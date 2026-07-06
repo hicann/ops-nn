@@ -83,7 +83,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>√</td>
     </tr>
     <tr>
-      <td>ord（aclTensor*）</td>
+      <td>ord（aclScalar*）</td>
       <td>输入</td>
       <td>表示范数的类型。对应公式中的ord。</td>
       <td>-</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnLinalgVectorNorm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -188,6 +188,9 @@ aclnnStatus aclnnLinalgVectorNorm(
     </tr>
     <tr>
       <td>dtype数据类型与out数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>self和out的数据类型不在支持范围内。</td>
     </tr>
     <tr>
       <td>dims中数值重复。</td>
@@ -256,7 +259,7 @@ aclnnStatus aclnnLinalgVectorNorm(
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnLinalgVectorNorm默认确定性实现。
 
 - 参数`self`、`dtype`、`out`支持的数据类型组合：
-  
+
   | `self`数据类型 | `dtype`数据类型 | `out`数据类型 |
   | ----------- | ----------- | -------------- |
   | FLOAT32     | FLOAT32     | FLOAT32        |
@@ -284,7 +287,7 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 #define LOG_PRINT(message, ...)         \
     do {                                \
-        printf(message, ##__VA_ARGS__); \ 
+        printf(message, ##__VA_ARGS__); \
     } while (0)
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
