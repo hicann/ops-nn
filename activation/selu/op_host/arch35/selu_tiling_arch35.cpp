@@ -18,6 +18,7 @@
  *   1. Multi-core: divide total elements evenly across AI Cores
  *   2. UB: divide per-core elements into UB-sized chunks
  *   3. Buffer layout: inputQueue(1 buf) + outputQueue(1 buf) + tmpBuf1 + tmpBuf2
+ *      （INT8 额外一个 tmpBuf3：正分支 fp32 中间 + 溢出回绕，共 3 个 tmp buffer）
  *
  * 用户约定：所有非 fp32 dtype（FP16/BF16/INT32/INT8）统一走 cast-to-fp32 路径，
  * 因此中间计算 buffer 大小始终 = ubFactor * sizeof(float)。
@@ -27,7 +28,7 @@
  *   FLOAT16:  (2*2 + 2*4) / 2 = 6   ← 由 (2*2+2*2)/2=4 改为 (2*2+2*4)/2=6（FP16 中间走 fp32）
  *   BFLOAT16: (2*2 + 2*4) / 2 = 6
  *   INT32:    (2*4 + 2*4) / 4 = 4
- *   INT8:     (2*1 + 2*4) / 1 = 10
+ *   INT8:     (2*1 + 3*4) / 1 = 14   ← 3 个 tmp buffer
  */
 
 #include "register/op_def_registry.h"
@@ -133,7 +134,9 @@ static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingDat
     int64_t blockFactor = CeilDiv(totalElements, coreNum);
     blockFactor = ((blockFactor + ubBlockSize - 1) / ubBlockSize) * ubBlockSize;
     int64_t usedCoreNum = CeilDiv(totalElements, blockFactor);
-    int64_t ubDivisor = (IO_BUF_NUM * typeSize + TMP_BUF_NUM * computeTypeSize) / typeSize;
+    // int8 正分支(fp32 中间)与溢出回绕需额外 1 个 fp32 buffer(tmpBuf3)，共 3 个 tmp buffer
+    int64_t tmpBufNum = (dataType == ge::DT_INT8) ? (TMP_BUF_NUM + 1) : TMP_BUF_NUM;
+    int64_t ubDivisor = (IO_BUF_NUM * typeSize + tmpBufNum * computeTypeSize) / typeSize;
     int64_t ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor), ubBlockSize);
     OP_CHECK_IF(ubFactor <= 0, OP_LOGE(context, "Selu: ubFactor is %ld, UB too small", ubFactor),
                 return ge::GRAPH_FAILED);
