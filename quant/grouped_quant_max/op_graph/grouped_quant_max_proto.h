@@ -23,9 +23,9 @@ namespace ge {
  * @li x: A required tensor of type FLOAT32, FLOAT16 or BFLOAT16, specifying the input tensor
  *        to be quantized. The format must be ND. Shape supports 2D to 8D.
  * @li scale: A required 1D tensor of type FLOAT32 with shape [num_groups], specifying the
- *            quantization scaling factor.
+ *            quantization scaling factor. The format must be ND.
  * @li group_list: A required 1D tensor of type INT64 with shape [num_groups], specifying the
- *            cumulative group boundaries along dim-0.
+ *            cumulative group boundaries along dim-0. The format must be ND.
  *
  * @par Attributes:
  * @li round_mode: An optional string, specifying the rounding mode for the cast operation.
@@ -42,7 +42,7 @@ namespace ge {
  *        Shape is the same as input "x". Data type is determined by dst_type.
  * @li amax: A required 1D tensor of type FLOAT32, FLOAT16 or BFLOAT16 with shape [num_groups],
  *           specifying the absolute maximum value of input "x".
- *           Data type must be the same as input "x".
+ *           Data type must be the same as input "x". The format must be ND.
  *
  * @par Third-party framework compatibility
  * It is a custom operator on Ascend NPU.

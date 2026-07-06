@@ -107,6 +107,7 @@
 - `round_mode`与`dst_type`的匹配关系：
     - 当`dst_type`为`35`或`36`时，`round_mode`必须为`"rint"`。
     - 当`dst_type`为`34`时，`round_mode`必须为`"round"`或`"hybrid"`。
+- num_groups的范围目前仅支持1-384。
 
 ## 调用说明
 
