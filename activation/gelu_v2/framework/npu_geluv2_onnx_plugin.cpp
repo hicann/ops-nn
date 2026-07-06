@@ -10,6 +10,7 @@
 
 #include "onnx_common.h"
 #include "nlohmann/json.hpp"
+#include "error_util.h"
 
 using namespace ge;
 using json = nlohmann::json;
@@ -22,16 +23,25 @@ Status ParseParamsNpuGeluV2(const ge::Operator& op_src, ge::Operator& op_dest)
     AscendString attrsString;
     std::string approximateMode = "none";
 
-    if (op_src.GetAttr("attribute", attrsString) == ge::GRAPH_SUCCESS) {
-        json attrs = json::parse(attrsString.GetString());
-        for (json& attr : attrs["attribute"]) {
-            if (attr["name"] == "approximate") {
-                approximateMode = attr["s"];
+    try {
+        if (op_src.GetAttr("attribute", attrsString) == ge::GRAPH_SUCCESS) {
+            json attrs = json::parse(attrsString.GetString());
+            for (json& attr : attrs["attribute"]) {
+                if (attr["name"] == "approximate") {
+                    approximateMode = attr["s"];
+                }
             }
         }
+    
+        op_dest.SetAttr("approximate", approximateMode);
+    } catch (const json::parse_error& e) {
+        OP_LOGE("gelu_v2", "JSON parse error: %s", e.what());
+        return FAILED;
+    } catch (const json::exception& e) {
+        OP_LOGE("gelu_v2", "JSON processing error: %s", e.what());
+        return FAILED;
     }
 
-    op_dest.SetAttr("approximate", approximateMode);
     return SUCCESS;
 }
 

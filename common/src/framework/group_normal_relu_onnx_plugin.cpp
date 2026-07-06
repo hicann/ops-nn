@@ -10,6 +10,7 @@
 
 #include "onnx_common.h"
 #include "nlohmann/json.hpp"
+#include "error_util.h"
 
 using namespace ge;
 using json = nlohmann::json;
@@ -19,20 +20,29 @@ static Status ParseOnnxParamsGroupNormRelu(const ge::Operator& op_src, ge::Opera
     AscendString attrs_string;
     int num_groups = 0;
     float eps = 0;
-    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
-        json attrs = json::parse(attrs_string.GetString());
-        for (json& attr : attrs["attribute"]) {
-            if (attr["name"] == "eps") {
-                std::string eps_str = attr["f"];
-                eps = atof(eps_str.c_str());
-            } else if (attr["name"] == "num_groups") {
-                num_groups = attr["i"];
+    try {
+        if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+            json attrs = json::parse(attrs_string.GetString());
+            
+            for (json& attr : attrs["attribute"]) {
+                if (attr["name"] == "eps") {
+                    std::string eps_str = attr["f"];
+                    eps = atof(eps_str.c_str());
+                } else if (attr["name"] == "num_groups") {
+                    num_groups = attr["i"];
+                }
             }
         }
-    }
 
-    op_dest.SetAttr("num_groups", num_groups);
-    op_dest.SetAttr("eps", eps);
+        op_dest.SetAttr("num_groups", num_groups);
+        op_dest.SetAttr("eps", eps);
+    } catch (const json::parse_error& e) {
+        OP_LOGE("group_normal_relu", "JSON parse error: %s", e.what());
+        return FAILED;
+    } catch (const json::exception& e) {
+        OP_LOGE("group_normal_relu", "JSON processing error: %s", e.what());
+        return FAILED;
+    }
     return SUCCESS;
 }
 

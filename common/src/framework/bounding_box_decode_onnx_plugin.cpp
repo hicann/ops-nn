@@ -10,6 +10,7 @@
 
 #include "onnx_common.h"
 #include "nlohmann/json.hpp"
+#include "error_util.h"
 
 using json = nlohmann::json;
 namespace domi {
@@ -24,48 +25,54 @@ void GetAttrListFromJson(json& attr, std::vector<T>& val, std::string& dtype)
     }
 }
 
-static Status ParseParamsBoundingBoxDecode(const ge::Operator& op_src, ge::Operator& op_dest)
-{
-    std::vector<int64_t> max_shape;
-    std::vector<float> means;
-    std::vector<float> stds;
-    float wh_ratio_clip = 0.016f;
-    std::string wh_ratio_clip_str;
-    std::string dtype = "ints";
-    ge::AscendString attrs_string;
-    if (ge::GRAPH_SUCCESS == op_src.GetAttr("attribute", attrs_string)) {
+static Status ParseParamsBoundingBoxDecode(const ge::Operator& op_src, ge::Operator& op_dest) {
+  std::vector<int64_t> max_shape;
+  std::vector<float> means;
+  std::vector<float> stds;
+  float wh_ratio_clip = 0.016f;
+  std::string wh_ratio_clip_str;
+  std::string dtype = "ints";
+  ge::AscendString attrs_string;
+  try {
+      if (ge::GRAPH_SUCCESS == op_src.GetAttr("attribute", attrs_string)) {
         json attrs = json::parse(attrs_string.GetString());
         for (json attr : attrs["attribute"]) {
-            if (attr["name"] == "max_shape") {
-                dtype = "ints";
-                GetAttrListFromJson(attr, max_shape, dtype);
-            }
+          if (attr["name"] == "max_shape") {
+            dtype = "ints";
+            GetAttrListFromJson(attr, max_shape, dtype);
+          }
 
-            if (attr["name"] == "means") {
-                dtype = "floats";
-                GetAttrListFromJson(attr, means, dtype);
-            }
+          if (attr["name"] == "means") {
+            dtype = "floats";
+            GetAttrListFromJson(attr, means, dtype);
+          }
 
-            if (attr["name"] == "stds") {
-                dtype = "floats";
-                GetAttrListFromJson(attr, stds, dtype);
-            }
+          if (attr["name"] == "stds") {
+            dtype = "floats";
+            GetAttrListFromJson(attr, stds, dtype);
+          }
 
-            if (attr["name"] == "wh_ratio_clip" && attr["type"] == kTypeFloat) {
-                wh_ratio_clip_str = attr["f"]; // float type in json has accuracy loss, so we use string type to store
-                                               // it
-                wh_ratio_clip = atof(wh_ratio_clip_str.c_str());
-                op_dest.SetAttr("wh_ratio_clip", wh_ratio_clip);
-            }
+          if (attr["name"] == "wh_ratio_clip" && attr["type"] == kTypeFloat) {
+            wh_ratio_clip_str = attr["f"];  // float type in json has accuracy loss, so we use string type to store it
+            wh_ratio_clip = atof(wh_ratio_clip_str.c_str());
+            op_dest.SetAttr("wh_ratio_clip", wh_ratio_clip);
+          }
         }
-    }
-    if (max_shape.empty() || means.empty() || stds.empty()) {
+      }
+      if (max_shape.empty() || means.empty() || stds.empty()) {
         return FAILED;
-    }
+      }
 
-    op_dest.SetAttr("max_shape", max_shape);
-    op_dest.SetAttr("means", means);
-    op_dest.SetAttr("stds", stds);
+      op_dest.SetAttr("max_shape", max_shape);
+      op_dest.SetAttr("means", means);
+      op_dest.SetAttr("stds", stds);
+  } catch (const json::parse_error& e) {
+      OP_LOGE("bounding_box_decode", "JSON parse error: %s", e.what());
+      return FAILED;
+  } catch (const json::exception& e) {
+      OP_LOGE("bounding_box_decode", "JSON processing error: %s", e.what());
+      return FAILED;
+  }
 
     return SUCCESS;
 }
