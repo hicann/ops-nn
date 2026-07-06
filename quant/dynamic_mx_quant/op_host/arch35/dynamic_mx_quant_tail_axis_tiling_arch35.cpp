@@ -34,6 +34,7 @@ constexpr int64_t BYTES_OF_SCALE_TYPE = sizeof(uint8_t);
 constexpr int64_t BYTES_OF_INVERSE_SCALE_TYPE = sizeof(uint16_t);
 constexpr int64_t DB_BUFFER = 2;
 constexpr float LOAD_BALANCE_THRESHOLD = 0.75; // 负载均衡的阈值
+constexpr int64_t RESERVED_UB_SIZE = 2 * 1024; // 预留空间
 
 ge::graphStatus DynamicMxQuantTailAxisTiling::SetTilingDataForTailAxis()
 {
@@ -203,23 +204,21 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::DoTiling()
 
     // 计算UB可以放下的block（1×256）数量
     // maxUbBlockNum * SLICE_SIZE_256 * (BYTES_OF_INPUT_TYPE * DB_BUFFER + BYTES_OF_OUTPUT_TYPE * DB_BUFFER) +
-    // maxUbBlockNum * DIGIT_EIGHT * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE * DB_BUFFER +
+    // maxUbBlockNum * DIGIT_EIGHT * DB_BUFFER * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE +
     // BYTES_OF_INVERSE_SCALE_TYPE)
-    // <= ubSize
+    // <= ubSize - RESERVED_UB_SIZE
     // fp16/bf16 输入 DB_BUFFER 总字节数 = 2*2 = 4；fp32 输入需要 fp32 数据 4*2 = 8
     int64_t bytesInputDbBuffer = DB_BUFFER * tilingParam_.inputDtypeSize;
     // fp32 输入时 maxExpBuffer_ 使用 sizeof(float)=4，其余使用 sizeof(uint16_t)=2
     int64_t bytesOfMaxValueType = tilingParam_.inputDtypeSize;
     if (tilingParam_.dstType == ge::DT_FLOAT4_E2M1 || tilingParam_.dstType == ge::DT_FLOAT4_E1M2) { // Y FP4
-        tilingParam_.maxUbBlockNum = tilingParam_.ubSize /
-                                     (SLICE_SIZE_256 * (bytesInputDbBuffer + BYTES_OF_OUTPUT_FP4_DB_BUFFER_TYPE) +
-                                      DIGIT_EIGHT * (bytesOfMaxValueType + BYTES_OF_SCALE_TYPE * DB_BUFFER +
-                                                     BYTES_OF_INVERSE_SCALE_TYPE));
+        tilingParam_.maxUbBlockNum = (tilingParam_.ubSize - RESERVED_UB_SIZE) /
+            (SLICE_SIZE_256 * (bytesInputDbBuffer + BYTES_OF_OUTPUT_FP4_DB_BUFFER_TYPE) +
+             DIGIT_EIGHT * DB_BUFFER * (bytesOfMaxValueType + BYTES_OF_SCALE_TYPE + BYTES_OF_INVERSE_SCALE_TYPE));
     } else if (tilingParam_.dstType == ge::DT_FLOAT8_E5M2 || tilingParam_.dstType == ge::DT_FLOAT8_E4M3FN) { // Y FP8
-        tilingParam_.maxUbBlockNum = tilingParam_.ubSize /
-                                     (SLICE_SIZE_256 * (bytesInputDbBuffer + BYTES_OF_OUTPUT_FP8_DB_BUFFER_TYPE) +
-                                      DIGIT_EIGHT * (bytesOfMaxValueType + BYTES_OF_SCALE_TYPE * DB_BUFFER +
-                                                     BYTES_OF_INVERSE_SCALE_TYPE));
+        tilingParam_.maxUbBlockNum = (tilingParam_.ubSize - RESERVED_UB_SIZE) /
+            (SLICE_SIZE_256 * (bytesInputDbBuffer + BYTES_OF_OUTPUT_FP8_DB_BUFFER_TYPE) +
+             DIGIT_EIGHT * DB_BUFFER * (bytesOfMaxValueType + BYTES_OF_SCALE_TYPE + BYTES_OF_INVERSE_SCALE_TYPE));
     }
     tilingParam_.maxUbBlockNum *= DIGIT_EIGHT; // 转换成UB可以放下的block（1×32）数量
 
