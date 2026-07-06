@@ -158,7 +158,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::CalcKernelSize(int64_t curIdx, i
     curOriginIndex_ = (curOriginH_ * tilingData_->wInDim + curOriginW_) * tilingData_->channel;
     curInOffset = curN * inHW_ * tilingData_->channel + curOriginIndex_;
 
-    if (tilingData_->divisorOverride > 0) {
+    if (tilingData_->divisorOverride) {
         mulsFactor_ = 1.0f / static_cast<float>(tilingData_->divisorOverride);
     } else if (tilingData_->countIncludePad == 0) {
         mulsFactor_ = curkH * curkW == 0 ? 0 : 1.0f / static_cast<float>(curkH * curkW);
