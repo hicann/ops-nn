@@ -142,16 +142,23 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf* self)
     self->ctx.splitHStartIndex_ = self->ctx.tiling_->padUp % self->ctx.tiling_->strideH;
     self->ctx.splitIndex_ = self->ctx.splitHStartIndex_ * self->ctx.tiling_->strideW + self->ctx.splitWStartIndex_;
 
-    // 0,1,2,3 sub kernel index,
-    // kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
-    self->ctx.splitWkList_[0] = DivCeil(self->ctx.tiling_->wk, self->ctx.tiling_->strideW);
-    self->ctx.splitWkList_[1] = self->ctx.tiling_->wk - self->ctx.splitWkList_[0];
-    self->ctx.splitWkList_[2] = self->ctx.splitWkList_[0];
-    self->ctx.splitWkList_[3] = self->ctx.splitWkList_[1];
-    self->ctx.splitHkList_[0] = DivCeil(self->ctx.tiling_->hk, self->ctx.tiling_->strideH);
-    self->ctx.splitHkList_[1] = self->ctx.splitHkList_[0];
-    self->ctx.splitHkList_[2] = self->ctx.tiling_->hk - self->ctx.splitHkList_[0];
-    self->ctx.splitHkList_[3] = self->ctx.splitHkList_[2];
+    // 0,1,2,3 sub kernel index, kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
+    // stride>kernel且不可拆分时（如1x1 stride=2），尾子kernel为0，回退为DivCeil值
+    uint32_t wkLeft = DivCeil(self->ctx.tiling_->wk, self->ctx.tiling_->strideW);
+    uint32_t wkRight = self->ctx.tiling_->wk - wkLeft;
+    wkRight = wkRight == 0 ? wkLeft : wkRight;
+    self->ctx.splitWkList_[0] = wkLeft;
+    self->ctx.splitWkList_[1] = wkRight;
+    self->ctx.splitWkList_[2] = wkLeft;
+    self->ctx.splitWkList_[3] = wkRight;
+
+    uint32_t hkUp = DivCeil(self->ctx.tiling_->hk, self->ctx.tiling_->strideH);
+    uint32_t hkDown = self->ctx.tiling_->hk - hkUp;
+    hkDown = hkDown == 0 ? hkUp : hkDown;
+    self->ctx.splitHkList_[0] = hkUp;
+    self->ctx.splitHkList_[1] = hkUp;
+    self->ctx.splitHkList_[2] = hkDown;
+    self->ctx.splitHkList_[3] = hkDown;
 
     for (uint32_t i = 0; i < SUB_KERNEL_NUM; i++) {
         self->ctx.splitHkWkList_[i] = self->ctx.splitWkList_[i] * self->ctx.splitHkList_[i];
