@@ -17,8 +17,8 @@
 #include "register/op_impl_registry.h"
 #include "test_cube_util.h"
 #include "ut_op_util.h"
-#include "../../../../op_graph/experimental_index_proto.h"
-#include "../../../../op_kernel/index_tiling_data.h"
+#include "../../../op_graph/experimental_index_proto.h"
+#include "../../../op_kernel/index_tiling_data.h"
 
 using namespace ge;
 using namespace std;

@@ -15,7 +15,7 @@
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "../../op_kernel/index_tiling_data.h"
+#include "../op_kernel/index_tiling_data.h"
 
 namespace {
 constexpr size_t INPUT_X = 0;
