@@ -10,163 +10,193 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 __input__ = {
-        "kernel": {
-            "weight_quant_batch_matmul_v2": "weight_quant_batch_matmul_v2_inputs"
-        },
-        "e2e": {
-            "torch_npu.npu_weight_quant_batchmatmul": "torch_weight_quant_batch_matmul_v2_inputs"
-        }
+    "kernel": {"weight_quant_batch_matmul_v2": "weight_quant_batch_matmul_v2_inputs"}
 }
 
-import math
-import struct
-import torch
-import torch_npu
 import numpy as np
-from ml_dtypes import bfloat16
+import warnings
+
+UNSIGNED_ONLY_DTYPES = ("float8_e8m0",)
 
 
-def weight_quant_batch_matmul_v2_inputs(x1, weight, antiquant_scale, antiquant_offset=None, quant_scale=None,
-                                        quant_offset=None, bias=None, transpose_x: bool = False,
-                                        transpose_weight: bool = False, antiquant_group_size: int = 0,
-                                        dtype: int = -1, inner_precise: int = 0, **kwargs):
-    output_dtypes = kwargs['output_dtypes']
-    input_ranges = kwargs['input_ranges']
-    testcase_name = kwargs['testcase_name']
+def _check_and_fix_unsigned_dtype_nan(tensor, input_index, input_ranges, testcase_name):
+    if tensor is None:
+        return tensor
+    dtype_str = str(tensor.dtype)
+    if not any(d in dtype_str for d in UNSIGNED_ONLY_DTYPES):
+        return tensor
+    fp32_check = tensor.astype(np.float32)
+    nan_count = int(np.isnan(fp32_check).sum())
+    if nan_count == 0:
+        return tensor
+    orig_range = None
+    if input_ranges is not None:
+        try:
+            orig_range = (
+                input_ranges[input_index] if input_index < len(input_ranges) else None
+            )
+        except (TypeError, IndexError):
+            pass
+    orig_low, orig_high = -10, 10
+    if orig_range is not None and len(orig_range) >= 2:
+        orig_low = orig_range[0] if orig_range[0] is not None else -10
+        orig_high = orig_range[1] if orig_range[1] is not None else 10
+    new_high = max(abs(float(orig_low)), abs(float(orig_high)), 1.0)
+    new_low = max(new_high * 0.001, 1e-6)
+    warnings.warn(
+        f"[{testcase_name}] Input {input_index} dtype={dtype_str} contains {nan_count} NaN "
+        f"values (original range ({orig_low}, {orig_high}) includes negatives). "
+        f"Regenerating with positive range ({new_low}, {new_high})."
+    )
+    new_data = np.random.uniform(new_low, new_high, tensor.shape).astype(np.float32)
+    return new_data.astype(tensor.dtype)
+
+
+def weight_quant_batch_matmul_v2_inputs(
+    x1,
+    weight,
+    antiquant_scale,
+    antiquant_offset=None,
+    quant_scale=None,
+    quant_offset=None,
+    bias=None,
+    *,
+    transpose_x: bool = False,
+    transpose_weight: bool = False,
+    antiquant_group_size: int = 0,
+    dtype: int = -1,
+    inner_precise: int = 0,
+    **kwargs,
+):
+    output_dtypes = kwargs.get("output_dtypes", ["float16"])
+    input_ranges = kwargs.get("input_ranges", None)
+    testcase_name = kwargs.get("testcase_name", "unknown")
+
+    antiquant_scale = _check_and_fix_unsigned_dtype_nan(
+        antiquant_scale, 2, input_ranges, testcase_name
+    )
+
     if antiquant_offset is not None:
-        antiquant_offset = change_antiquant_dtype(antiquant_offset, x1.dtype, input_ranges[3])  # antiquant_offset 存在时修正数值范围
+        offset_range = _get_input_range(input_ranges, 3)
+        antiquant_offset = change_antiquant_dtype(
+            antiquant_offset, x1.dtype, offset_range
+        )
 
-    if antiquant_scale.dtype.name == "uint64":
-        antiquant_scale = weight_quant_bmmv2_uint64_antiquant_scale_generate(antiquant_scale, input_ranges, testcase_name)
+    if antiquant_scale.dtype.name in ("uint64", "int64"):
+        target_dtype = antiquant_scale.dtype
+        antiquant_scale = _antiquant_scale_generate(
+            antiquant_scale, input_ranges, testcase_name
+        )
+        if target_dtype.name == "int64":
+            antiquant_scale = antiquant_scale.astype(np.int64)
 
     if output_dtypes[0] == "int8":
-        quant_scale = weight_quant_bmmv2_uint64_quant_scale_generate(quant_scale.shape, testcase_name)
+        quant_scale = _quant_scale_generate(quant_scale.shape)
 
-    return x1, weight, antiquant_scale, antiquant_offset, quant_scale, quant_offset, bias
+    return (
+        x1,
+        weight,
+        antiquant_scale,
+        antiquant_offset,
+        quant_scale,
+        quant_offset,
+        bias,
+    )
 
 
- # 伪量化算子量化参数dtype虽然是浮点,data_range要求是整型[-128,127]
-def change_antiquant_dtype(antiquant_offset, x_dtype, input_data_range):
-    input_range_left, input_range_right = input_data_range[0], input_data_range[1]
-    input_range_left = math.ceil(input_range_left)
-    input_range_right = math.ceil(input_range_right)
+def _get_input_range(input_ranges, index):
+    if input_ranges is None:
+        return None
+    try:
+        if index < len(input_ranges):
+            rng = input_ranges[index]
+            if rng is not None and len(rng) >= 2:
+                return rng[0], rng[1]
+    except (TypeError, IndexError):
+        pass
+    return None
+
+
+# 伪量化算子量化参数dtype虽然是浮点, data_range要求是整型[-128,127]
+def change_antiquant_dtype(antiquant_offset, x_dtype, input_data_range=None):
+    input_range_left, input_range_right = -128, 127
+    if input_data_range is not None:
+        input_range_left = int(np.ceil(input_data_range[0]))
+        input_range_right = int(np.ceil(input_data_range[1]))
     if input_range_right > 127:
         input_range_right = 127
-    elif input_range_left < -128:
+    if input_range_left < -128:
         input_range_left = -128
     if input_range_left == input_range_right:
-        if x_dtype.name in ('float16', 'bfloat16'):
-            antiquant_offset = np.full(antiquant_offset.shape, input_range_left, dtype=x_dtype)
+        if x_dtype.name in ("float16", "bfloat16"):
+            antiquant_offset = np.full(
+                antiquant_offset.shape, input_range_left, dtype=x_dtype
+            )
     else:
-        if x_dtype.name in ('float16', 'bfloat16'):
-            antiquant_offset = np.random.randint(input_range_left, input_range_right,
-                                                 size=antiquant_offset.shape).astype(x_dtype)
+        if x_dtype.name in ("float16", "bfloat16"):
+            antiquant_offset = np.random.randint(
+                input_range_left, input_range_right, size=antiquant_offset.shape
+            ).astype(x_dtype)
     return antiquant_offset
 
 
-def weight_quant_bmmv2_uint64_quant_scale_generate(scale_shape, testcase_name):
-    fp32_scale = np.random.uniform(low=-5, high=5, size=scale_shape).astype(np.float32)
-    fp32_quant_offset = np.random.uniform(low=-5, high=5, size=scale_shape).astype(np.float32)
-    np.save(testcase_name + "_scale.npy", fp32_scale)
-    np.save(testcase_name + "_quant_offset.npy", fp32_quant_offset)
-    quant_pre = []
-    for idx in range(fp32_scale.flatten().size):
-        quant_pre.append(get_quant_pre(fp32_scale.flatten()[idx], fp32_quant_offset.flatten()[idx]))
-    quant_pre = np.array(quant_pre, dtype=np.uint64).reshape(scale_shape)
-    return quant_pre
-
-
-def get_quant_pre(scale, offset):
-    # convert float32 to uint32
-    scale_binary = struct.pack('f', scale)
-    scale_int = int.from_bytes(scale_binary, byteorder='little')
-    # round to nearest, tie to even
-    offset_round = round(offset)
-    offset_round_clip = min(max(-256, offset_round), 255)
-    offset_binary = struct.pack('i', offset_round_clip)
-    offset_int = int.from_bytes(offset_binary, byteorder='little') & 0x1FF  # get complement of int9
-
-    quant_pre_u64 = (1 << 46) + (offset_int << 37) + scale_int
-
-    return quant_pre_u64
-
-
-# adapt fixpipe perf, process antiquant_scale uint64 scene
-def weight_quant_bmmv2_uint64_antiquant_scale_generate(antiquant_scale, input_data_ranges, testcase_name):
+def _antiquant_scale_generate(antiquant_scale, input_ranges, testcase_name):
     scale_shape = antiquant_scale.shape
+    input_range_left, input_range_right = -65504, 65504
+    if input_ranges is not None:
+        try:
+            if len(input_ranges) >= 3:
+                rng = input_ranges[2]
+            elif len(input_ranges) >= 2:
+                rng = input_ranges[1]
+            else:
+                rng = input_ranges[0]
+            input_range_left, input_range_right = rng[0], rng[1]
+        except (TypeError, IndexError):
+            pass
+    input_range_left, input_range_right = process_quant_inf_nan(
+        input_range_left, input_range_right, -65504, 65504
+    )
+    fp32_scale = (
+        np.random.uniform(
+            low=input_range_left, high=input_range_right, size=scale_shape
+        )
+        .astype(np.float16)
+        .astype(np.float32)
+    )
+    return _pack_u64_scale(fp32_scale, None)
 
-    if (len(input_data_ranges) >= 3):
-        input_range_left, input_range_right = input_data_ranges[2] # 获取antiquant_scale的range范围
-    else:
-        input_range_left, input_range_right = input_data_ranges[1] # 取第一个range范围
 
-    input_range_left, input_range_right = process_quant_inf_nan(input_range_left, input_range_right, -65504, 65504) # inf nan情况下上下限处理
+def _quant_scale_generate(scale_shape):
+    fp32_scale = np.random.uniform(low=-5, high=5, size=scale_shape).astype(np.float32)
+    fp32_offset = np.random.uniform(low=-5, high=5, size=scale_shape).astype(np.float32)
+    return _pack_u64_scale(fp32_scale, fp32_offset)
 
-    fp32_scale = np.random.uniform(low=input_range_left, high=input_range_right, size=scale_shape).astype(np.float16).astype(np.float32)
-    np.save(testcase_name + "_antiscale.npy", fp32_scale)
-    quant_pre = []
-    for idx in range(fp32_scale.flatten().size):
-        quant_pre.append(get_quant_pre(fp32_scale.flatten()[idx], 0))
-    quant_pre = np.array(quant_pre, dtype=np.uint64).reshape(scale_shape)
-    return quant_pre
+
+def _pack_u64_scale(fp32_scale, fp32_offset=None):
+    u32_scale = np.ascontiguousarray(fp32_scale).view(np.uint32).copy()
+    u64 = u32_scale.astype(np.uint64)
+    u64 |= np.uint64(1 << 46)
+    if fp32_offset is not None:
+        s9 = np.clip(np.round(fp32_offset), -256, 255).astype(np.int64)
+        s9 = s9.astype(np.uint64) & np.uint64(0x1FF)
+        u64 |= s9 << np.uint64(37)
+    return u64
 
 
 def process_quant_inf_nan(input_range_left, input_range_right, low, high):
-    if ("-inf" in str(input_range_left)):
+    if "-inf" in str(input_range_left):
         input_range_left = low
-    elif ("inf" in str(input_range_left)):
+    elif "inf" in str(input_range_left):
         input_range_left = high
-    elif ("nan" in str(input_range_left)):
+    elif "nan" in str(input_range_left):
         input_range_left = 0
-    else:
-        input_range_left = input_range_left
 
-    if ("-inf" in str(input_range_right)):
+    if "-inf" in str(input_range_right):
         input_range_right = low
-    elif ("inf" in str(input_range_right)):
+    elif "inf" in str(input_range_right):
         input_range_right = high
-    elif ("nan" in str(input_range_left)):
+    elif "nan" in str(input_range_right):
         input_range_right = 0
-    else:
-        input_range_right = input_range_right
 
     return input_range_left, input_range_right
-
-
-def torch_weight_quant_batch_matmul_v2_inputs(x, weight, antiquant_scale, antiquant_offset=None, quant_scale=None,
-                                              quant_offset=None, bias=None, antiquant_group_size:int = 0,
-                                              inner_precise: int = 0, weight_dtype:int = None, **kwargs):
-    x_dtype = x.dtype
-    weight_format = kwargs["tensor_formats"][1]
-    w_dtype = weight.dtype
-
-    if antiquant_offset is not None and w_dtype in [torch.int8, torch.int4, torch.int32]:
-        antiquant_offset[:] = torch_change_antiquant_dtype(antiquant_offset, w_dtype)
-        if x_dtype in [torch.float16]:
-            antiquant_offset = antiquant_offset.to(torch.float16)
-        else:
-            antiquant_offset = antiquant_offset.to(torch.bfloat16)
-
-    customize_dtype = None
-    if x_dtype in [torch.float16]:
-        customize_dtype = torch.float16
-    elif x_dtype in [torch.bfloat16]:
-        customize_dtype = torch.bfloat16
-    if (w_dtype == torch.int32 or w_dtype == "fp4_e2m1_as_fp32") and (weight_format in ["FRACTAL_NZ", "NZ"]):
-        weight = torch.from_numpy(weight).contiguous()
-        weight = torch_npu.npu_format_cast(weight.npu(), 29, customize_dtype)  # weightNZ格式
-        weight = torch_npu.npu_convert_weight_to_int4pack(weight)
-    elif (w_dtype == torch.int32 or w_dtype == "fp4_e2m1_as_fp32") and (weight_format in ["ND"]):
-        weight = torch.from_numpy(weight)
-        weight = torch_npu.npu_convert_weight_to_int4pack(weight.npu())
-
-
-# 伪量化算子量化参数 dtype为浮点， 但data_range 要求整型
-def torch_change_antiquant_dtype(antiquant_offset, w_dtype):
-    antiquant_offset_dtype = antiquant_offset.dtype
-    if w_dtype in [torch.int8]:
-        input_range_left, input_range_right = -128, 127
-    else:
-        input_range_left, input_range_right = -8, 7
-    antiquant_offset = torch.randint(input_range_left, input_range_right, size=antiquant_offset.shape, dtype=antiquant_offset_dtype)
-    return antiquant_offset
