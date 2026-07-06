@@ -24,6 +24,14 @@
 #endif
 #endif
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#define IS_BLAZE false
+#elif ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
+#define IS_BLAZE true
+#else
+#define IS_BLAZE false
+#endif
+
 #if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102) && \
     defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
     ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
@@ -49,7 +57,7 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #endif
 
 #if defined(__CCE_AICORE__) && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && \
-    defined(FORMAT_X2) &&                                                                                      \
+    defined(DT_FLOAT8_E4M3FN) && defined(DT_FLOAT8_E5M2) && defined(DT_FLOAT4_E2M1) && defined(DT_FLOAT8_E8M0) && \
     (ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2 ||                                  \
      ORIG_DTYPE_X1 == DT_FLOAT4_E2M1) &&                                                                       \
     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2 ||                                  \
@@ -121,9 +129,9 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE), // Bias Mode 只有0
-        ASCENDC_TPL_UINT_SEL(KERNELTYPE, 
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
             ASCENDC_TPL_UI_LIST,
-            TPL_VEC_EPILOGUE_WITH_MMAPI, 
+            TPL_VEC_EPILOGUE_WITH_MMAPI,
             TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
 #endif
@@ -133,8 +141,8 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE), // Bias Mode 只有0
-        ASCENDC_TPL_UINT_SEL(KERNELTYPE, 
-            ASCENDC_TPL_UI_LIST, 
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
+            ASCENDC_TPL_UI_LIST,
             TPL_VEC_EPILOGUE_WITH_CUSTOM_MM),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
 #endif
@@ -196,9 +204,9 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE),
-        ASCENDC_TPL_UINT_SEL(KERNELTYPE, 
-            ASCENDC_TPL_UI_LIST, 
-            TPL_NO_VEC_EPILOGUE_WITH_MMAPI, 
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
+            ASCENDC_TPL_UI_LIST,
+            TPL_NO_VEC_EPILOGUE_WITH_MMAPI,
             TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
 #endif
