@@ -283,9 +283,9 @@ __aicore__ inline void SoftmaxGradArRecompute<T>::CalcOutVF(uint32_t ubFactor)
             LoadTensorForDtypeT(x1Local, x1Reg, pregMask, offset);
 
             Mul(x1Reg, x0Reg, x1Reg, pregMask);
-            Mul(x0Reg, x0Reg, sumReg, pregMask);
-            Sub(x0Reg, x1Reg, x0Reg, pregMask);
-            StoreTensorForDtypeTOut(yLocal, x0Reg, pregMask, offset);
+            Neg(x0Reg, x0Reg, pregMask);
+            MulAddDst(x1Reg, x0Reg, sumReg, pregMask);
+            StoreTensorForDtypeTOut(yLocal, x1Reg, pregMask, offset);
         }
     }
 
