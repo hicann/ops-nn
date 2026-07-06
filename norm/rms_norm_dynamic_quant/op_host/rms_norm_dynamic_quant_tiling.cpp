@@ -241,7 +241,7 @@ bool RmsNormDynamicQuantTilingHelper::ValidateDtypes()
         return false;
     }
     if (this->smoothNum1_) {
-        auto smoothDataType = context_->GetInputDesc(SMOOTH_IDX)->GetDataType();
+        auto smoothDataType = context_->GetOptionalInputDesc(SMOOTH_IDX)->GetDataType();
         if (smoothDataType != xDataType) {
             std::string dtypeMsg = Ops::Base::ToString(xDataType) + " and " + Ops::Base::ToString(smoothDataType);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and smooth_scales", dtypeMsg.c_str(),
@@ -250,7 +250,7 @@ bool RmsNormDynamicQuantTilingHelper::ValidateDtypes()
         }
     }
     if (this->betaFlag_) {
-        auto betaDataType = context_->GetInputDesc(BETA_IDX)->GetDataType();
+        auto betaDataType = context_->GetOptionalInputDesc(BETA_IDX)->GetDataType();
         if (betaDataType != xDataType) {
             std::string dtypeMsg = Ops::Base::ToString(xDataType) + " and " + Ops::Base::ToString(betaDataType);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and beta", dtypeMsg.c_str(),
