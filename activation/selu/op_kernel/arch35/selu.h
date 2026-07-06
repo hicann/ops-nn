@@ -24,7 +24,7 @@
  *   - half:        TilingKey 1: cast fp16 -> fp32 -> compute -> cast back to fp16  ← 用户约定：FP16 必须走 FP32 中间
  *   - bfloat16_t:  TilingKey 2: cast bf16 -> fp32 -> compute -> cast back to bf16
  *   - int32_t:     TilingKey 3: cast int32 -> fp32 -> compute -> cast back to int32
- *   - int8_t:      TilingKey 4: int8 -> half -> float -> compute -> half -> int8
+ *   - int8_t:      TilingKey 4: int8 -> half -> compute in half -> ceil negative -> int8
  *
  * Buffer layout (single buffer):
  *   inputQueue(1 buf):  ubFactor * sizeof(T)
@@ -61,9 +61,14 @@ using AscendC::Maxs;
 using AscendC::Add;
 using AscendC::Cast;
 
-// SELU fixed constants（全部以 fp32 表示，FP16/BF16/INT 路径均通过 cast 到 fp32 计算后再回原 dtype）
+// SELU fixed constants
 constexpr float ALPHA_F32 = 1.6732632423543772848170429916717f;
 constexpr float SCALE_F32 = 1.0507009873554804934193349852946f;
+// int8 路径使用预乘常量：SCALE_ALPHA_PRODUCT = SCALE * ALPHA
+constexpr float SCALE_ALPHA_PRODUCT = 1.75809934085f;
+// int8 正分支乘数：SCALE 的 fp16 表示（=1.05078125）提升为 fp32；fp32 乘后 CAST_TRUNC 回 fp16，
+// 实现 fp16 乘法向零截断（A5 硬件 fp16 Muls 是 RNE，若直乘会在 x=59/98/118 多 1）
+constexpr float SCALE_F16_AS_F32 = 1.05078125f;
 
 // Compute type trait: 所有 dtype 统一用 fp32 作为中间计算类型
 template <typename T>
@@ -88,12 +93,16 @@ private:
     __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat,
                                            LocalTensor<float>& yFloat,
                                            int64_t alignedNum);
-    // 非 fp32 dtype（half/bf16/int32/int8）统一走 cast-to-fp32 路径
+    // 非 fp32 dtype（half/bf16/int32）走 cast-to-fp32 路径
     template <typename SrcT>
     __aicore__ inline void ComputeCastFp32(LocalTensor<SrcT>& xLocal,
                                             LocalTensor<SrcT>& yLocal,
                                             int64_t currentNum,
                                             int64_t alignedNum);
+    // int8: int8->half->compute in half->ceil negative->half->int8
+    __aicore__ inline void ComputeInt8(LocalTensor<int8_t>& xLocal,
+                                        LocalTensor<int8_t>& yLocal,
+                                        int64_t alignedNum);
 
 private:
     TPipe pipe;
@@ -101,6 +110,7 @@ private:
     TQue<QuePosition::VECOUT, 1> outputQueue;
     TBuf<QuePosition::VECCALC> tmpBuf1_;  // exp/cast intermediate (fp32)
     TBuf<QuePosition::VECCALC> tmpBuf2_;  // max(0,x)/calc workspace (fp32)
+    TBuf<QuePosition::VECCALC> tmpBuf3_;  // int8 正分支 RTZ 后的 fp16 结果
 
     GlobalTensor<T> xGM_;
     GlobalTensor<T> yGM_;
@@ -142,6 +152,9 @@ __aicore__ inline void Selu<T>::Init(GM_ADDR x, GM_ADDR y, const SeluTilingData*
     pipe.InitBuffer(outputQueue, 1, ubFactor_ * sizeof(T));
     pipe.InitBuffer(tmpBuf1_, ubFactor_ * computeTSize);
     pipe.InitBuffer(tmpBuf2_, ubFactor_ * computeTSize);
+    if constexpr (std::is_same_v<T, int8_t>) {
+        pipe.InitBuffer(tmpBuf3_, ubFactor_ * computeTSize);  // int8 正分支/溢出回绕专用第 3 buffer
+    }
 }
 
 // =============================================================================
@@ -204,14 +217,13 @@ __aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat,
 }
 
 // =============================================================================
-// ComputeCastFp32 - 非 fp32 dtype 统一 cast 路径
-// FP16 / BF16 / INT32 / INT8 全部走：源 dtype -> fp32 -> compute -> 源 dtype
+// ComputeCastFp32 - 非 fp32 dtype 统一 cast 路径（half/bf16/int32）
+// int8 已分离到 ComputeInt8
 //
 // Hardware-supported Cast paths on arch35:
 //   half     <-> float (direct)
 //   bfloat16 <-> float (direct)
 //   int32    <-> float (direct, CAST_TRUNC for round-to-zero)
-//   int8     <-> float 需经 half 中转（int8 <-> half <-> float）
 // =============================================================================
 template <typename T>
 template <typename SrcT>
@@ -224,15 +236,8 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal,
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();
 
     // ---- Cast input to fp32 ----
-    if constexpr (std::is_same_v<SrcT, int8_t>) {
-        // int8 -> half -> float (两步)
-        LocalTensor<half> tmpHalf = tmp2.template ReinterpretCast<half>();
-        Cast(tmpHalf, xLocal, RoundMode::CAST_NONE, alignedNum);
-        Cast(tmp1, tmpHalf, RoundMode::CAST_NONE, alignedNum);
-    } else {
-        // half / bfloat16 / int32 -> float (一步)
-        Cast(tmp1, xLocal, RoundMode::CAST_NONE, alignedNum);
-    }
+    // half / bfloat16 / int32 -> float (一步)
+    Cast(tmp1, xLocal, RoundMode::CAST_NONE, alignedNum);
 
     // ---- Compute SELU in fp32 ----
     // Step 1: alpha * (exp(min(x, 0)) - 1)
@@ -253,12 +258,7 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal,
     // half:    fp32 -> half (CAST_ROUND, RNE 四舍五入到最近偶数)
     // bf16:    fp32 -> bf16 (CAST_ROUND)
     // int32:   fp32 -> int32 (CAST_TRUNC，向零截断，与 C++ int() 语义一致)
-    // int8:    fp32 -> half -> int8 (两步，half->int8 用 CAST_TRUNC 截断到零)
-    if constexpr (std::is_same_v<SrcT, int8_t>) {
-        LocalTensor<half> tmpHalf = tmp2.template ReinterpretCast<half>();
-        Cast(tmpHalf, tmp1, RoundMode::CAST_TRUNC, alignedNum);
-        Cast(yLocal, tmpHalf, RoundMode::CAST_TRUNC, alignedNum);
-    } else if constexpr (std::is_same_v<SrcT, int32_t>) {
+    if constexpr (std::is_same_v<SrcT, int32_t>) {
         Cast(yLocal, tmp1, RoundMode::CAST_TRUNC, alignedNum);
     } else {
         // half / bfloat16 都走 CAST_ROUND（最近偶数舍入）
@@ -267,8 +267,66 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal,
 }
 
 // =============================================================================
+// ComputeInt8 - int8 实现
+// 路径: int8 -> half -> compute in half -> ceil(negative) -> half -> int8
+// 关键差异（vs ComputeCastFp32）:
+//   1. 中间计算类型为 half (float16)，不是 float32
+//   2. 负分支结果做 ceil（向正无穷取整），仅 int8
+//   3. half -> int8 直跳（不经 float32 中转）
+// 说明:
+//   1. 正分支乘法：需 fp16 向零截断；A5 硬件 fp16 Muls 是 RNE，故走
+//      fp32 精确乘 + CAST_TRUNC 回 fp16（否则 x=59/98/118 会多 1）
+//   2. 最终 half->int8：溢出回绕（numpy astype(int8) 语义）——
+//      先 trunc 取整再 t-256*(t>=128) 手工回绕（硬件 cast 是饱和的，需手工回绕）
+// =============================================================================
+template <typename T>
+__aicore__ inline void Selu<T>::ComputeInt8(LocalTensor<int8_t>& xLocal,
+                                                LocalTensor<int8_t>& yLocal,
+                                                int64_t alignedNum)
+{
+    // int8 -> half
+    LocalTensor<half> xHalf = tmpBuf1_.template Get<half>();
+    Cast(xHalf, xLocal, RoundMode::CAST_NONE, alignedNum);
+
+    // 正分支: max(x, 0) * SCALE —— fp32 乘 + CAST_TRUNC 回 fp16（fp16 向零截断）
+    LocalTensor<float> posF32 = tmpBuf2_.template Get<float>();
+    Cast(posF32, xHalf, RoundMode::CAST_NONE, alignedNum);     // fp16 x -> fp32
+    Maxs(posF32, posF32, 0.0f, alignedNum);                    // max(x, 0)
+    Muls(posF32, posF32, SCALE_F16_AS_F32, alignedNum);        // * fp16(SCALE)，fp32 精确乘积
+    LocalTensor<half> posRes = tmpBuf3_.template Get<half>();
+    Cast(posRes, posF32, RoundMode::CAST_TRUNC, alignedNum);   // fp32 -> fp16 向零截断(RTZ)
+
+    // 负分支: (exp(min(x, 0)) - 1) * SCALE_ALPHA_PRODUCT
+    Mins(xHalf, xHalf, static_cast<half>(0), alignedNum);
+    Exp(xHalf, xHalf, alignedNum);
+    Adds(xHalf, xHalf, static_cast<half>(-1), alignedNum);
+    Muls(xHalf, xHalf, static_cast<half>(SCALE_ALPHA_PRODUCT), alignedNum);
+
+    // 负分支 ceil（仅 int8）：无同类型 ceil，通过 half->int8(CAST_CEIL)->half(CAST_NONE) 实现
+    Cast(yLocal, xHalf, RoundMode::CAST_CEIL, alignedNum);
+    Cast(xHalf, yLocal, RoundMode::CAST_NONE, alignedNum);
+
+    // 合并正负分支
+    Add(xHalf, xHalf, posRes, alignedNum);
+
+    // half -> int8：溢出回绕（numpy astype(int8) 语义）。
+    // 硬件 fp16->int8 是饱和的，故先 trunc 取整再做 t - 256*(t>=128) 手工回绕：
+    LocalTensor<int32_t> ti32 = tmpBuf2_.template Get<int32_t>();
+    Cast(ti32, xHalf, RoundMode::CAST_TRUNC, alignedNum);       // val -> trunc(int32)
+    LocalTensor<half> tHalf = tmpBuf3_.template Get<half>();
+    Cast(tHalf, ti32, RoundMode::CAST_NONE, alignedNum);        // int32 -> fp16(整数值)
+    LocalTensor<half> mask = tmpBuf2_.template Get<half>();
+    Adds(mask, tHalf, static_cast<half>(-127), alignedNum);
+    Maxs(mask, mask, static_cast<half>(0), alignedNum);
+    Mins(mask, mask, static_cast<half>(1), alignedNum);         // mask = (t>=128)?1:0
+    Muls(mask, mask, static_cast<half>(-256), alignedNum);
+    Add(tHalf, tHalf, mask, alignedNum);                        // t - 256*(t>=128)
+    Cast(yLocal, tHalf, RoundMode::CAST_TRUNC, alignedNum);     // -> int8（已在范围内，不饱和）
+}
+
+// =============================================================================
 // Compute - dispatch by T
-// 用户约定：所有非 fp32 的 dtype（含 FP16/BF16/INT*）统一走 ComputeCastFp32。
+// float: direct fp32; int8: half path; others: cast-to-fp32
 // =============================================================================
 template <typename T>
 __aicore__ inline void Selu<T>::Compute(int64_t currentNum)
@@ -284,8 +342,11 @@ __aicore__ inline void Selu<T>::Compute(int64_t currentNum)
 
     if constexpr (std::is_same_v<T, float>) {
         ComputeFloat32(xLocal, yLocal, alignedNum);
+    } else if constexpr (std::is_same_v<T, int8_t>) {
+        // int8 走 half 计算路径
+        ComputeInt8(xLocal, yLocal, alignedNum);
     } else {
-        // half / bfloat16_t / int32_t / int8_t 全部走 cast-to-fp32 路径
+        // half / bfloat16_t / int32_t 走 cast-to-fp32 路径
         ComputeCastFp32(xLocal, yLocal, currentNum, alignedNum);
     }
 
