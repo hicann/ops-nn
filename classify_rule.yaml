@@ -61,6 +61,7 @@ ops-nn:
       - conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
       - conv/extend_conv2d/op_host/op_tiling/extend_conv2d_mdc_tiling.cpp
       - conv/conv2d_v2/op_host/config/MC62/MC62CM12AA_8_AiCore_Conv2DV2_runtime_kb.json
+      - conv/extend_conv_transpose/op_host/config/fuse/FUSE_8_AiCore_ExtendConvTranspose_runtime_kb.json
       - conv/conv2d_v2/op_kernel/conv2d_v2.cpp
       - conv/conv3d_v2/examples/demo/*
       - conv/conv3d_v2/op_kernel/conv3d_v2_template.h

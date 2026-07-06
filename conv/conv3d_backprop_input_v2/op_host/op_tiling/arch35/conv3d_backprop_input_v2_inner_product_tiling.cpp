@@ -786,9 +786,15 @@ std::shared_ptr<tuningtiling::TuningTilingDef> Conv3DDXV2InnerProductTiling::Get
     OP_TILING_CHECK(compileInfo == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "compileInfo is null"),
                     return nullptr);
     const std::string& socVersion = compileInfo->soc_version;
+    const std::string& socVersionFuse = "FUSE";
+    
     OP_LOGD(context_, "socVersion = %s, coreNum_ = %d", socVersion.c_str(), coreNum_);
-    uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DBackpropInputV2", socVersion, coreNum_,
-                                      tuningTiling);
+    uint32_t ret = -1;
+    if (IsSocVersionFuse(context_)) {
+        ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "ExtendConvTranspose", socVersionFuse, coreNum_, tuningTiling);
+    } else {
+        ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DBackpropInputV2", socVersion, coreNum_, tuningTiling);
+    }
     if (ret != 0) {
         OP_LOGD(context_->GetNodeName(),
                 "Conv3DBackpropInputV2 AscendC: get tiling from knowledge_tiling failed, ret = %d.", ret);
