@@ -36,7 +36,6 @@ protected:
 private:
     static constexpr uint64_t BASE_MN = 128;
     static constexpr uint64_t BASE_K = 128;
-    static constexpr uint64_t LIMIT_K = 512;
     static constexpr uint64_t ALIGN_NUM = 8;
 };
 } // namespace matmul_v3
