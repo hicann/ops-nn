@@ -56,18 +56,21 @@ A_{int} =
     A_{3} \\
     \end{bmatrix}
 $$
-9. 计算$C_{int}$:
+9. 计算$Y_{int}$:
 
-$$Y_{int} =     \begin{bmatrix}
+$$
+Y_{int} =
+    \begin{bmatrix}
     Y_{1} \\
     Y_{2} \\
     Y_{3} \\
-    \end{bmatrix} = A_{int} Weight_{group}$$
+    \end{bmatrix} = A_{int} Weight_{group}
+$$
+10. 计算$Y_{group}$:
 
-10. 计算$C_{group}$:
-
-$$Y_{group} = [(\frac{Y_{1}}{7.49}+\frac{Y_{2}}{7.49*14.98}+\frac{Y_{3}}{7.49*14.98*14.98})*A_{max}] * scale_{group}$$
-
+$$
+Y_{group} = [(\frac{Y_{1}}{7.49}+\frac{Y_{2}}{7.49*14.98}+\frac{Y_{3}}{7.49*14.98*14.98})*A_{max}] * scale_{group}
+$$
 11. 计算$Y^i$:
 
 $$Y^{i} = Y_{group} + Y^{i-1}$$
@@ -75,15 +78,11 @@ $$Y^{i} = Y_{group} + Y^{i-1}$$
 - 算子规格：
   <table>
   <tr><td rowspan="1" align="center">算子类型(OpType)</td><td colspan="4" align="center">WeightQuantBatchMatmul</td></tr>
-  </tr>
   <tr><td rowspan="4" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
   <tr><td align="center">x1</td><td align="center">M * K</td><td align="center">float16</td><td align="center">ND</td></tr>
   <tr><td align="center">x2</td><td align="center">K * N</td><td align="center">int4</td><td align="center">ND</td></tr>
   <tr><td align="center">antiquant_scale</td><td align="center"> GroupNum * N </td><td align="center">float16</td><td align="center">ND</td></tr>
-  </tr>
-  </tr>
   <tr><td rowspan="1" align="center">算子输出</td><td align="center">y</td><td align="center">M * N</td><td align="center">float16</td><td align="center">ND</td></tr>
-  </tr>
   <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">WeightQuantBatchMatmulExperiment</td></tr>
   </table>
 
@@ -139,7 +138,7 @@ cd ${git_clone_path}/experimental/matmul/weight_quant_batch_matmul_experiment/ex
 
 该模板实现如下流水:
 ![basic_msd_flow](./figures/basic_msd_flow.png)
-在前处理模块中，多个核产生后处理模块依赖的$A_{max}$和矩阵计算模块依赖的$A_{int}$。在矩阵计算模块中产生后处理模块依赖的$C_{int}$。因此这些模块执行结束后都需要执行一次全核同步，保证下个模块处理的时候上一个模块已完全使用完数据，避免数据踩踏。
+在前处理模块中，多个核产生后处理模块依赖的$A_{max}$和矩阵计算模块依赖的$A_{int}$。在矩阵计算模块中产生后处理模块依赖的$Y_{int}$。因此这些模块执行结束后都需要执行一次全核同步，保证下个模块处理的时候上一个模块已完全使用完数据，避免数据踩踏。
 
 ### Preload流水模板
 

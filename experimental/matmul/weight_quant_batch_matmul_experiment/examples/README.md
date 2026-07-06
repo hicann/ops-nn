@@ -28,7 +28,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulExperiment(void *workspace, uint64_t work
 ## 运行样例算子
 
 ### 1. 编译运行
- 	 
+
 运行此样例前，请参考[编译运行](../README.md#编译运行)完成前期准备。
 
 ### 2. aclnn调用样例运行
