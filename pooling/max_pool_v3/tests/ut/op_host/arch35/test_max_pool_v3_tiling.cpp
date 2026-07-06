@@ -83,7 +83,7 @@ static void ExecuteTestCase(gert::StorageShape xShape,
                             std::vector<int64_t> strides, std::string padding_mode, std::vector<int64_t> pads,
                             std::string data_format, bool global_pooling, bool ceil_mode, ge::DataType dtype,
                             uint64_t except_tilingkey, std::string expect) {
-  dlog_setlevel(0, 0, 0);
+  // dlog_setlevel(0, 0, 0);
 
   string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -170,7 +170,7 @@ static void ExecuteTestCase(gert::StorageShape xShape,
   ASSERT_EQ(tiling_key, except_tilingkey);
   auto tilingData = tiling_context->GetRawTilingData();
   ASSERT_NE(tilingData, nullptr);
-  dlog_setlevel(0, 3, 0);
+  // dlog_setlevel(0, 3, 0);
   auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
   EXPECT_EQ(tiling_data_result, expect);
 }

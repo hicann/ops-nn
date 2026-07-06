@@ -65,7 +65,7 @@ static void ExecuteTestCase(
     ge::DataType dtype,  ge::DataType dtypeIdx, uint64_t except_tilingkey,
     int32_t* shape_data)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

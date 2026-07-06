@@ -58,7 +58,7 @@ static void ExecuteTestCase(
     bool includeBatchInIndex, std::string data_format, bool nan_prop, uint64_t except_tilingkey, std::string expect,
     ge::graphStatus expect_status = ge::GRAPH_SUCCESS)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     gert::Shape xShape = xStorageShape.GetStorageShape();
     gert::Shape yShape = yStorageShape.GetStorageShape();
@@ -158,7 +158,7 @@ static void ExecuteTestCase(
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
     auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
     std::cout << tiling_data_result << std::endl;
     EXPECT_EQ(tiling_data_result, expect);

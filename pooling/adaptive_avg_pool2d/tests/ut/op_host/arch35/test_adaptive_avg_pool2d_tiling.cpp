@@ -58,7 +58,7 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(
     gert::StorageShape xShape, gert::StorageShape yShape, std::vector<int64_t> outputSize, ge::DataType dtype,
     uint64_t expect_tiling_key)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -144,14 +144,14 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(
     auto raw_tiling = tiling_context->GetRawTilingData();
     ASSERT_NE(raw_tiling, nullptr);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 static void ExecuteAdaptiveAvgPool2d950FailTestCase(
     gert::StorageShape xShape, gert::StorageShape yShape, std::vector<int64_t> outputSize, ge::DataType dtype,
     ge::graphStatus expect_result)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -231,7 +231,7 @@ static void ExecuteAdaptiveAvgPool2d950FailTestCase(
 
     ASSERT_EQ(ret, expect_result);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_dtype_int32)
@@ -362,7 +362,7 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_output_dtype_int32)
 
 TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_parse_invalid_core_num_zero)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -400,12 +400,12 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_parse_invalid_core_num_zero)
         "version", soc_version_infos);
     auto ret = tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>());
     ASSERT_EQ(ret, ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_parse_invalid_ub_size_zero)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -443,7 +443,7 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_parse_invalid_ub_size_zero)
         "version", soc_version_infos);
     auto ret = tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>());
     ASSERT_EQ(ret, ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 // 测试用例1: simt - 4D

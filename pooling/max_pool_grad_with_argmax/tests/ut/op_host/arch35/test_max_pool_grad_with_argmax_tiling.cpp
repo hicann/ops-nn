@@ -43,7 +43,7 @@ static void ExecuteTestCase(
     std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string padding, ge::DataType dtype,  ge::DataType dtypeIdx,
     bool include_batch_in_index, std::string data_format, uint64_t except_tilingkey)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

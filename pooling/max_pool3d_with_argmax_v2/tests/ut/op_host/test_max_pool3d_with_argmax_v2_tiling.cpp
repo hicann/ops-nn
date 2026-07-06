@@ -1523,7 +1523,7 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             std::vector<int64_t> dilation, ge::DataType dtype, int64_t index_dtype, bool ceil_mode,
                             std::string data_format, uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1618,7 +1618,7 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_017_simt_test_NCDHW)

@@ -143,7 +143,7 @@ static void Execute310PTestCase(gert::StorageShape xShape,
                             std::vector<int64_t> strides, std::vector<int64_t> pads, bool ceil_mode, bool count_include_pad, 
                             int64_t divisor_override, std::string data_format, ge::DataType dtype,
                             uint64_t except_tilingkey, std::string expect) {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"CORE_NUM": 8, "L2_SIZE": 16777216, "L1_SIZE": 1048576, "L0A_SIZE": 65536, "L0B_SIZE": 65536,

@@ -44,7 +44,7 @@ static void ExecuteTestCase(
     ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format,
     uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -504,7 +504,7 @@ static void ExecuteErrorTestCase(
     std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
     ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

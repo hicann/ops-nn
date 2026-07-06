@@ -130,9 +130,9 @@ void Pool3DNcdhwSmallKernelTiling::CalcKernelAndPadInfo()
     if (inputData_.ceilMode && isPadding_ == false) {
         if (((inputData_.outShape[D_DIM] - 1) * inputData_.stride[D_DIM] + effectiveKsize_[D_DIM])>
                 inputData_.inputShape[D_DIM] ||
-            ((inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + effectiveKsize_[H_DIM]) >
+            ((inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + effectiveKsize_[W_DIM]) >
                 inputData_.inputShape[W_DIM] ||
-            ((inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + effectiveKsize_[W_DIM]) >
+            ((inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + effectiveKsize_[H_DIM]) >
                 inputData_.inputShape[H_DIM]) {
             isPadding_ = true;
         }
