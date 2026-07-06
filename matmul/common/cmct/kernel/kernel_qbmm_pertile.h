@@ -220,12 +220,26 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
                                                                                              uint64_t batchB4Offset,
                                                                                              uint64_t batchC4Offset)
 {
-    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) *
-                                                       Get<MNK_K>(problemShape_);
-    Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) *
-                                                       Get<MNK_K>(problemShape_);
-    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) *
-                                                       Get<MNK_N>(problemShape_);
+    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) * Get<MNK_K>(problemShape_);
+    if constexpr (FormatB == CubeFormat::NZ) {
+        int64_t c0Size = AscendC::AuxGetC0Size<BType>(); // fp8 = 32
+        if constexpr (transB) {
+            // B[N,K] NZ: (k1, nAlign16, k0=c0)
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) =
+                batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), c0Size) *
+                CeilDiv(Get<MNK_N>(problemShape_), static_cast<int64_t>(AscendC::BLOCK_CUBE)) *
+                AscendC::BLOCK_CUBE * c0Size;
+        } else {
+            // B[K,N] NZ: (n1, kAlign16, n0=c0)
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) =
+                batchB4Offset * CeilDiv(Get<MNK_N>(problemShape_), c0Size) *
+                CeilDiv(Get<MNK_K>(problemShape_), static_cast<int64_t>(AscendC::BLOCK_CUBE)) *
+                AscendC::BLOCK_CUBE * c0Size;
+        }
+    } else {
+        Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) * Get<MNK_K>(problemShape_);
+    }
+    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) * Get<MNK_N>(problemShape_);
 
     if (isPertile_) {
         Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset *

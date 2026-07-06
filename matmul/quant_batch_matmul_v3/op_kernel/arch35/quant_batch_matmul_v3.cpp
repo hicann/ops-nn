@@ -601,8 +601,31 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     } while (0)
 
 #if SUPPORT_PERTILE
-    if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_CUSTOM_MM &&
-                  TPL_APILEVEL == TPL_API_LEVEL_BASIC) { // Bias Mode = 0; Kernel Type = 4;
+    if constexpr (
+        TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE &&
+        TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_CUSTOM_MM &&
+        TPL_APILEVEL == TPL_API_LEVEL_BASIC) { // Bias Mode = 0; Kernel Type = 4;
+#if defined(FORMAT_X2) && (FORMAT_X2 == FORMAT_FRACTAL_NZ)
+        // WeightNz: B in Fractal NZ format. B layout is Nz(non-transB)/Zn(transB).
+        // Note: only transA=False is supported (guarded by host tiling IsCapable !transA check);
+        // all 4 trans instantiations are kept for TilingKey compile-time enum completeness (ATRANS=1 is placeholder now).
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+            QBMM_QUANT_GB_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign);
+        }
+        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+            QBMM_QUANT_GB_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign);
+        }
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+            QBMM_QUANT_GB_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn, Cmct::Gemm::layout::RowMajorAlign);
+        }
+        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+            QBMM_QUANT_GB_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn, Cmct::Gemm::layout::RowMajorAlign);
+        }
+#else
         if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
             QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
                                      Cmct::Gemm::layout::RowMajorAlign);
@@ -619,6 +642,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
             QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
                                      Cmct::Gemm::layout::RowMajorAlign);
         }
+#endif
     }
 #endif
 

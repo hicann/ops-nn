@@ -400,18 +400,23 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Hifloat8() const
     bool hasPerTokenScale = context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
                             context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr;
     bool is64BitScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
+    // 静态 x2 scale 路径：pertokenScale 为 null 且 scale 为 UINT64/INT64
+    bool isStaticX2Scale = !hasPerTokenScale && is64BitScale;
+    // FP8-Pertile WeightNz(HIFLOAT8)：scale 与 pertokenScale 均为 FLOAT
+    bool isPertileFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                               inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
 
-    OP_TILING_CHECK(hasPerTokenScale,
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                        inputParams_.opName, "pertokenScale", "not null",
-                        "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, pertokenScale must be null"),
-                    return false);
     OP_TILING_CHECK(
-        !is64BitScale,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            inputParams_.opName, "scale", ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
-            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, the dtype of scale must be "
-            "UINT64/INT64"),
+        !(isStaticX2Scale || isPertileFloatScale),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "pertokenScale, scale",
+            FormatString(
+                "%s, %s",
+                hasPerTokenScale ?
+                    ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str() : "null",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()).c_str(),
+            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, pertokenScale and scale must both "
+            "be FLOAT, or pertokenScale must be null and scale must be UINT64/INT64"),
         return false);
     return true;
 }
@@ -448,9 +453,12 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Fp8E4M3() const
     bool is64BitScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
     bool isStaticX2Scale = !hasPerTokenScale && is64BitScale;
     bool isMxScale = hasPerTokenScale && isE8M0ScalePair;
+    // FP8-Pretile WeightNz(only for FLOAT8_E4M3FN): scale and pertokenScale are all FLOAT
+    bool isPertileFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                               inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
 
     OP_TILING_CHECK(
-        !(isMxScale || isStaticX2Scale),
+        !(isMxScale || isStaticX2Scale || isPertileFloatScale),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             inputParams_.opName, "pertokenScale, scale",
             FormatString("%s, %s",
@@ -460,7 +468,7 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Fp8E4M3() const
                          ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str())
                 .c_str(),
             "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, pertokenScale and scale must both "
-            "be FLOAT8_E8M0, or pertokenScale must be null and scale must be UINT64/INT64"),
+            "be FLOAT8_E8M0, or both be FLOAT, or pertokenScale must be null and scale must be UINT64/INT64"),
         return false);
     return true;
 }

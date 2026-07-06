@@ -69,6 +69,9 @@ public:
 
     static constexpr bool transA = TagToTrans<LayoutA>::value;
     static constexpr bool transB = TagToTrans<LayoutB>::value;
+    // WeightNz: B is stored in Fractal NZ format on GM, copy into L1 directly (skip ND2NZ)
+    static constexpr bool weightNz = (TagToFormat<LayoutB>::format == CubeFormat::NZ);
+    static constexpr int32_t B_C0_SIZE = AscendC::AuxGetC0Size<BType>();
 
     using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t>;              // m,n,k
     using TupleTileShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>; // m,n,ka,kb
@@ -104,6 +107,7 @@ private:
                                              bool isTailBL1);
     __aicore__ inline void CopyInA1Nd2Nz(const AscendC::GlobalTensor<AType>& aGlobal, uint64_t kOffset, bool isTailAL1);
     __aicore__ inline void CopyInB1Nd2Nz(const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset, bool isTailBL1);
+    __aicore__ inline void CopyInB1WeightNz(const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset, bool isTailBL1);
     __aicore__ inline void CopyInA2(uint64_t mAL1Offset, uint64_t kAL1Offset, uint64_t kOffset, bool isTailAL1);
     __aicore__ inline void CopyInB2(uint64_t nBL1Offset, uint64_t kBL1Offset, uint64_t kOffset, bool isTailBL1);
     __aicore__ inline void MmadBase(uint64_t kOffset);
@@ -287,7 +291,11 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
                  kInner += minKL1_) {
                 isTailBL1 = (kInner + minKL1_) >= Get<MNK_K>(problemShape_);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(bL1BufferID_ + DOUBLE_BUFFER);
-                CopyInB1Nd2Nz(bGlobal, kInner, isTailBL1);
+                if constexpr (weightNz) {
+                    CopyInB1WeightNz(bGlobal, kInner, isTailBL1);
+                } else {
+                    CopyInB1Nd2Nz(bGlobal, kInner, isTailBL1);
+                }
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(bL1BufferID_ + DOUBLE_BUFFER);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(bL1BufferID_ + DOUBLE_BUFFER);
                 AicBaseMadProcess(kInner, kInner - kOuter, isTailAL1, 0UL, isTailBL1);
@@ -301,7 +309,11 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         for (uint64_t kOuter = 0; kOuter < Get<MNK_K>(problemShape_); kOuter += maxKL1_) {
             isTailBL1 = (kOuter + maxKL1_) >= Get<MNK_K>(problemShape_);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(bL1BufferID_ + DOUBLE_BUFFER);
-            CopyInB1Nd2Nz(bGlobal, kOuter, isTailBL1);
+            if constexpr (weightNz) {
+                CopyInB1WeightNz(bGlobal, kOuter, isTailBL1);
+            } else {
+                CopyInB1Nd2Nz(bGlobal, kOuter, isTailBL1);
+            }
             AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(bL1BufferID_ + DOUBLE_BUFFER);
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(bL1BufferID_ + DOUBLE_BUFFER);
             for (uint64_t kInner = kOuter;
@@ -331,7 +343,11 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         isTailL1 = (kOuter + kaL1_) >= Get<MNK_K>(problemShape_);
         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(aL1BufferID_);
         CopyInA1Nd2Nz(aGlobal, kOuter, isTailL1);
-        CopyInB1Nd2Nz(bGlobal, kOuter, isTailL1);
+        if constexpr (weightNz) {
+            CopyInB1WeightNz(bGlobal, kOuter, isTailL1);
+        } else {
+            CopyInB1Nd2Nz(bGlobal, kOuter, isTailL1);
+        }
         AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_);
         AicBaseMadProcess(kOuter, 0UL, isTailL1, 0UL, isTailL1);
@@ -445,6 +461,47 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
     AscendC::Nd2NzParams nd2nzParam;
     matmulParam_.CalNd2NzParamB(nd2nzParam, isTailBL1);
     AscendC::DataCopy(bL1Local_[l1BufferBOffset_[bL1BufferID_]], bGlobal[offset], nd2nzParam);
+}
+
+QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::CopyInB1WeightNz(
+    const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset, bool isTailBL1)
+{
+    uint64_t kProblem = Get<MNK_K>(problemShape_);
+    uint64_t nProblem = Get<MNK_N>(problemShape_);
+    uint64_t curN = Get<MNK_N>(actualSingleShape_);
+    uint64_t kTail = (kProblem % kbL1_ == 0) ? static_cast<uint64_t>(kbL1_) : (kProblem % kbL1_);
+    uint64_t curK = isTailBL1 ? kTail : static_cast<uint64_t>(kbL1_);
+
+    auto bGlobalU8 = bGlobal.template ReinterpretCast<uint8_t>();
+    auto bL1U8 = bL1Local_[l1BufferBOffset_[bL1BufferID_]].template ReinterpretCast<uint8_t>();
+
+    AscendC::DataCopyExtParams dataCopyParams;
+    AscendC::DataCopyPadExtParams<uint8_t> padParams;
+    uint64_t gmOffset = 0;
+    if constexpr (transB) {
+        // B[N,K] NZ layout: (k1, nAlign16, k0=c0), slice along K to kOffset
+        uint64_t curAlignN = Cmct::Gemm::CeilAlign(curN, static_cast<uint64_t>(AscendC::BLOCK_CUBE));
+        dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(curK, static_cast<uint64_t>(B_C0_SIZE));
+        dataCopyParams.blockLen = curAlignN * B_C0_SIZE;
+        dataCopyParams.srcStride =
+            (Cmct::Gemm::CeilAlign(nProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) - curAlignN) * B_C0_SIZE;
+        dataCopyParams.dstStride = 0;
+        gmOffset = (kOffset / B_C0_SIZE) *
+                   Cmct::Gemm::CeilAlign(nProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) * B_C0_SIZE;
+    } else {
+        // B[K,N] NZ layout: (n1, kAlign16, n0=c0), slice along K to kOffset
+        uint64_t curAlignN = Cmct::Gemm::CeilAlign(curN, static_cast<uint64_t>(B_C0_SIZE));
+        uint64_t curKNZ = Cmct::Gemm::CeilAlign(curK, static_cast<uint64_t>(AscendC::BLOCK_CUBE));
+        uint64_t l1KPad = Cmct::Gemm::Align(curK, static_cast<uint64_t>(QBMM_DATA_BLOCK));
+        dataCopyParams.blockCount = curAlignN / B_C0_SIZE;
+        dataCopyParams.blockLen = curKNZ * B_C0_SIZE;
+        dataCopyParams.srcStride =
+            (Cmct::Gemm::CeilAlign(kProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) - curKNZ) * B_C0_SIZE;
+        dataCopyParams.dstStride = l1KPad - curKNZ;
+        gmOffset = kOffset * B_C0_SIZE;
+    }
+    AscendC::DataCopyPad(bL1U8, bGlobalU8[gmOffset], dataCopyParams, padParams);
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS

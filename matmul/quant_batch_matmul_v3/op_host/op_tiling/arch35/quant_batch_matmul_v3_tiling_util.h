@@ -119,7 +119,7 @@ inline bool IsMxBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 
 inline bool IsPerblockBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
-    return inputParams.isPerBlock && inputParams.bFormat == ge::FORMAT_ND;
+    return inputParams.isPerBlock && (inputParams.bFormat == ge::FORMAT_ND || inputParams.bFormat == ge::FORMAT_FRACTAL_NZ);
 }
 
 inline bool IsFp8OrHif8TTFloatBiasMix(const QuantBatchMatmulInfo& inputParams)
