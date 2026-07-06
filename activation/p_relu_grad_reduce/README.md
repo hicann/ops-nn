@@ -102,4 +102,3 @@ $$
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_prelu_backward](../p_relu_grad_update/examples/test_aclnn_prelu_backward.cpp) | 通过[aclnnPReluBackward](../p_relu_grad_update/docs/aclnnPreluBackward.md)接口方式调用PReluGradReduce算子。 |
-| 图模式 | - | 通过[算子IR]()构图方式调用PReluGradReduce算子。 |
