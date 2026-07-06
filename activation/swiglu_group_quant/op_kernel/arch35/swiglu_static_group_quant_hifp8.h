@@ -38,6 +38,7 @@ public:
 
 protected:
     __aicore__ inline void ProcessTokensWithScale(int64_t tokenStart, int64_t tokenEnd, float invScale);
+    __aicore__ inline void WaitMte3ToV();
 
     GlobalTensor<float> scaleGm_;
 };
@@ -92,11 +93,21 @@ __aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::ProcessTokensWithSc
         if (this->outputOrigin_) {
             this->CopyOutOrigin(xFloatLocalTensor, tokenIdx, curTileTokens);
             PipeBarrier<PIPE_MTE3>();
+            WaitMte3ToV();
         }
         this->QuantizeOut(xFloatLocalTensor, tokenIdx, curTileTokens, invScale);
         this->xQueue_.template FreeTensor<float>(xFloatLocalTensor);
         tokenIdx += curTileTokens;
     }
+}
+
+template <typename T>
+__aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::WaitMte3ToV()
+{
+    event_t event = static_cast<event_t>(this->pipe_->template AllocEventID<HardEvent::MTE3_V>());
+    SetFlag<HardEvent::MTE3_V>(event);
+    WaitFlag<HardEvent::MTE3_V>(event);
+    this->pipe_->template ReleaseEventID<AscendC::HardEvent::MTE3_V>(event);
 }
 
 } // namespace SwigluGroupQuantStaticHifp8Ops
