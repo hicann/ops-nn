@@ -85,6 +85,7 @@ protected:
     bool SetBlockDimsAndSingleCore(AscendC::tiling::TCubeTiling &mt);
     bool CalcUsedL1AndUBSize(int32_t aL1Size, int32_t bL1Size, bool &fallback);
     bool CheckShapeInBoundary(const gert::Shape &shape, uint32_t shapeIdx) const;
+    bool CheckInputInBoundary() const;
     ge::graphStatus InitTilingData(matmul_tiling::MatmulApiTilingBase &mm, bool fallback = false);
     void Int4LowerAxisAlign(uint64_t &baseM, uint64_t &baseN) const;
     uint64_t CalcL1SizeForBiasAndScale();
