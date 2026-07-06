@@ -84,7 +84,7 @@ aclnnStatus aclnnBucketize(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>输入张量，待确定区间索引的数据。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与boundaries的数据类型需满足互推导关系。</li></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与boundaries的数据类型需满足互推导关系。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnBucketize(
       <td>boundaries（aclTensor*）</td>
       <td>输入</td>
       <td>边界数组，必须是一维张量且单调递增。</td>
-      <td><ul><li>不支持空Tensor。</li><li>必须为一维张量。</li><li>必须单调递增且不重复。</li></td>
+      <td><ul><li>不支持空Tensor。</li><li>必须为一维张量。</li><li>必须单调递增且不重复。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8</td>
       <td>ND</td>
       <td>1</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnBucketize(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量，每个元素为对应的区间索引。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape必须与self相同。</li><li>数据类型由outInt32决定。</li></td>
+      <td><ul><li>支持空Tensor。</li><li>shape必须与self相同。</li><li>数据类型由outInt32决定。</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>与self一致</td>

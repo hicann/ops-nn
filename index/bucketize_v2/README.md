@@ -80,14 +80,14 @@
       <tr>
         <td>right</td>
         <td>可选属性</td>
-        <td><ul><li>用于指定区间是否包含右边界。</li><li>默认值为false。</ul></td>
+        <td><ul><li>用于指定区间是否包含右边界。</li><li>默认值为false。</li></ul></td>
         <td>BOOL</td>
         <td>ND</td>
       </tr>
       <tr>
         <td>out_int32</td>
         <td>可选属性</td>
-        <td><ul><li>用于指定输出的数据类型，true表示输出y的dtype为int32，false表示输出y的dtype为int64。</li><li>默认值为false。</ul></td>
+        <td><ul><li>用于指定输出的数据类型，true表示输出y的dtype为int32，false表示输出y的dtype为int64。</li><li>默认值为false。</li></ul></td>
         <td>BOOL</td>
         <td>ND</td>
       </tr>
