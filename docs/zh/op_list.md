@@ -3381,6 +3381,26 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_adagrad_dad/README.md">apply_adagrad_dad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现Adagrad Dual Averaging优化器的核心更新操作，用于深度学习模型训练中的参数更新。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adagrad_v2d/README.md">apply_adagrad_v2d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现Adagrad V2优化器单步参数更新功能。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/lamb_apply_optimizer_assign/README.md">lamb_apply_optimizer_assign</a></td>
     <td>✓</td>
     <td>✓</td>
