@@ -42,18 +42,22 @@ protected:
 static int64_t DtypeIdx(ge::DataType dt)
 {
     switch (dt) {
-        case ge::DT_FLOAT16: return 0;
-        case ge::DT_FLOAT:   return 1;
-        case ge::DT_INT32:   return 2;
-        case ge::DT_BF16:    return 3;
-        default:             return 0;
+        case ge::DT_FLOAT16:
+            return 0;
+        case ge::DT_FLOAT:
+            return 1;
+        case ge::DT_INT32:
+            return 2;
+        case ge::DT_BF16:
+            return 3;
+        default:
+            return 0;
     }
 }
 
 // Build a tiling context for ForeachBinaryOp and run the tiling function.
 // tensorShapes: per-tensor element shape, applied identically to x1[i], x2[i], y[i].
-static void RunTilingCase(int64_t opCode, ge::DataType dtype,
-                          const std::vector<std::vector<int64_t>>& tensorShapes,
+static void RunTilingCase(int64_t opCode, ge::DataType dtype, const std::vector<std::vector<int64_t>>& tensorShapes,
                           ge::graphStatus expectStatus, int64_t expectTilingKey)
 {
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
@@ -88,19 +92,20 @@ static void RunTilingCase(int64_t opCode, ge::DataType dtype,
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     const size_t K = tensorShapes.size();
@@ -118,10 +123,13 @@ static void RunTilingCase(int64_t opCode, ge::DataType dtype,
         }
     }
     std::vector<gert::StorageShape*> inputShapes;
-    for (size_t i = 0; i < K; ++i) inputShapes.push_back(&x1Shapes[i]);
-    for (size_t i = 0; i < K; ++i) inputShapes.push_back(&x2Shapes[i]);
+    for (size_t i = 0; i < K; ++i)
+        inputShapes.push_back(&x1Shapes[i]);
+    for (size_t i = 0; i < K; ++i)
+        inputShapes.push_back(&x2Shapes[i]);
     std::vector<gert::StorageShape*> outputShapes;
-    for (size_t i = 0; i < K; ++i) outputShapes.push_back(&yShapes[i]);
+    for (size_t i = 0; i < K; ++i)
+        outputShapes.push_back(&yShapes[i]);
 
     auto param = gert::TilingData::CreateCap(8192);
     ASSERT_NE(param, nullptr);
@@ -130,8 +138,7 @@ static void RunTilingCase(int64_t opCode, ge::DataType dtype,
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 1)
-                      .IrInstanceNum({static_cast<uint32_t>(K), static_cast<uint32_t>(K)},
-                                     {static_cast<uint32_t>(K)})
+                      .IrInstanceNum({static_cast<uint32_t>(K), static_cast<uint32_t>(K)}, {static_cast<uint32_t>(K)})
                       .InputShapes(inputShapes)
                       .OutputShapes(outputShapes)
                       .CompileInfo(&compile_info)
@@ -175,10 +182,11 @@ TEST_F(ForeachBinaryOpTilingArch35, multi_tensor_assign_cores)
 {
     constexpr int32_t kTensors = 16;
     constexpr int64_t kPerTensor = 64;
-    constexpr int64_t kTotal = kTensors * kPerTensor;   // 1024
+    constexpr int64_t kTotal = kTensors * kPerTensor; // 1024
 
     ForeachBinaryOpTilingDataHost td{};
-    for (int32_t t = 0; t < kTensors; ++t) td.tensorDataCountList[t] = kPerTensor;
+    for (int32_t t = 0; t < kTensors; ++t)
+        td.tensorDataCountList[t] = kPerTensor;
 
     // 2 cores x 512 elements: each core spans 8 tensors and crosses tensor boundaries.
     EXPECT_EQ(optiling::AssignCoresToTensors(&td, kTensors, kTotal, 2, 512), 2);
@@ -196,7 +204,8 @@ TEST_F(ForeachBinaryOpTilingArch35, multi_tensor_assign_cores)
     // More cores than the data needs: the trailing cores start past the end and break out, so the
     // returned used-core count is clamped to what actually holds elements.
     ForeachBinaryOpTilingDataHost td2{};
-    for (int32_t t = 0; t < kTensors; ++t) td2.tensorDataCountList[t] = kPerTensor;
+    for (int32_t t = 0; t < kTensors; ++t)
+        td2.tensorDataCountList[t] = kPerTensor;
     EXPECT_EQ(optiling::AssignCoresToTensors(&td2, kTensors, kTotal, 5, 512), 2);
 }
 

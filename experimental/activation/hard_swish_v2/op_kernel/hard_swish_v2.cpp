@@ -30,6 +30,6 @@ __global__ __aicore__ void hard_swish_v2(GM_ADDR x, GM_ADDR z, GM_ADDR workspace
     REGISTER_TILING_DEFAULT(HardSwishV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSwishV2TilingData, tilingData, tiling);
     NsHardSwishV2::HardSwishV2<DTYPE_X> op; // 算子kernel实例获取
-    op.Init(x, z, &tilingData);      // 算子kernel实例初始化
-    op.Process();                       // 算子kernel实例执行
+    op.Init(x, z, &tilingData);             // 算子kernel实例初始化
+    op.Process();                           // 算子kernel实例执行
 }

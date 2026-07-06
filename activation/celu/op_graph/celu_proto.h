@@ -21,25 +21,25 @@
 
 namespace ge {
 /**
-* @brief Continuously Differentiable Exponential Linear Units activation function.
-*
-* @par Inputs:
-* x: An ND tensor. Must be one of the following types: float16, float32.
-*
-* @par Attributes:
-* @li alpha1: An optional float32. Negative region scale factor. Defaults to "1.0".
-* @li alpha2: An optional float32. Negative region slope factor. Defaults to "1.0".
-* @li alpha3: An optional float32. Positive region fixed output factor. Defaults to "1.0".
-*
-* @par Outputs:
-* y: A tensor of the same type, shape and format as input x.
-*
-* @par Third-party framework compatibility
-* @li Compatible with ONNX's Celu operator
-*/
+ * @brief Continuously Differentiable Exponential Linear Units activation function.
+ *
+ * @par Inputs:
+ * x: An ND tensor. Must be one of the following types: float16, float32.
+ *
+ * @par Attributes:
+ * @li alpha1: An optional float32. Negative region scale factor. Defaults to "1.0".
+ * @li alpha2: An optional float32. Negative region slope factor. Defaults to "1.0".
+ * @li alpha3: An optional float32. Positive region fixed output factor. Defaults to "1.0".
+ *
+ * @par Outputs:
+ * y: A tensor of the same type, shape and format as input x.
+ *
+ * @par Third-party framework compatibility
+ * @li Compatible with ONNX's Celu operator
+ */
 REG_OP(Celu)
-    .INPUT(x, TensorType({DT_FLOAT,DT_FLOAT16}))
-    .OUTPUT(y, TensorType({DT_FLOAT,DT_FLOAT16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16}))
     .ATTR(alpha1, Float, 1.0)
     .ATTR(alpha2, Float, 1.0)
     .ATTR(alpha3, Float, 1.0)

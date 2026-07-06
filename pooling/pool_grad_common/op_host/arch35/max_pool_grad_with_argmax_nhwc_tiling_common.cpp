@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 /*!
  * \file max_pool_grad_with_argmax_nhwc_tiling_common.cpp
  * \brief
@@ -15,8 +15,7 @@
 #include "max_pool_grad_with_argmax_nhwc_tiling_common.h"
 #include <iostream>
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t FLOAT16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
 static constexpr int64_t INT32_SIZE = 4;
@@ -26,7 +25,8 @@ static constexpr int64_t EXTRA_BUFFER_SIZE = 256;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t CACHE_LINE_SIZE = 128;
 
-void MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData)
+void MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars(gert::TilingContext* context_,
+                                                               MaxPoolGradWithArgmaxHardwareInfo* hardwareData)
 {
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars()");
     baseData.vRegSize = Ops::Base::GetVRegSize(context_);
@@ -46,7 +46,7 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars(gert::TilingConte
     baseData.moveDataNumCacheLineT2 = CACHE_LINE_SIZE / baseData.indexBytes;
 
     baseData.isPad = 0;
-    if (inputData->hPad != 0 || inputData->wPad != 0 ) {
+    if (inputData->hPad != 0 || inputData->wPad != 0) {
         baseData.isPad = 1;
     }
 
@@ -84,8 +84,8 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate()
     int64_t tmpTotalBufferSize = splitData.outputBufferSize + splitData.gradBufferSize + splitData.argmaxBufferSize;
     splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
     PrintSplitData();
-    OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate() %d %d %d %d", 
-        inputData->hKernel, inputData->hStride, inputData->wKernel, inputData->wStride);
+    OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate() %d %d %d %d",
+            inputData->hKernel, inputData->hStride, inputData->wKernel, inputData->wStride);
 }
 
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::IsMeetTargetCoreNum() const
@@ -209,8 +209,8 @@ bool MaxPoolGradWithArgmaxNHWCTilingCommon::TrySplitAlignC()
     splitData.hOutputInner = inputData->hStride;
     splitData.wOutputInner = inputData->wStride;
 
-    int64_t tmpCAligned =
-        inputData->cX < baseData.moveDataNumCacheLineT2 ? inputData->cX : baseData.moveDataNumCacheLineT2;
+    int64_t tmpCAligned = inputData->cX < baseData.moveDataNumCacheLineT2 ? inputData->cX :
+                                                                            baseData.moveDataNumCacheLineT2;
     splitData.cOutputInner = tmpCAligned;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
         int64_t left = 1;
@@ -243,8 +243,8 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::SplitUnalignHWC()
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         splitData.hOutputInner = inputData->hStride;
         splitData.wOutputInner = inputData->wStride;
-        int64_t tmpCAligned =
-            inputData->cX < baseData.moveDataNumCacheLineT2 ? inputData->cX : baseData.moveDataNumCacheLineT2;
+        int64_t tmpCAligned = inputData->cX < baseData.moveDataNumCacheLineT2 ? inputData->cX :
+                                                                                baseData.moveDataNumCacheLineT2;
         splitData.cOutputInner = tmpCAligned;
     } else {
         splitData.wOutputInner = inputData->wX;
@@ -351,14 +351,13 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::DoUBTiling()
 
 void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum =
-        splitData.nOutputOuter * splitData.cOutputOuter * splitData.hOutputOuter * splitData.wOutputOuter;
+    splitData.totalBaseBlockNum = splitData.nOutputOuter * splitData.cOutputOuter * splitData.hOutputOuter *
+                                  splitData.wOutputOuter;
     splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
     splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
-
 
 void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintBaseData() const
 {
@@ -419,8 +418,8 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintSplitData() const
 
 void MaxPoolGradWithArgmaxNHWCTilingCommon::SetTilingData(gert::TilingContext* context, uint64_t key)
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData* tilingData =
-        context->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData* tilingData = context->GetTilingData<
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData>();
     tilingData->hArgmax = inputData->hGrad;
     tilingData->wArgmax = inputData->wGrad;
     tilingData->cOutput = inputData->cX;
@@ -469,24 +468,20 @@ ge::graphStatus MaxPoolGradWithArgmaxNHWCTilingCommon::DoOpTiling(gert::TilingCo
 
 ge::graphStatus MaxPoolGradWithArgmaxNHWCTilingCommon::PostTiling(gert::TilingContext* context_)
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData>();
     context_->SetBlockDim(tilingData->usedCoreNum);
 
     return ge::GRAPH_SUCCESS;
 }
 
-MaxPoolGradWithArgmaxNHWCSplitInfo MaxPoolGradWithArgmaxNHWCTilingCommon::GetSplitData()
+MaxPoolGradWithArgmaxNHWCSplitInfo MaxPoolGradWithArgmaxNHWCTilingCommon::GetSplitData() { return splitData; }
+
+MaxPoolGradWithArgmaxNHWCBaseInfo MaxPoolGradWithArgmaxNHWCTilingCommon::GetBaseData() { return baseData; }
+
+bool MaxPoolGradWithArgmaxNHWCTilingCommon::CheckUBSize()
 {
-    return splitData;
-}
-
-MaxPoolGradWithArgmaxNHWCBaseInfo MaxPoolGradWithArgmaxNHWCTilingCommon::GetBaseData() {
-    return baseData;
-}
-
-bool MaxPoolGradWithArgmaxNHWCTilingCommon::CheckUBSize() {
-    //ub is not enough
+    // ub is not enough
     splitData.nOutputInner = 1;
     splitData.hOutputInner = 1;
     splitData.wOutputInner = 1;
@@ -494,4 +489,4 @@ bool MaxPoolGradWithArgmaxNHWCTilingCommon::CheckUBSize() {
     DoBufferCalculate();
     return splitData.totalBufferSize <= baseData.availableUb;
 }
-}  // namespace optiling
+} // namespace optiling

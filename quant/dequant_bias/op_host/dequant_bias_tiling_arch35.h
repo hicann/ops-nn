@@ -16,7 +16,5 @@
 #include "../op_kernel/arch35/dequant_bias_tiling_data_arch35.h"
 #include "../op_kernel/arch35/dequant_bias_tiling_key_arch35.h"
 
-namespace optiling {
-
-} // namespace optiling
+namespace optiling {} // namespace optiling
 #endif

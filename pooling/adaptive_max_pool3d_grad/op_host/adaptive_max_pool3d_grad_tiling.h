@@ -26,7 +26,7 @@
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
- 
+
 BEGIN_TILING_DATA_DEF(AdaptiveMaxPool3DGradTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, ncDim);
 TILING_DATA_FIELD_DEF(uint64_t, diDim);
@@ -75,15 +75,15 @@ constexpr uint32_t MAX_BLOCK_COUNT = 65535;
  * @return : Tp:
  */
 template <typename Tp>
-inline Tp Gcd(Tp m, Tp n) {
-  while (n != 0)
-  {
-    Tp t = m % n;
-    m = n;
-    n = t;
-  }
-  return m;
-}   
+inline Tp Gcd(Tp m, Tp n)
+{
+    while (n != 0) {
+        Tp t = m % n;
+        m = n;
+        n = t;
+    }
+    return m;
+}
 
 struct Tiling4AdaptiveMaxPool3DGradCompileInfo {
     platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910B;
@@ -146,13 +146,10 @@ struct AdaptiveMaxPool3DGradTilingParams {
     bool isOverLap{false};
 };
 
-class AdaptiveMaxPool3DGradTilingBase : public TilingBaseClass
-{
+class AdaptiveMaxPool3DGradTilingBase : public TilingBaseClass {
 public:
-    explicit AdaptiveMaxPool3DGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptiveMaxPool3DGradTilingBase() override
-    {}
+    explicit AdaptiveMaxPool3DGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptiveMaxPool3DGradTilingBase() override {}
 
     const std::string nodeName = "AdaptiveMaxPool3DGrad";
     AdaptiveMaxPool3DGradTilingData tilingData;
@@ -186,13 +183,11 @@ protected:
     uint64_t GetTilingKey() const override;
 };
 
-class AdaptiveMaxPool3DGradNormalTiling : public AdaptiveMaxPool3DGradTilingBase
-{
+class AdaptiveMaxPool3DGradNormalTiling : public AdaptiveMaxPool3DGradTilingBase {
 public:
     explicit AdaptiveMaxPool3DGradNormalTiling(gert::TilingContext* context) : AdaptiveMaxPool3DGradTilingBase(context)
     {}
-    ~AdaptiveMaxPool3DGradNormalTiling() override
-    {}
+    ~AdaptiveMaxPool3DGradNormalTiling() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -209,13 +204,11 @@ private:
     void PrintNormalTilingData();
 };
 
-class AdaptiveMaxPool3DGradScatterTiling : public AdaptiveMaxPool3DGradTilingBase
-{
+class AdaptiveMaxPool3DGradScatterTiling : public AdaptiveMaxPool3DGradTilingBase {
 public:
     explicit AdaptiveMaxPool3DGradScatterTiling(gert::TilingContext* context) : AdaptiveMaxPool3DGradTilingBase(context)
     {}
-    ~AdaptiveMaxPool3DGradScatterTiling() override
-    {}
+    ~AdaptiveMaxPool3DGradScatterTiling() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

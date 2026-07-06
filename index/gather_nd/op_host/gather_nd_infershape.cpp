@@ -20,46 +20,48 @@ namespace ops {
 const size_t INPUT_IDX_X = 0;
 const size_t INPUT_IDX_INDICES = 1;
 
-static bool CheckGatherNdParamsSize(const gert::InferShapeContext* context, const int64_t last_dim, const int64_t shape_size) {
-  if (last_dim > shape_size) {
-    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "indices",
-        std::to_string(last_dim),
-        "The last axis of indices must be less than or equal to the shape dims of x");
-    return false;
-  }
-  return true;
+static bool CheckGatherNdParamsSize(const gert::InferShapeContext* context, const int64_t last_dim,
+                                    const int64_t shape_size)
+{
+    if (last_dim > shape_size) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "indices", std::to_string(last_dim),
+            "The last axis of indices must be less than or equal to the shape dims of x");
+        return false;
+    }
+    return true;
 }
 
-static ge::graphStatus InferShape4GatherNd(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "infershape is begin");
-  auto x_shape = context->GetInputShape(INPUT_IDX_X);
-  OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
-  int64_t x_real_dim_cnt = x_shape->GetDimNum();
-  auto indies_shape = context->GetInputShape(INPUT_IDX_INDICES);
-  OP_CHECK_NULL_WITH_CONTEXT(context, indies_shape);
-  int64_t rank_indices = indies_shape->GetDimNum();
-  auto out_shape = context->GetOutputShape(INPUT_IDX_X);
-  OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-  out_shape->SetDimNum(0);
-  if (rank_indices < 1) {
-    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices",
-        std::to_string(rank_indices) + "D",
-        "The shape dim of indices must be greater than 0");
-    return GRAPH_FAILED;
-  }
-  int64_t indices_last_element = indies_shape->GetDim(rank_indices - 1);
-  if (!CheckGatherNdParamsSize(context, indices_last_element, x_real_dim_cnt)) {
-      return ge::GRAPH_FAILED;
-  }
-  for (int64_t i = 0; i < rank_indices - 1; ++i) {
-    out_shape->AppendDim(indies_shape->GetDim(i));
-  }
-  for (int64_t i = indices_last_element; i < x_real_dim_cnt; ++i) {
-    out_shape->AppendDim(x_shape->GetDim(i));
-  }
-  OP_LOGD(context->GetNodeName(), "out_shape is %s", Ops::Base::ToString(*out_shape).c_str());
-  return GRAPH_SUCCESS;
+static ge::graphStatus InferShape4GatherNd(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "infershape is begin");
+    auto x_shape = context->GetInputShape(INPUT_IDX_X);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
+    int64_t x_real_dim_cnt = x_shape->GetDimNum();
+    auto indies_shape = context->GetInputShape(INPUT_IDX_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indies_shape);
+    int64_t rank_indices = indies_shape->GetDimNum();
+    auto out_shape = context->GetOutputShape(INPUT_IDX_X);
+    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    out_shape->SetDimNum(0);
+    if (rank_indices < 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(rank_indices) + "D",
+                                                 "The shape dim of indices must be greater than 0");
+        return GRAPH_FAILED;
+    }
+    int64_t indices_last_element = indies_shape->GetDim(rank_indices - 1);
+    if (!CheckGatherNdParamsSize(context, indices_last_element, x_real_dim_cnt)) {
+        return ge::GRAPH_FAILED;
+    }
+    for (int64_t i = 0; i < rank_indices - 1; ++i) {
+        out_shape->AppendDim(indies_shape->GetDim(i));
+    }
+    for (int64_t i = indices_last_element; i < x_real_dim_cnt; ++i) {
+        out_shape->AppendDim(x_shape->GetDim(i));
+    }
+    OP_LOGD(context->GetNodeName(), "out_shape is %s", Ops::Base::ToString(*out_shape).c_str());
+    return GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(GatherNd).InferShape(InferShape4GatherNd);
-}  // namespace ops
+} // namespace ops

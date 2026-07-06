@@ -51,8 +51,8 @@ __aicore__ inline void SetWaitFlag()
     WaitFlag<event>(eventId);
 }
 
-__simd_vf__ __aicore__ void ComputeInplaceReduceSumB64(
-    __ubuf__ int64_t* inAddr, uint32_t vlForElem, uint32_t elemNum, uint16_t vfLoopNum)
+__simd_vf__ __aicore__ void ComputeInplaceReduceSumB64(__ubuf__ int64_t* inAddr, uint32_t vlForElem, uint32_t elemNum,
+                                                       uint16_t vfLoopNum)
 {
     using namespace AscendC::MicroAPI;
 
@@ -111,8 +111,7 @@ public:
         pipe_->InitBuffer(threadInsertCountsBuf_, bufSize);
     }
 
-    __aicore__ void Process()
-    {}
+    __aicore__ void Process() {}
 
 protected:
     uint32_t blockIdx_{0};

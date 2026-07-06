@@ -16,7 +16,7 @@
 #define CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H
 #include <cstdint>
 
-namespace AscendC{
+namespace AscendC {
 struct TConv3DDwTiling {
     uint32_t batch = 0;
     uint32_t cin = 0;
@@ -86,13 +86,13 @@ struct TConv3DDwBasicBlockTiling {
     uint32_t singleCoreM = 0;
     uint32_t singleCoreN = 0;
     uint64_t singleCoreK = 0;
-    uint32_t streamKType = 0;      // 0: NO_STREAMK_CALC, 1: STREAMK_BATCHDOUT, 2: STREAMK_HWOUT
-    uint32_t coreStreamK = 0;      // Number of K-dimension splits applied per basic block
+    uint32_t streamKType = 0; // 0: NO_STREAMK_CALC, 1: STREAMK_BATCHDOUT, 2: STREAMK_HWOUT
+    uint32_t coreStreamK = 0; // Number of K-dimension splits applied per basic block
 };
 struct Conv3DBackpropFilterV2TilingData {
     Conv3DBackpropFilterV2Params params;
     TConv3DDwTiling dwTiling;
     TConv3DDwBasicBlockTiling basicBlockTiling;
 };
-}  // namespace conv_bp_v2_kernel
-#endif  // CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H
+} // namespace AscendC
+#endif // CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H

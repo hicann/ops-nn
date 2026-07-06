@@ -30,14 +30,8 @@ using namespace std;
 
 class dynamic_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dynamic_mx_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_mx_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dynamic_mx_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dynamic_mx_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
@@ -59,8 +53,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantTailAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
+    DynamicMxQuantTailAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
 
     tilingDatafromBin->tilingKey = 33;
     tilingDatafromBin->ubSize = 2048;
@@ -83,7 +76,8 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
     ICPU_SET_TILING_KEY(33);
 
     auto dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_0, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
+        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_0, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(
+            x, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(dynamic_mx_quant_kernel, blockDim, x, y, mxScale, workSpace, tiling);
 
@@ -114,8 +108,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_one_fp8_e4m3fn)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantTailAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
+    DynamicMxQuantTailAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
 
     tilingDatafromBin->tilingKey = 65;
     tilingDatafromBin->ubSize = 2048;
@@ -138,7 +131,8 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_one_fp8_e4m3fn)
     ICPU_SET_TILING_KEY(65);
 
     auto dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_1, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
+        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_1, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(
+            x, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(dynamic_mx_quant_kernel, blockDim, x, y, mxScale, workSpace, tiling);
 
@@ -169,8 +163,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_two)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantTailAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
+    DynamicMxQuantTailAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
 
     tilingDatafromBin->tilingKey = 97;
     tilingDatafromBin->ubSize = 2048;
@@ -193,7 +186,8 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_two)
     ICPU_SET_TILING_KEY(97);
 
     auto dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
+        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE, TPL_NOT_CARE_ROUND_MODE,
+                           TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(dynamic_mx_quant_kernel, blockDim, x, y, mxScale, workSpace, tiling);
 

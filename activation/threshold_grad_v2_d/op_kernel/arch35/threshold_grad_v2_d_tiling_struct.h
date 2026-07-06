@@ -19,9 +19,9 @@
 #include <cstdint>
 
 // === 算子特定常量 ===
-constexpr int64_t kMaxInputSlots  = 2;   // gradOutput, self
-constexpr int64_t kMaxOutputSlots = 1;   // out
-constexpr int64_t kPhysNodes      = 3;   // self/grad/out 三槽 (fp16/bf16 比较升 fp32 仅在寄存器内, 无额外 UB 中转)
+constexpr int64_t kMaxInputSlots = 2;  // gradOutput, self
+constexpr int64_t kMaxOutputSlots = 1; // out
+constexpr int64_t kPhysNodes = 3; // self/grad/out 三槽 (fp16/bf16 比较升 fp32 仅在寄存器内, 无额外 UB 中转)
 
 struct SplitResult {
     int64_t axis;
@@ -37,19 +37,19 @@ struct MultiCoreResult {
     int64_t cores_tail;
 };
 
-template<int64_t kRank>
+template <int64_t kRank>
 struct ThresholdGradV2DTilingData {
-    SplitResult     split;
+    SplitResult split;
     MultiCoreResult multicore;
-    int64_t         rank;            // 实际 rank (1~8)
-    int64_t         per_buf_bytes;   // (UB/P)&~31; Kernel 用此初始化 TBuf
-    int64_t         per_buf_elems;   // per_buf_bytes / 4（统一按 FP32 计算）
-    int64_t         max_bro_shape[kRank];
-    int64_t         num_inputs;
-    int64_t         num_outputs;
-    int64_t         input_shapes [kMaxInputSlots][kRank];
-    int64_t         input_strides[kMaxInputSlots][kRank];
-    int64_t         output_shapes[kMaxOutputSlots][kRank];
-    int64_t         output_strides[kMaxOutputSlots][kRank];
-    float           threshold;       // 属性标量, 默认 1.0
+    int64_t rank;          // 实际 rank (1~8)
+    int64_t per_buf_bytes; // (UB/P)&~31; Kernel 用此初始化 TBuf
+    int64_t per_buf_elems; // per_buf_bytes / 4（统一按 FP32 计算）
+    int64_t max_bro_shape[kRank];
+    int64_t num_inputs;
+    int64_t num_outputs;
+    int64_t input_shapes[kMaxInputSlots][kRank];
+    int64_t input_strides[kMaxInputSlots][kRank];
+    int64_t output_shapes[kMaxOutputSlots][kRank];
+    int64_t output_strides[kMaxOutputSlots][kRank];
+    float threshold; // 属性标量, 默认 1.0
 };

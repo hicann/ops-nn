@@ -36,7 +36,7 @@ __global__ __aicore__ void lp_loss(GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM
     using PromoteType = __reduceType::GetPromoteType<DTYPE_PREDICT>::T;
     if constexpr (Reduction == 0) {
         ElementwiseSch<0UL, LpLoss::LpLossOp<DTYPE_PREDICT>::OpDag> sch(&(tilingData.baseTiling),
-                                                                        &pipe);  // 获取Schedule
+                                                                        &pipe); // 获取Schedule
         sch.Init(predict, label, y);
         sch.Process();
     } else if constexpr (Reduction == 1) {

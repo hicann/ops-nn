@@ -38,10 +38,13 @@ namespace ge {
 * @li blocksize: An optional int. Block size for quantization scaling factors.Defaults to 32.
 * When scale_alg is 2, blocksize must be 32.
 * @li scale_alg: An optional int.The algorithm for the scale in quantization.Default to 0.
-* Support MxFP8/MxFP4(OCP Microscaling Formats (Mx) Specification , count 0) or MxFP8(nvidia-cuBLAS , count 1) or MxFP4(Dynamic Dtype Range , count 2).
-* @li dst_type_max: An optional Float.Max_dtype takes the maximum value of the quant_data_type, or the provided value.Defaults to 0.
-* Only support in FP4_E2M1 mode, with a valid range of 6.0 to 12.0. 
-* @li max_low_bound: An optional Float, indicates the maximum value limit for scale calculation. Defaults to 0. Only support when scale_alg=1. Must be non-negative.
+* Support MxFP8/MxFP4(OCP Microscaling Formats (Mx) Specification , count 0) or MxFP8(nvidia-cuBLAS , count 1) or
+MxFP4(Dynamic Dtype Range , count 2).
+* @li dst_type_max: An optional Float.Max_dtype takes the maximum value of the quant_data_type, or the provided
+value.Defaults to 0.
+* Only support in FP4_E2M1 mode, with a valid range of 6.0 to 12.0.
+* @li max_low_bound: An optional Float, indicates the maximum value limit for scale calculation. Defaults to 0. Only
+support when scale_alg=1. Must be non-negative.
 
 * @par Outputs:
 * @li y: Quantized output tensor. It has the same shape and rank as input x.
@@ -70,7 +73,8 @@ namespace ge {
 */
 REG_OP(DynamicMxQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
-    .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT6_E3M2, DT_FLOAT6_E2M3, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+    .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT6_E3M2, DT_FLOAT6_E2M3, DT_FLOAT8_E4M3FN,
+                           DT_FLOAT8_E5M2}))
     .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0}))
     .ATTR(axis, Int, -1)
     .ATTR(round_mode, String, "rint")

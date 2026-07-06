@@ -24,13 +24,13 @@ using namespace AscendC;
 using namespace AscendC::MicroAPI;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
-using RmsNorm::GetOverflowMode;
-using RmsNorm::SetOverflowMode;
 using RmsNorm::castTraitFp322Fp8;
 using RmsNorm::castTraitFp322Hifp8;
 using RmsNorm::CopyInX;
 using RmsNorm::CopyOutX;
 using RmsNorm::CopyOutY;
+using RmsNorm::GetOverflowMode;
+using RmsNorm::SetOverflowMode;
 using RmsNorm::YCopyOutImpl;
 
 constexpr uint64_t ALIGN_512_FACTOR = 512;
@@ -78,14 +78,13 @@ constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 __aicore__ inline void SetQuantGlobalBuffers(
     GlobalTensor<T_X>& x1Gm, GlobalTensor<T_X>& x2Gm, GlobalTensor<T_X>& gammaGm, GlobalTensor<T_X>& betaGm,
-    GlobalTensor<T_SCALES>& scales1Gm, GlobalTensor<T_SCALES>& scales2Gm,
-    GlobalTensor<T_ZEROPOINTS>& zeroPoints1Gm, GlobalTensor<T_ZEROPOINTS>& zeroPoints2Gm,
-    GlobalTensor<T_Y>& y1Gm, GlobalTensor<T_Y>& y2Gm, GlobalTensor<T_X>& xGm, GlobalTensor<T_X>& resOutGm,
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+    GlobalTensor<T_SCALES>& scales1Gm, GlobalTensor<T_SCALES>& scales2Gm, GlobalTensor<T_ZEROPOINTS>& zeroPoints1Gm,
+    GlobalTensor<T_ZEROPOINTS>& zeroPoints2Gm, GlobalTensor<T_Y>& y1Gm, GlobalTensor<T_Y>& y2Gm, GlobalTensor<T_X>& xGm,
+    GlobalTensor<T_X>& resOutGm, GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
     GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
     uint64_t blockIdx, uint64_t mPerCore, uint64_t mCore, uint64_t numN)
 {
-    constexpr bool HAS_BETA = (((TILING_KEY % 1000)/100) == 1);
+    constexpr bool HAS_BETA = (((TILING_KEY % 1000) / 100) == 1);
     constexpr bool HAS_RESOUT = ((TILING_KEY / 1000) == 2);
     constexpr uint64_t INPUT_KEY = ((TILING_KEY % 100) / 10);
     constexpr bool HAS_ZEROPOINTS1 = ((INPUT_KEY >> 2) % 2 == 1);
@@ -118,7 +117,8 @@ __aicore__ inline void SetQuantGlobalBuffers(
     }
 }
 
-template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY, bool ALLOC_XOUT_FP32 = true>
+template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY,
+          bool ALLOC_XOUT_FP32 = true>
 __aicore__ inline void InitQuantPipeBuffers(
     TPipe* pipe, TQue<QuePosition::VECIN, 1>& inQueueX1, TQue<QuePosition::VECIN, 1>& inQueueX2,
     TQue<QuePosition::VECOUT, 1>& outQueueX, TQue<QuePosition::VECIN, 1>& inQueueGamma,
@@ -126,11 +126,10 @@ __aicore__ inline void InitQuantPipeBuffers(
     TQue<QuePosition::VECIN, 1>& inQueueScales2, TQue<QuePosition::VECIN, 1>& inQueueZeroPoints1,
     TQue<QuePosition::VECIN, 1>& inQueueZeroPoints2, TQue<QuePosition::VECOUT, 1>& outQueueY1,
     TQue<QuePosition::VECOUT, 1>& outQueueY2, TQue<QuePosition::VECOUT, 1>& outQueueResOut,
-    TBuf<TPosition::VECCALC>& rstdBuf, TBuf<TPosition::VECCALC>& xOutFp32Buf,
-    TBuf<TPosition::VECCALC>& reduceBuf, uint64_t baseNReduceAlign, uint64_t baseNDtypeAlign,
-    uint64_t baseNB8Align, uint64_t baseN, uint64_t reduceBufAlign)
+    TBuf<TPosition::VECCALC>& rstdBuf, TBuf<TPosition::VECCALC>& xOutFp32Buf, TBuf<TPosition::VECCALC>& reduceBuf,
+    uint64_t baseNReduceAlign, uint64_t baseNDtypeAlign, uint64_t baseNB8Align, uint64_t baseN, uint64_t reduceBufAlign)
 {
-    constexpr bool HAS_BETA = (((TILING_KEY % 1000)/100) == 1);
+    constexpr bool HAS_BETA = (((TILING_KEY % 1000) / 100) == 1);
     constexpr bool HAS_RESOUT = ((TILING_KEY / 1000) == 2);
     constexpr uint64_t INPUT_KEY = ((TILING_KEY % 100) / 10);
     constexpr bool HAS_ZEROPOINTS1 = ((INPUT_KEY >> 2) % 2 == 1);
@@ -176,15 +175,14 @@ __aicore__ inline void InitQuantPipeBuffers(
  *        Use muti cast(float32->int32->float32->half->int8) to round
  *        Use float32 VL_LENGTH
  */
-template <
-    typename T_X, typename T_Y, typename T_SCALES = float, typename T_ZEROPOINTS = float, bool HAS_SCALES = true,
-    bool HAS_ZEROPOINTS = false, bool HAS_BETA = false, bool DIV_MODE = true, bool HAS_RESOUT = false,
-    bool COMPUTE_FP32_SUM_ON_THE_FLY = false>
-__aicore__ inline void ComputeY(
-    LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal,
-    LocalTensor<T_X>& betaLocal, LocalTensor<T_SCALES>& scalesLocal, LocalTensor<T_ZEROPOINTS>& zeroPointsLocal, uint32_t rstdOffset, uint32_t count,
-    __local_mem__ T_X* resOutAddr = nullptr, __local_mem__ float* xOutFp32Addr = nullptr,
-    __local_mem__ T_X* x2Addr = nullptr)
+template <typename T_X, typename T_Y, typename T_SCALES = float, typename T_ZEROPOINTS = float, bool HAS_SCALES = true,
+          bool HAS_ZEROPOINTS = false, bool HAS_BETA = false, bool DIV_MODE = true, bool HAS_RESOUT = false,
+          bool COMPUTE_FP32_SUM_ON_THE_FLY = false>
+__aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
+                                LocalTensor<T_X>& gammaLocal, LocalTensor<T_X>& betaLocal,
+                                LocalTensor<T_SCALES>& scalesLocal, LocalTensor<T_ZEROPOINTS>& zeroPointsLocal,
+                                uint32_t rstdOffset, uint32_t count, __local_mem__ T_X* resOutAddr = nullptr,
+                                __local_mem__ float* xOutFp32Addr = nullptr, __local_mem__ T_X* x2Addr = nullptr)
 {
     uint32_t sreg = (uint32_t)count;
     uint16_t repeatTimes = CeilDivision(count, V_LENGTH);
@@ -252,11 +250,9 @@ __aicore__ inline void ComputeY(
                     Cast<float, int32_t, castTraitInt322Fp32>(xReg, yRegInt32, maskReg);
                     Cast<half, float, castTraitFp322Fp16>(yRegFp16, xReg, maskReg);
                     Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegFp16, maskReg);
-                } else if constexpr (
-                    IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
+                } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                     Cast<T_Y, float, castTraitFp322Fp8>(yReg, xReg, maskReg);
-                } else if constexpr (
-                    IsSameType<T_Y, hifloat8_t>::value) {
+                } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                     Cast<T_Y, float, castTraitFp322Hifp8>(yReg, xReg, maskReg);
                 }
 
@@ -309,8 +305,8 @@ __aicore__ inline void ComputeY(
                     if constexpr (IsSameType<T_ZEROPOINTS, int32_t>::value) {
                         Cast<float, T_ZEROPOINTS, castTraitInt322Fp32>(zeroPointsRegFp32, zeroPointsReg, maskReg);
                     } else {
-                        Cast<float, T_ZEROPOINTS, NormCommon::castTraitB162B32>(
-                            zeroPointsRegFp32, zeroPointsReg, maskReg);
+                        Cast<float, T_ZEROPOINTS, NormCommon::castTraitB162B32>(zeroPointsRegFp32, zeroPointsReg,
+                                                                                maskReg);
                     }
                 }
                 if constexpr (COMPUTE_FP32_SUM_ON_THE_FLY) {
@@ -349,11 +345,9 @@ __aicore__ inline void ComputeY(
                     Cast<float, int32_t, castTraitInt322Fp32>(xRegFp32, yRegInt32, maskReg);
                     Cast<half, float, castTraitFp322Fp16>(yRegFp16, xRegFp32, maskReg);
                     Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegFp16, maskReg);
-                } else if constexpr (
-                    IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
+                } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                     Cast<T_Y, float, castTraitFp322Fp8>(yReg, xRegFp32, maskReg);
-                } else if constexpr (
-                    IsSameType<T_Y, hifloat8_t>::value) {
+                } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                     Cast<T_Y, float, castTraitFp322Hifp8>(yReg, xRegFp32, maskReg);
                 }
                 DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + i * V_LENGTH, yReg, maskReg);

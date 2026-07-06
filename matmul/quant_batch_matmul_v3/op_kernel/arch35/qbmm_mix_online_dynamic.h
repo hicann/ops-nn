@@ -19,11 +19,11 @@
 #include "qbmm_asw_block.h"
 #include "../quant_batch_matmul_v3_base.h"
 
-#define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                                 \
+#define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                             \
     template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType,            \
               CubeFormat aFormat, CubeFormat bFormat, CubeFormat cFormat, bool aTrans, bool bTrans, class l0cDtype, \
-              class blockType, const MatmulConfig &mmCfg>
-#define LOCAL_TEMPLATE_FUNC_MIX_PARAMS                                                                              \
+              class blockType, const MatmulConfig& mmCfg>
+#define LOCAL_TEMPLATE_FUNC_MIX_PARAMS                                                                          \
     aType, bType, scaleType, biasType, ptScaleType, cType, aFormat, bFormat, cFormat, aTrans, bTrans, l0cDtype, \
         blockType, mmCfg
 
@@ -59,13 +59,13 @@ constexpr AscendC::MicroAPI::CastTrait ctHalf2Fp32One = {
 
 template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType, CubeFormat aFormat,
           CubeFormat bFormat, CubeFormat cFormat, bool aTrans, bool bTrans, class l0cDtype,
-          class blockType = QuantBmmAswBlock, const MatmulConfig &mmCfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG>
+          class blockType = QuantBmmAswBlock, const MatmulConfig& mmCfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG>
 class QuantBmmPertokenRegbaseKernel {
 public:
     __aicore__ inline QuantBmmPertokenRegbaseKernel();
     __aicore__ inline ~QuantBmmPertokenRegbaseKernel();
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR ptScale,
-                                GM_ADDR cGM, GM_ADDR workSpace, const void *tilingData, TPipe *pipe);
+                                GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData, TPipe* pipe);
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias, GM_ADDR ptScale,
                                             GM_ADDR cGM, GM_ADDR workSpace);
     __aicore__ inline void Process();
@@ -76,7 +76,7 @@ public:
     using biasT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, biasType>;
     using cT = AscendC::MatmulType<TPosition::VECIN, CubeFormat::ND_ALIGN, l0cDtype>;
     AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
-                       AscendC::QBmmCustomMatmulPolicy>
+                        AscendC::QBmmCustomMatmulPolicy>
         mm;
 
 protected:
@@ -85,16 +85,16 @@ protected:
     __aicore__ inline void InitBiasEpilogueMode();
     __aicore__ inline void MMCompute();
     __aicore__ inline void DequantCompute();
-    __aicore__ inline void VFDoDequantWithX1Pertoken(__ubuf__ cType *dequantOutInUbAddr,
-                                                     __ubuf__ l0cDtype *l0cOutUbAddr, uint64_t offsetPtScale,
+    __aicore__ inline void VFDoDequantWithX1Pertoken(__ubuf__ cType* dequantOutInUbAddr,
+                                                     __ubuf__ l0cDtype* l0cOutUbAddr, uint64_t offsetPtScale,
                                                      uint16_t mSize);
-    __aicore__ inline void VFDoDequantWithX1Pertensor(__ubuf__ cType *dequantOutInUbAddr,
-                                                      __ubuf__ l0cDtype *l0cOutUbAddr, uint16_t mSize);
-    __aicore__ inline void VFDoDequantWithoutPertokenScale(__ubuf__ cType *dequantOutInUbAddr,
-                                                           __ubuf__ l0cDtype *l0cOutUbAddr, uint16_t mSize);
+    __aicore__ inline void VFDoDequantWithX1Pertensor(__ubuf__ cType* dequantOutInUbAddr,
+                                                      __ubuf__ l0cDtype* l0cOutUbAddr, uint16_t mSize);
+    __aicore__ inline void VFDoDequantWithoutPertokenScale(__ubuf__ cType* dequantOutInUbAddr,
+                                                           __ubuf__ l0cDtype* l0cOutUbAddr, uint16_t mSize);
     template <bool isPertensor, BasicQuantMode x1QuantMode, bool isBiasEpilogue, class BiasDtype>
-    __aicore__ inline void VFDoDequant(__ubuf__ cType *dst, __ubuf__ l0cDtype *l0cOut, __ubuf__ scaleType *scale,
-                                       __ubuf__ ptScaleType *perTokenScale, __ubuf__ BiasDtype *bias, uint16_t mSize,
+    __aicore__ inline void VFDoDequant(__ubuf__ cType* dst, __ubuf__ l0cDtype* l0cOut, __ubuf__ scaleType* scale,
+                                       __ubuf__ ptScaleType* perTokenScale, __ubuf__ BiasDtype* bias, uint16_t mSize,
                                        uint16_t nSize);
     __aicore__ inline void NotifyCube() { AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE, PIPE_V>(AIV_SYNC_AIC_FLAG); }
     __aicore__ inline void WaitForVector()
@@ -109,18 +109,18 @@ protected:
     }
     __aicore__ inline void WaitForCube() { AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE, PIPE_V>(AIC_SYNC_AIV_FLAG); }
     __aicore__ inline void CopyDataFromGm2Ub();
-    __aicore__ inline void CopyX1ScaleFromGm2Ub(LocalTensor<ptScaleType> &dst, uint64_t blockLen, uint64_t offset);
-    __aicore__ inline void CopyX2ScaleFromGm2Ub(LocalTensor<scaleType> &dst);
+    __aicore__ inline void CopyX1ScaleFromGm2Ub(LocalTensor<ptScaleType>& dst, uint64_t blockLen, uint64_t offset);
+    __aicore__ inline void CopyX2ScaleFromGm2Ub(LocalTensor<scaleType>& dst);
     template <class BiasDtype>
-    __aicore__ inline void CopyBiasFromGm2Ub(LocalTensor<BiasDtype> &dst);
-    __aicore__ inline void CopyDequantResFromUb2Gm(uint64_t blockCount, uint64_t offset, LocalTensor<cType> &src);
+    __aicore__ inline void CopyBiasFromGm2Ub(LocalTensor<BiasDtype>& dst);
+    __aicore__ inline void CopyDequantResFromUb2Gm(uint64_t blockCount, uint64_t offset, LocalTensor<cType>& src);
     __aicore__ inline void UbSetFlag();
 
 protected:
     uint32_t blockIdx_;
     uint32_t subBlockIdx_;
     blockType block_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     GlobalTensor<aType> aGlobal_;
     GlobalTensor<bType> bGlobal_;
     GlobalTensor<cType> cGlobal_;
@@ -139,7 +139,7 @@ protected:
     float scaleScalar_;
     float pertokenScaleScalar_;
 
-    const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData_;
+    const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData_;
     uint32_t biasDtype_;
     uint32_t dequantOutInUBPingPongID_ = 0;
     bool isBiasEpilogue_ = false;
@@ -177,26 +177,23 @@ __aicore__ inline QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>:
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::InitBiasEpilogueMode()
 {
-    constexpr bool isFp8OrHif8Input = IsSameType<aType, hifloat8_t>::value ||
-                                      IsSameType<aType, fp8_e4m3fn_t>::value ||
+    constexpr bool isFp8OrHif8Input = IsSameType<aType, hifloat8_t>::value || IsSameType<aType, fp8_e4m3fn_t>::value ||
                                       IsSameType<aType, fp8_e5m2_t>::value;
     constexpr bool isFloatScale = IsSameType<scaleType, float>::value && IsSameType<ptScaleType, float>::value;
     bool hasBias = static_cast<bool>(tilingData_->matmulTiling.isBias);
     // FP8/HIF8 float-bias epilogue keeps dequant in UB for TT/KC(m=1) and per-token modes.
-    bool isFp8OrHif8FloatBiasEpilogue =
-        hasBias && isFp8OrHif8Input && isFloatScale && biasDtype_ == DT_FLOAT &&
-        (static_cast<bool>(tilingData_->params.isPertoken) ||
-         static_cast<bool>(tilingData_->params.isDoubleScale));
-    isBiasEpilogue_ = hasBias &&
-                      (isFp8OrHif8FloatBiasEpilogue ||
-                       (IsSameType<aType, int8_t>::value &&
-                        (biasDtype_ == DT_BF16 || biasDtype_ == DT_FLOAT16 || biasDtype_ == DT_FLOAT)));
+    bool isFp8OrHif8FloatBiasEpilogue = hasBias && isFp8OrHif8Input && isFloatScale && biasDtype_ == DT_FLOAT &&
+                                        (static_cast<bool>(tilingData_->params.isPertoken) ||
+                                         static_cast<bool>(tilingData_->params.isDoubleScale));
+    isBiasEpilogue_ = hasBias && (isFp8OrHif8FloatBiasEpilogue ||
+                                  (IsSameType<aType, int8_t>::value &&
+                                   (biasDtype_ == DT_BF16 || biasDtype_ == DT_FLOAT16 || biasDtype_ == DT_FLOAT)));
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::Init(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR ptScale, GM_ADDR cGM,
-    GM_ADDR workSpace, const void *tilingData, TPipe *pipe)
+    GM_ADDR workSpace, const void* tilingData, TPipe* pipe)
 {
     blockIdx_ = AscendC::GetBlockIdx();
     if ASCEND_IS_AIV {
@@ -204,12 +201,12 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
         subBlockIdx_ = AscendC::GetSubBlockIdx();
     }
     pipe_ = pipe;
-    tilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    tilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
 
     biasDtype_ = tilingData_->params.biasDtype;
     InitBiasEpilogueMode();
     UpdateGlobalAddr(aGM, bGM, scale, bias, ptScale, cGM, workSpace);
-    if ASCEND_IS_AIC{
+    if ASCEND_IS_AIC {
         mm.Init(&tilingData_->matmulTiling, pipe);
     }
     uint32_t mForSingleVec = DequantBmm::CeilDiv(tilingData_->matmulTiling.baseM, CV_RATIO);
@@ -223,8 +220,10 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
             ubOffset += tilingData_->matmulTiling.baseN * sizeof(scaleType);
         }
         if (static_cast<bool>(tilingData_->params.isPertoken)) {
-            ptScaleUb_ = LocalTensor<ptScaleType>(TPosition::VECIN, ubOffset, DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), 
-                                                                                     static_cast<uint64_t>(DATA_BLOCK)) / sizeof(ptScaleType));
+            ptScaleUb_ = LocalTensor<ptScaleType>(
+                TPosition::VECIN, ubOffset,
+                DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)) /
+                    sizeof(ptScaleType));
             ubOffset += DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK));
         }
         if (isBiasEpilogue_) {
@@ -237,9 +236,14 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
             }
         }
         // fp16/bf16分两次输出，fp32分四次输出
-        dequantOutInUBPing_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN);
-        ubOffset += DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN * sizeof(cType);
-        dequantOutInUBPong_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN);
+        dequantOutInUBPing_ = LocalTensor<cType>(
+            TPosition::VECOUT, ubOffset,
+            DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN);
+        ubOffset += DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN *
+                    sizeof(cType);
+        dequantOutInUBPong_ = LocalTensor<cType>(
+            TPosition::VECOUT, ubOffset,
+            DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * tilingData_->matmulTiling.baseN);
     }
 }
 
@@ -249,40 +253,40 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 {
     block_.template Init<bType, false>(tilingData_, blockIdx_);
     if ASCEND_IS_AIC {
-        aGlobal_.SetGlobalBuffer((__gm__ aType *)aGM);
-        bGlobal_.SetGlobalBuffer((__gm__ bType *)bGM);
+        aGlobal_.SetGlobalBuffer((__gm__ aType*)aGM);
+        bGlobal_.SetGlobalBuffer((__gm__ bType*)bGM);
         // bias在L0C上累加的场景
         if (static_cast<bool>(tilingData_->matmulTiling.isBias) && !isBiasEpilogue_) {
-            biasGlobal_.SetGlobalBuffer((__gm__ biasType *)bias);
+            biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
         }
     }
     if ASCEND_IS_AIV {
         if (static_cast<bool>(tilingData_->params.isPerTensor)) {
             if constexpr (IsSameType<scaleType, bfloat16_t>::value) {
-                bfloat16_t scaleBf16 = *((__gm__ scaleType *)scale);
-                uint16_t uint16Scale = *(reinterpret_cast<uint16_t *>(&scaleBf16));
+                bfloat16_t scaleBf16 = *((__gm__ scaleType*)scale);
+                uint16_t uint16Scale = *(reinterpret_cast<uint16_t*>(&scaleBf16));
                 uint32_t uint32Scale = static_cast<uint32_t>(uint16Scale << BMM_BLOCK_NUM);
-                scaleScalar_ = *(reinterpret_cast<float *>(&uint32Scale));
+                scaleScalar_ = *(reinterpret_cast<float*>(&uint32Scale));
             } else {
-                scaleScalar_ = *((__gm__ float *)scale);
+                scaleScalar_ = *((__gm__ float*)scale);
             }
         } else {
-            scaleGlobal_.SetGlobalBuffer((__gm__ scaleType *)scale);
+            scaleGlobal_.SetGlobalBuffer((__gm__ scaleType*)scale);
         }
         if (static_cast<bool>(tilingData_->params.isDoubleScale)) {
-            pertokenScaleScalar_ = *((__gm__ ptScaleType *)ptScale);
+            pertokenScaleScalar_ = *((__gm__ ptScaleType*)ptScale);
         } else if (static_cast<bool>(tilingData_->params.isPertoken)) {
-            pertokenScaleGlobal_.SetGlobalBuffer((__gm__ ptScaleType *)ptScale);
+            pertokenScaleGlobal_.SetGlobalBuffer((__gm__ ptScaleType*)ptScale);
         }
         // bias 在UB上累加的场景
         if (static_cast<bool>(tilingData_->matmulTiling.isBias) && isBiasEpilogue_) {
             if (biasDtype_ == DT_FLOAT) {
-                biasGlobalFloat_.SetGlobalBuffer((__gm__ float *)bias);
+                biasGlobalFloat_.SetGlobalBuffer((__gm__ float*)bias);
             } else {
-                biasGlobalB16_.SetGlobalBuffer((__gm__ bfloat16_t *)bias);
+                biasGlobalB16_.SetGlobalBuffer((__gm__ bfloat16_t*)bias);
             }
         }
-        cGlobal_.SetGlobalBuffer((__gm__ cType *)cGM);
+        cGlobal_.SetGlobalBuffer((__gm__ cType*)cGM);
     }
 }
 
@@ -311,7 +315,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
                 block_.template CalcGMOffset<aTrans, bTrans, scaleType, bFormat>();
                 if ASCEND_IS_AIC {
                     mm.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
-                        tilingData_->matmulTiling.singleCoreK);
+                                      tilingData_->matmulTiling.singleCoreK);
                     if (block_.offset_.batchCOffset * block_.params_.round + j > 0) {
                         WaitForVector();
                     }
@@ -391,7 +395,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::DequantCompute()
 {
-    auto halfSingleM = DequantBmm::CeilDiv(block_.params_.singleCoreM, static_cast<uint64_t>(2));  // 分配给2个AIV计算
+    auto halfSingleM = DequantBmm::CeilDiv(block_.params_.singleCoreM, static_cast<uint64_t>(2)); // 分配给2个AIV计算
     auto singleMInVec = subBlockIdx_ == 1 ? block_.params_.singleCoreM - halfSingleM : halfSingleM;
     if (singleMInVec == 0) {
         return;
@@ -403,17 +407,18 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
     auto mSizeForOnce = DequantBmm::CeilDiv(singleMInVec, static_cast<uint64_t>(splitNumOfOut));
     for (uint16_t i = 0; i < splitNumOfOut; i++) {
         // do dequant in vector
-        uint64_t offsetL0c =
-            i * mSizeForOnce *
-            DequantBmm::Align(block_.params_.singleCoreN, static_cast<uint64_t>(DATA_BLOCK / sizeof(l0cDtype)));
+        uint64_t offsetL0c = i * mSizeForOnce *
+                             DequantBmm::Align(block_.params_.singleCoreN,
+                                               static_cast<uint64_t>(DATA_BLOCK / sizeof(l0cDtype)));
         if (i * mSizeForOnce >= singleMInVec) {
             break;
         }
         auto mSize = singleMInVec - i * mSizeForOnce >= mSizeForOnce ? mSizeForOnce : singleMInVec - i * mSizeForOnce;
-        LocalTensor<cType>& dequantOutInUB = (dequantOutInUBPingPongID_ == 0) ? dequantOutInUBPing_ : dequantOutInUBPong_;
+        LocalTensor<cType>& dequantOutInUB = (dequantOutInUBPingPongID_ == 0) ? dequantOutInUBPing_ :
+                                                                                dequantOutInUBPong_;
         AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(dequantOutInUBPingPongID_);
-        __ubuf__ cType *dequantOutInUbAddr = (__ubuf__ cType *)dequantOutInUB.GetPhyAddr();
-        __ubuf__ l0cDtype *l0cOutUbAddr = (__ubuf__ l0cDtype *)l0cOutUb_.GetPhyAddr();
+        __ubuf__ cType* dequantOutInUbAddr = (__ubuf__ cType*)dequantOutInUB.GetPhyAddr();
+        __ubuf__ l0cDtype* l0cOutUbAddr = (__ubuf__ l0cDtype*)l0cOutUb_.GetPhyAddr();
         l0cOutUbAddr = l0cOutUbAddr + offsetL0c;
 
         if (static_cast<bool>(tilingData_->params.isDoubleScale)) {
@@ -437,7 +442,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::CopyDataFromGm2Ub()
 {
-    auto halfSingleM = DequantBmm::CeilDiv(block_.params_.singleCoreM, static_cast<uint64_t>(2));  // 分配给2个AIV计算
+    auto halfSingleM = DequantBmm::CeilDiv(block_.params_.singleCoreM, static_cast<uint64_t>(2)); // 分配给2个AIV计算
     auto singleMInVec = subBlockIdx_ == 1 ? block_.params_.singleCoreM - halfSingleM : halfSingleM;
     // scale: GM -> UB
     if (!static_cast<bool>(tilingData_->params.isPerTensor)) {
@@ -473,7 +478,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::CopyX1ScaleFromGm2Ub(
-    LocalTensor<ptScaleType> &dst, uint64_t blockLen, uint64_t offset)
+    LocalTensor<ptScaleType>& dst, uint64_t blockLen, uint64_t offset)
 {
     DataCopyParams ptScale2UbParams{1, 0, 0, 0};
     DataCopyPadParams padParams;
@@ -483,7 +488,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::CopyX2ScaleFromGm2Ub(
-    LocalTensor<scaleType> &dst)
+    LocalTensor<scaleType>& dst)
 {
     DataCopyParams scale2UbParams{1, 0, 0, 0};
     DataCopyPadParams padParams;
@@ -494,7 +499,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 template <class BiasDtype>
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::CopyBiasFromGm2Ub(
-    LocalTensor<BiasDtype> &dst)
+    LocalTensor<BiasDtype>& dst)
 {
     DataCopyParams bias2UbParams{1, 0, 0, 0};
     DataCopyPadParams padParams;
@@ -509,7 +514,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::CopyDequantResFromUb2Gm(
-    uint64_t blockCount, uint64_t offset, LocalTensor<cType> &src)
+    uint64_t blockCount, uint64_t offset, LocalTensor<cType>& src)
 {
     DataCopyExtParams ub2GmParams{1, 0, 0, 0, 0};
     ub2GmParams.blockLen = block_.params_.singleCoreN * sizeof(cType);
@@ -540,9 +545,9 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::VFDoDequantWithX1Pertoken(
-    __ubuf__ cType *dequantOutInUbAddr, __ubuf__ l0cDtype *l0cOutUbAddr, uint64_t offsetPtScale, uint16_t mSize)
+    __ubuf__ cType* dequantOutInUbAddr, __ubuf__ l0cDtype* l0cOutUbAddr, uint64_t offsetPtScale, uint16_t mSize)
 {
-    __ubuf__ ptScaleType *ptScaleUbAddr = (__ubuf__ ptScaleType *)ptScaleUb_.GetPhyAddr();
+    __ubuf__ ptScaleType* ptScaleUbAddr = (__ubuf__ ptScaleType*)ptScaleUb_.GetPhyAddr();
     ptScaleUbAddr = ptScaleUbAddr + offsetPtScale;
     if (!isBiasEpilogue_) {
         if (static_cast<bool>(tilingData_->params.isPerTensor)) {
@@ -550,7 +555,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
                 dequantOutInUbAddr, l0cOutUbAddr, nullptr, ptScaleUbAddr, nullptr, mSize, block_.params_.singleCoreN);
         } else {
             VFDoDequant<false, BasicQuantMode::PERTOKEN_MODE, false, float>(
-                dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), ptScaleUbAddr, nullptr,
+                dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), ptScaleUbAddr, nullptr,
                 mSize, block_.params_.singleCoreN);
         }
     } else {
@@ -558,31 +563,31 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
             if (static_cast<bool>(tilingData_->params.isPerTensor)) {
                 VFDoDequant<true, BasicQuantMode::PERTOKEN_MODE, true, float>(
                     dequantOutInUbAddr, l0cOutUbAddr, nullptr, ptScaleUbAddr,
-                    (__ubuf__ float *)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    (__ubuf__ float*)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             } else {
                 VFDoDequant<false, BasicQuantMode::PERTOKEN_MODE, true, float>(
-                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), ptScaleUbAddr,
-                    (__ubuf__ float *)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), ptScaleUbAddr,
+                    (__ubuf__ float*)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             }
         } else if (biasDtype_ == DT_BF16) {
             if (static_cast<bool>(tilingData_->params.isPerTensor)) {
                 VFDoDequant<true, BasicQuantMode::PERTOKEN_MODE, true, bfloat16_t>(
                     dequantOutInUbAddr, l0cOutUbAddr, nullptr, ptScaleUbAddr,
-                    (__ubuf__ bfloat16_t *)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    (__ubuf__ bfloat16_t*)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             } else {
                 VFDoDequant<false, BasicQuantMode::PERTOKEN_MODE, true, bfloat16_t>(
-                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), ptScaleUbAddr,
-                    (__ubuf__ bfloat16_t *)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), ptScaleUbAddr,
+                    (__ubuf__ bfloat16_t*)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             }
         } else if (biasDtype_ == DT_FLOAT16) {
             if (static_cast<bool>(tilingData_->params.isPerTensor)) {
                 VFDoDequant<true, BasicQuantMode::PERTOKEN_MODE, true, half>(
-                    dequantOutInUbAddr, l0cOutUbAddr, nullptr, ptScaleUbAddr, (__ubuf__ half *)biasUbB16_.GetPhyAddr(),
+                    dequantOutInUbAddr, l0cOutUbAddr, nullptr, ptScaleUbAddr, (__ubuf__ half*)biasUbB16_.GetPhyAddr(),
                     mSize, block_.params_.singleCoreN);
             } else {
                 VFDoDequant<false, BasicQuantMode::PERTOKEN_MODE, true, half>(
-                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), ptScaleUbAddr,
-                    (__ubuf__ half *)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), ptScaleUbAddr,
+                    (__ubuf__ half*)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             }
         }
     }
@@ -590,53 +595,53 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::VFDoDequantWithX1Pertensor(
-    __ubuf__ cType *dequantOutInUbAddr, __ubuf__ l0cDtype *l0cOutUbAddr, uint16_t mSize)
+    __ubuf__ cType* dequantOutInUbAddr, __ubuf__ l0cDtype* l0cOutUbAddr, uint16_t mSize)
 {
     if (!isBiasEpilogue_) {
         VFDoDequant<false, BasicQuantMode::PERTENSOR_MODE, false, float>(
-            dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr, nullptr, mSize,
+            dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), nullptr, nullptr, mSize,
             block_.params_.singleCoreN);
     } else if (biasDtype_ == DT_FLOAT) {
         if (static_cast<bool>(tilingData_->params.isPerTensor)) {
             VFDoDequant<true, BasicQuantMode::PERTENSOR_MODE, true, float>(
-                dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ float *)biasUbFloat_.GetPhyAddr(),
-                mSize, block_.params_.singleCoreN);
+                dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ float*)biasUbFloat_.GetPhyAddr(), mSize,
+                block_.params_.singleCoreN);
         } else {
             VFDoDequant<false, BasicQuantMode::PERTENSOR_MODE, true, float>(
-                dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr,
-                (__ubuf__ float *)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), nullptr,
+                (__ubuf__ float*)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
         }
     }
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::VFDoDequantWithoutPertokenScale(
-    __ubuf__ cType *dequantOutInUbAddr, __ubuf__ l0cDtype *l0cOutUbAddr, uint16_t mSize)
+    __ubuf__ cType* dequantOutInUbAddr, __ubuf__ l0cDtype* l0cOutUbAddr, uint16_t mSize)
 {
     if (!isBiasEpilogue_) {
         VFDoDequant<false, BasicQuantMode::DEFAULT, false, float>(dequantOutInUbAddr, l0cOutUbAddr,
-                                                                  (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr,
+                                                                  (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), nullptr,
                                                                   nullptr, mSize, block_.params_.singleCoreN);
     } else {
         if (biasDtype_ == DT_FLOAT) {
             if (static_cast<bool>(tilingData_->params.isPerTensor)) {
                 VFDoDequant<true, BasicQuantMode::DEFAULT, true, float>(
-                    dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ float *)biasUbFloat_.GetPhyAddr(),
+                    dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ float*)biasUbFloat_.GetPhyAddr(),
                     mSize, block_.params_.singleCoreN);
             } else {
                 VFDoDequant<false, BasicQuantMode::DEFAULT, true, float>(
-                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr,
-                    (__ubuf__ float *)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), nullptr,
+                    (__ubuf__ float*)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             }
         } else if (biasDtype_ == DT_BF16) {
             if (static_cast<bool>(tilingData_->params.isPerTensor)) {
                 VFDoDequant<true, BasicQuantMode::DEFAULT, true, bfloat16_t>(
-                    dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ bfloat16_t *)biasUbB16_.GetPhyAddr(),
+                    dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ bfloat16_t*)biasUbB16_.GetPhyAddr(),
                     mSize, block_.params_.singleCoreN);
             } else {
                 VFDoDequant<false, BasicQuantMode::DEFAULT, true, bfloat16_t>(
-                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr,
-                    (__ubuf__ bfloat16_t *)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+                    dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), nullptr,
+                    (__ubuf__ bfloat16_t*)biasUbB16_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
             }
         }
     }
@@ -645,8 +650,8 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 template <bool isPertensor, BasicQuantMode x1QuantMode, bool isBiasEpilogue, class BiasDtype>
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::VFDoDequant(
-    __ubuf__ cType *dst, __ubuf__ l0cDtype *l0cOut, __ubuf__ scaleType *scale, __ubuf__ ptScaleType *perTokenScale,
-    __ubuf__ BiasDtype *bias, uint16_t mSize, uint16_t nSize)
+    __ubuf__ cType* dst, __ubuf__ l0cDtype* l0cOut, __ubuf__ scaleType* scale, __ubuf__ ptScaleType* perTokenScale,
+    __ubuf__ BiasDtype* bias, uint16_t mSize, uint16_t nSize)
 {
     uint32_t eleNumPerVf = platform::GetVRegSize() / sizeof(l0cDtype);
     uint32_t nSrcUbAligned = DequantBmm::Align(nSize, static_cast<uint16_t>(DATA_BLOCK / sizeof(l0cDtype)));
@@ -654,8 +659,8 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
     uint16_t nLoopCnt = (nSize + eleNumPerVf - 1) / eleNumPerVf;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::MaskReg maskN4B16 =
-            AscendC::MicroAPI::CreateMask<bfloat16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            maskN4B16 = AscendC::MicroAPI::CreateMask<bfloat16_t, AscendC::MicroAPI::MaskPattern::ALL>();
         for (uint16_t mIdx = 0; mIdx < mSize; mIdx++) {
             uint32_t elementNum = nSize;
             for (uint16_t vfBlockIdx = 0; vfBlockIdx < nLoopCnt; vfBlockIdx++) {
@@ -681,7 +686,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
                     AscendC::MicroAPI::Muls(mulScaleOutReg, castSrcOutReg, scaleScalar_, maskN);
                 } else {
                     AscendC::MicroAPI::DataCopy(scaleReg, scale + vfBlockIdx * eleNumPerVf);
-                    if constexpr (!IsSameType<scaleType, float>::value) {  // cast scale from bf16 to float
+                    if constexpr (!IsSameType<scaleType, float>::value) { // cast scale from bf16 to float
                         AscendC::MicroAPI::Cast<float, scaleType, ctHalf2Fp32Zero>(castScaleReg, scaleReg, maskN);
                         AscendC::MicroAPI::Cast<float, scaleType, ctHalf2Fp32One>(castScaleOneReg, scaleReg, maskN4B16);
                         AscendC::MicroAPI::Interleave(castScaleReg, castScaleOneReg, castScaleReg, castScaleOneReg);
@@ -735,4 +740,4 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
     }
 }
 
-}  // namespace QuantBatchMatmulV3
+} // namespace QuantBatchMatmulV3

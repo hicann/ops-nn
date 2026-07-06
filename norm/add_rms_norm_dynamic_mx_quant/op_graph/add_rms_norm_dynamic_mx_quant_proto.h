@@ -37,7 +37,8 @@ namespace ge {
 * The shape must be the same as x1.
 * @li gamma: A tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format: ND.
 * The shape must match the normalized dimension of x1.
-* @li beta: An optional tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format: ND.
+* @li beta: An optional tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format:
+ND.
 * The shape must match the normalized dimension of x1.
 
 * @par Attributes:

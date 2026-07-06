@@ -27,33 +27,29 @@ struct AntiquantFixTilePrivate {
 };
 
 namespace detail {
-template <
-    class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class TensorOffset,
-    class Shape, typename Enable = void>
+template <class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class TensorOffset,
+          class Shape, typename Enable = void>
 struct AntiquantImpl {
     static_assert(AscendC::Std::always_false_v<ArchTag>, "can not find the specialization.");
-    __aicore__ inline static void Run(
-        const TensorOut& tensorOut, const TensorIn& tensorIn, const TensorScale& tensorScale,
-        const TensorOffset& tensorOffset, const Shape& shape) = delete;
+    __aicore__ inline static void Run(const TensorOut& tensorOut, const TensorIn& tensorIn,
+                                      const TensorScale& tensorScale, const TensorOffset& tensorOffset,
+                                      const Shape& shape) = delete;
 };
 } // namespace detail
 
-template <
-    class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class TensorOffset,
-    class Shape>
-__aicore__ inline void Antiquant(
-    const TensorOut& tensorOut, const TensorIn& tensorIn, const TensorScale& tensorScale,
-    const TensorOffset& tensorOffset, const Shape& shape)
+template <class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class TensorOffset,
+          class Shape>
+__aicore__ inline void Antiquant(const TensorOut& tensorOut, const TensorIn& tensorIn, const TensorScale& tensorScale,
+                                 const TensorOffset& tensorOffset, const Shape& shape)
 {
-    detail::AntiquantImpl<
-        AscendC::Std::remove_cvref_t<ArchTag>, AscendC::Std::remove_cvref_t<DispatchPolicy>,
-        AscendC::Std::remove_cvref_t<TensorOut>, AscendC::Std::remove_cvref_t<TensorIn>,
-        AscendC::Std::remove_cvref_t<TensorScale>, AscendC::Std::remove_cvref_t<TensorOffset>,
-        AscendC::Std::remove_cvref_t<Shape>>::Run(tensorOut, tensorIn, tensorScale, tensorOffset, shape);
+    detail::AntiquantImpl<AscendC::Std::remove_cvref_t<ArchTag>, AscendC::Std::remove_cvref_t<DispatchPolicy>,
+                          AscendC::Std::remove_cvref_t<TensorOut>, AscendC::Std::remove_cvref_t<TensorIn>,
+                          AscendC::Std::remove_cvref_t<TensorScale>, AscendC::Std::remove_cvref_t<TensorOffset>,
+                          AscendC::Std::remove_cvref_t<Shape>>::Run(tensorOut, tensorIn, tensorScale, tensorOffset,
+                                                                    shape);
 }
 } // namespace Cmct::Prologue::Tile
 
 #include "antiquant_nd_nk.h"
 #include "antiquant_nd_kn.h"
 #include "antiquant_zn.h"
-

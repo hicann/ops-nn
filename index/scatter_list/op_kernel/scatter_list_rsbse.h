@@ -24,13 +24,11 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListRSBSE : public ScatterListBase<T1>
-{
+class ScatterListRSBSE : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListRSBSE(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -68,9 +66,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRSBSE<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListRSBSE<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                      GM_ADDR varOut, GM_ADDR workspace,
+                                                      const ScatterListTilingData* tilingData)
 {
     blockIndex = GetBlockIdx();
     this->ParseTilingData(tilingData, m_tilingData);

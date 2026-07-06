@@ -100,5 +100,5 @@ TILING_DATA_FIELD_DEF(int8_t, roundMode);
 
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(TConv2DTilingOp, TConv2DTiling);
-}
+} // namespace optiling
 #endif // ASCENDC_TILING_CONV2D_V2_API_TILINGDATA_H

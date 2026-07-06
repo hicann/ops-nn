@@ -37,9 +37,8 @@ constexpr int IDX_0 = 0;
 constexpr int IDX_1 = 1;
 constexpr int IDX_2 = 2;
 
-static bool CheckNotNull(
-    const aclTensor* x, const aclTensor* gamma, aclTensor* yOut,
-    aclTensor* mxscaleOut, bool outputRstd, aclTensor* rstdOut)
+static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, aclTensor* yOut, aclTensor* mxscaleOut,
+                         bool outputRstd, aclTensor* rstdOut)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(gamma, return false);
@@ -53,23 +52,23 @@ static bool CheckNotNull(
     return true;
 }
 
-static aclnnStatus ComputeRmsNormDynamicMxQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon,
-    int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
-    aclTensor* mxscaleOut, aclTensor* rstdOut, aclOpExecutor* executor)
+static aclnnStatus ComputeRmsNormDynamicMxQuant(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                                                double epsilon, int64_t scaleAlg, char* roundMode, int64_t dstType,
+                                                bool outputRstd, aclTensor* yOut, aclTensor* mxscaleOut,
+                                                aclTensor* rstdOut, aclOpExecutor* executor)
 {
     // 创建输出Tensor
     aclTensor* y_output = executor->AllocTensor(yOut->GetViewShape(), yOut->GetDataType(), yOut->GetViewFormat());
-    aclTensor* mxscale_output =
-        executor->AllocTensor(mxscaleOut->GetViewShape(), mxscaleOut->GetDataType(), mxscaleOut->GetViewFormat());
-    aclTensor* rstd_output =
-        (outputRstd) ?
-            executor->AllocTensor(rstdOut->GetViewShape(), rstdOut->GetDataType(), rstdOut->GetViewFormat()) :
-            executor->AllocTensor(op::Shape({0}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
+    aclTensor* mxscale_output = executor->AllocTensor(mxscaleOut->GetViewShape(), mxscaleOut->GetDataType(),
+                                                      mxscaleOut->GetViewFormat());
+    aclTensor* rstd_output = (outputRstd) ?
+                                 executor->AllocTensor(rstdOut->GetViewShape(), rstdOut->GetDataType(),
+                                                       rstdOut->GetViewFormat()) :
+                                 executor->AllocTensor(op::Shape({0}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
 
-    auto RmsNormDynamicMxQuantOuts = l0op::RmsNormDynamicMxQuant(
-        x, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd, y_output, mxscale_output,
-        rstd_output, executor);
+    auto RmsNormDynamicMxQuantOuts = l0op::RmsNormDynamicMxQuant(x, gamma, beta, epsilon, scaleAlg, roundMode, dstType,
+                                                                 outputRstd, y_output, mxscale_output, rstd_output,
+                                                                 executor);
 
     auto yComputeOut = std::get<IDX_0>(RmsNormDynamicMxQuantOuts);
     auto mxscaleComputeOut = std::get<IDX_1>(RmsNormDynamicMxQuantOuts);
@@ -95,15 +94,16 @@ static aclnnStatus ComputeRmsNormDynamicMxQuant(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon,
-    int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
-    aclTensor* mxscaleOut, aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma,
+                                                       const aclTensor* beta, double epsilon, int64_t scaleAlg,
+                                                       char* roundMode, int64_t dstType, bool outputRstd,
+                                                       aclTensor* yOut, aclTensor* mxscaleOut, aclTensor* rstdOut,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGD("Enter aclnnRmsNormDynamicMxQuantGetWorkspaceSize.");
-    L2_DFX_PHASE_1(
-        aclnnRmsNormDynamicMxQuant, DFX_IN(x, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd),
-        DFX_OUT(yOut, mxscaleOut, rstdOut));
+    L2_DFX_PHASE_1(aclnnRmsNormDynamicMxQuant,
+                   DFX_IN(x, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd),
+                   DFX_OUT(yOut, mxscaleOut, rstdOut));
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -133,9 +133,8 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
 
     const aclTensor* betaCont = (beta == nullptr) ? nullptr : l0op::Contiguous(beta, uniqueExecutor.get());
 
-    auto ret = ComputeRmsNormDynamicMxQuant(
-        xCont, gammaCont, betaCont, epsilon, scaleAlg, roundMode, dstType, outputRstd, yOut, mxscaleOut,
-        rstdOut, uniqueExecutor.get());
+    auto ret = ComputeRmsNormDynamicMxQuant(xCont, gammaCont, betaCont, epsilon, scaleAlg, roundMode, dstType,
+                                            outputRstd, yOut, mxscaleOut, rstdOut, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 获取计算过程中需要使用的workspace大小
@@ -145,8 +144,8 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnRmsNormDynamicMxQuant(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnRmsNormDynamicMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRmsNormDynamicMxQuant);
     // 固定写法，调用框架能力，完成计算

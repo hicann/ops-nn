@@ -29,8 +29,9 @@ template <typename T>
 class FusedCrossEntropyLossWithMaxSum {
 public:
     __aicore__ inline FusedCrossEntropyLossWithMaxSum() = delete;
-    __aicore__ inline FusedCrossEntropyLossWithMaxSum(
-        GM_ADDR inputTensors[TENSOR_COUNT], const FusedCrossEntropyLossWithMaxSumTilingData& tiling, TPipe& pipe)
+    __aicore__ inline FusedCrossEntropyLossWithMaxSum(GM_ADDR inputTensors[TENSOR_COUNT],
+                                                      const FusedCrossEntropyLossWithMaxSumTilingData& tiling,
+                                                      TPipe& pipe)
     {
         InitParams(inputTensors, tiling, pipe);
     }
@@ -92,8 +93,8 @@ private:
         WaitFlag<HardEvent::V_MTE3>(eventId);
     }
 
-    __aicore__ inline void InitParams(
-        GM_ADDR inputTensors[TENSOR_COUNT], const FusedCrossEntropyLossWithMaxSumTilingData& tiling, TPipe& pipe)
+    __aicore__ inline void InitParams(GM_ADDR inputTensors[TENSOR_COUNT],
+                                      const FusedCrossEntropyLossWithMaxSumTilingData& tiling, TPipe& pipe)
     {
         pipe_ = &pipe;
         auto blockIdx_ = GetBlockIdx();
@@ -144,8 +145,8 @@ private:
     }
 
     template <typename C>
-    __aicore__ inline void GMToUB(
-        GlobalTensor<C>& gm_, LocalTensor<float>& tensor_, int64_t copyOffset_, int64_t length)
+    __aicore__ inline void GMToUB(GlobalTensor<C>& gm_, LocalTensor<float>& tensor_, int64_t copyOffset_,
+                                  int64_t length)
     {
         LocalTensor<C> tmpTensor = tensor_.template ReinterpretCast<C>();
         DataCopyExtParams copyParams = {1, static_cast<uint32_t>(length * sizeof(C)), 0, 0, 0};
@@ -155,8 +156,8 @@ private:
         Cast(tensor_, tmpTensor[elementsNumber], RoundMode::CAST_NONE, length);
     }
 
-    __aicore__ inline void GMToUB(
-        GlobalTensor<float>& gm_, LocalTensor<float>& tensor_, int64_t copyOffset_, int64_t length)
+    __aicore__ inline void GMToUB(GlobalTensor<float>& gm_, LocalTensor<float>& tensor_, int64_t copyOffset_,
+                                  int64_t length)
     {
         DataCopyExtParams copyParams = {1, static_cast<uint32_t>(length * sizeof(float)), 0, 0, 0};
         DataCopyPadExtParams<float> padParams = {true, 0, 0, 0};
@@ -164,8 +165,8 @@ private:
         SyncM2toV();
     }
 
-    __aicore__ inline void UBToGM(
-        GlobalTensor<float>& gm_, LocalTensor<float>& tensor_, int64_t copyOffset_, int32_t reallength)
+    __aicore__ inline void UBToGM(GlobalTensor<float>& gm_, LocalTensor<float>& tensor_, int64_t copyOffset_,
+                                  int32_t reallength)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(reallength * sizeof(float)), 0, 0, 0};
         DataCopyPad(gm_[copyOffset_], tensor_, copyParams);

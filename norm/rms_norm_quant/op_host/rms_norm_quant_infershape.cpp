@@ -26,12 +26,8 @@ namespace ops {
 namespace {
 class NullPtrException : public std::exception {
 public:
-    explicit NullPtrException(const char* message = "Null pointer exception occurred") : msg_(message)
-    {}
-    const char* what() const noexcept override
-    {
-        return msg_;
-    }
+    explicit NullPtrException(const char* message = "Null pointer exception occurred") : msg_(message) {}
+    const char* what() const noexcept override { return msg_; }
 
 private:
     const char* msg_;

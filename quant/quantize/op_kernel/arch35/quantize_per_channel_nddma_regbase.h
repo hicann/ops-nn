@@ -24,13 +24,13 @@ template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, ui
 class QuantizePerChannelNddmaRegbase : public QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode> {
 public:
     __aicore__ inline QuantizePerChannelNddmaRegbase(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const QuantizeTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const QuantizeTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CopyXAndCompute(
-        int64_t dataCount, int64_t offset, LocalTensor<T1>& sLocal, LocalTensor<T2>& oLocal);
+    __aicore__ inline void CopyXAndCompute(int64_t dataCount, int64_t offset, LocalTensor<T1>& sLocal,
+                                           LocalTensor<T2>& oLocal);
     __aicore__ inline void CopyInScale(int64_t sLen, int64_t sInOffset);
     __aicore__ inline void CopyInOffset(int64_t sLen, int64_t sInOffset);
     __aicore__ inline void CopyInX(int64_t xN, int64_t xLen, int64_t xInOffset);
@@ -73,17 +73,15 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
     this->ParseCoreBlocks(tilingData_, blockIdx_, blockN_, blockLen_);
 
     // calc n size to alloc queue
-    pipe_.InitBuffer(
-        inQueueX_, bufferNum_, this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(T), this->BLOCK_SIZE));
-    pipe_.InitBuffer(
-        inQueueScale_, bufferNum_,
-        this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(T1), this->BLOCK_SIZE));
-    pipe_.InitBuffer(
-        inQueueOffset_, bufferNum_,
-        this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(T2), this->BLOCK_SIZE));
+    pipe_.InitBuffer(inQueueX_, bufferNum_,
+                     this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(T), this->BLOCK_SIZE));
+    pipe_.InitBuffer(inQueueScale_, bufferNum_,
+                     this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(T1), this->BLOCK_SIZE));
+    pipe_.InitBuffer(inQueueOffset_, bufferNum_,
+                     this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(T2), this->BLOCK_SIZE));
 
-    pipe_.InitBuffer(
-        outQueueY_, bufferNum_, this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(U), this->BLOCK_SIZE));
+    pipe_.InitBuffer(outQueueY_, bufferNum_,
+                     this->CeilAlign(tilingData_.baseN * tilingData_.baseLen * sizeof(U), this->BLOCK_SIZE));
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
@@ -238,8 +236,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
 
         AscendC::MicroAPI::RegTensor<float> vregTmp1;
         AscendC::MicroAPI::MaskReg mask;
-        AscendC::MicroAPI::MaskReg mask4Int4 =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+        AscendC::MicroAPI::MaskReg
+            mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
 
         mask = AscendC::MicroAPI::CreateMask<float>();
         uint32_t count = dataCount * nRow;
@@ -249,19 +247,19 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
             // ld and cast for x
             if constexpr (IsSameType<T, float>::value) {
                 // fp32
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregFloatX, xLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatX,
+                                                                                           xLocalAddr + i * VL);
             } else if constexpr (IsSameType<T, half>::value) {
                 // fp16
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregX, xLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX,
+                                                                                                xLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     float, half, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
                     vregFloatX, vregX, mask);
             } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                 // bf16
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregX, xLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX,
+                                                                                             xLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     float, T, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                     vregFloatX, vregX, mask);
@@ -270,8 +268,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
             // ld and cast for scale
             if constexpr (IsSameType<T1, float>::value) {
                 // fp32
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregFloatS, scaleLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatS,
+                                                                                           scaleLocalAddr + i * VL);
             } else if constexpr (IsSameType<T1, half>::value) {
                 // fp16
                 AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
@@ -281,8 +279,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                     vregFloatS, vregS, mask);
             } else if constexpr (IsSameType<T1, bfloat16_t>::value) {
                 // bf16
-                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregS, scaleLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregS,
+                                                                                              scaleLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     float, T1, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                     vregFloatS, vregS, mask);
@@ -290,15 +288,15 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
             // ld and cast for offset
             if constexpr (IsSameType<T2, int32_t>::value) {
                 // int32
-                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregO, offsetLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregO,
+                                                                                        offsetLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     float, T2, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_INT32_TO_FP32>(
                     vregFloatO, vregO, mask);
             } else if constexpr (IsSameType<T2, int8_t>::value) {
                 // int8
-                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK4_B8>(
-                    vregO, offsetLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK4_B8>(vregO,
+                                                                                              offsetLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     half, T2, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
                     vregHalfO, vregO, mask);
@@ -307,8 +305,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                     vregFloatO, vregHalfO, mask);
             } else if constexpr (IsSameType<T2, uint8_t>::value) {
                 // uint8
-                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK4_B8>(
-                    vregO, offsetLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK4_B8>(vregO,
+                                                                                              offsetLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     half, T2, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_UINT8_TO_HALF>(
                     vregHalfO, vregO, mask);
@@ -317,22 +315,22 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                     vregFloatO, vregHalfO, mask);
             } else if constexpr (IsSameType<T2, bfloat16_t>::value) {
                 // bf16
-                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregO, offsetLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregO,
+                                                                                              offsetLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     float, T2, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                     vregFloatO, vregO, mask);
             } else if constexpr (IsSameType<T2, half>::value) {
                 // fp16
-                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregO, offsetLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregO,
+                                                                                              offsetLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<
                     float, T2, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
                     vregFloatO, vregO, mask);
             } else if constexpr (IsSameType<T2, float>::value) {
                 // fp32
-                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregFloatO, offsetLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatO,
+                                                                                        offsetLocalAddr + i * VL);
             }
             if constexpr (SqrtMode == TPL_SQRT_MODE) {
                 AscendC::MicroAPI::Mul(vregFloatS, vregFloatS, vregFloatS, mask);
@@ -344,8 +342,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
             } else {
                 AscendC::MicroAPI::Mul(vregTmp1, vregFloatX, vregFloatS, mask);
             }
-            AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                vregFloatY, vregTmp1, vregFloatO, mask);
+            AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregFloatY, vregTmp1, vregFloatO,
+                                                                                     mask);
 
             // cast and sd for y
             if constexpr (IsSameType<U, hifloat8_t>::value) {
@@ -353,22 +351,22 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                 AscendC::MicroAPI::Cast<
                     U, float, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_HIFP8>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
                 // fp8_e5m2
                 AscendC::MicroAPI::Cast<
                     U, float, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_FP8E5M2>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
                 // fp8_e4m3
                 AscendC::MicroAPI::Cast<
                     U, float, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_FP8E4M3>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, int8_t>::value) {
                 // int8
                 AscendC::MicroAPI::Cast<
@@ -380,8 +378,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                 AscendC::MicroAPI::Cast<
                     int8_t, half, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_INT8>(
                     vregY, vregHalfY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, uint8_t>::value) {
                 // uint8
                 AscendC::MicroAPI::Cast<
@@ -393,15 +391,15 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                 AscendC::MicroAPI::Cast<
                     uint8_t, half, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_UINT8>(
                     vregY, vregHalfY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, int32_t>::value) {
                 // int32
                 AscendC::MicroAPI::Cast<
                     U, float, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_INT32>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_NORM>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_NORM>(outLocalAddr + i * VL, vregY,
+                                                                                        mask);
             } else if constexpr (IsSameType<U, int4b_t>::value) {
                 AscendC::MicroAPI::RegTensor<int16_t> vregInt16Y;
                 AscendC::MicroAPI::RegTensor<uint16_t> vregTmp1Y;
@@ -413,8 +411,8 @@ __aicore__ inline void QuantizePerChannelNddmaRegbase<T, T1, T2, U, DivMode, Rou
                     half, int16_t, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_INT16_TO_HALF>(
                     vregHalfY, vregInt16Y, mask);
                 AscendC::MicroAPI::Pack(vregTmp1Y, (AscendC::MicroAPI::RegTensor<uint32_t>&)vregHalfY);
-                AscendC::MicroAPI::Cast<
-                    int4x2_t, half, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_F16_TO_I8>(
+                AscendC::MicroAPI::Cast<int4x2_t, half,
+                                        QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_F16_TO_I8>(
                     (AscendC::MicroAPI::RegTensor<int4x2_t>&)vregTmp2Y, (AscendC::MicroAPI::RegTensor<half>&)vregTmp1Y,
                     mask);
                 AscendC::MicroAPI::DataCopy<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(

@@ -38,18 +38,15 @@ public:
         const BatchMatMulToMulBasicTilingData* tilingData;
     };
 
-    __aicore__ inline BlockSchedulerBatchMatMulToMulBuiltIn(
-        const ProblemShape& shape, int64_t blockIdx, int64_t blockNum, const Params& params)
+    __aicore__ inline BlockSchedulerBatchMatMulToMulBuiltIn(const ProblemShape& shape, int64_t blockIdx,
+                                                            int64_t blockNum, const Params& params)
     {
         b_ = shape.b;
         usedCoreNum_ = params.tilingData->usedCoreNum;
         batchNum_ = params.tilingData->batchNum;
     }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return usedCoreNum_ * MMV3DivCeil(b_, batchNum_ * usedCoreNum_);
-    }
+    __aicore__ inline int64_t GetTileNum() { return usedCoreNum_ * MMV3DivCeil(b_, batchNum_ * usedCoreNum_); }
 
     __aicore__ inline ParamsShape GetParams(const Params& params)
     {
@@ -58,19 +55,17 @@ public:
 
     __aicore__ inline BatchShape GetBtachShape(const Params& params)
     {
-        return {
-            batchNum_, params.tilingData->batchNumLastRound, params.tilingData->batchNumLastRoundTail,
-            params.tilingData->lastCoreNum};
+        return {batchNum_, params.tilingData->batchNumLastRound, params.tilingData->batchNumLastRoundTail,
+                params.tilingData->lastCoreNum};
     }
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInBatchMatmulToMulScheduler, TransA_, TransB_> {
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInBatchMatmulToMulScheduler,
+                              TransA_, TransB_> {
     using SchedulerOp = BlockSchedulerBatchMatMulToMulBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

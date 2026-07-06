@@ -70,8 +70,8 @@ public:
     __aicore__ inline GeluQuantBase(){};
 
     __aicore__ inline void ParseTilingData(const GeluQuantTilingData& tilingData);
-    __aicore__ inline void GeluV2ErfPost(
-        LocalTensor<float>& dst, LocalTensor<float>& src1, LocalTensor<float>& src2, uint32_t count);
+    __aicore__ inline void GeluV2ErfPost(LocalTensor<float>& dst, LocalTensor<float>& src1, LocalTensor<float>& src2,
+                                         uint32_t count);
     template <typename T>
     __aicore__ inline void ComputeGeluTanh(const LocalTensor<T>& src, const LocalTensor<float>& dst, uint32_t calCount);
     template <typename T>
@@ -82,9 +82,8 @@ public:
     __aicore__ inline void SetFloatOverflowModeForRegbase()
     {
 #if (__NPU_ARCH__ == 3510)
-        if constexpr (
-            IsSameType<dstType, hifloat8_t>::value || IsSameType<dstType, fp8_e5m2_t>::value ||
-            IsSameType<dstType, fp8_e4m3fn_t>::value) {
+        if constexpr (IsSameType<dstType, hifloat8_t>::value || IsSameType<dstType, fp8_e5m2_t>::value ||
+                      IsSameType<dstType, fp8_e4m3fn_t>::value) {
             AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(FLOAT_OVERFLOW_MODE_SATURATE);
         }
 #endif
@@ -146,8 +145,8 @@ __aicore__ inline void GeluQuantBase::ParseTilingData(const GeluQuantTilingData&
     roundMode_ = static_cast<AscendC::RoundMode>(tilingData.roundMode);
 }
 
-__aicore__ inline void GeluQuantBase::GeluV2ErfPost(
-    LocalTensor<float>& dst, LocalTensor<float>& src1, LocalTensor<float>& src2, uint32_t count)
+__aicore__ inline void GeluQuantBase::GeluV2ErfPost(LocalTensor<float>& dst, LocalTensor<float>& src1,
+                                                    LocalTensor<float>& src2, uint32_t count)
 {
 #ifdef __CCE_AICORE__
     uint32_t dtypeSize = sizeof(float);
@@ -182,8 +181,8 @@ __aicore__ inline void GeluQuantBase::GeluV2ErfPost(
 }
 
 template <typename T>
-__aicore__ inline void GeluQuantBase::ComputeGeluTanh(
-    const LocalTensor<T>& src, const LocalTensor<float>& dst, uint32_t count)
+__aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<T>& src, const LocalTensor<float>& dst,
+                                                      uint32_t count)
 {
 #ifdef __CCE_AICORE__
     uint32_t dtypeSize = sizeof(float);
@@ -224,8 +223,8 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregInput16, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregInput16,
+                                                                           (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                 MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
                 MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
                 MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
@@ -287,11 +286,11 @@ __aicore__ inline void GeluQuantBase::CastOutLocal(LocalTensor<float>& src, Loca
                 }
             } else if constexpr (IsSameType<dstType, fp8_e4m3fn_t>::value || IsSameType<dstType, fp8_e5m2_t>::value) {
                 AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregY, vregInput, preg0);
-            } else if constexpr (
-                IsSameType<dstType, hifloat8_t>::value && roundMode == AscendC::RoundMode::CAST_HYBRID) {
+            } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
+                                 roundMode == AscendC::RoundMode::CAST_HYBRID) {
                 AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregInput, preg0);
-            } else if constexpr (
-                IsSameType<dstType, hifloat8_t>::value && roundMode == AscendC::RoundMode::CAST_ROUND) {
+            } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
+                                 roundMode == AscendC::RoundMode::CAST_ROUND) {
                 AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregInput, preg0);
             }
             AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY, preg0);

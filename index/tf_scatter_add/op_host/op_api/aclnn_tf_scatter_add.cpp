@@ -48,8 +48,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
     op::DataType::DT_INT32, op::DataType::DT_INT8,    op::DataType::DT_UINT8};
 
-static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT64, op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
+                                                                             op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 
@@ -88,8 +88,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch) ||
-        socVersion == SocVersion::ASCEND910 ||
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch) || socVersion == SocVersion::ASCEND910 ||
         (socVersion >= SocVersion::ASCEND910B && socVersion <= SocVersion::ASCEND910E)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     }
@@ -105,9 +104,8 @@ static bool CheckDtypeValid(aclTensor* varRef, const aclTensor* indices, const a
     OP_CHECK_DTYPE_NOT_SUPPORT(indices, INDEX_DTYPE_SUPPORT_LIST, return false);
     // varRef和updates的数据类型要一致
     if (varRef->GetDataType() != updates->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "updates dtype %s should be in same with varRef dtype %s.",
-            op::ToString(updates->GetDataType()).GetString(), op::ToString(varRef->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "updates dtype %s should be in same with varRef dtype %s.",
+                op::ToString(updates->GetDataType()).GetString(), op::ToString(varRef->GetDataType()).GetString());
         return false;
     }
 
@@ -170,9 +168,8 @@ static bool CheckShapeForScatterNdAdd(aclTensor* varRef, const aclTensor* indice
     }
     // updates.shape = indices.shape[:-1] + var.shape[indices.shape[-1]:]
     if (updatesDimNum != indicesDimNum - 1 + varRefDimNum - rankSize) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "updatesDimNum must have the same number of indicesDimNum - 1 add varDimNum - rankSize.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "updatesDimNum must have the same number of indicesDimNum - 1 add varDimNum - rankSize.");
         return false;
     }
     for (size_t i = 0; i < indicesDimNum - 1; ++i) {
@@ -199,15 +196,14 @@ static aclnnStatus CheckParams(aclTensor* varRef, const aclTensor* indices, cons
     CHECK_RET(CheckDtypeValid(varRef, indices, updates), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查updates的shape是否为目标形状
-    CHECK_RET(
-        CheckShapeForScatterAdd(varRef, indices, updates) || CheckShapeForScatterNdAdd(varRef, indices, updates),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeForScatterAdd(varRef, indices, updates) || CheckShapeForScatterNdAdd(varRef, indices, updates),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* DoScatterAddWithSortedForTfScatterAdd(
-    const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, aclOpExecutor* executor)
+static const aclTensor* DoScatterAddWithSortedForTfScatterAdd(const aclTensor* varRef, const aclTensor* indices,
+                                                              const aclTensor* updates, aclOpExecutor* executor)
 {
     auto indexSize = static_cast<int64_t>(indices->Size());
     const aclTensor* scatterAddRes = nullptr;
@@ -237,9 +233,8 @@ static const aclTensor* DoScatterAddWithSortedForTfScatterAdd(
     return scatterAddRes;
 }
 
-aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
-    aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnTfScatterAddGetWorkspaceSize(aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
+                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnTfScatterAdd, DFX_IN(varRef, indices, updates), DFX_OUT(varRef));
 
@@ -279,17 +274,17 @@ aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
         auto updatesContiguousFloat = l0op::Cast(updatesContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(updatesContiguousFloat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-         const aclTensor* scatterAddResFloat = nullptr;
-        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguousFloat, indicesContiguous, updatesContiguousFloat)) {
-            scatterAddResFloat = DoScatterAddWithSortedForTfScatterAdd(
-                varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, uniqueExecutor.get());
+        const aclTensor* scatterAddResFloat = nullptr;
+        if (!useScatterNd &&
+            IsUseScatterAddWithSorted(varRefContiguousFloat, indicesContiguous, updatesContiguousFloat)) {
+            scatterAddResFloat = DoScatterAddWithSortedForTfScatterAdd(varRefContiguousFloat, indicesContiguous,
+                                                                       updatesContiguousFloat, uniqueExecutor.get());
         } else {
-            scatterAddResFloat =
-                useScatterNd ?
-                    l0op::ScatterNdAdd(
-                        varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, false, uniqueExecutor.get()) :
-                    l0op::ScatterAdd(
-                        varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, false, uniqueExecutor.get());
+            scatterAddResFloat = useScatterNd ?
+                                     l0op::ScatterNdAdd(varRefContiguousFloat, indicesContiguous,
+                                                        updatesContiguousFloat, false, uniqueExecutor.get()) :
+                                     l0op::ScatterAdd(varRefContiguousFloat, indicesContiguous, updatesContiguousFloat,
+                                                      false, uniqueExecutor.get());
         }
         CHECK_RET(scatterAddResFloat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -297,14 +292,13 @@ aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
         CHECK_RET(scatterAddRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
         if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguous, indicesContiguous, updatesContiguous)) {
-            scatterAddRes = DoScatterAddWithSortedForTfScatterAdd(
-                varRefContiguous, indicesContiguous, updatesContiguous, uniqueExecutor.get());
+            scatterAddRes = DoScatterAddWithSortedForTfScatterAdd(varRefContiguous, indicesContiguous,
+                                                                  updatesContiguous, uniqueExecutor.get());
         } else {
-            scatterAddRes =
-                useScatterNd ?
-                    l0op::ScatterNdAdd(
-                        varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get()) :
-                    l0op::ScatterAdd(varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
+            scatterAddRes = useScatterNd ? l0op::ScatterNdAdd(varRefContiguous, indicesContiguous, updatesContiguous,
+                                                              false, uniqueExecutor.get()) :
+                                           l0op::ScatterAdd(varRefContiguous, indicesContiguous, updatesContiguous,
+                                                            false, uniqueExecutor.get());
         }
         CHECK_RET(scatterAddRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }

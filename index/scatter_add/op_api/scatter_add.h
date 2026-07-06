@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ScatterAddWithAxis(const aclTensor *self, int64_t dim, const aclTensor *index,
-                                    const aclTensor *src, aclOpExecutor *executor);
+const aclTensor* ScatterAddWithAxis(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src,
+                                    aclOpExecutor* executor);
 
 }
 

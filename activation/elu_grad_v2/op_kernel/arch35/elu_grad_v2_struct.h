@@ -17,31 +17,25 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-namespace EluGradV2Op
-{
+namespace EluGradV2Op {
 #define EluGradV2_TPL_FP16 1
 #define EluGradV2_TPL_BF16 2
 #define EluGradV2_TPL_FP32 3
 #define EluGradV2_TPL_FP16_N 4
 #define EluGradV2_TPL_BF16_N 5
 #define EluGradV2_TPL_FP32_N 6
- 
+
 #define TPL_SCH_MODE_0 0
 #define TPL_SCH_MODE_1 1
- 
-ASCENDC_TPL_ARGS_DECL(EluGradV2,
-    ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
-    ASCENDC_TPL_DTYPE_DECL(dType, EluGradV2_TPL_FP16, EluGradV2_TPL_BF16, EluGradV2_TPL_FP32, 
-                            EluGradV2_TPL_FP16_N, EluGradV2_TPL_BF16_N, EluGradV2_TPL_FP32_N)
-);
- 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_SEL(dType, EluGradV2_TPL_FP16, EluGradV2_TPL_BF16, EluGradV2_TPL_FP32,
-                                EluGradV2_TPL_FP16_N, EluGradV2_TPL_BF16_N, EluGradV2_TPL_FP32_N)
-    )
-);
-} //namespace EluGradV2Op
+
+ASCENDC_TPL_ARGS_DECL(EluGradV2, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
+                      ASCENDC_TPL_DTYPE_DECL(dType, EluGradV2_TPL_FP16, EluGradV2_TPL_BF16, EluGradV2_TPL_FP32,
+                                             EluGradV2_TPL_FP16_N, EluGradV2_TPL_BF16_N, EluGradV2_TPL_FP32_N));
+
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, EluGradV2_TPL_FP16, EluGradV2_TPL_BF16,
+                                                           EluGradV2_TPL_FP32, EluGradV2_TPL_FP16_N,
+                                                           EluGradV2_TPL_BF16_N, EluGradV2_TPL_FP32_N)));
+} // namespace EluGradV2Op
 
 #endif //  CANN_CUSTOM_OPS_ELU_GRAD_V2_STRUCT_H_

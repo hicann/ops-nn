@@ -30,16 +30,13 @@ using namespace ge;
 
 class SwiGluTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-      std::cout << "SwiGluTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwiGluTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-      std::cout << "SwiGluTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwiGluTiling TearDown" << std::endl; }
 };
 
-TEST_F(SwiGluTiling, swi_glu_tiling_002) {
+TEST_F(SwiGluTiling, swi_glu_tiling_002)
+{
     // dlog_setlevel(OP,0,0);
     gert::StorageShape input_shape = {{8192, 1, 7808}, {8192, 1, 7808}};
     gert::StorageShape out_shape = {{8192, 1, 3904}, {8192, 1, 3904}};
@@ -55,12 +52,13 @@ TEST_F(SwiGluTiling, swi_glu_tiling_002) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    std::cout << "GetPlatFormInfos" << soc_infos.size() << " " << aicore_spec.size() << " " << intrinsics.size() << std::endl;
+    std::cout << "GetPlatFormInfos" << soc_infos.size() << " " << aicore_spec.size() << " " << intrinsics.size()
+              << std::endl;
 
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-      // compile info
+    // compile info
     struct SwiGluCompileInfo {};
     SwiGluCompileInfo compile_info;
 
@@ -71,23 +69,25 @@ TEST_F(SwiGluTiling, swi_glu_tiling_002) {
 
     // tilingParseFunc simulate
     auto kernel_holder = gert::KernelRunContextFaker()
-                      .KernelIONum(2, 1)
-                      .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info)})
-                      .Outputs({&compile_info})
-                      .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
 
     auto holder = gert::TilingContextFaker()
@@ -97,7 +97,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_002) {
                       .InputShapes({&input_shape})
                       .OutputShapes({&out_shape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
@@ -122,8 +122,9 @@ TEST_F(SwiGluTiling, swi_glu_tiling_002) {
     // dlog_setlevel(OP,3,0);
 }
 
-//310p does not support BF16
-TEST_F(SwiGluTiling, swi_glu_tiling_003) {
+// 310p does not support BF16
+TEST_F(SwiGluTiling, swi_glu_tiling_003)
+{
     // dlog_setlevel(OP,0,0);
     gert::StorageShape input_shape = {{8192, 1, 7808}, {8192, 1, 7808}};
     gert::StorageShape out_shape = {{8192, 1, 3904}, {8192, 1, 3904}};
@@ -138,14 +139,14 @@ TEST_F(SwiGluTiling, swi_glu_tiling_003) {
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}}; //SocV
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}, {"NpuArch", "2202"}}; // SocV
     map<string, string> npuarchs = {{"NpuArch", "2002"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-      // compile info
+    // compile info
     struct SwiGluCompileInfo {};
     SwiGluCompileInfo compile_info;
 
@@ -156,24 +157,27 @@ TEST_F(SwiGluTiling, swi_glu_tiling_003) {
 
     // tilingParseFunc simulate
     auto kernel_holder = gert::KernelRunContextFaker()
-                      .KernelIONum(2, 1)
-                      .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info)})
-                      .Outputs({&compile_info})
-                      .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions); // label:"version" res:socversions
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", socversions); // label:"version" res:socversions
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
 
     auto holder = gert::TilingContextFaker()
@@ -183,7 +187,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_003) {
                       .InputShapes({&input_shape})
                       .OutputShapes({&out_shape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
@@ -237,12 +241,12 @@ TEST_F(SwiGluTiling, swi_glu_tiling_100)
     SwiGluCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);

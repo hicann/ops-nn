@@ -30,7 +30,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
 static bool RenormInferShape(const op::Shape& selfShape, op::Shape& outShape, const int64_t dim)
 {
     size_t real_dim_num = selfShape.GetDimNum();
-    if (dim < 0 || static_cast<size_t>(dim) >= real_dim_num ) {
+    if (dim < 0 || static_cast<size_t>(dim) >= real_dim_num) {
         return false;
     }
     outShape.SetDimNum(real_dim_num);
@@ -52,9 +52,8 @@ static bool IsAiCoreSupport(const aclTensor* self)
 }
 
 // AiCore的执行逻辑
-static aclTensor* RenormAiCore(
-    const aclTensor* self, const float normType, const int64_t dim, const float maxNorm, aclTensor* out,
-    aclOpExecutor* executor)
+static aclTensor* RenormAiCore(const aclTensor* self, const float normType, const int64_t dim, const float maxNorm,
+                               aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(RenormAiCore, self, normType, dim, maxNorm, out);
 
@@ -67,8 +66,8 @@ static aclTensor* RenormAiCore(
 }
 
 // Renorm的实现
-const aclTensor* Renorm(
-    const aclTensor* self, const float normType, const int64_t dim, const float maxNorm, aclOpExecutor* executor)
+const aclTensor* Renorm(const aclTensor* self, const float normType, const int64_t dim, const float maxNorm,
+                        aclOpExecutor* executor)
 {
     // 目前Renorm无AiCPU,仅支持AiCore
     if (!IsAiCoreSupport(self)) {
@@ -76,9 +75,8 @@ const aclTensor* Renorm(
     }
     op::Shape outShape;
     if (!RenormInferShape(self->GetViewShape(), outShape, dim)) {
-        OP_LOGE(
-            ACL_ERROR_INVALID_PARAM, "infer shape failed. input shorage shape: [%s], view shape: [%s]",
-            op::ToString(self->GetStorageShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACL_ERROR_INVALID_PARAM, "infer shape failed. input shorage shape: [%s], view shape: [%s]",
+                op::ToString(self->GetStorageShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return nullptr;
     }
     auto out = executor->AllocTensor(outShape, self->GetDataType(), op::Format::FORMAT_ND);

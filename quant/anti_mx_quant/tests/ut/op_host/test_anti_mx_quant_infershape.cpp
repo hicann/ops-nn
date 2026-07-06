@@ -23,15 +23,9 @@
 namespace {
 class AntiMxQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AntiMxQuant InferShape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AntiMxQuant InferShape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AntiMxQuant InferShape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AntiMxQuant InferShape TearDown" << std::endl; }
 };
 
 // x shape [2048, 2360], axis=-1, blockSize=32
@@ -44,7 +38,7 @@ TEST_F(AntiMxQuant, AntiMxQuant_infershape_case_0)
     op.UpdateInputDesc("x", create_desc({2048, 2360}, ge::DT_FLOAT8_E5M2));
     op.UpdateInputDesc("mxscale", create_desc({2048, 37, 2}, ge::DT_FLOAT8_E8M0));
     op.SetAttr("axis", -1);
-    op.SetAttr("dst_type", 1);  // FP16
+    op.SetAttr("dst_type", 1); // FP16
     Runtime2TestParam param{{"axis", "dst_type"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     auto outputY = op.GetOutputDesc(0);
@@ -61,7 +55,7 @@ TEST_F(AntiMxQuant, AntiMxQuant_infershape_case_1)
     op.UpdateInputDesc("x", create_desc({2048, 2370}, ge::DT_FLOAT8_E4M3FN));
     op.UpdateInputDesc("mxscale", create_desc({2048, 38, 2}, ge::DT_FLOAT8_E8M0));
     op.SetAttr("axis", -1);
-    op.SetAttr("dst_type", 27);  // BF16
+    op.SetAttr("dst_type", 27); // BF16
     Runtime2TestParam param{{"axis", "dst_type"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     auto outputY = op.GetOutputDesc(0);
@@ -78,7 +72,7 @@ TEST_F(AntiMxQuant, AntiMxQuant_infershape_case_2)
     op.UpdateInputDesc("x", create_desc({1440, 2, 84}, ge::DT_FLOAT4_E2M1));
     op.UpdateInputDesc("mxscale", create_desc({1440, 2, 2, 2}, ge::DT_FLOAT8_E8M0));
     op.SetAttr("axis", -1);
-    op.SetAttr("dst_type", 0);  // FP32
+    op.SetAttr("dst_type", 0); // FP32
     Runtime2TestParam param{{"axis", "dst_type"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     auto outputY = op.GetOutputDesc(0);
@@ -142,9 +136,8 @@ TEST_F(AntiMxQuant, AntiMxQuant_InferDtype_case_1)
                                   .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                                  .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                                   .InputDataTypes({&input_x_ref, &input_mxscale_ref})
                                   .OutputDataTypes({&output_y_ref})
                                   .Build();
@@ -174,7 +167,7 @@ TEST_F(AntiMxQuant, AntiMxQuant_InferDtype_case_2)
                                   .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeAttrs(
                                       {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})  // dst_type mismatch
+                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}}) // dst_type mismatch
                                   .InputDataTypes({&input_x_ref, &input_mxscale_ref})
                                   .OutputDataTypes({&output_y_ref})
                                   .Build();

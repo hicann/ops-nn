@@ -74,19 +74,18 @@ FusedMatmulTrans GetTrans(bool aTrans, bool bTrans)
 
 bool CheckFormat(const gert::TilingContext& context, bool hasX3Input)
 {
-    ge::Format formatA =
-        static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(INPUT_X1_IDX)->GetStorageFormat()));
-    ge::Format formatB =
-        static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(INPUT_X2_IDX)->GetStorageFormat()));
+    ge::Format formatA = static_cast<ge::Format>(
+        ge::GetPrimaryFormat(context.GetInputDesc(INPUT_X1_IDX)->GetStorageFormat()));
+    ge::Format formatB = static_cast<ge::Format>(
+        ge::GetPrimaryFormat(context.GetInputDesc(INPUT_X2_IDX)->GetStorageFormat()));
     ge::Format formatOut = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetOutputDesc(0)->GetStorageFormat()));
     ge::Format formatX3 = hasX3Input ? static_cast<ge::Format>(ge::GetPrimaryFormat(
                                            context.GetOptionalInputDesc(INPUT_X3_IDX)->GetStorageFormat())) :
                                        ge::FORMAT_ND;
 
-    OP_TILING_CHECK(
-        (formatA == ge::FORMAT_FRACTAL_NZ || formatB == ge::FORMAT_FRACTAL_NZ || formatOut == ge::FORMAT_FRACTAL_NZ ||
-         formatX3 == ge::FORMAT_FRACTAL_NZ),
-        CUBE_INNER_ERR_REPORT("FusedMatMul", "invalid context"), return false);
+    OP_TILING_CHECK((formatA == ge::FORMAT_FRACTAL_NZ || formatB == ge::FORMAT_FRACTAL_NZ ||
+                     formatOut == ge::FORMAT_FRACTAL_NZ || formatX3 == ge::FORMAT_FRACTAL_NZ),
+                    CUBE_INNER_ERR_REPORT("FusedMatMul", "invalid context"), return false);
     return true;
 }
 
@@ -159,9 +158,8 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
         !isMatrix(context.GetInputShape(1)->GetOriginShape())) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context.GetNodeName(), "x1, x2",
-            Ops::NN::FormatString(
-                "%zu, %zu", context.GetInputShape(0)->GetOriginShape().GetDimNum(),
-                context.GetInputShape(1)->GetOriginShape().GetDimNum())
+            Ops::NN::FormatString("%zu, %zu", context.GetInputShape(0)->GetOriginShape().GetDimNum(),
+                                  context.GetInputShape(1)->GetOriginShape().GetDimNum())
                 .c_str(),
             Ops::NN::FormatString("The shape dims of %s must be %llu", "x1, x2", TWO_BATCH_DIM).c_str());
         return false;
@@ -191,11 +189,10 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
         const gert::Shape& biasShape = context.GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape();
         const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
         if (biasValue != n) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context.GetNodeName(), "bias", Ops::Base::ToString(biasShape).c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y", n)
-                    .c_str());
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context.GetNodeName(), "bias", Ops::Base::ToString(biasShape).c_str(),
+                                                  Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)",
+                                                                        "Shape[-1]", "bias", "Shape[-1]", "y", n)
+                                                      .c_str());
             return false;
         }
     }
@@ -215,9 +212,8 @@ bool GetShape(const gert::TilingContext& context, int64_t& m, int64_t& n, int64_
         (GetInputDims(context.GetInputShape(1)->GetStorageShape(), ge::FORMAT_ND, knDims) != ge::GRAPH_SUCCESS)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context.GetNodeName(), "x1, x2",
-            Ops::NN::FormatString(
-                "%zu, %zu", context.GetInputShape(0)->GetStorageShape().GetDimNum(),
-                context.GetInputShape(1)->GetStorageShape().GetDimNum())
+            Ops::NN::FormatString("%zu, %zu", context.GetInputShape(0)->GetStorageShape().GetDimNum(),
+                                  context.GetInputShape(1)->GetStorageShape().GetDimNum())
                 .c_str(),
             Ops::NN::FormatString("The shape dims of %s must be %llu", "x1, x2", TWO_BATCH_DIM).c_str());
         return false;
@@ -228,9 +224,8 @@ bool GetShape(const gert::TilingContext& context, int64_t& m, int64_t& n, int64_
     if (k != knDims[kIdxB]) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context.GetNodeName(), "x1, x2",
-            Ops::NN::FormatString(
-                "%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetStorageShape()).c_str(),
-                Ops::Base::ToString(context.GetInputShape(1)->GetStorageShape()).c_str())
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetStorageShape()).c_str(),
+                                  Ops::Base::ToString(context.GetInputShape(1)->GetStorageShape()).c_str())
                 .c_str(),
             Ops::NN::FormatString("%s of %s must be equal", "K-axis", "x1, x2").c_str());
         return false;
@@ -255,9 +250,8 @@ bool CheckShape(const gert::TilingContext& context, bool hasX3Input, bool hasBia
     if (!isValidDimValue(m) || !isValidDimValue(k) || !isValidDimValue(n)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context.GetNodeName(), "x1, x2",
-            Ops::NN::FormatString(
-                "%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetStorageShape()).c_str(),
-                Ops::Base::ToString(context.GetInputShape(1)->GetStorageShape()).c_str())
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetStorageShape()).c_str(),
+                                  Ops::Base::ToString(context.GetInputShape(1)->GetStorageShape()).c_str())
                 .c_str(),
             Ops::NN::FormatString("%s of %s must be within the range %s", "m, k, n", "x1, x2", "(0, INT32_MAX]")
                 .c_str());
@@ -284,13 +278,12 @@ bool CheckFusedOpType(const gert::TilingContext& context)
 
     // get available fused op type
     NpuArch npuArch;
-    OP_TILING_CHECK(
-        GetSocVersion(&context, npuArch) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "fail to get npu arch"), return false);
+    OP_TILING_CHECK(GetSocVersion(&context, npuArch) == ge::GRAPH_FAILED,
+                    CUBE_INNER_ERR_REPORT(context.GetNodeName(), "fail to get npu arch"), return false);
     auto it = NpuArchFusedOpSupport.find(npuArch);
-    OP_TILING_CHECK(
-        it == NpuArchFusedOpSupport.end(),
-        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "unsupported platform(impossible situation)"), return false);
+    OP_TILING_CHECK(it == NpuArchFusedOpSupport.end(),
+                    CUBE_INNER_ERR_REPORT(context.GetNodeName(), "unsupported platform(impossible situation)"),
+                    return false);
 
     // check op type support
     const auto& builtInSupportedOps = (it->second)[1];
@@ -309,34 +302,32 @@ ge::graphStatus BuiltInTilingCheck(gert::TilingContext* context, bool& useBuiltI
 
     // get available fused op type
     NpuArch npuArch;
-    OP_TILING_CHECK(
-        GetSocVersion(context, npuArch) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "fail to get npu arch"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetSocVersion(context, npuArch) == ge::GRAPH_FAILED,
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "fail to get npu arch"), return ge::GRAPH_FAILED);
     auto it = NpuArchFusedOpSupport.find(npuArch);
-    OP_TILING_CHECK(
-        it == NpuArchFusedOpSupport.end(),
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "unsupported platform(impossible situation)"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(it == NpuArchFusedOpSupport.end(),
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "unsupported platform(impossible situation)"),
+                    return ge::GRAPH_FAILED);
 
     // check op type support
     const auto& builtInSupportedOps = (it->second)[0];
-    useBuiltInTiling =
-        std::find(builtInSupportedOps.begin(), builtInSupportedOps.end(), fusedOpType) != builtInSupportedOps.end();
+    useBuiltInTiling = std::find(builtInSupportedOps.begin(), builtInSupportedOps.end(), fusedOpType) !=
+                       builtInSupportedOps.end();
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus FusedMatMulTilingFunc(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(
-        context == nullptr, CUBE_INNER_ERR_REPORT("FusedMatMul", "context is null"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("FusedMatMul", "context is null"),
+                    return ge::GRAPH_FAILED);
     if (!IsAdvancedSocVersion(context)) {
         OP_LOGE("FusedMatMul", "not support npu arch");
         return ge::GRAPH_FAILED;
     }
     bool useBuiltInTiling = false;
-    OP_TILING_CHECK(
-        BuiltInTilingCheck(context, useBuiltInTiling) != ge::GRAPH_SUCCESS,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to check built-in tiling"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(BuiltInTilingCheck(context, useBuiltInTiling) != ge::GRAPH_SUCCESS,
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to check built-in tiling"),
+                    return ge::GRAPH_FAILED);
     // 继承BMM Tiling（基础API）
     if (useBuiltInTiling) {
         return fused_matmul::FusedMatMulBuiltInTiling(context).DoTiling();
@@ -356,10 +347,9 @@ namespace fused_matmul {
 
 bool FusedMatMulTiling::CheckArgs() const
 {
-    return (
-        CheckFormat(*context_, hasX3Input_) && CheckDtype(*context_, hasX3Input_, hasBias_) &&
-        CheckShape(*context_, hasX3Input_, hasBias_) && CheckFusedOpType(*context_) &&
-        CheckInnerPrecise(*context_, "non-built-in tiling"));
+    return (CheckFormat(*context_, hasX3Input_) && CheckDtype(*context_, hasX3Input_, hasBias_) &&
+            CheckShape(*context_, hasX3Input_, hasBias_) && CheckFusedOpType(*context_) &&
+            CheckInnerPrecise(*context_, "non-built-in tiling"));
 }
 
 ge::graphStatus FusedMatMulTiling::CheckArgsPtr()
@@ -372,9 +362,8 @@ ge::graphStatus FusedMatMulTiling::CheckArgsPtr()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INPUT_X2_IDX));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(INPUT_X2_IDX));
 
-    hasBias_ =
-        (context_->GetOptionalInputDesc(INPUT_BIAS_IDX) != nullptr &&
-         context_->GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape().GetDimNum() > 0);
+    hasBias_ = (context_->GetOptionalInputDesc(INPUT_BIAS_IDX) != nullptr &&
+                context_->GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape().GetDimNum() > 0);
 
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputShape(0));
@@ -399,12 +388,11 @@ ge::graphStatus FusedMatMulTiling::CheckArgsPtr()
 bool FusedMatMulTiling::GetShapeAttrsInfo() // 检查输入属性是否支持
 {
     opName_ = context_->GetNodeName();
-    OP_TILING_CHECK(
-        opName_ == nullptr, CUBE_INNER_ERR_REPORT("fusedMatmul", "get op name invalid context"), return false);
+    OP_TILING_CHECK(opName_ == nullptr, CUBE_INNER_ERR_REPORT("fusedMatmul", "get op name invalid context"),
+                    return false);
     OP_LOGI(opName_, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(
-        (CheckArgsPtr() == ge::GRAPH_FAILED || !CheckArgs()), CUBE_INNER_ERR_REPORT(opName_, "invalid context"),
-        return false);
+    OP_TILING_CHECK((CheckArgsPtr() == ge::GRAPH_FAILED || !CheckArgs()),
+                    CUBE_INNER_ERR_REPORT(opName_, "invalid context"), return false);
     return true;
 }
 
@@ -413,17 +401,15 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
     if (!GetShapeAttrsInfo()) {
         return ge::GRAPH_FAILED;
     }
-    OP_TILING_CHECK(
-        (FUSED_OP_TYPE_MAP.find(opType_) == FUSED_OP_TYPE_MAP.end()),
-        CUBE_INNER_ERR_REPORT(opName_, "invalid opType_ %s", opType_.c_str()), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((FUSED_OP_TYPE_MAP.find(opType_) == FUSED_OP_TYPE_MAP.end()),
+                    CUBE_INNER_ERR_REPORT(opName_, "invalid opType_ %s", opType_.c_str()), return ge::GRAPH_FAILED);
 
     bool isATrans = *(context_->GetAttrs()->GetAttrPointer<bool>(0));
     bool isBTrans = *(context_->GetAttrs()->GetAttrPointer<bool>(1));
 
     // high level, trans, mm basic, no fullload, on the fly, fuse_op_type
-    uint64_t tilingKey = GET_TPL_TILING_KEY(
-        0, static_cast<uint64_t>(GetTrans(isATrans, isBTrans)), 0, 0, 0, 0,
-        static_cast<uint64_t>(FUSED_OP_TYPE_MAP.at(opType_)));
+    uint64_t tilingKey = GET_TPL_TILING_KEY(0, static_cast<uint64_t>(GetTrans(isATrans, isBTrans)), 0, 0, 0, 0,
+                                            static_cast<uint64_t>(FUSED_OP_TYPE_MAP.at(opType_)));
 
     int64_t m = 0L;
     int64_t n = 0L;
@@ -432,14 +418,13 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
         return false;
     }
 
-    FusedMatMulTilingData tilingData{
-        static_cast<uint32_t>(m), static_cast<uint32_t>(n), static_cast<uint32_t>(k), static_cast<uint32_t>(hasBias_)};
-    OP_TILING_CHECK(
-        context_->GetRawTilingData() == nullptr,
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "context rawtilingData is nullptr"), return ge::GRAPH_FAILED);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), &tilingData,
-        sizeof(tilingData));
+    FusedMatMulTilingData tilingData{static_cast<uint32_t>(m), static_cast<uint32_t>(n), static_cast<uint32_t>(k),
+                                     static_cast<uint32_t>(hasBias_)};
+    OP_TILING_CHECK(context_->GetRawTilingData() == nullptr,
+                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "context rawtilingData is nullptr"),
+                    return ge::GRAPH_FAILED);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           &tilingData, sizeof(tilingData));
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -452,9 +437,8 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
     context_->SetTilingKey(tilingKey);
     OP_LOGI(opName_, "TilingKey: %lu", tilingKey);
     size_t* workspaces = context_->GetWorkspaceSizes(1); // set workapce
-    OP_TILING_CHECK(
-        workspaces == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspace is nullptr"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(workspaces == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspace is nullptr"),
+                    return ge::GRAPH_FAILED);
     workspaces[0] = static_cast<size_t>(ALIGN_NUM * WORKSPACE_SIZE * WORKSPACE_SIZE);
     return ge::GRAPH_SUCCESS;
 };

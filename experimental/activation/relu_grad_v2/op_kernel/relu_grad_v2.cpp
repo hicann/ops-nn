@@ -13,8 +13,8 @@
 #include "relu_grad_v2.h"
 
 template <typename D_T_X>
-__global__ __aicore__ void relu_grad_v2(
-    GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void relu_grad_v2(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                                        GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ReluGradV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(ReluGradV2TilingData, tilingData, tiling);

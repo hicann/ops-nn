@@ -29,13 +29,13 @@ struct IndexPutV2InputInfo {
     std::vector<int64_t> indexedSizeDims;
     std::vector<int64_t> indexedStridesDims;
     std::vector<std::vector<int64_t>> indicesDims;
-    
+
     DataType xDtype;
     DataType valueDtype;
     DataType indexedSizeDtype;
     DataType indexedStridesDtype;
     std::vector<DataType> indicesDtypes;
-    
+
     Format xFmt;
     Format valueFmt;
     Format indexedSizeFmt;
@@ -43,24 +43,24 @@ struct IndexPutV2InputInfo {
     Format indicesFmt;
 
     std::vector<Shape> indicesShape;
-    
+
     bool attrAccumulate = false;
     int64_t indicesNum = 0;
 };
 
 class __attribute__((visibility("default"))) IndexPutV2FusionPass : public FusionBasePass {
 public:
-    Status Run(GraphPtr &graph, CustomPassContext &passContext) override;
+    Status Run(GraphPtr& graph, CustomPassContext& passContext) override;
 
 private:
     bool CheckPlatform() const;
     bool CheckDeterministic(ge::CustomPassContext& passContext) const;
-    bool CheckDtypes(const GNode &node, int64_t indicesNum) const;
-    bool CheckNode(const GNode &node);
-    bool CheckDynamic(const GNode &node, int64_t indicesNum) const;
-    IndexPutV2InputInfo GetInputInfo(const GNode &node) const;
-    GraphUniqPtr CreateReplacement(const GNode &node);
-    std::unique_ptr<SubgraphBoundary> ConstructBoundary(const GNode &node) const;
+    bool CheckDtypes(const GNode& node, int64_t indicesNum) const;
+    bool CheckNode(const GNode& node);
+    bool CheckDynamic(const GNode& node, int64_t indicesNum) const;
+    IndexPutV2InputInfo GetInputInfo(const GNode& node) const;
+    GraphUniqPtr CreateReplacement(const GNode& node);
+    std::unique_ptr<SubgraphBoundary> ConstructBoundary(const GNode& node) const;
 };
 
 } // namespace ge::fusion

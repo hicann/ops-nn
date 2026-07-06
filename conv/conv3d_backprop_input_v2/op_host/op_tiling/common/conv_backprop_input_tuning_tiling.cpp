@@ -11,13 +11,12 @@
 #include "conv_backprop_input_tuning_tiling.h"
 
 namespace tuningtiling {
-DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3DBackpropInputV2, Conv3DBackpropInputArgs, batch_n, groups, 
-    dedx_d, dedx_cin, dedx_h, dedx_w, dedy_d, dedy_cout, dedy_h, dedy_w, kernel_d, kernel_h, kernel_w, 
-    stride_d, stride_h, stride_w, pad_h, pad_t, pad_u, pad_d, pad_l, pad_r, 
-    dilation_d, dilation_h, dilation_w, 
-    backprop_pad_h, backprop_pad_t, backprop_pad_u, backprop_pad_d, backprop_pad_l, backprop_pad_r,
-    hf32_flag, a_dtype_bytes, b_dtype_bytes, c_dtype_bytes, 
-    outBackpropFormat, filterFormat, yFormat);
+DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3DBackpropInputV2, Conv3DBackpropInputArgs, batch_n, groups, dedx_d, dedx_cin,
+                                 dedx_h, dedx_w, dedy_d, dedy_cout, dedy_h, dedy_w, kernel_d, kernel_h, kernel_w,
+                                 stride_d, stride_h, stride_w, pad_h, pad_t, pad_u, pad_d, pad_l, pad_r, dilation_d,
+                                 dilation_h, dilation_w, backprop_pad_h, backprop_pad_t, backprop_pad_u, backprop_pad_d,
+                                 backprop_pad_l, backprop_pad_r, hf32_flag, a_dtype_bytes, b_dtype_bytes, c_dtype_bytes,
+                                 outBackpropFormat, filterFormat, yFormat);
 
 REGISTER_TUNING_TILING_CLASS(Conv3DBackpropInputV2, Conv3DBackpropInputTunerTiling);
-}  // namespace tuningtiling
+} // namespace tuningtiling

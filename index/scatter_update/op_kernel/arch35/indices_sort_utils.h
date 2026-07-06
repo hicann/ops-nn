@@ -26,12 +26,12 @@ constexpr uint64_t FNV_PRIME_B64 = 0x0100000001B3;
 constexpr uint32_t FNV_OFFSET_BIASIS_B32 = 0x811C9DC5;
 constexpr uint64_t FNV_OFFSET_BIASIS_B64 = 0xCBF29CE484222325;
 
-static constexpr MicroAPI::CastTrait castTraitInt16ToFp32 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait castTraitInt16ToFp32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-__simd_vf__ inline void IndexStatisticInt32Vf(
-    __ubuf__ uint32_t* srcM, __ubuf__ float* dstLocalAddr,
-    int32_t lastDimShift, uint16_t mainLoop, uint16_t tailLoop, uint32_t tailNum)
+__simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ float* dstLocalAddr,
+                                              int32_t lastDimShift, uint16_t mainLoop, uint16_t tailLoop,
+                                              uint32_t tailNum)
 {
     using namespace AscendC::MicroAPI;
     MaskReg patAllB32 = CreateMask<uint32_t, MaskPattern::ALL>();
@@ -74,12 +74,17 @@ __simd_vf__ inline void IndexStatisticInt32Vf(
         Muls(vectorIndex2, vectorIndex2, FNV_PRIME_B32, patAllB32);
         Muls(vectorIndex3, vectorIndex3, FNV_PRIME_B32, patAllB32);
 
-        DeInterleave(vectorB16Tmp0, vectorB16Tmp1, (RegTensor<uint16_t> &)vectorIndex0, (RegTensor<uint16_t> &)vectorIndex1);
-        DeInterleave(vectorB16Tmp2, vectorB16Tmp3, (RegTensor<uint16_t> &)vectorIndex2, (RegTensor<uint16_t> &)vectorIndex3);
-        DeInterleave(vectorB8Hash0, vectorB8Hash1, (RegTensor<uint8_t> &)vectorB16Tmp0, (RegTensor<uint8_t> &)vectorB16Tmp2);
+        DeInterleave(vectorB16Tmp0, vectorB16Tmp1, (RegTensor<uint16_t>&)vectorIndex0,
+                     (RegTensor<uint16_t>&)vectorIndex1);
+        DeInterleave(vectorB16Tmp2, vectorB16Tmp3, (RegTensor<uint16_t>&)vectorIndex2,
+                     (RegTensor<uint16_t>&)vectorIndex3);
+        DeInterleave(vectorB8Hash0, vectorB8Hash1, (RegTensor<uint8_t>&)vectorB16Tmp0,
+                     (RegTensor<uint8_t>&)vectorB16Tmp2);
 
-        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN0, HistogramsType::FREQUENCY>(histVector0, vectorB8Hash0, patAllB8);
-        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN1, HistogramsType::FREQUENCY>(histVector1, vectorB8Hash0, patAllB8);
+        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN0, HistogramsType::FREQUENCY>(histVector0, vectorB8Hash0,
+                                                                                          patAllB8);
+        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN1, HistogramsType::FREQUENCY>(histVector1, vectorB8Hash0,
+                                                                                          patAllB8);
     }
 
     for (uint16_t i = 0; i < tailLoop; i++) {
@@ -90,20 +95,22 @@ __simd_vf__ inline void IndexStatisticInt32Vf(
         Xor(vectorIndex0, vectorIndex0, xorOffset, patAllB32);
         Muls(vectorIndex0, vectorIndex0, FNV_PRIME_B32, patAllB32);
 
-        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN0, HistogramsType::FREQUENCY>(histVector0, (RegTensor<uint8_t> &)vectorIndex0, maskReg);
-        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN1, HistogramsType::FREQUENCY>(histVector1, (RegTensor<uint8_t> &)vectorIndex0, maskReg);
+        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN0, HistogramsType::FREQUENCY>(
+            histVector0, (RegTensor<uint8_t>&)vectorIndex0, maskReg);
+        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN1, HistogramsType::FREQUENCY>(
+            histVector1, (RegTensor<uint8_t>&)vectorIndex0, maskReg);
     }
 
     Max(histVector0, histVector0, histVector1, patAllB16);
     ReduceMax(histVector0, histVector0, patAllB16);
 
-    Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t> &)histVector0, patAllB16);
-    DataCopy<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1, patAllB32);
+    Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t>&)histVector0, patAllB16);
+    DataCopy<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
+                                                                                      patAllB32);
 }
 
-__simd_vf__ inline void IndexStatisticInt64Vf(
-    __ubuf__ uint64_t* srcM, __ubuf__ float* dstLocalAddr,
-    int64_t lastDimShift, uint16_t loopSize, uint32_t dataLen)
+__simd_vf__ inline void IndexStatisticInt64Vf(__ubuf__ uint64_t* srcM, __ubuf__ float* dstLocalAddr,
+                                              int64_t lastDimShift, uint16_t loopSize, uint32_t dataLen)
 {
     using namespace AscendC::MicroAPI;
     MaskReg patAllB32 = CreateMask<uint32_t, MaskPattern::ALL>();
@@ -127,34 +134,37 @@ __simd_vf__ inline void IndexStatisticInt64Vf(
         Xor(vectorIndex0, vectorIndex0, xorOffset, maskReg);
         Muls(vectorIndex0, vectorIndex0, FNV_PRIME_B64, maskReg);
 
-        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN0, HistogramsType::FREQUENCY>(histVector0, (RegTensor<uint8_t> &)vectorIndex0, maskReg);
-        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN1, HistogramsType::FREQUENCY>(histVector1, (RegTensor<uint8_t> &)vectorIndex0, maskReg);
+        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN0, HistogramsType::FREQUENCY>(
+            histVector0, (RegTensor<uint8_t>&)vectorIndex0, maskReg);
+        Histograms<uint8_t, uint16_t, HistogramsBinType::BIN1, HistogramsType::FREQUENCY>(
+            histVector1, (RegTensor<uint8_t>&)vectorIndex0, maskReg);
         Max(maxValue, histVector0, histVector1, patAllB16);
     }
     ReduceMax(maxValue, maxValue, patAllB16);
-    Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t> &)maxValue, patAllB16);
-    DataCopy<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1, patAllB32);
+    Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t>&)maxValue, patAllB16);
+    DataCopy<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
+                                                                                      patAllB32);
 }
 
-template<typename INDICE_TYPE>
-__aicore__ void IndexStatisticInt32(
-    LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
+template <typename INDICE_TYPE>
+__aicore__ void IndexStatisticInt32(LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore,
+                                    int64_t rowLen, int64_t lastDim)
 {
     __local_mem__ float* dstLocalAddr = (__local_mem__ float*)dstLocal.GetPhyAddr();
-    
+
     uint64_t lastDimSize = lastDim * sizeof(INDICE_TYPE);
     int32_t lastDimShift = 0;
     if (lastDimSize < LAST_DIM_SIZE_LIMIT) {
         uint64_t divisor = LAST_DIM_SIZE_LIMIT / lastDimSize;
         auto lz = 64 - ScalarCountLeadingZero(divisor);
         auto bc1 = ScalarGetCountOfValue<1>(divisor);
-        lastDimShift = (bc1 != 1) ? lz : lz - 1; 
+        lastDimShift = (bc1 != 1) ? lz : lz - 1;
     }
     uint16_t mainLoop = rowLen / INDICES_BUCKETS_SIZE;
     uint32_t tailNum = rowLen % INDICES_BUCKETS_SIZE;
     uint16_t tailLoop = Ops::Base::CeilDiv(tailNum, static_cast<uint32_t>(64));
     IndexStatisticInt32Vf((__ubuf__ uint32_t*)srcLocal.GetPhyAddr(), (__ubuf__ float*)dstLocal.GetPhyAddr(),
-        lastDimShift, mainLoop, tailLoop, tailNum);
+                          lastDimShift, mainLoop, tailLoop, tailNum);
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -162,30 +172,30 @@ __aicore__ void IndexStatisticInt32(
     maxScore = dstLocalAddr[0] / rowLen;
 }
 
-template<typename INDICE_TYPE>
-__aicore__ void IndexStatisticInt64(
-    LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore, int64_t rowLen, int64_t lastDim)
+template <typename INDICE_TYPE>
+__aicore__ void IndexStatisticInt64(LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal, float& maxScore,
+                                    int64_t rowLen, int64_t lastDim)
 {
     __local_mem__ float* dstLocalAddr = (__local_mem__ float*)dstLocal.GetPhyAddr();
-    
+
     int32_t lastDimSize = lastDim * sizeof(INDICE_TYPE);
     int64_t lastDimShift = 0;
     if (lastDimSize < LAST_DIM_SIZE_LIMIT) {
         uint64_t divisor = LAST_DIM_SIZE_LIMIT / lastDimSize;
         auto lz = 64 - ScalarCountLeadingZero(divisor);
         auto bc1 = ScalarGetCountOfValue<1>(divisor);
-        lastDimShift = (bc1 != 1) ? lz : lz - 1; 
+        lastDimShift = (bc1 != 1) ? lz : lz - 1;
     }
     uint32_t dataLen = static_cast<uint32_t>(rowLen);
     uint16_t loopSize = Ops::Base::CeilDiv(rowLen, 32L);
     IndexStatisticInt64Vf((__ubuf__ uint64_t*)srcLocal.GetPhyAddr(), (__ubuf__ float*)dstLocal.GetPhyAddr(),
-        lastDimShift, loopSize, dataLen);
+                          lastDimShift, loopSize, dataLen);
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     maxScore = dstLocalAddr[0] / rowLen;
 }
-}
+} // namespace ScatterUpdate
 
 #endif

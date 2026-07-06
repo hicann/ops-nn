@@ -45,23 +45,20 @@ inline bool CheckInnerPrecise(const gert::TilingContext& context, const char* lo
     OPS_CHECK_NULL_WITH_CONTEXT(&context, attrs);
     auto innerPrecise = attrs->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(&context, innerPrecise);
-    OP_TILING_CHECK(
-        *innerPrecise != INNER_PRECISE_HIGH_PRECISION && *innerPrecise != INNER_PRECISE_HIGH_PERFORMANCE,
-        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "inner_precise only supports 0 or 1"), return false);
+    OP_TILING_CHECK(*innerPrecise != INNER_PRECISE_HIGH_PRECISION && *innerPrecise != INNER_PRECISE_HIGH_PERFORMANCE,
+                    CUBE_INNER_ERR_REPORT(context.GetNodeName(), "inner_precise only supports 0 or 1"), return false);
     OP_LOGI(context.GetNodeName(), "FusedMatMul %s inner_precise is %ld", logPrefix, *innerPrecise);
     return true;
 }
 
-enum class FusedMatmulTrans : std::uint8_t
-{
+enum class FusedMatmulTrans : std::uint8_t {
     NO_TRANS = F_NO_TRANS,
     A_TRANS = F_A_TRANS,
     B_TRANS = F_B_TRANS,
     AB_TRANS = F_AB_TRANS
 };
 
-enum class FusedOpType : std::uint8_t
-{
+enum class FusedOpType : std::uint8_t {
     NONE = F_OPTYPE_NONE,
     ADD = F_OPTYPE_ADD,
     MUL = F_OPTYPE_MUL,
@@ -71,14 +68,13 @@ enum class FusedOpType : std::uint8_t
     CAST32 = F_OPTYPE_16CAST32,
 };
 
-const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {
-    {"", FusedOpType::NONE},
-    {"add", FusedOpType::ADD},
-    {"mul", FusedOpType::MUL},
-    {"gelu_erf", FusedOpType::GELU_ERF},
-    {"gelu_tanh", FusedOpType::GELU_TANH},
-    {"relu", FusedOpType::RELU},
-    {"16cast32", FusedOpType::CAST32}};
+const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {{"", FusedOpType::NONE},
+                                                              {"add", FusedOpType::ADD},
+                                                              {"mul", FusedOpType::MUL},
+                                                              {"gelu_erf", FusedOpType::GELU_ERF},
+                                                              {"gelu_tanh", FusedOpType::GELU_TANH},
+                                                              {"relu", FusedOpType::RELU},
+                                                              {"16cast32", FusedOpType::CAST32}};
 
 const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32", "add", "mul"};
 

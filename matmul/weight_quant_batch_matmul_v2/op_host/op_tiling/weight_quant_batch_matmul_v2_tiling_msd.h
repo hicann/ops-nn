@@ -20,8 +20,7 @@
 
 namespace optiling {
 
-class WeightQuantBatchMatmulV2Msd : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2Msd : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2Msd(gert::TilingContext* context) : WeightQuantBatchMatmulV2Tiling(context)
     {

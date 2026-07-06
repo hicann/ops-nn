@@ -42,32 +42,32 @@ struct ScaledMaskedSoftmaxGradV2TilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)               \
-        __ubuf__ tilingStruct* tilingDataPointer =                                        \
-            reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                               \
-        ScaledMaskedSoftmaxGradV2TilingData tilingData;                                          \
-        INIT_TILING_DATA(ScaledMaskedSoftmaxGradV2TilingData, tilingDataPointer, tilingPointer); \
-        (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                               \
-        (tilingData).batch = tilingDataPointer->batch;                                           \
-        (tilingData).channel = tilingDataPointer->channel;                                       \
-        (tilingData).seqLength = tilingDataPointer->seqLength;                                   \
-        (tilingData).headDim = tilingDataPointer->headDim;                                       \
-        (tilingData).totalLine = tilingDataPointer->totalLine;                                   \
-        (tilingData).paddedHeadDim = tilingDataPointer->paddedHeadDim;                           \
-        (tilingData).totalLinePerHeadCore = tilingDataPointer->totalLinePerHeadCore;             \
-        (tilingData).totalLinePerTailCore = tilingDataPointer->totalLinePerTailCore;             \
-        (tilingData).maxLinePerLoop = tilingDataPointer->maxLinePerLoop;                         \
-        (tilingData).tailLinePerHeadCore = tilingDataPointer->tailLinePerHeadCore;               \
-        (tilingData).tailLinePerTailCore = tilingDataPointer->tailLinePerTailCore;               \
-        (tilingData).headCoreNum = tilingDataPointer->headCoreNum;                               \
-        (tilingData).maskMoveMode = tilingDataPointer->maskMoveMode;                             \
-        (tilingData).selectSize = tilingDataPointer->selectSize;                                 \
-        (tilingData).scale = tilingDataPointer->scale;                                           \
-        (tilingData).fixedTriuMask = tilingDataPointer->fixedTriuMask;                           \
-        (tilingData).softmaxGradTilingData = tilingDataPointer->softmaxGradTilingData;
+#define GET_TILING_DATA(tilingData, tilingPointer)                                           \
+    ScaledMaskedSoftmaxGradV2TilingData tilingData;                                          \
+    INIT_TILING_DATA(ScaledMaskedSoftmaxGradV2TilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                               \
+    (tilingData).batch = tilingDataPointer->batch;                                           \
+    (tilingData).channel = tilingDataPointer->channel;                                       \
+    (tilingData).seqLength = tilingDataPointer->seqLength;                                   \
+    (tilingData).headDim = tilingDataPointer->headDim;                                       \
+    (tilingData).totalLine = tilingDataPointer->totalLine;                                   \
+    (tilingData).paddedHeadDim = tilingDataPointer->paddedHeadDim;                           \
+    (tilingData).totalLinePerHeadCore = tilingDataPointer->totalLinePerHeadCore;             \
+    (tilingData).totalLinePerTailCore = tilingDataPointer->totalLinePerTailCore;             \
+    (tilingData).maxLinePerLoop = tilingDataPointer->maxLinePerLoop;                         \
+    (tilingData).tailLinePerHeadCore = tilingDataPointer->tailLinePerHeadCore;               \
+    (tilingData).tailLinePerTailCore = tilingDataPointer->tailLinePerTailCore;               \
+    (tilingData).headCoreNum = tilingDataPointer->headCoreNum;                               \
+    (tilingData).maskMoveMode = tilingDataPointer->maskMoveMode;                             \
+    (tilingData).selectSize = tilingDataPointer->selectSize;                                 \
+    (tilingData).scale = tilingDataPointer->scale;                                           \
+    (tilingData).fixedTriuMask = tilingDataPointer->fixedTriuMask;                           \
+    (tilingData).softmaxGradTilingData = tilingDataPointer->softmaxGradTilingData;
 #endif

@@ -21,13 +21,11 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListNegLargeE : public ScatterListBase<T1>
-{
+class ScatterListNegLargeE : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListNegLargeE(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR update, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR update, GM_ADDR mask, GM_ADDR tempOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -44,8 +42,8 @@ private:
     __aicore__ inline void CopyOut(const int64_t& numPerCore);
     __aicore__ inline void CopyLast(copyOutLargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb);
     __aicore__ inline void CopyOnce(copyOutLargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb);
-    __aicore__ inline void CopyLargeEPad(
-        copyOutLargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb, const int64_t& dim1Idx);
+    __aicore__ inline void CopyLargeEPad(copyOutLargeParams& params, LocalTensor<T1>& updatesUb,
+                                         LocalTensor<T2>& indiceUb, const int64_t& dim1Idx);
     __aicore__ inline void ProcessPerCore(const int64_t& numPerCore);
 
 private:
@@ -64,9 +62,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegLargeE<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListNegLargeE<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                          GM_ADDR tempOut, GM_ADDR workspace,
+                                                          const ScatterListTilingData* tilingData)
 {
     this->ParseTilingData(tilingData, m_tilingData);
     blockIdx = GetBlockIdx();
@@ -120,8 +118,8 @@ __aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyIn(const int64_t& numPe
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyOnce(
-    copyOutLargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
+__aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyOnce(copyOutLargeParams& params, LocalTensor<T1>& updatesUb,
+                                                              LocalTensor<T2>& indiceUb)
 {
     this->Mte3ToMte2();
     int64_t srcOffset = blockIdx * m_tilingData.preCoreBatchNum * m_tilingData.dim3Count +
@@ -133,15 +131,15 @@ __aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyOnce(
     int64_t dim1Idx = params.allCoreBatchIdx % m_tilingData.dim1Count;
     if constexpr (IsDataCopyPadSupport()) {
         int64_t dim2OffsetIdx = indiceUb.GetValue(params.dim0Idx);
-        int64_t dstGmOffset =
-            dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx + params.inner_loop_idx * m_tilingData.eachPreLoopEle;
+        int64_t dstGmOffset = dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx +
+                              params.inner_loop_idx * m_tilingData.eachPreLoopEle;
 
         this->Mte2ToMte3();
         DataCopy(varGm[dstGmOffset], updatesUb, params.copyNum);
     } else {
         int64_t dim2OffsetIdx = indiceUb.GetValue(params.dim0Idx);
-        int64_t dstGmOffset =
-            dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx + params.inner_loop_idx * m_tilingData.eachPreLoopEle;
+        int64_t dstGmOffset = dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx +
+                              params.inner_loop_idx * m_tilingData.eachPreLoopEle;
 
         this->Mte2ToMte3();
         DataCopy(varGm[dstGmOffset], updatesUb, params.copyNum);
@@ -149,8 +147,9 @@ __aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyOnce(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLargeEPad(
-    copyOutLargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb, const int64_t& dim1Idx)
+__aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLargeEPad(copyOutLargeParams& params,
+                                                                   LocalTensor<T1>& updatesUb,
+                                                                   LocalTensor<T2>& indiceUb, const int64_t& dim1Idx)
 {
     int64_t src_offset = blockIdx * m_tilingData.preCoreBatchNum * m_tilingData.dim3Count +
                          params.eachCoreBatchIdx * m_tilingData.dim3Count +
@@ -159,8 +158,8 @@ __aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLargeEPad(
     DataCopy(updatesUb, updatesGM[src_offset], m_tilingData.eachLastLoopEleAlign);
 
     int64_t dim2OffsetIdx = indiceUb.GetValue(params.dim0Idx);
-    int64_t dstGmOffset =
-        dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx + params.inner_loop_idx * m_tilingData.eachPreLoopEle;
+    int64_t dstGmOffset = dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx +
+                          params.inner_loop_idx * m_tilingData.eachPreLoopEle;
     copyParams.blockCount = 1;
     copyParams.blockLen = m_tilingData.eachLastSize;
     copyParams.srcStride = 0;
@@ -170,8 +169,8 @@ __aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLargeEPad(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLast(
-    copyOutLargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
+__aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLast(copyOutLargeParams& params, LocalTensor<T1>& updatesUb,
+                                                              LocalTensor<T2>& indiceUb)
 {
     this->Mte3ToMte2();
 
@@ -185,8 +184,8 @@ __aicore__ inline void ScatterListNegLargeE<T1, T2>::CopyLast(
                              params.inner_loop_idx * m_tilingData.eachPreLoopEle;
         DataCopy(updatesUb, updatesGM[src_offset], m_tilingData.eachLastLoopEle);
         int64_t dim2OffsetIdx = indiceUb.GetValue(params.dim0Idx);
-        int64_t dstGmOffset =
-            dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx + params.inner_loop_idx * m_tilingData.eachPreLoopEle;
+        int64_t dstGmOffset = dim1Idx * m_tilingData.varDim3Count + dim2OffsetIdx +
+                              params.inner_loop_idx * m_tilingData.eachPreLoopEle;
         this->Mte2ToMte3();
         DataCopy(varGm[dstGmOffset], updatesUb, m_tilingData.eachLastLoopEle);
     }

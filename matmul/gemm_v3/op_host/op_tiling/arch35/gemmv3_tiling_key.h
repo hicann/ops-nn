@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file gemmv3_tiling_key.h
  * \brief
@@ -27,4 +26,3 @@ public:
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling
-

@@ -24,8 +24,7 @@ using namespace AscendC;
 using namespace Renorm;
 
 template <typename Dtype>
-struct GetPromoteType {
-};
+struct GetPromoteType {};
 
 // inf / -inf 场景下做max/min不需要升精度
 template <>
@@ -50,28 +49,28 @@ __global__ __aicore__ void renorm(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_AD
     GET_TILING_DATA_WITH_STRUCT(optiling::RenormTilingData, tilingData, tiling);
     TPipe pipe;
     float val = (TemplateNum == TEMPLATE_P_NINF) ? INFINITY : tilingData.epsilon;
-    if constexpr (TemplateNum == TEMPLATE_P0) {  // p=0
+    if constexpr (TemplateNum == TEMPLATE_P0) { // p=0
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormP0Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.template SetVar<float, VAR_INDEX_1>(tilingData.maxnorm);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P1) {  // p=1
+    } else if constexpr (TemplateNum == TEMPLATE_P1) { // p=1
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormP1Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.template SetVar<float, VAR_INDEX_1>(tilingData.maxnorm);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P2) {  // p=2
+    } else if constexpr (TemplateNum == TEMPLATE_P2) { // p=2
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormP2Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.template SetVar<float, VAR_INDEX_1>(tilingData.maxnorm);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P3) {  // p=3
+    } else if constexpr (TemplateNum == TEMPLATE_P3) { // p=3
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormP3Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
@@ -79,7 +78,7 @@ __global__ __aicore__ void renorm(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_AD
         op.template SetVar<float, VAR_INDEX_2>(tilingData.maxnorm);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P_NINF) {  // p = -inf
+    } else if constexpr (TemplateNum == TEMPLATE_P_NINF) { // p = -inf
         using promoteDtype = GetPromoteType<DTYPE_X>::T;
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormPNInfDag<DTYPE_X, promoteDtype, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
@@ -87,7 +86,7 @@ __global__ __aicore__ void renorm(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_AD
         op.template SetVar<promoteDtype, 1>(static_cast<promoteDtype>(tilingData.maxnorm));
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P_INF) {  // p = inf
+    } else if constexpr (TemplateNum == TEMPLATE_P_INF) { // p = inf
         using promoteDtype = GetPromoteType<DTYPE_X>::T;
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormPInfDag<DTYPE_X, promoteDtype, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
@@ -95,7 +94,7 @@ __global__ __aicore__ void renorm(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_AD
         op.template SetVar<promoteDtype, 1>(static_cast<promoteDtype>(tilingData.maxnorm));
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P_OTHER) {  // p = other
+    } else if constexpr (TemplateNum == TEMPLATE_P_OTHER) { // p = other
         using Op = ReduceSch<REDUCE_TPL_VALUE, Renorm::RenormPOtherDag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);

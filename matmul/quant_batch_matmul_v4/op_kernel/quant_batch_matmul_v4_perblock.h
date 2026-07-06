@@ -20,17 +20,15 @@
 
 namespace AscendC {
 
-template <
-    typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
-    bool weightNz = false>
-class QuantBatchMatmulV4Perblock : public QuantBatchMatmulV4Common
-{
+template <typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
+          bool weightNz = false>
+class QuantBatchMatmulV4Perblock : public QuantBatchMatmulV4Common {
 public:
     __aicore__ inline QuantBatchMatmulV4Perblock(){};
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-        GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y, GM_ADDR workspace,
-        const QuantBatchMatmulV4PerblockTilingData* tilingData, TPipe* tPipe);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
+                                GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y,
+                                GM_ADDR workspace, const QuantBatchMatmulV4PerblockTilingData* tilingData,
+                                TPipe* tPipe);
     __aicore__ inline void Process();
     __aicore__ inline void InitLocalBuffers();
 
@@ -72,7 +70,7 @@ private:
     LocalTensor<yType> dequantOut;  // [ubCalcM_, ubCalcN_]
     LocalTensor<float> X1Scale;     // [ubCalcM_, 8] // 8个K方向scale保证对齐
     LocalTensor<float> MulScale;    // [ubCalcN_ / 128, ubCalcM_, 8]
-    LocalTensor<float> biasAccu;        // [ubCalcN_]
+    LocalTensor<float> biasAccu;    // [ubCalcN_]
     LocalTensor<float> BrcbScale;
     LocalTensor<float> x2Scale;
 
@@ -84,14 +82,15 @@ private:
     uint32_t ubMTail_;
     uint64_t loop_ = 0;
 
-    __aicore__ inline uint32_t GetCurAivM() { // 计算m轴尾块
+    __aicore__ inline uint32_t GetCurAivM()
+    { // 计算m轴尾块
         if ASCEND_IS_AIC {
             return 0;
         }
         uint32_t curAivM = ubCalcM_;
         if (block_.params_.singleCoreM == baseM_) {
             curAivM = ubCalcM_; // ubCalcM_
-        } else { // m轴尾块
+        } else {                // m轴尾块
             if (subBlockIdx_ == 0) {
                 curAivM = block_.params_.singleCoreM > curAivM ? curAivM : block_.params_.singleCoreM;
             } else {
@@ -163,11 +162,11 @@ private:
         uint32_t singleCoreM = block_.params_.singleCoreM;
         uint64_t offsetX1Scale = (offset_.offsetPertoken + subBlockIdx_ * ubCalcM_) * nKgroups_ + kidx;
         DataCopyExtParams copyParams{
-            uint16_t(curAivM),  // block count
-            4,                  // block len
+            uint16_t(curAivM),   // block count
+            4,                   // block len
             (nKgroups_ - 1) * 4, // src stride
-            0,                  // dst stride
-            0                   // rsv
+            0,                   // dst stride
+            0                    // rsv
         };
 
         DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
@@ -183,7 +182,7 @@ private:
         uint32_t numCols = 8;
         if (baseN_ == BASE_N_256) {
             Muls(MulScale[curAivM * numCols], MulScale, x2ScaleGlobal_.GetValue(offsetX2Scale + nKgroups_),
-                curAivM * numCols);
+                 curAivM * numCols);
             PipeBarrier<PIPE_V>();
         }
         Muls(MulScale, MulScale, x2ScaleGlobal_.GetValue(offsetX2Scale), curAivM * numCols);
@@ -210,8 +209,8 @@ private:
         Mul(mmOutFp32, BrcbScale, mmOutFp32, NUM_ELEMENTS_PER_ITER, curAivM,
             {1, 0, 1, repeatStride, src0RepStride, repeatStride});
         // 完成mmOutFp32[：, 64:128]
-        Mul(mmOutFp32[NUM_ELEMENTS_PER_ITER], BrcbScale, mmOutFp32[NUM_ELEMENTS_PER_ITER], NUM_ELEMENTS_PER_ITER, curAivM,
-            {1, 0, 1, repeatStride, src0RepStride, repeatStride});
+        Mul(mmOutFp32[NUM_ELEMENTS_PER_ITER], BrcbScale, mmOutFp32[NUM_ELEMENTS_PER_ITER], NUM_ELEMENTS_PER_ITER,
+            curAivM, {1, 0, 1, repeatStride, src0RepStride, repeatStride});
         if (baseN_ == BASE_N_256) {
             // 完成mmOutFp32[：, 128:192]
             Mul(mmOutFp32[NUM_ELEMENTS_PER_ITER * FOLD2], BrcbScale[curAivM * NUM_ELEMENTS_PER_ITER],
@@ -245,7 +244,7 @@ private:
         PipeBarrier<PIPE_V>();
         // HardCode curAivN 256, N 32B对齐, dtypesize==2
         DataCopyParams copyParams{uint16_t(curAivM), uint16_t(curAivN / 16), // * sizeof(bfloat16) / 32B
-            0, uint16_t((block_.matmulTilingData_->N - curAivN) / 16)};
+                                  0, uint16_t((block_.matmulTilingData_->N - curAivN) / 16)};
         uint64_t offset = offset_.offsetC;
         offset += subBlockIdx_ * ubCalcM_ * block_.matmulTilingData_->N;
         SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
@@ -261,12 +260,16 @@ private:
         // k轴尾块处理
         if (kidx % stepka_ == 0) {
             uint32_t curKa = stepka_ * groupSizeK_;
-            if (kidx == loopk_ - 1) { curKa = singleCoreK_ - kidx * groupSizeK_; } // k tail
+            if (kidx == loopk_ - 1) {
+                curKa = singleCoreK_ - kidx * groupSizeK_;
+            } // k tail
             CopyInAL1(kidx, curAicM, curKa);
         }
         if (kidx % stepkb_ == 0) {
             uint32_t curKb = stepkb_ * groupSizeK_;
-            if (kidx == loopk_ - 1) { curKb = singleCoreK_ - kidx * groupSizeK_; } // k tail
+            if (kidx == loopk_ - 1) {
+                curKb = singleCoreK_ - kidx * groupSizeK_;
+            } // k tail
             CopyInBL1(kidx, curAicN, curKb);
         }
         mmObj_.SetTensorA(aL1[kidx % stepka_ * groupSizeK_ * CeilAlign(curAicM, ALIGN_UNIT_16)], /*transa*/ transA_);
@@ -289,7 +292,9 @@ private:
 
     __aicore__ inline void BasicMMDequantCompute(uint32_t curAicM, uint32_t curAicN, uint32_t kidx)
     {
-        if ASCEND_IS_AIC { MMCompute(curAicM, curAicN, kidx); }
+        if ASCEND_IS_AIC {
+            MMCompute(curAicM, curAicN, kidx);
+        }
 
         if ASCEND_IS_AIV {
             // m方向不对齐的尾块处理
@@ -317,7 +322,8 @@ private:
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID1);
         // dequantAccu[:, 0:64]
         uint8_t repeatStride = curAivN / 8;
-        Add(dequantAccu, biasAccu, dequantAccu, NUM_ELEMENTS_PER_ITER, curAivM, {1, 1, 1, repeatStride, 0, repeatStride});
+        Add(dequantAccu, biasAccu, dequantAccu, NUM_ELEMENTS_PER_ITER, curAivM,
+            {1, 1, 1, repeatStride, 0, repeatStride});
         // dequantAccu[:, 64:128]
         Add(dequantAccu[NUM_ELEMENTS_PER_ITER], biasAccu[NUM_ELEMENTS_PER_ITER], dequantAccu[NUM_ELEMENTS_PER_ITER],
             NUM_ELEMENTS_PER_ITER, curAivM, {1, 1, 1, repeatStride, 0, repeatStride});
@@ -357,15 +363,16 @@ private:
             block_.UpdateBlockIndex();
             if ASCEND_IS_AIV {
                 uint32_t curAivM = GetCurAivM();
-                if (curAivM > 0) { CastCopyOut(curAivM, baseN_); }
+                if (curAivM > 0) {
+                    CastCopyOut(curAivM, baseN_);
+                }
             }
         }
     }
 };
 
-template <
-    typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
-    bool weightNz>
+template <typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
+          bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4Perblock<xType, wType, biasType, x1scaleType, x2scaleType, yType, weightNz>::Init(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
@@ -405,9 +412,8 @@ QuantBatchMatmulV4Perblock<xType, wType, biasType, x1scaleType, x2scaleType, yTy
     mmObj_.SetOrgShape(baseM_, baseN_, block_.matmulTilingData_->Ka);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
-    bool weightNz>
+template <typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
+          bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4Perblock<xType, wType, biasType, x1scaleType, x2scaleType, yType, weightNz>::InitLocalBuffers()
 {
@@ -440,13 +446,14 @@ QuantBatchMatmulV4Perblock<xType, wType, biasType, x1scaleType, x2scaleType, yTy
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
-    bool weightNz>
+template <typename xType, typename wType, typename biasType, typename x1scaleType, typename x2scaleType, typename yType,
+          bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4Perblock<xType, wType, biasType, x1scaleType, x2scaleType, yType, weightNz>::Process()
 {
-    if (blockIdx_ >= usedCoreNum_) { return; }
+    if (blockIdx_ >= usedCoreNum_) {
+        return;
+    }
     if ASCEND_IS_AIV {
         CrossCoreSetFlag<CV_SYNC_FLAG, PIPE_MTE2>(V2C_PING_FLAG);
         CrossCoreSetFlag<CV_SYNC_FLAG, PIPE_MTE2>(V2C_PONG_FLAG);

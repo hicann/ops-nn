@@ -26,10 +26,10 @@ namespace optiling {
 
 using namespace Ops::NN::OpTiling;
 
-constexpr uint32_t BUFFER_NUM      = 2;    // double-buffer
-constexpr uint32_t WS_SYS_SIZE     = 512U;
-constexpr uint32_t UB_FACTOR       = 18;
-constexpr uint64_t UB_BLOCK_BYTES  = 32ULL;
+constexpr uint32_t BUFFER_NUM = 2; // double-buffer
+constexpr uint32_t WS_SYS_SIZE = 512U;
+constexpr uint32_t UB_FACTOR = 18;
+constexpr uint64_t UB_BLOCK_BYTES = 32ULL;
 
 struct ApplyAdagradDCompileInfo {};
 
@@ -45,9 +45,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
-                                    int64_t& totalElems,
-                                    ge::DataType& dataType,
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElems, ge::DataType& dataType,
                                     bool& updateSlots)
 {
     // Total elements from var input (index 0)
@@ -97,14 +95,14 @@ static ge::graphStatus ApplyAdagradDTilingFunc(gert::TilingContext* context)
 
     // 1. Platform info
     uint64_t ubSize = 0;
-    int64_t  coreNum = 0;
+    int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Shape / attr info
-    int64_t     totalElems  = 0;
+    int64_t totalElems = 0;
     ge::DataType dataType;
-    bool        updateSlots = true;
+    bool updateSlots = true;
     OP_CHECK_IF(GetShapeInfo(context, totalElems, dataType, updateSlots) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "GetShapeInfo error"), return ge::GRAPH_FAILED);
 
@@ -139,47 +137,50 @@ static ge::graphStatus ApplyAdagradDTilingFunc(gert::TilingContext* context)
                 return ge::GRAPH_FAILED);
 
     // ubSize / (BUFFER_NUM * UB_FACTOR * typeLength), rounded down to UB block boundary
-    uint64_t inputBytes        = static_cast<uint64_t>(typeLength);
-    uint64_t tileBlockNum_ub   = ubSize / (blockSize * static_cast<uint64_t>(BUFFER_NUM) *
-                                           static_cast<uint64_t>(UB_FACTOR));
+    uint64_t inputBytes = static_cast<uint64_t>(typeLength);
+    uint64_t tileBlockNum_ub = ubSize /
+                               (blockSize * static_cast<uint64_t>(BUFFER_NUM) * static_cast<uint64_t>(UB_FACTOR));
     uint64_t tileBlockNum = (tileBlockNum_ub == 0) ? 1ULL : tileBlockNum_ub;
 
     uint64_t tileDataNum = (tileBlockNum * blockSize) / inputBytes;
-    if (tileDataNum == 0ULL) tileDataNum = 1ULL;
+    if (tileDataNum == 0ULL)
+        tileDataNum = 1ULL;
 
     // Total UB blocks in the input (var tensor)
     uint64_t inputLengthBytes = static_cast<uint64_t>(totalElems) * inputBytes;
-    uint64_t blocksTotal      = (inputLengthBytes + blockSize - 1ULL) / blockSize;
+    uint64_t blocksTotal = (inputLengthBytes + blockSize - 1ULL) / blockSize;
 
     uint64_t coreNum64 = static_cast<uint64_t>(coreNum);
-    if (coreNum64 > blocksTotal) coreNum64 = blocksTotal;
-    if (coreNum64 == 0ULL)       coreNum64 = 1ULL;
+    if (coreNum64 > blocksTotal)
+        coreNum64 = blocksTotal;
+    if (coreNum64 == 0ULL)
+        coreNum64 = 1ULL;
     uint32_t finalCoreNum = static_cast<uint32_t>(coreNum64);
 
     uint64_t everyCoreBlocks = blocksTotal / coreNum64;
-    uint64_t tailBlockNum    = blocksTotal % coreNum64;
+    uint64_t tailBlockNum = blocksTotal % coreNum64;
 
     // small-core (gets everyCoreBlocks blocks)
-    uint64_t smallCoreDataNum  = (everyCoreBlocks * blockSize) / inputBytes;
-    uint64_t smallTileNum      = everyCoreBlocks / tileBlockNum;
+    uint64_t smallCoreDataNum = (everyCoreBlocks * blockSize) / inputBytes;
+    uint64_t smallTileNum = everyCoreBlocks / tileBlockNum;
     uint64_t finalSmallTileNum = ((everyCoreBlocks % tileBlockNum) == 0) ? smallTileNum : (smallTileNum + 1);
-    int64_t  smallTail_i       = static_cast<int64_t>(smallCoreDataNum) -
-                                  static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(smallTileNum);
-    uint64_t smallTailDataNum  = (smallTail_i <= 0) ? tileDataNum : static_cast<uint64_t>(smallTail_i);
+    int64_t smallTail_i = static_cast<int64_t>(smallCoreDataNum) -
+                          static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(smallTileNum);
+    uint64_t smallTailDataNum = (smallTail_i <= 0) ? tileDataNum : static_cast<uint64_t>(smallTail_i);
 
     // big-core (gets everyCoreBlocks+1 blocks)
-    uint64_t bigEveryBlocks   = everyCoreBlocks + 1ULL;
-    uint64_t bigCoreDataNum   = (bigEveryBlocks * blockSize) / inputBytes;
-    uint64_t bigTileNum       = bigEveryBlocks / tileBlockNum;
-    uint64_t finalBigTileNum  = ((bigEveryBlocks % tileBlockNum) == 0) ? bigTileNum : (bigTileNum + 1);
-    int64_t  bigTail_i        = static_cast<int64_t>(bigCoreDataNum) -
-                                 static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(bigTileNum);
-    uint64_t bigTailDataNum   = (bigTail_i <= 0) ? tileDataNum : static_cast<uint64_t>(bigTail_i);
+    uint64_t bigEveryBlocks = everyCoreBlocks + 1ULL;
+    uint64_t bigCoreDataNum = (bigEveryBlocks * blockSize) / inputBytes;
+    uint64_t bigTileNum = bigEveryBlocks / tileBlockNum;
+    uint64_t finalBigTileNum = ((bigEveryBlocks % tileBlockNum) == 0) ? bigTileNum : (bigTileNum + 1);
+    int64_t bigTail_i = static_cast<int64_t>(bigCoreDataNum) -
+                        static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(bigTileNum);
+    uint64_t bigTailDataNum = (bigTail_i <= 0) ? tileDataNum : static_cast<uint64_t>(bigTail_i);
 
     const uint64_t int64Max = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
     OP_CHECK_IF(tileDataNum > int64Max || smallCoreDataNum > int64Max || bigCoreDataNum > int64Max ||
-                    smallTailDataNum > int64Max || bigTailDataNum > int64Max ||
-                    finalSmallTileNum > int64Max || finalBigTileNum > int64Max || tailBlockNum > int64Max,
+                    smallTailDataNum > int64Max || bigTailDataNum > int64Max || finalSmallTileNum > int64Max ||
+                    finalBigTileNum > int64Max || tailBlockNum > int64Max,
                 OP_LOGE(context->GetNodeName(), "tiling value exceeds int64 range"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(tileDataNum > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
                     smallCoreDataNum > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
@@ -192,22 +193,22 @@ static ge::graphStatus ApplyAdagradDTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(ApplyAdagradDTilingData), 0, sizeof(ApplyAdagradDTilingData)) != EOK,
                 OP_LOGE(context->GetNodeName(), "memset tiling data error"), return ge::GRAPH_FAILED);
 
-    tiling->smallCoreDataNum  = static_cast<int64_t>(smallCoreDataNum);
-    tiling->bigCoreDataNum    = static_cast<int64_t>(bigCoreDataNum);
-    tiling->tileDataNum       = static_cast<int64_t>(tileDataNum);
-    tiling->smallTailDataNum  = static_cast<int64_t>(smallTailDataNum);
-    tiling->bigTailDataNum    = static_cast<int64_t>(bigTailDataNum);
+    tiling->smallCoreDataNum = static_cast<int64_t>(smallCoreDataNum);
+    tiling->bigCoreDataNum = static_cast<int64_t>(bigCoreDataNum);
+    tiling->tileDataNum = static_cast<int64_t>(tileDataNum);
+    tiling->smallTailDataNum = static_cast<int64_t>(smallTailDataNum);
+    tiling->bigTailDataNum = static_cast<int64_t>(bigTailDataNum);
     tiling->finalSmallTileNum = static_cast<int64_t>(finalSmallTileNum);
-    tiling->finalBigTileNum   = static_cast<int64_t>(finalBigTileNum);
-    tiling->tailBlockNum      = static_cast<int64_t>(tailBlockNum);
-    tiling->totalDataNum      = totalElems;
-    tiling->updateSlots       = updateSlots ? 1 : 0;
+    tiling->finalBigTileNum = static_cast<int64_t>(finalBigTileNum);
+    tiling->tailBlockNum = static_cast<int64_t>(tailBlockNum);
+    tiling->totalDataNum = totalElems;
+    tiling->updateSlots = updateSlots ? 1 : 0;
 
     context->SetBlockDim(finalCoreNum);
     context->SetTilingKey(GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_0));
 
-    OP_LOGI(context->GetNodeName(), "ApplyAdagradD tiling: coreNum=%u tileDataNum=%llu updateSlots=%d",
-            finalCoreNum, static_cast<unsigned long long>(tileDataNum), (int)updateSlots);
+    OP_LOGI(context->GetNodeName(), "ApplyAdagradD tiling: coreNum=%u tileDataNum=%llu updateSlots=%d", finalCoreNum,
+            static_cast<unsigned long long>(tileDataNum), (int)updateSlots);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -217,6 +218,8 @@ static ge::graphStatus TilingParseForApplyAdagradD([[maybe_unused]] gert::Tiling
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ApplyAdagradD).Tiling(ApplyAdagradDTilingFunc).TilingParse<ApplyAdagradDCompileInfo>(TilingParseForApplyAdagradD);
+IMPL_OP_OPTILING(ApplyAdagradD)
+    .Tiling(ApplyAdagradDTilingFunc)
+    .TilingParse<ApplyAdagradDCompileInfo>(TilingParseForApplyAdagradD);
 
 } // namespace optiling

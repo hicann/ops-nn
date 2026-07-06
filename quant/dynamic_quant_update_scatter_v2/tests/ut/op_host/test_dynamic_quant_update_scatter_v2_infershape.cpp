@@ -23,15 +23,9 @@
 
 class DynamicQuantUpdateScatterV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicQuantUpdateScatterV2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicQuantUpdateScatterV2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicQuantUpdateScatterV2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicQuantUpdateScatterV2 TearDown" << std::endl; }
 };
 
 TEST_F(DynamicQuantUpdateScatterV2Test, DynamicQuantUpdateScatterV2_infershape_case_0)
@@ -69,21 +63,21 @@ TEST_F(DynamicQuantUpdateScatterV2Test, DynamicQuantUpdateScatterV2_InferDtype_c
         ge::DataType output_var = ge::DT_INT4;
         ge::DataType output_var_scale = ge::DT_FLOAT;
         ge::DataType output_var_offset = ge::DT_FLOAT;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(5)
-                .NodeIoNum(5, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_x, &input_indices, &input_var, &input_var_scale, &input_var_offset})
-                .OutputDataTypes({&output_var, &output_var_scale, &output_var_offset})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(5)
+                                  .NodeIoNum(5, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes(
+                                      {&input_x, &input_indices, &input_var, &input_var_scale, &input_var_offset})
+                                  .OutputDataTypes({&output_var, &output_var_scale, &output_var_offset})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

@@ -35,11 +35,9 @@ struct SparseSegmentMeanFullLoadInfo {
     int64_t resSegmentNum{0};
 };
 
-class SparseSegmentMeanFullLoadTiling : public SparseSegmentMeanBaseTiling
-{
+class SparseSegmentMeanFullLoadTiling : public SparseSegmentMeanBaseTiling {
 public:
-    explicit SparseSegmentMeanFullLoadTiling(gert::TilingContext* context) : SparseSegmentMeanBaseTiling(context)
-    {}
+    explicit SparseSegmentMeanFullLoadTiling(gert::TilingContext* context) : SparseSegmentMeanBaseTiling(context) {}
 
     ~SparseSegmentMeanFullLoadTiling() override = default;
 
@@ -56,9 +54,9 @@ private:
     ge::graphStatus GetWorkspaceSize() override;
     SparseSegmentMeanFullLoadInfo fullLoadData;
     int64_t needCoreNum_ = 0;
-    int64_t normalCoreSegmentNum_ = 0; // 正常核处理的SegmentNum数
-    int64_t secondToLastCoreSegmentNum_ = 0;     // 倒数第二个核处理的SegmentNum数
-    int64_t lastCoreSegmentNum_ = 0; // 尾核处理的SegmentNum数
+    int64_t normalCoreSegmentNum_ = 0;       // 正常核处理的SegmentNum数
+    int64_t secondToLastCoreSegmentNum_ = 0; // 倒数第二个核处理的SegmentNum数
+    int64_t lastCoreSegmentNum_ = 0;         // 尾核处理的SegmentNum数
     bool specialBlockTiling_ = false;
 };
 

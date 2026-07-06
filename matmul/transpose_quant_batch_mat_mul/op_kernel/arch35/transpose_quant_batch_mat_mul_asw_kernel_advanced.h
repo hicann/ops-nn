@@ -21,13 +21,13 @@
 
 using namespace Cmct::Gemm;
 
-#define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                                \
-    template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType,               \
-              int8_t precisionMode, bool aTrans, bool bTrans, CubeFormat bFormat, class l0cDtype, class blockType,     \
+#define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                            \
+    template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType,           \
+              int8_t precisionMode, bool aTrans, bool bTrans, CubeFormat bFormat, class l0cDtype, class blockType, \
               const MatmulConfig& mmCfg>
-#define LOCAL_TEMPLATE_FUNC_MIX_PARAMS                                                                                 \
-    aType, bType, scaleType, biasType, ptScaleType, cType, precisionMode, aTrans, bTrans, bFormat, l0cDtype, blockType,\
-    mmCfg
+#define LOCAL_TEMPLATE_FUNC_MIX_PARAMS                                                                       \
+    aType, bType, scaleType, biasType, ptScaleType, cType, precisionMode, aTrans, bTrans, bFormat, l0cDtype, \
+        blockType, mmCfg
 
 namespace TransposeQuantBatchMatMulAdvanced {
 using AscendC::AIC;
@@ -63,24 +63,22 @@ LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 class TransposeQuantBatchMatMulAswKernel {
 public:
     __aicore__ inline TransposeQuantBatchMatMulAswKernel() {}
-    __aicore__ inline void Init(
-        GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scaleGM, GM_ADDR ptScaleGM, GM_ADDR cGM, GM_ADDR workSpace,
-        const void* tilingData, TPipe* pipe);
-    __aicore__ inline void UpdateGlobalAddr(
-        GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scaleGM, GM_ADDR ptScaleGM, GM_ADDR cGM, GM_ADDR workSpace);
+    __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scaleGM, GM_ADDR ptScaleGM, GM_ADDR cGM,
+                                GM_ADDR workSpace, const void* tilingData, TPipe* pipe);
+    __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scaleGM, GM_ADDR ptScaleGM, GM_ADDR cGM,
+                                            GM_ADDR workSpace);
     __aicore__ inline void Process();
 
 public:
     using aT = typename AscendC::Conditional<
         TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
-        AscendC::MatmulTypeWithScale<
-            TPosition::GM, TPosition::GM, CubeFormat::ND, aType, aTrans, TPosition::GM, CubeFormat::ND, aTrans,
-            TPosition::GM>,
+        AscendC::MatmulTypeWithScale<TPosition::GM, TPosition::GM, CubeFormat::ND, aType, aTrans, TPosition::GM,
+                                     CubeFormat::ND, aTrans, TPosition::GM>,
         AscendC::MatmulType<TPosition::GM, CubeFormat::ND, aType, aTrans>>::type;
     using bT = typename AscendC::Conditional<
         TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
-        AscendC::MatmulTypeWithScale<
-            TPosition::GM, TPosition::GM, bFormat, bType, bTrans, TPosition::GM, CubeFormat::ND, bTrans, TPosition::GM>,
+        AscendC::MatmulTypeWithScale<TPosition::GM, TPosition::GM, bFormat, bType, bTrans, TPosition::GM,
+                                     CubeFormat::ND, bTrans, TPosition::GM>,
         AscendC::MatmulType<TPosition::GM, bFormat, bType, bTrans>>::type;
     using biasT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, biasType>;
     using cT = typename AscendC::Conditional<
@@ -91,8 +89,8 @@ public:
     using MmType = typename AscendC::Conditional<
         TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>() ||
             precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8),
-        AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg,
-                           MatmulCallBackFunc<nullptr, nullptr, nullptr>, AscendC::Impl::Detail::MatmulWithScalePolicy>,
+        AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, MatmulCallBackFunc<nullptr, nullptr, nullptr>,
+                            AscendC::Impl::Detail::MatmulWithScalePolicy>,
         AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
                             AscendC::TQBmmCustomMatmulPolicy>>::type;
     MmType mm;
@@ -109,11 +107,11 @@ protected:
     __aicore__ inline void MMCompute();
     __aicore__ inline void SetOrgShape();
     __aicore__ inline void DequantCompute();
-    __aicore__ inline void VFDoDequantWithX1Pertoken(
-        __ubuf__ cType* dequantOutInUbAddr, __ubuf__ l0cDtype* l0cOutUbAddr, uint64_t offsetPtScale, uint16_t mSize);
-    __aicore__ inline void VFDoDequant(
-        __ubuf__ cType* dst, __ubuf__ l0cDtype* l0cOut, __ubuf__ scaleType* scale, __ubuf__ ptScaleType* perTokenScale,
-        uint16_t mSize, uint16_t nSize);
+    __aicore__ inline void VFDoDequantWithX1Pertoken(__ubuf__ cType* dequantOutInUbAddr,
+                                                     __ubuf__ l0cDtype* l0cOutUbAddr, uint64_t offsetPtScale,
+                                                     uint16_t mSize);
+    __aicore__ inline void VFDoDequant(__ubuf__ cType* dst, __ubuf__ l0cDtype* l0cOut, __ubuf__ scaleType* scale,
+                                       __ubuf__ ptScaleType* perTokenScale, uint16_t mSize, uint16_t nSize);
     __aicore__ inline void NotifyCube() { AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE, PIPE_V>(AIV_SYNC_AIC_FLAG); }
     __aicore__ inline void WaitForVector()
     {
@@ -164,7 +162,7 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     pipe_ = pipe;
     tilingData_ = static_cast<const BatchMatMulV3TilingData*>(tilingData);
     if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>() ||
-        precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
+                  precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
         if ASCEND_IS_AIV {
             return;
         }
@@ -184,21 +182,20 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
             subBlockIdx_ = AscendC::GetSubBlockIdx();
         }
         UpdateGlobalAddr(aGM, bGM, scaleGM, ptScaleGM, cGM, workSpace);
-        uint32_t mForSingleVec =
-            CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM), CV_RATIO);
-        pipe_->InitBuffer(
-            vecQueMMRes_, 1, mForSingleVec * tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(l0cDtype));
+        uint32_t mForSingleVec = CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM),
+                                         CV_RATIO);
+        pipe_->InitBuffer(vecQueMMRes_, 1,
+                          mForSingleVec * tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(l0cDtype));
         l0cOutUb_ = vecQueMMRes_.AllocTensor<l0cDtype>();
         // 仅AIV相关的buffer
         if ASCEND_IS_AIV {
             pipe_->InitBuffer(vecQueScale_, 1, tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(scaleType));
-            pipe_->InitBuffer(
-                vecQuePertokenScale_, 1, Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)));
+            pipe_->InitBuffer(vecQuePertokenScale_, 1,
+                              Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)));
             // fp16/bf16分两次输出，fp32分四次输出
-            pipe_->InitBuffer(
-                vecQueOut_, BUFFER_NUM,
-                CeilDiv(static_cast<uint64_t>(mForSingleVec), FP32_OUTPUT_TIMES) *
-                    tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(cType));
+            pipe_->InitBuffer(vecQueOut_, BUFFER_NUM,
+                              CeilDiv(static_cast<uint64_t>(mForSingleVec), FP32_OUTPUT_TIMES) *
+                                  tilingData_->matMulTilingData.tCubeTiling.baseN * sizeof(cType));
         }
     }
 }
@@ -207,10 +204,9 @@ LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::SetOrgShape()
 {
     uint64_t mergeBatchK = tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.Ka;
-    mm.SetOrgShape(
-        tilingData_->matMulTilingData.tCubeTiling.M, tilingData_->matMulTilingData.tCubeTiling.N, mergeBatchK,
-        tilingData_->matMulTilingData.tCubeTiling.Kb,
-        tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.N);
+    mm.SetOrgShape(tilingData_->matMulTilingData.tCubeTiling.M, tilingData_->matMulTilingData.tCubeTiling.N,
+                   mergeBatchK, tilingData_->matMulTilingData.tCubeTiling.Kb,
+                   tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.N);
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
@@ -254,9 +250,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
                     if ASCEND_IS_AIV {
                         return;
                     }
-                    mm.SetSingleShape(
-                        block_.params_.singleCoreM, block_.params_.singleCoreN,
-                        tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
+                    mm.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
+                                      tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
                     mm.SetTensorScaleA(pertokenScaleGlobal_[block_.offset_.offsetPerTokenScale], aTrans);
                     mm.SetTensorScaleB(scaleGlobal_[block_.offset_.offsetScale], bTrans);
                     MMCompute();
@@ -270,9 +265,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
                     MMCompute();
                 } else {
                     if ASCEND_IS_AIC {
-                        mm.SetSingleShape(
-                            block_.params_.singleCoreM, block_.params_.singleCoreN,
-                            tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
+                        mm.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
+                                          tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
                         if (j > 0) {
                             WaitForVector();
                         }
@@ -326,8 +320,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     auto mSizeForOnce = CeilDiv(singleMInVec, static_cast<uint64_t>(splitNumOfOut));
     for (uint16_t i = 0; i < splitNumOfOut; i++) {
         // do dequant in vector
-        uint64_t offsetL0c =
-            i * mSizeForOnce * Align(block_.params_.singleCoreN, static_cast<uint64_t>(DATA_BLOCK / sizeof(l0cDtype)));
+        uint64_t offsetL0c = i * mSizeForOnce *
+                             Align(block_.params_.singleCoreN, static_cast<uint64_t>(DATA_BLOCK / sizeof(l0cDtype)));
         if (i * mSizeForOnce >= singleMInVec) {
             break;
         }
@@ -398,9 +392,9 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     DataCopyExtParams ub2GmParams{1, 0, 0, 0, 0};
     ub2GmParams.blockLen = block_.params_.singleCoreN * sizeof(cType);
     ub2GmParams.blockCount = blockCount;
-    ub2GmParams.dstStride =
-        (tilingData_->matMulTilingData.tCubeTiling.N * tilingData_->cBatchDimAll - block_.params_.singleCoreN) *
-        sizeof(cType);
+    ub2GmParams.dstStride = (tilingData_->matMulTilingData.tCubeTiling.N * tilingData_->cBatchDimAll -
+                             block_.params_.singleCoreN) *
+                            sizeof(cType);
     AscendC::DataCopyPad(cGlobal_[block_.offset_.offsetC + offset], src, ub2GmParams);
 }
 
@@ -417,9 +411,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
 {
     __ubuf__ ptScaleType* ptScaleUbAddr = (__ubuf__ ptScaleType*)ptScaleUb_.GetPhyAddr();
     ptScaleUbAddr = ptScaleUbAddr + offsetPtScale;
-    VFDoDequant(
-        dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), ptScaleUbAddr, mSize,
-        block_.params_.singleCoreN);
+    VFDoDequant(dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType*)scaleUb_.GetPhyAddr(), ptScaleUbAddr, mSize,
+                block_.params_.singleCoreN);
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
@@ -433,8 +426,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     uint16_t nLoopCnt = (nSize + eleNumPerVf - 1) / eleNumPerVf;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::MaskReg maskN4B16 =
-            AscendC::MicroAPI::CreateMask<bfloat16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            maskN4B16 = AscendC::MicroAPI::CreateMask<bfloat16_t, AscendC::MicroAPI::MaskPattern::ALL>();
         for (uint16_t mIdx = 0; mIdx < mSize; mIdx++) {
             uint32_t elementNum = nSize;
             for (uint16_t vfBlockIdx = 0; vfBlockIdx < nLoopCnt; vfBlockIdx++) {

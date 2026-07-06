@@ -28,15 +28,9 @@ using namespace ge;
 
 class GroupedQuantMaxInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupedQuantMaxInferShapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupedQuantMaxInferShapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupedQuantMaxInferShapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupedQuantMaxInferShapeTest TearDown" << std::endl; }
 };
 
 TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_infershape_basic)
@@ -206,10 +200,8 @@ TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_inferdatatype_fp32_fp8_e
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .InputDataTypes({&x_dtype, &scale_dtype, &group_list_dtype})
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
-                                  .NodeAttrs({
-                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-                                  })
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -241,10 +233,8 @@ TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_inferdatatype_fp16_hiflo
                                   .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .InputDataTypes({&x_dtype, &scale_dtype, &group_list_dtype})
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
-                                  .NodeAttrs({
-                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("round")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}
-                                  })
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("round")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -276,10 +266,8 @@ TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_inferdatatype_bf16_fp8_e
                                   .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .InputDataTypes({&x_dtype, &scale_dtype, &group_list_dtype})
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
-                                  .NodeAttrs({
-                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}
-                                  })
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -311,10 +299,8 @@ TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_inferdatatype_invalid_x_
                                   .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .InputDataTypes({&x_dtype, &scale_dtype, &group_list_dtype})
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
-                                  .NodeAttrs({
-                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-                                  })
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -346,10 +332,8 @@ TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_inferdatatype_invalid_sc
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .InputDataTypes({&x_dtype, &scale_dtype, &group_list_dtype})
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
-                                  .NodeAttrs({
-                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-                                  })
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -381,10 +365,8 @@ TEST_F(GroupedQuantMaxInferShapeTest, grouped_quant_max_inferdatatype_invalid_gr
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .InputDataTypes({&x_dtype, &scale_dtype, &group_list_dtype})
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
-                                  .NodeAttrs({
-                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-                                  })
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();

@@ -35,9 +35,7 @@ struct WeightQuantBatchMatmulV2TilingCustomTestParam {
 };
 
 class TestWeightQuantBatchMatmulV2TilingCustom
-    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingCustomTestParam>
-{
-};
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingCustomTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -238,11 +236,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomTestParam
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(hasTilingCompileInfo ? &compileInfo : nullptr)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -254,10 +252,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomTestParam
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -298,52 +295,60 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingCustom, generalTest)
 
 static WeightQuantBatchMatmulV2TilingCustomTestParam casesParams2448[] = {
     // custom
-    {"fuzzcase_255_255_255_0_1_0_1_0_0_0_BF16_INT8_UINT64_INT8", 24, 365056114230017}, //310100ULL
-    {"int4fuzzcase_10112_8280_190_1_0_0_0_0_0_0_FLOAT16_INT4_UINT64_FLOAT16", 20, 365330992136961}, //311100UL
-    {"Key_96_11264_6912_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873}, //311110ULL
-    {"Key_96_6912_11264_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873}, //311110ULL
-    {"Key_1024_11264_1664_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873}, //311110ULL
-    {"Key_1024_11264_6912_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873}, //311110ULL
-    {"Key_1024_1408_11264_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873}, //311110ULL
-    {"Key_1024_6912_11264_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873}, //311110ULL
-    {"Int4fuzzCase_64_65504_10208_0_0_0_0_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 365057187971841}, //310200UL
-    {"fuzzcase_14783_3004_214_0_0_0_0_0_0_-1_BF16_INT8_UINT64_BF16", 24, 365057187971841}, //310200UL
-    {"fuzzcase_10112_8280_190_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16", 22, 365332065878785}, //311200ULL
-    {"fuzzcase_3_57713_1077_1_0_0_0_0_0_-1_BF16_INT8_UINT64_BF16", 24, 365332065878785}, //311200ULL
-    {"fuzzcase_103_2659_2169_1_0_0_0_0_0_-1_BF16_INT8_UINT64_BF16", 24, 365332065878785}, //311200ULL
-    {"int4fuzzCase_51_800_64_0_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 16, 365057724842753}, //310210UL
+    {"fuzzcase_255_255_255_0_1_0_1_0_0_0_BF16_INT8_UINT64_INT8", 24, 365056114230017},                     // 310100ULL
+    {"int4fuzzcase_10112_8280_190_1_0_0_0_0_0_0_FLOAT16_INT4_UINT64_FLOAT16", 20, 365330992136961},        // 311100UL
+    {"Key_96_11264_6912_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873},                        // 311110ULL
+    {"Key_96_6912_11264_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873},                        // 311110ULL
+    {"Key_1024_11264_1664_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873},                      // 311110ULL
+    {"Key_1024_11264_6912_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873},                      // 311110ULL
+    {"Key_1024_1408_11264_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873},                      // 311110ULL
+    {"Key_1024_6912_11264_1_0_0_0_0_1_0_BF16_INT8_UINT64_BF16", 24, 365331529007873},                      // 311110ULL
+    {"Int4fuzzCase_64_65504_10208_0_0_0_0_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 365057187971841}, // 310200UL
+    {"fuzzcase_14783_3004_214_0_0_0_0_0_0_-1_BF16_INT8_UINT64_BF16", 24, 365057187971841},                 // 310200UL
+    {"fuzzcase_10112_8280_190_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16", 22, 365332065878785},           // 311200ULL
+    {"fuzzcase_3_57713_1077_1_0_0_0_0_0_-1_BF16_INT8_UINT64_BF16", 24, 365332065878785},                   // 311200ULL
+    {"fuzzcase_103_2659_2169_1_0_0_0_0_0_-1_BF16_INT8_UINT64_BF16", 24, 365332065878785},                  // 311200ULL
+    {"int4fuzzCase_51_800_64_0_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 16, 365057724842753},      // 310210UL
     {"Int4fuzzCase_64_65504_32_0_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 365057724842753},
-    {"networkCase_96_11264_6912_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"networkCase_96_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"networkCase_1024_11264_1664_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"networkCase_1024_11264_6912_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"networkCase_1024_1408_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"networkCase_1024_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_1024_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_96_11263_1663_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_3486_355_25600_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_8480_336_14128_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 17, 365332602749697}, //311210ULL
-    {"fuzzcase_732_42131_73_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_800_17136_912_1_0_0_0_1_0_-1_BF16_INT8_UINT64_BF16", 24, 365332334314241}, //311201ULL
-    {"fuzzcase_3248_480_42976_1_0_0_1_1_0_-1_BF16_INT8_UINT64_BF16", 22, 365332334314241}, //311201ULL
-    {"fuzzcase_177_3311_3553_1_0_0_0_1_0_-1_BF16_INT8_UINT64_BF16", 23, 365332334314241}, //311201ULL
-    {"fuzzcase_37204_2339_198_1_0_0_1_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16", 24, 365332334314241}, //311201ULL
-    {"fuzzcase_2768_592_58416_1_0_0_1_1_1_-1_BF16_INT8_UINT64_BF16", 22, 365332871185153}, //311211ULL
-    {"fuzzcase_22_5698_73_1_0_0_0_1_1_-1_BF16_INT8_UINT64_BF16", 18, 365332871185153}, //311211ULL
-    {"fuzzcase_127_2049_1023_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24, 365332066206465}, //811200UL
-    {"fuzzcase_6472_3_9313_1_0_0_1_0_0_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 23, 365332066206465},//811200UL
-    {"fuzzcase_108_15980_13_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 21, 365057725170433}, //810210
+    {"networkCase_96_11264_6912_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},     // 311210ULL
+    {"networkCase_96_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},     // 311210ULL
+    {"networkCase_1024_11264_1664_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},   // 311210ULL
+    {"networkCase_1024_11264_6912_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},   // 311210ULL
+    {"networkCase_1024_1408_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},   // 311210ULL
+    {"networkCase_1024_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},   // 311210ULL
+    {"fuzzcase_1024_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},      // 311210ULL
+    {"fuzzcase_96_11263_1663_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},        // 311210ULL
+    {"fuzzcase_3486_355_25600_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},       // 311210ULL
+    {"fuzzcase_8480_336_14128_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 17, 365332602749697}, // 311210ULL
+    {"fuzzcase_732_42131_73_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},         // 311210ULL
+    {"fuzzcase_800_17136_912_1_0_0_0_1_0_-1_BF16_INT8_UINT64_BF16", 24, 365332334314241},        // 311201ULL
+    {"fuzzcase_3248_480_42976_1_0_0_1_1_0_-1_BF16_INT8_UINT64_BF16", 22, 365332334314241},       // 311201ULL
+    {"fuzzcase_177_3311_3553_1_0_0_0_1_0_-1_BF16_INT8_UINT64_BF16", 23, 365332334314241},        // 311201ULL
+    {"fuzzcase_37204_2339_198_1_0_0_1_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16", 24, 365332334314241}, // 311201ULL
+    {"fuzzcase_2768_592_58416_1_0_0_1_1_1_-1_BF16_INT8_UINT64_BF16", 22, 365332871185153},       // 311211ULL
+    {"fuzzcase_22_5698_73_1_0_0_0_1_1_-1_BF16_INT8_UINT64_BF16", 18, 365332871185153},           // 311211ULL
+    {"fuzzcase_127_2049_1023_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24,
+     365332066206465}, // 811200UL
+    {"fuzzcase_6472_3_9313_1_0_0_1_0_0_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 23,
+     365332066206465}, // 811200UL
+    {"fuzzcase_108_15980_13_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 21,
+     365057725170433}, // 810210
     {"fuzzcase_4096_8192_3584_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24, 365332603077377},
     {"fuzzcase_4096_8192_32000_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24, 365332603077377},
-    {"fuzzcase_3712_176_2592_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 24, 365332603077377}, //811210UL
-    {"fuzzcase_127_2049_1023_0_0_0_1_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24, 365057993605889}, //810211UL
-    {"fuzzcase_127_2049_1025_1_0_0_1_1_1_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 22, 365332871512833}, //811211UL
+    {"fuzzcase_3712_176_2592_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 24,
+     365332603077377}, // 811210UL
+    {"fuzzcase_127_2049_1023_0_0_0_1_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24,
+     365057993605889}, // 810211UL
+    {"fuzzcase_127_2049_1025_1_0_0_1_1_1_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 22,
+     365332871512833}, // 811211UL
     {"fuzzcase_127_2049_1023_1_0_0_1_1_1_-1_BF16_INT8_UINT64_BF16_24_48_supportL0C2Out_1", 24, 365332871512833},
     {"fuzzcase_3631_3902_11074_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24, 365332603077377},
-    {"fuzzcase_3631_3902_11074_1_0_0_0_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24, 365332066206465},//811200UL
+    {"fuzzcase_3631_3902_11074_1_0_0_0_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48_supportL0C2Out_1", 24,
+     365332066206465}, // 811200UL
     {"fuzzcase_3631_3902_11074_1_0_0_0_0_1_-1_BF16_INT4_UINT64_BF16_24_48_supportL0C2Out_1", 24, 365332603077377},
-    {"fuzzcase_3631_3902_11074_1_0_0_0_0_0_-1_BF16_INT4_UINT64_BF16_24_48_supportL0C2Out_1", 24, 365332066206465},//811200UL
-    {"Key_96_8192_1024_1_0_0_1_0_1_128_FLOAT16_INT32_UINT64_FLOAT16", 24, 365333676491521}, //311310ULL
+    {"fuzzcase_3631_3902_11074_1_0_0_0_0_0_-1_BF16_INT4_UINT64_BF16_24_48_supportL0C2Out_1", 24,
+     365332066206465},                                                                      // 811200UL
+    {"Key_96_8192_1024_1_0_0_1_0_1_128_FLOAT16_INT32_UINT64_FLOAT16", 24, 365333676491521}, // 311310ULL
     {"Key_96_8192_1024_1_0_0_1_0_1_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333676491521},
     {"Key_96_5120_640_1_0_0_1_0_1_128_FLOAT16_INT4_UINT64_FLOAT16", 23, 365333676491521},
     {"Key_451_8192_1024_1_0_0_1_0_1_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333676491521},
@@ -364,33 +369,32 @@ static WeightQuantBatchMatmulV2TilingCustomTestParam casesParams2448[] = {
     {"Key_2048_5120_640_1_1_0_1_0_1_128_FLOAT16_INT4_UINT64_INT8", 24, 365333676491521},
     {"Key_2142_5120_640_1_1_0_1_0_1_128_FLOAT16_INT4_UINT64_INT8", 24, 365333676491521},
     {"Key_4096_5120_640_1_1_0_1_0_1_128_FLOAT16_INT4_UINT64_INT8", 24, 365333676491521},
-    {"Key_1_4096_8192_1_0_0_0_0_1_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333676491521}, //311310UL
+    {"Key_1_4096_8192_1_0_0_0_0_1_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333676491521}, // 311310UL
     {"int4fuzzcase_255_23000_255_1_0_0_0_0_1_32_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333676491521},
     {"fuzzcase_1024_6912_11264_1_0_0_0_0_1_128_BF16_INT4_UINT64_BF16", 24, 365333676491521},
-    {"Key_1_4096_8192_1_0_0_0_1_0_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333408056065}, //311301UL
-    {"int4fuzzcase_573_4850_5040_1_0_0_0_1_1_3648_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333944926977}, //311311UL
-    {"int4fuzzcase_255_23000_256_1_0_0_0_0_0_32_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333139620609}, //311300UL
-    {"fuzzcase_1024_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_96_11263_1663_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_3486_355_25600_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_8480_336_14128_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 17, 365332602749697}, //311210ULL
-    {"fuzzcase_732_42131_73_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697}, //311210ULL
-    {"fuzzcase_2997_3072_32004_1_1_0_1_1_1_-1_BF16_INT8_UINT64_INT8", 24, 365350051054337}, //321211ULL
+    {"Key_1_4096_8192_1_0_0_0_1_0_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333408056065},             // 311301UL
+    {"int4fuzzcase_573_4850_5040_1_0_0_0_1_1_3648_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333944926977}, // 311311UL
+    {"int4fuzzcase_255_23000_256_1_0_0_0_0_0_32_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333139620609},   // 311300UL
+    {"fuzzcase_1024_6912_11264_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},           // 311210ULL
+    {"fuzzcase_96_11263_1663_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},             // 311210ULL
+    {"fuzzcase_3486_355_25600_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},            // 311210ULL
+    {"fuzzcase_8480_336_14128_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 17, 365332602749697},      // 311210ULL
+    {"fuzzcase_732_42131_73_1_0_0_1_0_1_-1_BF16_INT8_UINT64_BF16", 24, 365332602749697},              // 311210ULL
+    {"fuzzcase_2997_3072_32004_1_1_0_1_1_1_-1_BF16_INT8_UINT64_INT8", 24, 365350051054337},           // 321211ULL
 };
 
 INSTANTIATE_TEST_CASE_P(MM2448, TestWeightQuantBatchMatmulV2TilingCustom, testing::ValuesIn(casesParams2448));
 
-static void ThreadFunc(
-    const WeightQuantBatchMatmulV2TilingCustomTestParam* params, size_t testcase_num, size_t thread_idx,
-    size_t thread_num)
+static void ThreadFunc(const WeightQuantBatchMatmulV2TilingCustomTestParam* params, size_t testcase_num,
+                       size_t thread_idx, size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
 }
 
-static void TestMultiThread(
-    const WeightQuantBatchMatmulV2TilingCustomTestParam* params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const WeightQuantBatchMatmulV2TilingCustomTestParam* params, size_t testcase_num,
+                            size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {
@@ -405,7 +409,6 @@ static void TestMultiThread(
 TEST_F(TestWeightQuantBatchMatmulV2TilingCustom, multi_thread_2448)
 {
     // 用3个线程测试
-    TestMultiThread(
-        casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingCustomTestParam), 3);
+    TestMultiThread(casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingCustomTestParam),
+                    3);
 }
-

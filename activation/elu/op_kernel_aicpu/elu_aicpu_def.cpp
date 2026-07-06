@@ -14,7 +14,7 @@
 namespace ops {
 class Elu : public OpDef {
 public:
-    explicit Elu(const char *name) : OpDef(name)
+    explicit Elu(const char* name) : OpDef(name)
     {
         this->Input("x").ParamType(REQUIRED).DataType({ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16});
         this->Output("y").ParamType(REQUIRED).DataType({ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16});
@@ -25,4 +25,4 @@ public:
 };
 
 OP_ADD(Elu);
-}  // namespace ops
+} // namespace ops

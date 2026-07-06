@@ -18,7 +18,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *BucketizeV2(const aclTensor *self, const aclTensor *boundaries, const bool outInt32,
-                             const bool right, aclOpExecutor *executor);
+const aclTensor* BucketizeV2(const aclTensor* self, const aclTensor* boundaries, const bool outInt32, const bool right,
+                             aclOpExecutor* executor);
 }
 #endif

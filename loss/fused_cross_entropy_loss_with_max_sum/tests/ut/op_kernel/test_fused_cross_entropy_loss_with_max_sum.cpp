@@ -27,22 +27,17 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fused_cross_entropy_loss_with_max_sum(GM_ADDR logits_max, GM_ADDR sum_exp_logits,
-                                GM_ADDR predicted_logits, GM_ADDR input, GM_ADDR weight,GM_ADDR vocab_parallel_logits, 
-                                GM_ADDR loss, GM_ADDR softmax_logits, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fused_cross_entropy_loss_with_max_sum(
+    GM_ADDR logits_max, GM_ADDR sum_exp_logits, GM_ADDR predicted_logits, GM_ADDR input, GM_ADDR weight,
+    GM_ADDR vocab_parallel_logits, GM_ADDR loss, GM_ADDR softmax_logits, GM_ADDR workspace, GM_ADDR tiling);
 
 class fused_cross_entropy_loss_with_max_sum_test : public testing::Test {
-    protected:
-
-    static void SetUpTestCase() {
-        cout << "fused_cross_entropy_loss_with_max_sum_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "fused_cross_entropy_loss_with_max_sum_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "fused_cross_entropy_loss_with_max_sum_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "fused_cross_entropy_loss_with_max_sum_test TearDown\n" << endl; }
 };
 
-TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp32) 
+TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp32)
 {
     size_t vocab_parallel_logits_ = 1024 * 4096 * sizeof(float);
     size_t logits_max_ = 1024 * sizeof(float);
@@ -50,20 +45,20 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp32)
     size_t predicted_logits_ = 1024 * sizeof(float);
     size_t input_ = 1024 * sizeof(float);
     size_t weight_ = 1024 * sizeof(float);
-    size_t softmax_logits_ = 1024 *  4096 * sizeof(float);
-    size_t loss_ = 1024 *sizeof(float);
+    size_t softmax_logits_ = 1024 * 4096 * sizeof(float);
+    size_t loss_ = 1024 * sizeof(float);
     size_t tiling_ = sizeof(FusedCrossEntropyLossWithMaxSumTilingData);
 
-    uint8_t *vocab_parallel_logits = (uint8_t *)AscendC::GmAlloc(vocab_parallel_logits_);
-    uint8_t *logits_max = (uint8_t *)AscendC::GmAlloc(logits_max_);
-    uint8_t *sum_exp_logits = (uint8_t *)AscendC::GmAlloc(sum_exp_logits_);
-    uint8_t *predicted_logits = (uint8_t *)AscendC::GmAlloc(predicted_logits_);
-    uint8_t *input = (uint8_t *)AscendC::GmAlloc(input_);
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc(weight_);
-    uint8_t *softmax_logits = (uint8_t *)AscendC::GmAlloc(softmax_logits_);
-    uint8_t *loss = (uint8_t *)AscendC::GmAlloc(loss_);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* vocab_parallel_logits = (uint8_t*)AscendC::GmAlloc(vocab_parallel_logits_);
+    uint8_t* logits_max = (uint8_t*)AscendC::GmAlloc(logits_max_);
+    uint8_t* sum_exp_logits = (uint8_t*)AscendC::GmAlloc(sum_exp_logits_);
+    uint8_t* predicted_logits = (uint8_t*)AscendC::GmAlloc(predicted_logits_);
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(input_);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weight_);
+    uint8_t* softmax_logits = (uint8_t*)AscendC::GmAlloc(softmax_logits_);
+    uint8_t* loss = (uint8_t*)AscendC::GmAlloc(loss_);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
@@ -72,9 +67,10 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp32)
     system("cd ./gen_data/ && rm -rf ./*bin");
     system("cd ./gen_data/ && python3 gen_data.py 1024 4096 1024");
 
-    char *path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits, vocab_parallel_logits_);
+    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits,
+             vocab_parallel_logits_);
     ReadFile(path + "/gen_data/logits_max.bin", logits_max_, logits_max, logits_max_);
     ReadFile(path + "/gen_data/sum_exp_logits.bin", sum_exp_logits_, sum_exp_logits, sum_exp_logits_);
     ReadFile(path + "/gen_data/predicted_logits.bin", predicted_logits_, predicted_logits, predicted_logits_);
@@ -84,7 +80,8 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp32)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 48, logits_max, sum_exp_logits, predicted_logits, input, weight, vocab_parallel_logits, loss, softmax_logits,  workspace, tiling);
+    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 48, logits_max, sum_exp_logits, predicted_logits, input, weight,
+                vocab_parallel_logits, loss, softmax_logits, workspace, tiling);
 
     AscendC::GmFree(vocab_parallel_logits);
     AscendC::GmFree(logits_max);
@@ -98,7 +95,7 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp32)
     free(path_);
 }
 
-TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_bf16) 
+TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_bf16)
 {
     size_t vocab_parallel_logits_ = 1024 * 4096 * sizeof(half);
     size_t logits_max_ = 1024 * sizeof(float);
@@ -106,20 +103,20 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_bf16)
     size_t predicted_logits_ = 1024 * sizeof(float);
     size_t input_ = 1024 * sizeof(float);
     size_t weight_ = 1024 * sizeof(float);
-    size_t softmax_logits_ = 1024 *  4096 * sizeof(float);
-    size_t loss_ = 1024 *sizeof(float);
+    size_t softmax_logits_ = 1024 * 4096 * sizeof(float);
+    size_t loss_ = 1024 * sizeof(float);
     size_t tiling_ = sizeof(FusedCrossEntropyLossWithMaxSumTilingData);
 
-    uint8_t *vocab_parallel_logits = (uint8_t *)AscendC::GmAlloc(vocab_parallel_logits_);
-    uint8_t *logits_max = (uint8_t *)AscendC::GmAlloc(logits_max_);
-    uint8_t *sum_exp_logits = (uint8_t *)AscendC::GmAlloc(sum_exp_logits_);
-    uint8_t *predicted_logits = (uint8_t *)AscendC::GmAlloc(predicted_logits_);
-    uint8_t *input = (uint8_t *)AscendC::GmAlloc(input_);
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc(weight_);
-    uint8_t *softmax_logits = (uint8_t *)AscendC::GmAlloc(softmax_logits_);
-    uint8_t *loss = (uint8_t *)AscendC::GmAlloc(loss_);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* vocab_parallel_logits = (uint8_t*)AscendC::GmAlloc(vocab_parallel_logits_);
+    uint8_t* logits_max = (uint8_t*)AscendC::GmAlloc(logits_max_);
+    uint8_t* sum_exp_logits = (uint8_t*)AscendC::GmAlloc(sum_exp_logits_);
+    uint8_t* predicted_logits = (uint8_t*)AscendC::GmAlloc(predicted_logits_);
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(input_);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weight_);
+    uint8_t* softmax_logits = (uint8_t*)AscendC::GmAlloc(softmax_logits_);
+    uint8_t* loss = (uint8_t*)AscendC::GmAlloc(loss_);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
@@ -128,9 +125,10 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_bf16)
     system("cd ./gen_data/ && rm -rf ./*bin");
     system("cd ./gen_data/ && python3 gen_data_bf16.py 1024 4096 1024");
 
-    char *path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits, vocab_parallel_logits_);
+    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits,
+             vocab_parallel_logits_);
     ReadFile(path + "/gen_data/logits_max.bin", logits_max_, logits_max, logits_max_);
     ReadFile(path + "/gen_data/sum_exp_logits.bin", sum_exp_logits_, sum_exp_logits, sum_exp_logits_);
     ReadFile(path + "/gen_data/predicted_logits.bin", predicted_logits_, predicted_logits, predicted_logits_);
@@ -140,7 +138,8 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_bf16)
 
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 48, logits_max, sum_exp_logits, predicted_logits, input, weight, vocab_parallel_logits, loss, softmax_logits,  workspace, tiling);
+    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 48, logits_max, sum_exp_logits, predicted_logits, input, weight,
+                vocab_parallel_logits, loss, softmax_logits, workspace, tiling);
 
     AscendC::GmFree(vocab_parallel_logits);
     AscendC::GmFree(logits_max);
@@ -154,9 +153,7 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_bf16)
     free(path_);
 }
 
-
-
-TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp16) 
+TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp16)
 {
     size_t vocab_parallel_logits_ = 1024 * 4096 * sizeof(half);
     size_t logits_max_ = 1024 * sizeof(float);
@@ -164,20 +161,20 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp16)
     size_t predicted_logits_ = 1024 * sizeof(float);
     size_t input_ = 1024 * sizeof(float);
     size_t weight_ = 1024 * sizeof(float);
-    size_t softmax_logits_ = 1024 *  4096 * sizeof(float);
-    size_t loss_ = 1024 *sizeof(float);
+    size_t softmax_logits_ = 1024 * 4096 * sizeof(float);
+    size_t loss_ = 1024 * sizeof(float);
     size_t tiling_ = sizeof(FusedCrossEntropyLossWithMaxSumTilingData);
 
-    uint8_t *vocab_parallel_logits = (uint8_t *)AscendC::GmAlloc(vocab_parallel_logits_);
-    uint8_t *logits_max = (uint8_t *)AscendC::GmAlloc(logits_max_);
-    uint8_t *sum_exp_logits = (uint8_t *)AscendC::GmAlloc(sum_exp_logits_);
-    uint8_t *predicted_logits = (uint8_t *)AscendC::GmAlloc(predicted_logits_);
-    uint8_t *input = (uint8_t *)AscendC::GmAlloc(input_);
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc(weight_);
-    uint8_t *softmax_logits = (uint8_t *)AscendC::GmAlloc(softmax_logits_);
-    uint8_t *loss = (uint8_t *)AscendC::GmAlloc(loss_);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* vocab_parallel_logits = (uint8_t*)AscendC::GmAlloc(vocab_parallel_logits_);
+    uint8_t* logits_max = (uint8_t*)AscendC::GmAlloc(logits_max_);
+    uint8_t* sum_exp_logits = (uint8_t*)AscendC::GmAlloc(sum_exp_logits_);
+    uint8_t* predicted_logits = (uint8_t*)AscendC::GmAlloc(predicted_logits_);
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(input_);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weight_);
+    uint8_t* softmax_logits = (uint8_t*)AscendC::GmAlloc(softmax_logits_);
+    uint8_t* loss = (uint8_t*)AscendC::GmAlloc(loss_);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
@@ -186,9 +183,10 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp16)
     system("cd ./gen_data/ && rm -rf ./*bin");
     system("cd ./gen_data/ && python3 gen_data_fp16.py 1024 4096 1024");
 
-    char *path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits, vocab_parallel_logits_);
+    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits,
+             vocab_parallel_logits_);
     ReadFile(path + "/gen_data/logits_max.bin", logits_max_, logits_max, logits_max_);
     ReadFile(path + "/gen_data/sum_exp_logits.bin", sum_exp_logits_, sum_exp_logits, sum_exp_logits_);
     ReadFile(path + "/gen_data/predicted_logits.bin", predicted_logits_, predicted_logits, predicted_logits_);
@@ -198,7 +196,8 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp16)
 
     ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 48, logits_max, sum_exp_logits, predicted_logits, input, weight, vocab_parallel_logits, loss, softmax_logits,  workspace, tiling);
+    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 48, logits_max, sum_exp_logits, predicted_logits, input, weight,
+                vocab_parallel_logits, loss, softmax_logits, workspace, tiling);
 
     AscendC::GmFree(vocab_parallel_logits);
     AscendC::GmFree(logits_max);
@@ -212,7 +211,7 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_fp16)
     free(path_);
 }
 
-TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_nullptr) 
+TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_nullptr)
 {
     size_t vocab_parallel_logits_ = 1024 * 4096 * sizeof(half);
     size_t logits_max_ = 1024 * sizeof(float);
@@ -220,20 +219,20 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_nullptr)
     size_t predicted_logits_ = 1024 * sizeof(float);
     size_t input_ = 1024 * sizeof(float);
     size_t weight_ = 1024 * sizeof(float);
-    size_t softmax_logits_ = 1024 *  4096 * sizeof(float);
-    size_t loss_ = 1024 *sizeof(float);
+    size_t softmax_logits_ = 1024 * 4096 * sizeof(float);
+    size_t loss_ = 1024 * sizeof(float);
     size_t tiling_ = sizeof(FusedCrossEntropyLossWithMaxSumTilingData);
 
-    uint8_t *vocab_parallel_logits = (uint8_t *)AscendC::GmAlloc(vocab_parallel_logits_);
-    uint8_t *logits_max = (uint8_t *)AscendC::GmAlloc(logits_max_);
-    uint8_t *sum_exp_logits = (uint8_t *)AscendC::GmAlloc(sum_exp_logits_);
-    uint8_t *predicted_logits = (uint8_t *)AscendC::GmAlloc(predicted_logits_);
-    uint8_t *input = (uint8_t *)AscendC::GmAlloc(input_);
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc(weight_);
-    uint8_t *softmax_logits = (uint8_t *)AscendC::GmAlloc(softmax_logits_);
-    uint8_t *loss = (uint8_t *)AscendC::GmAlloc(loss_);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* vocab_parallel_logits = (uint8_t*)AscendC::GmAlloc(vocab_parallel_logits_);
+    uint8_t* logits_max = (uint8_t*)AscendC::GmAlloc(logits_max_);
+    uint8_t* sum_exp_logits = (uint8_t*)AscendC::GmAlloc(sum_exp_logits_);
+    uint8_t* predicted_logits = (uint8_t*)AscendC::GmAlloc(predicted_logits_);
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(input_);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weight_);
+    uint8_t* softmax_logits = (uint8_t*)AscendC::GmAlloc(softmax_logits_);
+    uint8_t* loss = (uint8_t*)AscendC::GmAlloc(loss_);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
@@ -242,9 +241,10 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_nullptr)
     system("cd ./gen_data/ && rm -rf ./*bin");
     system("cd ./gen_data/ && python3 gen_data_fp16.py 1024 4096 1024");
 
-    char *path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits, vocab_parallel_logits_);
+    ReadFile(path + "/gen_data/vocab_parallel_logits.bin", vocab_parallel_logits_, vocab_parallel_logits,
+             vocab_parallel_logits_);
     ReadFile(path + "/gen_data/logits_max.bin", logits_max_, logits_max, logits_max_);
     ReadFile(path + "/gen_data/sum_exp_logits.bin", sum_exp_logits_, sum_exp_logits, sum_exp_logits_);
     ReadFile(path + "/gen_data/predicted_logits.bin", predicted_logits_, predicted_logits, predicted_logits_);
@@ -254,7 +254,8 @@ TEST_F(fused_cross_entropy_loss_with_max_sum_test, params_nullptr)
 
     ICPU_SET_TILING_KEY(3);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 0, logits_max, sum_exp_logits, predicted_logits, input, weight, vocab_parallel_logits, loss, softmax_logits,  workspace, tiling);
+    ICPU_RUN_KF(fused_cross_entropy_loss_with_max_sum, 0, logits_max, sum_exp_logits, predicted_logits, input, weight,
+                vocab_parallel_logits, loss, softmax_logits, workspace, tiling);
 
     AscendC::GmFree(vocab_parallel_logits);
     AscendC::GmFree(logits_max);

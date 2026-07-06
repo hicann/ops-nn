@@ -32,15 +32,16 @@ template <typename T, typename = void>
 struct IsMatmulLayoutType : AscendC::Std::false_type {};
 
 template <typename T>
-struct IsMatmulLayoutType<T, std::void_t<typename T::layout, typename T::T, decltype(T::pos)>> : AscendC::Std::true_type {};
+struct IsMatmulLayoutType<T, std::void_t<typename T::layout, typename T::T, decltype(T::pos)>>
+    : AscendC::Std::true_type {};
 
 template <typename T>
 constexpr bool IsMatmulLayoutTypeV = IsMatmulLayoutType<T>::value;
 
 template <class LayoutT>
 struct ToMatmulType {
-    using Type = AscendC::MatmulType<LayoutT::pos, TagToFormat<typename LayoutT::layout>::format,
-            typename LayoutT::T, TagToTrans<typename LayoutT::layout>::value>;
+    using Type = AscendC::MatmulType<LayoutT::pos, TagToFormat<typename LayoutT::layout>::format, typename LayoutT::T,
+                                     TagToTrans<typename LayoutT::layout>::value>;
 };
 
 template <class LayoutT>
@@ -48,4 +49,3 @@ using ToMatmulTypeT = typename ToMatmulType<LayoutT>::Type;
 
 } // namespace Gemm
 } // namespace Cmct
-

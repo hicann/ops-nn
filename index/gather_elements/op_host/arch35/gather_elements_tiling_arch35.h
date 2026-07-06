@@ -32,18 +32,18 @@ namespace optiling {
 constexpr int64_t TILING_ARRAY_LEN_EIGHT = 8;
 constexpr int64_t M_SHIFT_OFFSET = 7;
 BEGIN_TILING_DATA_DEF(GatherElementsTilingData)
-TILING_DATA_FIELD_DEF(int64_t, axis);                                        // 属性axis(dim)的值
-TILING_DATA_FIELD_DEF(int64_t, usedCore);                                    // 使用核数
-TILING_DATA_FIELD_DEF(int64_t, perCoreNum);                                  // simt:非尾核的元素个数 simd:非尾核需要处理的高轴个数
-TILING_DATA_FIELD_DEF(int64_t, tailCoreNum);                                 // simt:尾核的元素个数 simd:尾核需要处理的高轴个数
+TILING_DATA_FIELD_DEF(int64_t, axis);        // 属性axis(dim)的值
+TILING_DATA_FIELD_DEF(int64_t, usedCore);    // 使用核数
+TILING_DATA_FIELD_DEF(int64_t, perCoreNum);  // simt:非尾核的元素个数 simd:非尾核需要处理的高轴个数
+TILING_DATA_FIELD_DEF(int64_t, tailCoreNum); // simt:尾核的元素个数 simd:尾核需要处理的高轴个数
 TILING_DATA_FIELD_DEF(int64_t, xLoadInUbNum);
 TILING_DATA_FIELD_DEF(int64_t, indexLoadInUbNum);
 TILING_DATA_FIELD_DEF(int64_t, xUbFactor);
 TILING_DATA_FIELD_DEF(int64_t, indexUbFactor);
 TILING_DATA_FIELD_DEF(int64_t, xAfterAxis);
 TILING_DATA_FIELD_DEF(int64_t, idxAfterAxis);
-TILING_DATA_FIELD_DEF_ARR(int64_t, TILING_ARRAY_LEN_EIGHT, xStrideArr);      // 输入x的stride
-TILING_DATA_FIELD_DEF_ARR(int64_t, TILING_ARRAY_LEN_EIGHT, indexStrideArr);  // 输入index的stride
+TILING_DATA_FIELD_DEF_ARR(int64_t, TILING_ARRAY_LEN_EIGHT, xStrideArr);     // 输入x的stride
+TILING_DATA_FIELD_DEF_ARR(int64_t, TILING_ARRAY_LEN_EIGHT, indexStrideArr); // 输入index的stride
 TILING_DATA_FIELD_DEF_ARR(uint64_t, M_SHIFT_OFFSET, magic);
 TILING_DATA_FIELD_DEF_ARR(uint64_t, M_SHIFT_OFFSET, shift);
 TILING_DATA_FIELD_DEF_ARR(int64_t, TILING_ARRAY_LEN_EIGHT, indexShape);
@@ -55,13 +55,13 @@ REGISTER_TILING_DATA_CLASS(GatherElements, GatherElementsTilingData)
 
 class GatherElementsSimtTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit GatherElementsSimtTiling(gert::TilingContext *context) : Ops::NN::Optiling::TilingBaseClass(context)
+    explicit GatherElementsSimtTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
     {
         Reset();
     }
     ~GatherElementsSimtTiling() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         Ops::NN::Optiling::TilingBaseClass::Reset(context);
         Reset();
@@ -97,10 +97,10 @@ private:
     static constexpr int64_t DIGIT_TEN = 10;
     static constexpr int64_t INT32_MAX_BOUND = 2147483647;
 
-    inline bool ParamTypeIsInvalid(ge::DataType &x);
+    inline bool ParamTypeIsInvalid(ge::DataType& x);
     ge::graphStatus GetInAndOutInfo();
     inline ge::graphStatus GetAttrInfo();
-    inline int HandleCount(int &count, int i, int j);
+    inline int HandleCount(int& count, int i, int j);
     void UpdateTilingKey();
     void ReductionDim();
     void CalculateFullLoadCondition(int64_t xDtypeSize, int64_t indexDtypeSize);
@@ -136,9 +136,9 @@ private:
     std::vector<int64_t> indexShapeArr_;
     std::vector<int64_t> xStrideArr_;
     std::vector<int64_t> indexStrideArr_;
-    uint64_t magic_[M_SHIFT_OFFSET] = {0,0,0,0,0,0,0};
-    uint64_t shift_[M_SHIFT_OFFSET] = {0,0,0,0,0,0,0};
-    
+    uint64_t magic_[M_SHIFT_OFFSET] = {0, 0, 0, 0, 0, 0, 0};
+    uint64_t shift_[M_SHIFT_OFFSET] = {0, 0, 0, 0, 0, 0, 0};
+
     gert::Shape xShape_;
     gert::Shape xShapeMerge_;
     gert::Shape xShape8d_;
@@ -150,8 +150,8 @@ private:
     gert::Shape yShape_;
     ge::DataType xDtype_;
     ge::DataType indexDtype_;
- 
-    const char *opName_ = "";
+
+    const char* opName_ = "";
     GatherElementsTilingData m_tilingData_;
 };
 } // namespace optiling

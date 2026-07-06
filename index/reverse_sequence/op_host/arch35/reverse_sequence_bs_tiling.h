@@ -28,21 +28,15 @@
 #include "util/math_util.h"
 #include "reverse_sequence_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 
 using Ops::NN::Optiling::TilingBaseClass;
 
-class ReverseSequenceBSTiling : public TilingBaseClass
-{
+class ReverseSequenceBSTiling : public TilingBaseClass {
 public:
-    explicit ReverseSequenceBSTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit ReverseSequenceBSTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~ReverseSequenceBSTiling() override
-    {
-    }
+    ~ReverseSequenceBSTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -63,7 +57,6 @@ public:
     uint64_t ubSize_ = 0;
 
 private:
-    
     ge::graphStatus InitializationVars();
     void DoUBTilingSingle();
     void DoBlockTiling();

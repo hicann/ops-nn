@@ -24,16 +24,13 @@ using namespace ge;
 
 class DynamicMxQuantWithDualAxisTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "dynamic_mx_quant_with_dual_axis test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "dynamic_mx_quant_with_dual_axis test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "dynamic_mx_quant_with_dual_axis test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "dynamic_mx_quant_with_dual_axis test TearDown" << std::endl; }
 };
 
-TEST_F(DynamicMxQuantWithDualAxisTest, dynamic_mx_quant_with_dual_axis_case_1) {
+TEST_F(DynamicMxQuantWithDualAxisTest, dynamic_mx_quant_with_dual_axis_case_1)
+{
     ge::op::DynamicMxQuantWithDualAxis quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({128, 128});

@@ -49,12 +49,7 @@ struct RmsNormDynamicQuantCompileInfo {
     uint64_t maxUbSize = 0;
 };
 
-enum class UB_TILING_POLICY : std::int32_t
-{
-    NORMAL,
-    SINGLE_ROW,
-    SLICE_D
-};
+enum class UB_TILING_POLICY : std::int32_t { NORMAL, SINGLE_ROW, SLICE_D };
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -68,8 +63,7 @@ inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
 
 class RmsNormDynamicQuantTilingHelper {
 public:
-    explicit RmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context)
-    {}
+    explicit RmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context) {}
 
     ~RmsNormDynamicQuantTilingHelper() = default;
     bool DoTiling();

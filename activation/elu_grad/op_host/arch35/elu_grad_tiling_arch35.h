@@ -30,22 +30,23 @@ struct EluGradCompileInfo {
 
 class EluGradTiling {
 public:
-    explicit EluGradTiling(gert::TilingContext *context) : tilingContext(context){};
+    explicit EluGradTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CheckShape();
+
 private:
     uint64_t dType = 0;
     uint64_t schMode = 0;
     ge::DataType gradsDtype = ge::DT_UNDEFINED;
     ge::DataType activationsDtype = ge::DT_UNDEFINED;
     ge::DataType outputDtype = ge::DT_UNDEFINED;
-    gert::TilingContext *tilingContext;
+    gert::TilingContext* tilingContext;
 };
 
 } // namespace optiling
- 
+
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_ELU_GRAD_TILING_ARCH35_H

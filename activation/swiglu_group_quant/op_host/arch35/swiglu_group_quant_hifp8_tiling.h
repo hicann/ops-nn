@@ -22,9 +22,7 @@ namespace optiling {
 
 class SwigluGroupQuantHifp8Tiling {
 public:
-    explicit SwigluGroupQuantHifp8Tiling(gert::TilingContext* tilingContext) : context_(tilingContext)
-    {
-    }
+    explicit SwigluGroupQuantHifp8Tiling(gert::TilingContext* tilingContext) : context_(tilingContext) {}
     ~SwigluGroupQuantHifp8Tiling() = default;
 
     ge::graphStatus GetPlatformInfo();
@@ -38,6 +36,7 @@ public:
     ge::graphStatus CalcOpTiling();
     void SetTilingData();
     void SetTilingKey();
+
 private:
     ge::graphStatus CheckInputDtype();
     ge::graphStatus CheckOutputDtype();
@@ -51,7 +50,7 @@ private:
     void CalcTileTokens();
     ge::graphStatus CalcCoreDistribution();
 
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     uint64_t tilingKey_ = 0;
     SwigluGroupQuantHifp8TilingData tilingData_;
     uint64_t coreNum_ = 0;
@@ -74,5 +73,5 @@ private:
     int64_t quantMode_ = 3;
 };
 
-}  // namespace optiling
-#endif  // SWIGLU_GROUP_QUANT_HIFP8_TILING_H
+} // namespace optiling
+#endif // SWIGLU_GROUP_QUANT_HIFP8_TILING_H

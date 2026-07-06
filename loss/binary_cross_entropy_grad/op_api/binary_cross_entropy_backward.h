@@ -14,9 +14,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *BinaryCrossEntropyGrad(
-    const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target, const aclTensor *weightOptional,
-    const std::string &reduction, aclOpExecutor *executor);
-}  // namespace l0op
+const aclTensor* BinaryCrossEntropyGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                        const aclTensor* weightOptional, const std::string& reduction,
+                                        aclOpExecutor* executor);
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_BACKEARD_H_
+#endif // OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_BACKEARD_H_

@@ -41,10 +41,7 @@ constexpr float GLU_BIAS_DEFAULT = 1.0;
 
 static const std::set<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
 // 获取INPUT/OUTPUT/ATTR信息
-ge::graphStatus ClippedSwigluTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ClippedSwigluTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 // 获取平台信息比如CoreNum、UB/L1/L0C资源大小
 ge::graphStatus ClippedSwigluTiling::GetPlatformInfo()
 {
@@ -100,10 +97,7 @@ ge::graphStatus ClippedSwigluTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 // 计算高阶API的TilingData
-ge::graphStatus ClippedSwigluTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ClippedSwigluTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 // 计算Workspace 大小
 ge::graphStatus ClippedSwigluTiling::GetWorkspaceSize()
 {
@@ -122,10 +116,7 @@ ge::graphStatus ClippedSwigluTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t ClippedSwigluTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t ClippedSwigluTiling::GetTilingKey() const { return tilingKey_; }
 
 // Dump Tiling数据
 void ClippedSwigluTiling::DumpTilingInfo()
@@ -152,15 +143,12 @@ void ClippedSwigluTiling::DumpTilingInfo()
 
 ge::graphStatus ClippedSwigluTiling::GetShapeAttrsInfoInner()
 {
-    OP_CHECK_IF(
-        CheckAndGetXAndAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "check x and attrs failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckAndGetGroupIndex() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "check group_index param failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckY() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "check y param failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckAndGetXAndAttrs() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "check x and attrs failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckAndGetGroupIndex() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "check group_index param failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckY() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "check y param failed."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -210,10 +198,9 @@ ge::graphStatus ClippedSwigluTiling::CheckAndGetXAndAttrs()
     auto descX = context_->GetInputDesc(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, descX);
     xDtype_ = descX->GetDataType();
-    OP_CHECK_IF(
-        (SUPPORT_DTYPE.find(xDtype_) == SUPPORT_DTYPE.end()),
-        OP_LOGE(context_->GetNodeName(), "x dtype only support float, half or bfloat16, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((SUPPORT_DTYPE.find(xDtype_) == SUPPORT_DTYPE.end()),
+                OP_LOGE(context_->GetNodeName(), "x dtype only support float, half or bfloat16, please check."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -229,16 +216,13 @@ ge::graphStatus ClippedSwigluTiling::CheckAndGetGroupIndex()
         auto descGroupIndex = context_->GetInputDesc(GROUP_INDEX_INDEX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, descGroupIndex);
         auto groupIndexDtype = descGroupIndex->GetDataType();
-        OP_CHECK_IF(
-            (groupIndexDim != 1),
-            OP_LOGE(
-                context_->GetNodeName(), "the number of dimensions of group_index should be 1, but get %ld.",
-                groupIndexDim),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            (groupIndexDtype != ge::DT_INT64),
-            OP_LOGE(context_->GetNodeName(), "groupIndex dtype only support int64, please check."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((groupIndexDim != 1),
+                    OP_LOGE(context_->GetNodeName(),
+                            "the number of dimensions of group_index should be 1, but get %ld.", groupIndexDim),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF((groupIndexDtype != ge::DT_INT64),
+                    OP_LOGE(context_->GetNodeName(), "groupIndex dtype only support int64, please check."),
+                    return ge::GRAPH_FAILED);
         groupNum_ = inputShapeGroupIndex.GetDim(0);
     }
     return ge::GRAPH_SUCCESS;
@@ -253,21 +237,17 @@ ge::graphStatus ClippedSwigluTiling::CheckY()
     auto descY = context_->GetInputDesc(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, descY);
     auto yDtype = descY->GetDataType();
-    OP_CHECK_IF(
-        (yDims != xDims_),
-        OP_LOGE(
-            context_->GetNodeName(), "the number of dimensions of y should be equal to dimensions of x, but get %ld.",
-            yDims),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (inputShapeY.GetDim(cutDim_) != (xCutDimNum_ / 2)),
-        OP_LOGE(
-            context_->GetNodeName(), "y[dim] should be equal to x[dim] divided by 2, but get %ld.",
-            inputShapeY.GetDim(cutDim_)),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (yDtype != xDtype_),
-        OP_LOGE(context_->GetNodeName(), "y dtype should be the same as x, please cheack."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((yDims != xDims_),
+                OP_LOGE(context_->GetNodeName(),
+                        "the number of dimensions of y should be equal to dimensions of x, but get %ld.", yDims),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((inputShapeY.GetDim(cutDim_) != (xCutDimNum_ / 2)),
+                OP_LOGE(context_->GetNodeName(), "y[dim] should be equal to x[dim] divided by 2, but get %ld.",
+                        inputShapeY.GetDim(cutDim_)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((yDtype != xDtype_),
+                OP_LOGE(context_->GetNodeName(), "y dtype should be the same as x, please cheack."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -283,12 +263,12 @@ ge::graphStatus ClippedSwigluTiling::CountMaxPair()
     int64_t tmpBuffer1 = SWI_FACTOR * DTYPE_FACTOR;
     int64_t tmpBuffer2 = SWI_FACTOR * DTYPE_FACTOR;
     int64_t numerator = static_cast<int64_t>(ubSize_) - UB_RESERVE - groupindexBuffer;
-    ubMaxPair_ =
-        ((numerator / (xBuffer + yBuffer + tmpBuffer1 + tmpBuffer2) / BLOCK_SIZE * BLOCK_SIZE) - (BLOCK_SIZE - 1)) /
-        SIZE_OF_BF16_FP16; // 32字节对齐
-    OP_CHECK_IF(
-        (numerator <= 0 || ubMaxPair_ <= 0),
-        OP_LOGE(context_->GetNodeName(), "Input not supported, groupNum is too large."), return ge::GRAPH_FAILED);
+    ubMaxPair_ = ((numerator / (xBuffer + yBuffer + tmpBuffer1 + tmpBuffer2) / BLOCK_SIZE * BLOCK_SIZE) -
+                  (BLOCK_SIZE - 1)) /
+                 SIZE_OF_BF16_FP16; // 32字节对齐
+    OP_CHECK_IF((numerator <= 0 || ubMaxPair_ <= 0),
+                OP_LOGE(context_->GetNodeName(), "Input not supported, groupNum is too large."),
+                return ge::GRAPH_FAILED);
     isLongH_ = ubMaxPair_ * SWI_FACTOR < dim2H_ ? 1 : 0;
 
     return ge::GRAPH_SUCCESS;
@@ -314,11 +294,10 @@ ge::graphStatus TilingPrepareForClippedSwiglu(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
+                        static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);

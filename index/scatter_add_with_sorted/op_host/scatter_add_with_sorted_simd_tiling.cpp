@@ -48,11 +48,13 @@ std::set<int64_t> FindFactor(int64_t usedCoreNum)
     return result;
 }
 
-void ScatterAddWithSortedSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum)
+void ScatterAddWithSortedSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum,
+                                                      int64_t rowTotalNum, int64_t colTotalNum)
 {
     int64_t tmpEleNum = BASE_BLOCK_ALIGN / updatesDtypeSize_;
     int64_t colBlockTotalNum = (colTotalNum + tmpEleNum - 1) / tmpEleNum;
-    usedCoreNum = std::min(usedCoreNum, std::max<int64_t>(1, rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
+    usedCoreNum = std::min(usedCoreNum,
+                           std::max<int64_t>(1, rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
 
     std::set<int64_t> cutSet = FindFactor(usedCoreNum);
     std::vector<std::vector<int64_t>> allTiling;
@@ -89,7 +91,8 @@ void ScatterAddWithSortedSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64
     });
 
     int64_t allTilingSize = static_cast<int64_t>(allTiling.size());
-    while (allTilingSize > 1 && static_cast<int64_t>(indicesNum_) / allTiling[0][0] < std::min<int64_t>(NUM_FOUR, indicesNum_)) {
+    while (allTilingSize > 1 &&
+           static_cast<int64_t>(indicesNum_) / allTiling[0][0] < std::min<int64_t>(NUM_FOUR, indicesNum_)) {
         allTiling.erase(allTiling.begin());
         allTilingSize = static_cast<int64_t>(allTiling.size());
     }
@@ -102,9 +105,11 @@ void ScatterAddWithSortedSimdTiling::DoBlockTiling()
     ubBlock_ = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     availableUbsize = ubSize_;
     availableUbsize = Ops::Base::FloorAlign(static_cast<int64_t>(availableUbsize / BUFFER_NUM), ubBlock_);
-    FrontAndBackIndex = Ops::Base::CeilAlign(
-        static_cast<int64_t>(FRONT_AND_BACK_INDEX_COUNT * indicesDtypeSize_), ubBlock_);
-    resUb = availableUbsize - UB_THREE_BUFFER_COUNT * static_cast<int64_t>(Ops::Base::CeilAlign(static_cast<int64_t>(varShape_[1] * updatesDtypeSize_), ubBlock_));
+    FrontAndBackIndex = Ops::Base::CeilAlign(static_cast<int64_t>(FRONT_AND_BACK_INDEX_COUNT * indicesDtypeSize_),
+                                             ubBlock_);
+    resUb = availableUbsize -
+            UB_THREE_BUFFER_COUNT * static_cast<int64_t>(Ops::Base::CeilAlign(
+                                        static_cast<int64_t>(varShape_[1] * updatesDtypeSize_), ubBlock_));
     resUb = isDeterminTemplate_ ? std::max<int64_t>(0, resUb - FrontAndBackIndex) : resUb;
     if (resUb >= COL_TILING_THRES) {
         coreNumInCol_ = 1;
@@ -134,9 +139,10 @@ void ScatterAddWithSortedSimdTiling::DoUBTiling()
 {
     int64_t rowNumInUb = 0;
     if (resUb >= COL_TILING_THRES) {
-        int64_t colSizeAlign = Ops::Base::CeilAlign(
-            static_cast<int64_t>(normalCoreColNum_ * updatesDtypeSize_), ubBlock_);
-        int64_t tmpRowNum = Ops::Base::FloorAlign(static_cast<int64_t>(resUb / BUFFER_NUM), ubBlock_) / indicesDtypeSize_;
+        int64_t colSizeAlign = Ops::Base::CeilAlign(static_cast<int64_t>(normalCoreColNum_ * updatesDtypeSize_),
+                                                    ubBlock_);
+        int64_t tmpRowNum = Ops::Base::FloorAlign(static_cast<int64_t>(resUb / BUFFER_NUM), ubBlock_) /
+                            indicesDtypeSize_;
         rowNumInUb = std::min(tmpRowNum, normalCoreRowNum_);
         rowNumInUb = std::max<int64_t>(1, rowNumInUb);
         updatesBufferSize_ = colSizeAlign;
@@ -150,7 +156,8 @@ void ScatterAddWithSortedSimdTiling::DoUBTiling()
     } else {
         int64_t tmpRowNum = COL_TILING_THRES / BUFFER_NUM / indicesDtypeSize_;
         rowNumInUb = std::min(tmpRowNum, normalCoreRowNum_);
-        int64_t colSizeInUb = Ops::Base::FloorAlign((availableUbsize - COL_TILING_THRES) / UB_THREE_BUFFER_COUNT, ubBlock_);
+        int64_t colSizeInUb = Ops::Base::FloorAlign((availableUbsize - COL_TILING_THRES) / UB_THREE_BUFFER_COUNT,
+                                                    ubBlock_);
         updatesBufferSize_ = colSizeInUb;
         outBufferSize_ = colSizeInUb;
         int64_t colNumInUb = colSizeInUb / updatesDtypeSize_;
@@ -175,13 +182,13 @@ void ScatterAddWithSortedSimdTiling::DoUBTiling()
 void ScatterAddWithSortedSimdTiling::DeterminTemplateUbTiling()
 {
     vecAlignSize_ = Ops::Base::CeilAlign(static_cast<int64_t>(varShape_[1] * updatesDtypeSize_), BASE_BLOCK_ALIGN);
-    int64_t resUbForDetermin = ubSize_ - UB_THREE_BUFFER_COUNT * static_cast<int64_t>(Ops::Base::CeilAlign(
+    int64_t resUbForDetermin = ubSize_ - UB_THREE_BUFFER_COUNT *
+                                             static_cast<int64_t>(Ops::Base::CeilAlign(
                                                  static_cast<int64_t>(varShape_[1] * updatesDtypeSize_), ubBlock_));
     // do UBTILING
-    if (resUbForDetermin >=
-        (coreNumInRow_ * CACHE_ALIGN_SIZE)) {
-        int64_t colSizeAlignDetermin =
-            Ops::Base::CeilAlign(static_cast<int64_t>(varShape_[1] * updatesDtypeSize_), ubBlock_);
+    if (resUbForDetermin >= (coreNumInRow_ * CACHE_ALIGN_SIZE)) {
+        int64_t colSizeAlignDetermin = Ops::Base::CeilAlign(static_cast<int64_t>(varShape_[1] * updatesDtypeSize_),
+                                                            ubBlock_);
         updatesDeterminBufferSize_ = colSizeAlignDetermin;
         outBufferDeterminSize_ = colSizeAlignDetermin;
         normalCoreColDetermNum_ = varShape_[1];
@@ -206,13 +213,13 @@ void ScatterAddWithSortedSimdTiling::DeterminTemplateUbTiling()
     indicesWorkspaceBufferSize_ = Ops::Base::FloorAlign((coreNumInRow_ * CACHE_ALIGN_SIZE), ubBlock_);
     normalCoreColUbDetermLoop_ = Ops::Base::CeilDiv(normalCoreColDetermNum_, colNumInUbDeterm);
     normalCoreNormalLoopDetermCols_ = Ops::Base::CeilDiv(normalCoreColDetermNum_, normalCoreColUbDetermLoop_);
-    normalCoreTailLoopDetermCols_ =
-        normalCoreColDetermNum_ - (normalCoreColUbDetermLoop_ - 1) * normalCoreNormalLoopDetermCols_;
+    normalCoreTailLoopDetermCols_ = normalCoreColDetermNum_ -
+                                    (normalCoreColUbDetermLoop_ - 1) * normalCoreNormalLoopDetermCols_;
 
     tailCoreColUbDetermLoop_ = Ops::Base::CeilDiv(tailCoreColNumDeterm_, colNumInUbDeterm);
     tailCoreNormalLoopDetermCols_ = Ops::Base::CeilDiv(tailCoreColNumDeterm_, tailCoreColUbDetermLoop_);
-    tailCoreTailLoopDetermCols_ =
-        tailCoreColNumDeterm_ - (tailCoreColUbDetermLoop_ - 1) * tailCoreNormalLoopDetermCols_;
+    tailCoreTailLoopDetermCols_ = tailCoreColNumDeterm_ -
+                                  (tailCoreColUbDetermLoop_ - 1) * tailCoreNormalLoopDetermCols_;
 }
 
 void ScatterAddWithSortedSimdTiling::SetTilingData()

@@ -22,7 +22,8 @@ namespace l0op {
 OP_TYPE_REGISTER(Mish);
 
 // AICORE算子kernel
-static const aclTensor *MishAiCore(const aclTensor *self, aclTensor *out, aclOpExecutor *executor) {
+static const aclTensor* MishAiCore(const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+{
     L0_DFX(MishAiCore, self, out);
     // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将Aicore Mish算子加入任务队列
     // Mish是算子的OpType，self是算子的输入，out是算子的输出
@@ -32,8 +33,9 @@ static const aclTensor *MishAiCore(const aclTensor *self, aclTensor *out, aclOpE
     return out;
 }
 
-const aclTensor *Mish(const aclTensor *self, aclOpExecutor *executor) {
+const aclTensor* Mish(const aclTensor* self, aclOpExecutor* executor)
+{
     auto mishOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
     return MishAiCore(self, mishOut, executor);
 }
-}  // namespace l0op
+} // namespace l0op

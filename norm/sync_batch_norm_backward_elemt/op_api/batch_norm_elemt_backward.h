@@ -13,9 +13,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* SyncBatchNormBackwardElemt(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* meadDy, const aclTensor* meadDyXmu, aclOpExecutor* executor);
+const aclTensor* SyncBatchNormBackwardElemt(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                            const aclTensor* invstd, const aclTensor* weight, const aclTensor* meadDy,
+                                            const aclTensor* meadDyXmu, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_BATCH_NORM_ELEMT_BACKWARD_OP_H_

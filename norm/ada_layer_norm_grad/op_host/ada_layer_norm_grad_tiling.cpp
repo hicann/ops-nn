@@ -12,17 +12,17 @@
  * \file ada_layer_norm_grad_tiling.cc
  * \brief
  */
-#include<iostream>
-#include<string>
+#include <iostream>
+#include <string>
 #include "ada_layer_norm_grad_tiling.h"
 
 namespace optiling {
-static ge::graphStatus Tiling4AdaLayerNormGrad(gert::TilingContext *context)
+static ge::graphStatus Tiling4AdaLayerNormGrad(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus TilingPrepare4AdaLayerNormGrad(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4AdaLayerNormGrad(gert::TilingParseContext* context)
 {
     OP_LOGD(context, "TilingPrepare4AdaLayerNormGrad enter.");
 
@@ -37,17 +37,17 @@ static ge::graphStatus TilingPrepare4AdaLayerNormGrad(gert::TilingParseContext *
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
-        static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
+                        static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
     OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
-        static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
+                        static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
+                return ge::GRAPH_FAILED);
     compileInfo->isRegBase = false;
 
     OP_LOGD(context->GetNodeName(),

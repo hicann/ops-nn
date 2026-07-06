@@ -22,15 +22,9 @@ using namespace std;
 
 class l2_layer_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "layer_norm_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_layer_norm_quant_test, ascend950_case_static_001)
@@ -39,18 +33,29 @@ TEST_F(l2_layer_norm_quant_test, ascend950_case_static_001)
     auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto tensor_desc_s = TensorDesc({1,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_o = TensorDesc({1,}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
 
     auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
-    auto tensor_desc_os = TensorDesc({8,}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
     int quantMode = 0;
     double eps = 1e-6;
 
     auto ut = OP_API_UT(
         aclnnLayerNormQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
         OUTPUT(tensor_desc_y, tensor_desc_os));
 
     // SAMPLE: only test GetWorkspaceSize
@@ -65,18 +70,29 @@ TEST_F(l2_layer_norm_quant_test, ascend910b_case_static_001)
     auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto tensor_desc_s = TensorDesc({1,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_o = TensorDesc({1,}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
 
     auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
-    auto tensor_desc_os = TensorDesc({8,}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
     int quantMode = 0;
     double eps = 1e-6;
 
     auto ut = OP_API_UT(
         aclnnLayerNormQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
         OUTPUT(tensor_desc_y, tensor_desc_os));
 
     // SAMPLE: only test GetWorkspaceSize
@@ -91,18 +107,29 @@ TEST_F(l2_layer_norm_quant_test, ascend910b_case_float16_001)
     auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_beta = TensorDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
 
-    auto tensor_desc_s = TensorDesc({1,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_o = TensorDesc({1,}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
 
     auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
-    auto tensor_desc_os = TensorDesc({8,}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
     int quantMode = 0;
     double eps = 1e-6;
 
     auto ut = OP_API_UT(
         aclnnLayerNormQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
         OUTPUT(tensor_desc_y, tensor_desc_os));
 
     // SAMPLE: only test GetWorkspaceSize
@@ -117,18 +144,29 @@ TEST_F(l2_layer_norm_quant_test, ascend910b_case_non_aligned_001)
     auto tensor_desc_gamma = TensorDesc({1, 63}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_beta = TensorDesc({1, 63}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto tensor_desc_s = TensorDesc({1,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_o = TensorDesc({1,}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
 
     auto tensor_desc_y = TensorDesc({8, 63}, ACL_INT8, ACL_FORMAT_ND);
-    auto tensor_desc_os = TensorDesc({8,}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
     int quantMode = 0;
     double eps = 1e-6;
 
     auto ut = OP_API_UT(
         aclnnLayerNormQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
         OUTPUT(tensor_desc_y, tensor_desc_os));
 
     // SAMPLE: only test GetWorkspaceSize

@@ -59,28 +59,27 @@ static std::string GetDataFormat(gert::TilingContext* context)
     return std::string(data_format);
 }
 
-static bool CheckX2GradShapeEqual(
-    gert::TilingContext* context, const gert::StorageShape* x2Shape, const gert::StorageShape* gradShape, size_t dimNum)
+static bool CheckX2GradShapeEqual(gert::TilingContext* context, const gert::StorageShape* x2Shape,
+                                  const gert::StorageShape* gradShape, size_t dimNum)
 {
     for (size_t i = 0; i < dimNum; i++) {
         uint64_t x2DimValue = x2Shape->GetStorageShape().GetDim(i);
         uint64_t gradDimValue = gradShape->GetStorageShape().GetDim(i);
-        OP_TILING_CHECK(
-            x2DimValue != gradDimValue,
-            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                context->GetNodeName(), "x2, grad",
-                (std::to_string(x2DimValue) + ", " + std::to_string(gradDimValue)).c_str(),
-                ("the dim values of x2 and grad must be equal, but x2[" + std::to_string(i) + "]=" +
-                 std::to_string(x2DimValue) + ", grad[" + std::to_string(i) + "]=" + std::to_string(gradDimValue))
-                    .c_str()),
-            return false);
+        OP_TILING_CHECK(x2DimValue != gradDimValue,
+                        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                            context->GetNodeName(), "x2, grad",
+                            (std::to_string(x2DimValue) + ", " + std::to_string(gradDimValue)).c_str(),
+                            ("the dim values of x2 and grad must be equal, but x2[" + std::to_string(i) +
+                             "]=" + std::to_string(x2DimValue) + ", grad[" + std::to_string(i) +
+                             "]=" + std::to_string(gradDimValue))
+                                .c_str()),
+                        return false);
     }
     return true;
 }
 
-static bool CheckNCDimEqual(
-    gert::TilingContext* context, const gert::StorageShape* x1Shape, const gert::StorageShape* x2Shape,
-    const std::string& format, size_t dimNum)
+static bool CheckNCDimEqual(gert::TilingContext* context, const gert::StorageShape* x1Shape,
+                            const gert::StorageShape* x2Shape, const std::string& format, size_t dimNum)
 {
     uint32_t cPosIdx = (format == "NHWC") ? dimNum - 1 : dimNum - 4;
     uint64_t xNDim = (dimNum == CHW_DIM_NUM) ? 1 : x1Shape->GetStorageShape().GetDim(0);
@@ -89,11 +88,11 @@ static bool CheckNCDimEqual(
     uint64_t gradCDim = x2Shape->GetStorageShape().GetDim(cPosIdx);
     OP_TILING_CHECK(
         (xNDim != gradNDim) || (xCDim != gradCDim),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "grad, x1",
-            ("N=" + std::to_string(gradNDim) + "," + std::to_string(gradCDim) + " and N=" + std::to_string(xNDim) +
-             "," + std::to_string(xCDim)).c_str(),
-            "the N,C dims of grad and x1 must be equal"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "grad, x1",
+                                               ("N=" + std::to_string(gradNDim) + "," + std::to_string(gradCDim) +
+                                                " and N=" + std::to_string(xNDim) + "," + std::to_string(xCDim))
+                                                   .c_str(),
+                                               "the N,C dims of grad and x1 must be equal"),
         return false);
     return true;
 }
@@ -118,19 +117,19 @@ bool MaxPoolGradTilingBase::CheckInputShape()
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context_->GetNodeName(), "input",
             (std::to_string(X1DimNum) + ", " + std::to_string(X2DimNum) + ", " + std::to_string(gradDimNum)).c_str(),
-            ("all inputs must have " + std::to_string(NCHW_DIM_NUM) + " dims, but got xdim=" +
-             std::to_string(X1DimNum) + ", x2dim=" + std::to_string(X2DimNum) + ", gradDim=" +
-             std::to_string(gradDimNum)).c_str()),
+            ("all inputs must have " + std::to_string(NCHW_DIM_NUM) +
+             " dims, but got xdim=" + std::to_string(X1DimNum) + ", x2dim=" + std::to_string(X2DimNum) +
+             ", gradDim=" + std::to_string(gradDimNum))
+                .c_str()),
         return false);
 
     for (uint32_t i = 0; i < X1DimNum; i++) {
         uint64_t xDimVal = x1Shape->GetStorageShape().GetDim(i);
-        OP_CHECK_IF(
-            xDimVal == 0,
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-                context_->GetNodeName(), "x", std::to_string(xDimVal).c_str(),
-                ("the dim" + std::to_string(i) + " of x should not be 0").c_str()),
-            return false);
+        OP_CHECK_IF(xDimVal == 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context_->GetNodeName(), "x", std::to_string(xDimVal).c_str(),
+                        ("the dim" + std::to_string(i) + " of x should not be 0").c_str()),
+                    return false);
     }
 
     if (!CheckX2GradShapeEqual(context_, x2Shape, gradShape, X1DimNum)) {
@@ -149,81 +148,72 @@ ge::graphStatus MaxPoolGradTilingBase::CheckInputDtype()
     auto x2DataType = context_->GetInputDesc(X2_INDEX)->GetDataType();
     auto gradDataType = context_->GetInputDesc(GRAD_INDEX)->GetDataType();
 
-    OP_CHECK_IF(
-        !(x1DataType == x2DataType && x2DataType == gradDataType),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "x1, x2, grads",
-            (ge::TypeUtils::DataTypeToSerialString(x1DataType) + ", " +
-             ge::TypeUtils::DataTypeToSerialString(x2DataType) + ", " +
-             ge::TypeUtils::DataTypeToSerialString(gradDataType)).c_str(),
-            "the dtypes of x1, x2, grads must be the same"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (x1DataType != ge::DT_FLOAT) && (x1DataType != ge::DT_FLOAT16) && (x1DataType != ge::DT_BF16),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "x1", ge::TypeUtils::DataTypeToSerialString(x1DataType).c_str(),
-            "the dtype of x1 must be fp32, fp16, or bf16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(x1DataType == x2DataType && x2DataType == gradDataType),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x1, x2, grads",
+                                                       (ge::TypeUtils::DataTypeToSerialString(x1DataType) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(x2DataType) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradDataType))
+                                                           .c_str(),
+                                                       "the dtypes of x1, x2, grads must be the same"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((x1DataType != ge::DT_FLOAT) && (x1DataType != ge::DT_FLOAT16) && (x1DataType != ge::DT_BF16),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x1",
+                                                      ge::TypeUtils::DataTypeToSerialString(x1DataType).c_str(),
+                                                      "the dtype of x1 must be fp32, fp16, or bf16"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckKSizeStridesForNhwc(
-    gert::TilingContext* context, const int64_t* kSizeVector, const int64_t* stridesVector)
+static ge::graphStatus CheckKSizeStridesForNhwc(gert::TilingContext* context, const int64_t* kSizeVector,
+                                                const int64_t* stridesVector)
 {
     OP_TILING_CHECK(
         kSizeVector[0] != 1 || kSizeVector[C_DIM_OFFSET] != 1,
         OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(),
-            ("ksize[0], ksize[" + std::to_string(C_DIM_OFFSET) + "]").c_str(),
+            context->GetNodeName(), ("ksize[0], ksize[" + std::to_string(C_DIM_OFFSET) + "]").c_str(),
             (std::to_string(kSizeVector[0]) + ", " + std::to_string(kSizeVector[C_DIM_OFFSET])).c_str(), "1, 1"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         stridesVector[0] != 1 || stridesVector[C_DIM_OFFSET] != 1,
         OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(),
-            ("strides[0], strides[" + std::to_string(C_DIM_OFFSET) + "]").c_str(),
+            context->GetNodeName(), ("strides[0], strides[" + std::to_string(C_DIM_OFFSET) + "]").c_str(),
             (std::to_string(stridesVector[0]) + ", " + std::to_string(stridesVector[C_DIM_OFFSET])).c_str(), "1, 1"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckKSizeStridesForNchw(
-    gert::TilingContext* context, const int64_t* kSizeVector, const int64_t* stridesVector)
+static ge::graphStatus CheckKSizeStridesForNchw(gert::TilingContext* context, const int64_t* kSizeVector,
+                                                const int64_t* stridesVector)
 {
-    OP_TILING_CHECK(
-        kSizeVector[0] != 1 || kSizeVector[1] != 1,
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "ksize[0], ksize[1]",
-            (std::to_string(kSizeVector[0]) + ", " + std::to_string(kSizeVector[1])).c_str(), "1, 1"),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        stridesVector[0] != 1 || stridesVector[1] != 1,
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "strides[0], strides[1]",
-            (std::to_string(stridesVector[0]) + ", " + std::to_string(stridesVector[1])).c_str(), "1, 1"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(kSizeVector[0] != 1 || kSizeVector[1] != 1,
+                    OP_LOGE_FOR_INVALID_VALUE(
+                        context->GetNodeName(), "ksize[0], ksize[1]",
+                        (std::to_string(kSizeVector[0]) + ", " + std::to_string(kSizeVector[1])).c_str(), "1, 1"),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(stridesVector[0] != 1 || stridesVector[1] != 1,
+                    OP_LOGE_FOR_INVALID_VALUE(
+                        context->GetNodeName(), "strides[0], strides[1]",
+                        (std::to_string(stridesVector[0]) + ", " + std::to_string(stridesVector[1])).c_str(), "1, 1"),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckKSizeStridesPositive(
-    gert::TilingContext* context, int32_t kSizeDimNum, int32_t stridesDimNum, const int64_t* kSizeVector,
-    const int64_t* stridesVector)
+static ge::graphStatus CheckKSizeStridesPositive(gert::TilingContext* context, int32_t kSizeDimNum,
+                                                 int32_t stridesDimNum, const int64_t* kSizeVector,
+                                                 const int64_t* stridesVector)
 {
     for (int32_t i = 0; i < kSizeDimNum; i++) {
-        OP_TILING_CHECK(
-            kSizeVector[i] <= 0,
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), ("ksize[" + std::to_string(i) + "]").c_str(),
-                std::to_string(kSizeVector[i]).c_str(), "positive integer"),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(kSizeVector[i] <= 0,
+                        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), ("ksize[" + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(kSizeVector[i]).c_str(), "positive integer"),
+                        return ge::GRAPH_FAILED);
     }
     for (int32_t i = 0; i < stridesDimNum; i++) {
         OP_TILING_CHECK(
             stridesVector[i] <= 0,
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), ("strides[" + std::to_string(i) + "]").c_str(),
-                std::to_string(stridesVector[i]).c_str(), "positive integer"),
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), ("strides[" + std::to_string(i) + "]").c_str(),
+                                      std::to_string(stridesVector[i]).c_str(), "positive integer"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -256,10 +246,9 @@ ge::graphStatus MaxPoolGradTilingBase::CheckAttrShape()
     const char* padMode = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, padMode);
     std::string padModeStr = padMode;
-    OP_TILING_CHECK(
-        IsInvalidPaddingModeWithCalculated(padModeStr),
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "padding", padModeStr.c_str(), "VALID or SAME"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(IsInvalidPaddingModeWithCalculated(padModeStr),
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "padding", padModeStr.c_str(), "VALID or SAME"),
+                    return ge::GRAPH_FAILED);
 
     // Check attr dim num
     OP_CHECK_IF(
@@ -347,11 +336,11 @@ ge::graphStatus MaxPoolGradTilingBase::SetAttrParams()
         inputData.hPad = 0;
         inputData.wPad = 0;
     } else if (padModeStr == "SAME") {
-        int64_t hPadNeed =
-            std::max(int64_t{0}, (inputData.hGrad - 1) * inputData.hStride + inputData.hKernel - inputData.hX);
+        int64_t hPadNeed = std::max(int64_t{0},
+                                    (inputData.hGrad - 1) * inputData.hStride + inputData.hKernel - inputData.hX);
         inputData.hPad = hPadNeed / DIGIT_TWO;
-        int64_t wPadNeed =
-            std::max(int64_t{0}, (inputData.wGrad - 1) * inputData.wStride + inputData.wKernel - inputData.wX);
+        int64_t wPadNeed = std::max(int64_t{0},
+                                    (inputData.wGrad - 1) * inputData.wStride + inputData.wKernel - inputData.wX);
         inputData.wPad = wPadNeed / DIGIT_TWO;
     }
 
@@ -367,23 +356,23 @@ ge::graphStatus MaxPoolGradTilingBase::CheckInputValid()
     const uint64_t dilationH = inputData.hDilation;
     const uint64_t dilationW = inputData.wDilation;
 
-    OP_CHECK_IF(
-        (pHTop >= kh) || (pWTop >= kw),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "padding",
-            ("hPad=" + std::to_string(pHTop) + ", wPad=" + std::to_string(pWTop)).c_str(),
-            ("padSize must be smaller than kernelSize (hKernel=" + std::to_string(kh) +
-             ", wKernel=" + std::to_string(kw) + ")").c_str()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (pHTop >= (kh - 1) * dilationH + 1) || (pWTop >= (kw - 1) * dilationW + 1),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "padding",
-            ("hPad=" + std::to_string(pHTop) + ", wPad=" + std::to_string(pWTop)).c_str(),
-            ("padSize must be smaller than (kernelSize - 1) * dilation + 1 "
-             "(hDilation=" + std::to_string(dilationH) + ", wDilation=" + std::to_string(dilationW) + ")")
-                .c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((pHTop >= kh) || (pWTop >= kw),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "padding",
+                    ("hPad=" + std::to_string(pHTop) + ", wPad=" + std::to_string(pWTop)).c_str(),
+                    ("padSize must be smaller than kernelSize (hKernel=" + std::to_string(kh) +
+                     ", wKernel=" + std::to_string(kw) + ")")
+                        .c_str()),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((pHTop >= (kh - 1) * dilationH + 1) || (pWTop >= (kw - 1) * dilationW + 1),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "padding",
+                    ("hPad=" + std::to_string(pHTop) + ", wPad=" + std::to_string(pWTop)).c_str(),
+                    ("padSize must be smaller than (kernelSize - 1) * dilation + 1 "
+                     "(hDilation=" +
+                     std::to_string(dilationH) + ", wDilation=" + std::to_string(dilationW) + ")")
+                        .c_str()),
+                return ge::GRAPH_FAILED);
     // Check outerDim invaild
     auto attrs = context_->GetAttrs();
     const char* padMode = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
@@ -418,27 +407,20 @@ ge::graphStatus MaxPoolGradTilingBase::GetShapeAttrsInfo()
     }
 
     OP_LOGD(context_->GetNodeName(), "Enter MaxPoolGradTilingBase GetShapeAttrsInfo.");
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckAttrShape(), OP_LOGE(context_->GetNodeName(), "The attr shape is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckAttrVal(), OP_LOGE(context_->GetNodeName(), "The attr value is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetAttrParams(), OP_LOGE(context_->GetNodeName(), "Set attr shape failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckInputValid(), OP_LOGE(context_->GetNodeName(), "The input shape is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckAttrShape(), OP_LOGE(context_->GetNodeName(), "The attr shape is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckAttrVal(), OP_LOGE(context_->GetNodeName(), "The attr value is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetAttrParams(), OP_LOGE(context_->GetNodeName(), "Set attr shape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputValid(), OP_LOGE(context_->GetNodeName(), "The input shape is invalid."),
+                return ge::GRAPH_FAILED);
     SetOtherInputParams();
     return ge::GRAPH_SUCCESS;
 }

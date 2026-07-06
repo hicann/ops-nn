@@ -18,39 +18,39 @@
 
 namespace aicpu {
 struct CpuKernelContextInfo {
-  CpuKernelContext *ctx;
-  Tensor *x;
-  Tensor *indices;
-  Tensor *updates;
-  Tensor *y;
+    CpuKernelContext* ctx;
+    Tensor* x;
+    Tensor* indices;
+    Tensor* updates;
+    Tensor* y;
 
-  std::shared_ptr<TensorShape> x_shape;
-  std::shared_ptr<TensorShape> indices_shape;
-  std::shared_ptr<TensorShape> updates_shape;
+    std::shared_ptr<TensorShape> x_shape;
+    std::shared_ptr<TensorShape> indices_shape;
+    std::shared_ptr<TensorShape> updates_shape;
 
-  uint64_t x_dims;
-  uint64_t indices_dims;
-  uint64_t updates_dims;
+    uint64_t x_dims;
+    uint64_t indices_dims;
+    uint64_t updates_dims;
 
-  uint64_t x_nums;
-  uint64_t indices_nums;
-  uint64_t updates_nums;
+    uint64_t x_nums;
+    uint64_t indices_nums;
+    uint64_t updates_nums;
 
-  DataType indices_type;
-  DataType x_type;
+    DataType indices_type;
+    DataType x_type;
 
-  uint64_t index_depth;
-  uint64_t num_updates;
+    uint64_t index_depth;
+    uint64_t num_updates;
 };
 
 class TensorScatterUpdateCpukernel : public CpuKernel {
- public:
-  TensorScatterUpdateCpukernel() = default;
-  ~TensorScatterUpdateCpukernel() override = default;
-  uint32_t Compute(CpuKernelContext &ctx) override;
+public:
+    TensorScatterUpdateCpukernel() = default;
+    ~TensorScatterUpdateCpukernel() override = default;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 
- private:
-  uint32_t GetInputAndCheck(const CpuKernelContextInfo &info);
+private:
+    uint32_t GetInputAndCheck(const CpuKernelContextInfo& info);
 };
 } // namespace aicpu
 

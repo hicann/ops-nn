@@ -23,21 +23,21 @@ using namespace GroupedDynamicMxQuantOp;
 
 template <uint64_t mode>
 __global__ __aicore__ void grouped_dynamic_mx_quant(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale,
-    GM_ADDR workspace, GM_ADDR tiling)
+                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(GroupedDynamicMxQuantTilingData);
     GET_TILING_DATA_WITH_STRUCT(GroupedDynamicMxQuantTilingData, tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
-    #if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
-    #endif
+#endif
 
     GroupedDynamicMxQuant::GroupedDynamicMxQuantBaseFP8<DTYPE_X, DTYPE_Y> op;
     op.Init(x, groupIndex, y, mxScale, tilingData);
     op.Process();
 
-    #if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
-    #endif
+#endif
 }

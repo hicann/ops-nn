@@ -19,13 +19,13 @@
 #include "register/tuning_bank_key_registry.h"
 
 namespace tuningtiling {
-void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs)
+void GetAttrsInfo(const gert::TilingContext* context, std::shared_ptr<Conv2DV2InputArgs>& conv2dArgs)
 {
     auto attrs = context->GetAttrs();
-    const gert::ContinuousVector *stridesList = nullptr;
-    const gert::ContinuousVector *padsList = nullptr;
-    const gert::ContinuousVector *dilationsList = nullptr;
-    const int64_t *groups = nullptr;
+    const gert::ContinuousVector* stridesList = nullptr;
+    const gert::ContinuousVector* padsList = nullptr;
+    const gert::ContinuousVector* dilationsList = nullptr;
+    const int64_t* groups = nullptr;
     size_t idx = 0;
 
     stridesList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
@@ -34,9 +34,9 @@ void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2In
     groups = attrs->GetAttrPointer<int64_t>(idx++);
 
     conv2dArgs->groups = static_cast<int32_t>(*groups);
-    const int64_t *stridesListData = reinterpret_cast<const int64_t *>(stridesList->GetData());
-    const int64_t *padsListData = reinterpret_cast<const int64_t *>(padsList->GetData());
-    const int64_t *dilationsListData = reinterpret_cast<const int64_t *>(dilationsList->GetData());
+    const int64_t* stridesListData = reinterpret_cast<const int64_t*>(stridesList->GetData());
+    const int64_t* padsListData = reinterpret_cast<const int64_t*>(padsList->GetData());
+    const int64_t* dilationsListData = reinterpret_cast<const int64_t*>(dilationsList->GetData());
 
     conv2dArgs->aDtype = context->GetInputDesc(tuningtiling::INPUT_A_INDEX)->GetDataType();
     conv2dArgs->aFormat = context->GetInputDesc(tuningtiling::INPUT_A_INDEX)->GetOriginFormat();
@@ -44,14 +44,14 @@ void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2In
     conv2dArgs->cFormat = context->GetOutputDesc(tuningtiling::INPUT_C_INDEX)->GetOriginFormat();
 
     auto aShape = context->GetInputShape(0);
-    auto &aOriShape = aShape->GetOriginShape();
+    auto& aOriShape = aShape->GetOriginShape();
 
     conv2dArgs->aShapeN = aOriShape.GetDim(tuningtiling::FORMAT_NCHW_N_INDEX);
     conv2dArgs->aShapeH = aOriShape.GetDim(tuningtiling::FORMAT_NCHW_H_INDEX);
     conv2dArgs->aShapeW = aOriShape.GetDim(tuningtiling::FORMAT_NCHW_W_INDEX);
 
     auto cShape = context->GetOutputShape(0);
-    auto &cOriShape = cShape->GetOriginShape();
+    auto& cOriShape = cShape->GetOriginShape();
 
     conv2dArgs->cShapeH = cOriShape.GetDim(tuningtiling::FORMAT_NCHW_H_INDEX);
     conv2dArgs->cShapeW = cOriShape.GetDim(tuningtiling::FORMAT_NCHW_W_INDEX);
@@ -68,7 +68,7 @@ void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2In
     conv2dArgs->padLeft = static_cast<int32_t>(padsListData[tuningtiling::PAD_LEFT_INDEX]);
     conv2dArgs->padRight = static_cast<int32_t>(padsListData[tuningtiling::PAD_RIGHT_INDEX]);
 
-    const int32_t *opImplMode = nullptr;
+    const int32_t* opImplMode = nullptr;
     if (conv2dArgs->aDtype == ge::DT_FLOAT && tuningtiling::opImplModeIdx < attrs->GetAttrNum()) {
         opImplMode = attrs->GetAttrPointer<int32_t>(tuningtiling::opImplModeIdx);
         if (opImplMode != nullptr && *opImplMode >= 0) {
@@ -79,7 +79,7 @@ void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2In
     }
 }
 
-void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs,
+void GetBiasInfo(const gert::TilingContext* context, std::shared_ptr<Conv2DV2InputArgs>& conv2dArgs,
                  size_t biasInputIndex)
 {
     conv2dArgs->biasFlag = context->GetOptionalInputShape(biasInputIndex) != nullptr;
@@ -90,7 +90,7 @@ void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2Inp
     }
 }
 
-void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs,
+void GetFilterInfo(const gert::TilingContext* context, std::shared_ptr<Conv2DV2InputArgs>& conv2dArgs,
                    size_t filterInputIndex)
 {
     auto filterDesc = context->GetInputDesc(filterInputIndex);
@@ -100,7 +100,7 @@ void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2I
     conv2dArgs->bFormat = filterOriFormat;
 
     auto filterShape = context->GetInputShape(filterInputIndex);
-    auto &filterOriShape = filterShape->GetOriginShape();
+    auto& filterOriShape = filterShape->GetOriginShape();
 
     // filter format is NCHW; 0, 1, 2, 3 is dim index for filter_n, filter_c, filter_h, filter_w
     conv2dArgs->bShapeN = filterOriShape.GetDim(tuningtiling::FORMAT_NCHW_N_INDEX);
@@ -109,18 +109,18 @@ void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2I
     conv2dArgs->bShapeW = filterOriShape.GetDim(tuningtiling::FORMAT_NCHW_W_INDEX);
 }
 
-std::string DisplayInfoDict(std::shared_ptr<void> &inputArgs, size_t size, std::string opType)
+std::string DisplayInfoDict(std::shared_ptr<void>& inputArgs, size_t size, std::string opType)
 {
-    auto &func = OpBankKeyFuncRegistryV2::RegisteredOpFuncInfoV2();
+    auto& func = OpBankKeyFuncRegistryV2::RegisteredOpFuncInfoV2();
     auto iter = func.find(ge::AscendString(opType.c_str()));
-    const auto &parseFunc = iter->second.GetBankKeyParseFuncV2();
+    const auto& parseFunc = iter->second.GetBankKeyParseFuncV2();
     ge::AscendString infoDictJsonAs;
     parseFunc(inputArgs, size, infoDictJsonAs);
     std::string info_dict_json_str(infoDictJsonAs.GetString(), infoDictJsonAs.GetLength());
     return info_dict_json_str;
 }
 
-bool TilingForConv2DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &inputArgs, size_t &size)
+bool TilingForConv2DV2Input(const gert::TilingContext* context, std::shared_ptr<void>& inputArgs, size_t& size)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE("CANNKB", "context is nullptr."), return false);
     std::shared_ptr<Conv2DV2InputArgs> conv2dArgs = std::make_shared<Conv2DV2InputArgs>();
@@ -137,13 +137,12 @@ bool TilingForConv2DV2Input(const gert::TilingContext *context, std::shared_ptr<
     return true;
 }
 
-DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv2DV2, Conv2DV2InputArgs, aDtype, bDtype, cDtype, biasDtype, aShapeN,
-                                 aShapeH, aShapeW, bShapeN, bShapeC, bShapeH, bShapeW, cShapeH, cShapeW,
-                                 aFormat, bFormat, cFormat, groups, strideH, strideW, dilationH,
-                                 dilationW, padTop, padBottom, padLeft, padRight, biasFlag, hf32Flag,
-                                 reserverdParam1, reserverdParam2, reserverdParam3, reserverdParam4,
-                                 reserverdParam5, reserverdParam6);
+DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv2DV2, Conv2DV2InputArgs, aDtype, bDtype, cDtype, biasDtype, aShapeN, aShapeH,
+                                 aShapeW, bShapeN, bShapeC, bShapeH, bShapeW, cShapeH, cShapeW, aFormat, bFormat,
+                                 cFormat, groups, strideH, strideW, dilationH, dilationW, padTop, padBottom, padLeft,
+                                 padRight, biasFlag, hf32Flag, reserverdParam1, reserverdParam2, reserverdParam3,
+                                 reserverdParam4, reserverdParam5, reserverdParam6);
 
 REGISTER_OP_BANK_KEY_CONVERT_FUN_V2(Conv2DV2, TilingForConv2DV2Input);
 REGISTER_TUNING_TILING_CLASS(Conv2DV2, Conv2DV2TunnerTiling);
-}  // namespace tuningtiling
+} // namespace tuningtiling

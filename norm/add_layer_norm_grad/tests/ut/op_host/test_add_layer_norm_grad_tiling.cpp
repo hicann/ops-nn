@@ -26,26 +26,21 @@ using namespace ge;
 
 class AddLayerNormGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddLayerNormGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddLayerNormGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddLayerNormGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddLayerNormGradTiling TearDown" << std::endl; }
 };
-struct AddLayerNormGradCompileInfo {
-};
+struct AddLayerNormGradCompileInfo {};
 
-inline void RunAddLayerNormGradTestWithXsum(
-    gert::StorageShape& input_dy_shape, gert::StorageShape& input_x1_shape, gert::StorageShape& input_x2_shape,
-    gert::StorageShape& input_rstd_shape, gert::StorageShape& input_mean_shape, gert::StorageShape& input_gamma_shape,
-    gert::StorageShape& input_xsum_shape, gert::StorageShape& out_dx_shape, gert::StorageShape& out_dgamma_shape,
-    gert::StorageShape& out_dbeta_shape, ge::DataType data_type, uint32_t is_faild_case, uint32_t tiling_key_expect = 0)
+inline void RunAddLayerNormGradTestWithXsum(gert::StorageShape& input_dy_shape, gert::StorageShape& input_x1_shape,
+                                            gert::StorageShape& input_x2_shape, gert::StorageShape& input_rstd_shape,
+                                            gert::StorageShape& input_mean_shape, gert::StorageShape& input_gamma_shape,
+                                            gert::StorageShape& input_xsum_shape, gert::StorageShape& out_dx_shape,
+                                            gert::StorageShape& out_dgamma_shape, gert::StorageShape& out_dbeta_shape,
+                                            ge::DataType data_type, uint32_t is_faild_case,
+                                            uint32_t tiling_key_expect = 0)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -72,19 +67,19 @@ inline void RunAddLayerNormGradTestWithXsum(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -96,9 +91,8 @@ inline void RunAddLayerNormGradTestWithXsum(
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_dy_shape, &input_x1_shape, &input_x2_shape, &input_rstd_shape, &input_mean_shape,
-                           &input_gamma_shape, &input_xsum_shape})
+                      .InputShapes({&input_dy_shape, &input_x1_shape, &input_x2_shape, &input_rstd_shape,
+                                    &input_mean_shape, &input_gamma_shape, &input_xsum_shape})
                       .OutputShapes({&out_dx_shape, &out_dgamma_shape, &out_dbeta_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -133,12 +127,12 @@ inline void RunAddLayerNormGradTestWithXsum(
         ASSERT_EQ(tiling_key, tiling_key_expect);
     }
 
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_001)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{40, 1, 133}, {40, 1, 133}};
     gert::StorageShape input1_shape = {{40, 1, 133}, {40, 1, 133}};
     gert::StorageShape input2_shape = {{40, 1, 133}, {40, 1, 133}};
@@ -175,19 +169,19 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -199,9 +193,8 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_001)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape})
+                      .InputShapes({&input_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape})
                       .OutputShapes({&out_shape, &out1_shape, &out2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -231,12 +224,12 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_001)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 21);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_005)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{40, 1, 12288}, {40, 1, 12288}};
     gert::StorageShape input1_shape = {{40, 1, 12288}, {40, 1, 12288}};
     gert::StorageShape input2_shape = {{40, 1, 12288}, {40, 1, 12288}};
@@ -273,19 +266,19 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_005)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -297,9 +290,8 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_005)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape})
+                      .InputShapes({&input_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape})
                       .OutputShapes({&out_shape, &out1_shape, &out2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -329,7 +321,7 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_005)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 41);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_shape_failed_001)
@@ -346,9 +338,9 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_shape_failed_001)
     gert::StorageShape out_dgamma_shape = {{12288}, {12288}};
     gert::StorageShape out_dbeta_shape = {{12288}, {12288}};
 
-    RunAddLayerNormGradTestWithXsum(
-        input_dy_shape, input_x1_shape, input_x2_shape, input_rstd_shape, input_mean_shape, input_gamma_shape,
-        input_xsum_shape, out_dx_shape, out_dgamma_shape, out_dbeta_shape, ge::DT_FLOAT, true);
+    RunAddLayerNormGradTestWithXsum(input_dy_shape, input_x1_shape, input_x2_shape, input_rstd_shape, input_mean_shape,
+                                    input_gamma_shape, input_xsum_shape, out_dx_shape, out_dgamma_shape,
+                                    out_dbeta_shape, ge::DT_FLOAT, true);
 }
 
 TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_shape_failed_002)
@@ -365,9 +357,9 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_shape_failed_002)
     gert::StorageShape out_dgamma_shape = {{12288}, {12288}};
     gert::StorageShape out_dbeta_shape = {{12288}, {12288}};
 
-    RunAddLayerNormGradTestWithXsum(
-        input_dy_shape, input_x1_shape, input_x2_shape, input_rstd_shape, input_mean_shape, input_gamma_shape,
-        input_xsum_shape, out_dx_shape, out_dgamma_shape, out_dbeta_shape, ge::DT_FLOAT, true);
+    RunAddLayerNormGradTestWithXsum(input_dy_shape, input_x1_shape, input_x2_shape, input_rstd_shape, input_mean_shape,
+                                    input_gamma_shape, input_xsum_shape, out_dx_shape, out_dgamma_shape,
+                                    out_dbeta_shape, ge::DT_FLOAT, true);
 }
 
 TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_shape_failed_003)
@@ -384,7 +376,7 @@ TEST_F(AddLayerNormGradTiling, add_layer_norm_grad_tiling_shape_failed_003)
     gert::StorageShape out_dgamma_shape = {{12288}, {12288}};
     gert::StorageShape out_dbeta_shape = {{12288}, {12288}};
 
-    RunAddLayerNormGradTestWithXsum(
-        input_dy_shape, input_x1_shape, input_x2_shape, input_rstd_shape, input_mean_shape, input_gamma_shape,
-        input_xsum_shape, out_dx_shape, out_dgamma_shape, out_dbeta_shape, ge::DT_FLOAT, true);
+    RunAddLayerNormGradTestWithXsum(input_dy_shape, input_x1_shape, input_x2_shape, input_rstd_shape, input_mean_shape,
+                                    input_gamma_shape, input_xsum_shape, out_dx_shape, out_dgamma_shape,
+                                    out_dbeta_shape, ge::DT_FLOAT, true);
 }

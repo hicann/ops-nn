@@ -29,26 +29,25 @@ namespace {
 void LogDebugMatmulInfo(gert::TilingContext* context, const optiling::DualLevelQuantBatchMatmulInfo& matmulInfo)
 {
     // 参数调试日志
-    OP_LOGD(
-        context,
-        "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s], "
-        "level0 group size[%lu], x1Format[%s], x2Format[%s], x1Dtype[%s], x2Dtype[%s], biasDtype[%s], "
-        "x1Level0ScaleDtype[%s], x1Level1ScaleDtype[%s], x2Level0ScaleDtype[%s], "
-        "x2Level1ScaleDtype[%s], yDtype[%s], level1QuantType[%s], level0QuantType[%s]",
-        matmulInfo.mSize, matmulInfo.kSize, matmulInfo.nSize, matmulInfo.transA ? "true" : "false",
-        matmulInfo.transB ? "true" : "false", matmulInfo.hasBias ? "true" : "false", matmulInfo.level0GroupSize,
-        ge::TypeUtils::FormatToAscendString(matmulInfo.x1Format).GetString(),
-        ge::TypeUtils::FormatToAscendString(matmulInfo.x2Format).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.x1Dtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.x2Dtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.biasDtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.x1Level0ScaleDtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.x1Level1ScaleDtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.x2Level0ScaleDtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.x2Level1ScaleDtype).GetString(),
-        ge::TypeUtils::DataTypeToAscendString(matmulInfo.yDtype).GetString(),
-        optiling::QuantTypeToString(matmulInfo.level1QuantType),
-        optiling::QuantTypeToString(matmulInfo.level0QuantType));
+    OP_LOGD(context,
+            "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s], "
+            "level0 group size[%lu], x1Format[%s], x2Format[%s], x1Dtype[%s], x2Dtype[%s], biasDtype[%s], "
+            "x1Level0ScaleDtype[%s], x1Level1ScaleDtype[%s], x2Level0ScaleDtype[%s], "
+            "x2Level1ScaleDtype[%s], yDtype[%s], level1QuantType[%s], level0QuantType[%s]",
+            matmulInfo.mSize, matmulInfo.kSize, matmulInfo.nSize, matmulInfo.transA ? "true" : "false",
+            matmulInfo.transB ? "true" : "false", matmulInfo.hasBias ? "true" : "false", matmulInfo.level0GroupSize,
+            ge::TypeUtils::FormatToAscendString(matmulInfo.x1Format).GetString(),
+            ge::TypeUtils::FormatToAscendString(matmulInfo.x2Format).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.x1Dtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.x2Dtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.biasDtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.x1Level0ScaleDtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.x1Level1ScaleDtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.x2Level0ScaleDtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.x2Level1ScaleDtype).GetString(),
+            ge::TypeUtils::DataTypeToAscendString(matmulInfo.yDtype).GetString(),
+            optiling::QuantTypeToString(matmulInfo.level1QuantType),
+            optiling::QuantTypeToString(matmulInfo.level0QuantType));
 }
 } // namespace
 
@@ -115,16 +114,14 @@ bool GetInputs(DualLevelQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
         return false);
 
     // not yet support empty tensor for input
-    OP_TILING_CHECK(
-        x1Shape.GetShapeSize() == 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "x1", "0", "The shape size of x1 can not be 0"),
-        return false);
-    OP_TILING_CHECK(
-        x2Shape.GetShapeSize() == 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "x2", "0", "The shape size of x2 can not be 0"),
-        return false);
+    OP_TILING_CHECK(x1Shape.GetShapeSize() == 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "x1", "0",
+                                                              "The shape size of x1 can not be 0"),
+                    return false);
+    OP_TILING_CHECK(x2Shape.GetShapeSize() == 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "x2", "0",
+                                                              "The shape size of x2 can not be 0"),
+                    return false);
 
     auto x1Outer = x1Shape.GetDim(0);
     auto x1Inner = x1Shape.GetDim(1);
@@ -134,13 +131,11 @@ bool GetInputs(DualLevelQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
     matmulInfo.nSize = static_cast<uint64_t>(matmulInfo.transB ? x2Outer : x2Inner);
     auto kX1 = matmulInfo.transA ? x1Outer : x1Inner;
     auto kX2 = matmulInfo.transB ? x2Inner : x2Outer;
-    OP_TILING_CHECK(
-        kX1 != kX2,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "x1, x2",
-            (std::to_string(kX1) + ", " + std::to_string(kX2)).c_str(),
-            "The K dimension of x1 must equal the K dimension of x2"),
-        return false);
+    OP_TILING_CHECK(kX1 != kX2,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x1, x2",
+                                                           (std::to_string(kX1) + ", " + std::to_string(kX2)).c_str(),
+                                                           "The K dimension of x1 must equal the K dimension of x2"),
+                    return false);
     matmulInfo.kSize = kX1;
     return true;
 }
@@ -164,41 +159,29 @@ ge::graphStatus DualLevelQuantBatchMatmulBaseTiling::GetShapeAttrsInfo()
     // 设置tiling相关的platform信息
     OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, context_, "Set PlatformInfoFortiling fail");
     // 检查context必要参数是否存在，避免重复判断
-    OP_TILING_CHECK(
-        Ops::NN::DLQBMMChecker::CheckContext(context_, tilingDataSize_) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "Invalid context."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(Ops::NN::DLQBMMChecker::CheckContext(context_, tilingDataSize_) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context_, "Invalid context."), return ge::GRAPH_FAILED);
 
     // 获取并检查参数信息
     OPS_LOG_I(context_, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
 
-    OP_TILING_CHECK(
-        !GetAttrs(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetAttrs"),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        !Ops::NN::DLQBMMChecker::CheckAttrs(context_, compileInfo_.npuArch, matmulInfo_),
-        OP_LOGE(context_, "Failed to check attrs."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!GetAttrs(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetAttrs"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!Ops::NN::DLQBMMChecker::CheckAttrs(context_, compileInfo_.npuArch, matmulInfo_),
+                    OP_LOGE(context_, "Failed to check attrs."), return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        !GetDtype(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetDtype"),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        !Ops::NN::DLQBMMChecker::CheckDtypes(context_, compileInfo_.npuArch, matmulInfo_),
-        OP_LOGE(context_, "Failed to check dtypes."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!GetDtype(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetDtype"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!Ops::NN::DLQBMMChecker::CheckDtypes(context_, compileInfo_.npuArch, matmulInfo_),
+                    OP_LOGE(context_, "Failed to check dtypes."), return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        !GetInputs(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetInputs"),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        !Ops::NN::DLQBMMChecker::CheckInputs(context_, compileInfo_.npuArch, matmulInfo_),
-        OP_LOGE(context_, "Failed to check inputs."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!GetInputs(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetInputs"),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!Ops::NN::DLQBMMChecker::CheckInputs(context_, compileInfo_.npuArch, matmulInfo_),
+                    OP_LOGE(context_, "Failed to check inputs."), return ge::GRAPH_FAILED);
     LogDebugMatmulInfo(context_, matmulInfo_);
     return ge::GRAPH_SUCCESS;
 }
 
-bool DualLevelQuantBatchMatmulBaseTiling::IsCapable()
-{
-    return true;
-}
+bool DualLevelQuantBatchMatmulBaseTiling::IsCapable() { return true; }
 
 // 2. 获取硬件平台信息，在构造函数中优先初始化CompileInfo
 void DualLevelQuantBatchMatmulBaseTiling::InitCompileInfo()
@@ -227,27 +210,25 @@ void DualLevelQuantBatchMatmulBaseTiling::InitCompileInfo()
 bool DualLevelQuantBatchMatmulBaseTiling::SetPlatformInfoForTiling()
 {
     if (!isCompileInfoInit) {
-        const auto* mmCompileInfo =
-            reinterpret_cast<const DualLevelQuantBatchMatmulCompileInfo*>(context_->GetCompileInfo());
-        OP_TILING_CHECK(
-            mmCompileInfo == nullptr, OP_LOGE(context_, "GetCompileInfo is null"), return false);
+        const auto* mmCompileInfo = reinterpret_cast<const DualLevelQuantBatchMatmulCompileInfo*>(
+            context_->GetCompileInfo());
+        OP_TILING_CHECK(mmCompileInfo == nullptr, OP_LOGE(context_, "GetCompileInfo is null"), return false);
         compileInfo_ = *mmCompileInfo;
     }
 
     matmulInfo_.libApiWorkSpaceSize = compileInfo_.workspaceNum;
 
-    OP_LOGE_IF(
-        compileInfo_.aivNum <= 0 || compileInfo_.aicNum == 0 || compileInfo_.l1Size == 0UL ||
-            compileInfo_.l0cSize == 0UL,
-        false, context_, "coreNum/L1Size/L0cSize should not be 0. aicNum: %u, aivNum: %u, L1Size: %lu, L0cSize: %lu",
-        compileInfo_.aicNum, compileInfo_.aivNum, compileInfo_.l1Size, compileInfo_.l0cSize);
+    OP_LOGE_IF(compileInfo_.aivNum <= 0 || compileInfo_.aicNum == 0 || compileInfo_.l1Size == 0UL ||
+                   compileInfo_.l0cSize == 0UL,
+               false, context_,
+               "coreNum/L1Size/L0cSize should not be 0. aicNum: %u, aivNum: %u, L1Size: %lu, L0cSize: %lu",
+               compileInfo_.aicNum, compileInfo_.aivNum, compileInfo_.l1Size, compileInfo_.l0cSize);
 
-    OP_LOGD(
-        context_,
-        "get platform: aivNum(%u) aicNum(%u) ubSize(%lu) l1Size(%lu) "
-        "l0cSize(%lu)  l0aSize(%lu) l0bSize(%lu)",
-        compileInfo_.aivNum, compileInfo_.aicNum, compileInfo_.ubSize, compileInfo_.l1Size, compileInfo_.l0cSize,
-        compileInfo_.l0aSize, compileInfo_.l0bSize);
+    OP_LOGD(context_,
+            "get platform: aivNum(%u) aicNum(%u) ubSize(%lu) l1Size(%lu) "
+            "l0cSize(%lu)  l0aSize(%lu) l0bSize(%lu)",
+            compileInfo_.aivNum, compileInfo_.aicNum, compileInfo_.ubSize, compileInfo_.l1Size, compileInfo_.l0cSize,
+            compileInfo_.l0aSize, compileInfo_.l0bSize);
     return true;
 }
 } // namespace optiling

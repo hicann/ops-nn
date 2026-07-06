@@ -23,7 +23,7 @@ namespace TopKTopPSample {
 
 constexpr uint32_t INNER_LOOP_ELE = 8 * 1024;
 constexpr uint32_t TOPP_K_FIX = 32;
-constexpr uint32_t ROW_LEN_MAX = 128;   // max batch size processed for single core under CUT_B template
+constexpr uint32_t ROW_LEN_MAX = 128; // max batch size processed for single core under CUT_B template
 constexpr uint32_t TOPK_MAX = 1 * 1024;
 constexpr uint32_t SORT32_PER_LEN = 2 * 1024;
 constexpr uint32_t SORT32_MAX_LOOP = INNER_LOOP_ELE / SORT32_PER_LEN;
@@ -34,16 +34,15 @@ constexpr float TOPP_MAX = 1.0f;
 constexpr uint32_t FP32_NEG_INF_BITS = 0b11111111100000000000000000000000;
 
 template <typename T>
-class TopKTopPSampleKernel
-{
+class TopKTopPSampleKernel {
 public:
     TOPKPParams params{};
     TopKTopPSampleSortKernel<T> sortOp;
 
     __aicore__ inline TopKTopPSampleKernel(){};
-    __aicore__ inline void Init(
-        GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect,
-        GM_ADDR workspace, const TopKTopPSampleTilingData tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR logitsSelectIdx,
+                                GM_ADDR logitsTopKPSelect, GM_ADDR workspace, const TopKTopPSampleTilingData tilingData,
+                                TPipe* tPipe)
     {
         if ASCEND_IS_AIV {
             InitTilingParams(tilingData);
@@ -53,7 +52,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (g_coreType == AscendC::AIC){
+        if (g_coreType == AscendC::AIC) {
             return;
         }
 
@@ -62,9 +61,9 @@ public:
             uint32_t kCount = 0;
             this->p = topPGlobal.GetValue(rowId); // 取p值
             float fp32P = 0;
-            if constexpr (std::is_same<T, bfloat16_t>::value){
+            if constexpr (std::is_same<T, bfloat16_t>::value) {
                 fp32P = ToFloat(this->p);
-            }else {
+            } else {
                 fp32P = static_cast<float>(this->p);
             }
             // float fp32P = std::is_same<T, bfloat16_t>::value ? ToFloat(this->p) : static_cast<float>(this->p);
@@ -80,7 +79,7 @@ public:
                 // classic topK and topP
                 this->k = topKGlobal.GetValue(rowId);
                 kCount = this->k;
-                this->k_pad = Align(this->k, EIGHT);  // logits转成float32后，需满足32字节对齐，k值必须为8的整倍数
+                this->k_pad = Align(this->k, EIGHT); // logits转成float32后，需满足32字节对齐，k值必须为8的整倍数
                 TopKLoopProcess(rowId, kCount);       // 排序且取前k个，存在了localValueRs中
                 SoftMaxCompute(kCount, localValueRs); // SoftMaxCompute的计算结果固定存在了sampleLogitsLocal中
                 if (fp32P > 0 && fp32P < TOPP_MAX) {
@@ -89,28 +88,35 @@ public:
                 } else {
                     this->topPNum = kCount; // 不使能TopP
                 }
-                if(this->ifQSampleCompute){
-                    QSampleCompute(rowId, this->k_pad, this->topPNum); // 从sampleLogitsLocal中取值计算Q，计算结果存在了sampleLogitsLocal中
+                if (this->ifQSampleCompute) {
+                    QSampleCompute(rowId, this->k_pad,
+                                   this->topPNum); // 从sampleLogitsLocal中取值计算Q，计算结果存在了sampleLogitsLocal中
                 }
                 ArgMaxAndGather(this->topPNum, maxIndex); // ReduceMax softMax的结果（sampleLogitsLocal）找到maxIndex
-                CopyOut(rowId, this->k_pad, maxIndex, true, this->isNeedLogits); // 存maxIndex, 如果isNeedLogits==true,将源Logits搬出到dstGM，源Logits存在localValueRs里，前面计算不会污染源Logits
+                CopyOut(
+                    rowId, this->k_pad, maxIndex, true,
+                    this->isNeedLogits); // 存maxIndex,
+                                         // 如果isNeedLogits==true,将源Logits搬出到dstGM，源Logits存在localValueRs里，前面计算不会污染源Logits
             } else if (fp32P <= 0 || fp32P >= TOPP_MAX) {
-                // 无 topK 和 topP : Performance preservation using vector softmax and argmax          
+                // 无 topK 和 topP : Performance preservation using vector softmax and argmax
                 kCount = TOPP_K_FIX;
                 this->k_pad = Align(kCount, EIGHT);
                 bool ifGetIndex = false;
                 // 不做排序，全长度Softmax取maxIndex
-                SoftMaxAll(rowId, kCount, logitsGlobal, this->ifQSampleCompute, maxIndex, this->isNeedLogits); //不做Qsample时，拿到的是sortmax全排序后的一行
-                if(!this->ifQSampleCompute){
+                SoftMaxAll(rowId, kCount, logitsGlobal, this->ifQSampleCompute, maxIndex,
+                           this->isNeedLogits); //不做Qsample时，拿到的是sortmax全排序后的一行
+                if (!this->ifQSampleCompute) {
                     ifGetIndex = true;
                 }
-                CopyOut(rowId, this->rowLen, maxIndex, ifGetIndex, false); 
+                CopyOut(rowId, this->rowLen, maxIndex, ifGetIndex, false);
             } else {
                 // 无topK 有topP 猜topK
                 kCount = this->topKGuess > this->rowLen ? this->rowLen : this->topKGuess;
                 this->k_pad = Align(kCount, EIGHT);
-                SoftMaxAll(rowId, kCount, logitsGlobal, false, maxIndex, false); //做了Softmax但是没做sort的存在了logitsGlobalUser里，做了softmax继续做了sort的存在了buf3里
-                TopPCompute(rowId, kCount, fp32P); // 因为已经做完softmax了 
+                SoftMaxAll(
+                    rowId, kCount, logitsGlobal, false, maxIndex,
+                    false); //做了Softmax但是没做sort的存在了logitsGlobalUser里，做了softmax继续做了sort的存在了buf3里
+                TopPCompute(rowId, kCount, fp32P); // 因为已经做完softmax了
                 if (this->ifFind == 1) {           // 猜到了
                     SoftMaxCompute(this->topPNum, localValueRs);
                     if (this->ifQSampleCompute) {
@@ -126,9 +132,11 @@ public:
                     params.rowId = rowId;
                     // 全排序，拿到排序结果，也会做topP，拿到toppNum
                     sortOp.SortAll(
-                        params, logitsGlobalUser, sortPartGlobalUser, sortAllGlobalUser, // 从logitsGlobalUser取做了softmax但是没排序的值做sort，然后求topPNum，sort的value结果存在了logitsGlobalUser中，index结果放在了srcIndexGlobalUser中
-                        srcIndexGlobalUser);  
-                    auto loopTime = SafeCeil(params.toppNum, SOFTMAX_PER_LEN); //(params.toppNum + SOFTMAX_PER_LEN - 1) / SOFTMAX_PER_LEN;
+                        params, logitsGlobalUser, sortPartGlobalUser,
+                        sortAllGlobalUser, // 从logitsGlobalUser取做了softmax但是没排序的值做sort，然后求topPNum，sort的value结果存在了logitsGlobalUser中，index结果放在了srcIndexGlobalUser中
+                        srcIndexGlobalUser);
+                    auto loopTime = SafeCeil(
+                        params.toppNum, SOFTMAX_PER_LEN); //(params.toppNum + SOFTMAX_PER_LEN - 1) / SOFTMAX_PER_LEN;
                     auto loopTail = params.toppNum % SOFTMAX_PER_LEN;
                     auto loopTailPad = (loopTail + THIRTY_ONE) / THIRTY_TWO * THIRTY_TWO;
                     params.softmaxLoopTime = loopTime;
@@ -138,7 +146,7 @@ public:
                     // 做softmax
                     this->k_pad = Align(params.toppNum, EIGHT);
                     if (this->ifQSampleCompute) {
-                        SoftMaxAll(rowId, 0, logitsGlobalUser, this->ifQSampleCompute, maxIndex, false); 
+                        SoftMaxAll(rowId, 0, logitsGlobalUser, this->ifQSampleCompute, maxIndex, false);
                     }
                     CopyOut(rowId, params.toppNum, sampleIndexGlobal, maxIndex);
                 }
@@ -185,38 +193,39 @@ private:
         }
     }
 
-    __aicore__ inline void InitAndSetBuffer(
-        GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect,
-        GM_ADDR workspace, TPipe* tPipe)
+    __aicore__ inline void InitAndSetBuffer(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q,
+                                            GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect, GM_ADDR workspace,
+                                            TPipe* tPipe)
     {
         // InitGlobalBuffer as '(type *)<ADDR_OFFSET>' where <ELEMENT AMOUNT> is not recommended.
-        uint32_t gmOffset = this->startTaskId * this->rowLen;   // element offset by row-offset * col_size (B_offset * S)
+        uint32_t gmOffset = this->startTaskId * this->rowLen; // element offset by row-offset * col_size (B_offset * S)
 
         // Read-only tensors
-        logitsGlobal.SetGlobalBuffer((__gm__ T*)logits + gmOffset);                 // logits in [B, S]
-        topKGlobal.SetGlobalBuffer((__gm__ uint32_t*)topKs + this->startTaskId);    // top_k in [B, ]
-        topPGlobal.SetGlobalBuffer((__gm__ T*)topPs + this->startTaskId);           // top_p in [B, ]
-        
-        uint32_t coreEle_ = this->rtCoreRowNum == 0 ? this->rowLen : this->rtCoreRowNum * this->rowLen; 
+        logitsGlobal.SetGlobalBuffer((__gm__ T*)logits + gmOffset);              // logits in [B, S]
+        topKGlobal.SetGlobalBuffer((__gm__ uint32_t*)topKs + this->startTaskId); // top_k in [B, ]
+        topPGlobal.SetGlobalBuffer((__gm__ T*)topPs + this->startTaskId);        // top_p in [B, ]
+
+        uint32_t coreEle_ = this->rtCoreRowNum == 0 ? this->rowLen : this->rtCoreRowNum * this->rowLen;
         // Write tensors shall aligned to their batch offset
-        dstLogitsGlobal.SetGlobalBuffer((__gm__ float*)logitsTopKPSelect + gmOffset, coreEle_);           // logits_top_kp_select in [B, S]
-        dstIndexGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsSelectIdx + this->startTaskId);  // logits_select_idx in [B, ]
+        dstLogitsGlobal.SetGlobalBuffer((__gm__ float*)logitsTopKPSelect + gmOffset,
+                                        coreEle_); // logits_top_kp_select in [B, S]
+        dstIndexGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsSelectIdx +
+                                       this->startTaskId); // logits_select_idx in [B, ]
 
         if (q != nullptr) {
-            qGlobal.SetGlobalBuffer((__gm__ float*)q + gmOffset);  // q in [B, S]
+            qGlobal.SetGlobalBuffer((__gm__ float*)q + gmOffset); // q in [B, S]
             this->ifQSampleCompute = true;
-        }
-        else {
+        } else {
             this->ifQSampleCompute = false;
         }
 
         // the workspace seems to be a shared cache for intermediate results from the GM data
         uint32_t count = this->rowNum * this->rowLen;
-        uint32_t offset = 0;    // offsets for different cache blocks shared by ALL kernels
-        uint32_t wsKernelOfs = gmOffset;   // Kernel addr offset in current workspace block
+        uint32_t offset = 0;             // offsets for different cache blocks shared by ALL kernels
+        uint32_t wsKernelOfs = gmOffset; // Kernel addr offset in current workspace block
 
         // If there is NO inter-kernel communications, local workspace shall start from the GM offset of current core.
-        logitsGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs);  // global Logits workspace in [B, S]
+        logitsGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs); // global Logits workspace in [B, S]
         offset += count;
         wsKernelOfs *= MRG_PER_ELE; // Kernel Addr offset in workspace block is sized by column factor for ONLY ONCE
         sortPartGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs + offset);
@@ -226,13 +235,14 @@ private:
         srcIndexGlobalUser.SetGlobalBuffer((__gm__ uint32_t*)workspace + gmOffset + offset);
 
         // Init top_kp_selected_logits GM to zeros when if isNeedLogits
-        if(this->isNeedLogits){
-            AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen, static_cast<float>(SEL_LOGITS_DEF_VAL));
+        if (this->isNeedLogits) {
+            AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen,
+                                      static_cast<float>(SEL_LOGITS_DEF_VAL));
             // Sync single core I/O steps
             SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
             // Prevent dirty write under multi-core scenarios
             SyncAll();
-        } 
+        }
 
         this->pipe = tPipe;
         pipe->InitBuffer(buf0, INNER_LOOP_ELE * sizeof(float));
@@ -248,7 +258,7 @@ private:
         for (uint32_t row = 0; row < this->rtCoreRowNum; row++) {
             uint32_t temp = topKGlobal.GetValue(row); // 自GM取当前行logits的k值
             uint32_t topKMax = this->rowLen > TOPK_MAX ? TOPK_MAX : this->rowLen;
-            if (temp > topKMax) {                    // k值大于1024 or s[b], topK不使能
+            if (temp > topKMax) { // k值大于1024 or s[b], topK不使能
                 this->rowIdToppList[row] = 1;
             } else {
                 this->rowIdTopkList[row] = 1;
@@ -256,9 +266,8 @@ private:
         }
     }
 
-    __aicore__ inline void GetRowMaxInner(
-        LocalTensor<float>& src, LocalTensor<float>& reduceMaxMiddle, uint32_t countLen, float* rowMax,
-        const GlobalTensor<float>& dist)
+    __aicore__ inline void GetRowMaxInner(LocalTensor<float>& src, LocalTensor<float>& reduceMaxMiddle,
+                                          uint32_t countLen, float* rowMax, const GlobalTensor<float>& dist)
     {
         ReduceMax(reduceMaxMiddle, src, reduceMaxMiddle, countLen, false);
         PipeBarrier<PIPE_V>();
@@ -268,8 +277,8 @@ private:
         *rowMax = *rowMax > temp ? *rowMax : temp;
         SetFlag<HardEvent::S_V>(EVENT_ID0);
         WaitFlag<HardEvent::S_V>(EVENT_ID0);
-        DataCopyPad(
-            dist, src, {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}); // 将cast后未做排序的logits存入globalUser
+        DataCopyPad(dist, src,
+                    {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}); // 将cast后未做排序的logits存入globalUser
     }
 
     template <typename DTYPE>
@@ -294,8 +303,8 @@ private:
             PipeBarrier<PIPE_V>();
             GetRowMaxInner(valueLocalCast, reduceMaxMiddle, countLen, rowMax, logitsGlobalUser[gmOffset]);
             if (ifCopyOut) { // 写死，false，不走该分支
-                DataCopyPad(
-                    dstLogitsGlobal[gmOffset], valueLocalCast, {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
+                DataCopyPad(dstLogitsGlobal[gmOffset], valueLocalCast,
+                            {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
             }
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
@@ -317,9 +326,8 @@ private:
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
-            DataCopy(
-                valueLocalCast, logitsGlobalUser[gmOffset],
-                innerCopyLen); // 从globalUser里将GetRowMax函数中存储的未排序的做了cast的logits拿出来
+            DataCopy(valueLocalCast, logitsGlobalUser[gmOffset],
+                     innerCopyLen); // 从globalUser里将GetRowMax函数中存储的未排序的做了cast的logits拿出来
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             Duplicate(valueLocalMiddle, rowMax, countLen); // 复制rowMax并填充
             PipeBarrier<PIPE_V>();
@@ -330,9 +338,8 @@ private:
             PipeBarrier<PIPE_V>();
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-            DataCopyPad(
-                logitsGlobalUser[gmOffset], valueLocalMiddle,
-                {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});           // 将EXP结果存储到globalUser里
+            DataCopyPad(logitsGlobalUser[gmOffset], valueLocalMiddle,
+                        {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});   // 将EXP结果存储到globalUser里
             ReduceSum(reduceSumVal, valueLocalMiddle, reduceSumVal, countLen); // 基础API
             PipeBarrier<PIPE_V>();
             SetFlag<HardEvent::V_S>(EVENT_ID0);
@@ -348,9 +355,8 @@ private:
         uint32_t countLen)
     {
         LocalTensor<float> valueRs = buf0.Get<float>();
-        DataCopy(
-            valueRs, logitsGlobalUser[gmOffset],
-            innerCopyLen); // 将softmaxFst中算的exp临时存储在了GM中，现在搬到local中
+        DataCopy(valueRs, logitsGlobalUser[gmOffset],
+                 innerCopyLen); // 将softmaxFst中算的exp临时存储在了GM中，现在搬到local中
         SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
         Duplicate(valueLocalCast, reduceSumMax, countLen);
@@ -378,14 +384,15 @@ private:
                 countLen = this->innerLoopEleTail;
             }
             SoftMaxSecCompute(localValueCast, reduceSumMax, gmOffset, innerCopyLen, countLen);
-            SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3); // It should be ok to use SetWaitFlag for flows share the same EVENT_ID.
+            SetWaitFlag<HardEvent::V_MTE3>(
+                HardEvent::V_MTE3); // It should be ok to use SetWaitFlag for flows share the same EVENT_ID.
 
-            DataCopyPad(
-                logitsGlobalUser[gmOffset], localValueCast,
-                {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0,
-                 0}); // 将softmax结果存储到GMUser里，在SoftMaxAl之后如果没猜到k值，进入全排序分支后会用到
+            DataCopyPad(logitsGlobalUser[gmOffset], localValueCast,
+                        {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0,
+                         0}); // 将softmax结果存储到GMUser里，在SoftMaxAl之后如果没猜到k值，进入全排序分支后会用到
             SetFlag<HardEvent::MTE3_V>(EVENT_ID0);
-            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset), countLen);
+            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset),
+                           countLen);
             PipeBarrier<PIPE_V>();
             WaitFlag<HardEvent::MTE3_V>(EVENT_ID0);
             if (kCount > 0) {
@@ -407,7 +414,7 @@ private:
             DataCopy(localValueCast, localValueRs, this->k_pad);
             PipeBarrier<PIPE_V>();
             SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
-        }        
+        }
     }
 
     __aicore__ inline void SoftMaxAndQSampleCompute(uint32_t rowId, float reduceSumMax, uint32_t& maxIndex)
@@ -440,7 +447,7 @@ private:
             float value = localValueCast.GetValue(0);
             float index = localValueCast.GetValue(1);
             auto tempIndex = *reinterpret_cast<uint32_t*>(&index);
-            if (value > maxValue){
+            if (value > maxValue) {
                 maxIndex = indexOffset + tempIndex;
             }
             maxValue = maxValue > value ? maxValue : value;
@@ -451,9 +458,8 @@ private:
     }
 
     template <typename DTYPE>
-    __aicore__ inline void SoftMaxAll(
-        int32_t rowId, uint32_t kCount, const GlobalTensor<DTYPE>& src, bool ifQSampleCompute, uint32_t& maxIndex,
-        bool ifCopyOut)
+    __aicore__ inline void SoftMaxAll(int32_t rowId, uint32_t kCount, const GlobalTensor<DTYPE>& src,
+                                      bool ifQSampleCompute, uint32_t& maxIndex, bool ifCopyOut)
     {
         float rowMax{0};
         float reduceSumMax{0};
@@ -462,32 +468,31 @@ private:
             SoftMaxFstCompute(rowId, rowMax, &reduceSumMax);
             SoftMaxAndQSampleCompute(rowId, reduceSumMax, maxIndex);
         } else {
-            GetRowMax(rowId, &rowMax, src, ifCopyOut); 
-            SoftMaxFstCompute(
-                rowId, rowMax, &reduceSumMax); // softFst做softmax中的exp(搬到临时GM中存储) 和 s（reduceSumMax）
+            GetRowMax(rowId, &rowMax, src, ifCopyOut);
+            SoftMaxFstCompute(rowId, rowMax,
+                              &reduceSumMax); // softFst做softmax中的exp(搬到临时GM中存储) 和 s（reduceSumMax）
             if (ifQSampleCompute) {
                 SoftMaxAndQSampleCompute(rowId, reduceSumMax, maxIndex);
-            }
-            else {
+            } else {
                 SoftMaxAndTopkCompute(rowId, reduceSumMax, kCount);
             }
         }
     }
 
-    __aicore__ inline void SortOneTime(
-        LocalTensor<float>&& srcData, LocalTensor<uint32_t>&& srcIndex, uint32_t dataLen, LocalTensor<float>& sortedLocal)
+    __aicore__ inline void SortOneTime(LocalTensor<float>&& srcData, LocalTensor<uint32_t>&& srcIndex, uint32_t dataLen,
+                                       LocalTensor<float>& sortedLocal)
     {
         LocalTensor<float> concatLocal;
         LocalTensor<float> sortTmpLocal = buf5.Get<float>();
         Concat(concatLocal, srcData, sortTmpLocal, dataLen / SIXTEEN);
         PipeBarrier<PIPE_V>();
-        Sort<float, true>(
-            sortedLocal, concatLocal, srcIndex.ReinterpretCast<uint32_t>(), sortTmpLocal, dataLen / THIRTY_TWO);
+        Sort<float, true>(sortedLocal, concatLocal, srcIndex.ReinterpretCast<uint32_t>(), sortTmpLocal,
+                          dataLen / THIRTY_TWO);
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void Sort32Block(
-        LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex, uint32_t dataLen, bool mrg)
+    __aicore__ inline void Sort32Block(LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex, uint32_t dataLen,
+                                       bool mrg)
     {
         auto sort32LoopNum = SafeCeil(dataLen, SORT32_PER_LEN);
         auto sort32LoopTailNum = dataLen % SORT32_PER_LEN;
@@ -495,8 +500,8 @@ private:
         auto compareLenPad = SORT32_PER_LEN;
         LocalTensor<float> msgSortPart1 = buf0.Get<float>();
         LocalTensor<float> msgSortPart2 = buf4.Get<float>();
-        LocalTensor<float> msgSortLocal[SORT32_MAX_LOOP] = {
-            msgSortPart1, msgSortPart1[SORT32_PER_LEN * NUM_TWO], msgSortPart2, msgSortPart2[SORT32_PER_LEN * NUM_TWO]};
+        LocalTensor<float> msgSortLocal[SORT32_MAX_LOOP] = {msgSortPart1, msgSortPart1[SORT32_PER_LEN * NUM_TWO],
+                                                            msgSortPart2, msgSortPart2[SORT32_PER_LEN * NUM_TWO]};
         uint32_t queLen[SORT32_MAX_LOOP] = {0};
 
         for (uint32_t sort32LoopCount = 0; sort32LoopCount < sort32LoopNum; ++sort32LoopCount) {
@@ -529,8 +534,10 @@ private:
             msgSortLocalResultTemp = msgSortLocalResult[NUM_ZERO];
         }
         if (sort32LoopNum <= 1) {
-            // DataCopy demands 32bytes alignment, immediate call using calCount aligned to 32bytes is valid ONLY WHEN msgSortLocal HAS BEEN ALIGNED to 32bytes yet.   
-            DataCopy(msgSortLocalResultTemp, msgSortLocal[NUM_ZERO], static_cast<uint32_t>(Align(queLen[NUM_ZERO] * NUM_TWO, EIGHT)));
+            // DataCopy demands 32bytes alignment, immediate call using calCount aligned to 32bytes is valid ONLY WHEN
+            // msgSortLocal HAS BEEN ALIGNED to 32bytes yet.
+            DataCopy(msgSortLocalResultTemp, msgSortLocal[NUM_ZERO],
+                     static_cast<uint32_t>(Align(queLen[NUM_ZERO] * NUM_TWO, EIGHT)));
             PipeBarrier<PIPE_V>();
             this->queLenGlobal[qid] = queLen[NUM_ZERO];
         } else {
@@ -540,7 +547,9 @@ private:
             }
             localParams = {elementLengths, false, valueBits[sort32LoopNum], 1};
             MrgSort<float>(
-                msgSortLocalResultTemp, {msgSortLocal[NUM_ZERO], msgSortLocal[NUM_ONE], msgSortLocal[NUM_TWO], msgSortLocal[NUM_THREE]}, localParams);
+                msgSortLocalResultTemp,
+                {msgSortLocal[NUM_ZERO], msgSortLocal[NUM_ONE], msgSortLocal[NUM_TWO], msgSortLocal[NUM_THREE]},
+                localParams);
             PipeBarrier<PIPE_V>();
         }
 
@@ -548,18 +557,18 @@ private:
             elementLengths[NUM_ZERO] = static_cast<uint16_t>(this->queLenGlobal[NUM_ZERO]);
             elementLengths[NUM_ONE] = static_cast<uint16_t>(this->queLenGlobal[NUM_ONE]);
             localParams = {elementLengths, false, valueBits[MRGSORT_PER_NUM_LAST], 1};
-            MrgSort<float>(
-                msgSortLocalResult[NUM_TWO],
-                {msgSortLocalResult[NUM_ZERO], msgSortLocalResult[NUM_ONE], msgSortLocalResult[NUM_ONE], msgSortLocalResult[NUM_ONE]}, localParams);
+            MrgSort<float>(msgSortLocalResult[NUM_TWO],
+                           {msgSortLocalResult[NUM_ZERO], msgSortLocalResult[NUM_ONE], msgSortLocalResult[NUM_ONE],
+                            msgSortLocalResult[NUM_ONE]},
+                           localParams);
             PipeBarrier<PIPE_V>();
             DataCopy(msgSortLocalResult[NUM_ZERO], msgSortLocalResult[NUM_TWO], SORT32_PERGROUP_LEN);
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void Sort32BlockNext(
-        LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex, uint32_t dataLen, LocalTensor<float>& mrgSortResult,
-        uint32_t kCount)
+    __aicore__ inline void Sort32BlockNext(LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex,
+                                           uint32_t dataLen, LocalTensor<float>& mrgSortResult, uint32_t kCount)
     {
         uint32_t firstTopkIndex = (kCount - 1) * NUM_TWO;
         uint64_t rsvdCnt = 0;
@@ -570,11 +579,11 @@ private:
         float firstTopk = mrgSortResult.GetValue(firstTopkIndex);
         CompareScalar(compareIndexMask, srcData, firstTopk, CMPMODE::GT, SafeCeil(dataLen, SIXTY_FOUR) * SIXTY_FOUR);
         PipeBarrier<PIPE_V>();
-        GatherMask(
-            srcData, srcData, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams, rsvdCnt);
+        GatherMask(srcData, srcData, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams,
+                   rsvdCnt);
         PipeBarrier<PIPE_V>();
-        GatherMask(
-            srcIndex, srcIndex, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams, rsvdCnt);
+        GatherMask(srcIndex, srcIndex, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams,
+                   rsvdCnt);
         PipeBarrier<PIPE_V>();
 
         if (rsvdCnt > 0) {
@@ -608,7 +617,8 @@ private:
                 innerCopyLen = this->innerLoopEleTailPad;
                 countLen = this->innerLoopEleTail;
             }
-            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset), countLen);
+            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset),
+                           countLen);
             PipeBarrier<PIPE_V>();
             DataCopy(localValue, logitsGlobal[gmOffset], innerCopyLen);
             SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
@@ -687,9 +697,10 @@ private:
 
     template <typename GDTYPE>
     __aicore__ inline void CopyOut(int32_t rowId, uint32_t calCnt, GDTYPE& dist, uint32_t maxIndex)
-    {   
+    {
         LocalTensor<uint64_t> tempLocalCopy = buf0.Get<uint64_t>();
-        AscendC::DataCacheCleanAndInvalid<uint32_t, AscendC::CacheLine::SINGLE_CACHE_LINE, AscendC::DcciDst::CACHELINE_OUT>(srcIndexGlobalUser[rowId * this->rowLen]);
+        AscendC::DataCacheCleanAndInvalid<uint32_t, AscendC::CacheLine::SINGLE_CACHE_LINE,
+                                          AscendC::DcciDst::CACHELINE_OUT>(srcIndexGlobalUser[rowId * this->rowLen]);
         this->outputIdx = static_cast<uint64_t>(dist.GetValue(maxIndex));
         tempLocalCopy.SetValue(0, this->outputIdx);
         SetWaitFlag<HardEvent::S_MTE3>(HardEvent::S_MTE3);
@@ -710,9 +721,8 @@ private:
 
             while (rowLenOri > 0) {
                 auto dataLen = rowLenOri > maxNum ? maxNum : rowLenOri;
-                DataCopyPad(
-                    localValue, logitsGlobal[startIndex + startOffset],
-                    {1, static_cast<uint16_t>(sizeof(T) * dataLen), 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(localValue, logitsGlobal[startIndex + startOffset],
+                            {1, static_cast<uint16_t>(sizeof(T) * dataLen), 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, dataLen);
                 uint32_t calCntOri = calCnt;
@@ -720,19 +730,19 @@ private:
                 while (calCntOri > 0) {
                     auto indexDataLen = calCntOri > maxNum ? maxNum : calCntOri;
                     if constexpr (std::is_same<GDTYPE, LocalTensor<uint32_t>>::value) {
-                        DataCopy(indexValue, dist[indexStartOffset], this->k_pad);  // TOPP_K_FIX
+                        DataCopy(indexValue, dist[indexStartOffset], this->k_pad); // TOPP_K_FIX
                         SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
                     } else {
-                        DataCopyPad(
-                            indexValue, dist[indexStartOffset],
-                            {1, static_cast<uint16_t>(SIZEOF_UINT32 * indexDataLen), 0, 0}, {false, 0, 0, 0});
+                        DataCopyPad(indexValue, dist[indexStartOffset],
+                                    {1, static_cast<uint16_t>(SIZEOF_UINT32 * indexDataLen), 0, 0}, {false, 0, 0, 0});
                         SetWaitFlag<HardEvent::MTE2_S>(HardEvent::MTE2_S);
                     }
                     for (uint32_t num = 0; num < indexDataLen; ++num) {
                         auto index = indexValue.GetValue(num);
-                        int32_t valIdx = index - startOffset;   // get local index in current global index section
+                        int32_t valIdx = index - startOffset; // get local index in current global index section
                         if (valIdx < dataLen && valIdx >= 0) {
-                            uint32_t offset = startIndex + index;   // adding origin column index on to GM offset of current core batch for dstlogitsIdx  
+                            uint32_t offset = startIndex + index; // adding origin column index on to GM offset of
+                                                                  // current core batch for dstlogitsIdx
                             auto val = localValueCast.GetValue(valIdx);
                             topKPLogitsLocal.SetValue(0, val);
                             SetWaitFlag<HardEvent::S_MTE3>(HardEvent::S_MTE3);
@@ -749,7 +759,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyOut(int32_t rowId, uint32_t copyCnt, uint32_t maxIndex, bool ifGetIndex, bool ifCopyOutValue)
+    __aicore__ inline void CopyOut(int32_t rowId, uint32_t copyCnt, uint32_t maxIndex, bool ifGetIndex,
+                                   bool ifCopyOutValue)
     {
         // copyOut
         LocalTensor<uint64_t> sampleIndexLocal = buf4.Get<uint64_t>();
@@ -767,7 +778,9 @@ private:
             LocalTensor<float> topKPLogitsLocal = buf5.Get<float>();
             DataCopy(topKPLogitsLocal, localValueRs, copyCnt);
             DataCopyExtParams copyLogitsOutParams{1, (uint32_t)sizeof(float), 0, 0, 0};
-            for (uint32_t num = 0; num < this->topPNum; num++) { // 排好序的前topPNum个数，分别拷贝到dstLogitsGlobal中，offset保证放置的位置和源Logits位置一致，未放置位置数值为0？
+            for (
+                uint32_t num = 0; num < this->topPNum;
+                num++) { // 排好序的前topPNum个数，分别拷贝到dstLogitsGlobal中，offset保证放置的位置和源Logits位置一致，未放置位置数值为0？
                 topKPLogitsLocal.SetValue(0, topKPLogitsLocal.GetValue(num));
                 uint32_t offset = startIndex + localIndexRs.GetValue(num);
                 SetWaitFlag<HardEvent::S_MTE3>(HardEvent::S_MTE3);
@@ -815,8 +828,8 @@ private:
     uint32_t softmaxLoopEleTail{0};
     uint32_t softmaxLoopEleTailPad{0};
 
-    uint32_t startTaskId{0};    // start batch index offest of current kernel
-    uint32_t rtCoreRowNum{0};   // batch amount processed by this kernel
+    uint32_t startTaskId{0};  // start batch index offest of current kernel
+    uint32_t rtCoreRowNum{0}; // batch amount processed by this kernel
     uint32_t k{0};
     uint32_t k_pad{0};
     uint32_t topPNum{0};
@@ -835,6 +848,6 @@ private:
 
     const float* FP32_NEG_INF_PTR = reinterpret_cast<const float*>(&FP32_NEG_INF_BITS);
     const float SEL_LOGITS_DEF_VAL = *FP32_NEG_INF_PTR;
-}; // namespace TopKTopPSample
-};
+};     // namespace TopKTopPSample
+};     // namespace TopKTopPSample
 #endif // TOP_K_TOP_P_SAMPLE_H

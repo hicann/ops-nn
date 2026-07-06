@@ -46,7 +46,7 @@ static int64_t DivRtn(int64_t x, int64_t y)
 {
     if (y == 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("MaxPoolWithArgmaxV3", "y", std::to_string(y).c_str(),
-            "Divisor y must not be zero");
+                                              "Divisor y must not be zero");
         return GRAPH_FAILED;
     }
     int64_t q = x / y;
@@ -57,8 +57,8 @@ static int64_t DivRtn(int64_t x, int64_t y)
     return q;
 }
 
-static void UpdateMaxShape(
-    const int64_t (&param)[PARAM_NUM], bool ceil_mode, const int64_t& dim_size, int64_t& out_max_shape)
+static void UpdateMaxShape(const int64_t (&param)[PARAM_NUM], bool ceil_mode, const int64_t& dim_size,
+                           int64_t& out_max_shape)
 {
     int64_t ksize = param[INDEX_KSIZE];
     int64_t strides = param[INDEX_STRIDES];
@@ -85,8 +85,8 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     OP_LOGD(context->GetNodeName(), "indices_dtype = %d", indices_dtype);
 
     if (input_format != FORMAT_ND && input_format != FORMAT_NCHW && input_format != FORMAT_NHWC) {
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
-            Ops::Base::ToString(input_format).c_str(), "ND, NCHW or NHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x", Ops::Base::ToString(input_format).c_str(),
+                                   "ND, NCHW or NHWC");
         return GRAPH_FAILED;
     }
 
@@ -101,8 +101,7 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
     if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize",
-            std::to_string(ksize->GetSize()).c_str(), "2");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(), "2");
         return GRAPH_FAILED;
     }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
@@ -110,8 +109,8 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
-            std::to_string(strides->GetSize()).c_str(), "2");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     "2");
         return GRAPH_FAILED;
     }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
@@ -119,8 +118,7 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     if (pads->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads",
-            std::to_string(pads->GetSize()).c_str(), "2");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads", std::to_string(pads->GetSize()).c_str(), "2");
         return GRAPH_FAILED;
     }
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
@@ -128,8 +126,8 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilation);
     if (dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation",
-            std::to_string(dilation->GetSize()).c_str(), "2");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation", std::to_string(dilation->GetSize()).c_str(),
+                                     "2");
         return GRAPH_FAILED;
     }
     auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
@@ -169,14 +167,14 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     for (size_t i = 0; i < dim_num; i++) {
         int64_t input_dim = in_shape->GetDim(i);
         if (i == input_h_dim) {
-            int64_t param[PARAM_NUM] = {
-                ksize_data[param_h_dim], strides_data[param_h_dim], pads_data[param_h_dim], dilation_data[param_h_dim]};
+            int64_t param[PARAM_NUM] = {ksize_data[param_h_dim], strides_data[param_h_dim], pads_data[param_h_dim],
+                                        dilation_data[param_h_dim]};
             UpdateMaxShape(param, *ceil_mode, input_dim, max_dim);
             out_max_shape->SetDim(i, max_dim);
             out_indices_shape->SetDim(i, max_dim);
         } else if (i == input_w_dim) {
-            int64_t param[PARAM_NUM] = {
-                ksize_data[param_w_dim], strides_data[param_w_dim], pads_data[param_w_dim], dilation_data[param_w_dim]};
+            int64_t param[PARAM_NUM] = {ksize_data[param_w_dim], strides_data[param_w_dim], pads_data[param_w_dim],
+                                        dilation_data[param_w_dim]};
             UpdateMaxShape(param, *ceil_mode, input_dim, max_dim);
             out_max_shape->SetDim(i, max_dim);
             out_indices_shape->SetDim(i, max_dim);

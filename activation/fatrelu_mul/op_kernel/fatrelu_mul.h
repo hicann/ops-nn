@@ -37,13 +37,12 @@ constexpr int32_t ONE_REPEAT_ELE_NUM_FP16 = 128;
 constexpr int32_t ONE_BLOCK_SIZE = 32;
 
 template <typename T>
-class FatreluMulND
-{
+class FatreluMulND {
 public:
     TPipe pipe;
     __aicore__ inline FatreluMulND(){};
-    __aicore__ inline void Init(
-        GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, const FatreluMulTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace,
+                                const FatreluMulTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -85,8 +84,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void FatreluMulND<T>::Init(
-    GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, const FatreluMulTilingData* tilingData)
+__aicore__ inline void FatreluMulND<T>::Init(GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace,
+                                             const FatreluMulTilingData* tilingData)
 {
     inputGm.SetGlobalBuffer((__gm__ T*)input);
     inScalarGM.SetGlobalBuffer((__gm__ T*)scalar, 1);
@@ -235,8 +234,8 @@ __aicore__ inline void FatreluMulND<bfloat16_t>::Compute(int64_t dataCount)
 }
 
 template <typename T>
-__aicore__ inline void FatreluMulND<T>::CopyOut(
-    int64_t outputOffset, int64_t dataCount, DataCopyExtParams dataCopyParams)
+__aicore__ inline void FatreluMulND<T>::CopyOut(int64_t outputOffset, int64_t dataCount,
+                                                DataCopyExtParams dataCopyParams)
 {
     if (std::is_same_v<T, half>) {
         Cast(x1Tensor, x1TensorFp32, RoundMode::CAST_NONE, dataCount);
@@ -292,8 +291,8 @@ __aicore__ inline void FatreluMulND<T>::SmallTailProcess()
 
         int32_t localOffset = i * n * lastDimSize;
         eventId = pingPongFlag ? EVENT_ID1 : EVENT_ID0;
-        DataCopyExtParams dataCopyParamsIn{
-            tmpCalNum, static_cast<uint32_t>(d * sizeof(T)), static_cast<uint32_t>(d * sizeof(T)), 0, 0};
+        DataCopyExtParams dataCopyParamsIn{tmpCalNum, static_cast<uint32_t>(d * sizeof(T)),
+                                           static_cast<uint32_t>(d * sizeof(T)), 0, 0};
 
         CopyIn(totalOffset + localOffset, dataCopyParamsIn);
         Compute(tmpCalNum * dAlign);

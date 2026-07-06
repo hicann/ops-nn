@@ -12,7 +12,7 @@
  * \file rms_norm_grad_EMPTY_DGAMMA.h
  * \brief RmsNorm EMPTY dgamma
  */
- 
+
 #ifndef RMS_NORM_GRAD_EMPTY_DGAMMA_H
 #define RMS_NORM_GRAD_EMPTY_DGAMMA_H
 
@@ -24,10 +24,10 @@ using namespace AscendC;
 template <int32_t BUFFER_NUM = 2>
 class EmptyDgamma {
 public:
-    __aicore__ inline EmptyDgamma(TPipe *pipe, const RmsNormGradEmptyTilingData *tilingData) : Ppipe_(pipe), tiling_(tilingData)
-    {
-    }
-    __aicore__ inline void Init(__gm__ uint8_t *dgamma)
+    __aicore__ inline EmptyDgamma(TPipe* pipe, const RmsNormGradEmptyTilingData* tilingData)
+        : Ppipe_(pipe), tiling_(tilingData)
+    {}
+    __aicore__ inline void Init(__gm__ uint8_t* dgamma)
     {
         coreIdx_ = AscendC::GetBlockIdx();
         usedCoreNumDG_ = tiling_->usedCoreNumDG;
@@ -44,12 +44,12 @@ public:
 
         gmOffset_ = colsPerCore_ * coreIdx_;
         colsLastCoreDG_ = tiling_->colsLastCoreDG;
-        dgammaGm_.SetGlobalBuffer((__gm__ float *)dgamma);
+        dgammaGm_.SetGlobalBuffer((__gm__ float*)dgamma);
         Ppipe_->InitBuffer(dgammaQueue_, BUFFER_NUM, (colsPerUB_ * sizeof(float)));
     }
 
     __aicore__ inline void CopyDgammaToGm(uint32_t dgammaGmOffset, LocalTensor<float> outLocal, int32_t curCols,
-        int32_t dgammaUBOffset)
+                                          int32_t dgammaUBOffset)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
@@ -60,7 +60,7 @@ public:
         DataCopyPad(dgammaGm_[dgammaGmOffset], outLocal[dgammaUBOffset], dataCopyParams);
     }
 
-    __aicore__ inline void VFDuplicateRows(LocalTensor<float> &dstAddr, uint32_t currentCols)
+    __aicore__ inline void VFDuplicateRows(LocalTensor<float>& dstAddr, uint32_t currentCols)
     {
         AscendC::NumericLimits<float>::QuietNaN(dstAddr, currentCols);
     }
@@ -78,49 +78,48 @@ public:
         dgammaQueue_.FreeTensor(dgammaOutLocal);
     }
 
-__aicore__ inline void Process()
-{
-    if (coreIdx_ >= usedCoreNumDG_) {
-        return;
-    }
-
-    int64_t outputOffset = 0;
-
-    if (coreIdx_ < usedCoreNumDG_ -1) {
-        for (uint32_t curLoop = 0; curLoop < ubLoopCount_; curLoop++) {
-            outputOffset = curLoop * colsPerUB_ + gmOffset_;
-            CalcDgamma(outputOffset, colsPerUB_);
+    __aicore__ inline void Process()
+    {
+        if (coreIdx_ >= usedCoreNumDG_) {
+            return;
         }
-        outputOffset = ubLoopCount_ * colsPerUB_ + gmOffset_;
-        CalcDgamma(outputOffset, tailUbCols_);
-    } else {
-        for (uint32_t curLoop = 0; curLoop < lastUbLoopCount_; curLoop++) {
-            outputOffset = curLoop * colsPerUB_ + gmOffset_;
-            CalcDgamma(outputOffset, colsPerUB_);
+
+        int64_t outputOffset = 0;
+
+        if (coreIdx_ < usedCoreNumDG_ - 1) {
+            for (uint32_t curLoop = 0; curLoop < ubLoopCount_; curLoop++) {
+                outputOffset = curLoop * colsPerUB_ + gmOffset_;
+                CalcDgamma(outputOffset, colsPerUB_);
+            }
+            outputOffset = ubLoopCount_ * colsPerUB_ + gmOffset_;
+            CalcDgamma(outputOffset, tailUbCols_);
+        } else {
+            for (uint32_t curLoop = 0; curLoop < lastUbLoopCount_; curLoop++) {
+                outputOffset = curLoop * colsPerUB_ + gmOffset_;
+                CalcDgamma(outputOffset, colsPerUB_);
+            }
+            outputOffset = lastUbLoopCount_ * colsPerUB_ + gmOffset_;
+            CalcDgamma(outputOffset, lastCoreTailUbCols_);
         }
-        outputOffset = lastUbLoopCount_ * colsPerUB_ + gmOffset_;
-        CalcDgamma(outputOffset, lastCoreTailUbCols_);
     }
-}
 
 private:
+    TQue<QuePosition::VECOUT, 1> dgammaQueue_;
 
-TQue<QuePosition::VECOUT, 1> dgammaQueue_;
+    GlobalTensor<float> dgammaGm_;
+    uint64_t colsLastCoreDG_;
+    uint32_t coreIdx_;
+    uint64_t colsPerCore_;
+    uint64_t gmOffset_;
+    uint64_t usedCoreNumDG_;
+    uint64_t colsPerUB_;
+    uint64_t tailUbCols_;
+    uint64_t ubLoopCount_;
+    uint64_t lastUbLoopCount_;
+    uint64_t lastCoreTailUbCols_;
+    TPipe* Ppipe_ = nullptr;
 
-GlobalTensor<float> dgammaGm_;
-uint64_t colsLastCoreDG_;
-uint32_t coreIdx_;
-uint64_t colsPerCore_;
-uint64_t gmOffset_;
-uint64_t usedCoreNumDG_;
-uint64_t colsPerUB_;
-uint64_t tailUbCols_;
-uint64_t ubLoopCount_;
-uint64_t lastUbLoopCount_;
-uint64_t lastCoreTailUbCols_;
-TPipe *Ppipe_ = nullptr;
-
-const RmsNormGradEmptyTilingData *tiling_;
+    const RmsNormGradEmptyTilingData* tiling_;
 };
 } // namespace RmsNormGrad
-#endif //RMS_NORM_GRAD_EMPTY_DGAMMA_H
+#endif // RMS_NORM_GRAD_EMPTY_DGAMMA_H

@@ -22,18 +22,14 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LpNormUpdateV3);
 
-const aclTensor *LpNormUpdateV2(const aclTensor *x,
-                                float p,
-                                float epsilon,
-                                aclOpExecutor *executor) {
-  L0_DFX(LpNormUpdateV2, x, p, epsilon);
-  auto out = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
+const aclTensor* LpNormUpdateV2(const aclTensor* x, float p, float epsilon, aclOpExecutor* executor)
+{
+    L0_DFX(LpNormUpdateV2, x, p, epsilon);
+    auto out = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
 
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpNormUpdateV3,
-                                         OP_INPUT(x),
-                                         OP_OUTPUT(out),
-                                         OP_ATTR(p, epsilon));
-  OP_CHECK(ret ==  ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormUpdateV3 ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
-  return out;
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpNormUpdateV3, OP_INPUT(x), OP_OUTPUT(out), OP_ATTR(p, epsilon));
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormUpdateV3 ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return out;
 }
-}
+} // namespace l0op

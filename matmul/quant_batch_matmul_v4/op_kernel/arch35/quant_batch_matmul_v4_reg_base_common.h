@@ -49,11 +49,10 @@ using AscendC::Dn2NzParams;
 using AscendC::MicroAPI::GetRound;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::TypeGet;
-using matmul::MatmulTypeWithScale;
 using matmul::MatmulType;
+using matmul::MatmulTypeWithScale;
 
-namespace QuantBatchMatmulV4
-{
+namespace QuantBatchMatmulV4 {
 using AscendC::IsSameType;
 
 constexpr uint8_t MAX_AL1_BUF_NUM = 4;
@@ -66,8 +65,7 @@ struct MatmulL1GmType : MatmulType<POSITION, FORMAT, TYPE, ISTRANS, LAYOUT, IBSH
 
 template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz = false>
-class QuantBatchMatmulV4RegBaseCommonKernel
-{
+class QuantBatchMatmulV4RegBaseCommonKernel {
     using VregType = typename TypeGet<xType>::T;
 
 public:
@@ -92,8 +90,8 @@ public:
     __aicore__ inline int64_t GetVecGn(int32_t bubKOffset, int32_t bubKLen);
     __aicore__ inline void CopyVecOut2L1(int64_t l1Offset, LocalTensor<xType> ubLocal, int32_t bubKLen,
                                          int32_t bubNLen);
-     __aicore__ inline void CopyVecOut2L1WeightNz(int64_t l1Offset, LocalTensor<xType> ubLocal, int32_t bubKLen,
-                                                int32_t bubNLen);
+    __aicore__ inline void CopyVecOut2L1WeightNz(int64_t l1Offset, LocalTensor<xType> ubLocal, int32_t bubKLen,
+                                                 int32_t bubNLen);
     __aicore__ inline void MovWeightAndCompute(int64_t bubKOffset, int64_t bubNOffset, int32_t bubKLen,
                                                int32_t bubNLen);
     __aicore__ inline void BL1Process(uint64_t curBL1BufIdx, int64_t nBL1Offset, int64_t kBL1Offset, int32_t kL1Len,
@@ -342,13 +340,13 @@ protected:
     static constexpr uint64_t FLAG_ID_MAX = 16;
     static constexpr uint64_t L1_BUFFER_SIZE = 512 * 1024;
     static constexpr uint64_t L1_BUFFER_HALF_SIZE = 256 * 1024;
-    static constexpr int32_t REPEAT_STRIDE_UINT = 5;  // 位移位数, 32
+    static constexpr int32_t REPEAT_STRIDE_UINT = 5; // 位移位数, 32
     static constexpr uint64_t DOUBLE_BUFFER = 2;
     static constexpr uint64_t SINGLE_BUFFER = 1;
     static constexpr uint64_t SYNC_AIV_AIC_FLAG = 2;
     static constexpr uint8_t SYNC_MODE4 = 4;
-    static constexpr uint64_t INT4_DTYPE_PARAM = 1;  // 位移位数, 2
-    static constexpr uint64_t VCVT_PARAM = 1;        // 位移位数, 2
+    static constexpr uint64_t INT4_DTYPE_PARAM = 1; // 位移位数, 2
+    static constexpr uint64_t VCVT_PARAM = 1;       // 位移位数, 2
     static constexpr int32_t VEC_MAX_ELEM_B16 = VECTOR_REG_WIDTH / sizeof(xType);
     static constexpr int32_t VEC_MAX_ELEM_B8 = VECTOR_REG_WIDTH / sizeof(xType);
     static constexpr int64_t ONE_BLK_ELEM_B16 = ONE_BLK_SIZE / sizeof(xType);
@@ -358,8 +356,8 @@ protected:
 
     TBuf<QuePosition::TSCM> l1Tbuf_;
 
-     AscendC::TEventID eventIdsScaleAMte1ToMte2_[DOUBLE_BUFFER];
-     AscendC::TEventID eventIdsScaleBMte1ToMte2_[DOUBLE_BUFFER];
+    AscendC::TEventID eventIdsScaleAMte1ToMte2_[DOUBLE_BUFFER];
+    AscendC::TEventID eventIdsScaleBMte1ToMte2_[DOUBLE_BUFFER];
 };
 
 enum class IterateOrder : uint32_t { ORDER_M = 0, ORDER_N, UNDEF };
@@ -397,11 +395,10 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::InitInputs(GM_ADDR x1, GM_ADDR x2,
-                                                                                     GM_ADDR x1_scale, GM_ADDR x2_scale,
-                                                                                     GM_ADDR x2_offset, GM_ADDR y_scale,
-                                                                                     GM_ADDR y_offset, GM_ADDR bias,
-                                                                                     GM_ADDR y, GM_ADDR workspace)
+                                      scaleType, weightNz>::InitInputs(GM_ADDR x1, GM_ADDR x2, GM_ADDR x1_scale,
+                                                                       GM_ADDR x2_scale, GM_ADDR x2_offset,
+                                                                       GM_ADDR y_scale, GM_ADDR y_offset, GM_ADDR bias,
+                                                                       GM_ADDR y, GM_ADDR workspace)
 {
     // 申请 Global Buffer
     xGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType*>(x1));
@@ -414,12 +411,12 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     quantScaleGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(y_scale));
 
     // 申请 L1 Buffer 以及 B 矩阵在 UB 上的输入与输出 buffer 空间
-    if constexpr(antiQuantType == QuantType::MX) {
+    if constexpr (antiQuantType == QuantType::MX) {
         pipe_->InitBuffer(l1Tbuf_, L1_BUFFER_SIZE);
     } else {
         pipe_->InitBuffer(l1Tbuf_, L1_BUFFER_SIZE -
-                                   tiling_->matmulTiling.isBias * tiling_->matmulTiling.baseN * sizeof(biasType) -
-                                   tiling_->matmulTiling.baseN * sizeof(uint64_t));
+                                       tiling_->matmulTiling.isBias * tiling_->matmulTiling.baseN * sizeof(biasType) -
+                                       tiling_->matmulTiling.baseN * sizeof(uint64_t));
     }
 
     if (likely(tiling_->BL1Pingpong == QUADRUPLE_BUFFER)) {
@@ -429,10 +426,11 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                 vecWeightInLen_ = (tiling_->BL1Pingpong * tiling_->nBubSize * tiling_->kBubSize) >> INT4_DTYPE_PARAM;
                 vecWeightOutLen_ = tiling_->BL1Pingpong * tiling_->nBubSize * tiling_->kBubSize * sizeof(xType);
             } else {
-                vecWeightInLen_ = tiling_->BL1Pingpong * (tiling_->nBubSize * CeilAlign(tiling_->kBubSize, OFFSET_64)) >>
-                                INT4_DTYPE_PARAM;
+                vecWeightInLen_ = tiling_->BL1Pingpong *
+                                      (tiling_->nBubSize * CeilAlign(tiling_->kBubSize, OFFSET_64)) >>
+                                  INT4_DTYPE_PARAM;
                 vecWeightOutLen_ = tiling_->BL1Pingpong * (CeilAlign(tiling_->nBubSize, BLOCK_CUBE) + 1) *
-                                CeilAlign(tiling_->kBubSize, ONE_BLK_SIZE);
+                                   CeilAlign(tiling_->kBubSize, ONE_BLK_SIZE);
             }
         } else {
             if constexpr (weightNz) {
@@ -447,10 +445,10 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                 vecWeightOutLen_ = vecPingpong_ * tiling_->nBubSize * tiling_->kBubSize * sizeof(xType);
             } else {
                 vecPingpong_ = Min(tiling_->BL1Pingpong, DOUBLE_BUFFER);
-                vecWeightInLen_ =
-                    vecPingpong_ * (tiling_->nBubSize * CeilAlign(tiling_->kBubSize, OFFSET_64)) >> INT4_DTYPE_PARAM;
+                vecWeightInLen_ = vecPingpong_ * (tiling_->nBubSize * CeilAlign(tiling_->kBubSize, OFFSET_64)) >>
+                                  INT4_DTYPE_PARAM;
                 vecWeightOutLen_ = vecPingpong_ * (CeilAlign(tiling_->nBubSize, BLOCK_CUBE) + 1) *
-                                CeilAlign(tiling_->kBubSize, ONE_BLK_SIZE);
+                                   CeilAlign(tiling_->kBubSize, ONE_BLK_SIZE);
             }
         } else {
             vecPingpong_ = tiling_->BL1Pingpong;
@@ -506,24 +504,24 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 
     kSingleCoreIterNum_ = CeilDiv(tiling_->kSize, Min(kAL1Size_, kBL1Size_));
 
-    int64_t mTailCoreSize_ = tiling_->mSize - (tiling_->cubeNumBlocksM - 1) * singleM;  // 尾核 m 大小
-    int64_t nTailCoreSize_ = tiling_->nSize - (tiling_->cubeNumBlocksN - 1) * singleN;  // 尾核 n 大小
+    int64_t mTailCoreSize_ = tiling_->mSize - (tiling_->cubeNumBlocksM - 1) * singleM; // 尾核 m 大小
+    int64_t nTailCoreSize_ = tiling_->nSize - (tiling_->cubeNumBlocksN - 1) * singleN; // 尾核 n 大小
 
-    mSingleCoreSize_ = mDimIdx_ == tiling_->cubeNumBlocksM - 1 ? mTailCoreSize_ : singleM;  // 单核内 m 方向大小
-    nSingleCoreSize_ = nDimIdx_ == tiling_->cubeNumBlocksN - 1 ? nTailCoreSize_ : singleN;  // 单核内 n 方向大小
+    mSingleCoreSize_ = mDimIdx_ == tiling_->cubeNumBlocksM - 1 ? mTailCoreSize_ : singleM; // 单核内 m 方向大小
+    nSingleCoreSize_ = nDimIdx_ == tiling_->cubeNumBlocksN - 1 ? nTailCoreSize_ : singleN; // 单核内 n 方向大小
 
-    tailL1M_ = mSingleCoreSize_ % mAL1Size_;  // 单核内l1上m方向尾块
+    tailL1M_ = mSingleCoreSize_ % mAL1Size_; // 单核内l1上m方向尾块
     if (tailL1M_ == 0) {
         tailL1M_ = mAL1Size_;
     }
 
-    tailL1N_ = nSingleCoreSize_ % nBL1Size_;  // 单核内l1上n方向尾块
+    tailL1N_ = nSingleCoreSize_ % nBL1Size_; // 单核内l1上n方向尾块
     if (tailL1N_ == 0) {
         tailL1N_ = nBL1Size_;
     }
 
-    mBlockOffset_ = mDimIdx_ * singleM;  // m 方向核间偏移
-    nBlockOffset_ = nDimIdx_ * singleN;  // n 方向核间偏移
+    mBlockOffset_ = mDimIdx_ * singleM; // m 方向核间偏移
+    nBlockOffset_ = nDimIdx_ * singleN; // n 方向核间偏移
 }
 
 template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
@@ -534,16 +532,16 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 {
     InitL1Params();
 
-    mIter_ = CeilDiv(mSingleCoreSize_, tiling_->matmulTiling.baseM);  // 单核内一共有basem块数量
-    nIter_ = CeilDiv(nSingleCoreSize_, tiling_->matmulTiling.baseN);  // 单核内一共有basen块数量
+    mIter_ = CeilDiv(mSingleCoreSize_, tiling_->matmulTiling.baseM); // 单核内一共有basem块数量
+    nIter_ = CeilDiv(nSingleCoreSize_, tiling_->matmulTiling.baseN); // 单核内一共有basen块数量
     biasPingPong_ = Min(nIter_, DOUBLE_BUFFER);
 
-    tailM_ = mSingleCoreSize_ % tiling_->matmulTiling.baseM;  // 单核内l0上m方向尾块
+    tailM_ = mSingleCoreSize_ % tiling_->matmulTiling.baseM; // 单核内l0上m方向尾块
     if (tailM_ == 0) {
         tailM_ = tiling_->matmulTiling.baseM;
     }
 
-    tailN_ = nSingleCoreSize_ % tiling_->matmulTiling.baseN;  // 单核内l0上n方向尾块
+    tailN_ = nSingleCoreSize_ % tiling_->matmulTiling.baseN; // 单核内l0上n方向尾块
     if (tailN_ == 0) {
         tailN_ = tiling_->matmulTiling.baseN;
     }
@@ -553,20 +551,18 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::CopyInTensorWeight(int64_t bubKOffset,
-                                                                                             int64_t bubNOffset,
-                                                                                             int32_t bubKLen,
-                                                                                             int32_t bubNLen)
+                                      scaleType, weightNz>::CopyInTensorWeight(int64_t bubKOffset, int64_t bubNOffset,
+                                                                               int32_t bubKLen, int32_t bubNLen)
 {
     DataCopyExtParams intriParams;
     intriParams.dstStride = 0;
     DataCopyPadExtParams<wType> padParams;
-    int64_t gmOffset;  // GM 上 B 矩阵的地址偏移（以元素个数为单位）
+    int64_t gmOffset; // GM 上 B 矩阵的地址偏移（以元素个数为单位）
     if constexpr (bTrans) {
         if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
             if constexpr (weightNz && (antiQuantType == QuantType::MX)) { // MXA8W4, NZ,(k1,n1,n0,k0)
-                intriParams.blockCount = bubKLen / C0_SIZE_B8;     // k1
-                intriParams.blockLen = bubNLen * BLOCK_CUBE;  // n1 * n0 * k0
+                intriParams.blockCount = bubKLen / C0_SIZE_B8;            // k1
+                intriParams.blockLen = bubNLen * BLOCK_CUBE;              // n1 * n0 * k0
                 int64_t nAlignSize = CeilAlign(tiling_->nSize, BLOCK_CUBE);
                 intriParams.srcStride = (nAlignSize - bubNLen) * BLOCK_CUBE;
                 gmOffset = (bubKOffset * nAlignSize + bubNOffset * C0_SIZE_B8);
@@ -581,9 +577,9 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support yet"); });
 #endif
         }
-    } else {  // B 矩阵非转置
-        intriParams.blockCount = bubNLen / C0_SIZE_B8;     // n1
-        intriParams.blockLen = bubKLen * BLOCK_CUBE;  // k1 * k0 * n0
+    } else {                                           // B 矩阵非转置
+        intriParams.blockCount = bubNLen / C0_SIZE_B8; // n1
+        intriParams.blockLen = bubKLen * BLOCK_CUBE;   // k1 * k0 * n0
         int64_t kAlignSize = CeilAlign(tiling_->kSize, BLOCK_CUBE);
         intriParams.srcStride = (kAlignSize - bubKLen) * BLOCK_CUBE;
         gmOffset = (bubNOffset * kAlignSize + bubKOffset * C0_SIZE_B8);
@@ -615,8 +611,8 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     intriParams.dstStride = 0;
     DataCopyPadExtParams<scaleType> padParams;
     DataCopyPadExtParams<xType> padParamsOffset;
-    int64_t gmOffset;  // GM 上 scale 和 offset 的地址偏移（以元素个数为单位）
-    int64_t ubOffset;  // UB 上 scale 和 offset 的地址偏移（以元素个数为单位）
+    int64_t gmOffset; // GM 上 scale 和 offset 的地址偏移（以元素个数为单位）
+    int64_t ubOffset; // UB 上 scale 和 offset 的地址偏移（以元素个数为单位）
 
     if constexpr (bTrans) {
         if constexpr (antiQuantType == QuantType::PER_GROUP) {
@@ -627,12 +623,12 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             gmOffset = bubNOffset * totalGroupNum + (bubKOffset / tiling_->groupSize);
             ubOffset = ubBufIdx_ * (vecScaleOffsetLen_ / sizeof(scaleType) / tiling_->BL1Pingpong);
         }
-    } else {  // B 矩阵非转置
+    } else { // B 矩阵非转置
         int32_t bubNLenReal = (bubNOffset + bubNLen) > tiling_->nSize ? tiling_->nSize - bubNOffset : bubNLen;
         intriParams.blockLen = bubNLenReal * sizeof(scaleType);
         intriParams.srcStride = (tiling_->nSize - bubNLenReal) * sizeof(scaleType);
-        intriParams.dstStride = (bubNLen * sizeof(scaleType) - CeilAlign(intriParams.blockLen, ALIGNED_32_SIZE))
-                                 / ALIGNED_32_SIZE;
+        intriParams.dstStride = (bubNLen * sizeof(scaleType) - CeilAlign(intriParams.blockLen, ALIGNED_32_SIZE)) /
+                                ALIGNED_32_SIZE;
         if constexpr (antiQuantType == QuantType::PER_GROUP) {
             // k_offset + n_offset
             gmOffset = bubKOffset / tiling_->groupSize * tiling_->nSize + bubNOffset;
@@ -653,8 +649,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
                                       scaleType, weightNz>::ComputeAntiquantParam(int32_t innerExtend,
-                                                                                                int32_t bubKOffset,
-                                                                                                int32_t outerExtend)
+                                                                                  int32_t bubKOffset,
+                                                                                  int32_t outerExtend)
 {
     static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
 
@@ -688,8 +684,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::AntiQuantComputeKNGroupNz(
-                                    int32_t bubKOffset, int32_t bubNLen, int32_t bubKLen)
+                                      scaleType, weightNz>::AntiQuantComputeKNGroupNz(int32_t bubKOffset,
+                                                                                      int32_t bubNLen, int32_t bubKLen)
 {
     // 处理一块 (kBub, nBub), 数据格式为 (nBub1, kBub1, kBub0, nBub0)
     // 每次处理 256 个数，按照 256 个数 (256B) 输出, 对于每个 256B, 间隔 1024B 存放, 避免 bank 冲突
@@ -717,9 +713,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::AntiQuantComputeNKGroup(int32_t bubKOffset,
-                                                                                                  int32_t bubNLen,
-                                                                                                  int32_t bubKLen)
+                                      scaleType, weightNz>::AntiQuantComputeNKGroup(int32_t bubKOffset, int32_t bubNLen,
+                                                                                    int32_t bubKLen)
 {
     if (tiling_->groupSize == GROUP_SIZE_32) {
         ParamsGroupSize32<xType, wType, scaleType> params;
@@ -727,8 +722,8 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         params.innerExtend = CeilDiv(CeilAlign(bubKLen, UB_ALIGN_SIZE_FOR_4BITS), AscendC::VECTOR_REG_WIDTH);
         params.dataBlockStride = CeilAlign(bubNLen, AscendC::BLOCK_CUBE) + 1;
         params.repeatStride = params.dataBlockStride * OFFSET_8;
-        params.outDimOffset =
-            AscendC::ONE_BLOCK_SIZE - params.innerExtend * params.repeatStride * AscendC::ONE_BLOCK_SIZE;
+        params.outDimOffset = AscendC::ONE_BLOCK_SIZE -
+                              params.innerExtend * params.repeatStride * AscendC::ONE_BLOCK_SIZE;
         params.outerStrideScale = CeilAlign(params.innerExtend * OFFSET_8, AscendC::BLOCK_CUBE);
         params.outerStrideWeight = CeilAlign(bubKLen >> 1, ALIGNED_32_SIZE);
         params.maskWeight = bubKLen;
@@ -748,9 +743,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
                                       scaleType, weightNz>::CopyVecOut2L1WeightNz(int64_t l1Offset,
-                                                                                        LocalTensor<xType> ubLocal,
-                                                                                        int32_t bubKLen,
-                                                                                        int32_t bubNLen)
+                                                                                  LocalTensor<xType> ubLocal,
+                                                                                  int32_t bubKLen, int32_t bubNLen)
 {
     DataCopyParams params;
     params.blockLen = BLOCK_NUM_REG;
@@ -780,7 +774,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         params.blockCount = bubNLen * bubKLen * sizeof(xType) / VECTOR_REG_WIDTH;
         // 每256B跳1024B(4buffer) / 512B(2buffer)
         params.srcStride = (tiling_->BL1Pingpong - 1) * BLOCK_NUM_REG;
-        params.dstStride = 0;  // dst地址连续
+        params.dstStride = 0; // dst地址连续
 
         DataCopy(l1Local_[l1Offset], ubLocal, params);
     }
@@ -789,10 +783,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::CopyVecOut2L1(int64_t l1Offset,
-                                                                                        LocalTensor<xType> ubLocal,
-                                                                                        int32_t bubKLen,
-                                                                                        int32_t bubNLen)
+                                      scaleType, weightNz>::CopyVecOut2L1(int64_t l1Offset, LocalTensor<xType> ubLocal,
+                                                                          int32_t bubKLen, int32_t bubNLen)
 {
     DataCopyParams params;
     if constexpr (bTrans) {
@@ -809,14 +801,14 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         } else {
             // "only support transpose_weight=True in s8"
         }
-    } else {  // B 矩阵非转置
+    } else { // B 矩阵非转置
         if constexpr (IsSameType<wType, int8_t>::value) {
             params.blockLen = bubKLen;
             params.blockCount = CeilDiv(bubNLen, BLOCK_CUBE);
             params.srcStride = 1;
             params.dstStride = kBL1Size_ - bubKLen;
             DataCopy(l1Local_[l1Offset], ubLocal, params);
-        } else {  // A16W4, NZ 格式输入, (n1, k1, k0, n0)
+        } else { // A16W4, NZ 格式输入, (n1, k1, k0, n0)
             params.blockLen = BLOCK_NUM_REG;
             if (twoVectorCoreSplitK_) {
                 // l1 (n1, 2*k1, k0, n0)
@@ -844,7 +836,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                 params.blockCount = bubNLen * bubKLen * sizeof(xType) / VECTOR_REG_WIDTH;
                 // 每256B跳1024B(4buffer) / 512B(2buffer)
                 params.srcStride = (tiling_->BL1Pingpong - 1) * BLOCK_NUM_REG;
-                params.dstStride = 0;  // dst地址连续
+                params.dstStride = 0; // dst地址连续
 
                 DataCopy(l1Local_[l1Offset], ubLocal, params);
             }
@@ -856,10 +848,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::MovWeightAndCompute(int64_t bubKOffset,
-                                                                                              int64_t bubNOffset,
-                                                                                              int32_t bubKLen,
-                                                                                              int32_t bubNLen)
+                                      scaleType, weightNz>::MovWeightAndCompute(int64_t bubKOffset, int64_t bubNOffset,
+                                                                                int32_t bubKLen, int32_t bubNLen)
 {
     CopyInTensorWeight(bubKOffset, bubNOffset, bubKLen, bubNLen);
     SetFlag<HardEvent::MTE2_V>(ubBufIdx_);
@@ -875,10 +865,9 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::BL1ProcessNK(uint64_t curBL1BufIdx,
-                                                                                       int64_t nBL1Offset,
-                                                                                       int64_t kBL1Offset,
-                                                                                       int32_t kL1Len, int32_t nL0Len)
+                                      scaleType, weightNz>::BL1ProcessNK(uint64_t curBL1BufIdx, int64_t nBL1Offset,
+                                                                         int64_t kBL1Offset, int32_t kL1Len,
+                                                                         int32_t nL0Len)
 {
     int64_t bubNFactor = CeilDiv(vecNBL1Len_, tiling_->nBubSize);
     int64_t bubKFactor = CeilDiv(vecKBL1Len_, tiling_->kBubSize);
@@ -930,14 +919,12 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
                                       scaleType, weightNz>::BL1ProcessNK4Buffer(uint64_t curBL1BufIdx,
-                                                                                              int64_t nBL1Offset,
-                                                                                              int64_t kBL1Offset,
-                                                                                              int32_t kL1Len,
-                                                                                              int32_t nL0Len)
+                                                                                int64_t nBL1Offset, int64_t kBL1Offset,
+                                                                                int32_t kL1Len, int32_t nL0Len)
 {
-    int64_t l1Offset =
-        (curBL1BufIdx & 0x1) * Max(L1_BUFFER_HALF_SIZE / sizeof(xType), DOUBLE_BUFFER * bL1DataSize_ + aL1DataSize_) +
-        ((curBL1BufIdx & 0x2) > 1) * bL1DataSize_;
+    int64_t l1Offset = (curBL1BufIdx & 0x1) *
+                           Max(L1_BUFFER_HALF_SIZE / sizeof(xType), DOUBLE_BUFFER * bL1DataSize_ + aL1DataSize_) +
+                       ((curBL1BufIdx & 0x2) > 1) * bL1DataSize_;
 
     idx_ += 1;
     ubBufIdx_ = idx_ & (tiling_->BL1Pingpong - 1);
@@ -973,10 +960,9 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::BL1ProcessKN(uint64_t curBL1BufIdx,
-                                                                                       int64_t nBL1Offset,
-                                                                                       int64_t kBL1Offset,
-                                                                                       int32_t kL1Len, int32_t nL0Len)
+                                      scaleType, weightNz>::BL1ProcessKN(uint64_t curBL1BufIdx, int64_t nBL1Offset,
+                                                                         int64_t kBL1Offset, int32_t kL1Len,
+                                                                         int32_t nL0Len)
 {
     // l1 space: bp0 bp1
     int64_t l1Offset;
@@ -999,7 +985,6 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     CopyInScaleOffset(nBL1Offset, bubNLen, 0, 0, kBL1Offset, 1);
     MovWeightAndCompute(kBL1Offset, nBL1Offset, bubKLen, bubNLen);
 
-
     SetFlag<HardEvent::V_MTE2>(ubBufIdx_);
     WaitFlag<HardEvent::V_MTE3>(ubBufIdx_);
 
@@ -1020,10 +1005,9 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::BL1Process(uint64_t curBL1BufIdx,
-                                                                                     int64_t nBL1Offset,
-                                                                                     int64_t kBL1Offset, int32_t kL1Len,
-                                                                                     int32_t nL0Len)
+                                      scaleType, weightNz>::BL1Process(uint64_t curBL1BufIdx, int64_t nBL1Offset,
+                                                                       int64_t kBL1Offset, int32_t kL1Len,
+                                                                       int32_t nL0Len)
 {
     if constexpr (bTrans) {
         if (tiling_->BL1Pingpong == QUADRUPLE_BUFFER) {
@@ -1044,10 +1028,10 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 {
     curML0Idx_ = curML1Idx_;
     curNL0Idx_ = curNL1Idx_;
-    curStepM_ =
-        (mIter_ - curML0Idx_) > tiling_->matmulTiling.stepM ? tiling_->matmulTiling.stepM : (mIter_ - curML1Idx_);
-    curStepN_ =
-        (nIter_ - curNL0Idx_) > tiling_->matmulTiling.stepN ? tiling_->matmulTiling.stepN : (nIter_ - curNL1Idx_);
+    curStepM_ = (mIter_ - curML0Idx_) > tiling_->matmulTiling.stepM ? tiling_->matmulTiling.stepM :
+                                                                      (mIter_ - curML1Idx_);
+    curStepN_ = (nIter_ - curNL0Idx_) > tiling_->matmulTiling.stepN ? tiling_->matmulTiling.stepN :
+                                                                      (nIter_ - curNL1Idx_);
 }
 
 /*
@@ -1066,10 +1050,10 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         curNL1Idx_ = 0;
         isFirstIter_ = false;
         // 考虑尾核
-        curStepM_ =
-            (mIter_ - curML0Idx_) > tiling_->matmulTiling.stepM ? tiling_->matmulTiling.stepM : (mIter_ - curML1Idx_);
-        curStepN_ =
-            (nIter_ - curNL0Idx_) > tiling_->matmulTiling.stepN ? tiling_->matmulTiling.stepN : (nIter_ - curNL1Idx_);
+        curStepM_ = (mIter_ - curML0Idx_) > tiling_->matmulTiling.stepM ? tiling_->matmulTiling.stepM :
+                                                                          (mIter_ - curML1Idx_);
+        curStepN_ = (nIter_ - curNL0Idx_) > tiling_->matmulTiling.stepN ? tiling_->matmulTiling.stepN :
+                                                                          (nIter_ - curNL1Idx_);
     } else if (likely(tiling_->matmulTiling.iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
         if (++curML0Idx_ >= curML1Idx_ + curStepM_) {
             curML0Idx_ = curML1Idx_;
@@ -1202,7 +1186,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             } else {
                 vecKBL1Len_ = Min(tiling_->kSize - kBL1Offset_, vecKBL1Len_);
             }
-        } else if (nBubFactor > 1) {  // 优先在N方向切分
+        } else if (nBubFactor > 1) { // 优先在N方向切分
             twoVectorCoreSplitN_ = true;
             vecNBL1Len_ = CeilDiv(nBubFactor, AIV_NUM) * tiling_->nBubSize;
             if (AscendC::GetSubBlockIdx() == 1) {
@@ -1211,13 +1195,13 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             } else {
                 vecNBL1Len_ = Min(tiling_->nSize - nBL1Offset_, vecNBL1Len_);
             }
-        } else {  // 仅使用 AIV-0 核
+        } else { // 仅使用 AIV-0 核
 #ifdef __CCE_KT_TEST__
             ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "just use a single aiv core is not supported yet"); });
 #endif
         }
     } else {
-        if (nBubFactor > 1) {  // 优先在N方向切分
+        if (nBubFactor > 1) { // 优先在N方向切分
             twoVectorCoreSplitN_ = true;
             vecNBL1Len_ = CeilDiv(nBubFactor, AIV_NUM) * tiling_->nBubSize;
             if (AscendC::GetSubBlockIdx() == 1) {
@@ -1235,7 +1219,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             } else {
                 vecKBL1Len_ = Min(tiling_->kSize - kBL1Offset_, vecKBL1Len_);
             }
-        } else {  // 仅使用 AIV-0 核
+        } else { // 仅使用 AIV-0 核
 #ifdef __CCE_KT_TEST__
             ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "just use a single aiv core is not supported yet"); });
 #endif
@@ -1247,9 +1231,8 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
  */
 template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
-__aicore__ inline void
-QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::CopyUb2L1()
+__aicore__ inline void QuantBatchMatmulV4RegBaseCommonKernel<
+    xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType, scaleType, weightNz>::CopyUb2L1()
 {
     vecKBL1Len_ = kBL1Len_;
     vecNBL1Len_ = nBL1Len_;
@@ -1265,9 +1248,9 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     } else if (tiling_->vecCoreParallel == 1) {
         if (AscendC::GetSubBlockIdx() == 1) {
             kBL1Offset_ += tiling_->kBubSize;
-            vecKBL1Len_ = Min(tiling_->kSize - kBL1Offset_, kBL1Size_);  // AIV-1 需要对应去搬运的 kBL1 大小
+            vecKBL1Len_ = Min(tiling_->kSize - kBL1Offset_, kBL1Size_); // AIV-1 需要对应去搬运的 kBL1 大小
         } else {
-            vecKBL1Len_ = Min(tiling_->kSize - kBL1Offset_, tiling_->kBubSize);  // AIV-0 需要对应去搬运的 kBL1 大小
+            vecKBL1Len_ = Min(tiling_->kSize - kBL1Offset_, tiling_->kBubSize); // AIV-0 需要对应去搬运的 kBL1 大小
         }
         VectorProcess();
     } else if (AscendC::GetSubBlockIdx() == 0) {
@@ -1423,9 +1406,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::AntiQuantComputeNormal(int32_t bubKOffset,
-                                                                                                 int32_t bubNLen,
-                                                                                                 int32_t bubKLen)
+                                      scaleType, weightNz>::AntiQuantComputeNormal(int32_t bubKOffset, int32_t bubNLen,
+                                                                                   int32_t bubKLen)
 {
     static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
 
@@ -1485,21 +1467,21 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             for (uint16_t repeatIdx = 0; repeatIdx < innerExtend; ++repeatIdx) {
                 MaskRegB8Tail0 = MicroAPI::UpdateMask<uint8_t>(maskWeight0Tmp);
                 MaskRegB8Tail1 = MicroAPI::UpdateMask<uint8_t>(maskWeight1Tmp);
-                MicroAPI::AddrReg aregWeightB8 =
-                    MicroAPI::CreateAddrReg<uint8_t>(outIdx, bubKLen >> 1, repeatIdx, VEC_MAX_ELEM_B8);
+                MicroAPI::AddrReg aregWeightB8 = MicroAPI::CreateAddrReg<uint8_t>(outIdx, bubKLen >> 1, repeatIdx,
+                                                                                  VEC_MAX_ELEM_B8);
                 MicroAPI::DataCopy(wLoad0, (__local_mem__ uint8_t*&)weightInUbBaseAddr, aregWeightB8);
                 // 提取E/M
-                MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg);  // vr1
-                MicroAPI::And(wShr, wShr, wdup1, preg);           // vr1
-                MicroAPI::ShiftLeft(wShl, wLoad0, wdup2, preg);   // vr2
-                MicroAPI::And(wShl, wShl, wdup1, preg);           // vr2
+                MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg); // vr1
+                MicroAPI::And(wShr, wShr, wdup1, preg);          // vr1
+                MicroAPI::ShiftLeft(wShl, wLoad0, wdup2, preg);  // vr2
+                MicroAPI::And(wShl, wShl, wdup1, preg);          // vr2
                 // 提取S
-                MicroAPI::ShiftLeft(s1, wLoad0, wdup3, preg);  // vr3
-                MicroAPI::And(sAnd0, s1, wdup4, preg);         // vr3
-                MicroAPI::And(sAnd1, wLoad0, wdup4, preg);     // vr4
+                MicroAPI::ShiftLeft(s1, wLoad0, wdup3, preg); // vr3
+                MicroAPI::And(sAnd0, s1, wdup4, preg);        // vr3
+                MicroAPI::And(sAnd1, wLoad0, wdup4, preg);    // vr4
                 // 合并S/E/M
-                MicroAPI::Or(wOr0, wShr, sAnd1, preg);  // odd
-                MicroAPI::Or(wOr1, wShl, sAnd0, preg);  // even
+                MicroAPI::Or(wOr0, wShr, sAnd1, preg); // odd
+                MicroAPI::Or(wOr1, wShl, sAnd0, preg); // even
                 MicroAPI::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
                 MicroAPI::DataCopy<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
                                    MicroAPI::PostLiteral::POST_MODE_UPDATE>(
@@ -1519,9 +1501,8 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::AntiQuantComputeNKMxNz(int32_t bubKOffset,
-                                                                                                 int32_t bubNLen,
-                                                                                                 int32_t bubKLen)
+                                      scaleType, weightNz>::AntiQuantComputeNKMxNz(int32_t bubKOffset, int32_t bubNLen,
+                                                                                   int32_t bubKLen)
 {
     static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
     uint32_t shiftLeftSize = 0;
@@ -1575,15 +1556,14 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void
 QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                      scaleType, weightNz>::AntiQuantCompute(int32_t bubKOffset,
-                                                                                           int32_t bubNLen,
-                                                                                           int32_t bubKLen)
+                                      scaleType, weightNz>::AntiQuantCompute(int32_t bubKOffset, int32_t bubNLen,
+                                                                             int32_t bubKLen)
 {
     // 以下表征 offset 的变量单位均为元素个数
     uint64_t weightOutUbOffset;
-    uint64_t weightInUbOffset;  // B矩阵反量化前数据类型为 INT4 时, 在 UB 上的存储格式仍是 INT8
+    uint64_t weightInUbOffset; // B矩阵反量化前数据类型为 INT4 时, 在 UB 上的存储格式仍是 INT8
     uint64_t scaleUbOffset;
-    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {  // A8W4
+    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) { // A8W4
         if constexpr (weightNz) {
             weightOutUbOffset = ubBufIdx_ * VEC_MAX_ELEM_B8;
         } else {
@@ -1591,7 +1571,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         }
         weightInUbOffset = ubBufIdx_ * (vecWeightInLen_ << INT4_DTYPE_PARAM) / this->tiling_->BL1Pingpong;
         scaleUbOffset = ubBufIdx_ * (vecScaleOffsetLen_ / sizeof(scaleType) / this->tiling_->BL1Pingpong);
-    } else {  // A16W8
+    } else { // A16W8
         weightOutUbOffset = ubBufIdx_ * (vecWeightOutLen_ / sizeof(xType) / vecPingpong_);
         weightInUbOffset = ubBufIdx_ * (vecWeightInLen_ / sizeof(int8_t) / vecPingpong_);
         scaleUbOffset = ubScalePongFlag_ * (vecScaleOffsetLen_ / sizeof(scaleType) / vecPingpong_);
@@ -1613,13 +1593,13 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                 vsstbConfig_ = (blockStride << 16u) | (repeatStride & 0xFFFFU);
                 repeatTimes_ = CeilDiv(bubKLen >> INT4_DTYPE_PARAM, VECTOR_REG_WIDTH);
                 outDimOffset_ = ONE_BLK_ELEM_B8 - repeatTimes_ * repeatStride * ONE_BLK_ELEM_B8;
-    #ifndef __CCE_KT_TEST__
+#ifndef __CCE_KT_TEST__
                 if constexpr (antiQuantType == QuantType::MX) {
                     AntiQuantComputeNormal(bubKOffset, bubNLen, bubKLen);
                 } else if constexpr (antiQuantType == QuantType::PER_GROUP && !weightNz) {
                     AntiQuantComputeNKGroup(bubKOffset, bubNLen, bubKLen);
                 }
-    #endif
+#endif
             } else {
                 if constexpr (antiQuantType == QuantType::MX) {
                     AntiQuantComputeNKMxNz(bubKOffset, bubNLen, bubKLen);
@@ -1630,11 +1610,10 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         }
     } else {
         if constexpr (antiQuantType == QuantType::PER_GROUP && weightNz) {
-                AntiQuantComputeKNGroupNz(bubKOffset, bubNLen, bubKLen);
+            AntiQuantComputeKNGroupNz(bubKOffset, bubNLen, bubKLen);
         } else {
             // not supported yet
         }
     }
 }
-}  // namespace QuantBatchMatmulV4
-
+} // namespace QuantBatchMatmulV4

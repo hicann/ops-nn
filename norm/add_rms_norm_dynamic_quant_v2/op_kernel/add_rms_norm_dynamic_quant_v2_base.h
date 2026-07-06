@@ -21,8 +21,7 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddRmsNormDynamicQuantV2Base {
 public:
-    __aicore__ inline KernelAddRmsNormDynamicQuantV2Base()
-    {}
+    __aicore__ inline KernelAddRmsNormDynamicQuantV2Base() {}
 
     __aicore__ inline void InitBaseParams(const AddRmsNormDynamicQuantV2TilingData* tiling)
     {
@@ -67,8 +66,8 @@ public:
         smooth2Gm.SetGlobalBuffer((__gm__ T*)smooth2);
     }
 
-    __aicore__ inline void InitOutGlobalTensors(
-        GM_ADDR y1, GM_ADDR y2, GM_ADDR y3, GM_ADDR y4, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2)
+    __aicore__ inline void InitOutGlobalTensors(GM_ADDR y1, GM_ADDR y2, GM_ADDR y3, GM_ADDR y4, GM_ADDR x,
+                                                GM_ADDR outScale1, GM_ADDR outScale2)
     {
         y1Gm.SetGlobalBuffer((__gm__ int8_t*)(y1) + blockIdx_ * this->gmOffset_);
         y2Gm.SetGlobalBuffer((__gm__ int8_t*)(y2) + blockIdx_ * this->gmOffset_);
@@ -79,8 +78,7 @@ public:
         outScale2Gm.SetGlobalBuffer((__gm__ float*)outScale2 + blockIdx_ * this->firstDimPerCore);
     }
 
-    __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace)
-    {}
+    __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace) {}
 
 protected:
     GlobalTensor<T> x1Gm;

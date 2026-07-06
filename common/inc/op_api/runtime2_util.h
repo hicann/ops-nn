@@ -36,28 +36,25 @@ static inline T* GetCompileInfoPtr(gert::TilingParseContext* context)
  * @return bool: true or false;
  */
 template <typename T>
-static inline bool CalcReduceMeanCof(
-    const gert::Shape& input_shape, const std::vector<T>& reduce_axis, float& reduce_mean_cof)
+static inline bool CalcReduceMeanCof(const gert::Shape& input_shape, const std::vector<T>& reduce_axis,
+                                     float& reduce_mean_cof)
 {
     const size_t dim_len = input_shape.GetDimNum();
     const size_t ori_reduce_axis_len = reduce_axis.size();
     // init reduce_mean_cof is 1.0
     reduce_mean_cof = 1.0;
     for (size_t i = 0; i < ori_reduce_axis_len; i++) {
-        OP_CHECK_IF(
-            !Ops::Nn::IsDimValid(dim_len, reduce_axis[i]),
-            OP_LOGE(
-                "CalcReduceMeanCof", "%s",
-                Ops::Nn::GenInvalidDimMsg("reduce_axis", i, dim_len, reduce_axis[i]).c_str()),
-            return false);
+        OP_CHECK_IF(!Ops::Nn::IsDimValid(dim_len, reduce_axis[i]),
+                    OP_LOGE("CalcReduceMeanCof", "%s",
+                            Ops::Nn::GenInvalidDimMsg("reduce_axis", i, dim_len, reduce_axis[i]).c_str()),
+                    return false);
 
         // convert reduce axis (like: -1 -> (dim_len - 1))
         T single_reduce_axis = reduce_axis[i] < 0 ? reduce_axis[i] + dim_len : reduce_axis[i];
 
         int64_t reduce_dim = input_shape.GetDim(single_reduce_axis);
-        OP_CHECK_IF(
-            reduce_dim == 0, OP_LOGI("CalcReduceMeanCof", "the reduce dim is 0, will ignore reduce_mean_cof"),
-            return true);
+        OP_CHECK_IF(reduce_dim == 0, OP_LOGI("CalcReduceMeanCof", "the reduce dim is 0, will ignore reduce_mean_cof"),
+                    return true);
         if (reduce_dim != 0) {
             reduce_mean_cof = reduce_mean_cof / reduce_dim;
         }
@@ -76,9 +73,8 @@ static inline bool CalcReduceMeanCof(
  * @return bool: true or false;
  */
 template <typename T>
-static inline bool AddReduceMeanCof(
-    const gert::Shape& input_shape, const ge::DataType input_dtype, const std::vector<T>& reduce_axis,
-    gert::TilingData* tiling_data)
+static inline bool AddReduceMeanCof(const gert::Shape& input_shape, const ge::DataType input_dtype,
+                                    const std::vector<T>& reduce_axis, gert::TilingData* tiling_data)
 {
     float reduce_mean_cof = 1.0;
     bool calcu_flag = CalcReduceMeanCof(input_shape, reduce_axis, reduce_mean_cof);
@@ -92,9 +88,8 @@ static inline bool AddReduceMeanCof(
             tiling_data->Append((uint16_t)0);
             return calcu_flag;
         default:
-            OP_LOGW(
-                "AddReduceMeanCof", "Only support [DT_FLOAT, DT_FLOAT16], but is [%s]",
-                Ops::Base::ToString(input_dtype).c_str());
+            OP_LOGW("AddReduceMeanCof", "Only support [DT_FLOAT, DT_FLOAT16], but is [%s]",
+                    Ops::Base::ToString(input_dtype).c_str());
             return false;
     }
 }
@@ -102,17 +97,10 @@ static inline bool AddReduceMeanCof(
 template <typename T>
 class OpHashInput {
 public:
-    OpHashInput(const OpHashInput& rhs)
-    {
-        content = rhs.content;
-    }
-    OpHashInput()
-    {}
+    OpHashInput(const OpHashInput& rhs) { content = rhs.content; }
+    OpHashInput() {}
 
-    explicit OpHashInput(T& input)
-    {
-        content = input;
-    }
+    explicit OpHashInput(T& input) { content = input; }
 
     OpHashInput& operator=(const OpHashInput& rhs)
     {

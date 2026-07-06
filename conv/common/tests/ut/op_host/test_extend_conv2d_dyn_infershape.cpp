@@ -602,7 +602,6 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dFilterUnknownRankFmapU
     gert::StorageShape y0Shape = {{}, {}};
     gert::StorageShape y1Shape = {{}, {}};
 
-
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(2, 2)
                       .IrInstanceNum({1, 1})
@@ -750,7 +749,6 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dPadModeSameUpper)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConv2D")->infer_shape;
 
-
     gert::StorageShape xShape = {{-1, -1, -1, -1}, {}};
     gert::StorageShape wShape = {{-1, -1, -1, -1}, {}};
     gert::StorageShape y0Shape = {{}, {}};
@@ -878,34 +876,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange0ToN)
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1ToN)
@@ -925,34 +925,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1ToN)
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1To1)
@@ -972,34 +974,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1To1)
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMinNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeNToN)
@@ -1019,34 +1023,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeNToN)
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1ToNWeightStc)
@@ -1066,34 +1072,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1ToNWei
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1ToNFmapStc)
@@ -1113,34 +1121,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRange1ToNFma
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangePadSame)
@@ -1160,34 +1170,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangePadSame
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, -1, -1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, -1, -1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangePadSameLower)
@@ -1207,34 +1219,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangePadSame
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-21, -12, -14, -16})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_LOWER")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-21, -12, -14, -16})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_LOWER")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangePadSameUpper)
@@ -1254,34 +1268,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangePadSame
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-21, -12, -14, -16})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_UPPER")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-21, -12, -14, -16})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_UPPER")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeValid)
@@ -1301,34 +1317,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeValid)
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-21, -12, -14, -16})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-21, -12, -14, -16})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeInvalidStride)
@@ -1348,30 +1366,30 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeInvalid
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -1, -1, -1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -1, -1, -1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_FAILED);
 }
@@ -1393,30 +1411,30 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeInvalid
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -1, -1, -1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -1, -1, -1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_FAILED);
 }
@@ -1438,34 +1456,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeFmapNDy
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeFmapNCDyn)
@@ -1485,34 +1505,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeFmapNCD
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeFmapNCHDyn)
@@ -1532,34 +1554,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeFmapNCH
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeWeightWDyn)
@@ -1579,34 +1603,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeWeightW
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeWeightHWDyn)
@@ -1626,34 +1652,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeWeightH
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeWeightCHWDyn)
@@ -1673,34 +1701,36 @@ TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferShapeRangeWeightC
     gert::Range<gert::Shape> wShapeRange(&wShapeMin, &wShapeMax);
     gert::Range<gert::Shape> y0ShapeRange(&y0ShapeMinNull, &y0ShapeMaxNull);
     auto holder = gert::InferShapeRangeContextFaker()
-                            .NodeIoNum(2, 1)
-                            .IrInstanceNum({1, 1})
-                            .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                            .NodeAttrs({
-                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
-                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            })
-                            .InputShapeRanges({&xShapeRange, &wShapeRange})
-                            .OutputShapeRanges({&y0ShapeRange})
-                            .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu0", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"enable_relu1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dual_output", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"dtype0", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"dtype1", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
+                      .InputShapeRanges({&xShapeRange, &wShapeRange})
+                      .OutputShapeRanges({&y0ShapeRange})
+                      .Build();
 
     ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()), Ops::Base::ToString(y0ShapeMin));
-    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()), Ops::Base::ToString(y0ShapeMax));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMin()),
+              Ops::Base::ToString(y0ShapeMin));
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)->GetMax()),
+              Ops::Base::ToString(y0ShapeMax));
 }
 
 TEST_F(Conv2DV2RuntimeDynInferShape, SupportedExtendConv2dInferDtypeUNDEFINED)

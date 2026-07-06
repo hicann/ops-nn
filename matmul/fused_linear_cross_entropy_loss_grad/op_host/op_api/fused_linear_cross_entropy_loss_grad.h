@@ -18,11 +18,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor *, aclTensor *> FusedLinearCrossEntropyLossGrad(
-    const aclTensor *grad, const aclTensor *input, const aclTensor *weight,
-    const aclTensor *targetMask, const aclTensor *maskedTarget, const aclTensor *logitsMax, const aclTensor *sumExpLogits,
-    const aclTensor *softmax, const float labelSmoothing,
-    aclOpExecutor *executor
-);
+const std::tuple<aclTensor*, aclTensor*> FusedLinearCrossEntropyLossGrad(
+    const aclTensor* grad, const aclTensor* input, const aclTensor* weight, const aclTensor* targetMask,
+    const aclTensor* maskedTarget, const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* softmax,
+    const float labelSmoothing, aclOpExecutor* executor);
 }
 #endif // OP_API_INC_LEVEL0_FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_H_

@@ -27,17 +27,10 @@ extern "C" __global__ __aicore__ void deformable_conv2d(GM_ADDR x, GM_ADDR weigh
                                                         GM_ADDR out, GM_ADDR deform_out, GM_ADDR workspace,
                                                         GM_ADDR tiling);
 
-class deformable_conv2d_test : public testing::Test
-{
+class deformable_conv2d_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "deformable_conv2d_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "deformable_conv2d_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "deformable_conv2d_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "deformable_conv2d_test TearDown\n" << std::endl; }
 };
 
 TEST_F(deformable_conv2d_test, test_case_bfloat16_1)
@@ -46,7 +39,8 @@ TEST_F(deformable_conv2d_test, test_case_bfloat16_1)
     //     "cp -rf "
     //     "../../../../conv/deformable_conv2d/tests/ut/op_kernel/deformable_conv2d_data ./");
     // system("chmod -R 755 ./deformable_conv2d_data/");
-    // system("cd ./deformable_conv2d_data/ && python3 gen_data.py '(1, 4, 4, 1)' '(1, 1, 3, 3)' '(1, 4, 4, 27)' '(1)' 'bfloat16'");
+    // system("cd ./deformable_conv2d_data/ && python3 gen_data.py '(1, 4, 4, 1)' '(1, 1, 3, 3)' '(1, 4, 4, 27)' '(1)'
+    // 'bfloat16'");
 
     size_t xByteSize = 4 * 4 * sizeof(float_t);
     size_t weightByteSize = 3 * 3 * sizeof(float_t);
@@ -97,7 +91,7 @@ TEST_F(deformable_conv2d_test, test_case_bfloat16_1)
     tilingDatafromBin->deformableGroups = 1;
     tilingDatafromBin->groups = 1;
     tilingDatafromBin->hasBias = true;
-    
+
     tilingDatafromBin->slideSizeW = 128;
     tilingDatafromBin->groupLen = 1;
     tilingDatafromBin->singleVecNum = 0;
@@ -133,7 +127,8 @@ TEST_F(deformable_conv2d_test, test_case_bfloat16_1)
 
     ICPU_SET_TILING_KEY(1);
 
-    ICPU_RUN_KF(deformable_conv2d, blockDim, x, weight, offset, bias, output, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(deformable_conv2d, blockDim, x, weight, offset, bias, output, y, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)(x));
     AscendC::GmFree((void*)(weight));
@@ -151,7 +146,8 @@ TEST_F(deformable_conv2d_test, test_case_bfloat16_2)
     //     "cp -rf "
     //     "../../../../conv/deformable_conv2d/tests/ut/op_kernel/deformable_conv2d_data ./");
     // system("chmod -R 755 ./deformable_conv2d_data/");
-    // system("cd ./deformable_conv2d_data/ && python3 gen_data.py '(1, 4, 4, 16)' '(1, 16, 3, 3)' '(1, 4, 4, 27)' '(1)' 'bfloat16'");
+    // system("cd ./deformable_conv2d_data/ && python3 gen_data.py '(1, 4, 4, 16)' '(1, 16, 3, 3)' '(1, 4, 4, 27)' '(1)'
+    // 'bfloat16'");
 
     size_t xByteSize = 4 * 4 * 16 * sizeof(float_t);
     size_t weightByteSize = 16 * 3 * 3 * sizeof(float_t);
@@ -202,7 +198,7 @@ TEST_F(deformable_conv2d_test, test_case_bfloat16_2)
     tilingDatafromBin->deformableGroups = 1;
     tilingDatafromBin->groups = 1;
     tilingDatafromBin->hasBias = true;
-    
+
     tilingDatafromBin->slideSizeW = 128;
     tilingDatafromBin->groupLen = 1;
     tilingDatafromBin->singleVecNum = 0;
@@ -238,7 +234,8 @@ TEST_F(deformable_conv2d_test, test_case_bfloat16_2)
 
     ICPU_SET_TILING_KEY(1);
 
-    ICPU_RUN_KF(deformable_conv2d, blockDim, x, weight, offset, bias, output, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(deformable_conv2d, blockDim, x, weight, offset, bias, output, y, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)(x));
     AscendC::GmFree((void*)(weight));

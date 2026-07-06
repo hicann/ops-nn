@@ -47,9 +47,10 @@ namespace ge {
 | Tensor    | x        | filter   | bias    | scale0/1     | relu_weight0/1 | clip_value0/1 | y0/1    |\n
 | :-------: | :------: | :------: | :-----: | :----------: | :------------: | :-----------: | :-----: |\n
 | Data Type | int8     | int8     | int32   | uint64/int64 | float32        | int8          | float16/int8 |\n
-|           | hifloat8 | hifloat8 | float32 | uint64/int64 | float32        | hifloat8      | float32/float16/bfloat16/hifloat8 |\n
-|           | float8   | float8   | float32 | uint64/int64 | float32        | float8        | float32/float16/bfloat16/float8_e4m3 |\n
-| Format    | NCHW     | NCHW     | ND      | ND           | ND             | ND            | NCHW    |\n
+|           | hifloat8 | hifloat8 | float32 | uint64/int64 | float32        | hifloat8      |
+float32/float16/bfloat16/hifloat8 |\n |           | float8   | float8   | float32 | uint64/int64 | float32        |
+float8        | float32/float16/bfloat16/float8_e4m3 |\n | Format    | NCHW     | NCHW     | ND      | ND           | ND
+| ND            | NCHW    |\n
 
 | Tensor    | x        | filter   | bias    | scale0/1     | relu_weight0/1 | clip_value0/1 | y0/1    |\n
 | :-------: | :------: | :------: | :-----: | :----------: | :------------: | :-----------: | :-----: |\n
@@ -184,5 +185,5 @@ REG_OP(ExtendConv2D)
     .ATTR(dtype1, Int, -1)
     .OP_END_FACTORY_REG(ExtendConv2D)
 
-}  // namespace ge
-#endif  // EXTEND_CONV2D_PROTO_H
+} // namespace ge
+#endif // EXTEND_CONV2D_PROTO_H

@@ -18,44 +18,29 @@ namespace ops {
 
 class IndexFillD : public OpDef {
 public:
-    const std::vector<ge::DataType> xDataType = {
-        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL};
-    const std::vector<ge::Format> xFormat = {
-        ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
- explicit IndexFillD(const char* name) : OpDef(name) {
-   this->Input("x")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Input("assist1")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Input("assist2")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Output("y")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Attr("dim").AttrType(REQUIRED).Int();
+    const std::vector<ge::DataType> xDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
+                                                 ge::DT_INT64,   ge::DT_INT32, ge::DT_BOOL};
+    const std::vector<ge::Format> xFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                             ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+    explicit IndexFillD(const char* name) : OpDef(name)
+    {
+        this->Input("x").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Input("assist1").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Input("assist2").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Output("y").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Attr("dim").AttrType(REQUIRED).Int();
 
-   OpAICoreConfig aicore_config;
-   aicore_config.DynamicCompileStaticFlag(true)
-       .DynamicFormatFlag(false)
-       .DynamicRankSupportFlag(true)
-       .DynamicShapeSupportFlag(true)
-       .NeedCheckSupportFlag(false)
-       .ExtendCfgInfo("opFile.value", "index_fill_d_apt");
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .ExtendCfgInfo("opFile.value", "index_fill_d_apt");
 
-   this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend950", aicore_config);
     }
 };
 
 OP_ADD(IndexFillD);
-}  // namespace ops
+} // namespace ops

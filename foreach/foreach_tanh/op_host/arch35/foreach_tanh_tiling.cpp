@@ -57,9 +57,8 @@ static ge::graphStatus ForeachTanhTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t maxCoreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, maxCoreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, maxCoreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfo = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfo);
@@ -80,18 +79,15 @@ static ge::graphStatus ForeachTanhTilingFunc(gert::TilingContext* context)
         maxTensorElements = std::max(maxTensorElements, elemCount);
     }
 
-    int64_t perCoreElements = std::max(static_cast<int64_t>(1024),
-        Ops::Base::CeilDiv(maxTensorElements, maxCoreNum));
+    int64_t perCoreElements = std::max(static_cast<int64_t>(1024), Ops::Base::CeilDiv(maxTensorElements, maxCoreNum));
     perCoreElements = Ops::Base::CeilAlign(perCoreElements, static_cast<int64_t>(32));
-    int32_t needCoreNum = std::max(1,
-        static_cast<int32_t>(std::min(maxCoreNum,
-            Ops::Base::CeilDiv(maxTensorElements, perCoreElements))));
+    int32_t needCoreNum = std::max(
+        1, static_cast<int32_t>(std::min(maxCoreNum, Ops::Base::CeilDiv(maxTensorElements, perCoreElements))));
 
     ForeachTanhTilingData* tiling = context->GetTilingData<ForeachTanhTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachTanhTilingData), 0, sizeof(ForeachTanhTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachTanhTilingData), 0, sizeof(ForeachTanhTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->tensorNum = tensorNum;
     tiling->needCoreNum = needCoreNum;
@@ -118,9 +114,8 @@ static ge::graphStatus ForeachTanhTilingFunc(gert::TilingContext* context)
     context->SetBlockDim(needCoreNum);
     context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

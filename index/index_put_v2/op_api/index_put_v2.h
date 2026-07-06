@@ -18,12 +18,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *IndexPutV2(const aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values,
-                            const aclTensor *masks, const bool accumulate, aclTensor *out, aclOpExecutor *executor);
+const aclTensor* IndexPutV2(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
+                            const aclTensor* masks, const bool accumulate, aclTensor* out, aclOpExecutor* executor);
 
-const aclTensor *IndexPutV3(const aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values,
-                          const aclTensor *masks, const bool accumulate, const bool deterministic,
-                          aclTensor *out, aclOpExecutor *executor);
-}
+const aclTensor* IndexPutV3(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
+                            const aclTensor* masks, const bool accumulate, const bool deterministic, aclTensor* out,
+                            aclOpExecutor* executor);
+} // namespace l0op
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_INDEX_PUT_V2_OP_H_
-

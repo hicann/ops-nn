@@ -9,7 +9,7 @@
  */
 /*!
  * \file bucketize_v2_full_load_tiling
- * \brief 
+ * \brief
  */
 
 #ifndef CANN_BUCKETIZE_V2_FULL_LOAD_TILING_H
@@ -21,10 +21,8 @@ namespace optiling {
 
 class BucketizeV2FullLoadTiling : public BucketizeV2BaseTiling {
 public:
-    explicit BucketizeV2FullLoadTiling(gert::TilingContext* context) : BucketizeV2BaseTiling(context)
-    {}
-    ~BucketizeV2FullLoadTiling() override
-    {}
+    explicit BucketizeV2FullLoadTiling(gert::TilingContext* context) : BucketizeV2BaseTiling(context) {}
+    ~BucketizeV2FullLoadTiling() override {}
 
 private:
     void DoUBTiling();
@@ -35,16 +33,16 @@ private:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
-    int64_t blockFactor_ {0};
-    int64_t blockTail_ {0};
-    int64_t ubFactor_ {0};
-    int64_t usedCoreNum_ {0};
-    int64_t boundBufSize_ {0};
-    int64_t inUbSize_ {0};
-    int64_t outUbSize_ {0};
-    int64_t maxIter_ {0};
-    int64_t ubBlockSize_ {0};
-    int64_t vRegLength_ {0};
+    int64_t blockFactor_{0};
+    int64_t blockTail_{0};
+    int64_t ubFactor_{0};
+    int64_t usedCoreNum_{0};
+    int64_t boundBufSize_{0};
+    int64_t inUbSize_{0};
+    int64_t outUbSize_{0};
+    int64_t maxIter_{0};
+    int64_t ubBlockSize_{0};
+    int64_t vRegLength_{0};
 };
 
 } // namespace optiling

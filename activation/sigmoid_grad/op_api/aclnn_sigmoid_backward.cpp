@@ -28,16 +28,16 @@ extern "C" {
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE,
+    op::DataType::DT_FLOAT,     op::DataType::DT_FLOAT16,    op::DataType::DT_DOUBLE,
     op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BF16};
 
 inline static bool CheckSocVersionIsSupportBf16(void)
 {
     return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
-inline static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *gradInput)
+inline static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* gradInput)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(output, return false);
@@ -46,7 +46,7 @@ inline static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *ou
     return true;
 }
 
-inline static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *gradInput)
+inline static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* gradInput)
 {
     // 检查gradOutput的数据类型是否在sigmoidGrad算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, DTYPE_SUPPORT_LIST, return false);
@@ -59,14 +59,14 @@ inline static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor 
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!bf16flag && gradOutput->GetDataType() == op::DataType::DT_BF16) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s is unsupported by the current SOC version [%s].",
-            op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(socVersion).GetString());
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(socVersion).GetString());
         return false;
     }
     return true;
 }
 
-inline static bool CheckShape(const aclTensor *gradOutput, const aclTensor *output,
-                                [[maybe_unused]] const aclTensor *gradInput)
+inline static bool CheckShape(const aclTensor* gradOutput, const aclTensor* output,
+                              [[maybe_unused]] const aclTensor* gradInput)
 {
     // gradOutput 维度必须小于9
     OP_CHECK_MAX_DIM(gradOutput, 8, return false);
@@ -74,21 +74,21 @@ inline static bool CheckShape(const aclTensor *gradOutput, const aclTensor *outp
     return true;
 }
 
-static bool CheckPromoteType(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *gradInput,
-                             op::DataType &promoteType)
+static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* gradInput,
+                             op::DataType& promoteType)
 {
     // 检查gradOutput和output能否做数据类型推导
     promoteType = op::PromoteType(gradOutput->GetDataType(), output->GetDataType());
-    OP_CHECK(promoteType != DataType::DT_UNDEFINED,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and output dtype %s can not promote dtype.",
-                    op::ToString(gradOutput->GetDataType()).GetString(),
-                    op::ToString(output->GetDataType()).GetString()),
-            return false);
+    OP_CHECK(
+        promoteType != DataType::DT_UNDEFINED,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and output dtype %s can not promote dtype.",
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(output->GetDataType()).GetString()),
+        return false);
     // 检查推导后的数据类型是否在算子支持的数据类型之内
     OP_CHECK(CheckType(promoteType, DTYPE_SUPPORT_LIST),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promote dtype %s should be in dtype support list [%s].",
-                    op::ToString(promoteType).GetString(), op::ToString(DTYPE_SUPPORT_LIST).GetString()),
-            return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promote dtype %s should be in dtype support list [%s].",
+                     op::ToString(promoteType).GetString(), op::ToString(DTYPE_SUPPORT_LIST).GetString()),
+             return false);
 
     // 检查推导后的数据类型能否转换为输出的数据类型
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, gradInput->GetDataType(), return false);
@@ -96,15 +96,14 @@ static bool CheckPromoteType(const aclTensor *gradOutput, const aclTensor *outpu
 }
 
 static bool CheckShapeBroadcast(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* gradInput,
-                                op::Shape &resultShape)
+                                op::Shape& resultShape)
 {
     // gradOutput、output的shape必须能够进行broadcast
-    OP_CHECK(BroadcastInferShape(gradOutput->GetViewShape(), output->GetViewShape(), resultShape),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "the size of tensor self %s must match the size of tensor other %s.",
-                     op::ToString(gradOutput->GetViewShape()).GetString(),
-                     op::ToString(output->GetViewShape()).GetString()),
-             return false);
+    OP_CHECK(
+        BroadcastInferShape(gradOutput->GetViewShape(), output->GetViewShape(), resultShape),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the size of tensor self %s must match the size of tensor other %s.",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(output->GetViewShape()).GetString()),
+        return false);
     // result shape 与指定的输出gradInput shape 必须相等
     OP_CHECK(resultShape == gradInput->GetViewShape(),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
@@ -119,12 +118,12 @@ static aclTensor* BroadcastTensor(const op::Shape dstShape, const aclTensor* src
     auto dstTensor = executor->AllocTensor(dstShape, src->GetDataType());
     op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(dstShape);
     auto shape = executor->ConvertToTensor(broadcastDims.data(), broadcastDims.size(),
-        static_cast<op::DataType>(ACL_INT64));
+                                           static_cast<op::DataType>(ACL_INT64));
     auto result = l0op::BroadcastTo(src, dstTensor, shape, executor);
     return const_cast<aclTensor*>(result);
 }
 
-static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *gradInput)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, output, gradInput), ACLNN_ERR_PARAM_NULLPTR);
@@ -139,9 +138,9 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *out
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSigmoidBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *output,
-                                                 aclTensor *gradInput, uint64_t *workspaceSize,
-                                                 aclOpExecutor **executor)
+aclnnStatus aclnnSigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* output,
+                                                 aclTensor* gradInput, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnSigmoidBackward, DFX_IN(gradOutput, output), DFX_OUT(gradInput));
     // 固定写法，创建OpExecutor
@@ -177,8 +176,8 @@ aclnnStatus aclnnSigmoidBackwardGetWorkspaceSize(const aclTensor *gradOutput, co
     CHECK_RET(outputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 若输出tensor形状不同，则进行broadcast
-    const aclTensor *gradOutputBroadCast = gradOutputContiguous;
-    const aclTensor *outputBroadCast = outputContiguous;
+    const aclTensor* gradOutputBroadCast = gradOutputContiguous;
+    const aclTensor* outputBroadCast = outputContiguous;
     if (gradOutputContiguous->GetViewShape() != outputContiguous->GetViewShape()) {
         gradOutputBroadCast = BroadcastTensor(resultShape, gradOutputContiguous, uniqueExecutor.get());
         CHECK_RET(gradOutputBroadCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -211,7 +210,7 @@ aclnnStatus aclnnSigmoidBackwardGetWorkspaceSize(const aclTensor *gradOutput, co
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSigmoidBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+aclnnStatus aclnnSigmoidBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                  const aclrtStream stream)
 {
     // 固定写法，调用框架能力，完成计算

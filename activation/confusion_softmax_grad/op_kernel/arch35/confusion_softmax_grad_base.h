@@ -21,8 +21,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
-namespace ConfusionSoftmaxGradOps
-{
+namespace ConfusionSoftmaxGradOps {
 using namespace AscendC;
 
 constexpr static AscendC::MicroAPI::CastTrait castTraitFp16ToFp32 = {
@@ -51,8 +50,7 @@ constexpr static int64_t CONST_EIGHT = 8;
 constexpr static int64_t CONST_SIXTY_THREE = 63;
 constexpr static uint32_t VL_FP32 = static_cast<int64_t>(platform::GetVRegSize()) / sizeof(float);
 
-class ConfusionSoftmaxGradOpsBase
-{
+class ConfusionSoftmaxGradOpsBase {
 public:
     __aicore__ inline ConfusionSoftmaxGradOpsBase() : pipe_(nullptr){};
 
@@ -69,7 +67,7 @@ protected:
 
 protected:
     TPipe* pipe_;
-};  // class ConfusionSoftmaxGradOpsBase
+}; // class ConfusionSoftmaxGradOpsBase
 
 // IMPL
 __aicore__ inline int64_t ConfusionSoftmaxGradOpsBase::FindNearestPower2(const int64_t value)
@@ -218,12 +216,13 @@ struct NlastDichotomyAdd<1> {
 };
 
 __aicore__ inline void ConfusionSoftmaxGradOpsBase::UpdateCache(const LocalTensor<float>& dstTensor,
-                                                     const LocalTensor<float>& srcTensor, const int64_t cacheID,
-                                                     const int64_t stride, const int64_t count)
+                                                                const LocalTensor<float>& srcTensor,
+                                                                const int64_t cacheID, const int64_t stride,
+                                                                const int64_t count)
 {
     // UpdateCache
-    uint16_t outerLoopTimes =
-        ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
+                                           static_cast<int64_t>(platform::GetVRegSize()));
     uint16_t innerLoopTimes = cacheID;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
@@ -248,15 +247,15 @@ __aicore__ inline void ConfusionSoftmaxGradOpsBase::UpdateCache(const LocalTenso
 }
 
 __aicore__ inline void ConfusionSoftmaxGradOpsBase::Normalize(const LocalTensor<float>& dstTensor,
-                                                   const LocalTensor<float>& srcTensor,
-                                                   const LocalTensor<float>& meanTensor,
-                                                   const LocalTensor<float>& rstdTensor, const int64_t rowSize,
-                                                   const int64_t colSize)
+                                                              const LocalTensor<float>& srcTensor,
+                                                              const LocalTensor<float>& meanTensor,
+                                                              const LocalTensor<float>& rstdTensor,
+                                                              const int64_t rowSize, const int64_t colSize)
 {
     // Normalize
     uint16_t outerLoopTimes = rowSize;
-    uint16_t innerLoopTimes =
-        ops::CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    uint16_t innerLoopTimes = ops::CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                           static_cast<int64_t>(platform::GetVRegSize()));
     uint32_t outerLoopStride = colSize;
     uint32_t innerLoopStride = VL_FP32;
     __VEC_SCOPE__
@@ -283,6 +282,6 @@ __aicore__ inline void ConfusionSoftmaxGradOpsBase::Normalize(const LocalTensor<
         }
     }
 }
-}  // namespace ConfusionSoftmaxGradOps
+} // namespace ConfusionSoftmaxGradOps
 
 #endif // NORM_CONFUSION_SOFTMAX_GRAD_BASE_H

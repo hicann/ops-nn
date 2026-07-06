@@ -14,12 +14,12 @@
 namespace ops {
 class GatherV2 : public OpDef {
 public:
-    explicit GatherV2(const char *name) : OpDef(name)
+    explicit GatherV2(const char* name) : OpDef(name)
     {
-        const std::vector<ge::DataType> data_types = {
-            ge::DT_INT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_UINT8, ge::DT_INT32, ge::DT_INT64,
-            ge::DT_UINT32, ge::DT_UINT64, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE,
-            ge::DT_COMPLEX64, ge::DT_COMPLEX128};
+        const std::vector<ge::DataType> data_types = {ge::DT_INT8,      ge::DT_INT16,   ge::DT_UINT16, ge::DT_UINT8,
+                                                      ge::DT_INT32,     ge::DT_INT64,   ge::DT_UINT32, ge::DT_UINT64,
+                                                      ge::DT_FLOAT,     ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_COMPLEX64,
+                                                      ge::DT_COMPLEX128};
         this->Input("x").ParamType(REQUIRED).DataType(data_types);
         this->Input("indices").ParamType(REQUIRED).DataType({ge::DT_INT32, ge::DT_INT64});
         this->Input("axis").ParamType(REQUIRED).DataType({ge::DT_INT32, ge::DT_INT64});
@@ -31,4 +31,4 @@ public:
 };
 
 OP_ADD(GatherV2);
-}  // namespace ops
+} // namespace ops

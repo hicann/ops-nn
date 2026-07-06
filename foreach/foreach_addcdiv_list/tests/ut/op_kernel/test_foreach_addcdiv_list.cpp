@@ -23,26 +23,21 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_addcdiv_list(GM_ADDR inputs, GM_ADDR tensor1,
-                                                            GM_ADDR tensor2, GM_ADDR scalar,
-                                                            GM_ADDR outputs,
-                                                            GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_addcdiv_list(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2,
+                                                           GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                           GM_ADDR tiling);
 
 class foreach_addcdiv_list_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_addcdiv_list_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "foreach_addcdiv_list_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_addcdiv_list_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_addcdiv_list_test TearDown\n" << std::endl; }
 };
 
-TEST_F(foreach_addcdiv_list_test, test_case_float_1) {
+TEST_F(foreach_addcdiv_list_test, test_case_float_1)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
     system("chmod -R 755 ./addcdiv_list_data/");
     system("cd ./addcdiv_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -62,13 +57,14 @@ TEST_F(foreach_addcdiv_list_test, test_case_float_1) {
     uint8_t* tensor2 = CreateTensorListForeachAddcdivList<float>(shapeInfos, "float32", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcdivList<float>(shapeInfos, "float32", "input");
 
-    float * scalar = (float *)AscendC::GmAlloc(sizeof(float) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (float)3;
     }
 
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcdivList<float>(out, shapeInfos, "float32");
     AscendC::GmFree((void*)x1);
@@ -81,11 +77,11 @@ TEST_F(foreach_addcdiv_list_test, test_case_float_1) {
     system("cd ./addcdiv_list_data/ && python3 compare_data.py 'float32'");
 }
 
-TEST_F(foreach_addcdiv_list_test, test_case_float16_2) {
+TEST_F(foreach_addcdiv_list_test, test_case_float16_2)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
     system("chmod -R 755 ./addcdiv_list_data/");
     system("cd ./addcdiv_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -105,13 +101,14 @@ TEST_F(foreach_addcdiv_list_test, test_case_float16_2) {
     uint8_t* tensor2 = CreateTensorListForeachAddcdivList<half>(shapeInfos, "float16", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcdivList<half>(shapeInfos, "float16", "input");
 
-    half * scalar = (half *)AscendC::GmAlloc(sizeof(half) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    half* scalar = (half*)AscendC::GmAlloc(sizeof(half) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (half)3;
     }
 
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcdivList<half>(out, shapeInfos, "float16");
     AscendC::GmFree((void*)x1);
@@ -124,11 +121,11 @@ TEST_F(foreach_addcdiv_list_test, test_case_float16_2) {
     system("cd ./addcdiv_list_data/ && python3 compare_data.py 'float16'");
 }
 
-TEST_F(foreach_addcdiv_list_test, test_case_bfloat16_3) {
+TEST_F(foreach_addcdiv_list_test, test_case_bfloat16_3)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
     system("chmod -R 755 ./addcdiv_list_data/");
     system("cd ./addcdiv_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -148,13 +145,14 @@ TEST_F(foreach_addcdiv_list_test, test_case_bfloat16_3) {
     uint8_t* tensor2 = CreateTensorListForeachAddcdivList<bfloat16_t>(shapeInfos, "bfloat16_t", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcdivList<bfloat16_t>(shapeInfos, "bfloat16_t", "input");
 
-    bfloat16_t * scalar = (bfloat16_t *)AscendC::GmAlloc(sizeof(bfloat16_t) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    bfloat16_t* scalar = (bfloat16_t*)AscendC::GmAlloc(sizeof(bfloat16_t) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (bfloat16_t)3;
     }
 
     ICPU_SET_TILING_KEY(4);
-    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcdivList<bfloat16_t>(out, shapeInfos, "bfloat16_t");
     AscendC::GmFree((void*)x1);
@@ -167,11 +165,11 @@ TEST_F(foreach_addcdiv_list_test, test_case_bfloat16_3) {
     system("cd ./addcdiv_list_data/ && python3 compare_data.py 'bfloat16_t'");
 }
 
-TEST_F(foreach_addcdiv_list_test, test_case_float_4_for_not_aligned) {
+TEST_F(foreach_addcdiv_list_test, test_case_float_4_for_not_aligned)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{7}, {9}, {17}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcdiv_list/tests/ut/op_kernel/addcdiv_list_data ./");
     system("chmod -R 755 ./addcdiv_list_data/");
     system("cd ./addcdiv_list_data/ && python3 gen_data.py '{{7}, {9}, {17}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -191,13 +189,14 @@ TEST_F(foreach_addcdiv_list_test, test_case_float_4_for_not_aligned) {
     uint8_t* tensor2 = CreateTensorListForeachAddcdivList<float>(shapeInfos, "float32", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcdivList<float>(shapeInfos, "float32", "input");
 
-    float * scalar = (float *)AscendC::GmAlloc(sizeof(float) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (float)3;
     }
 
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcdiv_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcdivList<float>(out, shapeInfos, "float32");
     AscendC::GmFree((void*)x1);

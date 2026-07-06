@@ -27,7 +27,8 @@ namespace ge {
 * @li dy: The input is Tensor, dtype is UnaryDataType.
 
 * @par Attributes:
-* @li complex_conj: An optional attribute indicates whether to use conjugate operations for complex dtype. Defaults to "false"
+* @li complex_conj: An optional attribute indicates whether to use conjugate operations for complex dtype. Defaults to
+"false"
 
 * @par Outputs:
 * z: The shape of output, dtype is UnaryDataType.
@@ -40,4 +41,4 @@ REG_OP(SigmoidGrad)
     .OP_END_FACTORY_REG(SigmoidGrad)
 
 } // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SIGMOID_GRAD_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SIGMOID_GRAD_H_

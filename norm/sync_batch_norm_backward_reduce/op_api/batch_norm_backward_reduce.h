@@ -14,9 +14,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> SyncBatchNormBackwardReduce(
-    const aclTensor* sumDy, const aclTensor* sumDyXmuPad, const aclTensor* mean, const aclTensor* invstd,
-    aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> SyncBatchNormBackwardReduce(const aclTensor* sumDy,
+                                                                     const aclTensor* sumDyXmuPad,
+                                                                     const aclTensor* mean, const aclTensor* invstd,
+                                                                     aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_BATCH_NORM_BACKWARD_REDUCE_H_

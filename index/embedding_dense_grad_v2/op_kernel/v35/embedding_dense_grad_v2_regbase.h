@@ -35,39 +35,58 @@ static const uint32_t PER_COLUMN_ALIGN = SECTOR_LINE / sizeof(float);
 static const uint16_t PROCESS_GROUP = 10;
 static const int64_t MAX_ELEWISE_AXIS_LIMIT = 8192;
 
-template<typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale = false, bool SplitEltwiseAxis = false, int32_t bufferNum = 1>
-class EmbeddingDenseGradV2Kernel
-{
+template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale = false, bool SplitEltwiseAxis = false,
+          int32_t bufferNum = 1>
+class EmbeddingDenseGradV2Kernel {
 public:
-    __aicore__ inline EmbeddingDenseGradV2Kernel(TPipe& pipe, const EmbeddingDenseGradV2TilingData4RegBase& tilingData) : pipe_(pipe), tiling_(tilingData){};
-    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR gradWeight, GM_ADDR workSpace);
+    __aicore__ inline EmbeddingDenseGradV2Kernel(TPipe& pipe, const EmbeddingDenseGradV2TilingData4RegBase& tilingData)
+        : pipe_(pipe), tiling_(tilingData){};
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR gradWeight,
+                                GM_ADDR workSpace);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessNotSplitEltwiseAxis();
     template <bool isColTail = false>
     __aicore__ inline void ProcessSplitEltwiseAxis(int64_t colBaseOffset);
-    __aicore__ inline void CopyIndices(LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& posIdxTensor, IDX_T indicesNumber, int64_t offset);
-    __aicore__ inline void CalcDupNum(LocalTensor<int32_t>& noDupCount, int64_t& arNum, const LocalTensor<IDX_T>& indicesTensor, IDX_T indicesNumber);
-    __aicore__ inline void UniqueGetElm(const LocalTensor<IDX_T> &indicesTensor, LocalTensor<int32_t> &noDupCount, uint32_t indicesFactorReal, int64_t &arNum);
-    __aicore__ inline void UniqueStat(const LocalTensor<IDX_T> &indicesTensor, LocalTensor<int32_t> &noDupCount, uint32_t indicesFactorReal, int64_t &arNum);
-    __aicore__ inline void CopyGrad(LocalTensor<int32_t>& posIdxTensor, IDX_T indicesNumber, uint32_t colLen, int64_t colOffset);
+    __aicore__ inline void CopyIndices(LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& posIdxTensor,
+                                       IDX_T indicesNumber, int64_t offset);
+    __aicore__ inline void CalcDupNum(LocalTensor<int32_t>& noDupCount, int64_t& arNum,
+                                      const LocalTensor<IDX_T>& indicesTensor, IDX_T indicesNumber);
+    __aicore__ inline void UniqueGetElm(const LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& noDupCount,
+                                        uint32_t indicesFactorReal, int64_t& arNum);
+    __aicore__ inline void UniqueStat(const LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& noDupCount,
+                                      uint32_t indicesFactorReal, int64_t& arNum);
+    __aicore__ inline void CopyGrad(LocalTensor<int32_t>& posIdxTensor, IDX_T indicesNumber, uint32_t colLen,
+                                    int64_t colOffset);
     template <bool useRes>
-    __aicore__ inline void AddGradPerIndice(LocalTensor<GRAD_T>& outTensor, LocalTensor<CAST_T>& lastResTensor, const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen, int32_t curGradCount, float scaleFreq);
+    __aicore__ inline void AddGradPerIndice(LocalTensor<GRAD_T>& outTensor, LocalTensor<CAST_T>& lastResTensor,
+                                            const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen,
+                                            int32_t curGradCount, float scaleFreq);
     template <bool isColTail>
-    __aicore__ inline void AddFirstGradByGroup(const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen, uint32_t colOffset, LocalTensor<int32_t>& noDupCount, int64_t arNum, uint32_t resColOffset);
-    __aicore__ inline void AddGradByGroup(const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen, uint32_t colOffset, LocalTensor<int32_t>& noDupCount, int64_t arNum, uint32_t resColOffset);
+    __aicore__ inline void AddFirstGradByGroup(const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen,
+                                               uint32_t colOffset, LocalTensor<int32_t>& noDupCount, int64_t arNum,
+                                               uint32_t resColOffset);
+    __aicore__ inline void AddGradByGroup(const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen, uint32_t colOffset,
+                                          LocalTensor<int32_t>& noDupCount, int64_t arNum, uint32_t resColOffset);
     template <bool SaveEnd, bool isColTail, bool isUpdateFreq = false>
-    __aicore__ inline void CopyOutGradWeight(LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& noDupCountTensor, int64_t arNum, uint32_t colLen, int64_t colOffset, uint32_t resColOffset);
+    __aicore__ inline void CopyOutGradWeight(LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& noDupCountTensor,
+                                             int64_t arNum, uint32_t colLen, int64_t colOffset, uint32_t resColOffset);
     __aicore__ inline void CopyIndicesToWs();
     __aicore__ inline void CopyIndicesFromWs(IDX_T indicesNumber, uint32_t endOffset);
     __aicore__ inline bool CheckHasSameIndices(uint32_t indicesNumber, uint32_t endOffset);
-    __aicore__ inline void GatherIndices(LocalTensor<IDX_T>& indicesBeginTensor, LocalTensor<IDX_T>& indicesEndTensor, uint32_t indicesNumber);
+    __aicore__ inline void GatherIndices(LocalTensor<IDX_T>& indicesBeginTensor, LocalTensor<IDX_T>& indicesEndTensor,
+                                         uint32_t indicesNumber);
     __aicore__ inline void InterleaveIndices(uint32_t totalIndicesNum, uint32_t endOffset);
-    __aicore__ inline void CopyGradFromWs(IDX_T indicesNumber, uint32_t elewiseNumber, uint32_t stride, int64_t gmOffset);
+    __aicore__ inline void CopyGradFromWs(IDX_T indicesNumber, uint32_t elewiseNumber, uint32_t stride,
+                                          int64_t gmOffset);
     __aicore__ inline void CopyScaleFreqFromWs(uint32_t totalIndicesNum);
     __aicore__ inline void GatherScaleFreq(uint32_t totalIndicesNum);
-    __aicore__ inline void CalcFreqBetweenBlock(LocalTensor<int32_t> &noDupCount, int64_t arNum, uint32_t totalIndicesNum);
-    __aicore__ inline void AddGradPerIndiceBetweenBlock(LocalTensor<GRAD_T>& outTensor, const LocalTensor<CAST_T>& gradTensor, uint32_t colLen, uint32_t colLenAlign, int32_t curGradCount, float freqInBlock);
-    __aicore__ inline void AddGradBetweenBlock(uint32_t colLen, uint32_t gradColAlign, LocalTensor<int32_t>& noDupCount, int64_t &arNum, uint32_t totalIndicesNum);
+    __aicore__ inline void CalcFreqBetweenBlock(LocalTensor<int32_t>& noDupCount, int64_t arNum,
+                                                uint32_t totalIndicesNum);
+    __aicore__ inline void AddGradPerIndiceBetweenBlock(LocalTensor<GRAD_T>& outTensor,
+                                                        const LocalTensor<CAST_T>& gradTensor, uint32_t colLen,
+                                                        uint32_t colLenAlign, int32_t curGradCount, float freqInBlock);
+    __aicore__ inline void AddGradBetweenBlock(uint32_t colLen, uint32_t gradColAlign, LocalTensor<int32_t>& noDupCount,
+                                               int64_t& arNum, uint32_t totalIndicesNum);
     __aicore__ inline void ReInitBuffer(uint32_t totalIndicesNumber);
     __aicore__ inline void ProcessGradBetweenBlock();
 
@@ -78,7 +97,7 @@ protected:
 
     TBuf<QuePosition::VECIN> indicesBuf_;
     TBuf<QuePosition::VECIN> posIdxBuf_;
-    TBuf<QuePosition::VECCALC> noDupIdxCountBuf_;  // 保存ub内每个词索引的重复次数的数组
+    TBuf<QuePosition::VECCALC> noDupIdxCountBuf_; // 保存ub内每个词索引的重复次数的数组
     TBuf<QuePosition::VECCALC> lastResBuf_;
 
     // In/Out Gm
@@ -99,38 +118,41 @@ protected:
     GlobalTensor<IDX_T> blockSyncGm_;
 
     // var
-    IDX_T firstResIdx_ {-2};
-    IDX_T firstResCount_ {0};
-    IDX_T lastResIdx_ {-2};
-    IDX_T lastResCount_ {0};
-    int64_t gradLenInWs_ {0};
-    int64_t scatterLoopNums_ {0};
-    int64_t elewiseLoopNums_ {0};
-    int64_t elewiseOuterTail_ {0};
-    uint32_t scatterTail_ {0};
-    uint32_t elewiseTail_ {0};
-    uint32_t elewiseNormal_ {0};
-    uint64_t indicesStart_ {0};
-    int32_t blockIdx_ {0};
-    uint32_t elewiseAligned_ {0};
-    uint32_t isBeginRecord_ {0};
-    uint32_t isBeginPadding_ {0};
+    IDX_T firstResIdx_{-2};
+    IDX_T firstResCount_{0};
+    IDX_T lastResIdx_{-2};
+    IDX_T lastResCount_{0};
+    int64_t gradLenInWs_{0};
+    int64_t scatterLoopNums_{0};
+    int64_t elewiseLoopNums_{0};
+    int64_t elewiseOuterTail_{0};
+    uint32_t scatterTail_{0};
+    uint32_t elewiseTail_{0};
+    uint32_t elewiseNormal_{0};
+    uint64_t indicesStart_{0};
+    int32_t blockIdx_{0};
+    uint32_t elewiseAligned_{0};
+    uint32_t isBeginRecord_{0};
+    uint32_t isBeginPadding_{0};
     constexpr static uint16_t vfFp32Block_ = platform::GetVRegSize() / sizeof(float);
     constexpr static uint32_t perVfIndices_ = platform::GetVRegSize() / sizeof(IDX_T);
     constexpr static uint32_t indexCountInBlock_ = ONE_BLK_SIZE / sizeof(IDX_T);
-    constexpr static uint32_t copyGradAlign_ = ONE_BLK_SIZE/ sizeof(GRAD_T);
+    constexpr static uint32_t copyGradAlign_ = ONE_BLK_SIZE / sizeof(GRAD_T);
 
     // tilingData
     const EmbeddingDenseGradV2TilingData4RegBase& tiling_;
 
-    using RegTensorType = typename std::conditional<IsSameType<IDX_T, int64_t>::value, typename MicroAPI::RegTensor<IDX_T, MicroAPI::RegTraitNumTwo>,
-                                            typename MicroAPI::RegTensor<IDX_T>>::type;
-    using RegCastType = typename std::conditional<IsSameType<IDX_T, int64_t>::value, typename MicroAPI::RegTensor<uint64_t, MicroAPI::RegTraitNumTwo>,
-                                            typename MicroAPI::RegTensor<uint32_t>>::type;
+    using RegTensorType = typename std::conditional<IsSameType<IDX_T, int64_t>::value,
+                                                    typename MicroAPI::RegTensor<IDX_T, MicroAPI::RegTraitNumTwo>,
+                                                    typename MicroAPI::RegTensor<IDX_T>>::type;
+    using RegCastType = typename std::conditional<IsSameType<IDX_T, int64_t>::value,
+                                                  typename MicroAPI::RegTensor<uint64_t, MicroAPI::RegTraitNumTwo>,
+                                                  typename MicroAPI::RegTensor<uint32_t>>::type;
 };
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::Init(GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR gradWeight, GM_ADDR workSpace)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::Init(
+    GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR gradWeight, GM_ADDR workSpace)
 {
     blockIdx_ = GetBlockIdx();
 
@@ -140,10 +162,13 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         scatterTail_ = tiling_.scatterFactor;
     } else {
         scatterLoopNums_ = tiling_.tailBlockLoopNum;
-        scatterTail_ = tiling_.scatterDimSize - (blockIdx_ * tiling_.normalBlockLoopNum + tiling_.tailBlockLoopNum - 1) * tiling_.scatterFactor;
+        scatterTail_ = tiling_.scatterDimSize -
+                       (blockIdx_ * tiling_.normalBlockLoopNum + tiling_.tailBlockLoopNum - 1) * tiling_.scatterFactor;
     }
 
-    int64_t lastResBufSize = ops::CeilAlign(tiling_.elewiseDimSize, static_cast<int64_t>(ONE_BLK_SIZE / sizeof(CAST_T))) * sizeof(CAST_T);
+    int64_t lastResBufSize = ops::CeilAlign(tiling_.elewiseDimSize,
+                                            static_cast<int64_t>(ONE_BLK_SIZE / sizeof(CAST_T))) *
+                             sizeof(CAST_T);
     if constexpr (SplitEltwiseAxis) {
         if (tiling_.elewiseDimOuterLoopNum < DOUBLE) {
             elewiseOuterTail_ = tiling_.elewiseDimSize;
@@ -164,10 +189,10 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     elewiseAligned_ = ops::CeilAlign(tiling_.elewiseFactor, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(GRAD_T)));
 
     // init params
-    gradGm_.SetGlobalBuffer((__gm__ GRAD_T *)grad);
-    sortIndicesGm_.SetGlobalBuffer((__gm__ IDX_T *)sortIndices);
-    posIdxGm_.SetGlobalBuffer((__gm__ int32_t *)posIdx);
-    gradWeightGm_.SetGlobalBuffer((__gm__ GRAD_T *)gradWeight);
+    gradGm_.SetGlobalBuffer((__gm__ GRAD_T*)grad);
+    sortIndicesGm_.SetGlobalBuffer((__gm__ IDX_T*)sortIndices);
+    posIdxGm_.SetGlobalBuffer((__gm__ int32_t*)posIdx);
+    gradWeightGm_.SetGlobalBuffer((__gm__ GRAD_T*)gradWeight);
 
     int64_t blockSyncWs = CACHE_LINE;
     gradLenInWs_ = ops::CeilAlign(tiling_.elewiseDimSize * sizeof(CAST_T), static_cast<uint64_t>(CACHE_LINE));
@@ -201,8 +226,10 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyIndices(LocalTensor<IDX_T>& indicesTensor,
-                                                                            LocalTensor<int32_t>& posIdxTensor, IDX_T indicesNumber, int64_t offset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CopyIndices(LocalTensor<IDX_T>& indicesTensor,
+                                                                          LocalTensor<int32_t>& posIdxTensor,
+                                                                          IDX_T indicesNumber, int64_t offset)
 {
     uint64_t copyPosition = indicesStart_ + offset;
 
@@ -214,45 +241,33 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
     uint8_t rightPadNum = static_cast<uint8_t>(indicesNumAligned - indicesNumber);
     DataCopyPadExtParams<IDX_T> padParams{true, static_cast<uint8_t>(0), rightPadNum, static_cast<uint8_t>(-1)};
-    DataCopyExtParams copyParam {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(indicesNumber * sizeof(IDX_T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyParam{static_cast<uint16_t>(1), static_cast<uint32_t>(indicesNumber * sizeof(IDX_T)),
+                                static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(indicesTensor[indexCountInBlock_], sortIndicesGm_[copyPosition], copyParam, padParams);
 
     int32_t posIdxNumAligned = static_cast<int32_t>(indicesNumAligned);
     uint8_t rightPadPosIdxNum = static_cast<uint8_t>(posIdxNumAligned - indicesNumber);
-    DataCopyPadExtParams<int32_t> padPosIdxParams{true, static_cast<uint8_t>(0), rightPadPosIdxNum, static_cast<uint8_t>(-1)};
-    DataCopyExtParams copyPosIdxParam {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(indicesNumber * sizeof(int32_t)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyPadExtParams<int32_t> padPosIdxParams{true, static_cast<uint8_t>(0), rightPadPosIdxNum,
+                                                  static_cast<uint8_t>(-1)};
+    DataCopyExtParams copyPosIdxParam{static_cast<uint16_t>(1), static_cast<uint32_t>(indicesNumber * sizeof(int32_t)),
+                                      static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(posIdxTensor, posIdxGm_[copyPosition], copyPosIdxParam, padPosIdxParams);
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyGrad(LocalTensor<int32_t>& posIdxTensor,
-                                                                                                    IDX_T indicesNumber, uint32_t colLen, int64_t colOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CopyGrad(LocalTensor<int32_t>& posIdxTensor,
+                                                                       IDX_T indicesNumber, uint32_t colLen,
+                                                                       int64_t colOffset)
 {
     LocalTensor<GRAD_T> gradTensor = inQueGrad_.template AllocTensor<GRAD_T>();
 
     uint8_t rightPadNum = static_cast<uint8_t>(ops::CeilAlign(colLen, copyGradAlign_) - colLen);
     DataCopyPadExtParams<GRAD_T> padParams{true, static_cast<uint8_t>(0), rightPadNum, static_cast<uint8_t>(0)};
-    DataCopyExtParams copyParam {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(colLen * sizeof(GRAD_T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyParam{static_cast<uint16_t>(1), static_cast<uint32_t>(colLen * sizeof(GRAD_T)),
+                                static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     // 不做padding过滤，直接拷贝。否则，scalar过多导致性能下降。
     for (uint32_t i = 0; i < indicesNumber; i++) {
@@ -265,8 +280,9 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CalcDupNum(LocalTensor<int32_t>& noDupCount, int64_t& arNum,
-                                                                                                    const LocalTensor<IDX_T>& indicesTensor, IDX_T indicesNumber)
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CalcDupNum(
+    LocalTensor<int32_t>& noDupCount, int64_t& arNum, const LocalTensor<IDX_T>& indicesTensor, IDX_T indicesNumber)
 {
     event_t eventMTE2_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventMTE2_V);
@@ -279,11 +295,13 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::UniqueGetElm(const LocalTensor<IDX_T> &indicesTensor, LocalTensor<int32_t> &noDupCount,
-                                uint32_t indicesFactorReal, int64_t &arNum)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::UniqueGetElm(const LocalTensor<IDX_T>& indicesTensor,
+                                                                           LocalTensor<int32_t>& noDupCount,
+                                                                           uint32_t indicesFactorReal, int64_t& arNum)
 {
-    __local_mem__ IDX_T *sortedIndicesAddr = (__ubuf__ IDX_T *)indicesTensor.GetPhyAddr();
-    __local_mem__ int32_t *noDupResAddr = (__ubuf__ int32_t *)noDupCount.GetPhyAddr();
+    __local_mem__ IDX_T* sortedIndicesAddr = (__ubuf__ IDX_T*)indicesTensor.GetPhyAddr();
+    __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupCount.GetPhyAddr();
 
     uint16_t loopCnt = (uint16_t)((indicesFactorReal + perVfIndices_) / perVfIndices_);
     int32_t scalar = 0;
@@ -296,8 +314,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         AscendC::MicroAPI::RegTensor<IDX_T> indicesReg;
         AscendC::MicroAPI::RegTensor<IDX_T> indicesShiftOneReg;
 
-        AscendC::MicroAPI::MaskReg maskReg =
-            AscendC::MicroAPI::CreateMask<IDX_T, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            maskReg = AscendC::MicroAPI::CreateMask<IDX_T, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg cmpMask;
         AscendC::MicroAPI::MaskReg maskRegUpdate;
         AscendC::MicroAPI::UnalignReg u0;
@@ -317,26 +335,28 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
                 AscendC::MicroAPI::MaskReg maskHalf;
                 AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
                 // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>
-                    (selReg, orderReg, maskHalf);
+                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                     maskHalf);
             } else {
                 // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>
-                    (selReg, orderReg, cmpMask);
+                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                     cmpMask);
             }
 
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>
-                (noDupResAddr, selReg, ureg);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(noDupResAddr,
+                                                                                                          selReg, ureg);
             AscendC::MicroAPI::DataCopyUnAlignPost(noDupResAddr, ureg);
         }
     }
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::UniqueStat(const LocalTensor<IDX_T> &indicesTensor,
-                                LocalTensor<int32_t> &noDupCount, uint32_t indicesFactorReal, int64_t &arNum)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::UniqueStat(const LocalTensor<IDX_T>& indicesTensor,
+                                                                         LocalTensor<int32_t>& noDupCount,
+                                                                         uint32_t indicesFactorReal, int64_t& arNum)
 {
-    __local_mem__ int32_t *noDupResAddr = (__ubuf__ int32_t *)noDupCount.GetPhyAddr();
+    __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupCount.GetPhyAddr();
 
     constexpr uint32_t vfLen = platform::GetVRegSize() / sizeof(int32_t);
     uint16_t loopCntStatFre = (arNum + vfLen - 1) / vfLen;
@@ -366,12 +386,14 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
 template <bool useRes>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradPerIndice(LocalTensor<GRAD_T>& outTensor, LocalTensor<CAST_T>& lastResTensor,
-                                                                                                const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen, int32_t curGradCount, float scaleFreq)
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradPerIndice(
+    LocalTensor<GRAD_T>& outTensor, LocalTensor<CAST_T>& lastResTensor, const LocalTensor<GRAD_T>& gradTensor,
+    uint32_t colLen, int32_t curGradCount, float scaleFreq)
 {
-    auto ubGradAddr = (__ubuf__ GRAD_T *)gradTensor.GetPhyAddr();
-    auto ubResultAddr = (__ubuf__ GRAD_T *)outTensor.GetPhyAddr();
-    auto ubLastBufAddr = (__ubuf__ CAST_T *)lastResTensor.GetPhyAddr();
+    auto ubGradAddr = (__ubuf__ GRAD_T*)gradTensor.GetPhyAddr();
+    auto ubResultAddr = (__ubuf__ GRAD_T*)outTensor.GetPhyAddr();
+    auto ubLastBufAddr = (__ubuf__ CAST_T*)lastResTensor.GetPhyAddr();
 
     uint32_t processColLen = colLen;
     uint32_t perColAlign = elewiseAligned_;
@@ -380,7 +402,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     uint16_t normalSegCount = loopSegCount * PROCESS_GROUP;
     uint16_t loopSegCountTail = curGradCount - normalSegCount;
 
-    __VEC_SCOPE__ {
+    __VEC_SCOPE__
+    {
         MicroAPI::RegTensor<float> srcGrad;
         MicroAPI::RegTensor<float> groupAdd;
         MicroAPI::RegTensor<float> gradResult;
@@ -388,18 +411,18 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
         for (uint16_t col = 0; col < perColLoopNum; col++) { // grad 一行
             preg = MicroAPI::UpdateMask<float>(processColLen);
-            uint32_t colOffset = col * vfFp32Block_;  // 列方向偏移
-            if constexpr (useRes) { // 相同UB间相同索引，需要累加
+            uint32_t colOffset = col * vfFp32Block_; // 列方向偏移
+            if constexpr (useRes) {                  // 相同UB间相同索引，需要累加
                 ops::LoadOneTensorForDtypeT<CAST_T>(ubLastBufAddr, gradResult, preg, colOffset);
             } else {
                 Duplicate(gradResult, (float)0, preg);
             }
 
-            for (uint16_t mainSeg = 0; mainSeg < loopSegCount; mainSeg++) {   // Main group
-                Duplicate(groupAdd, (float)0, preg);  // 分组累加，每组累加前清空reg
+            for (uint16_t mainSeg = 0; mainSeg < loopSegCount; mainSeg++) { // Main group
+                Duplicate(groupAdd, (float)0, preg);                        // 分组累加，每组累加前清空reg
 
                 uint32_t groupRowStart = mainSeg * PROCESS_GROUP;
-                for (uint16_t group = 0; group < PROCESS_GROUP; group++) {   // per group
+                for (uint16_t group = 0; group < PROCESS_GROUP; group++) { // per group
                     uint32_t gradOffset = (groupRowStart + group) * perColAlign + colOffset;
                     ops::LoadOneTensorForDtypeT<GRAD_T>(ubGradAddr, srcGrad, preg, gradOffset);
                     Add(groupAdd, groupAdd, srcGrad, preg);
@@ -408,7 +431,7 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             }
 
             Duplicate(groupAdd, (float)0, preg);
-            for (uint16_t tailRow = 0; tailRow < loopSegCountTail; tailRow++) {  // Tail group
+            for (uint16_t tailRow = 0; tailRow < loopSegCountTail; tailRow++) { // Tail group
                 uint32_t gradOffset = (normalSegCount + tailRow) * perColAlign + colOffset;
                 ops::LoadOneTensorForDtypeT<GRAD_T>(ubGradAddr, srcGrad, preg, gradOffset);
                 Add(groupAdd, groupAdd, srcGrad, preg);
@@ -428,8 +451,11 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
 template <bool isColTail>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddFirstGradByGroup(const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen,
-                                                                                                    uint32_t colOffset, LocalTensor<int32_t>& noDupCount, int64_t arNum, uint32_t resColOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::AddFirstGradByGroup(const LocalTensor<GRAD_T>& gradTensor,
+                                                                                  uint32_t colLen, uint32_t colOffset,
+                                                                                  LocalTensor<int32_t>& noDupCount,
+                                                                                  int64_t arNum, uint32_t resColOffset)
 {
     LocalTensor<GRAD_T> outTensor = outQueGradWeight_.template AllocTensor<GRAD_T>();
     LocalTensor<CAST_T> lastRes = lastResBuf_.Get<CAST_T>();
@@ -441,24 +467,26 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     IDX_T firstIdxCount = curCount;
     if (curIndex != tiling_.paddingIdx) {
         if (lastResIdx_ != curIndex) {
-            this->template AddGradPerIndice<false>(outTensor, lastResTensor, gradTensor, colLen, curCount, 1.0f / static_cast<float>(firstIdxCount));
+            this->template AddGradPerIndice<false>(outTensor, lastResTensor, gradTensor, colLen, curCount,
+                                                   1.0f / static_cast<float>(firstIdxCount));
         } else {
             firstIdxCount = lastResCount_ + curCount;
             if (firstResIdx_ == curIndex) {
                 isBeginRecord_ = false; // UB间index相同，需要重新存begin grad
             }
-            this->template AddGradPerIndice<true>(outTensor, lastResTensor, gradTensor, colLen, curCount, 1.0f / static_cast<float>(firstIdxCount));
+            this->template AddGradPerIndice<true>(outTensor, lastResTensor, gradTensor, colLen, curCount,
+                                                  1.0f / static_cast<float>(firstIdxCount));
         }
     } else {
         isBeginPadding_ = 1;
     }
 
     /*
-    *  1、UB间和UB内idx全相同
-    *  2、UB间idx前N-1次全相同，第N次arNum > 1
-    *  3、UB间idx前N-1次全相同，第N次arNum = 1，但是idx不同
-    *  4、第一次UB内arNum > 1
-    */
+     *  1、UB间和UB内idx全相同
+     *  2、UB间idx前N-1次全相同，第N次arNum > 1
+     *  3、UB间idx前N-1次全相同，第N次arNum = 1，但是idx不同
+     *  4、第一次UB内arNum > 1
+     */
     if (!isBeginRecord_ && !isBeginPadding_) {
         if constexpr (isColTail) {
             isBeginRecord_ = true;
@@ -466,13 +494,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             firstResCount_ = firstIdxCount;
         }
 
-        DataCopyExtParams copyParam {
-            static_cast<uint16_t>(1),
-            static_cast<uint32_t>(colLen * sizeof(CAST_T)),
-            static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0)
-        };
+        DataCopyExtParams copyParam{static_cast<uint16_t>(1), static_cast<uint32_t>(colLen * sizeof(CAST_T)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
         event_t eventV_MTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventV_MTE3);
@@ -489,8 +512,11 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradByGroup(const LocalTensor<GRAD_T>& gradTensor, uint32_t colLen,
-                                                                                                        uint32_t colOffset, LocalTensor<int32_t>& noDupCount, int64_t arNum, uint32_t resColOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::AddGradByGroup(const LocalTensor<GRAD_T>& gradTensor,
+                                                                             uint32_t colLen, uint32_t colOffset,
+                                                                             LocalTensor<int32_t>& noDupCount,
+                                                                             int64_t arNum, uint32_t resColOffset)
 {
     LocalTensor<CAST_T> lastRes = lastResBuf_.Get<CAST_T>();
     LocalTensor<CAST_T> lastResTensor = lastRes[resColOffset];
@@ -508,7 +534,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             LocalTensor<GRAD_T> outLocal = outTensor[i * elewiseAligned_];
             LocalTensor<GRAD_T> gradLocal = gradTensor[gradRowStart * elewiseAligned_];
             if constexpr (isScale) {
-                this->template AddGradPerIndice<false>(outLocal, lastResTensor, gradLocal, colLen, gradCount, 1.0f / static_cast<float>(gradCount));
+                this->template AddGradPerIndice<false>(outLocal, lastResTensor, gradLocal, colLen, gradCount,
+                                                       1.0f / static_cast<float>(gradCount));
             } else {
                 this->template AddGradPerIndice<false>(outLocal, lastResTensor, gradLocal, colLen, gradCount, 1.0f);
             }
@@ -521,19 +548,16 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
 template <bool SaveEnd, bool isColTail, bool isUpdateFreq>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyOutGradWeight(LocalTensor<IDX_T>& indicesTensor,
-                                                                LocalTensor<int32_t>& noDupCountTensor, int64_t arNum, uint32_t colLen, int64_t colOffset, uint32_t resColOffset)
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyOutGradWeight(
+    LocalTensor<IDX_T>& indicesTensor, LocalTensor<int32_t>& noDupCountTensor, int64_t arNum, uint32_t colLen,
+    int64_t colOffset, uint32_t resColOffset)
 {
     LocalTensor<GRAD_T> outTensor = outQueGradWeight_.template DeQue<GRAD_T>();
     LocalTensor<IDX_T> indices = indicesTensor[indexCountInBlock_];
 
-    DataCopyExtParams copyParam {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(colLen * sizeof(GRAD_T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyParam{static_cast<uint16_t>(1), static_cast<uint32_t>(colLen * sizeof(GRAD_T)),
+                                static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     uint32_t idxOffset = 0;
     IDX_T curLastIdx = -2; // 确保本核最后放到workspace的indices是升序的
@@ -577,11 +601,13 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradPerIndiceBetweenBlock(LocalTensor<GRAD_T>& outTensor,
-                                            const LocalTensor<CAST_T>& gradTensor, uint32_t colLen, uint32_t colLenAlign, int32_t curGradCount, float freqInBlock)
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradPerIndiceBetweenBlock(
+    LocalTensor<GRAD_T>& outTensor, const LocalTensor<CAST_T>& gradTensor, uint32_t colLen, uint32_t colLenAlign,
+    int32_t curGradCount, float freqInBlock)
 {
-    auto ubGradAddr = (__ubuf__ CAST_T *)gradTensor.GetPhyAddr();
-    auto ubResultAddr = (__ubuf__ GRAD_T *)outTensor.GetPhyAddr();
+    auto ubGradAddr = (__ubuf__ CAST_T*)gradTensor.GetPhyAddr();
+    auto ubResultAddr = (__ubuf__ GRAD_T*)outTensor.GetPhyAddr();
 
     uint32_t processColLen = colLen;
     uint32_t perColAlign = colLenAlign;
@@ -591,14 +617,15 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     uint16_t loopSegCountTail = curGradCount - normalSegCount;
     float scaleFreq = freqInBlock;
 
-    __VEC_SCOPE__ {
+    __VEC_SCOPE__
+    {
         MicroAPI::RegTensor<float> srcGrad;
         MicroAPI::RegTensor<float> groupAdd;
         MicroAPI::RegTensor<float> gradResult;
 
         MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
         for (uint16_t col = 0; col < perColLoopNum; col++) { // grad 一行
-            uint32_t colOffset = col * vfFp32Block_;  // 列方向的偏移
+            uint32_t colOffset = col * vfFp32Block_;         // 列方向的偏移
             Duplicate(gradResult, (float)0, preg);
 
             for (uint16_t mainSeg = 0; mainSeg < loopSegCount; mainSeg++) {
@@ -631,8 +658,9 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradBetweenBlock(uint32_t colLen, uint32_t gradColAlign,
-                                                                                        LocalTensor<int32_t>& noDupCount, int64_t &arNum, uint32_t totalIndicesNum)
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::AddGradBetweenBlock(
+    uint32_t colLen, uint32_t gradColAlign, LocalTensor<int32_t>& noDupCount, int64_t& arNum, uint32_t totalIndicesNum)
 {
     LocalTensor<CAST_T> gradTensor = inQueGrad_.template DeQue<CAST_T>();
     LocalTensor<GRAD_T> outTensor = outQueGradWeight_.template AllocTensor<GRAD_T>();
@@ -655,7 +683,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             LocalTensor<CAST_T> gradLocal = gradTensor[gradRowStart * gradColAlign];
             if constexpr (isScale) {
                 IDX_T freq = freqTensor(i);
-                AddGradPerIndiceBetweenBlock(outLocal, gradLocal, colLen, gradColAlign, curGradCount, 1.0f / static_cast<float>(freq));
+                AddGradPerIndiceBetweenBlock(outLocal, gradLocal, colLen, gradColAlign, curGradCount,
+                                             1.0f / static_cast<float>(freq));
             } else {
                 AddGradPerIndiceBetweenBlock(outLocal, gradLocal, colLen, gradColAlign, curGradCount, 1.0f);
             }
@@ -668,38 +697,34 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyIndicesToWs()
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyIndicesToWs()
 {
     LocalTensor<IDX_T> indicesTensor = indicesBuf_.Get<IDX_T>();
     LocalTensor<IDX_T> noDupCountTensor = noDupIdxCountBuf_.Get<IDX_T>();
 
-    event_t eventS_V= static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+    event_t eventS_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventS_V);
     WaitFlag<HardEvent::S_V>(eventS_V);
 
-    Duplicate(indicesTensor, (IDX_T)lastResIdx_, indexCountInBlock_);    // End indices
-    Duplicate(noDupCountTensor, (IDX_T)lastResCount_, indexCountInBlock_);  // End Freq
+    Duplicate(indicesTensor, (IDX_T)lastResIdx_, indexCountInBlock_);      // End indices
+    Duplicate(noDupCountTensor, (IDX_T)lastResCount_, indexCountInBlock_); // End Freq
 
-    DataCopyExtParams copyIdxParam {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(sizeof(IDX_T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyIdxParam{static_cast<uint16_t>(1), static_cast<uint32_t>(sizeof(IDX_T)),
+                                   static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     if (!isBeginRecord_ || firstResIdx_ == lastResIdx_) {
         /*
-        * 1、从头到尾只有一个index
-        * 2、从头到尾有两个index，其中一个index == padding_index
-        */
-        Duplicate(indicesTensor[indexCountInBlock_], (IDX_T)lastResIdx_, indexCountInBlock_);    // Begin indices
-        Duplicate(noDupCountTensor[indexCountInBlock_], (IDX_T)0, indexCountInBlock_);  // Begin Freq
+         * 1、从头到尾只有一个index
+         * 2、从头到尾有两个index，其中一个index == padding_index
+         */
+        Duplicate(indicesTensor[indexCountInBlock_], (IDX_T)lastResIdx_, indexCountInBlock_); // Begin indices
+        Duplicate(noDupCountTensor[indexCountInBlock_], (IDX_T)0, indexCountInBlock_);        // Begin Freq
 
         InitGlobalMemory(gradBeginWsGm_, tiling_.elewiseDimSize, (CAST_T)0);
     } else {
-        Duplicate(indicesTensor[indexCountInBlock_], (IDX_T)firstResIdx_, indexCountInBlock_);    // Begin indices
-        Duplicate(noDupCountTensor[indexCountInBlock_], (IDX_T)firstResCount_, indexCountInBlock_);  // Begin Freq
+        Duplicate(indicesTensor[indexCountInBlock_], (IDX_T)firstResIdx_, indexCountInBlock_);      // Begin indices
+        Duplicate(noDupCountTensor[indexCountInBlock_], (IDX_T)firstResCount_, indexCountInBlock_); // Begin Freq
 
         event_t eventV_MTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventV_MTE3);
@@ -713,7 +738,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::ProcessNotSplitEltwiseAxis()
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::ProcessNotSplitEltwiseAxis()
 {
     int64_t offset = 0;
     LocalTensor<int32_t> posIdxTensor = posIdxBuf_.Get<int32_t>();
@@ -732,7 +758,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         this->template AddFirstGradByGroup<true>(gradTensor, tiling_.elewiseFactor, 0, noDupCountTensor, arNum, 0);
         AddGradByGroup(gradTensor, tiling_.elewiseFactor, 0, noDupCountTensor, arNum, 0);
         inQueGrad_.FreeTensor(gradTensor);
-        this->template CopyOutGradWeight<false, true, true>(indicesTensor, noDupCountTensor, arNum, tiling_.elewiseFactor, 0, 0);
+        this->template CopyOutGradWeight<false, true, true>(indicesTensor, noDupCountTensor, arNum,
+                                                            tiling_.elewiseFactor, 0, 0);
     }
 
     // Tail block
@@ -745,7 +772,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     this->template AddFirstGradByGroup<true>(gradTensor, tiling_.elewiseFactor, 0, noDupCountTensor, arNum, 0);
     AddGradByGroup(gradTensor, tiling_.elewiseFactor, 0, noDupCountTensor, arNum, 0);
     inQueGrad_.FreeTensor(gradTensor);
-    this->template CopyOutGradWeight<true, true, true>(indicesTensor, noDupCountTensor, arNum, tiling_.elewiseFactor, 0, 0);
+    this->template CopyOutGradWeight<true, true, true>(indicesTensor, noDupCountTensor, arNum, tiling_.elewiseFactor, 0,
+                                                       0);
     CopyIndicesToWs();
 
     SyncAll();
@@ -759,7 +787,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
 template <bool isColTail>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::ProcessSplitEltwiseAxis(int64_t colBaseOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::ProcessSplitEltwiseAxis(int64_t colBaseOffset)
 {
     int64_t offset = 0;
     LocalTensor<int32_t> posIdxTensor = posIdxBuf_.Get<int32_t>();
@@ -778,23 +807,27 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         CalcDupNum(noDupCountTensor, arNum, indicesTensor, tiling_.scatterFactor);
         uint32_t colOffset = colBaseOffset;
         uint32_t resColOffset = 0;
-        for (int64_t colLoop = 0; colLoop < elewiseLoopNums_ -1; colLoop++) {
+        for (int64_t colLoop = 0; colLoop < elewiseLoopNums_ - 1; colLoop++) {
             CopyGrad(posIdxTensor, tiling_.scatterFactor, tiling_.elewiseFactor, colOffset);
             LocalTensor<GRAD_T> gradTensor = inQueGrad_.template DeQue<GRAD_T>();
-            this->template AddFirstGradByGroup<false>(gradTensor, tiling_.elewiseFactor, colOffset, noDupCountTensor, arNum, resColOffset);
+            this->template AddFirstGradByGroup<false>(gradTensor, tiling_.elewiseFactor, colOffset, noDupCountTensor,
+                                                      arNum, resColOffset);
             AddGradByGroup(gradTensor, tiling_.elewiseFactor, colOffset, noDupCountTensor, arNum, resColOffset);
             inQueGrad_.FreeTensor(gradTensor);
-            this->template CopyOutGradWeight<false, false, false>(indicesTensor, noDupCountTensor, arNum, tiling_.elewiseFactor, colOffset, resColOffset);
+            this->template CopyOutGradWeight<false, false, false>(indicesTensor, noDupCountTensor, arNum,
+                                                                  tiling_.elewiseFactor, colOffset, resColOffset);
             colOffset = colOffset + tiling_.elewiseFactor;
             resColOffset = resColOffset + tiling_.elewiseFactor;
         }
 
         CopyGrad(posIdxTensor, tiling_.scatterFactor, elewiseTail_, colOffset);
         LocalTensor<GRAD_T> gradTensor = inQueGrad_.template DeQue<GRAD_T>();
-        this->template AddFirstGradByGroup<true>(gradTensor, elewiseTail_, colOffset, noDupCountTensor, arNum, resColOffset);
+        this->template AddFirstGradByGroup<true>(gradTensor, elewiseTail_, colOffset, noDupCountTensor, arNum,
+                                                 resColOffset);
         AddGradByGroup(gradTensor, elewiseTail_, colOffset, noDupCountTensor, arNum, resColOffset);
         inQueGrad_.FreeTensor(gradTensor);
-        this->template CopyOutGradWeight<false, true, true>(indicesTensor, noDupCountTensor, arNum, elewiseTail_, colOffset, resColOffset);
+        this->template CopyOutGradWeight<false, true, true>(indicesTensor, noDupCountTensor, arNum, elewiseTail_,
+                                                            colOffset, resColOffset);
     }
 
     // Tail block
@@ -803,27 +836,32 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     CalcDupNum(noDupCountTensor, arNum, indicesTensor, scatterTail_);
     uint32_t colOffset = colBaseOffset;
     uint32_t resColOffset = 0;
-    for (int64_t colLoop = 0; colLoop < elewiseLoopNums_ -1; colLoop++) {
+    for (int64_t colLoop = 0; colLoop < elewiseLoopNums_ - 1; colLoop++) {
         CopyGrad(posIdxTensor, scatterTail_, tiling_.elewiseFactor, colOffset);
         LocalTensor<GRAD_T> gradTensor = inQueGrad_.template DeQue<GRAD_T>();
-        this->template AddFirstGradByGroup<false>(gradTensor, tiling_.elewiseFactor, colOffset, noDupCountTensor, arNum, resColOffset);
+        this->template AddFirstGradByGroup<false>(gradTensor, tiling_.elewiseFactor, colOffset, noDupCountTensor, arNum,
+                                                  resColOffset);
         AddGradByGroup(gradTensor, tiling_.elewiseFactor, colOffset, noDupCountTensor, arNum, resColOffset);
         inQueGrad_.FreeTensor(gradTensor);
-        this->template CopyOutGradWeight<true, false, false>(indicesTensor, noDupCountTensor, arNum, tiling_.elewiseFactor, colOffset, resColOffset);
+        this->template CopyOutGradWeight<true, false, false>(indicesTensor, noDupCountTensor, arNum,
+                                                             tiling_.elewiseFactor, colOffset, resColOffset);
         colOffset = colOffset + tiling_.elewiseFactor;
         resColOffset = resColOffset + tiling_.elewiseFactor;
     }
 
     CopyGrad(posIdxTensor, scatterTail_, elewiseTail_, colOffset);
     LocalTensor<GRAD_T> gradTensor = inQueGrad_.template DeQue<GRAD_T>();
-    this->template AddFirstGradByGroup<true>(gradTensor, elewiseTail_, colOffset, noDupCountTensor, arNum, resColOffset);
+    this->template AddFirstGradByGroup<true>(gradTensor, elewiseTail_, colOffset, noDupCountTensor, arNum,
+                                             resColOffset);
     AddGradByGroup(gradTensor, elewiseTail_, colOffset, noDupCountTensor, arNum, resColOffset);
     inQueGrad_.FreeTensor(gradTensor);
-    this->template CopyOutGradWeight<true, isColTail, true>(indicesTensor, noDupCountTensor, arNum, elewiseTail_, colOffset, resColOffset);
+    this->template CopyOutGradWeight<true, isColTail, true>(indicesTensor, noDupCountTensor, arNum, elewiseTail_,
+                                                            colOffset, resColOffset);
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::Process()
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::Process()
 {
     if constexpr (!SplitEltwiseAxis) {
         ProcessNotSplitEltwiseAxis();
@@ -865,26 +903,23 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyIndicesFromWs(IDX_T indicesNumber, uint32_t endOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CopyIndicesFromWs(IDX_T indicesNumber, uint32_t endOffset)
 {
     // copy in
     LocalTensor<IDX_T> indicesBeginTensor = inQueGrad_.template AllocTensor<IDX_T>();
     LocalTensor<IDX_T> indicesEndTensor = indicesBeginTensor[endOffset];
 
     uint8_t rightPadNum = indexCountInBlock_ - 1;
-    DataCopyPadExtParams<IDX_T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum), static_cast<uint8_t>(-1)};
+    DataCopyPadExtParams<IDX_T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum),
+                                          static_cast<uint8_t>(-1)};
 
     uint32_t stride = (CACHE_LINE * DOUBLE + gradLenInWs_) * DOUBLE - sizeof(IDX_T);
 
-    DataCopyExtParams copyIdxParam {
-        static_cast<uint16_t>(indicesNumber),
-        static_cast<uint32_t>(sizeof(IDX_T)),
-        static_cast<uint32_t>(stride),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyIdxParam{static_cast<uint16_t>(indicesNumber), static_cast<uint32_t>(sizeof(IDX_T)),
+                                   static_cast<uint32_t>(stride), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-    int64_t beginOffset = (CACHE_LINE + CACHE_LINE) / sizeof(IDX_T) +  gradLenInWs_ / sizeof(IDX_T);
+    int64_t beginOffset = (CACHE_LINE + CACHE_LINE) / sizeof(IDX_T) + gradLenInWs_ / sizeof(IDX_T);
 
     DataCopyPad(indicesBeginTensor, idxStartGm_[beginOffset], copyIdxParam, padParams); // start1
 
@@ -895,7 +930,9 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline bool EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CheckHasSameIndices(uint32_t indicesNumber, uint32_t endOffset)
+__aicore__ inline bool EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CheckHasSameIndices(uint32_t indicesNumber,
+                                                                                  uint32_t endOffset)
 {
     LocalTensor<IDX_T> indicesBeginTensor = inQueGrad_.template DeQue<IDX_T>();
     LocalTensor<IDX_T> indicesEndTensor = indicesBeginTensor[endOffset];
@@ -910,37 +947,36 @@ __aicore__ inline bool EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     event_t eventV_S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventV_S);
     WaitFlag<HardEvent::V_S>(eventV_S);
-    int64_t sameIdxCount = ScalarGetCountOfValue<1>(checkResult(0));  // 统计 bit=1的数量，bit 1 代表核间的头和尾相等，需要累加
+    int64_t sameIdxCount = ScalarGetCountOfValue<1>(
+        checkResult(0)); // 统计 bit=1的数量，bit 1 代表核间的头和尾相等，需要累加
     return sameIdxCount != 0;
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyScaleFreqFromWs(uint32_t totalIndicesNum)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CopyScaleFreqFromWs(uint32_t totalIndicesNum)
 {
     LocalTensor<IDX_T> freqTensor = lastResBuf_.Get<IDX_T>();
     uint8_t rightPadNum = indexCountInBlock_ - 1;
-    DataCopyPadExtParams<IDX_T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum), static_cast<uint8_t>(0)};
+    DataCopyPadExtParams<IDX_T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum),
+                                          static_cast<uint8_t>(0)};
 
     uint32_t stride = CACHE_LINE * DOUBLE + gradLenInWs_ - sizeof(IDX_T);
 
-    DataCopyExtParams copyIdxParam {
-        static_cast<uint16_t>(totalIndicesNum),
-        static_cast<uint32_t>(sizeof(IDX_T)),
-        static_cast<uint32_t>(stride),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyIdxParam{static_cast<uint16_t>(totalIndicesNum), static_cast<uint32_t>(sizeof(IDX_T)),
+                                   static_cast<uint32_t>(stride), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     constexpr uint64_t scaleFreqStart = CACHE_LINE / sizeof(IDX_T);
 
-    DataCopyPad(freqTensor, idxStartGm_[scaleFreqStart], copyIdxParam, padParams);  // End0 freq
+    DataCopyPad(freqTensor, idxStartGm_[scaleFreqStart], copyIdxParam, padParams); // End0 freq
     event_t eventMTE2_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventMTE2_V);
     WaitFlag<HardEvent::MTE2_V>(eventMTE2_V);
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::GatherScaleFreq(uint32_t totalIndicesNum)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::GatherScaleFreq(uint32_t totalIndicesNum)
 {
     LocalTensor<IDX_T> freqTensor = lastResBuf_.Get<IDX_T>();
     LocalTensor<IDX_T> dstFreqTensor = posIdxBuf_.Get<IDX_T>();
@@ -955,7 +991,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     uint32_t srcStride = perVfProcessNum * interval;
     uint32_t dstStride = perVfProcessNum;
 
-    __VEC_SCOPE__ {
+    __VEC_SCOPE__
+    {
         RegTensorType index;
         RegTensorType indexOri;
         RegCastType indexCast;
@@ -973,8 +1010,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         indexCast = (RegCastType&)index;
 
         for (uint16_t i = 0; i < loopCnt; ++i) {
-            MicroAPI::DataCopyGather(vregFreq, (__local_mem__ IDX_T *)(ubFreqAddr), indexCast, pMaskAll);
-            MicroAPI::DataCopy((__local_mem__ IDX_T *)ubDstAddr, vregFreq, pMaskAll);
+            MicroAPI::DataCopyGather(vregFreq, (__local_mem__ IDX_T*)(ubFreqAddr), indexCast, pMaskAll);
+            MicroAPI::DataCopy((__local_mem__ IDX_T*)ubDstAddr, vregFreq, pMaskAll);
             ubFreqAddr = ubFreqAddr + srcStride;
             ubDstAddr = ubDstAddr + dstStride;
         }
@@ -986,13 +1023,16 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             pTail = MicroAPI::UpdateMask<IDX_T>(tail);
         }
 
-        MicroAPI::DataCopyGather(vregFreq, (__local_mem__ IDX_T *)(ubFreqAddr), indexCast, pTail);
-        MicroAPI::DataCopy((__local_mem__ IDX_T *)ubDstAddr, vregFreq, pTail);
+        MicroAPI::DataCopyGather(vregFreq, (__local_mem__ IDX_T*)(ubFreqAddr), indexCast, pTail);
+        MicroAPI::DataCopy((__local_mem__ IDX_T*)ubDstAddr, vregFreq, pTail);
     }
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CalcFreqBetweenBlock(LocalTensor<int32_t> &noDupCount, int64_t arNum, uint32_t totalIndicesNum)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CalcFreqBetweenBlock(LocalTensor<int32_t>& noDupCount,
+                                                                                   int64_t arNum,
+                                                                                   uint32_t totalIndicesNum)
 {
     LocalTensor<IDX_T> freqTensor = posIdxBuf_.Get<IDX_T>();
     LocalTensor<IDX_T> freqResTensor = lastResBuf_.Get<IDX_T>();
@@ -1010,7 +1050,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         uint32_t countNum = static_cast<uint32_t>(gradCount(i));
         uint32_t sumLoop = countNum / perVfProcessNum;
         uint32_t tail = countNum - sumLoop * perVfProcessNum;
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             RegTensorType freqReg;
             RegTensorType sumReg;
             RegTensorType resultReg;
@@ -1026,13 +1067,15 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             MicroAPI::Duplicate(resultReg, 0);
             MicroAPI::DataCopyUnAlignPre(uSrc, ubFreqSrcAddr);
             for (uint16_t j = 0; j < (uint16_t)sumLoop; j++) {
-                MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr, vfIndicesLen);
+                MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr,
+                                                                                          vfIndicesLen);
                 MicroAPI::ReduceSum(sumReg, freqReg, pMaskAll);
                 MicroAPI::Add(resultReg, resultReg, sumReg, pMaskAll);
             }
 
             MicroAPI::DataCopyUnAlignPre(uSrc, ubFreqSrcAddr);
-            MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr, tail);
+            MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr,
+                                                                                      tail);
             MicroAPI::MaskReg preg;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
                 preg = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(tail);
@@ -1042,7 +1085,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             MicroAPI::ReduceSum(sumReg, freqReg, preg);
             MicroAPI::Add(resultReg, resultReg, sumReg, preg);
 
-            MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubFreqDstAddr, resultReg, udst, 1);
+            MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubFreqDstAddr, resultReg, udst,
+                                                                                      1);
             MicroAPI::DataCopyUnAlignPost(ubFreqDstAddr, udst, 0);
         }
         ubFreqDstAddr = ubFreqDstAddr + 1;
@@ -1051,7 +1095,10 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::GatherIndices(LocalTensor<IDX_T>& indicesBeginTensor, LocalTensor<IDX_T>& indicesEndTensor, uint32_t indicesNumber)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::GatherIndices(LocalTensor<IDX_T>& indicesBeginTensor,
+                                                                            LocalTensor<IDX_T>& indicesEndTensor,
+                                                                            uint32_t indicesNumber)
 {
     auto ubBeginAddr = (__ubuf__ IDX_T*)indicesBeginTensor.GetPhyAddr();
     auto ubEndAddr = (__ubuf__ IDX_T*)indicesEndTensor.GetPhyAddr();
@@ -1070,7 +1117,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     auto ubEndSrc = ubEndAddr;
     auto ubEndDst = ubEndAddr;
 
-    __VEC_SCOPE__ {
+    __VEC_SCOPE__
+    {
         RegTensorType index;
         RegCastType indexCast;
         RegTensorType vregBegin;
@@ -1095,8 +1143,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             } else {
                 pMask = MicroAPI::UpdateMask<IDX_T>(sregBegin);
             }
-            MicroAPI::DataCopyGather(vregBegin, (__local_mem__ IDX_T *)(ubBeginSrc), indexCast, pMask);
-            MicroAPI::DataCopy((__local_mem__ IDX_T *)ubBeginDst, vregBegin, pMask);
+            MicroAPI::DataCopyGather(vregBegin, (__local_mem__ IDX_T*)(ubBeginSrc), indexCast, pMask);
+            MicroAPI::DataCopy((__local_mem__ IDX_T*)ubBeginDst, vregBegin, pMask);
             ubBeginSrc = ubBeginSrc + srcStride;
             ubBeginDst = ubBeginDst + perVfProcessNum;
         }
@@ -1109,8 +1157,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             } else {
                 pMask = MicroAPI::UpdateMask<IDX_T>(sregEnd);
             }
-            MicroAPI::DataCopyGather(vregEnd, (__local_mem__ IDX_T *)(ubEndSrc), indexCast, pMask);
-            MicroAPI::DataCopy((__local_mem__ IDX_T *)ubEndDst, vregEnd, pMask);
+            MicroAPI::DataCopyGather(vregEnd, (__local_mem__ IDX_T*)(ubEndSrc), indexCast, pMask);
+            MicroAPI::DataCopy((__local_mem__ IDX_T*)ubEndDst, vregEnd, pMask);
             ubEndSrc = ubEndSrc + srcStride;
             ubEndDst = ubEndDst + perVfProcessNum;
         }
@@ -1118,7 +1166,9 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::InterleaveIndices(uint32_t totalIndicesNum, uint32_t endOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::InterleaveIndices(uint32_t totalIndicesNum,
+                                                                                uint32_t endOffset)
 {
     LocalTensor<IDX_T> indicesBeginTensor = inQueGrad_.template DeQue<IDX_T>();
     LocalTensor<IDX_T> indicesEndTensor = indicesBeginTensor[endOffset];
@@ -1172,29 +1222,32 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::CopyGradFromWs(IDX_T indicesNumber, uint32_t elewiseNumber, uint32_t stride, int64_t gmOffset)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::CopyGradFromWs(IDX_T indicesNumber,
+                                                                             uint32_t elewiseNumber, uint32_t stride,
+                                                                             int64_t gmOffset)
 {
     LocalTensor<CAST_T> gradTensor = inQueGrad_.template AllocTensor<CAST_T>();
-    uint8_t gradPadNum = static_cast<uint8_t>(ops::CeilAlign(elewiseNumber, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(CAST_T))) - elewiseNumber);
-    DataCopyPadExtParams<CAST_T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(gradPadNum), static_cast<uint8_t>(0)};
-    DataCopyExtParams copyParam {
-        static_cast<uint16_t>(indicesNumber),
-        static_cast<uint32_t>(elewiseNumber * sizeof(CAST_T)),
-        static_cast<uint32_t>(stride),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    uint8_t gradPadNum = static_cast<uint8_t>(
+        ops::CeilAlign(elewiseNumber, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(CAST_T))) - elewiseNumber);
+    DataCopyPadExtParams<CAST_T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(gradPadNum),
+                                           static_cast<uint8_t>(0)};
+    DataCopyExtParams copyParam{static_cast<uint16_t>(indicesNumber),
+                                static_cast<uint32_t>(elewiseNumber * sizeof(CAST_T)), static_cast<uint32_t>(stride),
+                                static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPad(gradTensor, gradStartGm_[gmOffset], copyParam, padParams);
     inQueGrad_.template EnQue<CAST_T>(gradTensor);
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::ReInitBuffer(uint32_t totalIndicesNumber)
+__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis,
+                                                  bufferNum>::ReInitBuffer(uint32_t totalIndicesNumber)
 {
     pipe_.Reset();
 
     uint32_t indicesBufSize = ops::CeilAlign(totalIndicesNumber + 1, indexCountInBlock_) * sizeof(IDX_T);
-    uint32_t freqBufferSize = ops::CeilAlign(totalIndicesNumber + 1, indexCountInBlock_) * ONE_BLK_SIZE; // 包含Begin和End
+    uint32_t freqBufferSize = ops::CeilAlign(totalIndicesNumber + 1, indexCountInBlock_) *
+                              ONE_BLK_SIZE; // 包含Begin和End
     elewiseNormal_ = tiling_.elewiseDimLastPerUbProcessNum;
     if (tiling_.elewiseDimSize < tiling_.elewiseDimLastPerUbProcessNum) {
         elewiseNormal_ = tiling_.elewiseDimSize;
@@ -1218,7 +1271,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 }
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
-__aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::ProcessGradBetweenBlock()
+__aicore__ inline void
+EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, bufferNum>::ProcessGradBetweenBlock()
 {
     IDX_T indicesNumber = tiling_.usedCoreNum - 1;
     uint32_t endOffset = indicesNumber * indexCountInBlock_;
@@ -1226,7 +1280,7 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     ReInitBuffer(totalIndicesNumber);
     CopyIndicesFromWs(indicesNumber, endOffset);
 
-    if (CheckHasSameIndices(indicesNumber, endOffset)) {  // 核间存在相同的索引
+    if (CheckHasSameIndices(indicesNumber, endOffset)) { // 核间存在相同的索引
         int64_t arNum = 0;
         InterleaveIndices(totalIndicesNumber, endOffset);
         LocalTensor<IDX_T> indicesTensor = indicesBuf_.Get<IDX_T>();
@@ -1247,7 +1301,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         for (uint32_t i = 0; i < elewiseLoopNums_ - 1; i++) {
             CopyGradFromWs(totalIndicesNumber, elewiseNormal_, mainStride, colOffset);
             AddGradBetweenBlock(elewiseNormal_, gradColAlign, noDupCountTensor, arNum, totalIndicesNumber);
-            this->template CopyOutGradWeight<false, false>(indicesTensor, noDupCountTensor, arNum, elewiseNormal_, colOffset, 0);
+            this->template CopyOutGradWeight<false, false>(indicesTensor, noDupCountTensor, arNum, elewiseNormal_,
+                                                           colOffset, 0);
             colOffset = colOffset + elewiseNormal_;
         }
 
@@ -1256,9 +1311,10 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         int64_t tailStride = DOUBLE * CACHE_LINE + gradLenInWs_ - elewiseTail_ * sizeof(CAST_T);
         CopyGradFromWs(totalIndicesNumber, elewiseTail_, tailStride, colOffset);
         AddGradBetweenBlock(elewiseTail_, gradColAlign, noDupCountTensor, arNum, totalIndicesNumber);
-        this->template CopyOutGradWeight<false, false>(indicesTensor, noDupCountTensor, arNum, elewiseTail_, colOffset, 0);
+        this->template CopyOutGradWeight<false, false>(indicesTensor, noDupCountTensor, arNum, elewiseTail_, colOffset,
+                                                       0);
     }
 }
 
-}
+} // namespace EmbeddingDenseGradV2
 #endif

@@ -53,9 +53,8 @@ static bool CheckNotNull(const aclTensor* input, const aclTensor* out, const acl
     return true;
 }
 
-static bool CheckScalarNotNull(
-    const aclScalar* inputScale, const aclScalar* inputZeroPoint, const aclScalar* outputScale,
-    const aclScalar* outputZeroPoint)
+static bool CheckScalarNotNull(const aclScalar* inputScale, const aclScalar* inputZeroPoint,
+                               const aclScalar* outputScale, const aclScalar* outputZeroPoint)
 {
     OP_CHECK_NULL(inputScale, return false);
     OP_CHECK_NULL(inputZeroPoint, return false);
@@ -97,8 +96,8 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* out)
     return true;
 }
 
-static bool CheckOtherDtypeValid(
-    const aclTensor* weight, const aclTensor* bias, const aclTensor* mean, const aclTensor* var)
+static bool CheckOtherDtypeValid(const aclTensor* weight, const aclTensor* bias, const aclTensor* mean,
+                                 const aclTensor* var)
 {
     if (weight != nullptr) {
         OP_CHECK_DTYPE_NOT_MATCH(weight, op::DataType::DT_FLOAT, return false);
@@ -115,9 +114,8 @@ static bool CheckOtherDtypeValid(
     return true;
 }
 
-static bool CheckScalarDtypeValid(
-    const aclScalar* inputScale, const aclScalar* inputZeroPoint, const aclScalar* outputScale,
-    const aclScalar* outputZeroPoint)
+static bool CheckScalarDtypeValid(const aclScalar* inputScale, const aclScalar* inputZeroPoint,
+                                  const aclScalar* outputScale, const aclScalar* outputZeroPoint)
 {
     if (inputScale != nullptr) {
         OP_CHECK_DTYPE_NOT_MATCH(inputScale, op::DataType::DT_FLOAT, return false);
@@ -137,9 +135,8 @@ static bool CheckScalarDtypeValid(
 static bool CheckFormat(const aclTensor* input, const aclTensor* out)
 {
     if (input->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, input [%s], output [%s].",
-            op::ToString(input->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, input [%s], output [%s].",
+                op::ToString(input->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -150,8 +147,8 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
     return true;
 }
 
-static bool CheckOtherShape(
-    int dimC, const aclTensor* weight, const aclTensor* bias, const aclTensor* mean, const aclTensor* var)
+static bool CheckOtherShape(int dimC, const aclTensor* weight, const aclTensor* bias, const aclTensor* mean,
+                            const aclTensor* var)
 {
     if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of weight should be one and shape is channel num of input.");
@@ -187,8 +184,8 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensor* output)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckOthersParams(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclTensor* mean, const aclTensor* var)
+static aclnnStatus CheckOthersParams(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                     const aclTensor* mean, const aclTensor* var)
 {
     CHECK_RET(CheckOtherDtypeValid(weight, bias, mean, var), ACLNN_ERR_PARAM_INVALID);
     int dimC = input->GetViewShape()[1];
@@ -196,18 +193,17 @@ static aclnnStatus CheckOthersParams(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckScalarParams(
-    const aclScalar* inputScale, const aclScalar* inputZeroPoint, const aclScalar* outputScale,
-    const aclScalar* outputZeroPoint)
+static aclnnStatus CheckScalarParams(const aclScalar* inputScale, const aclScalar* inputZeroPoint,
+                                     const aclScalar* outputScale, const aclScalar* outputZeroPoint)
 {
     CHECK_RET(CheckScalarDtypeValid(inputScale, inputZeroPoint, outputScale, outputZeroPoint), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus QuantizedBatchNormProc2(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* var, const aclScalar* inputScale,
-    const aclScalar* inputZeroPoint, const aclScalar* outputScale, const aclScalar* outputZeroPoint, aclTensor* weight,
-    aclTensor* bias, float epsilon, aclTensor** output, aclOpExecutor* executor)
+aclnnStatus QuantizedBatchNormProc2(const aclTensor* input, const aclTensor* mean, const aclTensor* var,
+                                    const aclScalar* inputScale, const aclScalar* inputZeroPoint,
+                                    const aclScalar* outputScale, const aclScalar* outputZeroPoint, aclTensor* weight,
+                                    aclTensor* bias, float epsilon, aclTensor** output, aclOpExecutor* executor)
 {
     op::DataType weightBiasDstType = DataType::DT_FLOAT;
 
@@ -240,25 +236,24 @@ aclnnStatus QuantizedBatchNormProc2(
     auto outputZeroPointTensor = executor->ConvertToTensor(outputZeroPoint, DataType::DT_INT32);
     CHECK_RET(outputZeroPointTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    l0op::QuantizedBatchNormParams params{
-        .x = input,
-        .mean = meanCast,
-        .var = varCast,
-        .inputScale = inputScaleTensor,
-        .inputZeroPoint = inputZeroPointTensor,
-        .outputScale = outputScaleTensor,
-        .outputZeroPoint = outputZeroPointTensor,
-        .weight = weightCast,
-        .bias = biasCast};
+    l0op::QuantizedBatchNormParams params{.x = input,
+                                          .mean = meanCast,
+                                          .var = varCast,
+                                          .inputScale = inputScaleTensor,
+                                          .inputZeroPoint = inputZeroPointTensor,
+                                          .outputScale = outputScaleTensor,
+                                          .outputZeroPoint = outputZeroPointTensor,
+                                          .weight = weightCast,
+                                          .bias = biasCast};
     *output = const_cast<aclTensor*>(l0op::QuantizedBatchNorm(params, epsilon, executor));
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus QuantizedBatchNormProc1(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* var, const aclScalar* inputScale,
-    const aclScalar* inputZeroPoint, const aclScalar* outputScale, const aclScalar* outputZeroPoint, aclTensor* weight,
-    aclTensor* bias, float epsilon, aclTensor** output, aclOpExecutor* executor)
+aclnnStatus QuantizedBatchNormProc1(const aclTensor* input, const aclTensor* mean, const aclTensor* var,
+                                    const aclScalar* inputScale, const aclScalar* inputZeroPoint,
+                                    const aclScalar* outputScale, const aclScalar* outputZeroPoint, aclTensor* weight,
+                                    aclTensor* bias, float epsilon, aclTensor** output, aclOpExecutor* executor)
 {
     size_t dimC = input->GetViewShape()[1];
 
@@ -282,21 +277,21 @@ aclnnStatus QuantizedBatchNormProc1(
     CHECK_RET(inputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     aclTensor* result = nullptr;
-    CHECK_RET(
-        QuantizedBatchNormProc2(
-            inputPre, mean, var, inputScale, inputZeroPoint, outputScale, outputZeroPoint, weight, bias, epsilon,
-            &result, executor) == ACLNN_SUCCESS,
-        ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(QuantizedBatchNormProc2(inputPre, mean, var, inputScale, inputZeroPoint, outputScale, outputZeroPoint,
+                                      weight, bias, epsilon, &result, executor) == ACLNN_SUCCESS,
+              ACLNN_ERR_INNER_NULLPTR);
 
     *output = result;
     return ACLNN_SUCCESS;
 }
 }; // namespace
 
-aclnnStatus aclnnQuantizedBatchNormGetWorkspaceSize(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* var, const aclScalar* inputScale,
-    const aclScalar* inputZeroPoint, const aclScalar* outputScale, const aclScalar* outputZeroPoint, aclTensor* weight,
-    aclTensor* bias, float epsilon, aclTensor* output, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnQuantizedBatchNormGetWorkspaceSize(const aclTensor* input, const aclTensor* mean, const aclTensor* var,
+                                                    const aclScalar* inputScale, const aclScalar* inputZeroPoint,
+                                                    const aclScalar* outputScale, const aclScalar* outputZeroPoint,
+                                                    aclTensor* weight, aclTensor* bias, float epsilon,
+                                                    aclTensor* output, uint64_t* workspaceSize,
+                                                    aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(
         aclnnQuantizedBatchNorm,
@@ -332,9 +327,8 @@ aclnnStatus aclnnQuantizedBatchNormGetWorkspaceSize(
     CHECK_RET(inputDims == QBN2D_INPUT_DIMS, ACLNN_ERR_PARAM_INVALID);
 
     aclTensor* qbnOutput = nullptr;
-    auto bnResult = QuantizedBatchNormProc1(
-        inputContiguous, mean, var, inputScale, inputZeroPoint, outputScale, outputZeroPoint, weight, bias, epsilon,
-        &qbnOutput, uniqueExecutor.get());
+    auto bnResult = QuantizedBatchNormProc1(inputContiguous, mean, var, inputScale, inputZeroPoint, outputScale,
+                                            outputZeroPoint, weight, bias, epsilon, &qbnOutput, uniqueExecutor.get());
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
     if (qbnOutput != nullptr) {
@@ -347,8 +341,8 @@ aclnnStatus aclnnQuantizedBatchNormGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnQuantizedBatchNorm(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnQuantizedBatchNorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnQuantizedBatchNorm);
     // 固定写法，调用框架能力，完成计算

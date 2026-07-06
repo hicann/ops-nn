@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -17,8 +17,7 @@
 #include "op_host/tiling_util.h"
 #include "index_put_with_sort_v2_tiling_arch35.h"
 #include "index/index_put_with_sort_v2/op_kernel/arch35/index_put_with_sort_v2_struct.h"
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::NN::OpTiling;
 
 constexpr int64_t INPUT_NUM = 4;
@@ -49,29 +48,29 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetPlatformInfo()
 ge::graphStatus IndexPutWithSortV2Tiling::CheckShapeAllPositive(gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape.GetDim(i) <= 0,
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "input",
-                                            std::to_string(shape.GetDim(i)).c_str(), "dimension value must be greater than 0"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape.GetDim(i) <= 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "input",
+                                                              std::to_string(shape.GetDim(i)).c_str(),
+                                                              "dimension value must be greater than 0"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus IndexPutWithSortV2Tiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
 {
-    OP_CHECK_IF(
-        shape0.GetDimNum() != shape1.GetDimNum(),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "shape0, shape1",
-                                        std::to_string(shape0.GetDimNum()).c_str(), "dimNum of both parameters must be equal"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shape0.GetDimNum() != shape1.GetDimNum(),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "shape0, shape1",
+                                                          std::to_string(shape0.GetDimNum()).c_str(),
+                                                          "dimNum of both parameters must be equal"),
+                return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < shape0.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape0.GetDim(i) != shape1.GetDim(i),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "shape0, shape1",
-                                            std::to_string(shape0.GetDim(i)).c_str(), "dimension values must be equal"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape0.GetDim(i) != shape1.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "shape0, shape1",
+                                                           std::to_string(shape0.GetDim(i)).c_str(),
+                                                           "dimension values must be equal"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -84,13 +83,13 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     auto storageShape0 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "self", "0",
-                                                   "all dimension values of shape must be greater than 0");
+                                                  "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     auto inputXDesc = context_->GetInputDesc(INPUT_INDEX_0);
- 	OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
- 	auto inputXDtype = inputXDesc->GetDataType();
- 	xDataType_ = inputXDtype;
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
+    auto inputXDtype = inputXDesc->GetDataType();
+    xDataType_ = inputXDtype;
 
     // check linear_index
     inputShape = context_->GetInputShape(INPUT_INDEX_1);
@@ -98,14 +97,14 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     auto storageShape1 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "linear_index", "0",
-                                                   "all dimension values of shape must be greater than 0");
+                                                  "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     indexedDimSize_ = storageShape1.GetShapeSize();
     auto indexed = context_->GetInputDesc(INPUT_INDEX_1);
- 	OP_CHECK_NULL_WITH_CONTEXT(context_, indexed);
- 	auto indexedDtype = indexed->GetDataType();
- 	indicesTypeSize_ = (indexedDtype == ge::DT_INT64) ? B8_SIZE : B4_SIZE;
+    OP_CHECK_NULL_WITH_CONTEXT(context_, indexed);
+    auto indexedDtype = indexed->GetDataType();
+    indicesTypeSize_ = (indexedDtype == ge::DT_INT64) ? B8_SIZE : B4_SIZE;
 
     // check pos_idx
     inputShape = context_->GetInputShape(INPUT_INDEX_2);
@@ -113,7 +112,7 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     auto storageShape2 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "pos_idx", "0",
-                                                   "all dimension values of shape must be greater than 0");
+                                                  "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -131,7 +130,7 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     auto storageShape3 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "values", "0",
-                                                   "all dimension values of shape must be greater than 0");
+                                                  "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -141,7 +140,6 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     }
     return ge::GRAPH_SUCCESS;
 }
-
 
 bool IndexPutWithSortV2Tiling::IsIndexedContinous(const int64_t* arr, int64_t size)
 {
@@ -155,7 +153,7 @@ bool IndexPutWithSortV2Tiling::IsIndexedContinous(const int64_t* arr, int64_t si
                 }
             }
         }
-        prevIndex = i;  // 更新前一个1的位置
+        prevIndex = i; // 更新前一个1的位置
     }
     return true;
 }
@@ -170,13 +168,13 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
     // check inputs shape
     if (CheckInputsShape() != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "inputs", "inputs_shape",
-                                               "input shape is invalid");
+                                              "input shape is invalid");
         return ge::GRAPH_FAILED;
     }
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    auto indexedSizesPtr = attrs->GetListInt(0);  // CheckNull
-    int64_t indexedSizesDimNum = indexedSizesPtr->GetSize();  // check和selfDimNum_是否一致
+    auto indexedSizesPtr = attrs->GetListInt(0);             // CheckNull
+    int64_t indexedSizesDimNum = indexedSizesPtr->GetSize(); // check和selfDimNum_是否一致
     for (int64_t i = 0; i < indexedSizesDimNum; i++) {
         indexedSizes_[i] = indexedSizesPtr->GetData()[i];
     }
@@ -196,14 +194,11 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool IndexPutWithSortV2Tiling::IsCapable()
-{
-    return true;
-}
+bool IndexPutWithSortV2Tiling::IsCapable() { return true; }
 
 uint64_t IndexPutWithSortV2Tiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(accumulate_, nonIndexedDimSize_ == 1, indexedBlockMode_ , false, 0);
+    return GET_TPL_TILING_KEY(accumulate_, nonIndexedDimSize_ == 1, indexedBlockMode_, false, 0);
 }
 
 ge::graphStatus IndexPutWithSortV2Tiling::PostTiling()
@@ -216,10 +211,7 @@ ge::graphStatus IndexPutWithSortV2Tiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IndexPutWithSortV2Tiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus IndexPutWithSortV2Tiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus IndexPutWithSortV2Tiling::GetWorkspaceSize()
 {
@@ -227,14 +219,14 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-
 void IndexPutWithSortV2Tiling::LogTilingResult()
 {
-    OP_LOGI(context_->GetNodeName(), "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_, nonIndexedDimSize_);
+    OP_LOGI(context_->GetNodeName(), "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_,
+            nonIndexedDimSize_);
 }
- 	 
-template<typename T>
-void CopyArray(T &arrSrc, T &arrDst, uint8_t count)
+
+template <typename T>
+void CopyArray(T& arrSrc, T& arrDst, uint8_t count)
 {
     for (uint8_t i = 0; i < count; i++) {
         arrDst[i] = arrSrc[i];
@@ -243,8 +235,7 @@ void CopyArray(T &arrSrc, T &arrDst, uint8_t count)
 
 void IndexPutWithSortV2Tiling::SetTilingData()
 {
-    IndexPutWithSortV2TilingData* tilingData =
-    context_->GetTilingData<IndexPutWithSortV2TilingData>();
+    IndexPutWithSortV2TilingData* tilingData = context_->GetTilingData<IndexPutWithSortV2TilingData>();
     tilingData->nonIndexedDimNum = static_cast<int64_t>(nonIndexedDimNum_);
     tilingData->indexedDimSize = indexedDimSize_;
     tilingData->nonIndexedDimSize = nonIndexedDimSize_;
@@ -259,12 +250,12 @@ void IndexPutWithSortV2Tiling::SetTilingData()
 void IndexPutWithSortV2Tiling::CalcSelfAndValueStride(int64_t* selfStride, int64_t* valueStride)
 {
     int64_t valueReshapeDims[nonIndexedDimNum_ + 1U];
-    for (int64_t k = 0; k < nonIndexedDimNum_ + 1U; k++){
+    for (int64_t k = 0; k < nonIndexedDimNum_ + 1U; k++) {
         valueReshapeDims[k] = 0L;
     }
 
     if (isContinous_) {
-        size_t j = 0;  // value
+        size_t j = 0; // value
         bool noWriteIndexd = true;
         for (size_t i = 0; i < selfDimNum_; i++) {
             if (indexedSizes_[i] == 0) {
@@ -279,7 +270,7 @@ void IndexPutWithSortV2Tiling::CalcSelfAndValueStride(int64_t* selfStride, int64
             }
         }
     } else {
-        valueReshapeDims[0] = indexedDimSize_;  // 索引始终在前；
+        valueReshapeDims[0] = indexedDimSize_; // 索引始终在前；
         size_t j = 1;
         for (size_t i = 0; i < selfDimNum_; i++) {
             if (indexedSizes_[i] == 0) {
@@ -290,8 +281,8 @@ void IndexPutWithSortV2Tiling::CalcSelfAndValueStride(int64_t* selfStride, int64
     }
 
     // 计算selfStride和valueStride
-    selfStride[selfDimNum_ - 1U] = 1;  // 最后一维设为1
-    valueStride[nonIndexedDimNum_] = 1;  // 最后一维设为1
+    selfStride[selfDimNum_ - 1U] = 1;   // 最后一维设为1
+    valueStride[nonIndexedDimNum_] = 1; // 最后一维设为1
     for (int32_t i = static_cast<int32_t>(selfDimNum_) - 2; i >= 0; i--) {
         selfStride[i] = selfDims_[i + 1] * selfStride[i + 1];
     }
@@ -309,7 +300,7 @@ void IndexPutWithSortV2Tiling::CalcNonIndexedStride(int64_t* selfStride, int64_t
 
     // 计算value的indexedSizes
     int64_t indexedValueSizes[nonIndexedDimNum_ + 1U];
-    for (int64_t k = 0; k < nonIndexedDimNum_ + 1U; k++){
+    for (int64_t k = 0; k < nonIndexedDimNum_ + 1U; k++) {
         indexedValueSizes[k] = 0L;
     }
 
@@ -334,7 +325,8 @@ void IndexPutWithSortV2Tiling::CalcNonIndexedStride(int64_t* selfStride, int64_t
     }
 
     j = 0UL;
-    for (size_t i = 0; i < static_cast<size_t>(nonIndexedDimNum_ + 1U); i++) { // 注意之前要校验selfDimNum_和 indexedSizesDimNum一致
+    for (size_t i = 0; i < static_cast<size_t>(nonIndexedDimNum_ + 1U);
+         i++) { // 注意之前要校验selfDimNum_和 indexedSizesDimNum一致
         if (indexedValueSizes[i] == 0) {
             nonIdxedValueStride_[j] = valueStride[i];
             j++;
@@ -344,16 +336,17 @@ void IndexPutWithSortV2Tiling::CalcNonIndexedStride(int64_t* selfStride, int64_t
     if (isContinous_) {
         for (size_t i = 0; i < static_cast<size_t>(nonIndexedDimNum_ + 1U); i++) {
             if (indexedValueSizes[i] == 1) {
-                idxedValueStride_ = valueStride[i];  // 相当于索引轴的stride
+                idxedValueStride_ = valueStride[i]; // 相当于索引轴的stride
                 break;
             }
         }
     } else {
-        idxedValueStride_ = nonIndexedDimSize_;  // 可能不用区分是否continous？
+        idxedValueStride_ = nonIndexedDimSize_; // 可能不用区分是否continous？
     }
 }
 
-void IndexPutWithSortV2Tiling::CalcThreadNum() {
+void IndexPutWithSortV2Tiling::CalcThreadNum()
+{
     if (indexedDimSize_ < aivCoreNum_ && nonIndexedDimSize_ > aivCoreNum_) {
         indexedBlockMode_ = false;
     } else {
@@ -394,21 +387,21 @@ ge::graphStatus IndexPutWithSortV2Tiling::DoOpTiling()
     OP_LOGI(context_->GetNodeName(), "IndexPutWithSortV2Tiling DoOpTiling");
     ge::graphStatus result = ge::GRAPH_SUCCESS;
     int64_t selfStride[selfDimNum_];
-    for (size_t k = 0; k < selfDimNum_; k++){
+    for (size_t k = 0; k < selfDimNum_; k++) {
         selfStride[k] = 0L;
     }
 
     int64_t valueStride[nonIndexedDimNum_ + 1U];
-    for (int64_t k = 0; k < nonIndexedDimNum_ + 1U; k++){
+    for (int64_t k = 0; k < nonIndexedDimNum_ + 1U; k++) {
         valueStride[k] = 0L;
     }
     CalcSelfAndValueStride(selfStride, valueStride);
     CalcNonIndexedStride(selfStride, valueStride);
     CalcThreadNum();
     if (indexedThreadNum_ <= 0 || nonIndexedThreadNum_ <= 0) {
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "ThreadNum",
-                                  (std::to_string(indexedThreadNum_) + ", " + std::to_string(nonIndexedThreadNum_)).c_str(),
-                                  "> 0");
+        OP_LOGE_FOR_INVALID_VALUE(
+            context_->GetNodeName(), "ThreadNum",
+            (std::to_string(indexedThreadNum_) + ", " + std::to_string(nonIndexedThreadNum_)).c_str(), "> 0");
         return ge::GRAPH_FAILED;
     }
     SetTilingData();
@@ -424,12 +417,14 @@ ge::graphStatus Tiling4IndexPutWithSortV2(gert::TilingContext* context)
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus TilingPrepare4IndexPutWithSortV2([[maybe_unused]] gert::TilingParseContext* context) 
+static ge::graphStatus TilingPrepare4IndexPutWithSortV2([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
 struct IndexPutWithSortV2CompileInfo {};
-IMPL_OP_OPTILING(IndexPutWithSortV2).Tiling(Tiling4IndexPutWithSortV2).TilingParse<IndexPutWithSortV2CompileInfo>(TilingPrepare4IndexPutWithSortV2);
+IMPL_OP_OPTILING(IndexPutWithSortV2)
+    .Tiling(Tiling4IndexPutWithSortV2)
+    .TilingParse<IndexPutWithSortV2CompileInfo>(TilingPrepare4IndexPutWithSortV2);
 
-}  // namespace optiling
+} // namespace optiling

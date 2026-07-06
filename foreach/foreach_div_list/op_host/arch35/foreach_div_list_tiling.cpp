@@ -49,8 +49,7 @@ static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
     }
 }
 
-static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context,
-    int64_t& coreNum, int64_t& ubSize)
+static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
 {
     auto compileInfo = reinterpret_cast<const ForeachDivListCompileInfo*>(context->GetCompileInfo());
     if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
@@ -91,11 +90,9 @@ static ge::graphStatus ForeachDivListTilingFunc(gert::TilingContext* context)
     int64_t coreNum = 0;
     int64_t ubSize = 0;
     OP_CHECK_IF(GetPlatformInfoFallback(context, coreNum, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Failed to get platform info"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
 
     // 2. Get tensor count from dynamic input x1
@@ -106,9 +103,9 @@ static ge::graphStatus ForeachDivListTilingFunc(gert::TilingContext* context)
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
     OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_DIV_LIST),
-        OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_DIV_LIST %d",
-                 tensorNum, MAX_TENSOR_NUM_FOREACH_DIV_LIST),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_DIV_LIST %d", tensorNum,
+                        MAX_TENSOR_NUM_FOREACH_DIV_LIST),
+                return ge::GRAPH_FAILED);
 
     // 3. Compute per-tensor element counts, totalElements, maxTensorElements
     int64_t totalElements = 0;
@@ -136,9 +133,8 @@ static ge::graphStatus ForeachDivListTilingFunc(gert::TilingContext* context)
     // 4. Compute core split based on maxTensorElements (MDE design)
     int64_t needCoreNum = 1;
     if (maxTensorElements >= SINGLE_CORE_MIN_ELEMENTS) {
-        needCoreNum = std::min(coreNum,
-            (static_cast<int64_t>(maxTensorElements) + SINGLE_CORE_MIN_ELEMENTS - 1)
-            / SINGLE_CORE_MIN_ELEMENTS);
+        needCoreNum = std::min(coreNum, (static_cast<int64_t>(maxTensorElements) + SINGLE_CORE_MIN_ELEMENTS - 1) /
+                                            SINGLE_CORE_MIN_ELEMENTS);
     }
 
     // 5. Fill TilingData (aligned with MDE)
@@ -153,9 +149,8 @@ static ge::graphStatus ForeachDivListTilingFunc(gert::TilingContext* context)
 
     // 7. Set local memory size
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize));
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+                return ge::GRAPH_FAILED);
 
     // 8. Set workspace size (user workspace + system workspace)
     int64_t userWorkspaceSize = ComputeWorkspaceSize(static_cast<int32_t>(tensorNum));
@@ -176,15 +171,11 @@ static ge::graphStatus TilingParseForForeachDivList(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

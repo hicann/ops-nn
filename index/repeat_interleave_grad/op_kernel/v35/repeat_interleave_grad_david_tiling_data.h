@@ -17,32 +17,27 @@
 
 #include "atvoss/reduce/reduce_tiling_data.h"
 
-
-class UbParaUnit
-{
+class UbParaUnit {
 public:
     int32_t ubCount = 0;
     int32_t ubFactor = 0;
     int32_t ubTailFactor = 0;
 }; // ubCount = 1, 设置在ubTailFactor中
 
-class RIGUbPara
-{
+class RIGUbPara {
 public:
     UbParaUnit mainCoreUbPara;
     UbParaUnit tailCoreUbPara;
 };
 
-class RIGBlockPara
-{
+class RIGBlockPara {
 public:
     int32_t blockCount = 0;
     int64_t blockFactor = 0;
     int64_t blockTailFactor = 0;
 }; // 同ubfactor的处理
 
-class RepeatInterleaveGradDavidTilingData
-{
+class RepeatInterleaveGradDavidTilingData {
 public:
     int64_t lenM = 0;
     int64_t lenR = 0;

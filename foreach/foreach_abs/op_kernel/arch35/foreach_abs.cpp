@@ -22,8 +22,7 @@ enum class ForeachAbsTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_abs(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_abs(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachAbsTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachAbsTilingData, tilingData, tiling);

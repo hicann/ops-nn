@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -28,7 +28,7 @@
 
 #define ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS                                                              \
     template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans, \
-              QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, const MatmulConfig &mmCfg>
+              QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, const MatmulConfig& mmCfg>
 #define ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS \
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, mmCfg
 
@@ -43,9 +43,7 @@ namespace WeightQuantBatchMatmulV2::Arch35 {
 ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
 class WeightQuantBatchMatmulV2IterBatchKernel {
 public:
-    __aicore__ inline WeightQuantBatchMatmulV2IterBatchKernel()
-    {
-    }
+    __aicore__ inline WeightQuantBatchMatmulV2IterBatchKernel() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
                                 GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
                                 const void* tilingData, TPipe* tPipe);
@@ -53,6 +51,7 @@ public:
                                             GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y,
                                             GM_ADDR workspace);
     __aicore__ inline void Process();
+
 protected:
     __aicore__ inline void CalcMmWithBatch();
     uint32_t blockIdx_;
@@ -93,16 +92,16 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_T
 {
     block_.Init(tiling_, blockIdx_);
 
-    if constexpr (antiQuantType == QuantType::PER_TENSOR) {  // pertensor
-        block_.offset_.scaleScalar = *((__gm__ uint64_t *)antiquantScale);
+    if constexpr (antiQuantType == QuantType::PER_TENSOR) { // pertensor
+        block_.offset_.scaleScalar = *((__gm__ uint64_t*)antiquantScale);
     } else {
-        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t *)antiquantScale);
+        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t*)antiquantScale);
     }
 
     // update global buffer
-    aGlobal_.SetGlobalBuffer((__gm__ xType *)x);
-    bGlobal_.SetGlobalBuffer((__gm__ wType *)weight);
-    cGlobal_.SetGlobalBuffer((__gm__ yType *)y);
+    aGlobal_.SetGlobalBuffer((__gm__ xType*)x);
+    bGlobal_.SetGlobalBuffer((__gm__ wType*)weight);
+    cGlobal_.SetGlobalBuffer((__gm__ yType*)y);
     if (static_cast<bool>(tiling_->matmulTiling.isBias)) {
         biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
     }
@@ -136,7 +135,7 @@ ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS>::CalcMmWithBatch()
 {
     for (uint64_t loopIndex = 0; loopIndex < block_.params_.loopTimes; loopIndex++) {
-        if constexpr(antiQuantType == QuantType::PER_TENSOR) {
+        if constexpr (antiQuantType == QuantType::PER_TENSOR) {
             mm_.SetQuantScalar(block_.offset_.scaleScalar);
         } else {
             mm_.SetQuantVector(scaleGlobal_[block_.offset_.offsetScale]);
@@ -150,8 +149,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_T
         mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], bTrans);
         mm_.SetBatchNum(block_.params_.batchANum, block_.params_.batchBNum);
         mm_.IterateBatch(cGlobal_[block_.offset_.offsetC], false, 0, false, block_.params_.singleASize,
-                            block_.params_.singleBSize);
+                         block_.params_.singleBSize);
     }
 }
-}  // namespace WeightQuantBatchMatmulV2::Arch35
-
+} // namespace WeightQuantBatchMatmulV2::Arch35

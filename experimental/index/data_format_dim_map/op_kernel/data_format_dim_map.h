@@ -30,7 +30,7 @@ class DataFormatDimMap {
     static constexpr int32_t BUFFER_NUM = 2;
 
 public:
-    __aicore__ inline DataFormatDimMap() {};
+    __aicore__ inline DataFormatDimMap(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const DataFormatDimMapTilingData* tilingData);
     __aicore__ inline void Process();
@@ -61,8 +61,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void DataFormatDimMap<T>::Init(
-    GM_ADDR x, GM_ADDR y, const DataFormatDimMapTilingData* tilingData)
+__aicore__ inline void DataFormatDimMap<T>::Init(GM_ADDR x, GM_ADDR y, const DataFormatDimMapTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -150,11 +149,11 @@ __aicore__ inline void DataFormatDimMap<T>::Compute(int64_t currentNum)
 
     AscendC::Duplicate(resultLocal, static_cast<float>(indValues_[formatLen_ - 1]), count);
     for (int32_t i = formatLen_ - 2; i >= 0; i--) {
-        AscendC::Compares(cmpLocal, modLocal, static_cast<float>(i),
-                          AscendC::CMPMODE::EQ, static_cast<uint32_t>(count));
+        AscendC::Compares(cmpLocal, modLocal, static_cast<float>(i), AscendC::CMPMODE::EQ,
+                          static_cast<uint32_t>(count));
         AscendC::Duplicate(tmpLocal, static_cast<float>(indValues_[i]), count);
-        AscendC::Select(resultLocal, cmpLocal, tmpLocal, resultLocal,
-                        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, static_cast<uint32_t>(count));
+        AscendC::Select(resultLocal, cmpLocal, tmpLocal, resultLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                        static_cast<uint32_t>(count));
     }
 
     if constexpr (sizeof(T) == 8) {

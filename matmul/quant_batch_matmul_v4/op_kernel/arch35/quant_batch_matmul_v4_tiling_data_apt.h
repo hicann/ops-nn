@@ -173,4 +173,3 @@ struct QuantBatchMatmulV4TilingDataParams {
 };
 #pragma pack(pop)
 } // namespace qbmmv4_tiling
-

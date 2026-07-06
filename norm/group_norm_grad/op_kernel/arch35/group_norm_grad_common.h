@@ -48,10 +48,7 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 #endif
 }
 
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
 constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
     AscendC::MicroAPI::RegLayout::ZERO,
@@ -68,9 +65,9 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 };
 
 template <typename T>
-__aicore__ inline void LoadTwoTensorForDtypeT(
-    __local_mem__ T* src1, __local_mem__ T* src2, RegTensor<float>& dst1, RegTensor<float>& dst2, MaskReg& dst1Preg,
-    MaskReg& dst2Preg, uint32_t src1Offset, uint32_t src2Offset)
+__aicore__ inline void LoadTwoTensorForDtypeT(__local_mem__ T* src1, __local_mem__ T* src2, RegTensor<float>& dst1,
+                                              RegTensor<float>& dst2, MaskReg& dst1Preg, MaskReg& dst2Preg,
+                                              uint32_t src1Offset, uint32_t src2Offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16Q;
@@ -93,8 +90,8 @@ __aicore__ inline void LoadTwoTensorForDtypeT(
 }
 
 template <typename T>
-__aicore__ inline void LoadOneTensorForDtypeT(
-    __local_mem__ T* input, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadOneTensorForDtypeT(__local_mem__ T* input, RegTensor<float>& dst, MaskReg& preg,
+                                              uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
@@ -110,8 +107,8 @@ __aicore__ inline void LoadOneTensorForDtypeT(
 }
 
 template <typename T>
-__aicore__ inline void LoadUnAlignOneTensor(
-    __local_mem__ T*& input, RegTensor<float>& dst, UnalignReg& uSrc, MaskReg& preg, uint32_t postUpdateStride)
+__aicore__ inline void LoadUnAlignOneTensor(__local_mem__ T*& input, RegTensor<float>& dst, UnalignReg& uSrc,
+                                            MaskReg& preg, uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
@@ -131,8 +128,8 @@ __aicore__ inline void LoadUnAlignOneTensor(
 }
 
 template <typename T>
-__aicore__ inline void StoreOneTensorForDtypeT(
-    __local_mem__ T* output, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneTensorForDtypeT(__local_mem__ T* output, RegTensor<float>& src, MaskReg& preg,
+                                               uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
@@ -148,8 +145,8 @@ __aicore__ inline void StoreOneTensorForDtypeT(
 }
 
 template <typename T>
-__aicore__ inline void StoreUnAlignOneTensor(
-    __local_mem__ T*& output, RegTensor<float>& src, UnalignReg& uValue, MaskReg& preg, uint32_t postUpdateStride)
+__aicore__ inline void StoreUnAlignOneTensor(__local_mem__ T*& output, RegTensor<float>& src, UnalignReg& uValue,
+                                             MaskReg& preg, uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
@@ -169,8 +166,8 @@ __aicore__ inline void StoreUnAlignOneTensor(
 }
 
 template <typename T>
-__aicore__ inline void VFCastFloat2T(
-    const __ubuf__ T* ubAddrOut, const __ubuf__ float* ubAddrIn, const uint32_t length, const uint32_t vecLen)
+__aicore__ inline void VFCastFloat2T(const __ubuf__ T* ubAddrOut, const __ubuf__ float* ubAddrIn, const uint32_t length,
+                                     const uint32_t vecLen)
 {
     uint16_t loopCnt = CeilDiv(length, vecLen);
     __VEC_SCOPE__
@@ -201,8 +198,8 @@ __aicore__ inline void VFCastFloat2T(
 }
 
 template <typename T>
-__aicore__ inline void VFCastT2Float(
-    const __ubuf__ float* ubAddrOut, const __ubuf__ T* ubAddrIn, const uint32_t length, const uint32_t vecLen)
+__aicore__ inline void VFCastT2Float(const __ubuf__ float* ubAddrOut, const __ubuf__ T* ubAddrIn, const uint32_t length,
+                                     const uint32_t vecLen)
 {
     __ubuf__ T* srcAddr = (__ubuf__ T*)ubAddrIn;
     __ubuf__ float* dstAddr = (__ubuf__ float*)ubAddrOut;
@@ -232,9 +229,9 @@ __aicore__ inline void VFCastT2Float(
     }
 }
 
-template<typename U>
+template <typename U>
 __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, const LocalTensor<U>& srcTensor,
-                                const int64_t cacheId, const int64_t stride, const int64_t count)
+                                              const int64_t cacheId, const int64_t stride, const int64_t count)
 {
     uint16_t outerLoopTimes = CeilDiv(static_cast<int64_t>(count * sizeof(U)), static_cast<int64_t>(GetVRegSize()));
     uint16_t innerLoopTimes = cacheId;
@@ -260,9 +257,6 @@ __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, c
     }
 }
 
-__aicore__ inline int64_t GetCacheId(const int64_t idx)
-{
-    return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
-}
+__aicore__ inline int64_t GetCacheId(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 } // namespace GroupNormGrad
 #endif

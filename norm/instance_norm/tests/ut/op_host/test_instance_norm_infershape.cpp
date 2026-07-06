@@ -18,15 +18,9 @@
 
 class InstanceNormTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "InstanceNormTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "InstanceNormTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "InstanceNormTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "InstanceNormTest TearDown" << std::endl; }
 };
 
 TEST_F(InstanceNormTest, instance_norm_infer_shape_float_nchw_001)

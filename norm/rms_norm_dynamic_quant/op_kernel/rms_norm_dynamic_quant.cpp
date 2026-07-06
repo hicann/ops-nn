@@ -16,9 +16,9 @@
 #include "rms_norm_dynamic_quant_single_row_kernel.h"
 #include "rms_norm_dynamic_quant_cut_d_kernel.h"
 
-extern "C" __global__ __aicore__ void rms_norm_dynamic_quant(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void rms_norm_dynamic_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta,
+                                                             GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
+                                                             GM_ADDR tiling)
 {
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);

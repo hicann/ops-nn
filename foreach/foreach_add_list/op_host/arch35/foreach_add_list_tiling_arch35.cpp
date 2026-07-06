@@ -52,8 +52,7 @@ static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
     }
 }
 
-static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context,
-    int64_t& coreNum, int64_t& ubSize)
+static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
 {
     auto compileInfo = reinterpret_cast<const ForeachAddListCompileInfo*>(context->GetCompileInfo());
     if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
@@ -80,11 +79,9 @@ static ge::graphStatus ForeachAddListTilingFunc(gert::TilingContext* context)
     int64_t coreNum = 0;
     int64_t ubSize = 0;
     OP_CHECK_IF(GetPlatformInfoFallback(context, coreNum, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Failed to get platform info"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
@@ -94,14 +91,12 @@ static ge::graphStatus ForeachAddListTilingFunc(gert::TilingContext* context)
     uint64_t tensorNum = x1InstanceInfoPtr->GetInstanceNum();
 
     OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ADD_LIST),
-        OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d",
-            tensorNum, MAX_TENSOR_NUM_FOREACH_ADD_LIST),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM_FOREACH_ADD_LIST),
+                return ge::GRAPH_FAILED);
 
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT;
-    ForeachAddListTilingDataHost* tilingData =
-        context->GetTilingData<ForeachAddListTilingDataHost>();
+    ForeachAddListTilingDataHost* tilingData = context->GetTilingData<ForeachAddListTilingDataHost>();
 
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto idxTensorShapePtr = context->GetDynamicInputShape(INPUT_IDX_X1, i);
@@ -170,9 +165,8 @@ static ge::graphStatus ForeachAddListTilingFunc(gert::TilingContext* context)
     context->SetTilingKey(GetTilingKeyByDtype(dataType));
 
     auto res = context->SetLocalMemorySize(ubSize);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+                return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = 0;
@@ -188,15 +182,11 @@ static ge::graphStatus TilingParseForForeachAddList(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

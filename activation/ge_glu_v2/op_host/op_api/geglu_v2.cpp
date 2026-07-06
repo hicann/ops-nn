@@ -24,8 +24,8 @@ namespace l0op {
 
 OP_TYPE_REGISTER(GeGluV2);
 
-std::tuple<aclTensor*, aclTensor*> GeGluV2(
-    const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft, aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*> GeGluV2(const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft,
+                                           aclOpExecutor* executor)
 {
     L0_DFX(GeGluV2, self, dim, approximate, activateLeft);
 
@@ -42,8 +42,8 @@ std::tuple<aclTensor*, aclTensor*> GeGluV2(
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
     }
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        GeGluV2, OP_INPUT(self), OP_OUTPUT(out, outGelu), OP_ATTR(dim, approximate, activateLeft));
+    ADD_TO_LAUNCHER_LIST_AICORE(GeGluV2, OP_INPUT(self), OP_OUTPUT(out, outGelu),
+                                OP_ATTR(dim, approximate, activateLeft));
     return std::tuple<aclTensor*, aclTensor*>(out, outGelu);
 }
 

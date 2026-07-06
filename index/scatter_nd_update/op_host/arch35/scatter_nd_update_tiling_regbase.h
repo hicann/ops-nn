@@ -24,37 +24,35 @@
 namespace optiling {
 
 struct ScatterNdUpdateCompileInfo {
-  int64_t core_num{1};
-  int64_t ub_size{1};
-  bool is_950{false};
+    int64_t core_num{1};
+    int64_t ub_size{1};
+    bool is_950{false};
 };
 
 using namespace Ops::NN::Optiling;
 class ScatterNdUpdateTiling : public TilingBaseClass {
 public:
-    explicit ScatterNdUpdateTiling(gert::TilingContext* context) : TilingBaseClass(context) {
-    }
+    explicit ScatterNdUpdateTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
     uint32_t maxThread_{1024};
     uint64_t coreNum_{0};
     uint64_t ubSize_{0};
+
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
-    int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes,
-                                 int64_t originalSize, int64_t postAxisSize, ge::DataType idType);
-    ge::graphStatus CheckScatterNdUpdateTensorShape(const gert::Shape& indiceShape, const gert::Shape& updateShape, 
-                                 const gert::Shape& outputShape);
+    int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes, int64_t originalSize, int64_t postAxisSize,
+                                 ge::DataType idType);
+    ge::graphStatus CheckScatterNdUpdateTensorShape(const gert::Shape& indiceShape, const gert::Shape& updateShape,
+                                                    const gert::Shape& outputShape);
     ge::graphStatus ValidateVarInfo(const gert::Tensor* var, const gert::Shape& varOriginShape);
     ge::graphStatus ValidateIndicesInfo(const gert::Tensor* indices, gert::Shape& indiceShape, int64_t& indiceDims);
     ge::graphStatus HandleNonContiguousCase(const gert::Tensor* var, const gert::Shape& varOriginShape);
     ge::graphStatus HandleContiguousCase();
     ge::graphStatus ValidateUpdatesInfo(const gert::Tensor* updates, gert::Shape& updateShape);
-    ge::graphStatus CalculateDerivedParams(const gert::Shape& varOriginShape, gert::Shape& indiceShape, gert::Shape& updateShape);
+    ge::graphStatus CalculateDerivedParams(const gert::Shape& varOriginShape, gert::Shape& indiceShape,
+                                           gert::Shape& updateShape);
     void DoOpTilingSplitAfter();
     void DoOpTilingSimdSplitIndices();
     void DoOpTilingForSimdNonDetermin();
@@ -82,33 +80,33 @@ protected:
     void DumpTilingInfo() override;
 
 private:
-  ge::graphStatus UbTiling();
-  void BlockTiling();
-  void SetTilingData();
-  ge::graphStatus SetStride();
+    ge::graphStatus UbTiling();
+    void BlockTiling();
+    void SetTilingData();
+    ge::graphStatus SetStride();
 
 private:
     int64_t shapeRank_ = 0;
-    int64_t totalCoreNum_ {0};
+    int64_t totalCoreNum_{0};
     ge::DataType varDtype_ = ge::DT_UNDEFINED;
     ge::DataType updateDtype_ = ge::DT_UNDEFINED;
     ge::DataType indiceDtype_ = ge::DT_UNDEFINED;
     ge::DataType outOfSetDtype_ = ge::DT_UNDEFINED;
 
-    uint64_t updateShapeSize {0};
-    uint64_t indiceShapeSize {0};
+    uint64_t updateShapeSize{0};
+    uint64_t indiceShapeSize{0};
     uint64_t outputStorageShapeSize_ = 1;
     uint64_t outputShapeSize = 1;
-    uint64_t alignFactor {0};
-    uint64_t blockNum {0};
-    uint64_t blockTilingSize {0};
-    uint64_t tailBlockTilingSize {0};
-    uint32_t ubTilingSize {0};
-    uint32_t rankSize_ {0};
-    uint64_t sliceSize {0};
+    uint64_t alignFactor{0};
+    uint64_t blockNum{0};
+    uint64_t blockTilingSize{0};
+    uint64_t tailBlockTilingSize{0};
+    uint32_t ubTilingSize{0};
+    uint32_t rankSize_{0};
+    uint64_t sliceSize{0};
     uint64_t strideList[MAX_SHAPE_RANK] = {0};
     uint64_t outPutShape[MAX_SHAPE_RANK] = {0};
-    uint64_t workspaceSize {0};
+    uint64_t workspaceSize{0};
 
     int64_t indicesAxis_ = 0;
     int64_t varInAxis_ = 1;
@@ -167,5 +165,5 @@ private:
     const char* opName = "ScatterNdUpdate";
 };
 
-} //namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ND_ADD_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ND_ADD_TILING_H_

@@ -32,14 +32,14 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool CheckNotNull(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
-    const aclTensor* vOut, const uint64_t* workspaceSize, aclOpExecutor* const* executor)
+static bool CheckNotNull(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
+                         const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1,
+                         const aclTensor* beta2, const aclTensor* epsilon, const aclTensor* grad,
+                         const aclTensor* varOut, const aclTensor* mOut, const aclTensor* vOut,
+                         const uint64_t* workspaceSize, aclOpExecutor* const* executor)
 {
     OP_CHECK_NULL(var, return false);
     OP_CHECK_NULL(m, return false);
@@ -84,17 +84,15 @@ static int64_t GetShapeSize(const aclTensor* tensor)
     return size;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
-    const aclTensor* vOut)
+static bool CheckDtypeValid(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
+                            const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1,
+                            const aclTensor* beta2, const aclTensor* epsilon, const aclTensor* grad,
+                            const aclTensor* varOut, const aclTensor* mOut, const aclTensor* vOut)
 {
     auto dtype = var->GetDataType();
     if (!CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Unsupported dtype: %d. Only FLOAT, FLOAT16 and BF16 are supported.",
-            static_cast<int>(dtype));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported dtype: %d. Only FLOAT, FLOAT16 and BF16 are supported.",
+                static_cast<int>(dtype));
         return false;
     }
     OP_CHECK_DTYPE_NOT_MATCH(m, dtype, return false);
@@ -112,9 +110,8 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckTensorShapes(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad, const aclTensor* varOut,
-    const aclTensor* mOut, const aclTensor* vOut)
+static bool CheckTensorShapes(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad,
+                              const aclTensor* varOut, const aclTensor* mOut, const aclTensor* vOut)
 {
     OP_CHECK_MAX_DIM(var, ACLNN_MAX_SHAPE_RANK, return false);
     OP_CHECK_MAX_DIM(m, ACLNN_MAX_SHAPE_RANK, return false);
@@ -132,9 +129,8 @@ static bool CheckTensorShapes(
     return true;
 }
 
-static bool CheckScalarTensorShapes(
-    const aclTensor* beta1Power, const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1,
-    const aclTensor* beta2, const aclTensor* epsilon)
+static bool CheckScalarTensorShapes(const aclTensor* beta1Power, const aclTensor* beta2Power, const aclTensor* lr,
+                                    const aclTensor* beta1, const aclTensor* beta2, const aclTensor* epsilon)
 {
     const aclTensor* scalars[] = {beta1Power, beta2Power, lr, beta1, beta2, epsilon};
     const char* names[] = {"beta1Power", "beta2Power", "lr", "beta1", "beta2", "epsilon"};
@@ -148,15 +144,14 @@ static bool CheckScalarTensorShapes(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
-    const aclTensor* vOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+static aclnnStatus CheckParams(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                               const aclTensor* beta1Power, const aclTensor* beta2Power, const aclTensor* lr,
+                               const aclTensor* beta1, const aclTensor* beta2, const aclTensor* epsilon,
+                               const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
+                               const aclTensor* vOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    if (!CheckNotNull(
-            var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut, workspaceSize,
-            executor)) {
+    if (!CheckNotNull(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut,
+                      workspaceSize, executor)) {
         OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Null pointer in input parameters.");
         return ACLNN_ERR_PARAM_NULLPTR;
     }
@@ -172,22 +167,22 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnApplyAdamDGetWorkspaceSize(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, bool useLocking, bool useNesterov, aclTensor* varOut,
-    aclTensor* mOut, aclTensor* vOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnApplyAdamDGetWorkspaceSize(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                                       const aclTensor* beta1Power, const aclTensor* beta2Power,
+                                                       const aclTensor* lr, const aclTensor* beta1,
+                                                       const aclTensor* beta2, const aclTensor* epsilon,
+                                                       const aclTensor* grad, bool useLocking, bool useNesterov,
+                                                       aclTensor* varOut, aclTensor* mOut, aclTensor* vOut,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnApplyAdamD, DFX_IN(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad),
-        DFX_OUT(varOut, mOut, vOut));
+    L2_DFX_PHASE_1(aclnnApplyAdamD, DFX_IN(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad),
+                   DFX_OUT(varOut, mOut, vOut));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    auto ret = CheckParams(
-        var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut, workspaceSize,
-        executor);
+    auto ret = CheckParams(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut,
+                           workspaceSize, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (var->IsEmpty()) {
@@ -217,10 +212,9 @@ extern "C" aclnnStatus aclnnApplyAdamDGetWorkspaceSize(
     auto gradContiguous = l0op::Contiguous(grad, uniqueExecutor.get());
     CHECK_RET(gradContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto opResults = l0op::ApplyAdamD(
-        varContiguous, mContiguous, vContiguous, beta1PowerContiguous, beta2PowerContiguous, lrContiguous,
-        beta1Contiguous, beta2Contiguous, epsilonContiguous, gradContiguous, useLocking, useNesterov,
-        uniqueExecutor.get());
+    auto opResults = l0op::ApplyAdamD(varContiguous, mContiguous, vContiguous, beta1PowerContiguous,
+                                      beta2PowerContiguous, lrContiguous, beta1Contiguous, beta2Contiguous,
+                                      epsilonContiguous, gradContiguous, useLocking, useNesterov, uniqueExecutor.get());
     CHECK_RET(opResults.varOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopy1 = l0op::ViewCopy(opResults.varOut, varOut, uniqueExecutor.get());
@@ -235,8 +229,8 @@ extern "C" aclnnStatus aclnnApplyAdamDGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnApplyAdamD(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+extern "C" aclnnStatus aclnnApplyAdamD(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnApplyAdamD);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

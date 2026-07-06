@@ -18,35 +18,27 @@
 
 using namespace std;
 namespace {
-int64_t CalculateOutputSize(int64_t inSize, int64_t padding0, int64_t padding1,
-                            int64_t kernelSize, int64_t dilation, int64_t stride) {
+int64_t CalculateOutputSize(int64_t inSize, int64_t padding0, int64_t padding1, int64_t kernelSize, int64_t dilation,
+                            int64_t stride)
+{
     return (inSize + padding0 + padding1 - ((kernelSize - 1) * dilation + 1)) / stride + 1;
 }
 
-int64_t CalculateOffsetOutChannels(int64_t outH, int64_t outW, int64_t K_H, int64_t K_W) {
-    return outH * K_H;
-}
+int64_t CalculateOffsetOutChannels(int64_t outH, int64_t outW, int64_t K_H, int64_t K_W) { return outH * K_H; }
 
-int64_t CalculateOffsetOutWidth(int64_t outW, int64_t K_W) {
-    return outW * K_W;
-}
+int64_t CalculateOffsetOutWidth(int64_t outW, int64_t K_W) { return outW * K_W; }
 
-int64_t CalculateOffsetChannels(bool modulated, int64_t deformableGroups, int64_t K_H, int64_t K_W) {
+int64_t CalculateOffsetChannels(bool modulated, int64_t deformableGroups, int64_t K_H, int64_t K_W)
+{
     int64_t multiplier = modulated ? 3 : 2;
     return multiplier * deformableGroups * K_H * K_W;
 }
 
 class deformable_conv2d_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "deformable_conv2d_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "deformable_conv2d_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "deformable_conv2d_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "deformable_conv2d_backward_test TearDown" << std::endl; }
 };
 
 TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_FP16)
@@ -60,8 +52,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_FP16)
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -79,12 +73,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_FP16)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -102,8 +95,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_FP32)
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -121,12 +116,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_FP32)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -144,8 +138,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_BF16)
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -163,12 +159,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_BF16)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -186,8 +181,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_groups)
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -205,12 +202,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_groups)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -228,8 +224,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_deformable
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -247,12 +245,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_deformable
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -270,8 +267,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_stride2)
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -289,12 +288,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_stride2)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -312,8 +310,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_dilation2)
     auto padding_desc = IntArrayDesc(vector<int64_t>{2, 2, 2, 2});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 2, 2});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -331,12 +331,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_dilation2)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -354,8 +353,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_kernel5x5)
     auto padding_desc = IntArrayDesc(vector<int64_t>{2, 2, 2, 2});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -373,12 +374,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_kernel5x5)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -396,8 +396,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_kernel7x7)
     auto padding_desc = IntArrayDesc(vector<int64_t>{3, 3, 3, 3});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -415,12 +417,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_kernel7x7)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -438,8 +439,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_stride4)
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -457,12 +460,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_stride4)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -480,8 +482,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_dilation3)
     auto padding_desc = IntArrayDesc(vector<int64_t>{3, 3, 3, 3});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 3, 3});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -499,12 +503,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_dilation3)
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -522,8 +525,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_of
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -541,12 +546,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_of
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -564,8 +568,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_of
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -583,12 +589,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_of
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -606,8 +611,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_gr
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -625,12 +632,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_gr
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -648,8 +654,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_we
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -667,12 +675,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_invalid_we
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -690,8 +697,10 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_weight_inp
     auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
     auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1, 1});
 
-    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2], stride_desc.Get()[2]);
-    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3], stride_desc.Get()[3]);
+    int64_t outH = CalculateOutputSize(inH, padding_desc.Get()[0], padding_desc.Get()[1], K_H, dilation_desc.Get()[2],
+                                       stride_desc.Get()[2]);
+    int64_t outW = CalculateOutputSize(inW, padding_desc.Get()[2], padding_desc.Get()[3], K_W, dilation_desc.Get()[3],
+                                       stride_desc.Get()[3]);
     int64_t offsetOutC = CalculateOffsetOutChannels(outH, outW, K_H, K_W);
     int64_t offsetOutW = CalculateOffsetOutWidth(outW, K_W);
     int64_t offsetC = CalculateOffsetChannels(modulated, deformableGroups, K_H, K_W);
@@ -709,12 +718,11 @@ TEST_F(deformable_conv2d_backward_test, test_DeformableConv2dBackward_weight_inp
 
     auto kernel_size_desc = IntArrayDesc(vector<int64_t>{K_H, K_W});
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2dBackward,
-        INPUT(
-            input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc, offset_tensor_desc,
-            kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups, deformableGroups, modulated),
-        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
+    auto ut = OP_API_UT(aclnnDeformableConv2dBackward,
+                        INPUT(input_tensor_desc, grad_output_tensor_desc, offset_out_tensor_desc, weight_tensor_desc,
+                              offset_tensor_desc, kernel_size_desc, stride_desc, padding_desc, dilation_desc, groups,
+                              deformableGroups, modulated),
+                        OUTPUT(gradInput, gradWeight, gradOffset, gradBias));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

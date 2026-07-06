@@ -22,8 +22,8 @@
 namespace optiling {
 
 struct MaskedScatterCompileInfo {
-  int64_t coreNum{ 0 };
-  int64_t ubSize{ 0 };
+    int64_t coreNum{0};
+    int64_t ubSize{0};
 };
 
 BEGIN_TILING_DATA_DEF(MaskedScatterTilingData)
@@ -41,11 +41,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaskedScatter, MaskedScatterTilingData)
 
-ge::graphStatus MaskedScatterTilingForAscendC(gert::TilingContext *context);
+ge::graphStatus MaskedScatterTilingForAscendC(gert::TilingContext* context);
 
 class MaskedScatterTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaskedScatterTiling(gert::TilingContext *context) : TilingBaseClass(context) {}
+    explicit MaskedScatterTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -57,6 +57,7 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
+
 private:
     ge::graphStatus CheckDataType();
     ge::graphStatus CheckOutputShape();

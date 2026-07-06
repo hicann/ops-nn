@@ -47,7 +47,7 @@
 #endif
 
 #if __has_include("exe_graph/runtime/shape.h") && __has_include("exe_graph/runtime/storage_shape.h") && \
-    __has_include("graph/types.h")
+                                                                __has_include("graph/types.h")
 #include "exe_graph/runtime/shape.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "graph/types.h"
@@ -78,21 +78,20 @@ inline std::string GetExeDirPath()
 #endif
 }
 
-inline std::string Trim(const std::string &input)
+inline std::string Trim(const std::string& input)
 {
-    const auto first = std::find_if_not(input.begin(), input.end(), [](unsigned char ch) {
-        return std::isspace(ch) != 0;
-    });
+    const auto first = std::find_if_not(input.begin(), input.end(),
+                                        [](unsigned char ch) { return std::isspace(ch) != 0; });
     if (first == input.end()) {
         return "";
     }
     const auto last = std::find_if_not(input.rbegin(), input.rend(), [](unsigned char ch) {
-        return std::isspace(ch) != 0;
-    }).base();
+                          return std::isspace(ch) != 0;
+                      }).base();
     return std::string(first, last);
 }
 
-inline void SplitStr2Vec(const std::string &input, const std::string &delimiter, std::vector<std::string> &output)
+inline void SplitStr2Vec(const std::string& input, const std::string& delimiter, std::vector<std::string>& output)
 {
     output.clear();
     if (delimiter.empty()) {
@@ -114,7 +113,7 @@ inline void SplitStr2Vec(const std::string &input, const std::string &delimiter,
     }
 }
 
-inline std::vector<int64_t> ParseInt64Vec(const std::string &value)
+inline std::vector<int64_t> ParseInt64Vec(const std::string& value)
 {
     std::vector<int64_t> result;
     const std::string trimmed = Trim(value);
@@ -124,31 +123,31 @@ inline std::vector<int64_t> ParseInt64Vec(const std::string &value)
     std::vector<std::string> items;
     SplitStr2Vec(trimmed, " ", items);
     for (size_t tokenIdx = 0; tokenIdx < items.size(); ++tokenIdx) {
-        const auto &item = items[tokenIdx];
+        const auto& item = items[tokenIdx];
         const std::string token = Trim(item);
         if (token.empty()) {
             continue;
         }
         try {
             result.push_back(static_cast<int64_t>(std::stoll(token)));
-        } catch (const std::exception &e) {
+        } catch (const std::exception& e) {
             std::cerr << "ParseInt64Vec skip invalid token, original value: \"" << value
-                      << "\", token index: " << tokenIdx << ", token: \"" << token
-                      << "\", error: " << e.what() << std::endl;
+                      << "\", token index: " << tokenIdx << ", token: \"" << token << "\", error: " << e.what()
+                      << std::endl;
             continue;
         }
     }
     return result;
 }
 
-inline bool ParseBool(const std::string &value)
+inline bool ParseBool(const std::string& value)
 {
     std::string t = Trim(value);
     std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return t == "true" || t == "1";
 }
 
-inline int ParseIntOrDefault(const std::string &value, int defaultValue)
+inline int ParseIntOrDefault(const std::string& value, int defaultValue)
 {
     const std::string trimmed = Trim(value);
     if (trimmed.empty()) {
@@ -156,12 +155,12 @@ inline int ParseIntOrDefault(const std::string &value, int defaultValue)
     }
     try {
         return std::stoi(trimmed);
-    } catch (const std::exception &) {
+    } catch (const std::exception&) {
         return defaultValue;
     }
 }
 
-inline int64_t ParseInt64OrDefault(const std::string &value, int64_t defaultValue)
+inline int64_t ParseInt64OrDefault(const std::string& value, int64_t defaultValue)
 {
     const std::string trimmed = Trim(value);
     if (trimmed.empty()) {
@@ -169,18 +168,17 @@ inline int64_t ParseInt64OrDefault(const std::string &value, int64_t defaultValu
     }
     try {
         return static_cast<int64_t>(std::stoll(trimmed));
-    } catch (const std::exception &) {
+    } catch (const std::exception&) {
         return defaultValue;
     }
 }
 
 #ifdef NN_TESTS_UT_COMMON_HAS_GE_TYPES
-inline ge::graphStatus ParseGraphStatus(const std::string &value, ge::graphStatus defaultValue = ge::GRAPH_FAILED)
+inline ge::graphStatus ParseGraphStatus(const std::string& value, ge::graphStatus defaultValue = ge::GRAPH_FAILED)
 {
     std::string lowered = Trim(value);
-    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     if (lowered == "graph_success" || lowered == "success" || lowered == "1") {
         return ge::GRAPH_SUCCESS;
     }
@@ -190,7 +188,7 @@ inline ge::graphStatus ParseGraphStatus(const std::string &value, ge::graphStatu
     return defaultValue;
 }
 
-inline gert::Shape ToShape(const std::vector<int64_t> &dims)
+inline gert::Shape ToShape(const std::vector<int64_t>& dims)
 {
     gert::Shape shape;
     for (const auto dim : dims) {
@@ -199,7 +197,7 @@ inline gert::Shape ToShape(const std::vector<int64_t> &dims)
     return shape;
 }
 
-inline gert::StorageShape MakeStorageShape(const std::vector<int64_t> &dims)
+inline gert::StorageShape MakeStorageShape(const std::vector<int64_t>& dims)
 {
     gert::StorageShape shape;
     shape.MutableStorageShape() = ToShape(dims);
@@ -207,12 +205,9 @@ inline gert::StorageShape MakeStorageShape(const std::vector<int64_t> &dims)
     return shape;
 }
 
-inline gert::Shape ParseShape(const std::string &value)
-{
-    return ToShape(ParseInt64Vec(value));
-}
+inline gert::Shape ParseShape(const std::string& value) { return ToShape(ParseInt64Vec(value)); }
 
-inline ge::DataType ParseDtype(const std::string &value, ge::DataType defaultValue = ge::DT_FLOAT16)
+inline ge::DataType ParseDtype(const std::string& value, ge::DataType defaultValue = ge::DT_FLOAT16)
 {
     static const std::map<std::string, ge::DataType> kDtypeMap = {
         {"FLOAT16", ge::DT_FLOAT16},
@@ -262,7 +257,7 @@ inline ge::DataType ParseDtype(const std::string &value, ge::DataType defaultVal
     return defaultValue;
 }
 
-inline ge::Format ParseFormat(const std::string &value, ge::Format defaultValue = ge::FORMAT_ND)
+inline ge::Format ParseFormat(const std::string& value, ge::Format defaultValue = ge::FORMAT_ND)
 {
     static const std::map<std::string, ge::Format> kFormatMap = {
         {"ND", ge::FORMAT_ND},
@@ -280,7 +275,7 @@ inline ge::Format ParseFormat(const std::string &value, ge::Format defaultValue 
 #endif
 
 #ifdef NN_TESTS_UT_COMMON_HAS_ACLNN_TYPES
-inline aclDataType ParseAclDataType(const std::string &value, aclDataType defaultValue = ACL_FLOAT16)
+inline aclDataType ParseAclDataType(const std::string& value, aclDataType defaultValue = ACL_FLOAT16)
 {
     static const std::map<std::string, aclDataType> kDtypeMap = {
         {"ACL_INT4", ACL_INT4},
@@ -304,7 +299,7 @@ inline aclDataType ParseAclDataType(const std::string &value, aclDataType defaul
     return defaultValue;
 }
 
-inline aclnnStatus ParseAclnnStatus(const std::string &value)
+inline aclnnStatus ParseAclnnStatus(const std::string& value)
 {
     static const std::map<std::string, aclnnStatus> kStatusMap = {
         {"ACLNN_SUCCESS", ACLNN_SUCCESS},
@@ -318,7 +313,7 @@ inline aclnnStatus ParseAclnnStatus(const std::string &value)
     return ACLNN_ERR_PARAM_INVALID;
 }
 
-inline aclFormat ParseAclFormat(const std::string &value)
+inline aclFormat ParseAclFormat(const std::string& value)
 {
     static const std::map<std::string, aclFormat> kFormatMap = {
         {"ACL_FORMAT_ND", ACL_FORMAT_ND},
@@ -334,12 +329,11 @@ inline aclFormat ParseAclFormat(const std::string &value)
 }
 #endif
 
-inline std::vector<int64_t> MakeDefaultStride(const std::vector<int64_t> &shape)
+inline std::vector<int64_t> MakeDefaultStride(const std::vector<int64_t>& shape)
 {
     std::vector<int64_t> stride(shape.size(), 1);
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; --i) {
-        stride[static_cast<size_t>(i)] =
-            stride[static_cast<size_t>(i + 1)] * shape[static_cast<size_t>(i + 1)];
+        stride[static_cast<size_t>(i)] = stride[static_cast<size_t>(i + 1)] * shape[static_cast<size_t>(i + 1)];
     }
     return stride;
 }

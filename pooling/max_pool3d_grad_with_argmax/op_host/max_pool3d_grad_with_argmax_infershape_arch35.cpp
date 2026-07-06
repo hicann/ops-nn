@@ -49,16 +49,16 @@ static int64_t DivRtn(int64_t x, int64_t y)
         return GRAPH_FAILED;
     }
     if (x < 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            opName_, "x", std::to_string(x).c_str(), "x value cannot be smaller than zero.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "x", std::to_string(x).c_str(),
+                                              "x value cannot be smaller than zero.");
         return GRAPH_FAILED;
     }
     int64_t q = x / y;
     return q;
 }
 
-static void UpdateMaxShape(
-    const int64_t (&param)[PARAM_NUM], bool ceil_mode, const int64_t& dim_size, int64_t& out_max_shape)
+static void UpdateMaxShape(const int64_t (&param)[PARAM_NUM], bool ceil_mode, const int64_t& dim_size,
+                           int64_t& out_max_shape)
 {
     int64_t ksize = param[ATTR_INDEX_KSIZE];
     int64_t strides = param[ATTR_INDEX_STRIDES];
@@ -83,9 +83,8 @@ static int64_t CalcOutDim(int64_t input_dim, int64_t k, int64_t s, int64_t p, in
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
         output_shape->SetDim(i, UNKNOWN_DIM_VALUE_);
@@ -108,9 +107,9 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     auto inputXFormat = inputXDesc->GetOriginFormat();
     if (inputXFormat != FORMAT_ND && inputXFormat != FORMAT_NCDHW && inputXFormat != FORMAT_NDHWC &&
         inputXFormat != FORMAT_NCHW) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            opName_, "x", std::to_string(static_cast<int32_t>(inputXFormat)).c_str(),
-            "format only supports ND, NCDHW, NDHWC");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x",
+                                                std::to_string(static_cast<int32_t>(inputXFormat)).c_str(),
+                                                "format only supports ND, NCDHW, NDHWC");
         return GRAPH_FAILED;
     }
 
@@ -131,9 +130,9 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(ksize->GetSize()); i++) {
         if (ksize_data[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("ksize[") + std::to_string(i) + "]").c_str(),
-                std::to_string(ksize_data[i]).c_str(), "ksize value should bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("ksize[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(ksize_data[i]).c_str(),
+                                                  "ksize value should bigger than 0");
             return GRAPH_FAILED;
         }
     }
@@ -145,17 +144,17 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (strides->GetSize() != 0 && strides->GetSize() != 1 && strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            opName_, "Length of strides", std::to_string(strides->GetSize()).c_str(), "0, 1, or 3");
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of strides", std::to_string(strides->GetSize()).c_str(),
+                                     "0, 1, or 3");
         return GRAPH_FAILED;
     }
 
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(strides->GetSize()); i++) {
         if (strides_data[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("strides[") + std::to_string(i) + "]").c_str(),
-                std::to_string(strides_data[i]).c_str(), "strides value should bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("strides[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(strides_data[i]).c_str(),
+                                                  "strides value should bigger than 0");
             return GRAPH_FAILED;
         }
     }
@@ -179,9 +178,8 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
         if (pads_data[i] < 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(), std::to_string(pads_data[i]).c_str(),
-                "pads value should be >= 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(pads_data[i]).c_str(), "pads value should be >= 0");
             return GRAPH_FAILED;
         }
     }
@@ -193,17 +191,17 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilation);
     if (dilation->GetSize() != 1 && dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            opName_, "Length of dilation", std::to_string(dilation->GetSize()).c_str(), "1 or 3");
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of dilation", std::to_string(dilation->GetSize()).c_str(),
+                                     "1 or 3");
         return GRAPH_FAILED;
     }
 
     auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(dilation->GetSize()); i++) {
         if (dilation_data[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("dilation[") + std::to_string(i) + "]").c_str(),
-                std::to_string(dilation_data[i]).c_str(), "dilation value should bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("dilation[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(dilation_data[i]).c_str(),
+                                                  "dilation value should bigger than 0");
             return GRAPH_FAILED;
         }
     }
@@ -225,7 +223,8 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
         return ge::GRAPH_FAILED;
     }
 
-    if ((pD > ((kD - 1) * dD + 1) / NUMBER_TWO) || (pH > ((kH - 1) * dH + 1) / NUMBER_TWO) || (pW > ((kW - 1) * dW + 1) / NUMBER_TWO)) {
+    if ((pD > ((kD - 1) * dD + 1) / NUMBER_TWO) || (pH > ((kH - 1) * dH + 1) / NUMBER_TWO) ||
+        (pW > ((kW - 1) * dW + 1) / NUMBER_TWO)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "pD, pH, pW", (std::to_string(pD) + ", " + std::to_string(pH) + ", " + std::to_string(pW)).c_str(),
             "padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2");

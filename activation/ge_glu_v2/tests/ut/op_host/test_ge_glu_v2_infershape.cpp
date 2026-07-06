@@ -23,15 +23,9 @@
 
 class GEGLUV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GEGLUV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GEGLUV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GEGLUV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GEGLUV2 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(GEGLUV2, GEGLUV2_infershape_diff_test_legal_input)

@@ -45,16 +45,11 @@ static Status ParseParamsCommonLSTM(const Message* op_src, ge::Operator& op_dest
 
 REGISTER_CUSTOM_OP("CommonLSTM")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::LSTM"), 
-                   ge::AscendString("ai.onnx::9::LSTM"), 
-                   ge::AscendString("ai.onnx::10::LSTM"), 
-                   ge::AscendString("ai.onnx::11::LSTM"), 
-                   ge::AscendString("ai.onnx::12::LSTM"),
-                   ge::AscendString("ai.onnx::13::LSTM"), 
-                   ge::AscendString("ai.onnx::14::LSTM"), 
-                   ge::AscendString("ai.onnx::15::LSTM"), 
-                   ge::AscendString("ai.onnx::16::LSTM"), 
-                   ge::AscendString("ai.onnx::17::LSTM"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::LSTM"), ge::AscendString("ai.onnx::9::LSTM"),
+                   ge::AscendString("ai.onnx::10::LSTM"), ge::AscendString("ai.onnx::11::LSTM"),
+                   ge::AscendString("ai.onnx::12::LSTM"), ge::AscendString("ai.onnx::13::LSTM"),
+                   ge::AscendString("ai.onnx::14::LSTM"), ge::AscendString("ai.onnx::15::LSTM"),
+                   ge::AscendString("ai.onnx::16::LSTM"), ge::AscendString("ai.onnx::17::LSTM"),
                    ge::AscendString("ai.onnx::18::LSTM")})
     .ParseParamsFn(ParseParamsCommonLSTM)
     .ImplyType(ImplyType::TVM);

@@ -26,19 +26,19 @@ template <typename T, typename U, const bool isTail>
 class DynamicMxQuantNotTailAxisFP8 : public DynamicMxQuantBaseFP8<T, U, isTail> {
 public:
     __aicore__ inline DynamicMxQuantNotTailAxisFP8(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace,
+                                const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void SplitPostAxisCompute(int64_t dataLen, int64_t blockCount);
     __aicore__ inline void SplitPreAxisCompute(int64_t ubFactor, int64_t blockSizeIdx);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeOCP(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeOCP(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                      __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputecuBLAS(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputecuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     __aicore__ inline bool IsTailLoopInUbDim(int64_t loopIdx);
     __aicore__ inline bool IsNeedPadAndTailInAxis(int64_t curLoopIdxInAllCore);
 
@@ -50,8 +50,9 @@ private:
 };
 
 template <typename T, typename U, const bool isTail>
-__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
+__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                                                        GM_ADDR workspace,
+                                                                        const DynamicMxQuantTilingData* tilingData)
 {
     this->BaseInit(x, y, mxScale, workspace, tilingData);
     if (this->blockIdx_ >= this->usedCoreNum_) {
@@ -59,8 +60,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::Init(
     }
     blockLoopOffset_ = this->blockIdx_ * this->blockFactor_;
     if (this->ubDim_ == DIM2) { // 非尾轴场景，切axis之后的轴合轴成的post
-        scaleBlockOffset_ =
-            blockLoopOffset_ / this->uo_ * this->postAxisSize_ + blockLoopOffset_ % this->uo_ * this->ubFactor_;
+        scaleBlockOffset_ = blockLoopOffset_ / this->uo_ * this->postAxisSize_ +
+                            blockLoopOffset_ % this->uo_ * this->ubFactor_;
         if (this->isPad_) {
             int64_t fullAxisNum = blockLoopOffset_ / (this->uo_ * this->blockSizeNumInAxis_);
             int64_t blockLoopMod = blockLoopOffset_ % (this->uo_ * this->blockSizeNumInAxis_);
@@ -168,8 +169,8 @@ __aicore__ inline bool DynamicMxQuantNotTailAxisFP8<T, U, isTail>::IsNeedPadAndT
 }
 
 template <typename T, typename U, const bool isTail>
-__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPostAxisCompute(
-    int64_t dataLen, int64_t blockCount)
+__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPostAxisCompute(int64_t dataLen,
+                                                                                        int64_t blockCount)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -188,8 +189,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPostAxis
 }
 
 template <typename T, typename U, const bool isTail>
-__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPreAxisCompute(
-    int64_t ubFactor, int64_t blockSizeIdx)
+__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPreAxisCompute(int64_t ubFactor,
+                                                                                       int64_t blockSizeIdx)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -203,11 +204,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPreAxisC
         auto yAddr = (__ubuf__ uint8_t*)y.GetPhyAddr() + offset;
         offset += blockCount * this->postAxisSize_;
         if (this->scaleAlg_ == 0) {
-            ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr, mxScaleAddr,
+                                                                    yAddr);
         } else {
-            ComputecuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputecuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                       mxScaleAddr, yAddr);
         }
     }
     this->mxScaleQueue_.template EnQue(mxScale);
@@ -217,10 +218,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPreAxisC
 
 template <typename T, typename U, const bool isTail>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
-    int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(int64_t dataLen, int64_t blockCount,
+                                                                              __ubuf__ T* xAddr,
+                                                                              __ubuf__ uint8_t* mxScaleAddr,
+                                                                              __ubuf__ uint8_t* yAddr)
 {
-    constexpr uint32_t vfNum16 = Ops::Base::GetVRegSize() / sizeof(T);     // 寄存器单次处理能处理的长度
+    constexpr uint32_t vfNum16 = Ops::Base::GetVRegSize() / sizeof(T); // 寄存器单次处理能处理的长度
     constexpr uint32_t vfNum32 = Ops::Base::GetVRegSize() / sizeof(float); // cast到FP32后单个寄存器中的元素个数
     uint16_t regLoop = static_cast<uint16_t>(dataLen) / static_cast<uint16_t>(vfNum16); // 当前loop需要处理的长度
     uint16_t tailVfLen = static_cast<uint16_t>(dataLen) % static_cast<uint16_t>(vfNum16);
@@ -286,14 +289,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
         Reg::MaskReg specialDataMask;
 
         Reg::MaskReg maskAll = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        static constexpr Reg::CastTrait castTraitZero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitOne = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTrait32to8 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTrait32to8 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
         Reg::Duplicate(maxEle, BF16_MAX_EXP);
         Reg::Duplicate(fp8MaxExp, FP8_BF16_MAX_EXP);
@@ -353,10 +356,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
                 if constexpr (IsSame<T, half>::value) {
                     Reg::Cast<float, T, castTraitZero>(yZero, x, p0);
                     Reg::Cast<float, T, castTraitOne>(yOne, x, p0);
-                    Reg::Cast<float, bfloat16_t, castTraitZero>(
-                        reversedShareExpRegTensorFP32Zero, (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p0);
-                    Reg::Cast<float, bfloat16_t, castTraitOne>(
-                        reversedShareExpRegTensorFP32One, (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p0);
+                    Reg::Cast<float, bfloat16_t, castTraitZero>(reversedShareExpRegTensorFP32Zero,
+                                                                (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p0);
+                    Reg::Cast<float, bfloat16_t, castTraitOne>(reversedShareExpRegTensorFP32One,
+                                                               (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p0);
                     Reg::Mul(yZero, yZero, reversedShareExpRegTensorFP32Zero, maskAll);
                     Reg::Mul(yOne, yOne, reversedShareExpRegTensorFP32One, maskAll);
                 } else if constexpr (IsSame<T, bfloat16_t>::value) {
@@ -394,8 +397,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
                 Reg::And(expMax, (Reg::RegTensor<uint16_t>&)x, maxEle, p1);
             }
             for (uint16_t j = 1; j < static_cast<uint16_t>(blockCount); j++) {
-                this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(
-                    xAddr, regLoop * vfNum16 + j * dataLen, x, p1);
+                this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(xAddr, regLoop * vfNum16 + j * dataLen, x,
+                                                                          p1);
                 if constexpr (IsSame<T, half>::value) {
                     Reg::And(xSelect, (Reg::RegTensor<uint16_t>&)x, invalidMaskU16, p1);
                     Reg::Compare<uint16_t, CMPMODE::NE>(invalidDataMask, xSelect, invalidMaskU16, p1);
@@ -428,15 +431,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
             }
             // 求data value
             for (uint16_t j = 0; j < static_cast<uint16_t>(blockCount); j++) {
-                this->template LoadData<toBf16RoundMode, roundMode, true>(
-                    xAddr, regLoop * vfNum16 + j * dataLen, x, p1);
+                this->template LoadData<toBf16RoundMode, roundMode, true>(xAddr, regLoop * vfNum16 + j * dataLen, x,
+                                                                          p1);
                 if constexpr (IsSame<T, half>::value) {
                     Reg::Cast<float, T, castTraitZero>(yZero, x, p1);
                     Reg::Cast<float, T, castTraitOne>(yOne, x, p1);
-                    Reg::Cast<float, bfloat16_t, castTraitZero>(
-                        reversedShareExpRegTensorFP32Zero, (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p1);
-                    Reg::Cast<float, bfloat16_t, castTraitOne>(
-                        reversedShareExpRegTensorFP32One, (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p1);
+                    Reg::Cast<float, bfloat16_t, castTraitZero>(reversedShareExpRegTensorFP32Zero,
+                                                                (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p1);
+                    Reg::Cast<float, bfloat16_t, castTraitOne>(reversedShareExpRegTensorFP32One,
+                                                               (Reg::RegTensor<bfloat16_t>&)reversedShareExp, p1);
                     Reg::Mul(yZero, yZero, reversedShareExpRegTensorFP32Zero, maskAll);
                     Reg::Mul(yOne, yOne, reversedShareExpRegTensorFP32One, maskAll);
                 } else if constexpr (IsSame<T, bfloat16_t>::value) {
@@ -464,10 +467,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
 
 template <typename T, typename U, const bool isTail>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS(
-    int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS(int64_t dataLen, int64_t blockCount,
+                                                                                 __ubuf__ T* xAddr,
+                                                                                 __ubuf__ uint8_t* mxScaleAddr,
+                                                                                 __ubuf__ uint8_t* yAddr)
 {
-    constexpr uint32_t vfNum16 = Ops::Base::GetVRegSize() / sizeof(T);     // 寄存器单次能处理的长度
+    constexpr uint32_t vfNum16 = Ops::Base::GetVRegSize() / sizeof(T); // 寄存器单次能处理的长度
     constexpr uint32_t vfNum32 = Ops::Base::GetVRegSize() / sizeof(float); // cast到FP32后单个寄存器中的元素个数
     uint16_t regLoop = static_cast<uint16_t>(dataLen) / static_cast<uint16_t>(vfNum32);
     uint16_t tailVfLen = static_cast<uint16_t>(dataLen) % static_cast<uint16_t>(vfNum32);
@@ -523,14 +528,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
         Reg::MaskReg preMaskScale = Reg::CreateMask<uint32_t>();
         Reg::MaskReg maskAll = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
 
-        static constexpr Reg::CastTrait castTraitZero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitOne = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTrait32to8 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        static constexpr Reg::CastTrait castTraitHalf2Float = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTrait32to8 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitHalf2Float = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                               Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
         Reg::Duplicate(absMaskBF16, BF16_ABS_MASK);
         Reg::Duplicate(zeroRegTensor32, 0);
@@ -544,42 +549,40 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
         p0 = Reg::UpdateMask<T>(pnum); // 前vfNum位有效加载
         for (uint16_t i = 0; i < regLoop; i++) {
             this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(xAddr, i * vfNum32, x, p0);
-            Reg::And(
-                (Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor, (Reg::RegTensor<uint16_t>&)x, absMaskBF16,
-                p0);
+            Reg::And((Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor, (Reg::RegTensor<uint16_t>&)x,
+                     absMaskBF16, p0);
             for (uint16_t j = 1; j < static_cast<uint16_t>(blockCount); j++) {
                 this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(xAddr, j * dataLen + i * vfNum32, x, p0);
-                Reg::And(
-                    (Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, (Reg::RegTensor<uint16_t>&)x, absMaskBF16, p0);
-                Reg::Max(
-                    expMaxreShareExpFP16YOneRegTensor, (Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor,
-                    (Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, p0);
+                Reg::And((Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, (Reg::RegTensor<uint16_t>&)x, absMaskBF16,
+                         p0);
+                Reg::Max(expMaxreShareExpFP16YOneRegTensor,
+                         (Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor,
+                         (Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, p0);
             }
             Reg::Interleave(expMaxreShareExpFP16YOneRegTensor, fullZero, expMaxreShareExpFP16YOneRegTensor, fullZero);
-            Reg::Cast<float, T, castTraitHalf2Float>(
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
-                (Reg::RegTensor<T>&)expMaxreShareExpFP16YOneRegTensor, preMaskScale);
+            Reg::Cast<float, T, castTraitHalf2Float>((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
+                                                     (Reg::RegTensor<T>&)expMaxreShareExpFP16YOneRegTensor,
+                                                     preMaskScale);
             // 校验
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(
-                infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP, preMaskScale);
+            Reg::CompareScalar<uint32_t, CMPMODE::LT>(infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP,
+                                                      preMaskScale);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, expMaxAndAddOneFP32RegTensor, zeroRegTensor32, preMaskScale);
             Reg::Maxs((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
-            Reg::Muls(
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, inv_dtype_max, preMaskScale);
-            Reg::ShiftRights(
-                expAndreShareExpFP32RegTensor, expMaxAndAddOneFP32RegTensor, FP32_SHR_NUM, preMaskScale);  // Exp
+                      (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
+            Reg::Muls((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
+                      (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, inv_dtype_max, preMaskScale);
+            Reg::ShiftRights(expAndreShareExpFP32RegTensor, expMaxAndAddOneFP32RegTensor, FP32_SHR_NUM,
+                             preMaskScale);                                                                // Exp
             Reg::And(manAndmxScaleFP32RegTensor, expMaxAndAddOneFP32RegTensor, manMaskFP32, preMaskScale); // Man
             // 条件
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(
-                p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
+                                                      preMaskScale);
             Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_254, preMaskScale);
             Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
             Reg::MaskAnd(p1, p1, p2, preMaskScale);
             Reg::MaskAnd(p1, p1, p3, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::EQ>(
-                p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
+                                                      preMaskScale);
             Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_HALF, preMaskScale);
             Reg::MaskAnd(p2, p2, p3, preMaskScale);
             Reg::MaskXor(p1, p1, p2, preMaskScale);
@@ -589,8 +592,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             // 校验
             Reg::Select<uint32_t>(manAndmxScaleFP32RegTensor, manAndmxScaleFP32RegTensor, fp8Nan, infMask);
             Reg::Select<uint32_t>(manAndmxScaleFP32RegTensor, manAndmxScaleFP32RegTensor, zeroRegTensor32, zeroMask);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                expScaleMxYZeroRegTensor, manAndmxScaleFP32RegTensor);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(expScaleMxYZeroRegTensor,
+                                                                    manAndmxScaleFP32RegTensor);
             Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(outZeromxScaleFp8, expScaleMxYZeroRegTensor);
             Reg::DataCopyUnAlign(mxScaleAddr, outZeromxScaleFp8, u1, vfNum32); // 从寄存器搬到UB
             Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
@@ -599,10 +602,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             Reg::Sub(expAndreShareExpFP32RegTensor, bias, manAndmxScaleFP32RegTensor, preMaskScale);
             // 校验
             Reg::Select<uint32_t>(expAndreShareExpFP32RegTensor, expAndreShareExpFP32RegTensor, nan, infMask);
-            Reg::Select<uint32_t>(
-                expAndreShareExpFP32RegTensor, expAndreShareExpFP32RegTensor, zeroRegTensor32, zeroMask);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                expMaxreShareExpFP16YOneRegTensor, expAndreShareExpFP32RegTensor);
+            Reg::Select<uint32_t>(expAndreShareExpFP32RegTensor, expAndreShareExpFP32RegTensor, zeroRegTensor32,
+                                  zeroMask);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(expMaxreShareExpFP16YOneRegTensor,
+                                                                    expAndreShareExpFP32RegTensor);
             // 求data value
             for (uint16_t j = 0; j < static_cast<uint16_t>(blockCount); j++) {
                 this->template LoadData<toBf16RoundMode, roundMode, true>(xAddr, j * dataLen + i * vfNum32, x, p0);
@@ -636,43 +639,41 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
         p0 = Reg::UpdateMask<T>(tailPnum); // 前tailvfLen有效加载
         if (tailVfLen != 0) {
             this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(xAddr, regLoop * vfNum32, x, p0);
-            Reg::And(
-                (Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor, (Reg::RegTensor<uint16_t>&)x, absMaskBF16,
-                p0);
+            Reg::And((Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor, (Reg::RegTensor<uint16_t>&)x,
+                     absMaskBF16, p0);
             for (uint16_t j = 1; j < static_cast<uint16_t>(blockCount); j++) {
-                this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(
-                    xAddr, regLoop * vfNum32 + j * dataLen, x, p0);
-                Reg::And(
-                    (Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, (Reg::RegTensor<uint16_t>&)x, absMaskBF16, p0);
-                Reg::Max(
-                    expMaxreShareExpFP16YOneRegTensor, (Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor,
-                    (Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, p0);
+                this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(xAddr, regLoop * vfNum32 + j * dataLen, x,
+                                                                          p0);
+                Reg::And((Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, (Reg::RegTensor<uint16_t>&)x, absMaskBF16,
+                         p0);
+                Reg::Max(expMaxreShareExpFP16YOneRegTensor,
+                         (Reg::RegTensor<uint16_t>&)expMaxreShareExpFP16YOneRegTensor,
+                         (Reg::RegTensor<uint16_t>&)expScaleMxYZeroRegTensor, p0);
             }
             Reg::Interleave(expMaxreShareExpFP16YOneRegTensor, fullZero, expMaxreShareExpFP16YOneRegTensor, fullZero);
-            Reg::Cast<float, T, castTraitHalf2Float>(
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
-                (Reg::RegTensor<T>&)expMaxreShareExpFP16YOneRegTensor, preMaskScale);
+            Reg::Cast<float, T, castTraitHalf2Float>((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
+                                                     (Reg::RegTensor<T>&)expMaxreShareExpFP16YOneRegTensor,
+                                                     preMaskScale);
             // 校验
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(
-                infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP, preMaskScale);
+            Reg::CompareScalar<uint32_t, CMPMODE::LT>(infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP,
+                                                      preMaskScale);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, expMaxAndAddOneFP32RegTensor, zeroRegTensor32, preMaskScale);
             Reg::Maxs((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
-            Reg::Muls(
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
-                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, inv_dtype_max, preMaskScale);
-            Reg::ShiftRights(
-                expAndreShareExpFP32RegTensor, expMaxAndAddOneFP32RegTensor, FP32_SHR_NUM, preMaskScale);  // Exp
+                      (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
+            Reg::Muls((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
+                      (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, inv_dtype_max, preMaskScale);
+            Reg::ShiftRights(expAndreShareExpFP32RegTensor, expMaxAndAddOneFP32RegTensor, FP32_SHR_NUM,
+                             preMaskScale);                                                                // Exp
             Reg::And(manAndmxScaleFP32RegTensor, expMaxAndAddOneFP32RegTensor, manMaskFP32, preMaskScale); // Man
             // 条件
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(
-                p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
+                                                      preMaskScale);
             Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_254, preMaskScale);
             Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
             Reg::MaskAnd(p1, p1, p2, preMaskScale);
             Reg::MaskAnd(p1, p1, p3, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::EQ>(
-                p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
+                                                      preMaskScale);
             Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_HALF, preMaskScale);
             Reg::MaskAnd(p2, p2, p3, preMaskScale);
             Reg::MaskXor(p1, p1, p2, preMaskScale);
@@ -682,8 +683,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             // 校验
             Reg::Select<uint32_t>(manAndmxScaleFP32RegTensor, manAndmxScaleFP32RegTensor, fp8Nan, infMask);
             Reg::Select<uint32_t>(manAndmxScaleFP32RegTensor, manAndmxScaleFP32RegTensor, zeroRegTensor32, zeroMask);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                expScaleMxYZeroRegTensor, manAndmxScaleFP32RegTensor);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(expScaleMxYZeroRegTensor,
+                                                                    manAndmxScaleFP32RegTensor);
             Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(outZeromxScaleFp8, expScaleMxYZeroRegTensor);
             Reg::DataCopyUnAlign(mxScaleAddr, outZeromxScaleFp8, u1, tailVfLen); // 从寄存器搬到UB
             Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
@@ -692,17 +693,17 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             Reg::Sub(expAndreShareExpFP32RegTensor, bias, manAndmxScaleFP32RegTensor, preMaskScale);
             // 校验
             Reg::Select<uint32_t>(expAndreShareExpFP32RegTensor, expAndreShareExpFP32RegTensor, nan, infMask);
-            Reg::Select<uint32_t>(
-                expAndreShareExpFP32RegTensor, expAndreShareExpFP32RegTensor, zeroRegTensor32, zeroMask);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                expMaxreShareExpFP16YOneRegTensor, expAndreShareExpFP32RegTensor);
+            Reg::Select<uint32_t>(expAndreShareExpFP32RegTensor, expAndreShareExpFP32RegTensor, zeroRegTensor32,
+                                  zeroMask);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(expMaxreShareExpFP16YOneRegTensor,
+                                                                    expAndreShareExpFP32RegTensor);
             if constexpr (isTail) {
                 Reg::Duplicate(expMaxreShareExpFP16YOneRegTensor, expMaxreShareExpFP16YOneRegTensor, p0);
             }
             // 求data value
             for (uint16_t j = 0; j < static_cast<uint16_t>(blockCount); j++) {
-                this->template LoadData<toBf16RoundMode, roundMode, true>(
-                    xAddr, regLoop * vfNum32 + j * dataLen, x, p0);
+                this->template LoadData<toBf16RoundMode, roundMode, true>(xAddr, regLoop * vfNum32 + j * dataLen, x,
+                                                                          p0);
                 if constexpr (IsSame<T, half>::value) {
                     Reg::Cast<float, T, castTraitZero>(yZero, x, p0);
                     Reg::Cast<float, T, castTraitOne>(yOne, x, p0);

@@ -34,9 +34,10 @@ struct QuantBatchMatmulV3BitField {
 
 class QuantBatchMatmulV3HashInput {
 public:
-    explicit QuantBatchMatmulV3HashInput(const QuantBatchMatmulInfo &params, const Ops::NN::Optiling::AiCoreParams &aicoreParams);
+    explicit QuantBatchMatmulV3HashInput(const QuantBatchMatmulInfo& params,
+                                         const Ops::NN::Optiling::AiCoreParams& aicoreParams);
     ~QuantBatchMatmulV3HashInput() = default;
-    bool operator==(const QuantBatchMatmulV3HashInput &params) const
+    bool operator==(const QuantBatchMatmulV3HashInput& params) const
     {
         return memcmp(this, &params, sizeof(params)) == 0;
     }
@@ -69,13 +70,13 @@ private:
 
 class QuantBatchMatmulV3HashItem {
 public:
-    explicit QuantBatchMatmulV3HashItem(const QuantBatchMatmulInfo &params, const Ops::NN::Optiling::AiCoreParams &aicoreParams)
+    explicit QuantBatchMatmulV3HashItem(const QuantBatchMatmulInfo& params,
+                                        const Ops::NN::Optiling::AiCoreParams& aicoreParams)
         : hashKey_(params, aicoreParams)
-    {
-    }
-    const QuantBatchMatmulV3HashInput &input() const { return hashKey_; }
-    const BasicTiling &GetTiling() const { return tiling_; }
-    void SetTiling(const BasicTiling &tiling) { tiling_ = tiling; }
+    {}
+    const QuantBatchMatmulV3HashInput& input() const { return hashKey_; }
+    const BasicTiling& GetTiling() const { return tiling_; }
+    void SetTiling(const BasicTiling& tiling) { tiling_ = tiling; }
 
 private:
     QuantBatchMatmulV3HashInput hashKey_;
@@ -83,5 +84,5 @@ private:
 };
 
 using MMBasicTilingHash = Ops::NN::TilingCache<QuantBatchMatmulV3HashInput, QuantBatchMatmulV3HashItem>;
-}  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V3_TILING_CACHE_H
+} // namespace optiling
+#endif // QUANT_BATCH_MATMUL_V3_TILING_CACHE_H

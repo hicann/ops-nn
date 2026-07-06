@@ -46,15 +46,11 @@ enum class QuantBatchMatmulV4QuantType : std::uint8_t {
     PER_CHANNEL = 2,
     PER_GROUP = 3,
     MX = 4,
-    K_C = 5, //pertoken + perchannel
-    K_G = 6  //pertoken + pergroup
+    K_C = 5, // pertoken + perchannel
+    K_G = 6  // pertoken + pergroup
 };
 
 // kernel template type
-enum class KernelTemplateType : std::uint8_t {
-    MSD_BASIS = 0,
-    PERBLOCK_BASIS = 1,
-    PERGROUP_BASIS = 2
-};
+enum class KernelTemplateType : std::uint8_t { MSD_BASIS = 0, PERBLOCK_BASIS = 1, PERGROUP_BASIS = 2 };
 } // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V4_TILING_INFO_H
+#endif // QUANT_BATCH_MATMUL_V4_TILING_INFO_H

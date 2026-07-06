@@ -54,6 +54,6 @@ REG_OP(KlDivLossGrad)
     .ATTR(reduction, String, "mean")
     .ATTR(log_target, Bool, false)
     .OP_END_FACTORY_REG(KlDivLossGrad)
-}
+} // namespace ge
 
 #endif

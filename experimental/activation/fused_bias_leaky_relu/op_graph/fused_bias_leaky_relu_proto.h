@@ -46,4 +46,4 @@ REG_OP(FusedBiasLeakyRelu)
 
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_OPS_H_

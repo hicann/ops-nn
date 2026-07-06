@@ -48,8 +48,7 @@ struct Conv3dBackpropV2TBETilingData {
     int32_t k_dim;     // K dimension
 };
 
-enum OpTypeV2 : size_t
-{
+enum OpTypeV2 : size_t {
     kConv3DBackpropFilterV2,
     kConv3DBackpropInputV2,
     kConv3DTransposeV2,
@@ -60,22 +59,20 @@ enum OpTypeV2 : size_t
 // 子包场景：通过适配层dlopen方式找到libophost_comm_legacy.so里的C接口实现，向本仓算子侧提供Ops::NN namepsace的接口调用
 // 整包和静态库场景：只做optiling namespace下的接口声明，向本仓算子侧提供Ops::NN namepsace的接口调用
 #ifndef NN_ENABLE_DLOPEN_LEGACY
-bool GetTbeTiling(
-    gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
-    const optiling::OpTypeV2 opType);
+bool GetTbeTiling(gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
+                  const optiling::OpTypeV2 opType);
 #endif
 } // namespace optiling
 
 namespace Ops {
 namespace NN {
 #ifdef NN_ENABLE_DLOPEN_LEGACY
-bool GetTbeTiling(
-    gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
-    const optiling::OpTypeV2 opType);
+bool GetTbeTiling(gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
+                  const optiling::OpTypeV2 opType);
 #else
 using optiling::GetTbeTiling;
 #endif
 } // namespace NN
 } // namespace Ops
 
-#endif  // TBE_TILING_API_H
+#endif // TBE_TILING_API_H

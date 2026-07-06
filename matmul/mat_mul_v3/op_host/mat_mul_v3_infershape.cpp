@@ -27,8 +27,8 @@ constexpr int64_t BLOCK_SIZE = 16;
 constexpr int64_t UNKNOWN_DIM = -1;
 constexpr int64_t UNKNOWN_DIM_NUM = -2;
 
-void InferComplementedInput(
-    Shape& shape_x1_new, Shape& shape_x2_new, bool& shape_x1_reshape_flag, bool& shape_x2_reshape_flag)
+void InferComplementedInput(Shape& shape_x1_new, Shape& shape_x2_new, bool& shape_x1_reshape_flag,
+                            bool& shape_x2_reshape_flag)
 {
     if (shape_x1_new.GetDimNum() == 1 && shape_x1_new.GetDim(0) > 0) {
         shape_x1_reshape_flag = true;
@@ -82,12 +82,10 @@ bool UpdateOutputShapeByBias(const std::string& op_name, gert::Shape* shape_out,
         UpdateUnknowDimNumToUnkownRank(shape_bias_new);
         int64_t bias_dim = shape_bias_new.GetDimNum();
         if (shape_bias_new.GetDim(bias_dim - 1) != UNKNOWN_DIM && shape_out->GetDim(1) != UNKNOWN_DIM) {
-            OP_CHECK_IF(
-                shape_bias_new.GetDim(bias_dim - 1) != shape_out->GetDim(1),
-                OP_LOGE(
-                    op_name, "The dimension of n [%ld] and bias [%ld] tensors must be the same", shape_out->GetDim(1),
-                    shape_bias_new.GetDim(bias_dim - 1)),
-                return false);
+            OP_CHECK_IF(shape_bias_new.GetDim(bias_dim - 1) != shape_out->GetDim(1),
+                        OP_LOGE(op_name, "The dimension of n [%ld] and bias [%ld] tensors must be the same",
+                                shape_out->GetDim(1), shape_bias_new.GetDim(bias_dim - 1)),
+                        return false);
         }
         if (shape_bias_new.GetDim(bias_dim - 1) != UNKNOWN_DIM && shape_out->GetDim(1) == UNKNOWN_DIM) {
             shape_out->SetDim(1, shape_bias_new.GetDim(bias_dim - 1));
@@ -108,7 +106,8 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
         shape_x1 == nullptr || shape_x2 == nullptr || shape_out == nullptr || tensor_x1 == nullptr || attrs == nullptr,
         CUBE_INNER_ERR_REPORT(op_name, "shape or attrs is null"), return ge::GRAPH_FAILED);
     auto shape_bias = context->GetOptionalInputShape(MATMUL_BIAS_IDX);
-    if (CheckIsUnknownDimNum(*shape_x1) && CheckIsUnknownDimNum(*shape_x2) && (shape_bias == nullptr || CheckIsUnknownDimNum(*shape_bias))) {
+    if (CheckIsUnknownDimNum(*shape_x1) && CheckIsUnknownDimNum(*shape_x2) &&
+        (shape_bias == nullptr || CheckIsUnknownDimNum(*shape_bias))) {
         shape_out->SetDimNum(1);
         shape_out->SetDim(0, UNKNOWN_DIM_NUM);
         return ge::GRAPH_SUCCESS;
@@ -116,13 +115,11 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
 
     const bool* trans_a = attrs->GetAttrPointer<bool>(0);
     const bool* trans_b = attrs->GetAttrPointer<bool>(1);
-    OP_CHECK_IF(
-        trans_a == nullptr || trans_b == nullptr, CUBE_INNER_ERR_REPORT(op_name, "attribute is null"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(trans_a == nullptr || trans_b == nullptr, CUBE_INNER_ERR_REPORT(op_name, "attribute is null"),
+                return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        context->GetNodeName(), "x1_shape: %s, x2_shape: %s, transpose_x1: %d, transpose_x2: %d",
-        Ops::Base::ToString(*shape_x1).c_str(), Ops::Base::ToString(*shape_x2).c_str(), *trans_a, *trans_b);
+    OP_LOGD(context->GetNodeName(), "x1_shape: %s, x2_shape: %s, transpose_x1: %d, transpose_x2: %d",
+            Ops::Base::ToString(*shape_x1).c_str(), Ops::Base::ToString(*shape_x2).c_str(), *trans_a, *trans_b);
 
     ge::DataType dtype = tensor_x1->GetDataType();
     if (dtype == ge::DT_FLOAT) {
@@ -143,10 +140,9 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
         if (input_size != nullptr && hidden_size != nullptr && *input_size > 0 && *hidden_size > 0) {
             OP_LOGD(op_name, "get private attr, input_size: %ld, hidden_size: %ld", *input_size, *hidden_size);
             shape_x2_new.SetDim(1, shape_x1_new.GetDim(1));
-            OP_CHECK_IF(
-                *input_size > std::numeric_limits<int64_t>::max() - BLOCK_SIZE + 1,
-                OP_LOGE(op_name, "input_size %ld is too large and will cause overflow of int64.", *input_size),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(*input_size > std::numeric_limits<int64_t>::max() - BLOCK_SIZE + 1,
+                        OP_LOGE(op_name, "input_size %ld is too large and will cause overflow of int64.", *input_size),
+                        return ge::GRAPH_FAILED);
             int64_t align_dim = (*input_size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE +
                                 (*hidden_size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
             shape_x2_new.SetDim(0, align_dim);
@@ -156,7 +152,7 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
     OP_LOGD(op_name, "check the input shape length.");
     size_t dimNumX1 = shape_x1_new.GetDimNum();
     // dimX1= 2, 3(slice), 4(NZ)
-    if (dimNumX1 < MATMUL_MIN_SHAPE_SIZE ||  dimNumX1 > MATMUL_MAX_SHAPE_SIZE) {
+    if (dimNumX1 < MATMUL_MIN_SHAPE_SIZE || dimNumX1 > MATMUL_MAX_SHAPE_SIZE) {
         CUBE_INNER_ERR_REPORT(op_name, "first input dim num[%zu] is not between [2, 4]!", shape_x1_new.GetDimNum());
         return ge::GRAPH_FAILED;
     }
@@ -170,7 +166,7 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
         idx_m = 1;
         idx_k_a = 0;
     } else if (dimNumX1 == MATMUL_SLICE_SHAPE_SIZE) {
-        idx_k_a = 2;  // k in dim 2
+        idx_k_a = 2; // k in dim 2
         idx_m = 1;
     }
 
@@ -183,12 +179,10 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
                                                    shape_x1_new.GetDim(idx_m);
     auto n = shape_x2_new.GetDim(idx_n);
     if (shape_x1_new.GetDim(idx_k_a) != UNKNOWN_DIM && shape_x2_new.GetDim(idx_k_b) != UNKNOWN_DIM) {
-        OP_CHECK_IF(
-            shape_x1_new.GetDim(idx_k_a) != shape_x2_new.GetDim(idx_k_b),
-            CUBE_INNER_ERR_REPORT(
-                op_name, "The k-axis of a(%ld) and b(%ld) tensors must be the same", shape_x1_new.GetDim(idx_k_a),
-                shape_x2_new.GetDim(idx_k_b)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape_x1_new.GetDim(idx_k_a) != shape_x2_new.GetDim(idx_k_b),
+                    CUBE_INNER_ERR_REPORT(op_name, "The k-axis of a(%ld) and b(%ld) tensors must be the same",
+                                          shape_x1_new.GetDim(idx_k_a), shape_x2_new.GetDim(idx_k_b)),
+                    return ge::GRAPH_FAILED);
     }
 
     shape_out->SetDimNum(MATMUL_MIN_SHAPE_SIZE);
@@ -204,5 +198,5 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
 
 } // namespace
 namespace ops {
-    IMPL_OP_INFERSHAPE(MatMulV3).InferShape(InferShapeForMatMulV3);
+IMPL_OP_INFERSHAPE(MatMulV3).InferShape(InferShapeForMatMulV3);
 }

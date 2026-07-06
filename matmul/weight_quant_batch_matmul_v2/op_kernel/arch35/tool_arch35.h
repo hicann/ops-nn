@@ -68,8 +68,8 @@ __aicore__ inline T CeilAlign(T a, T b)
 
 __aicore__ inline uint32_t CeilAlign(uint32_t a, uint32_t b)
 {
-    ASCENDC_ASSERT(
-        a <= (std::numeric_limits<uint32_t>::max() - b), { KERNEL_LOG(KERNEL_ERROR, "CeilAlign uint32 over limit."); });
+    ASCENDC_ASSERT(a <= (std::numeric_limits<uint32_t>::max() - b),
+                   { KERNEL_LOG(KERNEL_ERROR, "CeilAlign uint32 over limit."); });
     ASCENDC_ASSERT(b != 0, { KERNEL_LOG(KERNEL_ERROR, "Division by zero error!"); });
     return (a + b - 1) / b * b;
 }
@@ -82,9 +82,8 @@ __aicore__ inline T CeilDiv(T a, T b)
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(
-    const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount, uint32_t blockLen,
-    uint32_t dstInnerLength, uint32_t srcInnerLength)
+__aicore__ inline void DataCopyPad2D(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount,
+                                     uint32_t blockLen, uint32_t dstInnerLength, uint32_t srcInnerLength)
 {
     DataCopyExtParams params;
     params.blockCount = blockCount;
@@ -98,8 +97,7 @@ __aicore__ inline void DataCopyPad2D(
         padParams.paddingValue = 0;
     }
 
-    if constexpr (
-        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value) {
+    if constexpr (IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value) {
         // 4bit场景下， 跳转的步长、数据长度等需要除2
         params.blockLen = params.blockLen >> 1;
         params.srcStride = params.srcStride >> 1;
@@ -124,11 +122,9 @@ __aicore__ constexpr uint32_t GetKBUnit()
     return 512; // 512个int4是1kb
 }
 
-template <
-    TPosition POSITION, CubeFormat FORMAT, typename TYPE, bool ISTRANS = false, LayoutMode LAYOUT = LayoutMode::NONE,
-    bool IBSHARE = false>
+template <TPosition POSITION, CubeFormat FORMAT, typename TYPE, bool ISTRANS = false,
+          LayoutMode LAYOUT = LayoutMode::NONE, bool IBSHARE = false>
 struct MatmulL1GmType : MatmulType<POSITION, FORMAT, TYPE, ISTRANS, LAYOUT, IBSHARE> {
     constexpr static TPosition srcPos = TPosition::GM;
 };
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

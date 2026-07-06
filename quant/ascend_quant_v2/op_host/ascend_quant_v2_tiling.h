@@ -63,8 +63,7 @@ struct AscendQuantV2CompileInfo {
 };
 
 namespace ascendquantv2 {
-enum class RoundMode : int32_t
-{
+enum class RoundMode : int32_t {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -72,8 +71,7 @@ enum class RoundMode : int32_t
     MODE_UNDEFINED = -1,
 };
 
-enum class QuantKey
-{
+enum class QuantKey {
     KEY_PER_CHANNEL = 0,
     KEY_PER_TENSOR = 1,
     KEY_PER_HEAD = 2,

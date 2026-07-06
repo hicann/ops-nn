@@ -31,8 +31,7 @@
 #include "foreach_div_scalar.h"
 
 template <typename D_T_X>
-__global__ __aicore__ void foreach_div_scalar(GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
-                                              GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_div_scalar(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachDivScalarTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachDivScalarTilingData, tilingData, tiling);

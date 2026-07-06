@@ -23,49 +23,32 @@
 #include "graph/types.h"
 #include "op_impl_registry.h"
 
-ge::TensorDesc create_desc(std::initializer_list<int64_t> shape_dims,
-                           ge::DataType dt=ge::DT_FLOAT);
+ge::TensorDesc create_desc(std::initializer_list<int64_t> shape_dims, ge::DataType dt = ge::DT_FLOAT);
 
-ge::TensorDesc create_desc_with_ori(std::initializer_list<int64_t> shape_dims,
-                                    ge::DataType dt=ge::DT_FLOAT,
-                                    ge::Format format=ge::FORMAT_ND,
-                                    std::initializer_list<int64_t> ori_shape_dims={},
-                                    ge::Format ori_format=ge::FORMAT_ND);
-ge::TensorDesc create_desc_shape_range(
-    std::initializer_list<int64_t> shape_dims,
-    ge::DataType dt,
-    ge::Format format,
-    std::initializer_list<int64_t> ori_shape_dims,
-    ge::Format ori_format,
-    std::vector<std::pair<int64_t,int64_t>> shape_range);
+ge::TensorDesc create_desc_with_ori(std::initializer_list<int64_t> shape_dims, ge::DataType dt = ge::DT_FLOAT,
+                                    ge::Format format = ge::FORMAT_ND,
+                                    std::initializer_list<int64_t> ori_shape_dims = {},
+                                    ge::Format ori_format = ge::FORMAT_ND);
+ge::TensorDesc create_desc_shape_range(std::initializer_list<int64_t> shape_dims, ge::DataType dt, ge::Format format,
+                                       std::initializer_list<int64_t> ori_shape_dims, ge::Format ori_format,
+                                       std::vector<std::pair<int64_t, int64_t>> shape_range);
 
-ge::TensorDesc create_desc_shape_range(
-    const std::vector<int64_t>& shape_dims,
-    ge::DataType dt,
-    ge::Format format,
-    const std::vector<int64_t>& ori_shape_dims,
-    ge::Format ori_format,
-    std::vector<std::pair<int64_t,int64_t>> shape_range);
-ge::TensorDesc create_desc_with_original_shape(std::initializer_list<int64_t> shape_dims,
-                                               ge::DataType dt,
-                                               ge::Format format,
-                                               std::initializer_list<int64_t> ori_shape_dims,
+ge::TensorDesc create_desc_shape_range(const std::vector<int64_t>& shape_dims, ge::DataType dt, ge::Format format,
+                                       const std::vector<int64_t>& ori_shape_dims, ge::Format ori_format,
+                                       std::vector<std::pair<int64_t, int64_t>> shape_range);
+ge::TensorDesc create_desc_with_original_shape(std::initializer_list<int64_t> shape_dims, ge::DataType dt,
+                                               ge::Format format, std::initializer_list<int64_t> ori_shape_dims,
                                                ge::Format ori_format);
-ge::TensorDesc create_desc_shape_and_origin_shape_range(
-    std::initializer_list<int64_t> shape_dims,
-    ge::DataType dt,
-    ge::Format format,
-    std::initializer_list<int64_t> ori_shape_dims,
-    ge::Format ori_format,
-    std::vector<std::pair<int64_t,int64_t>> shape_range);
+ge::TensorDesc create_desc_shape_and_origin_shape_range(std::initializer_list<int64_t> shape_dims, ge::DataType dt,
+                                                        ge::Format format,
+                                                        std::initializer_list<int64_t> ori_shape_dims,
+                                                        ge::Format ori_format,
+                                                        std::vector<std::pair<int64_t, int64_t>> shape_range);
 
-ge::TensorDesc create_desc_shape_and_origin_shape_range(
-    const std::vector<int64_t>& shape_dims,
-    ge::DataType dt,
-    ge::Format format,
-    const std::vector<int64_t>& ori_shape_dims,
-    ge::Format ori_format,
-    std::vector<std::pair<int64_t,int64_t>> shape_range);
+ge::TensorDesc create_desc_shape_and_origin_shape_range(const std::vector<int64_t>& shape_dims, ge::DataType dt,
+                                                        ge::Format format, const std::vector<int64_t>& ori_shape_dims,
+                                                        ge::Format ori_format,
+                                                        std::vector<std::pair<int64_t, int64_t>> shape_range);
 
 /*
  * @brief: Create gert::Shape according to std::vector
@@ -81,4 +64,4 @@ gert::Shape CreateShape(const std::vector<int64_t>& shape);
  * @return gert::Shape: the register function for infer axis type info
  */
 gert::StorageShape CreateStorageShape(const std::vector<int64_t>& ori_shape, const std::vector<int64_t>& shape = {});
-#endif //NN_TESTS_UT_COMMON_INFERSHAPE_TEST_UTIL_H_
+#endif // NN_TESTS_UT_COMMON_INFERSHAPE_TEST_UTIL_H_

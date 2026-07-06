@@ -40,28 +40,27 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(const aclTensor *x1, const aclTensor *x2,
-                                                         const aclTensor *x1Scale, const aclTensor *x2Scale,
-                                                         const aclTensor *yScaleOptional, const aclTensor *x1OffsetOptional,
-                                                         const aclTensor *x2OffsetOptional, const aclTensor *yOffsetOptional,
-                                                         const aclTensor *biasOptional, const aclTensor *x3Optional, 
-                                                         const char *fusedOpType, int64_t groupSizeOptional,
-                                                         aclTensor *out, uint64_t *workspaceSize,
-                                                         aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
+    const aclTensor* yScaleOptional, const aclTensor* x1OffsetOptional, const aclTensor* x2OffsetOptional,
+    const aclTensor* yOffsetOptional, const aclTensor* biasOptional, const aclTensor* x3Optional,
+    const char* fusedOpType, int64_t groupSizeOptional, aclTensor* out, uint64_t* workspaceSize,
+    aclOpExecutor** executor);
 
 /**
  * @brief aclnnFusedQuantMatmul的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnFusedQuantMatmulGetWorkspaceSize获取。
+ * @param [in] workspace_size: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnFusedQuantMatmulGetWorkspaceSize获取。
  * @param [in] exector: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
 ACLNN_API aclnnStatus aclnnFusedQuantMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                         aclrtStream stream);
+                                            aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_FUSED_QUANT_MATMUL_
+#endif // OP_API_INC_FUSED_QUANT_MATMUL_

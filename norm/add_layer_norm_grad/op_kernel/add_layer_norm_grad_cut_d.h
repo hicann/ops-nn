@@ -24,35 +24,40 @@ template <typename T, int TILING_KEY>
 class KernelAddLayerNormGradLarge {
 #define HAS_ADDITIONAL_INPUT ((TILING_KEY % 10) == 1)
 public:
-    __aicore__ inline KernelAddLayerNormGradLarge()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x_1, GM_ADDR x_2, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR dsum, GM_ADDR d_x,
-        GM_ADDR d_gamma, GM_ADDR d_beta, const AddLayerNormGradTilingData tiling, GM_ADDR workspace)
+    __aicore__ inline KernelAddLayerNormGradLarge() {}
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x_1, GM_ADDR x_2, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma,
+                                GM_ADDR dsum, GM_ADDR d_x, GM_ADDR d_gamma, GM_ADDR d_beta,
+                                const AddLayerNormGradTilingData tiling, GM_ADDR workspace)
     {
         InitVar(tiling);
-        if(selfTiling.isDeterministicKey) {
+        if (selfTiling.isDeterministicKey) {
             deterministicWorkSpaceSize = roundUpNumLastDimFloatLen * CONSTANT_TWO * selfTiling.numCore;
             workspaceGMOri.SetGlobalBuffer((__gm__ float*)workspace, deterministicWorkSpaceSize);
         }
         InitOutputQueue();
         InitOuputGmBuffer(d_gamma, d_beta);
 
-        if(isComputedCore) {
-            if(selfTiling.isDeterministicKey) {
+        if (isComputedCore) {
+            if (selfTiling.isDeterministicKey) {
                 InitWorkspaceGmBuffer(workspace);
             }
             InitInputGmBuffer(dy, x_1, x_2, rstd, mean, gamma, dsum);
             InitInputQueue();
             InitTmpBuffer(workspace);
-            dXGm.SetGlobalBuffer((__gm__ T *)d_x + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
+            dXGm.SetGlobalBuffer((__gm__ T*)d_x + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim,
+                                 gmOneCoreElemXY);
         }
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         SyncAll();
 #else
         uint32_t each_core_handle_num = BLOCK_AlIGN / sizeof(int32_t);
-        syncGlobal_.SetGlobalBuffer((__gm__ int32_t*)workspace + selfTiling.isDeterministicKey * deterministicWorkSpaceSize, GetBlockNum() * FLOAT_BLOCK_ELEM);
-        syncGlobal1_.SetGlobalBuffer((__gm__ int32_t*)workspace + selfTiling.isDeterministicKey * deterministicWorkSpaceSize + GetBlockNum() * FLOAT_BLOCK_ELEM, GetBlockNum() * FLOAT_BLOCK_ELEM);
+        syncGlobal_.SetGlobalBuffer(
+            (__gm__ int32_t*)workspace + selfTiling.isDeterministicKey * deterministicWorkSpaceSize,
+            GetBlockNum() * FLOAT_BLOCK_ELEM);
+        syncGlobal1_.SetGlobalBuffer((__gm__ int32_t*)workspace +
+                                         selfTiling.isDeterministicKey * deterministicWorkSpaceSize +
+                                         GetBlockNum() * FLOAT_BLOCK_ELEM,
+                                     GetBlockNum() * FLOAT_BLOCK_ELEM);
 
         LocalTensor<int32_t> tmp_init_buf = dBetaQue.AllocTensor<int32_t>();
         Duplicate(tmp_init_buf, 0, each_core_handle_num);
@@ -69,7 +74,8 @@ public:
         selfTiling = tiling;
         roundUpNumLastDimFloatLen = selfTiling.roundUpNumLastDimFloat / sizeof(float);
 
-        nInOneCore = (GetBlockIdx() != selfTiling.numCore - 1) ? selfTiling.nInOneCoreLength : selfTiling.nInOneCoreLengthTail;
+        nInOneCore = (GetBlockIdx() != selfTiling.numCore - 1) ? selfTiling.nInOneCoreLength :
+                                                                 selfTiling.nInOneCoreLengthTail;
         gmOneCoreElemXY = nInOneCore * selfTiling.numLastDim;
 
         blockNumber = BLOCK_AlIGN / sizeof(float);
@@ -79,30 +85,40 @@ public:
             blockNumberTdtype = BLOCK_AlIGN / sizeof(float);
         }
 
-        if(GetBlockIdx() < selfTiling.numCore) {
+        if (GetBlockIdx() < selfTiling.numCore) {
             isComputedCore = true;
         }
     }
 
-    __aicore__ inline void InitInputGmBuffer(
-        GM_ADDR dy, GM_ADDR x_1, GM_ADDR x_2, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR dsum)
+    __aicore__ inline void InitInputGmBuffer(GM_ADDR dy, GM_ADDR x_1, GM_ADDR x_2, GM_ADDR rstd, GM_ADDR mean,
+                                             GM_ADDR gamma, GM_ADDR dsum)
     {
-        dyGm.SetGlobalBuffer((__gm__ T*)dy + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
-        x1Gm.SetGlobalBuffer((__gm__ T*)x_1 + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x_2 + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
+        dyGm.SetGlobalBuffer((__gm__ T*)dy + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim,
+                             gmOneCoreElemXY);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x_1 + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim,
+                             gmOneCoreElemXY);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x_2 + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim,
+                             gmOneCoreElemXY);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + GetBlockIdx() * selfTiling.nInOneCoreLength, nInOneCore);
         meanGm.SetGlobalBuffer((__gm__ float*)mean + GetBlockIdx() * selfTiling.nInOneCoreLength, nInOneCore);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, selfTiling.numLastDim);
         if constexpr (HAS_ADDITIONAL_INPUT) {
-            dSumGm.SetGlobalBuffer((__gm__ T*)dsum + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
+            dSumGm.SetGlobalBuffer(
+                (__gm__ T*)dsum + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
         }
     }
 
-    __aicore__ inline void InitWorkspaceGmBuffer(GM_ADDR workspace) {
-        workspaceGmGamma.SetGlobalBuffer((__gm__ float*)workspace + GetBlockIdx() * CONSTANT_TWO * roundUpNumLastDimFloatLen, roundUpNumLastDimFloatLen);
-        workspaceGmBeta.SetGlobalBuffer((__gm__ float*)workspace + (1 + GetBlockIdx() * CONSTANT_TWO) * roundUpNumLastDimFloatLen, roundUpNumLastDimFloatLen);
+    __aicore__ inline void InitWorkspaceGmBuffer(GM_ADDR workspace)
+    {
+        workspaceGmGamma.SetGlobalBuffer(
+            (__gm__ float*)workspace + GetBlockIdx() * CONSTANT_TWO * roundUpNumLastDimFloatLen,
+            roundUpNumLastDimFloatLen);
+        workspaceGmBeta.SetGlobalBuffer(
+            (__gm__ float*)workspace + (1 + GetBlockIdx() * CONSTANT_TWO) * roundUpNumLastDimFloatLen,
+            roundUpNumLastDimFloatLen);
         LocalTensor<float> temp_local_tensor = dGammaQue.AllocTensor<float>();
-        InitGmData(workspaceGmGamma, workspaceGmBeta, roundUpNumLastDimFloatLen, temp_local_tensor, ROUND_UP(selfTiling.dInnerLength, blockNumber));
+        InitGmData(workspaceGmGamma, workspaceGmBeta, roundUpNumLastDimFloatLen, temp_local_tensor,
+                   ROUND_UP(selfTiling.dInnerLength, blockNumber));
         dGammaQue.FreeTensor(temp_local_tensor);
     }
 
@@ -112,7 +128,8 @@ public:
         dBetaGm.SetGlobalBuffer((__gm__ float*)d_beta, selfTiling.numLastDim);
         if (GetBlockIdx() == 0) {
             LocalTensor<float> temp_local_tensor = dGammaQue.AllocTensor<float>();
-            InitGmData(dGammaGm, dBetaGm, selfTiling.numLastDim, temp_local_tensor, ROUND_UP(selfTiling.dInnerLength, blockNumber));
+            InitGmData(dGammaGm, dBetaGm, selfTiling.numLastDim, temp_local_tensor,
+                       ROUND_UP(selfTiling.dInnerLength, blockNumber));
             dGammaQue.FreeTensor(temp_local_tensor);
         }
     }
@@ -155,7 +172,7 @@ public:
 
     __aicore__ inline void CutDProcess()
     {
-        if(isComputedCore){
+        if (isComputedCore) {
             LocalTensor<float> tmpMeanPdLocal = tmpMeanPdBuf.Get<float>();
             LocalTensor<float> tmpVarPdLocal = tmpVarPdBuf.Get<float>();
             LocalTensor<float> dyFp32Local;
@@ -183,7 +200,8 @@ public:
                 Duplicate(tmpVarPdLocal, 0.0f, blockNumber);
                 PipeBarrier<PIPE_V>();
                 for (int32_t DOuterUbIndex = 0; DOuterUbIndex < selfTiling.dOuterLength; ++DOuterUbIndex) {
-                    uint32_t DInOnceUb = (DOuterUbIndex != selfTiling.dOuterLength - 1) ? selfTiling.dInnerLength : selfTiling.dInnerLengthTail;
+                    uint32_t DInOnceUb = (DOuterUbIndex != selfTiling.dOuterLength - 1) ? selfTiling.dInnerLength :
+                                                                                          selfTiling.dInnerLengthTail;
                     uint32_t offsetUbXY = DOuterUbIndex * selfTiling.dInnerLength + nInnerIndex * selfTiling.numLastDim;
                     uint32_t offsetUbMeanVar = nInnerIndex;
                     uint32_t offsetUbGamma = DOuterUbIndex * selfTiling.dInnerLength;
@@ -212,11 +230,12 @@ public:
                         Cast(x1Fp32Local, inputX1, RoundMode::CAST_NONE, elemCoutXYUb);
                         Cast(x2Fp32Local, inputX2, RoundMode::CAST_NONE, elemCoutXYUb);
                         Cast(gammaFp32Local, inputGamma, RoundMode::CAST_NONE, elemCoutXYUb);
-                        MainComputeFirstPart(dyFp32Local, x1Fp32Local, x2Fp32Local, inputRstd, inputMean, gammaFp32Local, outputDgamma,
-                            outputDbeta, dXLocal, tmpVarPdLocal, tmpMeanPdLocal, elemCoutXYUb);
+                        MainComputeFirstPart(dyFp32Local, x1Fp32Local, x2Fp32Local, inputRstd, inputMean,
+                                             gammaFp32Local, outputDgamma, outputDbeta, dXLocal, tmpVarPdLocal,
+                                             tmpMeanPdLocal, elemCoutXYUb);
                     } else {
-                        MainComputeFirstPart(inputDy, inputX1, inputX2, inputRstd, inputMean, inputGamma, outputDgamma, outputDbeta,
-                            outputDx, tmpVarPdLocal, tmpMeanPdLocal, elemCoutXYUb);
+                        MainComputeFirstPart(inputDy, inputX1, inputX2, inputRstd, inputMean, inputGamma, outputDgamma,
+                                             outputDbeta, outputDx, tmpVarPdLocal, tmpMeanPdLocal, elemCoutXYUb);
                     }
                     dyQue.FreeTensor(inputDy);
                     x1Que.FreeTensor(inputX1);
@@ -235,7 +254,8 @@ public:
                 }
 
                 for (int32_t DOuterUbIndex = 0; DOuterUbIndex < selfTiling.dOuterLength; ++DOuterUbIndex) {
-                    uint32_t DInOnceUb = (DOuterUbIndex != selfTiling.dOuterLength - 1) ? selfTiling.dInnerLength : selfTiling.dInnerLengthTail;
+                    uint32_t DInOnceUb = (DOuterUbIndex != selfTiling.dOuterLength - 1) ? selfTiling.dInnerLength :
+                                                                                          selfTiling.dInnerLengthTail;
                     uint32_t offsetUbXY = DOuterUbIndex * selfTiling.dInnerLength + nInnerIndex * selfTiling.numLastDim;
                     uint32_t offsetUbMeanVar = nInnerIndex;
                     uint32_t offsetUbGamma = DOuterUbIndex * selfTiling.dInnerLength;
@@ -269,9 +289,9 @@ public:
                             Cast(dSumFp32Local, inputDx, RoundMode::CAST_NONE, elemCoutXYUb);
                         }
                         PipeBarrier<PIPE_V>();
-                        MainComputeSecondPart(
-                            dyFp32Local, x1Fp32Local, x2Fp32Local, inputRstd, inputMean, gammaFp32Local, dSumFp32Local,
-                            dXLocal, tmpVarPdLocal, tmpMeanPdLocal, elemCoutXYUb);
+                        MainComputeSecondPart(dyFp32Local, x1Fp32Local, x2Fp32Local, inputRstd, inputMean,
+                                              gammaFp32Local, dSumFp32Local, dXLocal, tmpVarPdLocal, tmpMeanPdLocal,
+                                              elemCoutXYUb);
                         if constexpr (is_same<T, half>::value) {
                             Cast(outputDx, dXLocal, RoundMode::CAST_NONE, elemCoutXYUb);
                             PipeBarrier<PIPE_V>();
@@ -280,8 +300,8 @@ public:
                             PipeBarrier<PIPE_V>();
                         }
                     } else {
-                        MainComputeSecondPart(inputDy, inputX1, inputX2, inputRstd, inputMean, inputGamma, inputDx, outputDx, tmpVarPdLocal,
-                            tmpMeanPdLocal, elemCoutXYUb);
+                        MainComputeSecondPart(inputDy, inputX1, inputX2, inputRstd, inputMean, inputGamma, inputDx,
+                                              outputDx, tmpVarPdLocal, tmpMeanPdLocal, elemCoutXYUb);
                     }
 
                     dyQue.FreeTensor(inputDy);
@@ -301,7 +321,7 @@ public:
                 }
             }
         }
-        if(selfTiling.isDeterministicKey) {
+        if (selfTiling.isDeterministicKey) {
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
             SyncAll();
 #else
@@ -317,9 +337,9 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(
-        const int32_t offsetUbXY, const int32_t offsetUbMeanVar, const int32_t d_y_in_ub, const int32_t DRstdInUb,
-        const int32_t n_in_once_ub, const int32_t offsetUbGamma, const bool has_dsum = false)
+    __aicore__ inline void CopyIn(const int32_t offsetUbXY, const int32_t offsetUbMeanVar, const int32_t d_y_in_ub,
+                                  const int32_t DRstdInUb, const int32_t n_in_once_ub, const int32_t offsetUbGamma,
+                                  const bool has_dsum = false)
     {
         // AllocTensor
         LocalTensor<T> dyLocal = dyQue.AllocTensor<T>();
@@ -352,21 +372,21 @@ private:
 #else
         for (uint32_t idx = 0; idx < n_in_once_ub; idx++) {
             DataCopy(dyLocal[idx * ROUND_UP(d_y_in_ub, blockNumberTdtype)], dyGm[offsetUbXY + idx * d_y_in_ub],
-                ROUND_UP(d_y_in_ub, blockNumberTdtype));
+                     ROUND_UP(d_y_in_ub, blockNumberTdtype));
             DataCopy(x1Local[idx * ROUND_UP(d_y_in_ub, blockNumberTdtype)], x1Gm[offsetUbXY + idx * d_y_in_ub],
-                ROUND_UP(d_y_in_ub, blockNumberTdtype));
+                     ROUND_UP(d_y_in_ub, blockNumberTdtype));
             DataCopy(x2Local[idx * ROUND_UP(d_y_in_ub, blockNumberTdtype)], x2Gm[offsetUbXY + idx * d_y_in_ub],
-                ROUND_UP(d_y_in_ub, blockNumberTdtype));
+                     ROUND_UP(d_y_in_ub, blockNumberTdtype));
 
             DataCopy(rstdLocal[idx * ROUND_UP(DRstdInUb, blockNumber)], rstdGm[offsetUbMeanVar + idx * DRstdInUb],
-                ROUND_UP(DRstdInUb, blockNumber));
+                     ROUND_UP(DRstdInUb, blockNumber));
             DataCopy(meanLocal[idx * ROUND_UP(DRstdInUb, blockNumber)], meanGm[offsetUbMeanVar + idx * DRstdInUb],
-                ROUND_UP(DRstdInUb, blockNumber));
+                     ROUND_UP(DRstdInUb, blockNumber));
 
             if (HAS_ADDITIONAL_INPUT && has_dsum) {
                 dSumLocal = dSumQue.AllocTensor<T>();
                 DataCopy(dSumLocal[idx * ROUND_UP(d_y_in_ub, blockNumberTdtype)], dSumGm[offsetUbXY + idx * d_y_in_ub],
-                    ROUND_UP(d_y_in_ub, blockNumberTdtype));
+                         ROUND_UP(d_y_in_ub, blockNumberTdtype));
             }
         }
         DataCopy(gammaLocal, gammaGm[offsetUbGamma], ROUND_UP(d_y_in_ub, blockNumberTdtype));
@@ -385,7 +405,8 @@ private:
         }
     }
 
-    __aicore__ inline void MainComputeFirstPart(const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX1, const LocalTensor<float>& inputX2,
+    __aicore__ inline void MainComputeFirstPart(
+        const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX1, const LocalTensor<float>& inputX2,
         const LocalTensor<float>& inputRstd, const LocalTensor<float>& inputMean, const LocalTensor<float>& inputGamma,
         const LocalTensor<float>& outputDgamma, const LocalTensor<float>& outputDbeta,
         const LocalTensor<float>& outputDx, const LocalTensor<float>& tmpVarPdLocal,
@@ -493,7 +514,7 @@ private:
         LocalTensor<float> d_beta_local = dBetaQue.DeQue<float>();
 
         SetAtomicAdd<float>();
-        if(selfTiling.isDeterministicKey){
+        if (selfTiling.isDeterministicKey) {
             DataCopyAutomicAdd(workspaceGmGamma, d_gammaLocal, elem_cout_d_x_y, offsetUbGamma, (uint16_t)1);
         } else {
             DataCopyAutomicAdd(dGammaGm, d_gammaLocal, elem_cout_d_x_y, offsetUbGamma, (uint16_t)1);
@@ -502,7 +523,7 @@ private:
         SetAtomicNone();
 
         SetAtomicAdd<float>();
-        if(selfTiling.isDeterministicKey){
+        if (selfTiling.isDeterministicKey) {
             DataCopyAutomicAdd(workspaceGmBeta, d_beta_local, elem_cout_d_x_y, offsetUbGamma, (uint16_t)1);
         } else {
             DataCopyAutomicAdd(dBetaGm, d_beta_local, elem_cout_d_x_y, offsetUbGamma, (uint16_t)1);
@@ -571,6 +592,6 @@ private:
     uint64_t deterministicWorkSpaceSize = 0;
     bool isComputedCore = false;
 };
-}
+} // namespace AddLayerNormGrad
 
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_ADD_LAYER_NORM_GRAD_ADD_LAYER_NORM_GRAD_CUT_D

@@ -48,56 +48,52 @@ static inline bool IsDtypeSupported(const ge::DataType dtype)
 
 bool BatchNormV3TilingBase::CheckInputDtype()
 {
-    OP_CHECK_IF(
-        context_->GetInputDesc(X_INPUT_IDX) == nullptr, OP_LOGE("BatchNormV3TilingBase", "X_INPUT_IDX is null"),
-        return false);
+    OP_CHECK_IF(context_->GetInputDesc(X_INPUT_IDX) == nullptr, OP_LOGE("BatchNormV3TilingBase", "X_INPUT_IDX is null"),
+                return false);
     auto xDtype = context_->GetInputDesc(X_INPUT_IDX)->GetDataType();
-    OP_CHECK_IF(
-        context_->GetInputDesc(WEIGHT_INPUT_IDX) == nullptr,
-        OP_LOGE("BatchNormV3TilingBase", "WEIGHT_INPUT_IDX is null"), return false);
+    OP_CHECK_IF(context_->GetInputDesc(WEIGHT_INPUT_IDX) == nullptr,
+                OP_LOGE("BatchNormV3TilingBase", "WEIGHT_INPUT_IDX is null"), return false);
     auto weightDtype = context_->GetInputDesc(WEIGHT_INPUT_IDX)->GetDataType();
-    OP_CHECK_IF(
-        context_->GetInputDesc(BIAS_INPUT_IDX) == nullptr, OP_LOGE("BatchNormV3TilingBase", "BIAS_INPUT_IDX is null"),
-        return false);
+    OP_CHECK_IF(context_->GetInputDesc(BIAS_INPUT_IDX) == nullptr,
+                OP_LOGE("BatchNormV3TilingBase", "BIAS_INPUT_IDX is null"), return false);
     auto biasDtype = context_->GetInputDesc(BIAS_INPUT_IDX)->GetDataType();
-    OP_CHECK_IF(
-        context_->GetInputDesc(MEAN_INPUT_IDX) == nullptr, OP_LOGE("BatchNormV3TilingBase", "MEAN_INPUT_IDX is null"),
-        return false);
+    OP_CHECK_IF(context_->GetInputDesc(MEAN_INPUT_IDX) == nullptr,
+                OP_LOGE("BatchNormV3TilingBase", "MEAN_INPUT_IDX is null"), return false);
     auto meanDtype = context_->GetInputDesc(MEAN_INPUT_IDX)->GetDataType();
-    OP_CHECK_IF(
-        context_->GetInputDesc(VAR_INPUT_IDX) == nullptr, OP_LOGE("BatchNormV3TilingBase", "VAR_INPUT_IDX is null"),
-        return false);
+    OP_CHECK_IF(context_->GetInputDesc(VAR_INPUT_IDX) == nullptr,
+                OP_LOGE("BatchNormV3TilingBase", "VAR_INPUT_IDX is null"), return false);
 
     auto varDtype = context_->GetInputDesc(VAR_INPUT_IDX)->GetDataType();
     OP_CHECK_IF(
-        !IsDtypeSupported(xDtype), OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(), "DT_FLOAT, DT_FLOAT16 or DT_BF16"),
+        !IsDtypeSupported(xDtype),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+                                  "DT_FLOAT, DT_FLOAT16 or DT_BF16"),
         return false);
-    OP_CHECK_IF(
-        (!IsDtypeSupported(weightDtype)),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "weight",
-            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(), "DT_FLOAT, DT_FLOAT16 or DT_BF16"), return false);
-    OP_CHECK_IF(
-        (xDtype != weightDtype) && (weightDtype != ge::DT_FLOAT),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "weight",
-            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
-            "when weight dtype not same as x dtype, weight dtype must be DT_FLOAT"),
-        return false);
+    OP_CHECK_IF((!IsDtypeSupported(weightDtype)),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "weight",
+                                          ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
+                                          "DT_FLOAT, DT_FLOAT16 or DT_BF16"),
+                return false);
+    OP_CHECK_IF((xDtype != weightDtype) && (weightDtype != ge::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "weight", ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
+                    "when weight dtype not same as x dtype, weight dtype must be DT_FLOAT"),
+                return false);
     if (weightDtype != biasDtype) {
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(weightDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(biasDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and bias",
-            dtypesStr.c_str(), "The dtype of bias and weight must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and bias", dtypesStr.c_str(),
+                                               "The dtype of bias and weight must be the same");
         return false;
     }
-    OP_CHECK_IF(
-        (meanDtype != ge::DT_FLOAT), OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "running_mean",
-            ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "DT_FLOAT"),
-        return false);
-    OP_CHECK_IF(
-        (varDtype != ge::DT_FLOAT), OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "running_var",
-            ge::TypeUtils::DataTypeToSerialString(varDtype).c_str(), "DT_FLOAT"),
-        return false);
+    OP_CHECK_IF((meanDtype != ge::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "running_mean",
+                                          ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "DT_FLOAT"),
+                return false);
+    OP_CHECK_IF((varDtype != ge::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "running_var",
+                                          ge::TypeUtils::DataTypeToSerialString(varDtype).c_str(), "DT_FLOAT"),
+                return false);
     commonParams.xDtype = xDtype;
     return true;
 }
@@ -122,10 +118,11 @@ bool BatchNormV3TilingBase::CheckInputShape()
     auto xDesc = context_->GetInputDesc(X_INPUT_IDX);
     auto format = xDesc->GetFormat().GetStorageFormat();
     if (format == FORMAT_ND) {
-        OP_CHECK_IF(
-            xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "at least 2D with ND format"), return false);
+        OP_CHECK_IF(xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                                                 std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "at least 2D with ND format"),
+                    return false);
         commonParams.patternR1 = xStorageShape.GetDim(DIM_0);
         commonParams.patternA = xStorageShape.GetDim(DIM_1);
         commonParams.patternR0 = 1;
@@ -136,7 +133,8 @@ bool BatchNormV3TilingBase::CheckInputShape()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"), return false);
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
+            return false);
         commonParams.patternR1 = xStorageShape.GetDim(DIM_0);
         commonParams.patternA = xStorageShape.GetDim(DIM_1);
         commonParams.patternR0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
@@ -144,53 +142,66 @@ bool BatchNormV3TilingBase::CheckInputShape()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCDHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"), return false);
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
+            return false);
         commonParams.patternR1 = xStorageShape.GetDim(DIM_0);
         commonParams.patternA = xStorageShape.GetDim(DIM_1);
-        commonParams.patternR0 =
-            xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
+        commonParams.patternR0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) *
+                                 xStorageShape.GetDim(DIM_4);
     } else {
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
-            ge::TypeUtils::FormatToSerialString(format).c_str(), "ND, NCHW and NCDHW");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(format).c_str(),
+                                   "ND, NCHW and NCDHW");
         return false;
     }
     OP_CHECK_IF(
         commonParams.patternR1 <= 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "The dim 0 of x should be greater than zero"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape).c_str(),
+                                              "The dim 0 of x should be greater than zero"),
         return false);
     OP_CHECK_IF(
         commonParams.patternA <= 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "The dim 1 of x should be greater than zero"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape).c_str(),
+                                              "The dim 1 of x should be greater than zero"),
         return false);
     OP_CHECK_IF(
         commonParams.patternR0 <= 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "dim_2 * dim_3 * dim_4 of x should be greater than zero"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape).c_str(),
+                                              "dim_2 * dim_3 * dim_4 of x should be greater than zero"),
         return false);
     if (bnWeightStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "The shape size of weight must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of weight must be the same as the C dimension of x (the second "
+                                "dimension is C dimension): " +
+                                std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "weight",
-            std::to_string(bnWeightStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+                                                   std::to_string(bnWeightStorageShape.GetShapeSize()).c_str(),
+                                                   reasonMsg.c_str());
         return false;
     }
     if (bnBiasStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "The shape size of bias must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of bias must be the same as the C dimension of x (the second dimension "
+                                "is C dimension): " +
+                                std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "bias",
-            std::to_string(bnBiasStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+                                                   std::to_string(bnBiasStorageShape.GetShapeSize()).c_str(),
+                                                   reasonMsg.c_str());
         return false;
     }
     if (bnMeanStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "The shape size of running_mean must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of running_mean must be the same as the C dimension of x (the second "
+                                "dimension is C dimension): " +
+                                std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "running_mean",
-            std::to_string(bnMeanStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+                                                   std::to_string(bnMeanStorageShape.GetShapeSize()).c_str(),
+                                                   reasonMsg.c_str());
         return false;
     }
     if (bnVarStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "The shape size of running_var must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of running_var must be the same as the C dimension of x (the second "
+                                "dimension is C dimension): " +
+                                std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "running_var",
-            std::to_string(bnVarStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+                                                   std::to_string(bnVarStorageShape.GetShapeSize()).c_str(),
+                                                   reasonMsg.c_str());
         return false;
     }
     return true;
@@ -198,19 +209,16 @@ bool BatchNormV3TilingBase::CheckInputShape()
 
 bool BatchNormV3TilingBase::CheckInputParam()
 {
-    OP_CHECK_IF(
-        isTrainingValue == false,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "is_training",
-            "false", "Attr is_training does not support false."),
-        return false);
+    OP_CHECK_IF(isTrainingValue == false,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "is_training", "false",
+                                                      "Attr is_training does not support false."),
+                return false);
     // check输入dtype
-    OP_CHECK_IF(
-        !BatchNormV3TilingBase::CheckInputDtype(), OP_LOGE(commonParams.nodeName, "CheckInputDtype failed."),
-        return false);
+    OP_CHECK_IF(!BatchNormV3TilingBase::CheckInputDtype(), OP_LOGE(commonParams.nodeName, "CheckInputDtype failed."),
+                return false);
     // check输入shape
-    OP_CHECK_IF(
-        !BatchNormV3TilingBase::CheckInputShape(), OP_LOGE(commonParams.nodeName, "CheckInputShape failed."),
-        return false);
+    OP_CHECK_IF(!BatchNormV3TilingBase::CheckInputShape(), OP_LOGE(commonParams.nodeName, "CheckInputShape failed."),
+                return false);
 
     commonParams.patternR0Align = (commonParams.xDtype == ge::DT_FLOAT) ?
                                       Ops::Base::CeilAlign(commonParams.patternR0, B32_BLOCK_ALIGN_NUM) :
@@ -230,17 +238,15 @@ ge::graphStatus BatchNormV3TilingBase::GetPlatformInfo()
         commonParams.ubSizePlatForm = ubSizePlatForm;
     } else {
         auto compileInfoPtr = reinterpret_cast<const BatchNormV3CompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(commonParams.nodeName, "compile info is null"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(commonParams.nodeName, "compile info is null"),
+                    return ge::GRAPH_FAILED);
         commonParams.coreNum = compileInfoPtr->coreNum;
         commonParams.ubSizePlatForm = compileInfoPtr->ubSize;
     }
-    OP_CHECK_IF(
-        commonParams.coreNum == 0, OP_LOGE(commonParams.nodeName, "coreNum should not be equal to zero."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        commonParams.ubSizePlatForm == 0, OP_LOGE(commonParams.nodeName, "ubSizePlatForm should not be equal to zero."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(commonParams.coreNum == 0, OP_LOGE(commonParams.nodeName, "coreNum should not be equal to zero."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(commonParams.ubSizePlatForm == 0,
+                OP_LOGE(commonParams.nodeName, "ubSizePlatForm should not be equal to zero."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

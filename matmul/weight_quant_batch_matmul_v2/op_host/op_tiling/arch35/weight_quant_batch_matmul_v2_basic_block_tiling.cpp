@@ -122,13 +122,12 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::Reset()
 void WeightQuantBatchMatmulV2BasicBlockTiling::SetPlatformParam(const PlatformParam& param)
 {
     platformParam_ = param;
-    OP_LOGI(
-        opName_,
-        "Platform info: blockNum: %ld, aicNum: %ld, ubSize: %ld, l1Size: %ld, l0aSize: %ld, l0bSize: %ld, l0cSize: "
-        "%ld, cacheLine: %ld, minCacheLine: %ld, frequency: %lf, hbmBW: %lf, l2BW: %lf",
-        platformParam_.blockNum, platformParam_.aicNum, platformParam_.ubSize, platformParam_.l1Size,
-        platformParam_.l0aSize, platformParam_.l0bSize, platformParam_.l0cSize, platformParam_.cacheLine,
-        platformParam_.minCacheLine, platformParam_.frequency, platformParam_.hbmBW, platformParam_.l2BW);
+    OP_LOGI(opName_,
+            "Platform info: blockNum: %ld, aicNum: %ld, ubSize: %ld, l1Size: %ld, l0aSize: %ld, l0bSize: %ld, l0cSize: "
+            "%ld, cacheLine: %ld, minCacheLine: %ld, frequency: %lf, hbmBW: %lf, l2BW: %lf",
+            platformParam_.blockNum, platformParam_.aicNum, platformParam_.ubSize, platformParam_.l1Size,
+            platformParam_.l0aSize, platformParam_.l0bSize, platformParam_.l0cSize, platformParam_.cacheLine,
+            platformParam_.minCacheLine, platformParam_.frequency, platformParam_.hbmBW, platformParam_.l2BW);
 }
 
 void WeightQuantBatchMatmulV2BasicBlockTiling::SetShape(int64_t mSize, int64_t nSize, int64_t kSize, int64_t groupSize)
@@ -138,9 +137,8 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SetShape(int64_t mSize, int64_t n
     basicBlockParam_.kSize = kSize;
     basicBlockParam_.singleK = kSize;
     basicBlockParam_.groupSize = groupSize;
-    OP_LOGI(
-        opName_, "Init shape param, mSize: %ld, nSize: %ld, kSize: %ld, groupSize: %ld", basicBlockParam_.mSize,
-        basicBlockParam_.nSize, basicBlockParam_.kSize, basicBlockParam_.groupSize);
+    OP_LOGI(opName_, "Init shape param, mSize: %ld, nSize: %ld, kSize: %ld, groupSize: %ld", basicBlockParam_.mSize,
+            basicBlockParam_.nSize, basicBlockParam_.kSize, basicBlockParam_.groupSize);
 }
 
 void WeightQuantBatchMatmulV2BasicBlockTiling::SetAttr(const char* opName, const WeightQuantBmmAttr& attr)
@@ -151,15 +149,14 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SetAttr(const char* opName, const
     basicBlockParam_.hasBias = attr.hasBias;
     basicBlockParam_.weightNzFlag = attr.weightNzFlag;
     hasOffset_ = attr.hasOffset;
-    OP_LOGI(
-        opName_, "Init attr param, transA: %s, transB: %s, hasBias: %s, weightNzFlag: %s, hasOffset: %s",
-        basicBlockParam_.transA ? "true" : "false", basicBlockParam_.transB ? "true" : "false",
-        basicBlockParam_.hasBias ? "true" : "false", basicBlockParam_.weightNzFlag ? "true" : "false",
-        hasOffset_ ? "true" : "false");
+    OP_LOGI(opName_, "Init attr param, transA: %s, transB: %s, hasBias: %s, weightNzFlag: %s, hasOffset: %s",
+            basicBlockParam_.transA ? "true" : "false", basicBlockParam_.transB ? "true" : "false",
+            basicBlockParam_.hasBias ? "true" : "false", basicBlockParam_.weightNzFlag ? "true" : "false",
+            hasOffset_ ? "true" : "false");
 }
 
-void WeightQuantBatchMatmulV2BasicBlockTiling::SetDtypeBits(
-    int64_t aDtypeBits, int64_t bDtypeBits, int64_t biasDtypeBits)
+void WeightQuantBatchMatmulV2BasicBlockTiling::SetDtypeBits(int64_t aDtypeBits, int64_t bDtypeBits,
+                                                            int64_t biasDtypeBits)
 {
     basicBlockParam_.aDtypeBits = aDtypeBits;
     basicBlockParam_.bDtypeBits = bDtypeBits;
@@ -167,9 +164,8 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SetDtypeBits(
     aByteSize_ = aDtypeBits / BYTE_BITS;
     bByteSize_ = bDtypeBits / BYTE_BITS;
     biasByteSize_ = biasDtypeBits / BYTE_BITS;
-    OP_LOGI(
-        opName_, "Init byteSize, aByteSize_: %lf, bByteSize_: %lf, biasByteSize_: %lf", aByteSize_, bByteSize_,
-        biasByteSize_);
+    OP_LOGI(opName_, "Init byteSize, aByteSize_: %lf, bByteSize_: %lf, biasByteSize_: %lf", aByteSize_, bByteSize_,
+            biasByteSize_);
 }
 
 void WeightQuantBatchMatmulV2BasicBlockTiling::SetQuantType(QuantType antiquantType)
@@ -180,14 +176,14 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SetQuantType(QuantType antiquantT
 
 bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateInputParam() const
 {
-    OP_TILING_CHECK(
-        basicBlockParam_.mSize <= 0 || basicBlockParam_.nSize <= 0 || basicBlockParam_.kSize <= 0,
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            opName_, "mSize, nSize, kSize",
-            (std::to_string(basicBlockParam_.mSize) + ", " + std::to_string(basicBlockParam_.nSize) + ", " +
-             std::to_string(basicBlockParam_.kSize)).c_str(),
-            "The values of mSize, nSize, kSize must be greater than 0"),
-        return false);
+    OP_TILING_CHECK(basicBlockParam_.mSize <= 0 || basicBlockParam_.nSize <= 0 || basicBlockParam_.kSize <= 0,
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        opName_, "mSize, nSize, kSize",
+                        (std::to_string(basicBlockParam_.mSize) + ", " + std::to_string(basicBlockParam_.nSize) + ", " +
+                         std::to_string(basicBlockParam_.kSize))
+                            .c_str(),
+                        "The values of mSize, nSize, kSize must be greater than 0"),
+                    return false);
 
     OP_TILING_CHECK(
         basicBlockParam_.aDtypeBits <= 0 || basicBlockParam_.bDtypeBits <= 0 ||
@@ -196,23 +192,24 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateInputParam() const
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "aDtypeBits, bDtypeBits, biasDtypeBits",
             (std::to_string(basicBlockParam_.aDtypeBits) + ", " + std::to_string(basicBlockParam_.bDtypeBits) + ", " +
-             std::to_string(basicBlockParam_.biasDtypeBits)).c_str(),
-            std::string("The dtype bits of aDtypeBits, bDtypeBits, biasDtypeBits must be greater than 0, and biasDtypeBits must ") +
-            "match the hasBias flag"),
+             std::to_string(basicBlockParam_.biasDtypeBits))
+                .c_str(),
+            std::string("The dtype bits of aDtypeBits, bDtypeBits, biasDtypeBits must be greater than 0, and "
+                        "biasDtypeBits must ") +
+                "match the hasBias flag"),
         return false);
 
     OP_TILING_CHECK(
         basicBlockParam_.groupSize < 0 || basicBlockParam_.groupSize >= basicBlockParam_.kSize,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            opName_, "groupSize", std::to_string(basicBlockParam_.groupSize).c_str(),
-            "The value of groupSize must be >= 0 and < kSize"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "groupSize", std::to_string(basicBlockParam_.groupSize).c_str(),
+                                              "The value of groupSize must be >= 0 and < kSize"),
         return false);
 
     return true;
 }
 
-double WeightQuantBatchMatmulV2BasicBlockTiling::GetMinMte2BW(
-    int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const
+double WeightQuantBatchMatmulV2BasicBlockTiling::GetMinMte2BW(int64_t baseM, int64_t baseN, int64_t mDim,
+                                                              int64_t nDim) const
 {
     if (mDim * nDim * baseM * baseN == 0) {
         return 0;
@@ -224,8 +221,8 @@ double WeightQuantBatchMatmulV2BasicBlockTiling::GetMinMte2BW(
            (aByteSize_ / static_cast<double>(baseN) + bByteSize_ / static_cast<double>(baseM));
 }
 
-double WeightQuantBatchMatmulV2BasicBlockTiling::GetMte2BW(
-    int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const
+double WeightQuantBatchMatmulV2BasicBlockTiling::GetMte2BW(int64_t baseM, int64_t baseN, int64_t mDim,
+                                                           int64_t nDim) const
 {
     // 估算V100平台当前分核条件下的综合MTE2带宽
     if (platformParam_.hbmBW <= 0.0 || platformParam_.l2BW <= 0.0 || platformParam_.blockNum <= 0L) {
@@ -236,16 +233,15 @@ double WeightQuantBatchMatmulV2BasicBlockTiling::GetMte2BW(
             platformParam_.hbmBW, platformParam_.l2BW, platformParam_.blockNum);
         return 0;
     }
-    double denominator =
-        (static_cast<double>(mDim * baseM) * aByteSize_ + static_cast<double>(nDim * baseN) * bByteSize_) /
-            platformParam_.hbmBW +
-        (static_cast<double>(mDim * nDim - mDim) * static_cast<double>(baseM) * aByteSize_ +
-         static_cast<double>(baseN) * static_cast<double>(mDim * nDim - nDim) * bByteSize_) /
-            platformParam_.l2BW;
+    double denominator = (static_cast<double>(mDim * baseM) * aByteSize_ +
+                          static_cast<double>(nDim * baseN) * bByteSize_) /
+                             platformParam_.hbmBW +
+                         (static_cast<double>(mDim * nDim - mDim) * static_cast<double>(baseM) * aByteSize_ +
+                          static_cast<double>(baseN) * static_cast<double>(mDim * nDim - nDim) * bByteSize_) /
+                             platformParam_.l2BW;
     if (denominator <= 0.0) {
-        OP_LOGE(
-            opName_, "Invalid denominator, denominator must be greater than 0, in fact it is denominator: %lf",
-            denominator);
+        OP_LOGE(opName_, "Invalid denominator, denominator must be greater than 0, in fact it is denominator: %lf",
+                denominator);
         return 0;
     }
     double res = (static_cast<double>(mDim * nDim) *
@@ -254,8 +250,8 @@ double WeightQuantBatchMatmulV2BasicBlockTiling::GetMte2BW(
     return res;
 }
 
-double WeightQuantBatchMatmulV2BasicBlockTiling::GetMte2BWRatio(
-    int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const
+double WeightQuantBatchMatmulV2BasicBlockTiling::GetMte2BWRatio(int64_t baseM, int64_t baseN, int64_t mDim,
+                                                                int64_t nDim) const
 {
     if (GetMinMte2BW(baseM, baseN, mDim, nDim) > 0) {
         return GetMte2BW(baseM, baseN, mDim, nDim) / GetMinMte2BW(baseM, baseN, mDim, nDim);
@@ -269,24 +265,24 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetCachelineAlignFlag(int64_t dty
     // 1）singleK大于cachline；
     // 2）非group场景；
     // 3）group场景，由于要满足kBL1与groupSize的对齐关系，因此需满足groupSize是cacheline的倍数或因子；
-    bool cachelineAlignFlag =
-        (basicBlockParam_.singleK * dtypeBits > cacheline * BITS_8) &&
-        (basicBlockParam_.groupSize == 0 || (basicBlockParam_.groupSize * dtypeBits % (cacheline * BITS_8) == 0 ||
-                                             cacheline * BITS_8 % (basicBlockParam_.groupSize * dtypeBits) == 0));
+    bool cachelineAlignFlag = (basicBlockParam_.singleK * dtypeBits > cacheline * BITS_8) &&
+                              (basicBlockParam_.groupSize == 0 ||
+                               (basicBlockParam_.groupSize * dtypeBits % (cacheline * BITS_8) == 0 ||
+                                cacheline * BITS_8 % (basicBlockParam_.groupSize * dtypeBits) == 0));
     return cachelineAlignFlag;
 }
 
 void WeightQuantBatchMatmulV2BasicBlockTiling::UpdateMte2DataSize()
 {
     // 给定单核L1、L0切分条件，计算MTE2总搬运量
-    int64_t singleMLoop =
-        CeilDiv(basicBlockParam_.singleM, basicBlockParam_.l1Param.stepM * basicBlockParam_.basicBlock.baseM);
-    int64_t singleNLoop =
-        CeilDiv(basicBlockParam_.singleN, basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN);
-    bool A1KFullLoadFlag =
-        basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKa >= basicBlockParam_.singleK;
-    bool B1KFullLoadFlag =
-        basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb >= basicBlockParam_.singleK;
+    int64_t singleMLoop = CeilDiv(basicBlockParam_.singleM,
+                                  basicBlockParam_.l1Param.stepM * basicBlockParam_.basicBlock.baseM);
+    int64_t singleNLoop = CeilDiv(basicBlockParam_.singleN,
+                                  basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN);
+    bool A1KFullLoadFlag = basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKa >=
+                           basicBlockParam_.singleK;
+    bool B1KFullLoadFlag = basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb >=
+                           basicBlockParam_.singleK;
 
     if (A1KFullLoadFlag && B1KFullLoadFlag) {
         int64_t mte2DataSizeOrderM = static_cast<int64_t>(
@@ -318,39 +314,40 @@ int64_t WeightQuantBatchMatmulV2BasicBlockTiling::GetUbLoadSize() const
     int64_t ubLoadSize = 0;
     if (!basicBlockParam_.weightNzFlag && basicBlockParam_.groupSize > 0) {
         int64_t innerDimAlignSize = UB_ALIGN_SIZE * BITS_8 / basicBlockParam_.bDtypeBits;
-        int64_t weightInnerDim =
-            basicBlockParam_.transB ?
-                CeilAlign(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb, innerDimAlignSize) :
-                CeilAlign(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN, innerDimAlignSize);
+        int64_t weightInnerDim = basicBlockParam_.transB ?
+                                     CeilAlign(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb,
+                                               innerDimAlignSize) :
+                                     CeilAlign(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN,
+                                               innerDimAlignSize);
         if (basicBlockParam_.bDtypeBits == BITS_4 && basicBlockParam_.transB &&
             basicBlockParam_.groupSize > GROUP_SIZE_64 && basicBlockParam_.groupSize % GROUP_SIZE_64 > 0 &&
             weightInnerDim > basicBlockParam_.groupSize) {
             // 96含义：在W4 NK且gs非64对齐场景，跨gs计算的长度为96，因此至少保证内轴长度大等于gs+96
             weightInnerDim = std::max(weightInnerDim, basicBlockParam_.groupSize + 96);
         }
-        int64_t weightOuterDim =
-            basicBlockParam_.transB ?
-                CeilDiv(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN, BUFF_NUM_2) :
-                CeilDiv(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb, BUFF_NUM_2);
-        int64_t scaleSize =
-            basicBlockParam_.transB ?
-                CeilDiv(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN, BUFF_NUM_2) *
-                    CeilAlign(
-                        CeilDiv(
-                            basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb,
-                            basicBlockParam_.groupSize),
-                        BLOCK_CUBE) :
-                CeilDiv(
-                    CeilDiv(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb, BUFF_NUM_2),
-                    basicBlockParam_.groupSize) *
-                    basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN;
+        int64_t weightOuterDim = basicBlockParam_.transB ?
+                                     CeilDiv(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN,
+                                             BUFF_NUM_2) :
+                                     CeilDiv(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb,
+                                             BUFF_NUM_2);
+        int64_t scaleSize = basicBlockParam_.transB ?
+                                CeilDiv(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN,
+                                        BUFF_NUM_2) *
+                                    CeilAlign(
+                                        CeilDiv(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb,
+                                                basicBlockParam_.groupSize),
+                                        BLOCK_CUBE) :
+                                CeilDiv(CeilDiv(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb,
+                                                BUFF_NUM_2),
+                                        basicBlockParam_.groupSize) *
+                                    basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN;
         // ND场景采用4-buffer方案，包含最多4份weightIn\offset\scale，最多2份weightOut
-        ubLoadSize =
-            basicBlockParam_.l1Param.B1BufferNum * weightOuterDim * weightInnerDim * basicBlockParam_.bDtypeBits +
-            std::min(basicBlockParam_.l1Param.B1BufferNum, BUFF_NUM_2) * (CeilAlign(weightOuterDim, BLOCK_CUBE) + 1) *
-                weightInnerDim * basicBlockParam_.aDtypeBits +
-            basicBlockParam_.l1Param.B1BufferNum * scaleSize * basicBlockParam_.aDtypeBits *
-                (static_cast<int64_t>(hasOffset_) + 1);
+        ubLoadSize = basicBlockParam_.l1Param.B1BufferNum * weightOuterDim * weightInnerDim *
+                         basicBlockParam_.bDtypeBits +
+                     std::min(basicBlockParam_.l1Param.B1BufferNum, BUFF_NUM_2) *
+                         (CeilAlign(weightOuterDim, BLOCK_CUBE) + 1) * weightInnerDim * basicBlockParam_.aDtypeBits +
+                     basicBlockParam_.l1Param.B1BufferNum * scaleSize * basicBlockParam_.aDtypeBits *
+                         (static_cast<int64_t>(hasOffset_) + 1);
     }
     return ubLoadSize;
 }
@@ -360,12 +357,13 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlagForBasicBlock() con
     // 128: reg base寄存器处理B16最大元素数量
     constexpr int64_t REG_WIDTH = 128;
     // 剪枝A16W8 ND-perGroup KN场景部分baseN不整除VL的情况
-    bool invalidFlag =
-        basicBlockParam_.bDtypeBits == BITS_8 && basicBlockParam_.groupSize > 0 && !basicBlockParam_.weightNzFlag &&
-        !basicBlockParam_.transB &&
-        ((basicBlockParam_.singleN > REG_WIDTH && basicBlockParam_.singleN > basicBlockParam_.basicBlock.baseN &&
-          basicBlockParam_.basicBlock.baseN % REG_WIDTH > 0) ||
-         (basicBlockParam_.singleN <= REG_WIDTH && basicBlockParam_.singleN > basicBlockParam_.basicBlock.baseN));
+    bool invalidFlag = basicBlockParam_.bDtypeBits == BITS_8 && basicBlockParam_.groupSize > 0 &&
+                       !basicBlockParam_.weightNzFlag && !basicBlockParam_.transB &&
+                       ((basicBlockParam_.singleN > REG_WIDTH &&
+                         basicBlockParam_.singleN > basicBlockParam_.basicBlock.baseN &&
+                         basicBlockParam_.basicBlock.baseN % REG_WIDTH > 0) ||
+                        (basicBlockParam_.singleN <= REG_WIDTH &&
+                         basicBlockParam_.singleN > basicBlockParam_.basicBlock.baseN));
     invalidFlag = invalidFlag || (basicBlockParam_.basicBlock.baseM <= 0 || basicBlockParam_.basicBlock.baseK <= 0 ||
                                   basicBlockParam_.basicBlock.baseN <= 0);
     return invalidFlag;
@@ -382,51 +380,54 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlagA16W4() const
     if (basicBlockParam_.weightNzFlag) {
         // a16w4场景固定采用4-buffer方案，要求单块BL1空间最多分出两份ub任务（优先在N1轴切分），
         // 根据ub单次最大处理量12KB可反算出单份BL1最大空间
-        invalidFlag =
-            CeilAlign(basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN, BLOCK_CUBE * BUFF_NUM_2) *
-                basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK * aByteSize_ >
-            A16W4_MAX_BL1_SIZE_NZ;
-        int64_t nBl1Tail =
-            basicBlockParam_.singleN % (basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN);
+        invalidFlag = CeilAlign(basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN,
+                                BLOCK_CUBE * BUFF_NUM_2) *
+                          basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK * aByteSize_ >
+                      A16W4_MAX_BL1_SIZE_NZ;
+        int64_t nBl1Tail = basicBlockParam_.singleN %
+                           (basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN);
         int64_t nBl1TailBlockTail = basicBlockParam_.nSize % basicBlockParam_.singleN %
                                     (basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN);
         int64_t nBubSize = CeilAlign(
             CeilDiv(basicBlockParam_.basicBlock.baseN * basicBlockParam_.l1Param.stepN, BUFF_NUM_2), BLOCK_CUBE);
         // a16w4场景要求BL1尾块可分给两个vector处理
         invalidFlag = invalidFlag || ((nBl1Tail > 0 && nBl1Tail <= nBubSize) ||
-                                      (nBl1TailBlockTail > 0 && nBl1TailBlockTail <= nBubSize && nBl1TailBlockTail < basicBlockParam_.nSize));
+                                      (nBl1TailBlockTail > 0 && nBl1TailBlockTail <= nBubSize &&
+                                       nBl1TailBlockTail < basicBlockParam_.nSize));
     } else {
         invalidFlag = GetUbLoadSize() > platformParam_.ubSize * BITS_8;
         // 根据内轴是否minCacheline对齐做初步剪枝
         if (basicBlockParam_.transB) {
             // 当singleK大于minCacheline且groupSize为minCacheline的倍数或因子时，kBL1具备minCacheline对齐的条件，
             // 此时剪枝掉非全载并且非对齐情况
-            invalidFlag =
-                invalidFlag ||
-                (GetCachelineAlignFlag(basicBlockParam_.bDtypeBits, platformParam_.minCacheLine) &&
-                 (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK * basicBlockParam_.bDtypeBits) %
-                         (platformParam_.minCacheLine * BITS_8) >
-                     0 &&
-                 basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK < basicBlockParam_.singleK);
-            const int64_t kBl1Size =
-                std::min(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb, basicBlockParam_.singleK);
+            invalidFlag = invalidFlag ||
+                          (GetCachelineAlignFlag(basicBlockParam_.bDtypeBits, platformParam_.minCacheLine) &&
+                           (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK *
+                            basicBlockParam_.bDtypeBits) %
+                                   (platformParam_.minCacheLine * BITS_8) >
+                               0 &&
+                           basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK <
+                               basicBlockParam_.singleK);
+            const int64_t kBl1Size = std::min(basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb,
+                                              basicBlockParam_.singleK);
             const int64_t kBl1TailSize = basicBlockParam_.singleK % kBl1Size;
             const int64_t groupPairSize = BUFF_NUM_2 * basicBlockParam_.groupSize;
             // 对于groupSize非64对齐场景，VF中以2*groupSize为单位进行处理，需过滤kBL1或kBL1Tail为奇数倍groupSize的场景
-            invalidFlag =
-                invalidFlag ||
-                (basicBlockParam_.groupSize > GROUP_SIZE_64 && basicBlockParam_.groupSize % GROUP_SIZE_64 > 0 &&
-                 ((kBl1Size > basicBlockParam_.groupSize && kBl1Size % groupPairSize > 0) ||
-                  (kBl1TailSize > basicBlockParam_.groupSize && kBl1TailSize % groupPairSize > 0 &&
-                   kBl1TailSize % groupPairSize <= basicBlockParam_.groupSize)));
+            invalidFlag = invalidFlag ||
+                          (basicBlockParam_.groupSize > GROUP_SIZE_64 &&
+                           basicBlockParam_.groupSize % GROUP_SIZE_64 > 0 &&
+                           ((kBl1Size > basicBlockParam_.groupSize && kBl1Size % groupPairSize > 0) ||
+                            (kBl1TailSize > basicBlockParam_.groupSize && kBl1TailSize % groupPairSize > 0 &&
+                             kBl1TailSize % groupPairSize <= basicBlockParam_.groupSize)));
         } else {
-            invalidFlag =
-                invalidFlag ||
-                ((basicBlockParam_.singleN * basicBlockParam_.bDtypeBits > platformParam_.minCacheLine * BITS_8) &&
-                 (basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN * basicBlockParam_.bDtypeBits) %
-                         (platformParam_.minCacheLine * BITS_8) >
-                     0 &&
-                 basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN < basicBlockParam_.singleN);
+            invalidFlag = invalidFlag || ((basicBlockParam_.singleN * basicBlockParam_.bDtypeBits >
+                                           platformParam_.minCacheLine * BITS_8) &&
+                                          (basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN *
+                                           basicBlockParam_.bDtypeBits) %
+                                                  (platformParam_.minCacheLine * BITS_8) >
+                                              0 &&
+                                          basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN <
+                                              basicBlockParam_.singleN);
         }
     }
     return invalidFlag;
@@ -438,28 +439,30 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlagA16W8() const
     if (!basicBlockParam_.weightNzFlag && basicBlockParam_.groupSize > 0) {
         invalidFlag = GetUbLoadSize() > platformParam_.ubSize * BITS_8;
         if (basicBlockParam_.transB) {
-            invalidFlag =
-                invalidFlag ||
-                (GetCachelineAlignFlag(basicBlockParam_.bDtypeBits, platformParam_.minCacheLine) &&
-                 (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK * basicBlockParam_.bDtypeBits) %
-                         (platformParam_.minCacheLine * BITS_8) >
-                     0 &&
-                 basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK < basicBlockParam_.singleK);
+            invalidFlag = invalidFlag ||
+                          (GetCachelineAlignFlag(basicBlockParam_.bDtypeBits, platformParam_.minCacheLine) &&
+                           (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK *
+                            basicBlockParam_.bDtypeBits) %
+                                   (platformParam_.minCacheLine * BITS_8) >
+                               0 &&
+                           basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK <
+                               basicBlockParam_.singleK);
         } else {
-            invalidFlag =
-                invalidFlag ||
-                ((basicBlockParam_.singleN * basicBlockParam_.bDtypeBits > platformParam_.minCacheLine * BITS_8) &&
-                 (basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN * basicBlockParam_.bDtypeBits) %
-                         (platformParam_.minCacheLine * BITS_8) >
-                     0 &&
-                 basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN < basicBlockParam_.singleN);
+            invalidFlag = invalidFlag || ((basicBlockParam_.singleN * basicBlockParam_.bDtypeBits >
+                                           platformParam_.minCacheLine * BITS_8) &&
+                                          (basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN *
+                                           basicBlockParam_.bDtypeBits) %
+                                                  (platformParam_.minCacheLine * BITS_8) >
+                                              0 &&
+                                          basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN <
+                                              basicBlockParam_.singleN);
         }
     } else if (!basicBlockParam_.transB) {
         // A16W8 B非转置场景 需过滤掉nbubsize非32B对齐的解和超ub大小的解
-        int64_t kBl1Size =
-            std::min(basicBlockParam_.singleK, basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK);
-        int64_t nBl1Size =
-            std::min(basicBlockParam_.singleN, basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN);
+        int64_t kBl1Size = std::min(basicBlockParam_.singleK,
+                                    basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK);
+        int64_t nBl1Size = std::min(basicBlockParam_.singleN,
+                                    basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN);
         // 过滤singleN和stepN * baseN非32B对齐的解，确保nBl1 = min(singleN,stepN * baseN)为32B对齐
         invalidFlag = basicBlockParam_.singleN % UB_ALIGN_SIZE != 0 ||
                       (basicBlockParam_.l1Param.stepN * basicBlockParam_.basicBlock.baseN) % UB_ALIGN_SIZE != 0;
@@ -482,11 +485,12 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlagA16W8() const
 bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlag(bool isCubeBoundSolution, int64_t stepKMax) const
 {
     bool invalidFlag = GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param) > platformParam_.l1Size;
-    invalidFlag =
-        invalidFlag ||
-        (basicBlockParam_.groupSize > 0 &&
-         (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK) % basicBlockParam_.groupSize > 0 &&
-         basicBlockParam_.groupSize % (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK) > 0);
+    invalidFlag = invalidFlag ||
+                  (basicBlockParam_.groupSize > 0 &&
+                   (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK) % basicBlockParam_.groupSize >
+                       0 &&
+                   basicBlockParam_.groupSize % (basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK) >
+                       0);
     // group-ND且非转置场景，进一步保证kBL1为groupsize的偶数倍或因子，避免group跨vector
     invalidFlag = invalidFlag ||
                   (basicBlockParam_.groupSize > 0 && !basicBlockParam_.weightNzFlag && !basicBlockParam_.transB &&
@@ -494,28 +498,28 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetInvalidFlag(bool isCubeBoundSo
                    basicBlockParam_.l1Param.stepKb * basicBlockParam_.basicBlock.baseK %
                            (basicBlockParam_.groupSize * BUFF_NUM_2) >
                        0);
-    invalidFlag =
-        invalidFlag || (basicBlockParam_.l1Param.stepKa < stepKMax && basicBlockParam_.l1Param.stepKb < stepKMax &&
-                        basicBlockParam_.l1Param.stepKa % basicBlockParam_.l1Param.stepKb > 0 &&
-                        basicBlockParam_.l1Param.stepKb % basicBlockParam_.l1Param.stepKa > 0);
-    invalidFlag =
-        invalidFlag ||
-        (isCubeBoundSolution && !basicBlockParam_.weightNzFlag && basicBlockParam_.transB &&
-         basicBlockParam_.groupSize > GROUP_SIZE_64 && basicBlockParam_.groupSize % GROUP_SIZE_64 > 0 &&
-         // NK-per-group且groupSize非64对齐场景，cube-bound选解阶段去除kBL1过小（小于512）的解以保证MTE2效率
-         basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb < std::min(512L, basicBlockParam_.kSize));
+    invalidFlag = invalidFlag ||
+                  (basicBlockParam_.l1Param.stepKa < stepKMax && basicBlockParam_.l1Param.stepKb < stepKMax &&
+                   basicBlockParam_.l1Param.stepKa % basicBlockParam_.l1Param.stepKb > 0 &&
+                   basicBlockParam_.l1Param.stepKb % basicBlockParam_.l1Param.stepKa > 0);
+    invalidFlag = invalidFlag ||
+                  (isCubeBoundSolution && !basicBlockParam_.weightNzFlag && basicBlockParam_.transB &&
+                   basicBlockParam_.groupSize > GROUP_SIZE_64 && basicBlockParam_.groupSize % GROUP_SIZE_64 > 0 &&
+                   // NK-per-group且groupSize非64对齐场景，cube-bound选解阶段去除kBL1过小（小于512）的解以保证MTE2效率
+                   basicBlockParam_.basicBlock.baseK * basicBlockParam_.l1Param.stepKb <
+                       std::min(512L, basicBlockParam_.kSize));
     invalidFlag = invalidFlag || (basicBlockParam_.bDtypeBits == BITS_8 && GetInvalidFlagA16W8());
     invalidFlag = invalidFlag || (basicBlockParam_.bDtypeBits == BITS_4 && GetInvalidFlagA16W4());
     return invalidFlag;
 }
 
-void WeightQuantBatchMatmulV2BasicBlockTiling::GetL1Param(
-    bool isCubeBoundSolution, int64_t stepKMax, int64_t stepKaTmp, int64_t stepKbTmp)
+void WeightQuantBatchMatmulV2BasicBlockTiling::GetL1Param(bool isCubeBoundSolution, int64_t stepKMax, int64_t stepKaTmp,
+                                                          int64_t stepKbTmp)
 {
     int64_t a1BufferNum, b1BufferNum;
     if (basicBlockParam_.groupSize > 0) {
-        int64_t a1BufferNumMax =
-            (basicBlockParam_.bDtypeBits == BITS_4 && basicBlockParam_.weightNzFlag) ? BUFF_NUM_4 : BUFF_NUM_2;
+        int64_t a1BufferNumMax = (basicBlockParam_.bDtypeBits == BITS_4 && basicBlockParam_.weightNzFlag) ? BUFF_NUM_4 :
+                                                                                                            BUFF_NUM_2;
         a1BufferNum = std::min(
             CeilDiv(stepKMax, stepKaTmp) * CeilDiv(basicBlockParam_.singleM, basicBlockParam_.basicBlock.baseM),
             a1BufferNumMax);
@@ -555,20 +559,18 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::DoL1Tiling(bool isCubeBoundSoluti
     int64_t stepKMax = CeilDiv(basicBlockParam_.singleK, basicBlockParam_.basicBlock.baseK);
     int64_t stepKaMax = std::min(
         CeilDiv(stepKMax, BUFF_NUM_2),
-        CeilDiv(
-            platformParam_.l1Size,
-            static_cast<int64_t>(basicBlockParam_.basicBlock.baseM * basicBlockParam_.basicBlock.baseK * aByteSize_)));
+        CeilDiv(platformParam_.l1Size, static_cast<int64_t>(basicBlockParam_.basicBlock.baseM *
+                                                            basicBlockParam_.basicBlock.baseK * aByteSize_)));
     // A非转置且非group场景（group场景约束较多，可能无解），kAL1以cachline为粒度遍历
-    int64_t stepKaMin =
-        !basicBlockParam_.transA && GetCachelineAlignFlag(basicBlockParam_.aDtypeBits, platformParam_.cacheLine) ?
-            std::min(
-                CeilDiv(platformParam_.cacheLine, static_cast<int64_t>(basicBlockParam_.basicBlock.baseK * aByteSize_)),
-                stepKaMax) :
-            1;
+    int64_t stepKaMin = !basicBlockParam_.transA &&
+                                GetCachelineAlignFlag(basicBlockParam_.aDtypeBits, platformParam_.cacheLine) ?
+                            std::min(CeilDiv(platformParam_.cacheLine,
+                                             static_cast<int64_t>(basicBlockParam_.basicBlock.baseK * aByteSize_)),
+                                     stepKaMax) :
+                            1;
     int64_t stepKbMinPruneLimit = std::min(
-        CeilDiv(
-            isCubeBoundSolution ? platformParam_.minCacheLine : platformParam_.cacheLine,
-            static_cast<int64_t>(basicBlockParam_.basicBlock.baseK * bByteSize_)),
+        CeilDiv(isCubeBoundSolution ? platformParam_.minCacheLine : platformParam_.cacheLine,
+                static_cast<int64_t>(basicBlockParam_.basicBlock.baseK * bByteSize_)),
         stepKMax);
     stepKbMinPruneLimit = basicBlockParam_.groupSize > 0 && basicBlockParam_.transB ?
                               DownwardFactor(stepKbMinPruneLimit, stepKMax) :
@@ -585,12 +587,11 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::DoL1Tiling(bool isCubeBoundSoluti
     for (int64_t stepKaTmp = stepKaMin; stepKaTmp <= stepKaMax; stepKaTmp += stepKaMin) {
         int64_t stepKbMax = std::min(
             stepKbMaxPruneLimit,
-            CeilDiv(
-                static_cast<int64_t>(
-                    platformParam_.l1Size -
-                    basicBlockParam_.basicBlock.baseM * basicBlockParam_.basicBlock.baseK * stepKaTmp * aByteSize_),
-                static_cast<int64_t>(
-                    basicBlockParam_.basicBlock.baseN * basicBlockParam_.basicBlock.baseK * aByteSize_)));
+            CeilDiv(static_cast<int64_t>(platformParam_.l1Size - basicBlockParam_.basicBlock.baseM *
+                                                                     basicBlockParam_.basicBlock.baseK * stepKaTmp *
+                                                                     aByteSize_),
+                    static_cast<int64_t>(basicBlockParam_.basicBlock.baseN * basicBlockParam_.basicBlock.baseK *
+                                         aByteSize_)));
         for (int64_t stepKbTmp = stepKbMin; stepKbTmp <= stepKbMax; stepKbTmp += stepKbMin) {
             GetL1Param(isCubeBoundSolution, stepKMax, stepKaTmp, stepKbTmp);
             if (GetInvalidFlag(isCubeBoundSolution, stepKMax)) {
@@ -665,8 +666,8 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::GetBasicBlockTable()
     }
 }
 
-bool WeightQuantBatchMatmulV2BasicBlockTiling::GetHalfSingleShape(
-    const RowView& basicBlockTable, int64_t& halfSingleM, int64_t& halfSingleN)
+bool WeightQuantBatchMatmulV2BasicBlockTiling::GetHalfSingleShape(const RowView& basicBlockTable, int64_t& halfSingleM,
+                                                                  int64_t& halfSingleN)
 {
     if (basicBlockTable.size() == 0) {
         return false;
@@ -722,16 +723,15 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const RowView& 
             continue;
         }
         // 其中baseK、tailBWRatio需要重新计算
-        basicBlockParam_.basicBlock.baseK =
-            GetBaseK(basicBlockParam_.basicBlock.baseM, basicBlockParam_.basicBlock.baseN);
+        basicBlockParam_.basicBlock.baseK = GetBaseK(basicBlockParam_.basicBlock.baseM,
+                                                     basicBlockParam_.basicBlock.baseN);
         if (basicBlockParam_.singleM % basicBlockParam_.basicBlock.baseM == 0 &&
             basicBlockParam_.singleN % basicBlockParam_.basicBlock.baseN == 0) {
             // 1）特解：存在一组基本块同时整除singleM、singleN，则直接添加到最终解集，此时无尾块
             basicBlockParam_.basicBlock.mte2TailBWRatio = MTE2_TAIL_BW_RATIO_MAX + 1;
             cubeBoundResults_.push_back(basicBlockParam_);
-        } else if (
-            basicBlockParam_.singleM % basicBlockParam_.basicBlock.baseM == 0 &&
-            basicBlockParam_.singleN >= basicBlockParam_.basicBlock.baseN) {
+        } else if (basicBlockParam_.singleM % basicBlockParam_.basicBlock.baseM == 0 &&
+                   basicBlockParam_.singleN >= basicBlockParam_.basicBlock.baseN) {
             // 2）存在一组基本块，使得singleM整除baseM，则此时M轴尾块被消除，N轴存在尾块，
             //   将该组解添加到可选解集中，后续通过选取尾块bwRato最大值添加到最终解集。
             // 备注：采用BWRatio作为比较指标的依据，即使尾块较大，若能够达到或者接近cube bound状态，其效率也满足要求；
@@ -740,17 +740,15 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const RowView& 
                 basicBlockParam_.basicBlock.baseM, basicBlockParam_.singleN % basicBlockParam_.basicBlock.baseN,
                 basicBlockParam_.mDim, basicBlockParam_.nDim);
             cubeBoundResults_.push_back(basicBlockParam_);
-        } else if (
-            basicBlockParam_.singleN % basicBlockParam_.basicBlock.baseN == 0 &&
-            basicBlockParam_.singleM >= basicBlockParam_.basicBlock.baseM) {
+        } else if (basicBlockParam_.singleN % basicBlockParam_.basicBlock.baseN == 0 &&
+                   basicBlockParam_.singleM >= basicBlockParam_.basicBlock.baseM) {
             // 对N轴做2）处理
             basicBlockParam_.basicBlock.mte2TailBWRatio = GetMte2BWRatio(
                 basicBlockParam_.singleM % basicBlockParam_.basicBlock.baseM, basicBlockParam_.basicBlock.baseN,
                 basicBlockParam_.mDim, basicBlockParam_.nDim);
             cubeBoundResults_.push_back(basicBlockParam_);
-        } else if (
-            halfSingleM % basicBlockParam_.basicBlock.baseM == 0 &&
-            basicBlockParam_.singleN >= basicBlockParam_.basicBlock.baseN) {
+        } else if (halfSingleM % basicBlockParam_.basicBlock.baseM == 0 &&
+                   basicBlockParam_.singleN >= basicBlockParam_.basicBlock.baseN) {
             // 3）若singleM、singleN均大于基本块上界且无整除解，则通过折半缩小singleM、singleN，直到其落在基本块可选范围内，
             //    此时单核内出现L型尾块。
             // 备注：基本块解集具有连续性，若singleM在基本块解集最小、最大值范围内，则必然存在一组解使得singleM整除baseM，N同理；
@@ -762,9 +760,8 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const RowView& 
                 basicBlockParam_.basicBlock.baseM, basicBlockParam_.singleN % basicBlockParam_.basicBlock.baseN,
                 basicBlockParam_.mDim, basicBlockParam_.nDim);
             cubeBoundResults_.push_back(basicBlockParam_);
-        } else if (
-            halfSingleN % basicBlockParam_.basicBlock.baseN == 0 &&
-            basicBlockParam_.singleM >= basicBlockParam_.basicBlock.baseM) {
+        } else if (halfSingleN % basicBlockParam_.basicBlock.baseN == 0 &&
+                   basicBlockParam_.singleM >= basicBlockParam_.basicBlock.baseM) {
             // 对N轴做3）处理
             basicBlockParam_.basicBlock.mte2TailBWRatio = GetMte2BWRatio(
                 basicBlockParam_.singleM % basicBlockParam_.basicBlock.baseM, basicBlockParam_.basicBlock.baseN,
@@ -774,8 +771,8 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const RowView& 
     }
 }
 
-int64_t WeightQuantBatchMatmulV2BasicBlockTiling::GetL1LoadSize(
-    const BasicBlock& basicBlock, const L1TilingParam& l1Param) const
+int64_t WeightQuantBatchMatmulV2BasicBlockTiling::GetL1LoadSize(const BasicBlock& basicBlock,
+                                                                const L1TilingParam& l1Param) const
 {
     int64_t b1BufferNum = l1Param.B1BufferNum;
     // A16W4-ND per-group以及A16W8-ND per-group场景，weightOut及weightL1 buffer数量最大为2
@@ -791,9 +788,9 @@ int64_t WeightQuantBatchMatmulV2BasicBlockTiling::GetL1LoadSize(
                    static_cast<int64_t>(
                        basicBlock.baseN * l1Param.stepN * basicBlock.baseK * l1Param.stepKb * BUFF_NUM_2 * aByteSize_ +
                        basicBlock.baseM * l1Param.stepM * basicBlock.baseK * l1Param.stepKa * aByteSize_)) +
-               static_cast<int64_t>(
-                   basicBlock.baseN * l1Param.stepN * basicBlock.baseK * l1Param.stepKb * BUFF_NUM_2 * aByteSize_ +
-                   basicBlock.baseN * biasBufferNum * biasByteSize_);
+               static_cast<int64_t>(basicBlock.baseN * l1Param.stepN * basicBlock.baseK * l1Param.stepKb * BUFF_NUM_2 *
+                                        aByteSize_ +
+                                    basicBlock.baseN * biasBufferNum * biasByteSize_);
     }
     return static_cast<int64_t>(
         basicBlock.baseM * l1Param.stepM * basicBlock.baseK * l1Param.stepKa * l1Param.A1BufferNum * aByteSize_ +
@@ -804,18 +801,17 @@ int64_t WeightQuantBatchMatmulV2BasicBlockTiling::GetL1LoadSize(
 void WeightQuantBatchMatmulV2BasicBlockTiling::PrintFinalResult(const BasicBlockParam& param, bool enable) const
 {
     if (enable) {
-        OP_LOGD(
-            opName_,
-            "Tiling result: mSize: %ld, nSize: %ld, kSize: %ld, groupSize: %ld, singleM: %ld, singleN: %ld, "
-            "singleK: %ld, mDim: %ld, nDim: %ld, kDim: %ld, mte2DataSize: %ld, fixpDataSize: %ld, iterateOrder: "
-            "%ld, stepM: %ld, stepN: %ld, stepKa: %ld, stepKb: %ld, A1BufferNum: %ld, B1BufferNum: %ld, baseM: "
-            "%ld, baseN: %ld, baseK: %ld, mte2BW: %lf, mte2MinBW: %lf, mte2BWRatio: %lf, mte2TailBWRatio: %lf",
-            param.mSize, param.nSize, param.kSize, basicBlockParam_.groupSize, param.singleM, param.singleN,
-            param.singleK, param.mDim, param.nDim, param.kDim, param.mte2DataSize, param.fixpDataSize,
-            param.l1Param.iterateOrder, param.l1Param.stepM, param.l1Param.stepN, param.l1Param.stepKa,
-            param.l1Param.stepKb, param.l1Param.A1BufferNum, param.l1Param.B1BufferNum, param.basicBlock.baseM,
-            param.basicBlock.baseN, param.basicBlock.baseK, param.basicBlock.mte2BW, param.basicBlock.mte2MinBW,
-            param.basicBlock.mte2BWRatio, param.basicBlock.mte2TailBWRatio);
+        OP_LOGD(opName_,
+                "Tiling result: mSize: %ld, nSize: %ld, kSize: %ld, groupSize: %ld, singleM: %ld, singleN: %ld, "
+                "singleK: %ld, mDim: %ld, nDim: %ld, kDim: %ld, mte2DataSize: %ld, fixpDataSize: %ld, iterateOrder: "
+                "%ld, stepM: %ld, stepN: %ld, stepKa: %ld, stepKb: %ld, A1BufferNum: %ld, B1BufferNum: %ld, baseM: "
+                "%ld, baseN: %ld, baseK: %ld, mte2BW: %lf, mte2MinBW: %lf, mte2BWRatio: %lf, mte2TailBWRatio: %lf",
+                param.mSize, param.nSize, param.kSize, basicBlockParam_.groupSize, param.singleM, param.singleN,
+                param.singleK, param.mDim, param.nDim, param.kDim, param.mte2DataSize, param.fixpDataSize,
+                param.l1Param.iterateOrder, param.l1Param.stepM, param.l1Param.stepN, param.l1Param.stepKa,
+                param.l1Param.stepKb, param.l1Param.A1BufferNum, param.l1Param.B1BufferNum, param.basicBlock.baseM,
+                param.basicBlock.baseN, param.basicBlock.baseK, param.basicBlock.mte2BW, param.basicBlock.mte2MinBW,
+                param.basicBlock.mte2BWRatio, param.basicBlock.mte2TailBWRatio);
     }
 }
 
@@ -823,41 +819,36 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateTilingResult() const
 {
     OP_TILING_CHECK(
         basicBlockParam_.mDim * basicBlockParam_.nDim * basicBlockParam_.kDim > platformParam_.blockNum,
-        OP_LOGE(
-            opName_, "Invalid block dim, mDim: %ld, nDim: %ld, kDim: %ld, maxDimNum: %ld", basicBlockParam_.mDim,
-            basicBlockParam_.nDim, basicBlockParam_.kDim, platformParam_.blockNum),
+        OP_LOGE(opName_, "Invalid block dim, mDim: %ld, nDim: %ld, kDim: %ld, maxDimNum: %ld", basicBlockParam_.mDim,
+                basicBlockParam_.nDim, basicBlockParam_.kDim, platformParam_.blockNum),
         return false);
 
     OP_TILING_CHECK(
         GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param) > platformParam_.l1Size,
-        OP_LOGE(
-            opName_, "The load size exceeds L1 buffer limit, load size: %ld, L1 buffer size: %ld",
-            GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param), platformParam_.l1Size),
+        OP_LOGE(opName_, "The load size exceeds L1 buffer limit, load size: %ld, L1 buffer size: %ld",
+                GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param), platformParam_.l1Size),
         return false);
 
-    int64_t a2Size = static_cast<int64_t>(
-        basicBlockParam_.basicBlock.baseM * basicBlockParam_.basicBlock.baseK * aByteSize_ * BUFF_NUM_2);
-    int64_t b2Size = static_cast<int64_t>(
-        basicBlockParam_.basicBlock.baseN * basicBlockParam_.basicBlock.baseK * aByteSize_ * BUFF_NUM_2);
+    int64_t a2Size = static_cast<int64_t>(basicBlockParam_.basicBlock.baseM * basicBlockParam_.basicBlock.baseK *
+                                          aByteSize_ * BUFF_NUM_2);
+    int64_t b2Size = static_cast<int64_t>(basicBlockParam_.basicBlock.baseN * basicBlockParam_.basicBlock.baseK *
+                                          aByteSize_ * BUFF_NUM_2);
 
     OP_TILING_CHECK(
         a2Size > platformParam_.l0aSize || b2Size > platformParam_.l0bSize || a2Size == 0 || b2Size == 0,
-        OP_LOGE(
-            opName_,
-            "The load size may exceed L0 buffer limit, L0A load size: %ld, L0B load size: %ld, L0 buffer size: %ld",
-            a2Size, b2Size, platformParam_.l0aSize),
+        OP_LOGE(opName_,
+                "The load size may exceed L0 buffer limit, L0A load size: %ld, L0B load size: %ld, L0 buffer size: %ld",
+                a2Size, b2Size, platformParam_.l0aSize),
         return false);
 
     int64_t stepKMax = CeilDiv(basicBlockParam_.singleK, basicBlockParam_.basicBlock.baseK);
 
-    OP_TILING_CHECK(
-        (basicBlockParam_.l1Param.stepKa < stepKMax && basicBlockParam_.l1Param.stepKb < stepKMax) &&
-            (basicBlockParam_.l1Param.stepKa % basicBlockParam_.l1Param.stepKb > 0 &&
-             basicBlockParam_.l1Param.stepKb % basicBlockParam_.l1Param.stepKa > 0),
-        OP_LOGE(
-            opName_, "Invalid stepK, stepKa (%ld) should be divisible by stepKb (%ld) or otherwise",
-            basicBlockParam_.l1Param.stepKa, basicBlockParam_.l1Param.stepKb),
-        return false);
+    OP_TILING_CHECK((basicBlockParam_.l1Param.stepKa < stepKMax && basicBlockParam_.l1Param.stepKb < stepKMax) &&
+                        (basicBlockParam_.l1Param.stepKa % basicBlockParam_.l1Param.stepKb > 0 &&
+                         basicBlockParam_.l1Param.stepKb % basicBlockParam_.l1Param.stepKa > 0),
+                    OP_LOGE(opName_, "Invalid stepK, stepKa (%ld) should be divisible by stepKb (%ld) or otherwise",
+                            basicBlockParam_.l1Param.stepKa, basicBlockParam_.l1Param.stepKb),
+                    return false);
 
     return true;
 }
@@ -881,9 +872,8 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetFinalResult()
 {
     bool ret = true;
     if (cubeBoundResults_.empty() && mte2BoundResults_.empty()) {
-        OP_LOGI(
-            opName_, "No solution Found. mSize: %ld, nSize: %ld, kSize: %ld", basicBlockParam_.mSize,
-            basicBlockParam_.nSize, basicBlockParam_.kSize);
+        OP_LOGI(opName_, "No solution Found. mSize: %ld, nSize: %ld, kSize: %ld", basicBlockParam_.mSize,
+                basicBlockParam_.nSize, basicBlockParam_.kSize);
         ret = false;
         // 分满核且cube bound选解
     } else if (!cubeBoundResults_.empty() && mte2BoundResults_.empty()) {
@@ -942,10 +932,10 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetBasicBlockTiling()
     OP_TILING_CHECK(!ValidateInputParam(), OP_LOGE(opName_, "Invalid input param"), return false);
 
     Reset();
-    std::unique_ptr<WeightQuantBatchMatmulV2BasicBlockTable> basicBlockTablePtr =
-        std::make_unique<WeightQuantBatchMatmulV2BasicBlockTable>();
-    auto basicBlockRow = WeightQuantBatchMatmulV2BasicBlockTable::GetBasicBlockTable(
-        basicBlockParam_.aDtypeBits, basicBlockParam_.bDtypeBits);
+    std::unique_ptr<WeightQuantBatchMatmulV2BasicBlockTable>
+        basicBlockTablePtr = std::make_unique<WeightQuantBatchMatmulV2BasicBlockTable>();
+    auto basicBlockRow = WeightQuantBatchMatmulV2BasicBlockTable::GetBasicBlockTable(basicBlockParam_.aDtypeBits,
+                                                                                     basicBlockParam_.bDtypeBits);
 
     // 1）遍历分核方式
     for (size_t i = 0; i < basicBlockRow.size(); ++i) {

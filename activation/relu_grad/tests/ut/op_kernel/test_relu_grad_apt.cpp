@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -23,21 +23,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops,
+                                                GM_ADDR workspace, GM_ADDR tiling);
 
 class relu_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "relu_grad_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "relu_grad_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "relu_grad TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./relu_grad_data");
     }
 };
-
 
 TEST_F(relu_grad_test, test_case_fp32_1)
 {
@@ -49,7 +46,7 @@ TEST_F(relu_grad_test, test_case_fp32_1)
     uint8_t* gradients = (uint8_t*)AscendC::GmAlloc(gradientsByteSize);
     uint8_t* features = (uint8_t*)AscendC::GmAlloc(featuresByteSize);
     uint8_t* backprops = (uint8_t*)AscendC::GmAlloc(backpropsByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/relu_grad/tests/ut/op_kernel/relu_grad_data", "relu_grad_data");
@@ -64,8 +61,9 @@ TEST_F(relu_grad_test, test_case_fp32_1)
     tilingDatafromBin->blockNum = 1;
     ReadFile(path + "/relu_grad_data/input_gradients.bin", gradientsByteSize, gradients, gradientsByteSize);
     ReadFile(path + "/relu_grad_data/input_features.bin", featuresByteSize, features, featuresByteSize);
-    auto KernelReluGrad = [](GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling) {
-        ::relu_grad<202,0>(gradients, features, backprops, workspace, tiling);
+    auto KernelReluGrad = [](GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                             GM_ADDR tiling) {
+        ::relu_grad<202, 0>(gradients, features, backprops, workspace, tiling);
     };
     ICPU_SET_TILING_KEY(1003);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -14,7 +14,6 @@
  */
 
 #include "layer_norm_v4_tiling.h"
-
 
 namespace optiling {
 constexpr uint64_t BLOCK_SIZE = 32;
@@ -59,7 +58,7 @@ ge::graphStatus LayerNormV4CommonTiling::DoOpTiling()
     uint32_t maxtileLength_;
 
     coefficient_ = static_cast<float>(1.0) / static_cast<float>(commonParams.rowSize);
-    
+
     if (commonParams.colSize <= commonParams.coreNum) {
         selfBlockDim_ = commonParams.colSize;
     } else {
@@ -75,8 +74,8 @@ ge::graphStatus LayerNormV4CommonTiling::DoOpTiling()
         tileLength_ = maxtileLength_ / NUM_TWO;
     }
     tileCount_ = (blockLength_ + tileLength_ - 1) / tileLength_;
-    uint32_t tileLengthFp16Aligned = (tileLength_ + BLOCK_SIZE_OF_FLOAT16 - 1) / 
-                                         BLOCK_SIZE_OF_FLOAT16 * BLOCK_SIZE_OF_FLOAT16;
+    uint32_t tileLengthFp16Aligned = (tileLength_ + BLOCK_SIZE_OF_FLOAT16 - 1) / BLOCK_SIZE_OF_FLOAT16 *
+                                     BLOCK_SIZE_OF_FLOAT16;
     uint32_t maxtileCount = maxtileLength_ - tileLengthFp16Aligned;
     if (maxtileCount < tileCount_) {
         OP_LOGE(context_->GetNodeName(), "The size of normalized shape is too big.");
@@ -88,8 +87,8 @@ ge::graphStatus LayerNormV4CommonTiling::DoOpTiling()
     td_.set_eps(commonParams.eps);
     td_.set_space(commonParams.ubSizePlatForm);
     td_.set_coefficient(coefficient_);
-    td_.set_nullptrGamma(commonParams.gammaNullPtr);   // 
-    td_.set_nullptrBeta(commonParams.betaNullPtr);   // 
+    td_.set_nullptrGamma(commonParams.gammaNullPtr); //
+    td_.set_nullptrBeta(commonParams.betaNullPtr);   //
     TilingDataPrint();
 
     return ge::GRAPH_SUCCESS;

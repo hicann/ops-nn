@@ -47,6 +47,6 @@ REG_OP(FakeQuantWithMinMaxVarsPerChannel)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVarsPerChannel)
 
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_QUANT_FAKE_QUANT_WITH_MIN_MAX_VARS_PER_CHANNEL_PROTO_H_
+#endif // OPS_QUANT_FAKE_QUANT_WITH_MIN_MAX_VARS_PER_CHANNEL_PROTO_H_

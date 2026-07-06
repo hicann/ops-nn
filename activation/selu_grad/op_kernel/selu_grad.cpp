@@ -25,8 +25,7 @@
 #include "arch35/selu_grad.h"
 
 template <typename Op>
-__aicore__ inline void RunSeluGrad(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y,
-                                   const SeluGradTilingData* tilingData)
+__aicore__ inline void RunSeluGrad(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y, const SeluGradTilingData* tilingData)
 {
     Op op;
     op.Init(gradients, outputs, y, tilingData);
@@ -34,8 +33,7 @@ __aicore__ inline void RunSeluGrad(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y
 }
 
 template <typename D_T_X, int SCH_MODE>
-__global__ __aicore__ void selu_grad(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y,
-                                      GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void selu_grad(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SeluGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(SeluGradTilingData, tilingData, tiling);

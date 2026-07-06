@@ -39,14 +39,14 @@ extern "C" {
  * 公式中的输入beta，数据类型和shape维度与gamma保持一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] epsilon: double 类型，层归一化中用到的防止除0的参数。
- * @param [in] scaleAlg: 
+ * @param [in] scaleAlg:
  * 公式中的scale_alg，int 类型，表示mxscale_out的计算方法。
  * 支持取值0:OCP计算方法,和取值1:cuBLAS计算方法，当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。
- * @param [in] roundMode: 
+ * @param [in] roundMode:
  * 公式中的round_mode，string 类型，数据转换的模式。
  * 对应yOut数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}，
  * 对应yOut数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。
- * @param [in] dstType: 
+ * @param [in] dstType:
  * 公式中的dst_type，int 类型，表示指定数据转换后yOut的类型。
  * 输入范围为{35, 36, 40, 41}，分别对应{FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, FLOAT4_E1M2}。
  * @param [in] outputRstd: bool 类型，表示指定是否输出有效的rstdOut，当为False时，rstdOut为无效输出。
@@ -63,10 +63,12 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon,
-    int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
-    aclTensor* mxscaleOut, aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma,
+                                                                 const aclTensor* beta, double epsilon,
+                                                                 int64_t scaleAlg, char* roundMode, int64_t dstType,
+                                                                 bool outputRstd, aclTensor* yOut,
+                                                                 aclTensor* mxscaleOut, aclTensor* rstdOut,
+                                                                 uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnRmsNormDynamicMxQuant的第二段接口，用于执行计算。
@@ -80,8 +82,8 @@ ACLNN_API aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnRmsNormDynamicMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnRmsNormDynamicMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                 aclrtStream stream);
 
 #ifdef __cplusplus
 }

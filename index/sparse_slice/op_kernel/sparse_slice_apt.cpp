@@ -24,9 +24,9 @@
 
 using namespace SparseSlice;
 
-extern "C" __global__ __aicore__ void sparse_slice(
-    GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start, GM_ADDR size, GM_ADDR yIndices, GM_ADDR yValues,
-    GM_ADDR yShape, GM_ADDR outputShape1, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sparse_slice(GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start,
+                                                   GM_ADDR size, GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape,
+                                                   GM_ADDR outputShape1, GM_ADDR workspace, GM_ADDR tiling)
 {
     GM_ADDR userWS = GetUserWorkspace(workspace);
     GET_TILING_DATA(tilingData, tiling);
@@ -34,17 +34,20 @@ extern "C" __global__ __aicore__ void sparse_slice(
     if (TILING_KEY_IS(TILING_KEY_DIMENSION_BASE)) {
         TPipe pipe;
         SparseSliceDimension<DTYPE_VALUES> op;
-        op.Init(indices, values, shape, start, size, yIndices, yValues, yShape, outputShape1, userWS, tilingData, &pipe);
+        op.Init(indices, values, shape, start, size, yIndices, yValues, yShape, outputShape1, userWS, tilingData,
+                &pipe);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_EMPTY_OUTPUT)) {
         TPipe pipe;
         SparseSliceEmpty<DTYPE_VALUES> op;
-        op.Init(indices, values, shape, start, size, yIndices, yValues, yShape, outputShape1, userWS, tilingData, &pipe);
+        op.Init(indices, values, shape, start, size, yIndices, yValues, yShape, outputShape1, userWS, tilingData,
+                &pipe);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_OUTPUT)) {
         TPipe pipe;
         SparseSliceSimt<int64_t, DTYPE_VALUES> op;
-        op.Init(indices, values, shape, start, size, yIndices, yValues, yShape, outputShape1, userWS, tilingData, &pipe);
+        op.Init(indices, values, shape, start, size, yIndices, yValues, yShape, outputShape1, userWS, tilingData,
+                &pipe);
         op.Process();
     }
 }

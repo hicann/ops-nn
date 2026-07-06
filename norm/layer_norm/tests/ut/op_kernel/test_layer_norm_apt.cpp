@@ -33,20 +33,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void layer_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR variance, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void layer_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                 GM_ADDR variance, GM_ADDR workspace, GM_ADDR tiling);
 
 class layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "layer_norm_test TearDown\n" << endl; }
 };
 
 std::string Shape2Str(const std::vector<int64_t>& shape)
@@ -72,9 +65,8 @@ static inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void ExcuteTestCase(
-    const std::vector<int64_t>& xShape, const std::vector<int64_t>& gammaShape, const std::string& dtype,
-    int64_t tilingKey, uint32_t blockNum, uint8_t* tiling)
+void ExcuteTestCase(const std::vector<int64_t>& xShape, const std::vector<int64_t>& gammaShape,
+                    const std::string& dtype, int64_t tilingKey, uint32_t blockNum, uint8_t* tiling)
 {
     uint32_t typeSize = 4;
     uint32_t fp32TypeSize = 4;
@@ -118,8 +110,8 @@ TEST_F(layer_norm_test, test_two_pass_float32)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseTwoPass);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    LayerNormV3TilingDataRegBaseTwoPass* tilingDatafromBin =
-        reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPass*>(tiling);
+    LayerNormV3TilingDataRegBaseTwoPass* tilingDatafromBin = reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPass*>(
+        tiling);
 
     tilingDatafromBin->r = 64;
     tilingDatafromBin->rAlign = 64;
@@ -176,8 +168,8 @@ TEST_F(layer_norm_test, test_two_pass_perf_float32)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseTwoPassPerf);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    LayerNormV3TilingDataRegBaseTwoPassPerf* tilingDatafromBin =
-        reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPassPerf*>(tiling);
+    LayerNormV3TilingDataRegBaseTwoPassPerf*
+        tilingDatafromBin = reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPassPerf*>(tiling);
 
     tilingDatafromBin->a = 32;
     tilingDatafromBin->aBlockFactor = 16;
@@ -203,8 +195,8 @@ TEST_F(layer_norm_test, test_no_reduce_float32)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseNoReduce);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    LayerNormV3TilingDataRegBaseNoReduce* tilingDatafromBin =
-        reinterpret_cast<LayerNormV3TilingDataRegBaseNoReduce*>(tiling);
+    LayerNormV3TilingDataRegBaseNoReduce* tilingDatafromBin = reinterpret_cast<LayerNormV3TilingDataRegBaseNoReduce*>(
+        tiling);
 
     tilingDatafromBin->a = 32;
     tilingDatafromBin->aBlockFactor = 16;
@@ -227,8 +219,8 @@ TEST_F(layer_norm_test, test_two_pass_half)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseTwoPass);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    LayerNormV3TilingDataRegBaseTwoPass* tilingDatafromBin =
-        reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPass*>(tiling);
+    LayerNormV3TilingDataRegBaseTwoPass* tilingDatafromBin = reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPass*>(
+        tiling);
 
     tilingDatafromBin->r = 64;
     tilingDatafromBin->rAlign = 64;

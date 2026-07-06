@@ -48,14 +48,14 @@ WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
 class WqbmmExpVecCompute {
 public:
     __aicore__ inline WqbmmExpVecCompute(){};
-    __aicore__ inline void UnfoldA(
-        uint64_t curMSize, uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<xType>& xGlobal,
-        const GlobalTensor<float>& aMaxWorkspaceGm, const GlobalTensor<wType>& aUnfoldGlobal);
+    __aicore__ inline void UnfoldA(uint64_t curMSize, uint64_t mPreSum, const A16W4MsdConstParam& constParams,
+                                   const GlobalTensor<xType>& xGlobal, const GlobalTensor<float>& aMaxWorkspaceGm,
+                                   const GlobalTensor<wType>& aUnfoldGlobal);
     __aicore__ inline void Init(GM_ADDR antiquantScale, GM_ADDR y, TPipe* tPipe);
-    __aicore__ inline void MergeY(
-        uint64_t mGmOffset, uint64_t nGmOffset, uint64_t kGmOffset, bool isLastK,
-        const GlobalTensor<float>& aMaxWorkspaceGm, const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm,
-        const A16W4MsdConstParam& constParams);
+    __aicore__ inline void MergeY(uint64_t mGmOffset, uint64_t nGmOffset, uint64_t kGmOffset, bool isLastK,
+                                  const GlobalTensor<float>& aMaxWorkspaceGm,
+                                  const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm,
+                                  const A16W4MsdConstParam& constParams);
     __aicore__ inline void End();
 
 private:
@@ -95,30 +95,32 @@ private:
     // msd算法的展开系数
     float multiFactors_[UNFLOD_TIMES] = {7.49f, 14.98f, 14.98f};
 
-    __aicore__ inline void ComputeMaxA(
-        uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<float>& aMaxWorkspaceGm);
-    __aicore__ inline void UnfoldAMatrix(
-        uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<wType>& aUnfoldGlobal);
-    __aicore__ inline void CopyAFp16GmToUb(
-        uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<xType>& xGlobal);
-    __aicore__ inline void TransToWType(
-        uint64_t unfoldATimes, uint64_t defaultOffset, uint64_t mainRepeatK, float multiFactors,
-        const BinaryRepeatParams& f32BinaryRepeatParams, const UnaryRepeatParams& f32UnaryRepeatParams,
-        const UnaryRepeatParams& f32ToF16RepeatParams, const A16W4MsdConstParam& constParams);
-    __aicore__ inline void TransToWTypeFirstStep(
-        uint64_t defaultOffset, uint64_t mainRepeatK, const BinaryRepeatParams& f32BinaryRepeatParams,
-        const A16W4MsdConstParam& constParams);
-    __aicore__ inline void CopyUbToGm(
-        uint64_t curMGmOffset, uint64_t nGmOffset, uint64_t curMSize, bool isLastK,
-        const A16W4MsdConstParam& constParams);
-    __aicore__ inline void ComputeMergeY(
-        uint64_t curMSize, const LocalTensor<float>& aMaxUb, const LocalTensor<CUBE_FIXP_DTYPE>& yS32Ub,
-        const LocalTensor<xType>& scaleF16Ub, const A16W4MsdConstParam& constParams);
-    __aicore__ inline void CopyMergeYInputGmToUb(
-        uint64_t curMGmOffset, uint64_t curMSize, uint64_t kGmOffset, uint64_t nGmOffset,
-        const LocalTensor<float>& aMaxUb, const LocalTensor<CUBE_FIXP_DTYPE>& yS32Ub,
-        const LocalTensor<xType>& scaleF16Ub, const GlobalTensor<float>& aMaxWorkspaceGm,
-        const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm, const A16W4MsdConstParam& constParams);
+    __aicore__ inline void ComputeMaxA(uint64_t mPreSum, const A16W4MsdConstParam& constParams,
+                                       const GlobalTensor<float>& aMaxWorkspaceGm);
+    __aicore__ inline void UnfoldAMatrix(uint64_t mPreSum, const A16W4MsdConstParam& constParams,
+                                         const GlobalTensor<wType>& aUnfoldGlobal);
+    __aicore__ inline void CopyAFp16GmToUb(uint64_t mPreSum, const A16W4MsdConstParam& constParams,
+                                           const GlobalTensor<xType>& xGlobal);
+    __aicore__ inline void TransToWType(uint64_t unfoldATimes, uint64_t defaultOffset, uint64_t mainRepeatK,
+                                        float multiFactors, const BinaryRepeatParams& f32BinaryRepeatParams,
+                                        const UnaryRepeatParams& f32UnaryRepeatParams,
+                                        const UnaryRepeatParams& f32ToF16RepeatParams,
+                                        const A16W4MsdConstParam& constParams);
+    __aicore__ inline void TransToWTypeFirstStep(uint64_t defaultOffset, uint64_t mainRepeatK,
+                                                 const BinaryRepeatParams& f32BinaryRepeatParams,
+                                                 const A16W4MsdConstParam& constParams);
+    __aicore__ inline void CopyUbToGm(uint64_t curMGmOffset, uint64_t nGmOffset, uint64_t curMSize, bool isLastK,
+                                      const A16W4MsdConstParam& constParams);
+    __aicore__ inline void ComputeMergeY(uint64_t curMSize, const LocalTensor<float>& aMaxUb,
+                                         const LocalTensor<CUBE_FIXP_DTYPE>& yS32Ub,
+                                         const LocalTensor<xType>& scaleF16Ub, const A16W4MsdConstParam& constParams);
+    __aicore__ inline void CopyMergeYInputGmToUb(uint64_t curMGmOffset, uint64_t curMSize, uint64_t kGmOffset,
+                                                 uint64_t nGmOffset, const LocalTensor<float>& aMaxUb,
+                                                 const LocalTensor<CUBE_FIXP_DTYPE>& yS32Ub,
+                                                 const LocalTensor<xType>& scaleF16Ub,
+                                                 const GlobalTensor<float>& aMaxWorkspaceGm,
+                                                 const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm,
+                                                 const A16W4MsdConstParam& constParams);
 };
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
@@ -179,9 +181,11 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::End()
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::UnfoldA(
-    uint64_t curMSize, uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<xType>& xGlobal,
-    const GlobalTensor<float>& aMaxWorkspaceGm, const GlobalTensor<wType>& aUnfoldGlobal)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::UnfoldA(uint64_t curMSize, uint64_t mPreSum,
+                                                            const A16W4MsdConstParam& constParams,
+                                                            const GlobalTensor<xType>& xGlobal,
+                                                            const GlobalTensor<float>& aMaxWorkspaceGm,
+                                                            const GlobalTensor<wType>& aUnfoldGlobal)
 {
     CopyAFp16GmToUb(mPreSum, constParams, xGlobal);
 
@@ -198,8 +202,9 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::UnfoldA(
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::CopyAFp16GmToUb(
-    uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<xType>& xGlobal)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::CopyAFp16GmToUb(uint64_t mPreSum,
+                                                                    const A16W4MsdConstParam& constParams,
+                                                                    const GlobalTensor<xType>& xGlobal)
 {
     DataCopyPad2D(aOriginTensor_, xGlobal, 1, constParams.kUbSize, constParams.kUbSize, constParams.kGmSize);
     event_t eventIdMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -215,8 +220,8 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::CopyAFp16GmToUb(
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMaxA(
-    uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<float>& aMaxWorkspaceGm)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMaxA(uint64_t mPreSum, const A16W4MsdConstParam& constParams,
+                                                                const GlobalTensor<float>& aMaxWorkspaceGm)
 {
     SetMaskNorm();
     SetVectorMask<float, MaskMode::NORMAL>(FP32_MAX_MASK_SIZE);
@@ -232,16 +237,15 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMaxA(
     param.dstRepStride = FP32_MASK_BLK_NUM;
     param.src0RepStride = FP32_MASK_BLK_NUM * 2;
     param.src1RepStride = FP32_MASK_BLK_NUM * 2;
-    AscendC::Max<float, false>(
-        aF32TmpTensor_, aF32TmpTensor_, aF32TmpTensor_[FP32_MAX_MASK_SIZE], FP32_MAX_MASK_SIZE, processGroupNum, param);
+    AscendC::Max<float, false>(aF32TmpTensor_, aF32TmpTensor_, aF32TmpTensor_[FP32_MAX_MASK_SIZE], FP32_MAX_MASK_SIZE,
+                               processGroupNum, param);
     PipeBarrier<PIPE_V>();
 
     BlockReduceMax(aF32TmpTensor_, aF32TmpTensor_, processGroupNum, FP32_MAX_MASK_SIZE, 1, 1, FP32_MASK_BLK_NUM);
 
     PipeBarrier<PIPE_V>();
-    BlockReduceMax(
-        aF32TmpTensor_, aF32TmpTensor_, CeilDiv(processGroupNum, FP32_BLOCK_SIZE), FP32_MAX_MASK_SIZE, 1, 1,
-        VEC_REPEAT_MAX_STRIDE);
+    BlockReduceMax(aF32TmpTensor_, aF32TmpTensor_, CeilDiv(processGroupNum, FP32_BLOCK_SIZE), FP32_MAX_MASK_SIZE, 1, 1,
+                   VEC_REPEAT_MAX_STRIDE);
 
     PipeBarrier<PIPE_V>();
     Brcb(aMaxTensor_, aF32TmpTensor_, CeilDiv(processGroupNum, FP32_BLOCK_SIZE), {1, 8});
@@ -255,8 +259,9 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMaxA(
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::UnfoldAMatrix(
-    uint64_t mPreSum, const A16W4MsdConstParam& constParams, const GlobalTensor<wType>& aUnfoldGlobal)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::UnfoldAMatrix(uint64_t mPreSum,
+                                                                  const A16W4MsdConstParam& constParams,
+                                                                  const GlobalTensor<wType>& aUnfoldGlobal)
 {
     // 避免bank冲突，tensor使用时每次额外往前偏移一个repeat的数据量
     uint64_t defaultOffset = UNFLOD_TIMES * FP32_MAX_MASK_SIZE;
@@ -283,25 +288,25 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::UnfoldAMatrix(
 
     float multiFactors[3] = {multiFactors_[0], multiFactors_[1], multiFactors_[2]};
     for (uint64_t unfoldATimes = 0; unfoldATimes < UNFLOD_TIMES; unfoldATimes++, defaultOffset -= FP32_MAX_MASK_SIZE) {
-        TransToWType(
-            unfoldATimes, defaultOffset, mainRepeatK, multiFactors[unfoldATimes], f32BinaryRepeatParams,
-            f32UnaryRepeatParams, f32ToF16RepeatParams, constParams);
+        TransToWType(unfoldATimes, defaultOffset, mainRepeatK, multiFactors[unfoldATimes], f32BinaryRepeatParams,
+                     f32UnaryRepeatParams, f32ToF16RepeatParams, constParams);
 
         event_t eventIdVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMTE3);
         uint64_t gmOffset = (mPreSum * UNFLOD_TIMES + unfoldATimes) * constParams.kUbSize;
-        DataCopyPad2D(
-            aUnfoldGlobal[gmOffset], aUnfoldLocalTensor_[unfoldATimes * constParams.kUbSize], 1, constParams.kUbSize,
-            constParams.kUbSize, constParams.kUbSize);
+        DataCopyPad2D(aUnfoldGlobal[gmOffset], aUnfoldLocalTensor_[unfoldATimes * constParams.kUbSize], 1,
+                      constParams.kUbSize, constParams.kUbSize, constParams.kUbSize);
     }
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::TransToWType(
-    uint64_t unfoldATimes, uint64_t defaultOffset, uint64_t mainRepeatK, float multiFactors,
-    const BinaryRepeatParams& f32BinaryRepeatParams, const UnaryRepeatParams& f32UnaryRepeatParams,
-    const UnaryRepeatParams& f32ToF16RepeatParams, const A16W4MsdConstParam& constParams)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::TransToWType(uint64_t unfoldATimes, uint64_t defaultOffset,
+                                                                 uint64_t mainRepeatK, float multiFactors,
+                                                                 const BinaryRepeatParams& f32BinaryRepeatParams,
+                                                                 const UnaryRepeatParams& f32UnaryRepeatParams,
+                                                                 const UnaryRepeatParams& f32ToF16RepeatParams,
+                                                                 const A16W4MsdConstParam& constParams)
 {
     if (likely(unfoldATimes > 0)) {
         Sub(aF32TmpTensor_[defaultOffset], aF32Tensor_, aF32TmpTensor_[defaultOffset + FP32_MAX_MASK_SIZE],
@@ -310,24 +315,20 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::TransToWType(
         TransToWTypeFirstStep(defaultOffset, mainRepeatK, f32BinaryRepeatParams, constParams);
     }
     PipeBarrier<PIPE_V>();
-    Muls<float, false>(
-        aF32Tensor_, aF32TmpTensor_[defaultOffset], multiFactors, FP32_MAX_MASK_SIZE, mainRepeatK,
-        f32UnaryRepeatParams);
+    Muls<float, false>(aF32Tensor_, aF32TmpTensor_[defaultOffset], multiFactors, FP32_MAX_MASK_SIZE, mainRepeatK,
+                       f32UnaryRepeatParams);
     PipeBarrier<PIPE_V>();
 
-    AscendC::Cast<float, float, false>(
-        aF32TmpTensor_[defaultOffset], aF32Tensor_, RoundMode::CAST_ROUND, FP32_MAX_MASK_SIZE, mainRepeatK,
-        f32UnaryRepeatParams);
+    AscendC::Cast<float, float, false>(aF32TmpTensor_[defaultOffset], aF32Tensor_, RoundMode::CAST_ROUND,
+                                       FP32_MAX_MASK_SIZE, mainRepeatK, f32UnaryRepeatParams);
     PipeBarrier<PIPE_V>();
 
-    AscendC::Cast<half, float, false>(
-        aFp16Tensor_, aF32TmpTensor_[defaultOffset], RoundMode::CAST_NONE, FP32_MAX_MASK_SIZE, mainRepeatK,
-        f32ToF16RepeatParams);
+    AscendC::Cast<half, float, false>(aFp16Tensor_, aF32TmpTensor_[defaultOffset], RoundMode::CAST_NONE,
+                                      FP32_MAX_MASK_SIZE, mainRepeatK, f32ToF16RepeatParams);
 
     PipeBarrier<PIPE_V>();
-    Cast(
-        aUnfoldLocalTensor_[unfoldATimes * constParams.kUbSize], aFp16Tensor_, RoundMode::CAST_NONE,
-        constParams.kUbSize);
+    Cast(aUnfoldLocalTensor_[unfoldATimes * constParams.kUbSize], aFp16Tensor_, RoundMode::CAST_NONE,
+         constParams.kUbSize);
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
@@ -343,19 +344,18 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::TransToWTypeFirstStep(
     repeatParams.dstRepStride = constParams.groupSize / FP32_MASK_BLK_NUM;
     repeatParams.src0RepStride = repeatParams.dstRepStride;
     repeatParams.src1RepStride = 1;
-    AscendC::Div(
-        aF32TmpTensor_[defaultOffset], aF32Tensor_, aMaxTensor_, FP32_MAX_MASK_SIZE, processGroupNum, repeatParams);
+    AscendC::Div(aF32TmpTensor_[defaultOffset], aF32Tensor_, aMaxTensor_, FP32_MAX_MASK_SIZE, processGroupNum,
+                 repeatParams);
 
-    AscendC::Div(
-        aF32TmpTensor_[defaultOffset + 64], aF32Tensor_[64], aMaxTensor_, FP32_MAX_MASK_SIZE, processGroupNum,
-        repeatParams);
+    AscendC::Div(aF32TmpTensor_[defaultOffset + 64], aF32Tensor_[64], aMaxTensor_, FP32_MAX_MASK_SIZE, processGroupNum,
+                 repeatParams);
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::MergeY(
-    uint64_t mGmOffset, uint64_t nGmOffset, uint64_t kGmOffset, bool isLastK,
-    const GlobalTensor<float>& aMaxWorkspaceGm, const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm,
-    const A16W4MsdConstParam& constParams)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::MergeY(uint64_t mGmOffset, uint64_t nGmOffset, uint64_t kGmOffset,
+                                                           bool isLastK, const GlobalTensor<float>& aMaxWorkspaceGm,
+                                                           const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm,
+                                                           const A16W4MsdConstParam& constParams)
 {
     event_t eventIdsVToMte2[2] = {eventIdsVToMte2_[0], eventIdsVToMte2_[1]};
     // 按m分核
@@ -374,9 +374,8 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::MergeY(
     LocalTensor<float> aMaxUb = aMaxUb_[(mte2BufIdx_ % DOUBLE_BUFFER_NUM) * A_MAX_FP32_MERGE_UB_OFFSET];
     LocalTensor<CUBE_FIXP_DTYPE> yS32Ub = yS32Ub_[(mte2BufIdx_ % DOUBLE_BUFFER_NUM) * Y_F32_UB_OFFSET];
     LocalTensor<xType> scaleF16Ub = scaleF16Ub_[(mte2BufIdx_ % DOUBLE_BUFFER_NUM) * SCALE_B16_MERGE_UB_OFFSET];
-    CopyMergeYInputGmToUb(
-        curMGmOffset, curMSize, kGmOffset, nGmOffset, aMaxUb, yS32Ub, scaleF16Ub, aMaxWorkspaceGm, cS32GlobalGm,
-        constParams);
+    CopyMergeYInputGmToUb(curMGmOffset, curMSize, kGmOffset, nGmOffset, aMaxUb, yS32Ub, scaleF16Ub, aMaxWorkspaceGm,
+                          cS32GlobalGm, constParams);
 
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -396,36 +395,33 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::CopyMergeYInputGmToUb(
     const GlobalTensor<float>& aMaxWorkspaceGm, const GlobalTensor<CUBE_FIXP_DTYPE>& cS32GlobalGm,
     const A16W4MsdConstParam& constParams)
 {
-    DataCopyPad2D(
-        aMaxUb, aMaxWorkspaceGm[curMGmOffset * FP32_BLOCK_SIZE], 1, curMSize * FP32_BLOCK_SIZE,
-        curMSize * FP32_BLOCK_SIZE, curMSize * FP32_BLOCK_SIZE);
+    DataCopyPad2D(aMaxUb, aMaxWorkspaceGm[curMGmOffset * FP32_BLOCK_SIZE], 1, curMSize * FP32_BLOCK_SIZE,
+                  curMSize * FP32_BLOCK_SIZE, curMSize * FP32_BLOCK_SIZE);
 
-    DataCopyPad2D(
-        yS32Ub, cS32GlobalGm, UNFLOD_TIMES * curMSize, constParams.nL1Size, constParams.nL1Size, constParams.nGmSize);
+    DataCopyPad2D(yS32Ub, cS32GlobalGm, UNFLOD_TIMES * curMSize, constParams.nL1Size, constParams.nL1Size,
+                  constParams.nGmSize);
 
-    DataCopyPad2D(
-        scaleF16Ub, scaleGm_[(kGmOffset / constParams.groupSize) * constParams.nGmSize + nGmOffset], 1,
-        constParams.nL1Size, constParams.nL1Size, constParams.nGmSize);
+    DataCopyPad2D(scaleF16Ub, scaleGm_[(kGmOffset / constParams.groupSize) * constParams.nGmSize + nGmOffset], 1,
+                  constParams.nL1Size, constParams.nL1Size, constParams.nGmSize);
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMergeY(
-    uint64_t curMSize, const LocalTensor<float>& aMaxUb, const LocalTensor<CUBE_FIXP_DTYPE>& yS32Ub,
-    const LocalTensor<xType>& scaleF16Ub, const A16W4MsdConstParam& constParams)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMergeY(uint64_t curMSize, const LocalTensor<float>& aMaxUb,
+                                                                  const LocalTensor<CUBE_FIXP_DTYPE>& yS32Ub,
+                                                                  const LocalTensor<xType>& scaleF16Ub,
+                                                                  const A16W4MsdConstParam& constParams)
 {
     Cast(scaleF32Ub_, scaleF16Ub, RoundMode::CAST_NONE, constParams.nL1Size);
     Cast(yF32CastUb_, yS32Ub, RoundMode::CAST_NONE, curMSize * constParams.nL1Size * UNFLOD_TIMES);
     Duplicate(yF32ComputeUb_, 0.0f, curMSize * constParams.nL1Size);
     PipeBarrier<PIPE_V>();
-    float divFactors[3] = {
-        1.0f / multiFactors_[0], 1.0f / (multiFactors_[0] * multiFactors_[1]),
-        1.0f / (multiFactors_[0] * multiFactors_[1] * multiFactors_[2])};
+    float divFactors[3] = {1.0f / multiFactors_[0], 1.0f / (multiFactors_[0] * multiFactors_[1]),
+                           1.0f / (multiFactors_[0] * multiFactors_[1] * multiFactors_[2])};
     for (uint64_t unfoldATimes = 0; unfoldATimes < UNFLOD_TIMES; unfoldATimes++) {
         for (uint64_t idxM = 0; idxM < curMSize; idxM++) {
             uint64_t cOffset = (idxM * UNFLOD_TIMES + unfoldATimes) * constParams.nL1Size;
-            AscendC::Axpy(
-                yF32ComputeUb_[idxM * constParams.nL1Size], yF32CastUb_[cOffset], divFactors[unfoldATimes],
-                FP32_MAX_MASK_SIZE, constParams.nL1Size / FP32_MAX_MASK_SIZE, commonUnaryRepeatParams_);
+            AscendC::Axpy(yF32ComputeUb_[idxM * constParams.nL1Size], yF32CastUb_[cOffset], divFactors[unfoldATimes],
+                          FP32_MAX_MASK_SIZE, constParams.nL1Size / FP32_MAX_MASK_SIZE, commonUnaryRepeatParams_);
         }
         PipeBarrier<PIPE_V>();
     }
@@ -443,25 +439,25 @@ __aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::ComputeMergeY(
     repeatParams.src1RepStride = 0;
     for (uint64_t idxM = 0; idxM < curMSize; idxM++) {
         uint64_t maxOffset = idxM * FP32_BLOCK_SIZE;
-        AscendC::MulAddDst(
-            yF32UbSum_[idxM * constParams.nL1Size], yF32ComputeUb_[idxM * constParams.nL1Size], aMaxUb[maxOffset],
-            FP32_MAX_MASK_SIZE, constParams.nL1Size / FP32_MAX_MASK_SIZE, repeatParams);
+        AscendC::MulAddDst(yF32UbSum_[idxM * constParams.nL1Size], yF32ComputeUb_[idxM * constParams.nL1Size],
+                           aMaxUb[maxOffset], FP32_MAX_MASK_SIZE, constParams.nL1Size / FP32_MAX_MASK_SIZE,
+                           repeatParams);
     }
     PipeBarrier<PIPE_V>();
 }
 
 WQBMM_EXP_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::CopyUbToGm(
-    uint64_t mGmOffset, uint64_t nGmOffset, uint64_t curMSize, bool isLastK, const A16W4MsdConstParam& constParams)
+__aicore__ inline void WQBMM_EXP_VEC_COMPUTE_CLASS::CopyUbToGm(uint64_t mGmOffset, uint64_t nGmOffset,
+                                                               uint64_t curMSize, bool isLastK,
+                                                               const A16W4MsdConstParam& constParams)
 {
     if (isLastK) {
         Cast(yOutputUb_, yF32UbSum_, RoundMode::CAST_RINT, curMSize * constParams.nL1Size);
         event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-        DataCopyPad2D(
-            yGm_[mGmOffset * constParams.nGmSize + nGmOffset], yOutputUb_, curMSize, constParams.nL1Size,
-            constParams.nL1Size, constParams.nGmSize);
+        DataCopyPad2D(yGm_[mGmOffset * constParams.nGmSize + nGmOffset], yOutputUb_, curMSize, constParams.nL1Size,
+                      constParams.nL1Size, constParams.nGmSize);
     }
 }
 } // namespace WeightQuantBatchMatmulExperimental

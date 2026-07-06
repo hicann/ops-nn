@@ -49,7 +49,7 @@ static __aicore__ inline uint64_t GetAicBlockIdx()
 // API类中定义call函数的默认重载函数，支持任意类型任意数量的参数
 #define DECLARE_DEFAULT_OVERLOADING_FUN(T, NAMESPACE)                       \
     template <class... Ts>                                                  \
-    static __aicore__ inline NAMESPACE::TypeFalse call(T *self, Ts... args) \
+    static __aicore__ inline NAMESPACE::TypeFalse call(T* self, Ts... args) \
     {                                                                       \
         return (NAMESPACE::TypeFalse){0};                                   \
     }

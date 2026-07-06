@@ -16,15 +16,9 @@
 
 class ApplyAdamWV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamWV2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamWV2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamWV2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamWV2 TearDown" << std::endl; }
 };
 
 TEST_F(ApplyAdamWV2, ApplyAdamWV2_infershape_case_0)
@@ -40,12 +34,11 @@ TEST_F(ApplyAdamWV2, ApplyAdamWV2_infershape_case_0)
     gert::StorageShape max_grad_normShape = {{256}, {256}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(6, 4)
-        .IrInstanceNum({1, 1, 1, 1, 1, 1})
-        .InputShapes({&varShape, &mShape, &vShape, &gradShape,
-                        &stepShape, &max_grad_normShape})
-        .OutputShapes({&varShape, &mShape, &vShape, &max_grad_normShape})
-        .Build();
+                      .NodeIoNum(6, 4)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &mShape, &vShape, &gradShape, &stepShape, &max_grad_normShape})
+                      .OutputShapes({&varShape, &mShape, &vShape, &max_grad_normShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

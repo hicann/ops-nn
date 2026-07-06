@@ -24,11 +24,10 @@ bool RmsNormDynamicMxQuantFullLoadTiling::IsCapable()
 {
     constexpr int64_t BIN_ADD_FOLD_THRESHOLD = 16384;
     if (numN_ > BIN_ADD_FOLD_THRESHOLD) {
-        OP_LOGD(
-            context_->GetNodeName(),
-            "FullLoad IsCapable false: numN=%ld >= binAddFoldThreshold=%ld, "
-            "binary add rounds increase, recommend Recompute mode.",
-            numN_, BIN_ADD_FOLD_THRESHOLD);
+        OP_LOGD(context_->GetNodeName(),
+                "FullLoad IsCapable false: numN=%ld >= binAddFoldThreshold=%ld, "
+                "binary add rounds increase, recommend Recompute mode.",
+                numN_, BIN_ADD_FOLD_THRESHOLD);
         return false;
     }
     return true;
@@ -41,10 +40,9 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
     // 分核
     usedCoreNum_ = std::min(numM_, totalCoreNum_);
     if (usedCoreNum_ == 0) {
-        OP_LOGD(
-            context_->GetNodeName(),
-            "DoOpTiling failed, usedCoreNum must not be 0, input shape: (%ld, %ld), total core num: %ld.", numM_, numN_,
-            totalCoreNum_);
+        OP_LOGD(context_->GetNodeName(),
+                "DoOpTiling failed, usedCoreNum must not be 0, input shape: (%ld, %ld), total core num: %ld.", numM_,
+                numN_, totalCoreNum_);
         return ge::GRAPH_FAILED;
     }
     int64_t mPerCore = numM_ / usedCoreNum_;
@@ -70,22 +68,21 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
 
     int64_t mUbFactorMax = 0;
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) == 0) { // fp8量化
-        mUbFactorMax =
-            (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE - CONST_THREE * nMxblockAligned * DOUBLE_BUFFER) /
-            (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES + FP32_BYTES * CONST_THREE +
-             nMxblockAligned * DOUBLE_BUFFER + nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
+        mUbFactorMax = (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE - CONST_THREE * nMxblockAligned * DOUBLE_BUFFER) /
+                       (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES +
+                        FP32_BYTES * CONST_THREE + nMxblockAligned * DOUBLE_BUFFER +
+                        nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
     } else { // fp4量化
-        mUbFactorMax =
-            (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE) /
-            (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES + FP32_BYTES * CONST_THREE +
-             nMxblockAligned / CONST_TWO * DOUBLE_BUFFER + nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
+        mUbFactorMax = (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE) /
+                       (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES +
+                        FP32_BYTES * CONST_THREE + nMxblockAligned / CONST_TWO * DOUBLE_BUFFER +
+                        nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
     }
 
     OP_CHECK_IF(
         mUbFactorMax < 1,
-        OP_LOGI(
-            context_->GetNodeName(), "fused input shape (%ld, %ld) too large, full_load_template out of ub[%ld].",
-            numM_, numN_, ubSize_),
+        OP_LOGI(context_->GetNodeName(), "fused input shape (%ld, %ld) too large, full_load_template out of ub[%ld].",
+                numM_, numN_, ubSize_),
         return ge::GRAPH_PARAM_INVALID);
 
     int64_t mUbFactor = std::min(mPerTailCore, mUbFactorMax);
@@ -131,9 +128,8 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
 
     size_t tilingDataSize = sizeof(tilingData_);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        static_cast<const void*>(&tilingData_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           static_cast<const void*>(&tilingData_), tilingDataSize);
     OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "memcpy_s failed."), return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 

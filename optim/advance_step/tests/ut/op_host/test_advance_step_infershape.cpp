@@ -14,18 +14,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/advance_step_proto.h"
 
-class AdvanceStep : public testing::Test
-{
+class AdvanceStep : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdvanceStep SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdvanceStep SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdvanceStep TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdvanceStep TearDown" << std::endl; }
 };
 
 TEST_F(AdvanceStep, AdvanceStep_infershape_case_0)

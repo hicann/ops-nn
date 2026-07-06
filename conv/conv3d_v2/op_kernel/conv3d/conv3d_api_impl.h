@@ -16,7 +16,6 @@
 #ifndef CONV3D_API_IMPL_H
 #define CONV3D_API_IMPL_H
 
-
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_common.h"
@@ -71,47 +70,53 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
 
-        const Ops::NN::Conv3dV2::TConv3DTiling *__restrict conv3dTiling;
+        const Ops::NN::Conv3dV2::TConv3DTiling* __restrict conv3dTiling;
 
         TPipe pipe;
 
         using LoadAL1ToolsTmp1 = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::LoadAL1WithPointWiseTools<Intf>, Conv3dFunc::LoadAL1Tools<Intf>>::type;
-        using LoadAL1Tools =
-            typename Conditional<outputOrder, Conv3dFunc::LoadAL1WithHwModeTools<Intf>, LoadAL1ToolsTmp1>::type;
+                                                      Conv3dFunc::LoadAL1WithPointWiseTools<Intf>,
+                                                      Conv3dFunc::LoadAL1Tools<Intf>>::type;
+        using LoadAL1Tools = typename Conditional<outputOrder, Conv3dFunc::LoadAL1WithHwModeTools<Intf>,
+                                                  LoadAL1ToolsTmp1>::type;
 
         using LoadBL1ToolsTmp1 = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::LoadBL1WithPointWiseTools<Intf>, Conv3dFunc::LoadBL1Tools<Intf>>::type;
-        using LoadBL1ToolsTmp2 =
-            typename Conditional<groupConvType, Conv3dFunc::LoadBL1WithGroupOptTools<Intf>, LoadBL1ToolsTmp1>::type;
-        using LoadBL1Tools =
-            typename Conditional<outputOrder, Conv3dFunc::LoadBL1WithHwModeTools<Intf>, LoadBL1ToolsTmp2>::type;
+                                                      Conv3dFunc::LoadBL1WithPointWiseTools<Intf>,
+                                                      Conv3dFunc::LoadBL1Tools<Intf>>::type;
+        using LoadBL1ToolsTmp2 = typename Conditional<groupConvType, Conv3dFunc::LoadBL1WithGroupOptTools<Intf>,
+                                                      LoadBL1ToolsTmp1>::type;
+        using LoadBL1Tools = typename Conditional<outputOrder, Conv3dFunc::LoadBL1WithHwModeTools<Intf>,
+                                                  LoadBL1ToolsTmp2>::type;
 
         using MMadTools = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::MMadWithPointWiseTools<Intf>, Conv3dFunc::MMadTools<Intf>>::type;
+                                               Conv3dFunc::MMadWithPointWiseTools<Intf>,
+                                               Conv3dFunc::MMadTools<Intf>>::type;
 
         using LoadBL0ToolsTmp = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::LoadBL0WithPointWiseTools<Intf>, Conv3dFunc::LoadBL0Tools<Intf>>::type;
-        using LoadBL0Tools =
-            typename Conditional<groupConvType, Conv3dFunc::LoadBL0WithGroupOptTools<Intf>, LoadBL0ToolsTmp>::type;
+                                                     Conv3dFunc::LoadBL0WithPointWiseTools<Intf>,
+                                                     Conv3dFunc::LoadBL0Tools<Intf>>::type;
+        using LoadBL0Tools = typename Conditional<groupConvType, Conv3dFunc::LoadBL0WithGroupOptTools<Intf>,
+                                                  LoadBL0ToolsTmp>::type;
 
         using LoadAL0ToolsTmp1 = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::LoadAL0WithPointWiseTools<Intf>, Conv3dFunc::LoadAL0Tools<Intf>>::type;
-        using LoadAL0Tools =
-            typename Conditional<outputOrder, Conv3dFunc::LoadAL0WithHwModeTools<Intf>, LoadAL0ToolsTmp1>::type;
+                                                      Conv3dFunc::LoadAL0WithPointWiseTools<Intf>,
+                                                      Conv3dFunc::LoadAL0Tools<Intf>>::type;
+        using LoadAL0Tools = typename Conditional<outputOrder, Conv3dFunc::LoadAL0WithHwModeTools<Intf>,
+                                                  LoadAL0ToolsTmp1>::type;
 
         using LoadChannelWiseL1Tools = typename Conditional<
             Config::formatA == conv::ConvFormat::NCDHW,
             Conv3dFunc::LoadBiasL1WithPointWiseTools<Intf, typename Config::BiasT>,
             Conv3dFunc::LoadChannelWiseL1Tools<Intf, typename Config::BiasT>>::type;
-        using LoadBiasL0Tools = typename Conditional<
-            Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::LoadBiasL0WithBroadcastTools<Intf>, Conv3dFunc::LoadBiasBtTools<Intf>>::type;
+        using LoadBiasL0Tools = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
+                                                     Conv3dFunc::LoadBiasL0WithBroadcastTools<Intf>,
+                                                     Conv3dFunc::LoadBiasBtTools<Intf>>::type;
 
         using CopyOutToolsTmp1 = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW,
-            Conv3dFunc::CopyOutWithPointWiseTools<Intf>, Conv3dFunc::CopyOutTools<Intf>>::type;
-        using CopyOutTools =
-            typename Conditional<outputOrder, Conv3dFunc::CopyOutWithHwModeTools<Intf>, CopyOutToolsTmp1>::type;
+                                                      Conv3dFunc::CopyOutWithPointWiseTools<Intf>,
+                                                      Conv3dFunc::CopyOutTools<Intf>>::type;
+        using CopyOutTools = typename Conditional<outputOrder, Conv3dFunc::CopyOutWithHwModeTools<Intf>,
+                                                  CopyOutToolsTmp1>::type;
 
         LoadAL1Tools loadAl1Ins;
         LoadBL1Tools loadBL1Ins;
@@ -142,44 +147,42 @@ public:
         LocalTensor<typename Config::SrcBT> bl0Pong;
         LocalTensor<typename Config::L0cT> cl0;
 
-        //vec queue
+        // vec queue
         TQue<QuePosition::VECIN, 1> queueUBin;
         TQue<QuePosition::VECOUT, 1> queueUBout;
         TQue<QuePosition::VECIN, 1> queueUBbias;
         TQue<QuePosition::VECIN, 1> queueUBscale;
         TBuf<TPosition::VECCALC> fp32BiasBuf;
 
-        //vec tensor
+        // vec tensor
         LocalTensor<typename Config::L0cT> ubin;
         LocalTensor<typename Config::DstT> ubout;
         LocalTensor<typename Config::FP32T> ubbias;
         LocalTensor<typename Config::FP32T> ubscale;
 
         // Queue
-        TQue<QuePosition::A1, QUE_DEPTH_SIZE_TWO> queueAL1;      // AL1
-        TQue<QuePosition::B1, QUE_DEPTH_SIZE_TWO> queueBL1;      // BL1
-        TQue<QuePosition::A1, 1> queueBiasL1;   // BiasL1
-        TQue<TPosition::C2, 1> queueBiasBT;     // BT
-        TQue<QuePosition::CO1, 1> queueCL0;  // CL0
+        TQue<QuePosition::A1, QUE_DEPTH_SIZE_TWO> queueAL1; // AL1
+        TQue<QuePosition::B1, QUE_DEPTH_SIZE_TWO> queueBL1; // BL1
+        TQue<QuePosition::A1, 1> queueBiasL1;               // BiasL1
+        TQue<TPosition::C2, 1> queueBiasBT;                 // BT
+        TQue<QuePosition::CO1, 1> queueCL0;                 // CL0
         // Buffers
-        using L0aBufType = typename Conditional<
-            Config::formatA == conv::ConvFormat::NCDHW,
-            TBuf<TPosition::B2>, TBuf<TPosition::A2>>::type;
-        using L0bBufType = typename Conditional<
-            Config::formatA == conv::ConvFormat::NCDHW,
-            TBuf<TPosition::A2>, TBuf<TPosition::B2>>::type;
+        using L0aBufType = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW, TBuf<TPosition::B2>,
+                                                TBuf<TPosition::A2>>::type;
+        using L0bBufType = typename Conditional<Config::formatA == conv::ConvFormat::NCDHW, TBuf<TPosition::A2>,
+                                                TBuf<TPosition::B2>>::type;
 
         L0aBufType l0aBuf;
         L0bBufType l0bBuf;
         LocalTensor<typename Config::L0cT> al0BiasB;
         LocalTensor<typename Config::L0cT> bl0BiasB;
 
-        uint8_t enableBias = false;     // 是否有bias
-        uint8_t isFirstIterate = true;  // 是否第一次Iterate
-        uint8_t loadAL1Flag = true;     // 是否载入AL1的标志
-        uint8_t loadBL1Flag = true;     // 是否载入BL1的标志
-        uint8_t loadAL0Flag = true;     // 是否载入AL0的标志
-        uint8_t loadBL0Flag = true;     // 是否载入BL0的标志
+        uint8_t enableBias = false;    // 是否有bias
+        uint8_t isFirstIterate = true; // 是否第一次Iterate
+        uint8_t loadAL1Flag = true;    // 是否载入AL1的标志
+        uint8_t loadBL1Flag = true;    // 是否载入BL1的标志
+        uint8_t loadAL0Flag = true;    // 是否载入AL0的标志
+        uint8_t loadBL0Flag = true;    // 是否载入BL0的标志
         uint8_t kAL1fullload = false;
         uint8_t kBL1fullload = false;
         uint8_t biasFullLoadFlag = false;
@@ -189,17 +192,17 @@ public:
         uint8_t freeBL1TensorFlag = false;
         uint8_t isGroupOptDimTail = false;
 
-        uint64_t kAL1Iter = 0;  // AL1上k方向迭代器
-        uint64_t kBL1Iter = 0;  // BL1上k方向迭代器
+        uint64_t kAL1Iter = 0; // AL1上k方向迭代器
+        uint64_t kBL1Iter = 0; // BL1上k方向迭代器
         uint64_t mAL1Iter = 0;
-        uint64_t nBL1Iter = 0;  // BL1上n方向迭代器
+        uint64_t nBL1Iter = 0; // BL1上n方向迭代器
         uint64_t dOutIter = 0;
-        uint64_t kIter = 0;     // k方向迭代器，从DDR到L0
-        uint64_t kAL0Iter = 0;  // L1A 到L0方向的迭代器
-        uint64_t kBL0Iter = 0;  // L1B 到L0方向的迭代器
-        uint64_t mAL0Iter = 0;  // AL0上m方向迭代器
-        uint64_t nBL0Iter = 0;  // BL0上n方向迭代器
-        uint64_t groupOptIter = 0;  // groupopt方向迭代器
+        uint64_t kIter = 0;        // k方向迭代器，从DDR到L0
+        uint64_t kAL0Iter = 0;     // L1A 到L0方向的迭代器
+        uint64_t kBL0Iter = 0;     // L1B 到L0方向的迭代器
+        uint64_t mAL0Iter = 0;     // AL0上m方向迭代器
+        uint64_t nBL0Iter = 0;     // BL0上n方向迭代器
+        uint64_t groupOptIter = 0; // groupopt方向迭代器
 
         uint64_t maxKAL1Iter = 0;
         uint64_t maxMAL1Iter = 0;
@@ -219,17 +222,17 @@ public:
         uint64_t ddr2l0LoopK = 0;
 
         // conv3d shape info
-        uint64_t orgCi = 0;  //  fmap上cin大小
-        uint64_t orgCo = 0;  //  weight上cout大小
+        uint64_t orgCi = 0; //  fmap上cin大小
+        uint64_t orgCo = 0; //  weight上cout大小
         uint64_t orgDi = 0;
-        uint64_t orgDo = 0;    //  weight上cout大小
-        uint64_t orgHi = 0;    //  fmap上h大小
-        uint64_t orgWi = 0;    //  fmap上w大小
-        uint64_t orgHo = 0;    //  output上h大小
-        uint64_t orgWo = 0;    //  output上w大小
-        uint64_t kernelD = 0;  //  weight上d大小
-        uint64_t kernelH = 0;  //  weight上h大小
-        uint64_t kernelW = 0;  //  weight上w大小
+        uint64_t orgDo = 0;   //  weight上cout大小
+        uint64_t orgHi = 0;   //  fmap上h大小
+        uint64_t orgWi = 0;   //  fmap上w大小
+        uint64_t orgHo = 0;   //  output上h大小
+        uint64_t orgWo = 0;   //  output上w大小
+        uint64_t kernelD = 0; //  weight上d大小
+        uint64_t kernelH = 0; //  weight上h大小
+        uint64_t kernelW = 0; //  weight上w大小
         uint64_t strideD = 0;
         uint64_t strideH = 0;
         uint64_t strideW = 0;
@@ -242,9 +245,9 @@ public:
         uint64_t padBottom = 0;
         uint64_t padLeft = 0;
         uint64_t padRight = 0;
-        uint64_t singleCoreCin = 0;  // 单核上处理的Cin大小
-        uint64_t singleCoreCo = 0;   // 单核上处理的Co大小
-        uint64_t singleCoreM = 0;    // 单核上处理的M
+        uint64_t singleCoreCin = 0; // 单核上处理的Cin大小
+        uint64_t singleCoreCo = 0;  // 单核上处理的Co大小
+        uint64_t singleCoreM = 0;   // 单核上处理的M
         uint64_t singleCoreDo = 0;  // 单核上处理的Dout
 
         uint64_t dilatedKernelH = 0;
@@ -286,7 +289,7 @@ public:
         uint64_t singleCoreKL0 = 0;
         uint64_t preCorePerGroupSumCout = 0;
         uint64_t singleCoreGroupOpt = 0; // 单核上处理的GroutOpt
-        uint64_t singleCoreCinTail = 0; // GroutOpt场景尾core的Cin
+        uint64_t singleCoreCinTail = 0;  // GroutOpt场景尾core的Cin
         uint64_t singleCoreCoutTail = 0; // GroutOpt场景尾core的Cout
 
         // HW_Mode
@@ -314,6 +317,6 @@ public:
     };
 };
 
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif

@@ -24,31 +24,35 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
-static uint64_t GetDtypeSelfFromDtype(ge::DataType dt) {
-    return static_cast<uint64_t>(dt);
-}
+static uint64_t GetDtypeSelfFromDtype(ge::DataType dt) { return static_cast<uint64_t>(dt); }
 
-static int64_t GetTypeSizeFromDtype(ge::DataType dt) {
+static int64_t GetTypeSizeFromDtype(ge::DataType dt)
+{
     switch (static_cast<int>(dt)) {
-        case 0:  return 4;  // DT_FLOAT
-        case 1:  return 2;  // DT_FLOAT16
-        case 27: return 2;  // DT_BFLOAT16
-        default: return 4;
+        case 0:
+            return 4; // DT_FLOAT
+        case 1:
+            return 2; // DT_FLOAT16
+        case 27:
+            return 2; // DT_BFLOAT16
+        default:
+            return 4;
     }
 }
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -79,9 +83,8 @@ static ge::graphStatus ThresholdV2TilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto inputShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
@@ -93,22 +96,18 @@ static ge::graphStatus ThresholdV2TilingFunc(gert::TilingContext* context)
     ge::DataType inputDtype = inputDesc->GetDataType();
     int dtypeInt = static_cast<int>(inputDtype);
     bool isSupportedDtype = (dtypeInt == 0 || dtypeInt == 1 || dtypeInt == 27);
-    OP_CHECK_IF(!isSupportedDtype,
-        OP_LOGE(context, "ThresholdV2: unsupported dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!isSupportedDtype, OP_LOGE(context, "ThresholdV2: unsupported dtype"), return ge::GRAPH_FAILED);
     int64_t typeSize = GetTypeSizeFromDtype(inputDtype);
-    OP_CHECK_IF(typeSize <= 0,
-        OP_LOGE(context, "ThresholdV2: invalid typeSize"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(typeSize <= 0, OP_LOGE(context, "ThresholdV2: invalid typeSize"), return ge::GRAPH_FAILED);
     uint64_t dtypeSelf = GetDtypeSelfFromDtype(inputDtype);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ThresholdV2TilingData* tiling = context->GetTilingData<ThresholdV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ThresholdV2TilingData), 0, sizeof(ThresholdV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ThresholdV2TilingData), 0, sizeof(ThresholdV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     int64_t ubBlockSize = GetUbBlockSize(context);
 
@@ -120,12 +119,11 @@ static ge::graphStatus ThresholdV2TilingFunc(gert::TilingContext* context)
     int64_t bufferNum = useDoubleBuffer ? 4 : 2;
     int64_t maskReserve = 4096;
     int64_t availUb = static_cast<int64_t>(ubSize) - maskReserve;
-    OP_CHECK_IF(availUb <= 0,
-        OP_LOGE(context, "ThresholdV2: insufficient UB memory"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(typeSize == 0,
-        OP_LOGE(context, "ThresholdV2: typeSize is 0, division by zero"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(bufferNum == 0,
-        OP_LOGE(context, "ThresholdV2: bufferNum is 0, division by zero"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(availUb <= 0, OP_LOGE(context, "ThresholdV2: insufficient UB memory"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(typeSize == 0, OP_LOGE(context, "ThresholdV2: typeSize is 0, division by zero"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(bufferNum == 0, OP_LOGE(context, "ThresholdV2: bufferNum is 0, division by zero"),
+                return ge::GRAPH_FAILED);
     int64_t vectorAlign = 256 / typeSize;
     int64_t ubFactorRaw = FloorDiv((availUb / typeSize), bufferNum);
     tiling->ubFactor = (ubFactorRaw / vectorAlign) * vectorAlign;
@@ -140,8 +138,10 @@ static ge::graphStatus ThresholdV2TilingFunc(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForThresholdV2(
-    [[maybe_unused]] gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
+static ge::graphStatus TilingParseForThresholdV2([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
 struct ThresholdV2CompileInfo {};
 
 IMPL_OP_OPTILING(ThresholdV2)

@@ -31,13 +31,12 @@ constexpr uint32_t K0_INDEX = 8;
 
 class Sparse4to2QuantMatmulUpdate {
 public:
-    __aicore__ inline Sparse4to2QuantMatmulUpdate()
-    {}
+    __aicore__ inline Sparse4to2QuantMatmulUpdate() {}
     template <CubeFormat x1Format, CubeFormat x2Format, bool aTrans, bool bTrans>
     __aicore__ inline void Init(const TCubeTiling* mmTiling, const SparseBaseBlockArgs& params);
     template <CubeFormat x1Format, CubeFormat x2Format, bool aTrans, bool bTrans>
-    __aicore__ inline void UpdateBlockParamsAndCalcGmOffset(
-        SparseBaseBlockArgs& params, SparseBlockOffset& offset, uint64_t mTileIndex, uint64_t nTileIndex);
+    __aicore__ inline void UpdateBlockParamsAndCalcGmOffset(SparseBaseBlockArgs& params, SparseBlockOffset& offset,
+                                                            uint64_t mTileIndex, uint64_t nTileIndex);
     __aicore__ inline void UpdateBlockParams(SparseBaseBlockArgs& params, uint64_t mTileIndex, uint64_t nTileIndex);
     template <CubeFormat x1Format, CubeFormat x2Format, bool aTrans, bool bTrans>
     __aicore__ inline void CalcGMOffset(SparseBaseBlockArgs& params, SparseBlockOffset& offset);
@@ -51,25 +50,27 @@ template <CubeFormat x1Format, CubeFormat x2Format, bool aTrans, bool bTrans>
 __aicore__ inline void Sparse4to2QuantMatmulUpdate::Init(const TCubeTiling* mmTiling, const SparseBaseBlockArgs& params)
 {
     mmTiling_ = mmTiling;
-    info_.nBaseTail =
-        static_cast<uint64_t>(mmTiling_->N) - (params.nTotalCnt - 1) * mmTiling_->singleCoreN; // n方向上的base尾块
-    info_.mBaseTail =
-        static_cast<uint64_t>(mmTiling_->M) - (params.mTotalCnt - 1) * mmTiling_->singleCoreM; // m方向上的base尾块
+    info_.nBaseTail = static_cast<uint64_t>(mmTiling_->N) -
+                      (params.nTotalCnt - 1) * mmTiling_->singleCoreN; // n方向上的base尾块
+    info_.mBaseTail = static_cast<uint64_t>(mmTiling_->M) -
+                      (params.mTotalCnt - 1) * mmTiling_->singleCoreM; // m方向上的base尾块
     // (m, k)
     info_.alignedKaSize = SparseQmm::Align(mmTiling_->Ka, K0_INT8);
     info_.alignedKbSize = SparseQmm::Align(mmTiling_->Kb, K0_INT8);
 }
 
 template <CubeFormat x1Format, CubeFormat x2Format, bool aTrans, bool bTrans>
-__aicore__ inline void Sparse4to2QuantMatmulUpdate::UpdateBlockParamsAndCalcGmOffset(
-    SparseBaseBlockArgs& params, SparseBlockOffset& offset, uint64_t mTileIndex, uint64_t nTileIndex)
+__aicore__ inline void Sparse4to2QuantMatmulUpdate::UpdateBlockParamsAndCalcGmOffset(SparseBaseBlockArgs& params,
+                                                                                     SparseBlockOffset& offset,
+                                                                                     uint64_t mTileIndex,
+                                                                                     uint64_t nTileIndex)
 {
     UpdateBlockParams(params, mTileIndex, nTileIndex);
     CalcGMOffset<x1Format, x2Format, aTrans, bTrans>(params, offset);
 }
 
-__aicore__ inline void Sparse4to2QuantMatmulUpdate::UpdateBlockParams(
-    SparseBaseBlockArgs& params, uint64_t mTileIndex, uint64_t nTileIndex)
+__aicore__ inline void Sparse4to2QuantMatmulUpdate::UpdateBlockParams(SparseBaseBlockArgs& params, uint64_t mTileIndex,
+                                                                      uint64_t nTileIndex)
 {
     if ((mTileIndex == (params.mTileCntL2 - 1)) && (nTileIndex == (params.nTileCntL2 - 1)) &&
         (params.index == (params.totalTileCnt - 1))) {

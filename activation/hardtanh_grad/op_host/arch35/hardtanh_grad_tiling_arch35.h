@@ -20,4 +20,4 @@ namespace optiling {
 extern void Tiling4HardtanhGrad();
 extern void TilingPrepareForElewise();
 } // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_HARDTANH_GRAD_TILING_H
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_HARDTANH_GRAD_TILING_H

@@ -57,26 +57,26 @@ public:
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices);
     __aicore__ inline void CalInputBlockPara(int64_t curBlockIdx, BlockSplitParam& blockPara);
-    __aicore__ inline void CopyInput(
-        uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t xOffset);
-    __aicore__ inline void TransposeB16(
-        LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum, uint32_t colNum);
+    __aicore__ inline void CopyInput(uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen,
+                                     int64_t xOffset);
+    __aicore__ inline void TransposeB16(LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum,
+                                        uint32_t colNum);
     template <typename I>
-    __aicore__ inline void TransposeB32(
-        LocalTensor<I> xLocalTrans, LocalTensor<I> xLocal, uint32_t rowNum, uint32_t colNum);
+    __aicore__ inline void TransposeB32(LocalTensor<I> xLocalTrans, LocalTensor<I> xLocal, uint32_t rowNum,
+                                        uint32_t colNum);
     __aicore__ inline void TransInput(uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen);
-    __aicore__ inline void CustomSelect(
-        LocalTensor<T> inputLocal, LocalTensor<int32_t> inputIndex, LocalTensor<T> outLocal,
-        LocalTensor<int32_t> outIndex, uint16_t repeatTimes, uint16_t kernelSize, uint16_t srcStride);
-    __aicore__ inline void CustomSelectOnW(
-        LocalTensor<T> inputLocal, LocalTensor<T> outLocal, LocalTensor<int32_t> outIndex, uint16_t diDataLen,
-        uint16_t hiDataLen, uint16_t kernelSize, uint16_t srcStride, uint32_t indexOfset);
-    __aicore__ inline void MaxPoolOnW(
-        uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx, uint32_t woNum);
-    __aicore__ inline void MaxPoolOnH(
-        uint32_t diDataLen, uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx, uint32_t hoNum);
-    __aicore__ inline void MaxPoolOnD(
-        uint32_t diDataLen, uint32_t hoNum, uint32_t woNum, int64_t doIdx, uint32_t doNum);
+    __aicore__ inline void CustomSelect(LocalTensor<T> inputLocal, LocalTensor<int32_t> inputIndex,
+                                        LocalTensor<T> outLocal, LocalTensor<int32_t> outIndex, uint16_t repeatTimes,
+                                        uint16_t kernelSize, uint16_t srcStride);
+    __aicore__ inline void CustomSelectOnW(LocalTensor<T> inputLocal, LocalTensor<T> outLocal,
+                                           LocalTensor<int32_t> outIndex, uint16_t diDataLen, uint16_t hiDataLen,
+                                           uint16_t kernelSize, uint16_t srcStride, uint32_t indexOfset);
+    __aicore__ inline void MaxPoolOnW(uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx,
+                                      uint32_t woNum);
+    __aicore__ inline void MaxPoolOnH(uint32_t diDataLen, uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx,
+                                      uint32_t hoNum);
+    __aicore__ inline void MaxPoolOnD(uint32_t diDataLen, uint32_t hoNum, uint32_t woNum, int64_t doIdx,
+                                      uint32_t doNum);
     __aicore__ inline void TransOut(int64_t doNum, int64_t hoNum, int64_t woNum, int64_t indexOffset);
     __aicore__ inline void CopyOut(int64_t ncNum, int64_t doNum, int64_t hoNum, int64_t woNum, int64_t yGmOffset);
     __aicore__ inline void Process();
@@ -140,8 +140,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::Init(GM_ADDR x, GM_ADDR 
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CalInputBlockPara(
-    int64_t curBlockIdx, BlockSplitParam& blockPara)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CalInputBlockPara(int64_t curBlockIdx,
+                                                                          BlockSplitParam& blockPara)
 {
     int64_t dhwOuter = tilingData_.doOuter * tilingData_.hoOuter * tilingData_.woOuter;
     int64_t hwOuter = tilingData_.hoOuter * tilingData_.woOuter;
@@ -164,12 +164,12 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CalInputBlockPara(
     blockPara.kerDStartIdx = ((blockPara.doIdx * tilingData_.doFactor) * tilingData_.dIn) / tilingData_.dOut;
     blockPara.kerHStartIdx = ((blockPara.hoIdx * tilingData_.hoFactor) * tilingData_.hIn) / tilingData_.hOut;
     blockPara.kerWStartIdx = ((blockPara.woIdx * tilingData_.woFactor) * tilingData_.wIn) / tilingData_.wOut;
-    int32_t kerDEndIdx =
-        Ceil((blockPara.doIdx * tilingData_.doFactor + blockPara.doNum) * tilingData_.dIn, tilingData_.dOut);
-    int32_t kerHEndIdx =
-        Ceil((blockPara.hoIdx * tilingData_.hoFactor + blockPara.hoNum) * tilingData_.hIn, tilingData_.hOut);
-    int32_t kerWEndIdx =
-        Ceil((blockPara.woIdx * tilingData_.woFactor + blockPara.woNum) * tilingData_.wIn, tilingData_.wOut);
+    int32_t kerDEndIdx = Ceil((blockPara.doIdx * tilingData_.doFactor + blockPara.doNum) * tilingData_.dIn,
+                              tilingData_.dOut);
+    int32_t kerHEndIdx = Ceil((blockPara.hoIdx * tilingData_.hoFactor + blockPara.hoNum) * tilingData_.hIn,
+                              tilingData_.hOut);
+    int32_t kerWEndIdx = Ceil((blockPara.woIdx * tilingData_.woFactor + blockPara.woNum) * tilingData_.wIn,
+                              tilingData_.wOut);
 
     blockPara.diDataLen = kerDEndIdx - blockPara.kerDStartIdx;
     blockPara.hiDataLen = kerHEndIdx - blockPara.kerHStartIdx;
@@ -179,16 +179,16 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CalInputBlockPara(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CopyInput(
-    uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t xOffset)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CopyInput(uint32_t ncNum, uint32_t diDataLen,
+                                                                  uint32_t hiDataLen, uint32_t wiDataLen,
+                                                                  int64_t xOffset)
 {
     LocalTensor<T> xLocal = inputQue.AllocTensor<T>();
 
     uint32_t wiDataAlign = ops::CeilAlign(wiDataLen, ubAlignNum_);
-    DataCopyExtParams paramsIn = {
-        static_cast<uint16_t>(hiDataLen), static_cast<uint32_t>(wiDataLen * sizeof(T)),
-        static_cast<uint32_t>((tilingData_.wIn - wiDataLen) * sizeof(T)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams paramsIn = {static_cast<uint16_t>(hiDataLen), static_cast<uint32_t>(wiDataLen * sizeof(T)),
+                                  static_cast<uint32_t>((tilingData_.wIn - wiDataLen) * sizeof(T)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<T> padParams = {false, 0, 0, 0};
 
     LoopModeParams loopModeParams;
@@ -206,8 +206,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CopyInput(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB16(
-    LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB16(LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal,
+                                                                     uint32_t rowNum, uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
     uint64_t srcList[TRANS_ADDR_LEN];
@@ -240,8 +240,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB16(
         /* repeat在列方向,一次处理16*8个b32或者16*16个B16， 行方向一次处理16行 */
         for (int32_t rowLoopIdx = 0; rowLoopIdx < rowNum / TRANS_ADDR_LEN; rowLoopIdx++) {
             for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] =
-                    static_cast<uint64_t>(xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
+                srcList[i] = static_cast<uint64_t>(
+                    xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
                 dstList[i] = static_cast<uint64_t>(xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
             }
             TransDataTo5HD<T>(dstList, srcList, transDataParams);
@@ -251,8 +251,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB16(
 
 template <typename T, typename U>
 template <typename I>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB32(
-    LocalTensor<I> xLocalTrans, LocalTensor<I> xLocal, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB32(LocalTensor<I> xLocalTrans, LocalTensor<I> xLocal,
+                                                                     uint32_t rowNum, uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
     uint64_t srcList[TRANS_ADDR_LEN];
@@ -288,12 +288,12 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB32(
         /* repeat在列方向, 一次处理16*8个b32或者16*16个B16, 行方向一次处理16行 */
         for (int32_t rowLoopIdx = 0; rowLoopIdx < rowNum / TRANS_ADDR_LEN; rowLoopIdx++) {
             for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] =
-                    static_cast<uint64_t>(xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
+                srcList[i] = static_cast<uint64_t>(
+                    xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
             }
             for (int32_t i = 0; i < TRANS_LEN_B32; i++) {
-                dstList[i * 2] =
-                    static_cast<uint64_t>(xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
+                dstList[i * 2] = static_cast<uint64_t>(
+                    xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
                 dstList[i * 2 + 1] = static_cast<uint64_t>(
                     xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum + transPoseAlign].GetPhyAddr());
             }
@@ -303,8 +303,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransposeB32(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransInput(
-    uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransInput(uint32_t ncNum, uint32_t diDataLen,
+                                                                   uint32_t hiDataLen, uint32_t wiDataLen)
 {
     uint32_t wiDataAlign = ops::CeilAlign(wiDataLen, ubAlignNum_);
     LocalTensor<T> xLocal = inputQue.DeQue<T>();
@@ -462,8 +462,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CustomSelectOnW(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnW(
-    uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx, uint32_t woNum)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnW(uint32_t diDataLen, uint32_t hiDataLen,
+                                                                   uint32_t wiDataLen, int64_t woIdx, uint32_t woNum)
 {
     LocalTensor<T> xTransLocal = maxQue.DeQue<T>();
 
@@ -480,9 +480,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnW(
         auto kerWOffset = kerWStartIdx - kerWStartIdxGlobal;
         auto inputOffset = kerWOffset * vlNum_;
         auto maxBufferOffset = kernelIdx * diDataLen * hiDataLen * vlNum_;
-        CustomSelectOnW(
-            xTransLocal[inputOffset], maxOutLocal[maxBufferOffset], maxIndexOutLocal[maxBufferOffset], diDataLen,
-            hiDataLen, kernelSize, wiDataAlign, kerWOffset);
+        CustomSelectOnW(xTransLocal[inputOffset], maxOutLocal[maxBufferOffset], maxIndexOutLocal[maxBufferOffset],
+                        diDataLen, hiDataLen, kernelSize, wiDataAlign, kerWOffset);
     }
     maxQue.EnQue(xTransLocal);
     maxTransQue.EnQue(maxOutLocal);
@@ -490,8 +489,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnW(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnH(
-    uint32_t diDataLen, uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx, uint32_t hoNum)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnH(uint32_t diDataLen, uint32_t hiDataLen,
+                                                                   uint32_t woNum, int64_t hoIdx, uint32_t hoNum)
 {
     LocalTensor<T> wTransLocal = maxTransQue.DeQue<T>();
     LocalTensor<int32_t> maxIndexInLocal = maxIndexTransQue.DeQue<int32_t>();
@@ -510,9 +509,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnH(
         auto kerHOffset = kerHStartIdx - kerHStartIdxGlobal;
         auto inputOffset = kerHOffset * vlNum_;
         auto maxBufferOffset = kernelIdx * woNumAlign * diDataLen * vlNum_;
-        CustomSelect(
-            wTransLocal[inputOffset], maxIndexInLocal[inputOffset], maxOutLocal[maxBufferOffset],
-            maxIndexOutLocal[maxBufferOffset], repeat, kernelSize, hiDataLen);
+        CustomSelect(wTransLocal[inputOffset], maxIndexInLocal[inputOffset], maxOutLocal[maxBufferOffset],
+                     maxIndexOutLocal[maxBufferOffset], repeat, kernelSize, hiDataLen);
     }
     maxTransQue.EnQue(wTransLocal);
     maxIndexTransQue.EnQue(maxIndexInLocal);
@@ -521,8 +519,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnH(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnD(
-    uint32_t diDataLen, uint32_t hoNum, uint32_t woNum, int64_t doIdx, uint32_t doNum)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnD(uint32_t diDataLen, uint32_t hoNum, uint32_t woNum,
+                                                                   int64_t doIdx, uint32_t doNum)
 {
     LocalTensor<T> hTransLocal = maxQue.DeQue<T>();
     LocalTensor<int32_t> maxIndexInLocal = maxIndexQue.DeQue<int32_t>();
@@ -541,9 +539,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnD(
         auto kerDOffset = kerDStartIdx - kerDStartIdxGlobal;
         auto inputOffset = kerDOffset * vlNum_;
         auto maxBufferOffset = kernelIdx * repeat * vlNum_;
-        CustomSelect(
-            hTransLocal[inputOffset], maxIndexInLocal[inputOffset], maxOutLocal[maxBufferOffset],
-            maxIndexOutLocal[maxBufferOffset], repeat, kernelSize, diDataLen);
+        CustomSelect(hTransLocal[inputOffset], maxIndexInLocal[inputOffset], maxOutLocal[maxBufferOffset],
+                     maxIndexOutLocal[maxBufferOffset], repeat, kernelSize, diDataLen);
     }
     maxQue.EnQue(hTransLocal);
     maxIndexQue.EnQue(maxIndexInLocal);
@@ -553,8 +550,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::MaxPoolOnD(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransOut(
-    int64_t doNum, int64_t hoNum, int64_t woNum, int64_t indexOffset)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransOut(int64_t doNum, int64_t hoNum, int64_t woNum,
+                                                                 int64_t indexOffset)
 {
     int64_t woNumAlign = ops::CeilAlign(woNum, static_cast<int64_t>(ubAlignNum_));
     int64_t rowNum = doNum * hoNum * woNumAlign;
@@ -581,8 +578,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::TransOut(
 }
 
 template <typename T, typename U>
-__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CopyOut(
-    int64_t ncNum, int64_t doNum, int64_t hoNum, int64_t woNum, int64_t yGmOffset)
+__aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CopyOut(int64_t ncNum, int64_t doNum, int64_t hoNum,
+                                                                int64_t woNum, int64_t yGmOffset)
 {
     uint32_t woNumAlign = ops::CeilAlign(woNum, static_cast<int64_t>(ubAlignNum_));
     uint32_t woNumIntAlign = ops::CeilAlign(woNum, static_cast<int64_t>(ubBlockSize_ / sizeof(int32_t)));
@@ -675,8 +672,8 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::Process()
 
         if (curIdx != endBlockIdx_ - 1) {
             CalInputBlockPara(curIdx + 1, blockPara_);
-            CopyInput(
-                blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen, blockPara_.wiDataLen, blockPara_.xOffset);
+            CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen, blockPara_.wiDataLen,
+                      blockPara_.xOffset);
         }
 
         /* outshape: [woNum, hiDataLen, diDataLen, vl] */

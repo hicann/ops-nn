@@ -18,24 +18,22 @@
 #include "max_pool3d_grad_tiling.h"
 
 namespace optiling {
-static constexpr int64_t KSIZE_THRESHOLD= 4096;
+static constexpr int64_t KSIZE_THRESHOLD = 4096;
 
 bool MaxPool3DGradNCDHWSmallKernelTiling::IsCapable()
 {
     base->InitializationVars(context_, ubSize_, coreNum_);
-    if (inputData.inputFormat != ge::Format::FORMAT_NCDHW)
-    {
+    if (inputData.inputFormat != ge::Format::FORMAT_NCDHW) {
         OP_LOGI("IsCapable", "inputFormat error");
         return false;
     }
-    if(inputData.dDilation != 1 || inputData.hDilation != 1 || inputData.wDilation != 1) {
-        OP_LOGI("IsCapable", "dDilation:%ld,  hDilation:%ld,  wDilation:%ld",
-                inputData.dDilation, inputData.hDilation, inputData.wDilation);
+    if (inputData.dDilation != 1 || inputData.hDilation != 1 || inputData.wDilation != 1) {
+        OP_LOGI("IsCapable", "dDilation:%ld,  hDilation:%ld,  wDilation:%ld", inputData.dDilation, inputData.hDilation,
+                inputData.wDilation);
         return false;
     }
     bool ksizeCheck = true;
-    if (base->GetBaseData().dProBatchSize == 1 &&
-        base->GetBaseData().hProBatchSize == 1 &&
+    if (base->GetBaseData().dProBatchSize == 1 && base->GetBaseData().hProBatchSize == 1 &&
         base->GetBaseData().wProBatchSize == 1) {
         ksizeCheck = inputData.dKernel * inputData.hKernel * inputData.wKernel < KSIZE_THRESHOLD;
     }
@@ -45,8 +43,8 @@ bool MaxPool3DGradNCDHWSmallKernelTiling::IsCapable()
     base->GetSplitData().hOutputInner = 1;
     base->GetSplitData().wOutputInner = std::min(inputData.wX, base->GetBaseData().proDataNumInOneBeatT2);
     base->DoBufferCalculate();
-    OP_LOGI("IsCapable", "ksizeCheck:%d,  totalBufferSize:%ld,  availableUb:%ld",
-            ksizeCheck, base->GetSplitData().totalBufferSize, base->GetBaseData().availableUb);
+    OP_LOGI("IsCapable", "ksizeCheck:%d,  totalBufferSize:%ld,  availableUb:%ld", ksizeCheck,
+            base->GetSplitData().totalBufferSize, base->GetBaseData().availableUb);
     return ksizeCheck && base->GetSplitData().totalBufferSize <= base->GetBaseData().availableUb;
 }
 
@@ -60,15 +58,9 @@ uint64_t MaxPool3DGradNCDHWSmallKernelTiling::GetTilingKey() const
     return GET_TPL_TILING_KEY(idxDtype, isSimt, isChannelLast, base->GetSplitData().isCheckRange, useINT64Index);
 }
 
-ge::graphStatus MaxPool3DGradNCDHWSmallKernelTiling::DoOpTiling()
-{
-    return base->DoOpTiling(context_);
-}
+ge::graphStatus MaxPool3DGradNCDHWSmallKernelTiling::DoOpTiling() { return base->DoOpTiling(context_); }
 
-ge::graphStatus MaxPool3DGradNCDHWSmallKernelTiling::PostTiling()
-{
-    return base->PostTiling(context_, GetTilingKey());
-}
+ge::graphStatus MaxPool3DGradNCDHWSmallKernelTiling::PostTiling() { return base->PostTiling(context_, GetTilingKey()); }
 
 REGISTER_TILING_TEMPLATE("MaxPool3DGrad", MaxPool3DGradNCDHWSmallKernelTiling, 0);
 

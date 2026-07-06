@@ -22,15 +22,9 @@
 
 class ModulateGradProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ModulateGrad Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ModulateGrad Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ModulateGrad Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ModulateGrad Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(ModulateGradProto, modulate_grad_infershape_with_scale_shift)
@@ -92,7 +86,7 @@ TEST_F(ModulateGradProto, modulate_grad_infershape_scale_only)
     gert::StorageShape gradOutputShape = {{4, 16, 128}, {4, 16, 128}};
     gert::StorageShape inputShape = {{4, 16, 128}, {4, 16, 128}};
     gert::StorageShape scaleShape = {{4, 128}, {4, 128}};
-    gert::StorageShape shiftShape = {{}, {}};  // shift absent -> empty placeholder at fixed IR index 3
+    gert::StorageShape shiftShape = {{}, {}}; // shift absent -> empty placeholder at fixed IR index 3
     gert::StorageShape gradInputShape;
     gert::StorageShape gradScaleShape;
     gert::StorageShape gradShiftShape;
@@ -107,7 +101,7 @@ TEST_F(ModulateGradProto, modulate_grad_infershape_scale_only)
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[4, 16, 128]");
-    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(1)), "[4, 128]");  // grad_scale at fixed IR index 1
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(1)), "[4, 128]"); // grad_scale at fixed IR index 1
 }
 
 TEST_F(ModulateGradProto, modulate_grad_infershape_shift_only)
@@ -117,7 +111,7 @@ TEST_F(ModulateGradProto, modulate_grad_infershape_shift_only)
 
     gert::StorageShape gradOutputShape = {{4, 16, 128}, {4, 16, 128}};
     gert::StorageShape inputShape = {{4, 16, 128}, {4, 16, 128}};
-    gert::StorageShape scaleShape = {{}, {}};  // scale absent -> empty placeholder at fixed IR index 2
+    gert::StorageShape scaleShape = {{}, {}}; // scale absent -> empty placeholder at fixed IR index 2
     gert::StorageShape shiftShape = {{4, 128}, {4, 128}};
     gert::StorageShape gradInputShape;
     gert::StorageShape gradScaleShape;
@@ -133,7 +127,7 @@ TEST_F(ModulateGradProto, modulate_grad_infershape_shift_only)
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[4, 16, 128]");
-    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(2)), "[4, 128]");  // grad_shift at fixed IR index 2
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(2)), "[4, 128]"); // grad_shift at fixed IR index 2
 }
 
 TEST_F(ModulateGradProto, modulate_grad_inferdtype_with_scale_shift)
@@ -194,6 +188,6 @@ TEST_F(ModulateGradProto, modulate_grad_inferdtype_shift_only)
     EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
     ASSERT_NE(context, nullptr);
 
-    EXPECT_EQ(context->GetOutputDataType(0), outputRef);   // grad_input
-    EXPECT_EQ(context->GetOutputDataType(2), outputRef);   // grad_shift dtype at fixed IR index 2
+    EXPECT_EQ(context->GetOutputDataType(0), outputRef); // grad_input
+    EXPECT_EQ(context->GetOutputDataType(2), outputRef); // grad_shift dtype at fixed IR index 2
 }

@@ -22,8 +22,7 @@
 #include "index_fill_tiling_arch35.h"
 #include "index_fill_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 void CalculatePNQ(gert::Shape& xShape, int64_t dim, IndexFillInputInfo& inputData)
 {
     // 非尾轴场景，统一合轴为shape: (P, N, Q); 尾轴场景，统一合轴为shape: (P, N),该shape可以看成是(P, N, 1)
@@ -74,9 +73,9 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
             }
             return r;
         };
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "x, y", (shapeStr(xShape) + ", " + shapeStr(yShape)).c_str(),
-            "shape of x must be same as shape of y");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y",
+                                               (shapeStr(xShape) + ", " + shapeStr(yShape)).c_str(),
+                                               "shape of x must be same as shape of y");
         return ge::GRAPH_FAILED;
     }
     inputData.dtype = xDtype;
@@ -101,7 +100,8 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     dim = dim >= 0 ? dim : dim + xDims;
     if (dim < 0 || dim >= xDims) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "dim", std::to_string(dim).c_str(), "dim must be less than the dimension count of x and greater than the negative of dimension count of x");
+            context->GetNodeName(), "dim", std::to_string(dim).c_str(),
+            "dim must be less than the dimension count of x and greater than the negative of dimension count of x");
         return ge::GRAPH_FAILED;
     }
 
@@ -154,18 +154,15 @@ ge::graphStatus IndexFillCommonTiling::GetPlatformInfo()
     }
 
     if (coreNum_ == 0) {
-        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
-            context_->GetNodeName(), "0", "coreNum", "platform", "platform coreNum must be greater than 0");
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(context_->GetNodeName(), "0", "coreNum", "platform",
+                                               "platform coreNum must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IndexFillCommonTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus IndexFillCommonTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus IndexFillCommonTiling::GetWorkspaceSize()
 {

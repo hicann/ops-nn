@@ -28,22 +28,19 @@ namespace l0op {
 
 OP_TYPE_REGISTER(QuantizedBatchNorm);
 
-const aclTensor* QuantizedBatchNorm(
-    const l0op::QuantizedBatchNormParams& params, float epsilon, aclOpExecutor* executor)
+const aclTensor* QuantizedBatchNorm(const l0op::QuantizedBatchNormParams& params, float epsilon,
+                                    aclOpExecutor* executor)
 {
-    L0_DFX(
-        QuantizedBatchNorm, params.x, params.mean, params.var, params.inputScale, params.inputZeroPoint,
-        params.outputScale, params.outputZeroPoint, params.weight, params.bias, epsilon);
+    L0_DFX(QuantizedBatchNorm, params.x, params.mean, params.var, params.inputScale, params.inputZeroPoint,
+           params.outputScale, params.outputZeroPoint, params.weight, params.bias, epsilon);
 
-    auto y = executor->AllocTensor(
-        params.x->GetStorageShape(), params.x->GetOriginalShape(), params.x->GetDataType(),
-        params.x->GetStorageFormat(), params.x->GetOriginalFormat());
+    auto y = executor->AllocTensor(params.x->GetStorageShape(), params.x->GetOriginalShape(), params.x->GetDataType(),
+                                   params.x->GetStorageFormat(), params.x->GetOriginalFormat());
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         QuantizedBatchNorm,
-        OP_INPUT(
-            params.x, params.mean, params.var, params.inputScale, params.inputZeroPoint, params.outputScale,
-            params.outputZeroPoint, params.weight, params.bias),
+        OP_INPUT(params.x, params.mean, params.var, params.inputScale, params.inputZeroPoint, params.outputScale,
+                 params.outputZeroPoint, params.weight, params.bias),
         OP_OUTPUT(y), OP_ATTR(epsilon));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "QuantizedBatchNorm ADD_TO_LAUNCHER_LIST_AICORE failed.");

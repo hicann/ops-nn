@@ -15,7 +15,6 @@
 
 #include "elu_v2.h"
 
-
 template <uint32_t schMode>
 __global__ __aicore__ void elu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -23,7 +22,7 @@ __global__ __aicore__ void elu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_AD
     GET_TILING_DATA_WITH_STRUCT(EluV2TilingData, tilingData, tiling);
 
     NsEluV2::EluV2<DTYPE_X> op;
-    op.Init(x, y, tilingData.bigCoreDataNum, tilingData.smallCoreDataNum,
-            tilingData.tileDataNum, tilingData.bigCoreNum, tilingData.alpha, tilingData.scale, tilingData.inputScale);
+    op.Init(x, y, tilingData.bigCoreDataNum, tilingData.smallCoreDataNum, tilingData.tileDataNum, tilingData.bigCoreNum,
+            tilingData.alpha, tilingData.scale, tilingData.inputScale);
     op.Process();
 }

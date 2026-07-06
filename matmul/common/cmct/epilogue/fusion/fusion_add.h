@@ -55,9 +55,8 @@ public:
     bool fixp1v2_{false};
 
     template <class LocalTensor>
-    __aicore__ inline void Init(
-        Params const& params, LocalTensor ubTensor, int64_t ubCalcM, int64_t ubCalcN, int64_t& ubOffset,
-        int64_t& stageSize, uint64_t m = 0, bool needNdDma = false)
+    __aicore__ inline void Init(Params const& params, LocalTensor ubTensor, int64_t ubCalcM, int64_t ubCalcN,
+                                int64_t& ubOffset, int64_t& stageSize, uint64_t m = 0, bool needNdDma = false)
     {
         static constexpr int64_t stageNum = 2;
         inputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeIn*>(params.inputGmAddr)); // get x3 from gm
@@ -77,19 +76,20 @@ public:
         stageSize = stageSize_;
     }
 
-    __aicore__ inline void operator()(
-        const AscendC::LocalTensor<DataTypeIn>& srcLocal, AscendC::LocalTensor<DataTypeOut>& outputLocal,
-        int64_t offset, int64_t curAivM, int64_t curAivN, int64_t strideN, int64_t stageSize)
+    __aicore__ inline void operator()(const AscendC::LocalTensor<DataTypeIn>& srcLocal,
+                                      AscendC::LocalTensor<DataTypeOut>& outputLocal, int64_t offset, int64_t curAivM,
+                                      int64_t curAivN, int64_t strideN, int64_t stageSize)
     {
-        int64_t curAivNAlign = fixp1v2_? CeilAlign(curAivN, AscendC::BLOCK_CUBE) : AlignBlock<DataTypeIn>(curAivN);
+        int64_t curAivNAlign = fixp1v2_ ? CeilAlign(curAivN, AscendC::BLOCK_CUBE) : AlignBlock<DataTypeIn>(curAivN);
         if (!needNdDma_) {
             AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
             uint16_t blockCount = static_cast<uint16_t>(stageSize / curAivNAlign);
             uint16_t blockLen = static_cast<uint32_t>(curAivN * sizeof(DataTypeOut));
             uint32_t srcStride = static_cast<uint32_t>((strideN - curAivN) * sizeof(DataTypeIn));
-            uint32_t dstSrtide =
-                fixp1v2_ ? static_cast<uint32_t>((curAivNAlign - curAivN) * sizeof(DataTypeOut) / UB_ALIGN_SIZE) : 0;
+            uint32_t dstSrtide = fixp1v2_ ? static_cast<uint32_t>((curAivNAlign - curAivN) * sizeof(DataTypeOut) /
+                                                                  UB_ALIGN_SIZE) :
+                                            0;
             AscendC::DataCopyExtParams copyParams{blockCount, blockLen, srcStride, dstSrtide, 0};
             AscendC::DataCopyPadExtParams<DataTypeIn> padParams{false, 0, 0, 0};
             // x3Gm -> x3local
@@ -131,4 +131,3 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

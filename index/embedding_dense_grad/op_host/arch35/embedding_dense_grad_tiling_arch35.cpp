@@ -52,13 +52,9 @@ const std::map<ge::DataType, uint32_t> indicesTypeMap = {
     {ge::DT_INT64, 800},
 };
 
-const std::map<ge::DataType, uint32_t> gradTypeMap = {
-        {ge::DT_FLOAT, 4}, {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 1}
-    };
+const std::map<ge::DataType, uint32_t> gradTypeMap = {{ge::DT_FLOAT, 4}, {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 1}};
 
-const std::map<ge::DataType, uint32_t> gradTypeByte = {
-        {ge::DT_FLOAT, 4}, {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}
-    };
+const std::map<ge::DataType, uint32_t> gradTypeByte = {{ge::DT_FLOAT, 4}, {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}};
 
 static void SetTilingData(EmbeddingDenseGradSimdTilingData& tiling, EmbeddingDenseGradACTilingParam& tilingParams)
 {
@@ -92,7 +88,8 @@ static void SetTilingData(EmbeddingDenseGradSimdTilingData& tiling, EmbeddingDen
     tiling.set_clearBlock(tilingParams.clearBlockDim);
 }
 
-static uint32_t GetMaxSortTmpBuf(const EmbeddingDenseGradACTilingParam &tilingParams, int64_t sortDim) {
+static uint32_t GetMaxSortTmpBuf(const EmbeddingDenseGradACTilingParam& tilingParams, int64_t sortDim)
+{
     std::vector<int64_t> shapeVec = {sortDim};
     ge::Shape srcShape(shapeVec);
     AscendC::SortConfig config;
@@ -107,13 +104,13 @@ static uint32_t GetMaxSortTmpBuf(const EmbeddingDenseGradACTilingParam &tilingPa
     return maxValue;
 }
 
-static uint64_t CalUBTotalSize(EmbeddingDenseGradACTilingParam &tilingParams,
-                               uint64_t baseADim, uint64_t baseSDim)
+static uint64_t CalUBTotalSize(EmbeddingDenseGradACTilingParam& tilingParams, uint64_t baseADim, uint64_t baseSDim)
 {
     uint32_t gradBlockAlignNum = tilingParams.blockSize / tilingParams.gradDtypeSize;
     uint32_t resBlockAlignNum = tilingParams.blockSize / sizeof(float);
     uint32_t indicesBlockAlignNum = tilingParams.blockSize / tilingParams.indicesDtypeSize;
-    uint64_t gradDtypeAlign = baseSDim * CeilDiv(baseADim, static_cast<uint64_t>(gradBlockAlignNum)) * gradBlockAlignNum;
+    uint64_t gradDtypeAlign = baseSDim * CeilDiv(baseADim, static_cast<uint64_t>(gradBlockAlignNum)) *
+                              gradBlockAlignNum;
     uint64_t resB32Align = baseSDim * CeilDiv(baseADim, static_cast<uint64_t>(resBlockAlignNum)) * resBlockAlignNum;
     uint64_t indicesDtypeAlign = CeilDiv(baseSDim, static_cast<uint64_t>(indicesBlockAlignNum)) * indicesBlockAlignNum;
     uint64_t indicesSortBufCnt = 3;
@@ -121,12 +118,11 @@ static uint64_t CalUBTotalSize(EmbeddingDenseGradACTilingParam &tilingParams,
     uint64_t sortNeedTmpSize = GetMaxSortTmpBuf(tilingParams, static_cast<int64_t>(indicesDtypeAlign));
     uint64_t oneIndicesBufSize = indicesDtypeAlign * tilingParams.indicesDtypeSize;
 
-    uint64_t totalSize = \
-        1 * gradDtypeAlign * tilingParams.gradDtypeSize +    // gradBuf
-        1 * resB32Align * sizeof(float) +    // resBuf
-        (indicesSortBufCnt + indicesOtherBufCnt) * oneIndicesBufSize +     // some indicesBuf
-        SORT_STAT_PADDING + SORT_STAT_PADDING +   // sort padding
-        sortNeedTmpSize;       // sort shared buf size
+    uint64_t totalSize = 1 * gradDtypeAlign * tilingParams.gradDtypeSize +              // gradBuf
+                         1 * resB32Align * sizeof(float) +                              // resBuf
+                         (indicesSortBufCnt + indicesOtherBufCnt) * oneIndicesBufSize + // some indicesBuf
+                         SORT_STAT_PADDING + SORT_STAT_PADDING +                        // sort padding
+                         sortNeedTmpSize;                                               // sort shared buf size
 
     return totalSize;
 }
@@ -134,8 +130,8 @@ static uint64_t CalUBTotalSize(EmbeddingDenseGradACTilingParam &tilingParams,
 /**
  * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
  */
-static uint64_t CalBestBaseSize(EmbeddingDenseGradACTilingParam &tilingParams,
-                                uint64_t baseXoStart, uint64_t baseXoEnd, const uint32_t ubCutAxis)
+static uint64_t CalBestBaseSize(EmbeddingDenseGradACTilingParam& tilingParams, uint64_t baseXoStart, uint64_t baseXoEnd,
+                                const uint32_t ubCutAxis)
 {
     uint64_t baseXoMid;
     uint64_t tmpTotalSize = 0;
@@ -156,14 +152,14 @@ static uint64_t CalBestBaseSize(EmbeddingDenseGradACTilingParam &tilingParams,
     return baseXoStart;
 }
 
-static ge::graphStatus TilingUBAndBlockBase(EmbeddingDenseGradACTilingParam &tilingParams)
+static ge::graphStatus TilingUBAndBlockBase(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     OP_LOGD("EmbeddingDenseGrad", "Enter TilingUBAndBlockBase.");
     tilingParams.baseWDim = tilingParams.numWeights;
 
     // 0. No cut
-    uint64_t noCutTotalSizeTmp = CalUBTotalSize(tilingParams,
-        tilingParams.embeddingDimPerCore, tilingParams.numelIndices);
+    uint64_t noCutTotalSizeTmp = CalUBTotalSize(tilingParams, tilingParams.embeddingDimPerCore,
+                                                tilingParams.numelIndices);
     if (noCutTotalSizeTmp < tilingParams.ubSizePlatform) {
         tilingParams.baseADim = tilingParams.embeddingDimPerCore;
         tilingParams.baseSDim = tilingParams.numelIndices;
@@ -201,48 +197,52 @@ static ge::graphStatus TilingUBAndBlockBase(EmbeddingDenseGradACTilingParam &til
     return ge::GRAPH_FAILED;
 }
 
-static void TilingUBAndBlockOther(EmbeddingDenseGradACTilingParam &tilingParams)
+static void TilingUBAndBlockOther(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     uint32_t gradBlockAlignNum = tilingParams.blockSize / tilingParams.gradDtypeSize;
-    tilingParams.gradFactor = tilingParams.baseSDim *
-                              CeilDiv(tilingParams.baseADim, gradBlockAlignNum) * gradBlockAlignNum;
-    tilingParams.loopPerCoreGrad = CeilDiv(tilingParams.embeddingDimPerCore, static_cast<uint64_t>(tilingParams.baseADim));
+    tilingParams.gradFactor = tilingParams.baseSDim * CeilDiv(tilingParams.baseADim, gradBlockAlignNum) *
+                              gradBlockAlignNum;
+    tilingParams.loopPerCoreGrad = CeilDiv(tilingParams.embeddingDimPerCore,
+                                           static_cast<uint64_t>(tilingParams.baseADim));
     tilingParams.gradFactorPerRow = tilingParams.baseADim;
-    tilingParams.gradFactorPerRowTail = \
-        tilingParams.embeddingDimPerCore - (tilingParams.loopPerCoreGrad - 1) * tilingParams.baseADim;
+    tilingParams.gradFactorPerRowTail = tilingParams.embeddingDimPerCore -
+                                        (tilingParams.loopPerCoreGrad - 1) * tilingParams.baseADim;
 
     tilingParams.loopPerCoreIndice = CeilDiv(tilingParams.numelIndices, static_cast<uint64_t>(tilingParams.baseSDim));
-    tilingParams.loopPerCoreRowNumTail = \
-        tilingParams.numelIndices - (tilingParams.loopPerCoreIndice - 1) * tilingParams.baseSDim;
+    tilingParams.loopPerCoreRowNumTail = tilingParams.numelIndices -
+                                         (tilingParams.loopPerCoreIndice - 1) * tilingParams.baseSDim;
 
     tilingParams.indicesFactor = tilingParams.baseSDim;
     tilingParams.indicesFactorTail = tilingParams.loopPerCoreRowNumTail;
 
     uint32_t indicesBlockAlignNum = tilingParams.blockSize / tilingParams.indicesDtypeSize;
-    uint32_t indicesDtypeAlign = \
-        CeilDiv(tilingParams.baseSDim, indicesBlockAlignNum) * indicesBlockAlignNum;
+    uint32_t indicesDtypeAlign = CeilDiv(tilingParams.baseSDim, indicesBlockAlignNum) * indicesBlockAlignNum;
     tilingParams.sortSharedBufSize = GetMaxSortTmpBuf(tilingParams, indicesDtypeAlign);
 
-    OP_LOGI("EmbeddingDenseGrad", "tilingParams: "
-        "ubSizePlatform: %u, baseSDim: %u, baseADim: %u, baseWDim: %u, "
-        "blockDim: %u, embeddingDim: %lu, embeddingDimPerCore: %lu, embeddingDimLastCore: %lu, "
-        "gradFactor: %u, loopPerCoreIndice: %lu, indicesFactor: %u, indicesFactorTail: %u, "
-        "loopPerCoreGrad: %lu, gradFactorPerRow: %u, gradFactorPerRowTail: %u, "
-        "loopPerCoreRowNumTail: %u, sortSharedBufSize: %u.",
-        tilingParams.ubSizePlatform, tilingParams.baseSDim, tilingParams.baseADim, tilingParams.baseWDim,
-        tilingParams.blockDim, tilingParams.embeddingDim, tilingParams.embeddingDimPerCore, tilingParams.embeddingDimLastCore,
-        tilingParams.gradFactor, tilingParams.loopPerCoreIndice, tilingParams.indicesFactor, tilingParams.indicesFactorTail,
-        tilingParams.loopPerCoreGrad, tilingParams.gradFactorPerRow, tilingParams.gradFactorPerRowTail,
-        tilingParams.loopPerCoreRowNumTail, tilingParams.sortSharedBufSize);
+    OP_LOGI("EmbeddingDenseGrad",
+            "tilingParams: "
+            "ubSizePlatform: %u, baseSDim: %u, baseADim: %u, baseWDim: %u, "
+            "blockDim: %u, embeddingDim: %lu, embeddingDimPerCore: %lu, embeddingDimLastCore: %lu, "
+            "gradFactor: %u, loopPerCoreIndice: %lu, indicesFactor: %u, indicesFactorTail: %u, "
+            "loopPerCoreGrad: %lu, gradFactorPerRow: %u, gradFactorPerRowTail: %u, "
+            "loopPerCoreRowNumTail: %u, sortSharedBufSize: %u.",
+            tilingParams.ubSizePlatform, tilingParams.baseSDim, tilingParams.baseADim, tilingParams.baseWDim,
+            tilingParams.blockDim, tilingParams.embeddingDim, tilingParams.embeddingDimPerCore,
+            tilingParams.embeddingDimLastCore, tilingParams.gradFactor, tilingParams.loopPerCoreIndice,
+            tilingParams.indicesFactor, tilingParams.indicesFactorTail, tilingParams.loopPerCoreGrad,
+            tilingParams.gradFactorPerRow, tilingParams.gradFactorPerRowTail, tilingParams.loopPerCoreRowNumTail,
+            tilingParams.sortSharedBufSize);
 }
 
-static uint64_t CalUBTotalSizeFreq(const EmbeddingDenseGradACTilingParam &tilingParams,
-                                   uint64_t baseADim, uint64_t baseWeights)
+static uint64_t CalUBTotalSizeFreq(const EmbeddingDenseGradACTilingParam& tilingParams, uint64_t baseADim,
+                                   uint64_t baseWeights)
 {
     uint32_t weightBlockAlignNum = tilingParams.blockSize / tilingParams.gradDtypeSize;
     uint32_t indicesBlockAlignNum = tilingParams.blockSize / tilingParams.indicesDtypeSize;
-    uint64_t resDtypeAlign = baseWeights * CeilDiv(baseADim, static_cast<uint64_t>(weightBlockAlignNum)) * weightBlockAlignNum;
-    uint64_t freqIndicesDtypeAlign = CeilDiv(baseWeights, static_cast<uint64_t>(indicesBlockAlignNum)) * indicesBlockAlignNum;
+    uint64_t resDtypeAlign = baseWeights * CeilDiv(baseADim, static_cast<uint64_t>(weightBlockAlignNum)) *
+                             weightBlockAlignNum;
+    uint64_t freqIndicesDtypeAlign = CeilDiv(baseWeights, static_cast<uint64_t>(indicesBlockAlignNum)) *
+                                     indicesBlockAlignNum;
 
     uint64_t totalSize = DOUBLE_COUNT * resDtypeAlign * sizeof(float) +
                          1 * freqIndicesDtypeAlign * tilingParams.indicesDtypeSize;
@@ -252,8 +252,8 @@ static uint64_t CalUBTotalSizeFreq(const EmbeddingDenseGradACTilingParam &tiling
 /**
  * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
  */
-static uint64_t CalBestBaseSizeFreq(EmbeddingDenseGradACTilingParam &tilingParams,
-                                    uint64_t baseXoStart, uint64_t baseXoEnd, const uint32_t ubCutAxis)
+static uint64_t CalBestBaseSizeFreq(EmbeddingDenseGradACTilingParam& tilingParams, uint64_t baseXoStart,
+                                    uint64_t baseXoEnd, const uint32_t ubCutAxis)
 {
     uint64_t baseXoMid;
     uint64_t tmpTotalSize = 0;
@@ -274,11 +274,11 @@ static uint64_t CalBestBaseSizeFreq(EmbeddingDenseGradACTilingParam &tilingParam
     return baseXoStart;
 }
 
-static ge::graphStatus TilingUB4Freq(EmbeddingDenseGradACTilingParam &tilingParams)
+static ge::graphStatus TilingUB4Freq(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     // 0. No cut
-    uint64_t noCutTotalSizeTmp = CalUBTotalSizeFreq(tilingParams,
-        tilingParams.embeddingDimPerCore, tilingParams.numWeights);
+    uint64_t noCutTotalSizeTmp = CalUBTotalSizeFreq(tilingParams, tilingParams.embeddingDimPerCore,
+                                                    tilingParams.numWeights);
     if (noCutTotalSizeTmp < tilingParams.ubSizePlatform) {
         tilingParams.baseADim = tilingParams.embeddingDimPerCore;
         tilingParams.baseWDim = tilingParams.numWeights;
@@ -286,12 +286,10 @@ static ge::graphStatus TilingUB4Freq(EmbeddingDenseGradACTilingParam &tilingPara
     }
 
     // 1. Cut W
-    uint64_t cutWTotalSizeTmp = CalUBTotalSizeFreq(tilingParams,
-        tilingParams.embeddingDimPerCore, 1);
+    uint64_t cutWTotalSizeTmp = CalUBTotalSizeFreq(tilingParams, tilingParams.embeddingDimPerCore, 1);
     if (cutWTotalSizeTmp < tilingParams.ubSizePlatform) {
         tilingParams.baseADim = tilingParams.embeddingDimPerCore;
-        tilingParams.baseWDim = CalBestBaseSizeFreq(tilingParams,
-            1, tilingParams.numWeights, TILING_UB_CUT_W);
+        tilingParams.baseWDim = CalBestBaseSizeFreq(tilingParams, 1, tilingParams.numWeights, TILING_UB_CUT_W);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -299,8 +297,8 @@ static ge::graphStatus TilingUB4Freq(EmbeddingDenseGradACTilingParam &tilingPara
     uint64_t cutAWTotalSizeTmp = CalUBTotalSizeFreq(tilingParams, tilingParams.minBaseADim, 1);
     if (cutAWTotalSizeTmp < tilingParams.ubSizePlatform) {
         tilingParams.baseWDim = 1;
-        tilingParams.baseADim = CalBestBaseSizeFreq(tilingParams, 
-            tilingParams.minBaseADim, tilingParams.embeddingDimPerCore, TILING_UB_CUT_A);
+        tilingParams.baseADim = CalBestBaseSizeFreq(tilingParams, tilingParams.minBaseADim,
+                                                    tilingParams.embeddingDimPerCore, TILING_UB_CUT_A);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -308,32 +306,34 @@ static ge::graphStatus TilingUB4Freq(EmbeddingDenseGradACTilingParam &tilingPara
     return ge::GRAPH_FAILED;
 }
 
-static void TilingUB4FreqOther(EmbeddingDenseGradACTilingParam &tilingParams)
+static void TilingUB4FreqOther(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     tilingParams.gradFactorPerRowFreq = tilingParams.baseADim;
-    tilingParams.loopPerCoreGradFreq = CeilDiv(tilingParams.embeddingDimPerCore, static_cast<uint64_t>(tilingParams.baseADim));
-    tilingParams.gradFactorPerRowTailFreq = \
-        tilingParams.embeddingDimPerCore - (tilingParams.loopPerCoreGradFreq - 1) * tilingParams.baseADim;
+    tilingParams.loopPerCoreGradFreq = CeilDiv(tilingParams.embeddingDimPerCore,
+                                               static_cast<uint64_t>(tilingParams.baseADim));
+    tilingParams.gradFactorPerRowTailFreq = tilingParams.embeddingDimPerCore -
+                                            (tilingParams.loopPerCoreGradFreq - 1) * tilingParams.baseADim;
 
     tilingParams.loopPerCoreRowNumFreq = tilingParams.baseWDim;
     tilingParams.loopPerCoreIndiceFreq = CeilDiv(tilingParams.numWeights, static_cast<int64_t>(tilingParams.baseWDim));
-    tilingParams.loopPerCoreRowNumFreqTail = \
-        tilingParams.numWeights - (tilingParams.loopPerCoreIndiceFreq - 1) * tilingParams.baseWDim;
+    tilingParams.loopPerCoreRowNumFreqTail = tilingParams.numWeights -
+                                             (tilingParams.loopPerCoreIndiceFreq - 1) * tilingParams.baseWDim;
 
     tilingParams.indicesFactorFreq = tilingParams.loopPerCoreRowNumFreq;
     tilingParams.indicesFactorFreqTail = tilingParams.loopPerCoreRowNumFreqTail;
 
-    OP_LOGI("EmbeddingDenseGrad", "[Freq]tilingParams: "
-        "gradFactorPerRowFreq: %u, loopPerCoreGradFreq: %lu, gradFactorPerRowTailFreq: %u, "
-        "loopPerCoreRowNumFreq: %u, loopPerCoreIndiceFreq: %lu, loopPerCoreRowNumFreqTail: %u, "
-        "indicesFactorFreq: %u, indicesFactorFreqTail: %u.",
-        tilingParams.gradFactorPerRowFreq, tilingParams.loopPerCoreGradFreq, tilingParams.gradFactorPerRowTailFreq,
-        tilingParams.loopPerCoreRowNumFreq, tilingParams.loopPerCoreIndiceFreq, tilingParams.loopPerCoreRowNumFreqTail,
-        tilingParams.indicesFactorFreq, tilingParams.indicesFactorFreqTail);
+    OP_LOGI("EmbeddingDenseGrad",
+            "[Freq]tilingParams: "
+            "gradFactorPerRowFreq: %u, loopPerCoreGradFreq: %lu, gradFactorPerRowTailFreq: %u, "
+            "loopPerCoreRowNumFreq: %u, loopPerCoreIndiceFreq: %lu, loopPerCoreRowNumFreqTail: %u, "
+            "indicesFactorFreq: %u, indicesFactorFreqTail: %u.",
+            tilingParams.gradFactorPerRowFreq, tilingParams.loopPerCoreGradFreq, tilingParams.gradFactorPerRowTailFreq,
+            tilingParams.loopPerCoreRowNumFreq, tilingParams.loopPerCoreIndiceFreq,
+            tilingParams.loopPerCoreRowNumFreqTail, tilingParams.indicesFactorFreq, tilingParams.indicesFactorFreqTail);
 }
 
-static uint64_t CalUBTotalSizeCast(const EmbeddingDenseGradACTilingParam &tilingParams,
-                                  uint64_t baseADim, uint64_t baseWeights)
+static uint64_t CalUBTotalSizeCast(const EmbeddingDenseGradACTilingParam& tilingParams, uint64_t baseADim,
+                                   uint64_t baseWeights)
 {
     uint64_t dtypeAlignNum = tilingParams.blockSize / tilingParams.gradDtypeSize;
     uint64_t gradElements = baseWeights * CeilDiv(baseADim, dtypeAlignNum) * dtypeAlignNum;
@@ -344,8 +344,8 @@ static uint64_t CalUBTotalSizeCast(const EmbeddingDenseGradACTilingParam &tiling
 /**
  * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
  */
-static uint32_t CalBestBaseSizeCast(EmbeddingDenseGradACTilingParam &tilingParams,
-    uint64_t baseXoStart, uint64_t baseXoEnd, const uint32_t ubCutAxis)
+static uint32_t CalBestBaseSizeCast(EmbeddingDenseGradACTilingParam& tilingParams, uint64_t baseXoStart,
+                                    uint64_t baseXoEnd, const uint32_t ubCutAxis)
 {
     uint64_t baseXoMid;
     uint64_t tmpTotalSize = 0;
@@ -366,11 +366,11 @@ static uint32_t CalBestBaseSizeCast(EmbeddingDenseGradACTilingParam &tilingParam
     return baseXoStart;
 }
 
-static ge::graphStatus TilingUB4Cast(EmbeddingDenseGradACTilingParam &tilingParams)
+static ge::graphStatus TilingUB4Cast(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     // 0. No cut
-    uint64_t noCutTotalSizeTmp = CalUBTotalSizeCast(tilingParams,
-    tilingParams.embeddingDimPerCore, tilingParams.numWeights);
+    uint64_t noCutTotalSizeTmp = CalUBTotalSizeCast(tilingParams, tilingParams.embeddingDimPerCore,
+                                                    tilingParams.numWeights);
     if (noCutTotalSizeTmp < tilingParams.ubSizePlatform) {
         tilingParams.baseADim = tilingParams.embeddingDimPerCore;
         tilingParams.baseWDim = tilingParams.numWeights;
@@ -378,12 +378,10 @@ static ge::graphStatus TilingUB4Cast(EmbeddingDenseGradACTilingParam &tilingPara
     }
 
     // 1. Cut W
-    uint64_t cutWTotalSizeTmp = CalUBTotalSizeCast(tilingParams,
-        tilingParams.embeddingDimPerCore, 1);
-        if (cutWTotalSizeTmp < tilingParams.ubSizePlatform) {
-            tilingParams.baseADim = tilingParams.embeddingDimPerCore;
-            tilingParams.baseWDim = CalBestBaseSizeCast(tilingParams,
-                1, tilingParams.numWeights, TILING_UB_CUT_W);
+    uint64_t cutWTotalSizeTmp = CalUBTotalSizeCast(tilingParams, tilingParams.embeddingDimPerCore, 1);
+    if (cutWTotalSizeTmp < tilingParams.ubSizePlatform) {
+        tilingParams.baseADim = tilingParams.embeddingDimPerCore;
+        tilingParams.baseWDim = CalBestBaseSizeCast(tilingParams, 1, tilingParams.numWeights, TILING_UB_CUT_W);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -391,8 +389,8 @@ static ge::graphStatus TilingUB4Cast(EmbeddingDenseGradACTilingParam &tilingPara
     uint64_t cutAWTotalSizeTmp = CalUBTotalSizeCast(tilingParams, tilingParams.minBaseADim, 1);
     if (cutAWTotalSizeTmp < tilingParams.ubSizePlatform) {
         tilingParams.baseWDim = 1;
-        tilingParams.baseADim = CalBestBaseSizeCast(tilingParams, 
-            tilingParams.minBaseADim, tilingParams.embeddingDimPerCore, TILING_UB_CUT_A);
+        tilingParams.baseADim = CalBestBaseSizeCast(tilingParams, tilingParams.minBaseADim,
+                                                    tilingParams.embeddingDimPerCore, TILING_UB_CUT_A);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -400,28 +398,26 @@ static ge::graphStatus TilingUB4Cast(EmbeddingDenseGradACTilingParam &tilingPara
     return ge::GRAPH_FAILED;
 }
 
-static void TilingUB4CastOther(EmbeddingDenseGradACTilingParam &tilingParams)
+static void TilingUB4CastOther(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     tilingParams.baseACast = tilingParams.baseADim;
     tilingParams.cntACast = CeilDiv(tilingParams.embeddingDimPerCore, static_cast<uint64_t>(tilingParams.baseACast));
-    tilingParams.tailACast = \
-        tilingParams.embeddingDimPerCore - (tilingParams.cntACast - 1) * tilingParams.baseACast;
+    tilingParams.tailACast = tilingParams.embeddingDimPerCore - (tilingParams.cntACast - 1) * tilingParams.baseACast;
 
     tilingParams.baseWCast = tilingParams.baseWDim;
     tilingParams.cntWCast = CeilDiv(tilingParams.numWeights, static_cast<int64_t>(tilingParams.baseWCast));
-    tilingParams.tailWCast = \
-        tilingParams.numWeights - (tilingParams.cntWCast - 1) * tilingParams.baseWCast;
+    tilingParams.tailWCast = tilingParams.numWeights - (tilingParams.cntWCast - 1) * tilingParams.baseWCast;
 
-    OP_LOGI("EmbeddingDenseGrad", "[Cast]tilingParams: "
-        "baseACast: %u, baseWCast: %u, "
-        "cntACast: %lu, cntWCast: %lu, "
-        "tailACast: %u, tailWCast: %u.",
-        tilingParams.baseACast, tilingParams.baseWCast,
-        tilingParams.cntACast, tilingParams.cntWCast,
-        tilingParams.tailACast, tilingParams.tailWCast);
+    OP_LOGI("EmbeddingDenseGrad",
+            "[Cast]tilingParams: "
+            "baseACast: %u, baseWCast: %u, "
+            "cntACast: %lu, cntWCast: %lu, "
+            "tailACast: %u, tailWCast: %u.",
+            tilingParams.baseACast, tilingParams.baseWCast, tilingParams.cntACast, tilingParams.cntWCast,
+            tilingParams.tailACast, tilingParams.tailWCast);
 }
 
-static ge::graphStatus CalTilingParamForFullLoadIndices(EmbeddingDenseGradACTilingParam &tilingParams)
+static ge::graphStatus CalTilingParamForFullLoadIndices(EmbeddingDenseGradACTilingParam& tilingParams)
 {
     uint32_t gradBlockAlignNum = tilingParams.blockSize / tilingParams.gradDtypeSize;
     uint32_t indicesBlockAlignNum = tilingParams.blockSize / tilingParams.indicesDtypeSize;
@@ -429,7 +425,8 @@ static ge::graphStatus CalTilingParamForFullLoadIndices(EmbeddingDenseGradACTili
     uint64_t indicesBufferNumber = 5;
     uint64_t sortNeedTmpSize = GetMaxSortTmpBuf(tilingParams, static_cast<int64_t>(indicesBlockAlignNum));
     uint64_t oneIndicesBufSize = indicesBlockAlignNum * tilingParams.indicesDtypeSize;
-    int32_t remainUbSize = tilingParams.ubSizePlatform - SORT_STAT_PADDING - SORT_STAT_PADDING - sortNeedTmpSize - indicesBufferNumber * oneIndicesBufSize;
+    int32_t remainUbSize = tilingParams.ubSizePlatform - SORT_STAT_PADDING - SORT_STAT_PADDING - sortNeedTmpSize -
+                           indicesBufferNumber * oneIndicesBufSize;
     int32_t processGradNum = FloorDiv(remainUbSize, static_cast<int32_t>(tilingParams.gradDtypeSize * DOUBLE_COUNT));
     processGradNum = FloorDiv(processGradNum, static_cast<int32_t>(tilingParams.baseSDim));
     int32_t perUbADimNum = FloorAlign(processGradNum, static_cast<int32_t>(gradBlockAlignNum));
@@ -440,16 +437,17 @@ static ge::graphStatus CalTilingParamForFullLoadIndices(EmbeddingDenseGradACTili
 
     tilingParams.baseADim = perUbADimNum;
     tilingParams.blockDim = std::min(CeilAlign(tilingParams.embeddingDim, static_cast<uint64_t>(perUbADimNum)),
-                                    static_cast<uint64_t>(tilingParams.blockDim));
+                                     static_cast<uint64_t>(tilingParams.blockDim));
     tilingParams.embeddingDimPerCore = CeilDiv(tilingParams.embeddingDim, static_cast<uint64_t>(tilingParams.blockDim));
-    tilingParams.embeddingDimLastCore = \
-        tilingParams.embeddingDim - (tilingParams.blockDim - 1) * tilingParams.embeddingDimPerCore;
+    tilingParams.embeddingDimLastCore = tilingParams.embeddingDim -
+                                        (tilingParams.blockDim - 1) * tilingParams.embeddingDimPerCore;
 
     tilingParams.gradFactor = tilingParams.baseSDim * CeilAlign(tilingParams.baseADim, gradBlockAlignNum);
-    tilingParams.loopPerCoreGrad = CeilDiv(tilingParams.embeddingDimPerCore, static_cast<uint64_t>(tilingParams.baseADim));
+    tilingParams.loopPerCoreGrad = CeilDiv(tilingParams.embeddingDimPerCore,
+                                           static_cast<uint64_t>(tilingParams.baseADim));
     tilingParams.gradFactorPerRow = tilingParams.baseADim;
-    tilingParams.gradFactorPerRowTail = \
-        tilingParams.embeddingDimPerCore - (tilingParams.loopPerCoreGrad - 1) * tilingParams.baseADim;
+    tilingParams.gradFactorPerRowTail = tilingParams.embeddingDimPerCore -
+                                        (tilingParams.loopPerCoreGrad - 1) * tilingParams.baseADim;
 
     tilingParams.loopPerCoreIndice = 1; // indices 全载
     tilingParams.loopPerCoreRowNumTail = 0;
@@ -458,21 +456,22 @@ static ge::graphStatus CalTilingParamForFullLoadIndices(EmbeddingDenseGradACTili
     tilingParams.indicesFactorTail = 0;
     tilingParams.sortSharedBufSize = sortNeedTmpSize;
 
-    OP_LOGI("EmbeddingDenseGrad", "tilingParams: "
-        "baseSDim: %u, baseADim: %u, baseWDim: %u, blockDim: %u, "
-        "embeddingDim: %lu, embeddingPerCore: %lu, embeddingLastCore: %lu, "
-        "gradFactor: %u, loopPerCoreIndice: %lu, indicesFactor: %u, indicesFactorTail: %u, "
-        "sortSharedBufSize: %u, loopPerCoreGrad: %lu, gradFactorPerRow: %u, gradFactorPerRowTail: %u, "
-        "loopPerCoreRowNumTail: %u.",
-        tilingParams.baseSDim, tilingParams.baseADim, tilingParams.baseWDim, tilingParams.blockDim,
-        tilingParams.embeddingDim, tilingParams.embeddingDimPerCore, tilingParams.embeddingDimLastCore,
-        tilingParams.gradFactor, tilingParams.loopPerCoreIndice, tilingParams.indicesFactor, tilingParams.indicesFactorTail,
-        tilingParams.sortSharedBufSize, tilingParams.loopPerCoreGrad, tilingParams.gradFactorPerRow, tilingParams.gradFactorPerRowTail,
-        tilingParams.loopPerCoreRowNumTail);
+    OP_LOGI("EmbeddingDenseGrad",
+            "tilingParams: "
+            "baseSDim: %u, baseADim: %u, baseWDim: %u, blockDim: %u, "
+            "embeddingDim: %lu, embeddingPerCore: %lu, embeddingLastCore: %lu, "
+            "gradFactor: %u, loopPerCoreIndice: %lu, indicesFactor: %u, indicesFactorTail: %u, "
+            "sortSharedBufSize: %u, loopPerCoreGrad: %lu, gradFactorPerRow: %u, gradFactorPerRowTail: %u, "
+            "loopPerCoreRowNumTail: %u.",
+            tilingParams.baseSDim, tilingParams.baseADim, tilingParams.baseWDim, tilingParams.blockDim,
+            tilingParams.embeddingDim, tilingParams.embeddingDimPerCore, tilingParams.embeddingDimLastCore,
+            tilingParams.gradFactor, tilingParams.loopPerCoreIndice, tilingParams.indicesFactor,
+            tilingParams.indicesFactorTail, tilingParams.sortSharedBufSize, tilingParams.loopPerCoreGrad,
+            tilingParams.gradFactorPerRow, tilingParams.gradFactorPerRowTail, tilingParams.loopPerCoreRowNumTail);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus DoOpTiling(const gert::TilingContext *context, EmbeddingDenseGradACTilingParam &tilingParams)
+static ge::graphStatus DoOpTiling(const gert::TilingContext* context, EmbeddingDenseGradACTilingParam& tilingParams)
 {
     // indices ub内全载情况
     if (tilingParams.numelIndices <= INDICES_TILING_LIMIT) {
@@ -490,31 +489,28 @@ static ge::graphStatus DoOpTiling(const gert::TilingContext *context, EmbeddingD
     }
 
     ge::graphStatus status = TilingUBAndBlockBase(tilingParams);
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != status,
-                    OP_LOGE(context->GetNodeName(), "TilingUBAndBlockBase failed."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != status, OP_LOGE(context->GetNodeName(), "TilingUBAndBlockBase failed."),
+                return ge::GRAPH_FAILED);
     TilingUBAndBlockOther(tilingParams);
 
     if (tilingParams.scaleGradByFreq != static_cast<uint32_t>(0)) {
         OP_LOGI("EmbeddingDenseGrad", "Attr scale_grad_by_freq is True.");
         status = TilingUB4Freq(tilingParams);
-        OP_CHECK_IF(ge::GRAPH_SUCCESS != status,
-                        OP_LOGE(context->GetNodeName(), "TilingUB4Freq failed."),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ge::GRAPH_SUCCESS != status, OP_LOGE(context->GetNodeName(), "TilingUB4Freq failed."),
+                    return ge::GRAPH_FAILED);
         TilingUB4FreqOther(tilingParams);
     } else if (tilingParams.gradDataType != ge::DT_FLOAT) {
         OP_LOGI("EmbeddingDenseGrad", "Dtype is not fp32 and attr scale_grad_by_freq is False.");
         status = TilingUB4Cast(tilingParams);
-        OP_CHECK_IF(ge::GRAPH_SUCCESS != status,
-                        OP_LOGE(context->GetNodeName(), "TilingUB4Cast failed."),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ge::GRAPH_SUCCESS != status, OP_LOGE(context->GetNodeName(), "TilingUB4Cast failed."),
+                    return ge::GRAPH_FAILED);
         TilingUB4CastOther(tilingParams);
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint32_t maxCoreNum,
+ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext* context, uint32_t maxCoreNum,
                                               uint32_t ubSizePlatform, uint32_t maxThreadNum)
 {
     OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradSimd is begin");
@@ -531,8 +527,8 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     const gert::Shape gradShape = gradTensor->GetStorageShape();
     int64_t gradDims = gradShape.GetDimNum();
     if (gradDims <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad",
-            (std::to_string(gradDims) + "D").c_str(), "greater than 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad", (std::to_string(gradDims) + "D").c_str(),
+                                     "greater than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -554,7 +550,8 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     }
     if (gradShapeMuls != indicesShapeMuls) {
         std::string sizeMsg = std::to_string(gradShapeMuls) + " and " + std::to_string(indicesShapeMuls);
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "grad and indices", sizeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context->GetNodeName(), "grad and indices", sizeMsg.c_str(),
             "The product of the first (dim-1) axes of grad must equal the total shape size of indices.");
         return ge::GRAPH_FAILED;
     }
@@ -566,8 +563,8 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesTensorDesc);
     auto indicesDataType = indicesTensorDesc->GetDataType();
     if (indicesTypeMap.count(indicesDataType) == 0) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
-            Ops::Base::ToString(indicesDataType).c_str(), "INT32 or INT64");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices", Ops::Base::ToString(indicesDataType).c_str(),
+                                  "INT32 or INT64");
         return ge::GRAPH_FAILED;
     }
     tilingParams.tilingKey += indicesTypeMap.find(indicesDataType)->second;
@@ -578,8 +575,7 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     tilingParams.gradDataType = gradTensorDesc->GetDataType();
     if (gradTypeMap.count(tilingParams.gradDataType) == 0) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad",
-            Ops::Base::ToString(tilingParams.gradDataType).c_str(),
-            "FLOAT, FLOAT16 or BF16");
+                                  Ops::Base::ToString(tilingParams.gradDataType).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     tilingParams.tilingKey += gradTypeMap.find(tilingParams.gradDataType)->second;
@@ -599,12 +595,14 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
 
     // 按照128B分核
     tilingParams.minBaseADim = MIN_CACHE_LINE_SIZE / tilingParams.gradDtypeSize;
-    tilingParams.embeddingDimPerCore = CeilDiv(tilingParams.embeddingDim, static_cast<uint64_t>(tilingParams.maxCoreNum));
-    tilingParams.embeddingDimPerCore = std::max(static_cast<uint64_t>(tilingParams.minBaseADim), tilingParams.embeddingDimPerCore);
+    tilingParams.embeddingDimPerCore = CeilDiv(tilingParams.embeddingDim,
+                                               static_cast<uint64_t>(tilingParams.maxCoreNum));
+    tilingParams.embeddingDimPerCore = std::max(static_cast<uint64_t>(tilingParams.minBaseADim),
+                                                tilingParams.embeddingDimPerCore);
     tilingParams.embeddingDimPerCore = std::min(tilingParams.embeddingDim, tilingParams.embeddingDimPerCore);
     tilingParams.blockDim = static_cast<uint32_t>(CeilDiv(tilingParams.embeddingDim, tilingParams.embeddingDimPerCore));
-    tilingParams.embeddingDimLastCore = \
-        tilingParams.embeddingDim - (tilingParams.blockDim - 1) * tilingParams.embeddingDimPerCore;
+    tilingParams.embeddingDimLastCore = tilingParams.embeddingDim -
+                                        (tilingParams.blockDim - 1) * tilingParams.embeddingDimPerCore;
 
     uint64_t totalOutputNum = tilingParams.numWeights * tilingParams.embeddingDim;
     uint64_t clearBaseBlock = MIN_CLEAR_BLOCK_SIZE / tilingParams.gradDtypeSize;
@@ -626,11 +624,13 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
 
-    size_t usrSize = (tilingParams.isFullLoad == false) ? tilingParams.numWeights * tilingParams.indicesDtypeSize + \
-                     tilingParams.numWeights * tilingParams.embeddingDim * sizeof(float) : 0;
-    size_t *workspace = context->GetWorkspaceSizes(1);
+    size_t usrSize = (tilingParams.isFullLoad == false) ?
+                         tilingParams.numWeights * tilingParams.indicesDtypeSize +
+                             tilingParams.numWeights * tilingParams.embeddingDim * sizeof(float) :
+                         0;
+    size_t* workspace = context->GetWorkspaceSizes(1);
     workspace[0] = usrSize + ASCENDC_TOOLS_WORKSPACE;
     OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradSimd is end");
     return ge::GRAPH_SUCCESS;
 }
-}  // namespace optiling
+} // namespace optiling

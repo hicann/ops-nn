@@ -15,51 +15,52 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class DeformableConv2d : public OpDef {
-    public:
-        explicit DeformableConv2d(const char* name) : OpDef(name) {
-            this->Input("x")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("weight")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("offset")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("bias")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+class DeformableConv2d : public OpDef {
+public:
+    explicit DeformableConv2d(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("weight")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("offset")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-            this->Output("out")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("deform_out")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("out")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("deform_out")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-            this->Attr("kernel_size").AttrType(REQUIRED).ListInt();
-            this->Attr("stride").AttrType(REQUIRED).ListInt();
-            this->Attr("padding").AttrType(REQUIRED).ListInt();
-            this->Attr("dilation").AttrType(OPTIONAL).ListInt({1,1,1,1});
-            this->Attr("groups").AttrType(OPTIONAL).Int(1);
-            this->Attr("deformable_groups").AttrType(OPTIONAL).Int(1);
-            this->Attr("modulated").AttrType(OPTIONAL).Bool(true);
-            this->AICore().AddConfig("ascend910b");
-            this->AICore().AddConfig("ascend910_93");
-        }
-    };
-    OP_ADD(DeformableConv2d);
-}
+        this->Attr("kernel_size").AttrType(REQUIRED).ListInt();
+        this->Attr("stride").AttrType(REQUIRED).ListInt();
+        this->Attr("padding").AttrType(REQUIRED).ListInt();
+        this->Attr("dilation").AttrType(OPTIONAL).ListInt({1, 1, 1, 1});
+        this->Attr("groups").AttrType(OPTIONAL).Int(1);
+        this->Attr("deformable_groups").AttrType(OPTIONAL).Int(1);
+        this->Attr("modulated").AttrType(OPTIONAL).Bool(true);
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+    }
+};
+OP_ADD(DeformableConv2d);
+} // namespace ops

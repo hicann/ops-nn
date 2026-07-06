@@ -19,25 +19,25 @@
 
 namespace optiling {
 struct TilingDataStructIndexFillArch35 {
-  uint32_t coreNum = 0;
-  uint64_t N = 0; // x在axis上的维度值
-  uint64_t indicesNum = 0; // 索引tensor长度
-  uint64_t indicesProcessMode = 0; // 索引处理模式
-  uint64_t frontCoreNumTaskIndices = 0;
-  uint64_t tailCoreNumTaskIndices = 0;
-  uint64_t frontCoreDataTaskIndices = 0;
-  uint64_t tailCoreDataTaskIndices = 0;
-  uint64_t ubSize = 0;
-  uint64_t P = 0;
-  uint64_t Q = 0;
+    uint32_t coreNum = 0;
+    uint64_t N = 0;                  // x在axis上的维度值
+    uint64_t indicesNum = 0;         // 索引tensor长度
+    uint64_t indicesProcessMode = 0; // 索引处理模式
+    uint64_t frontCoreNumTaskIndices = 0;
+    uint64_t tailCoreNumTaskIndices = 0;
+    uint64_t frontCoreDataTaskIndices = 0;
+    uint64_t tailCoreDataTaskIndices = 0;
+    uint64_t ubSize = 0;
+    uint64_t P = 0;
+    uint64_t Q = 0;
 
-  uint32_t tilingKey = 0;
+    uint32_t tilingKey = 0;
 };
 
 struct IndexFillCompileInfoArch35 {
-  int32_t totalCoreNum = 0;
-  uint64_t ubSizePlatForm = 0;
-  uint32_t sysWorkspaceSize = 0;
+    int32_t totalCoreNum = 0;
+    uint64_t ubSizePlatForm = 0;
+    uint32_t sysWorkspaceSize = 0;
 };
-}
+} // namespace optiling
 #endif // INDEX_FILL_TILING_ARCH35_H

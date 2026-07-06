@@ -31,11 +31,9 @@ constexpr int32_t SINGLE_CONST_32 = 32;
 template <typename Tfm, typename Tweight>
 class LayerNormV4SingleRead {
 public:
-    __aicore__ inline LayerNormV4SingleRead()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const LayerNormV4TilingDataSingleRead* __restrict tilingData)
+    __aicore__ inline LayerNormV4SingleRead() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const LayerNormV4TilingDataSingleRead* __restrict tilingData)
     {
         // load tiling data
         colSize = tilingData->colSize;
@@ -141,9 +139,8 @@ private:
             dataCopyParams.srcStride = 0;
             dataCopyParams.dstStride = 0;
             padParams.isPad = false;
-            DataCopyPad(
-                xLocal.ReinterpretCast<Tfm>()[(sizeof(Tfm) == SINGLE_CONST_TWO) * tileLength], xGm[currentBlockOffset], dataCopyParams,
-                padParams);
+            DataCopyPad(xLocal.ReinterpretCast<Tfm>()[(sizeof(Tfm) == SINGLE_CONST_TWO) * tileLength],
+                        xGm[currentBlockOffset], dataCopyParams, padParams);
         }
         inQueueX.EnQue(xLocal);
         xLocal = inQueueX.DeQue<float>();
@@ -213,9 +210,8 @@ private:
                 event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
                 SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
                 WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-                DataCopyPad(
-                    xLocal.ReinterpretCast<Tweight>()[(sizeof(Tweight) == SINGLE_CONST_TWO) * rowAlign], gammaGm, dataCopyParams,
-                    padParams);
+                DataCopyPad(xLocal.ReinterpretCast<Tweight>()[(sizeof(Tweight) == SINGLE_CONST_TWO) * rowAlign],
+                            gammaGm, dataCopyParams, padParams);
             }
 
             // the 1st row has been processed, load gamma to the 1st row
@@ -224,8 +220,9 @@ private:
                 SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
                 WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
                 DataCopyPad(
-                    xLocal.ReinterpretCast<Tweight>()[(sizeof(Tweight) == SINGLE_CONST_TWO) * SINGLE_CONST_TWO * rowAlign + rowAlign], betaGm,
-                    dataCopyParams, padParams);
+                    xLocal.ReinterpretCast<
+                        Tweight>()[(sizeof(Tweight) == SINGLE_CONST_TWO) * SINGLE_CONST_TWO * rowAlign + rowAlign],
+                    betaGm, dataCopyParams, padParams);
             }
 
             Muls(yLocal[currentRowOffset], yLocal[currentRowOffset], rstdValue, rowSize);
@@ -242,7 +239,8 @@ private:
                 event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
                 SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
                 WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-                Cast(xLocal[rowAlign], xLocal.ReinterpretCast<Tweight>()[rowAlign * SINGLE_CONST_THREE], RoundMode::CAST_NONE, rowAlign);
+                Cast(xLocal[rowAlign], xLocal.ReinterpretCast<Tweight>()[rowAlign * SINGLE_CONST_THREE],
+                     RoundMode::CAST_NONE, rowAlign);
             }
         }
 
@@ -281,9 +279,8 @@ private:
             event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
             SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
             WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-            DataCopyPad(
-                xLocal.ReinterpretCast<Tweight>()[(sizeof(Tweight) == SINGLE_CONST_TWO) * rowAlign], betaGm, dataCopyParams,
-                padParams);
+            DataCopyPad(xLocal.ReinterpretCast<Tweight>()[(sizeof(Tweight) == SINGLE_CONST_TWO) * rowAlign], betaGm,
+                        dataCopyParams, padParams);
             event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);

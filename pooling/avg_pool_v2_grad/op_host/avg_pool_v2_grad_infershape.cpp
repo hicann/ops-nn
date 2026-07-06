@@ -60,9 +60,8 @@ inline bool IsConstTensor(const gert::Tensor* inputTensor)
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
         output_shape->SetDim(i, UNKNOWN_DIM_VALUE);
@@ -83,8 +82,8 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     auto gradOriFormat = gradDesc->GetOriginFormat();
 
     if (gradOriFormat != FORMAT_ND && gradOriFormat != FORMAT_NCHW && gradOriFormat != FORMAT_NHWC) {
-        OP_LOGE_FOR_INVALID_FORMAT(
-            context->GetNodeName(), "grad", Ops::Base::ToString(gradOriFormat).c_str(), "ND, NCHW and NHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "grad", Ops::Base::ToString(gradOriFormat).c_str(),
+                                   "ND, NCHW and NHWC");
         return GRAPH_FAILED;
     }
 
@@ -113,24 +112,24 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
 
     if (dataFormatStr == "NCHW") {
         if (ksize_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(),
+                                      "1");
             return GRAPH_FAILED;
         }
         if (ksize_data[IDX_ONE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "ksize[1]", std::to_string(ksize_data[IDX_ONE]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[1]", std::to_string(ksize_data[IDX_ONE]).c_str(),
+                                      "1");
             return GRAPH_FAILED;
         }
     } else if (dataFormatStr == "NHWC") {
         if (ksize_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(),
+                                      "1");
             return GRAPH_FAILED;
         }
         if (ksize_data[IDX_THREE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "ksize[3]", std::to_string(ksize_data[IDX_THREE]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[3]", std::to_string(ksize_data[IDX_THREE]).c_str(),
+                                      "1");
             return GRAPH_FAILED;
         }
     }
@@ -138,32 +137,32 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_STRIDE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(), "4");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     "4");
         return GRAPH_FAILED;
     }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     if (dataFormatStr == "NCHW") {
         if (strides_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "strides[0]", std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[0]",
+                                      std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
             return GRAPH_FAILED;
         }
         if (strides_data[IDX_ONE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "strides[1]", std::to_string(strides_data[IDX_ONE]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[1]",
+                                      std::to_string(strides_data[IDX_ONE]).c_str(), "1");
             return GRAPH_FAILED;
         }
     } else if (dataFormatStr == "NHWC") {
         if (strides_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "strides[0]", std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[0]",
+                                      std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
             return GRAPH_FAILED;
         }
         if (strides_data[IDX_THREE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(
-                context->GetNodeName(), "strides[3]", std::to_string(strides_data[IDX_THREE]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[3]",
+                                      std::to_string(strides_data[IDX_THREE]).c_str(), "1");
             return GRAPH_FAILED;
         }
     }
@@ -173,8 +172,8 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     size_t inputDimNum = static_cast<size_t>(inputShape0->GetOriginShape().GetShapeSize());
     const int32_t* shapeValue = inputShape0->GetData<int32_t>();
     if (inputDimNum != CHW_DIMS && inputDimNum != NCHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context->GetNodeName(), "input", std::to_string(inputDimNum).c_str(), "input dim num should be 3 or 4");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "input", std::to_string(inputDimNum).c_str(),
+                                                 "input dim num should be 3 or 4");
         return GRAPH_FAILED;
     }
     const gert::Shape* inputShape1 = context->GetInputShape(IDX_ORIGIN_INPUT);

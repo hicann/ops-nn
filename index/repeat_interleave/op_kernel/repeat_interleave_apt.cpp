@@ -24,8 +24,8 @@ using namespace RepeatInterleave;
 #define BATCH_TILING_SPLIT_REPEATS_SHAPE_INT32 201
 #define BATCH_TILING_SPLIT_REPEATS_SHAPE_INT64 202
 
-extern "C" __global__ __aicore__ void repeat_interleave(
-    GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void repeat_interleave(GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
+                                                        GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

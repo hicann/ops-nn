@@ -23,15 +23,9 @@ using namespace std;
 
 class swish_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sign_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "sign_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "sign_test TeastDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "sign_test TeastDown" << endl; }
 };
 
 TEST_F(swish_test, test_swish_dataType_error)

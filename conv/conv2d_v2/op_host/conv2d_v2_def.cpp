@@ -18,49 +18,41 @@
 
 namespace ops {
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2FmapDataType = {
-    {"ascend950", {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8,
-                      ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}
-};
+    {"ascend950",
+     {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2WeightDataType = {
-    {"ascend950", {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8,
-                      ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}
-};
+    {"ascend950",
+     {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2BiasDataType = {
-    {"ascend950", {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
-                      ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}
-};
+    {"ascend950",
+     {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2OffsetWDataType = {
-    {"ascend950", {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-                      ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}
-};
+    {"ascend950", {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2OutputDataType = {
-    {"ascend950", {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8,
-                      ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}
-};
+    {"ascend950",
+     {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2FmapFormat = {
-    {"ascend950", {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                      ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC}}
-};
+    {"ascend950",
+     {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
+      ge::FORMAT_NHWC}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2WeightFormat = {
-    {"ascend950", {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                      ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN}}
-};
+    {"ascend950",
+     {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
+      ge::FORMAT_HWCN}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2BiasFormat = {
-    {"ascend950", {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}
-};
+    {"ascend950",
+     {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2OffsetWFormat = {
-    {"ascend950", {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}
-};
+    {"ascend950",
+     {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2OutputFormat = {
-    {"ascend950", {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                      ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC}}
-};
+    {"ascend950",
+     {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
+      ge::FORMAT_NHWC}}};
 
 class Conv2DV2 : public OpDef {
 public:
-    explicit Conv2DV2(const char *name) : OpDef(name)
+    explicit Conv2DV2(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -99,15 +91,15 @@ public:
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
-                        .DynamicFormatFlag(true)
-                        .DynamicRankSupportFlag(true)
-                        .DynamicShapeSupportFlag(true)
-                        .NeedCheckSupportFlag(false)
-                        .PrecisionReduceFlag(true)
-                        .ExtendCfgInfo("opFile.value", "conv2d_v2")
-                        .ExtendCfgInfo("opInterface.value", "conv2dv2")
-                        .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
-                        .ExtendCfgInfo("jitCompile.flag", "false");
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "conv2d_v2")
+            .ExtendCfgInfo("opInterface.value", "conv2dv2")
+            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
+            .ExtendCfgInfo("jitCompile.flag", "false");
 
         SetAscendConfig(aicoreConfig, "ascend950");
     }
@@ -150,4 +142,4 @@ private:
 };
 
 OP_ADD(Conv2DV2);
-}
+} // namespace ops

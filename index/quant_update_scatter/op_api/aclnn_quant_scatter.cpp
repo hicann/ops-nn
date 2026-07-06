@@ -41,173 +41,184 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_QUANT_ZERO_POINT
                                                                                      DataType::DT_INT32};
 
 static inline bool CheckNotNull(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
-                                const aclTensor* quantScales) {
-  OP_CHECK_NULL(selfRef, return false);
-  OP_CHECK_NULL(indices, return false);
-  OP_CHECK_NULL(updates, return false);
-  OP_CHECK_NULL(quantScales, return false);
-  return true;
+                                const aclTensor* quantScales)
+{
+    OP_CHECK_NULL(selfRef, return false);
+    OP_CHECK_NULL(indices, return false);
+    OP_CHECK_NULL(updates, return false);
+    OP_CHECK_NULL(quantScales, return false);
+    return true;
 }
 
 static inline bool CheckDtypeCombineValid(const aclTensor* updates, const aclTensor* quantScales,
-                                          const aclTensor* quantZeroPoints) {
-  DataType updatesDtype = updates->GetDataType();
-  DataType quantScalesDtype = quantScales->GetDataType();
+                                          const aclTensor* quantZeroPoints)
+{
+    DataType updatesDtype = updates->GetDataType();
+    DataType quantScalesDtype = quantScales->GetDataType();
 
-  if (quantZeroPoints) {
-    DataType quantZeroPointsDtype = quantZeroPoints->GetDataType();
-    if (updatesDtype == DataType::DT_FLOAT16 && quantScalesDtype == DataType::DT_FLOAT &&
-        quantZeroPointsDtype == DataType::DT_INT32) {
-      return true;
-    } else if (updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16 &&
-               quantZeroPointsDtype == DataType::DT_BF16) {
-      return true;
+    if (quantZeroPoints) {
+        DataType quantZeroPointsDtype = quantZeroPoints->GetDataType();
+        if (updatesDtype == DataType::DT_FLOAT16 && quantScalesDtype == DataType::DT_FLOAT &&
+            quantZeroPointsDtype == DataType::DT_INT32) {
+            return true;
+        } else if (updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16 &&
+                   quantZeroPointsDtype == DataType::DT_BF16) {
+            return true;
+        } else {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "(updates,quantScales,quantZeroPoints) Dtype should be (float16, float, int32) or (bfloat16, bfloat16, "
+                "bfloat16), but is (%s, %s, %s).",
+                op::ToString(updates->GetDataType()).GetString(), op::ToString(quantScales->GetDataType()).GetString(),
+                op::ToString(quantZeroPoints->GetDataType()).GetString());
+            return false;
+        }
     } else {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-              "(updates,quantScales,quantZeroPoints) Dtype should be (float16, float, int32) or (bfloat16, bfloat16, "
-              "bfloat16), but is (%s, %s, %s).",
-              op::ToString(updates->GetDataType()).GetString(), op::ToString(quantScales->GetDataType()).GetString(),
-              op::ToString(quantZeroPoints->GetDataType()).GetString());
-      return false;
+        if (updatesDtype == DataType::DT_FLOAT16 && quantScalesDtype == DataType::DT_FLOAT) {
+            return true;
+        } else if (updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16) {
+            return true;
+        } else {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "(updates,quantScales) Dtype should be (float16, float) or (bfloat16, bfloat16), but is (%s, %s).",
+                    op::ToString(updates->GetDataType()).GetString(),
+                    op::ToString(quantScales->GetDataType()).GetString());
+            return false;
+        }
     }
-  } else {
-    if (updatesDtype == DataType::DT_FLOAT16 && quantScalesDtype == DataType::DT_FLOAT) {
-      return true;
-    } else if (updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16) {
-      return true;
-    } else {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-              "(updates,quantScales) Dtype should be (float16, float) or (bfloat16, bfloat16), but is (%s, %s).",
-              op::ToString(updates->GetDataType()).GetString(), op::ToString(quantScales->GetDataType()).GetString());
-      return false;
-    }
-  }
 }
 
 static inline bool CheckDtypeValid(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
-                                   const aclTensor* quantScales, const aclTensor* quantZeroPoints) {
-  OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST_SELFREF, return false);
-  OP_CHECK_DTYPE_NOT_SUPPORT(indices, DTYPE_SUPPORT_LIST_INDICES, return false);
-  OP_CHECK_DTYPE_NOT_SUPPORT(updates, DTYPE_SUPPORT_LIST_UPDATES, return false);
-  OP_CHECK_DTYPE_NOT_SUPPORT(quantScales, DTYPE_SUPPORT_LIST_QUANT_SCALES, return false);
+                                   const aclTensor* quantScales, const aclTensor* quantZeroPoints)
+{
+    OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST_SELFREF, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(indices, DTYPE_SUPPORT_LIST_INDICES, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(updates, DTYPE_SUPPORT_LIST_UPDATES, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(quantScales, DTYPE_SUPPORT_LIST_QUANT_SCALES, return false);
 
-  if (quantZeroPoints) {
-    OP_CHECK_DTYPE_NOT_SUPPORT(quantZeroPoints, DTYPE_SUPPORT_LIST_QUANT_ZERO_POINTS, return false);
-  }
+    if (quantZeroPoints) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(quantZeroPoints, DTYPE_SUPPORT_LIST_QUANT_ZERO_POINTS, return false);
+    }
 
-  if (!CheckDtypeCombineValid(updates, quantScales, quantZeroPoints)) {
-    return false;
-  }
-  return true;
+    if (!CheckDtypeCombineValid(updates, quantScales, quantZeroPoints)) {
+        return false;
+    }
+    return true;
 }
 
-static inline bool CheckShape(const aclTensor* selfRef, const aclTensor* updates) {
-  if (selfRef->GetViewShape().GetDimNum() != updates->GetViewShape().GetDimNum()) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dimension of selfRef and updates should equal");
-    return false;
-  }
-  return true;
+static inline bool CheckShape(const aclTensor* selfRef, const aclTensor* updates)
+{
+    if (selfRef->GetViewShape().GetDimNum() != updates->GetViewShape().GetDimNum()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dimension of selfRef and updates should equal");
+        return false;
+    }
+    return true;
 }
 
 static void CheckFormatNZ(const aclTensor* x)
 {
-    if (x == nullptr) { return; }
+    if (x == nullptr) {
+        return;
+    }
     op::Format format = x->GetStorageFormat();
     if (format == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGW("Format of input gets [%s], this format may lead to precision failure",
-        op::ToString(format).GetString());
+                op::ToString(format).GetString());
     }
 }
 
 static aclnnStatus CheckParams(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
-                               const aclTensor* quantScales, const aclTensor* quantZeroPoints) {
-  // 1. 检查参数是否为空指针
-  CHECK_RET(CheckNotNull(selfRef, indices, updates, quantScales), ACLNN_ERR_PARAM_NULLPTR);
+                               const aclTensor* quantScales, const aclTensor* quantZeroPoints)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(selfRef, indices, updates, quantScales), ACLNN_ERR_PARAM_NULLPTR);
 
-  // 2. 检查参数的数据类型是否符合预期
-  CHECK_RET(CheckDtypeValid(selfRef, indices, updates, quantScales, quantZeroPoints), ACLNN_ERR_PARAM_INVALID);
+    // 2. 检查参数的数据类型是否符合预期
+    CHECK_RET(CheckDtypeValid(selfRef, indices, updates, quantScales, quantZeroPoints), ACLNN_ERR_PARAM_INVALID);
 
-  // 3. 检查输入tensor的shape
-  CHECK_RET(CheckShape(selfRef, updates), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查输入tensor的shape
+    CHECK_RET(CheckShape(selfRef, updates), ACLNN_ERR_PARAM_INVALID);
 
-  // 4. 检查输入是否为NZ，若为NZ提示warning
-  CheckFormatNZ(selfRef);
-  CheckFormatNZ(indices);
-  CheckFormatNZ(updates);
-  CheckFormatNZ(quantScales);
-  CheckFormatNZ(quantZeroPoints);
+    // 4. 检查输入是否为NZ，若为NZ提示warning
+    CheckFormatNZ(selfRef);
+    CheckFormatNZ(indices);
+    CheckFormatNZ(updates);
+    CheckFormatNZ(quantScales);
+    CheckFormatNZ(quantZeroPoints);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
 aclnnStatus aclnnInplaceQuantScatterGetWorkspaceSize(aclTensor* selfRef, const aclTensor* indices,
                                                      const aclTensor* updates, const aclTensor* quantScales,
                                                      const aclTensor* quantZeroPoints, int64_t axis, int64_t quantAxis,
                                                      int64_t reduction, uint64_t* workspaceSize,
-                                                     aclOpExecutor** executor) {
-  L2_DFX_PHASE_1(aclnnInplaceQuantScatter,
-                 DFX_IN(selfRef, indices, updates, quantScales, quantZeroPoints, axis, quantAxis, reduction),
-                 DFX_OUT(selfRef));
+                                                     aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnInplaceQuantScatter,
+                   DFX_IN(selfRef, indices, updates, quantScales, quantZeroPoints, axis, quantAxis, reduction),
+                   DFX_OUT(selfRef));
 
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  // 参数检查
-  auto ret = CheckParams(selfRef, indices, updates, quantScales, quantZeroPoints);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // 参数检查
+    auto ret = CheckParams(selfRef, indices, updates, quantScales, quantZeroPoints);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  if (selfRef->IsEmpty() || indices->IsEmpty() || updates->IsEmpty() || quantScales->IsEmpty()) {
-    *workspaceSize = 0;
+    if (selfRef->IsEmpty() || indices->IsEmpty() || updates->IsEmpty() || quantScales->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 将输入selfRef转换成连续的tensor
+    auto selfRefContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
+    CHECK_RET(selfRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将输入indices转换成连续的tensor
+    auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
+    CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将输入updates转换成连续的tensor
+    auto updatesContiguous = l0op::Contiguous(updates, uniqueExecutor.get());
+    CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将输入quantScales转换成连续的tensor
+    auto quantScalesContiguous = l0op::Contiguous(quantScales, uniqueExecutor.get());
+    CHECK_RET(quantScalesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const aclTensor* quantZeroPointsContiguous = nullptr;
+    if (quantZeroPoints) {
+        // 将输入quantZeroPoints转换成连续的tensor
+        quantZeroPointsContiguous = l0op::Contiguous(quantZeroPoints, uniqueExecutor.get());
+        CHECK_RET(quantZeroPointsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    const std::string reduce = "update";
+
+    // 执行L0算子
+    auto quantUpdateScatterResult = l0op::QuantUpdateScatter(selfRefContiguous, indicesContiguous, updatesContiguous,
+                                                             quantScalesContiguous, quantZeroPointsContiguous, reduce,
+                                                             axis, quantAxis, uniqueExecutor.get());
+    CHECK_RET(quantUpdateScatterResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将计算结果拷贝到输出data上
+    auto viewCopyResult = l0op::ViewCopy(quantUpdateScatterResult, selfRef, uniqueExecutor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
-  }
-
-  // 将输入selfRef转换成连续的tensor
-  auto selfRefContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
-  CHECK_RET(selfRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入indices转换成连续的tensor
-  auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
-  CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入updates转换成连续的tensor
-  auto updatesContiguous = l0op::Contiguous(updates, uniqueExecutor.get());
-  CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入quantScales转换成连续的tensor
-  auto quantScalesContiguous = l0op::Contiguous(quantScales, uniqueExecutor.get());
-  CHECK_RET(quantScalesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  const aclTensor* quantZeroPointsContiguous = nullptr;
-  if (quantZeroPoints) {
-    // 将输入quantZeroPoints转换成连续的tensor
-    quantZeroPointsContiguous = l0op::Contiguous(quantZeroPoints, uniqueExecutor.get());
-    CHECK_RET(quantZeroPointsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-
-  const std::string reduce = "update";
-
-  // 执行L0算子
-  auto quantUpdateScatterResult =
-      l0op::QuantUpdateScatter(selfRefContiguous, indicesContiguous, updatesContiguous, quantScalesContiguous,
-                               quantZeroPointsContiguous, reduce, axis, quantAxis, uniqueExecutor.get());
-  CHECK_RET(quantUpdateScatterResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将计算结果拷贝到输出data上
-  auto viewCopyResult = l0op::ViewCopy(quantUpdateScatterResult, selfRef, uniqueExecutor.get());
-  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 获取计算过程中需要使用的workspace大小
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
 }
 
 aclnnStatus aclnnInplaceQuantScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                     aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnInplaceQuantScatter);
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+                                     aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnInplaceQuantScatter);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

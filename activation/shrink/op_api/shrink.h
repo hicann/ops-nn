@@ -11,7 +11,7 @@
 #define PTA_NPU_OP_API_INC_LEVEL0_OP_SHRINK_OP_H_
 
 #include "opdev/op_executor.h"
-namespace l0op{
+namespace l0op {
 const aclTensor* Shrink(const aclTensor* input, float lambd, float bias, aclOpExecutor* executor);
 }
 #endif

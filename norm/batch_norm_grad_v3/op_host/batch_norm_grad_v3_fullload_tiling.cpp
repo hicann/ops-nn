@@ -26,8 +26,7 @@ using namespace Ops::NN::OpTiling;
 
 class BatchNormGradV3FullLoadTiling : public BatchNormGradV3Base {
 public:
-    explicit BatchNormGradV3FullLoadTiling(gert::TilingContext* context) : BatchNormGradV3Base(context)
-    {}
+    explicit BatchNormGradV3FullLoadTiling(gert::TilingContext* context) : BatchNormGradV3Base(context) {}
     ~BatchNormGradV3FullLoadTiling() override = default;
 
 protected:
@@ -45,10 +44,9 @@ protected:
             return false;
         }
 
-        OP_LOGD(
-            context_->GetNodeName(),
-            "BatchNormGradV3FullLoadTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
-            fusedALen_, fusedB1Len_);
+        OP_LOGD(context_->GetNodeName(),
+                "BatchNormGradV3FullLoadTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
+                fusedALen_, fusedB1Len_);
         return true;
     }
 
@@ -64,11 +62,12 @@ private:
 
 ge::graphStatus BatchNormGradV3FullLoadTiling::DoOpTiling()
 {
-    uint64_t eachCoreChannel = std::ceil(static_cast<float>(fusedALen_) / aicoreParams_.numBlocks); // 每个核处理的channel个数
+    uint64_t eachCoreChannel = std::ceil(static_cast<float>(fusedALen_) /
+                                         aicoreParams_.numBlocks); // 每个核处理的channel个数
     if (eachCoreChannel == 0) {
         return ge::GRAPH_FAILED;
     }
-    needCoreNum = std::ceil(static_cast<float>(fusedALen_) / eachCoreChannel);                    // 需要总核数
+    needCoreNum = std::ceil(static_cast<float>(fusedALen_) / eachCoreChannel);       // 需要总核数
     uint64_t eachCoreChannelTail = fusedALen_ - (needCoreNum - 1) * eachCoreChannel; // 尾块
 
     uint64_t ubTensorRelateChannelBlock = 0;

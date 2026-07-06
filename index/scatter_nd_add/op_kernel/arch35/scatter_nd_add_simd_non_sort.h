@@ -28,8 +28,8 @@ using namespace AscendC;
 template <typename T, typename U>
 class ScatterNdAddSimdNoSort : public ScatterNdAddBase<T, U> {
 public:
-    __aicore__ inline ScatterNdAddSimdNoSort(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline ScatterNdAddSimdNoSort(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void CopyInVar(LocalTensor<T>& dstTensor, int64_t varOffset, int64_t rowLen, int64_t colLen);
     __aicore__ inline void CopyOutVar(LocalTensor<T>& dstTensor, int64_t varOffset, int64_t rowLen, int64_t colLen);
@@ -52,11 +52,11 @@ private:
 
     constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};  // bf16 --float
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN}; // bf16 --float
 
     constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};  // float---bf16 
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT}; // float---bf16
 
     int64_t curCoreIndexCount_{0};
     uint64_t strideList[MAX_RANK_COUNT];
@@ -64,14 +64,13 @@ private:
 };
 
 template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::Init(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                          GM_ADDR workspace)
 {
-    varGm_.SetGlobalBuffer((__gm__ T *)(var));
-    this->indicesGm_.SetGlobalBuffer((__gm__ U *)(indices));
-    this->updatesGm_.SetGlobalBuffer((__gm__ T *)(updates));
-    yGm_.SetGlobalBuffer((__gm__ T *)(y));
-
+    varGm_.SetGlobalBuffer((__gm__ T*)(var));
+    this->indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
+    this->updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
+    yGm_.SetGlobalBuffer((__gm__ T*)(y));
 
     this->indicesFactor_ = tilingData_.indicesFactor;
     this->afterAxis_ = tilingData_.afterAxis;
@@ -79,9 +78,9 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::Init(
     this->indexRankSize_ = tilingData_.indexRankSize;
     this->eachCoreAfterAxisCount_ = tilingData_.eachCoreAfterAxisCount;
 
-    
     pipe_.InitBuffer(this->indicesBuf_, ROUND_UP32(tilingData_.indicesFactor * tilingData_.indexRankSize * sizeof(U)));
-    pipe_.InitBuffer(this->dataQueue_, 1, tilingData_.indicesFactor * ROUND_UP32( tilingData_.afterAxisFactor * sizeof(T)));
+    pipe_.InitBuffer(this->dataQueue_, 1,
+                     tilingData_.indicesFactor * ROUND_UP32(tilingData_.afterAxisFactor * sizeof(T)));
     pipe_.InitBuffer(varBuf_, ROUND_UP32(tilingData_.varInAxis * tilingData_.afterAxisFactor * sizeof(T)));
     // 计算完偏移存储indice
     pipe_.InitBuffer(this->outOfstBuf_, ROUND_UP32(tilingData_.indicesFactor * sizeof(U)));
@@ -91,61 +90,57 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::Init(
                                                                                  tilingData_.tailCoreIndexCount);
 }
 
-
 template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::CopyInVar(LocalTensor<T>& dstTensor, int64_t varOffset, int64_t rowLen, int64_t colLen)
+__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::CopyInVar(LocalTensor<T>& dstTensor, int64_t varOffset,
+                                                               int64_t rowLen, int64_t colLen)
 {
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
-                                        static_cast<uint32_t>(colLen * sizeof(T)),
-                                        static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(T)),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)),
+                                    static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(T)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<T> updatePadParams = {false, 0, 0, 0};
     DataCopyPad(dstTensor, yGm_[varOffset], copyParams, updatePadParams);
 }
 
-
 template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::CopyOutVar(LocalTensor<T>& dstTensor, int64_t varOffset, int64_t rowLen, int64_t colLen)
+__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::CopyOutVar(LocalTensor<T>& dstTensor, int64_t varOffset,
+                                                                int64_t rowLen, int64_t colLen)
 {
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
-                                        static_cast<uint32_t>(colLen * sizeof(T)),
-                                        static_cast<uint32_t>(0),
-                                        static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(T)),
-                                        static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams = {
+        static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)), static_cast<uint32_t>(0),
+        static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(T)), static_cast<uint32_t>(0)};
     DataCopyPad(yGm_[varOffset], dstTensor, copyParams);
 }
 
 template <typename T, typename U>
-__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ComputeWithCast(LocalTensor<T> yLocal, LocalTensor<T> updatesLocal, int64_t dataLen)
+__aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ComputeWithCast(LocalTensor<T> yLocal, LocalTensor<T> updatesLocal,
+                                                                     int64_t dataLen)
 {
-        __local_mem__ T* yLocalAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
-        __local_mem__ T* updatesLocalAddr = (__local_mem__ T*)updatesLocal.GetPhyAddr();
-        
-        int64_t vfLen = platform::GetVRegSize() / sizeof(float);
-        int64_t loopSize = ops::CeilDiv(static_cast<int64_t>(dataLen), vfLen);
-        uint32_t size = static_cast<uint32_t>(dataLen);
+    __local_mem__ T* yLocalAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
+    __local_mem__ T* updatesLocalAddr = (__local_mem__ T*)updatesLocal.GetPhyAddr();
 
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<T> vreg_x1;
-            MicroAPI::RegTensor<T> vreg_x2;
-            MicroAPI::RegTensor<float> vreg0;
-            MicroAPI::RegTensor<float> vreg1;
-            MicroAPI::RegTensor<float> sumReg;
-            MicroAPI::RegTensor<T> vregy;
-            MicroAPI::MaskReg maskReg;
+    int64_t vfLen = platform::GetVRegSize() / sizeof(float);
+    int64_t loopSize = ops::CeilDiv(static_cast<int64_t>(dataLen), vfLen);
+    uint32_t size = static_cast<uint32_t>(dataLen);
 
-            for (uint16_t i = 0; i < static_cast<uint16_t>(loopSize); i++) {
-                maskReg = MicroAPI::UpdateMask<float>(size);
-                uint32_t offset = i * vfLen;
-                ops::LoadOneTensorForDtypeT<T>(yLocalAddr, vreg0, maskReg, offset);
-                ops::LoadOneTensorForDtypeT<T>(updatesLocalAddr, vreg1, maskReg, offset);
-                MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    sumReg, vreg0, vreg1, maskReg);
-                ops::StoreOneTensorForDtypeT<T>(yLocalAddr, sumReg, maskReg, offset);
-            }
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<T> vreg_x1;
+        MicroAPI::RegTensor<T> vreg_x2;
+        MicroAPI::RegTensor<float> vreg0;
+        MicroAPI::RegTensor<float> vreg1;
+        MicroAPI::RegTensor<float> sumReg;
+        MicroAPI::RegTensor<T> vregy;
+        MicroAPI::MaskReg maskReg;
+
+        for (uint16_t i = 0; i < static_cast<uint16_t>(loopSize); i++) {
+            maskReg = MicroAPI::UpdateMask<float>(size);
+            uint32_t offset = i * vfLen;
+            ops::LoadOneTensorForDtypeT<T>(yLocalAddr, vreg0, maskReg, offset);
+            ops::LoadOneTensorForDtypeT<T>(updatesLocalAddr, vreg1, maskReg, offset);
+            MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(sumReg, vreg0, vreg1, maskReg);
+            ops::StoreOneTensorForDtypeT<T>(yLocalAddr, sumReg, maskReg, offset);
         }
+    }
 }
 
 template <typename T, typename U>
@@ -154,12 +149,12 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ProcessSplitAfter()
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
     }
-     
-    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize
-                                                                              : tilingData_.updateLoopSize;
+
+    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize :
+                                                                                tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
-    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum
-                                                                                  : tilingData_.updateTailNum;
+    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum :
+                                                                                    tilingData_.updateTailNum;
     int64_t rowMainDataLen = tilingData_.indicesFactor;
     int64_t rowTailDataLen = tilingData_.indiceTailNum;
     int64_t rowLoopNum = tilingData_.indicesLoopSize;
@@ -167,9 +162,9 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ProcessSplitAfter()
     LocalTensor<T> yLocal = varBuf_.template Get<T>();
     for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
         int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
-        int64_t varOffset =  GetBlockIdx() * this->eachCoreAfterAxisCount_ + colIdx * colDataLen;
+        int64_t varOffset = GetBlockIdx() * this->eachCoreAfterAxisCount_ + colIdx * colDataLen;
 
-        int64_t colAlignBlock= ops::Aligned(colDataLen, colAlignPerBlock_);      
+        int64_t colAlignBlock = ops::Aligned(colDataLen, colAlignPerBlock_);
         CopyInVar(yLocal, varOffset, tilingData_.varInAxis, colDataLen);
 
         for (int64_t rowIdx = 0; rowIdx < rowLoopNum; rowIdx++) {
@@ -177,14 +172,14 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ProcessSplitAfter()
             this->ProcessAfterSingleNonSort(rowIdx, colIdx, rowDataLen, colDataLen);
             LocalTensor<T> updatesLocal = this->dataQueue_.template DeQue<T>();
             LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
-            
+
             event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
             SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
             WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
 
             if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
                 //类型提升
-                for (int64_t i = 0; i < rowDataLen; i++){
+                for (int64_t i = 0; i < rowDataLen; i++) {
                     int64_t yOffset = outOfstLocal(i) * colAlignBlock;
                     int64_t updatesOffset = i * colAlignBlock;
                     LocalTensor<T> varRow = yLocal[yOffset];
@@ -192,7 +187,7 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ProcessSplitAfter()
                     ComputeWithCast(varRow, updatesRow, colDataLen);
                 }
             } else {
-                for (int64_t i = 0; i < rowDataLen; i++){
+                for (int64_t i = 0; i < rowDataLen; i++) {
                     int64_t yOffset = outOfstLocal(i) * colAlignBlock;
                     int64_t updatesOffset = i * colAlignBlock;
                     Add(yLocal[yOffset], yLocal[yOffset], updatesLocal[updatesOffset], colDataLen);
@@ -225,5 +220,5 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::Process()
     }
     ProcessSplitAfter();
 }
-}  // namespace ScatterNdAdd
-#endif  // SCATTER_ND_ADD_SIMD_H
+} // namespace ScatterNdAdd
+#endif // SCATTER_ND_ADD_SIMD_H

@@ -14,11 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *PReluGradReduce(const aclTensor *gradOutput,
-                                 const aclTensor *self,
-                                 const aclTensor *weight,
-                                 const aclTensor *update,
-                                 aclOpExecutor *executor);
-} // l0op
+const aclTensor* PReluGradReduce(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* weight,
+                                 const aclTensor* update, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_PRELU_GRAD_REDUCE_H_

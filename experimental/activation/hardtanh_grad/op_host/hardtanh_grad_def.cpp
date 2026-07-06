@@ -18,33 +18,29 @@
 
 namespace ops {
 class HardtanhGrad : public OpDef {
-    public:
-        explicit HardtanhGrad(const char* name) : OpDef(name)
-        {
-            this->Input("result")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("grad")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("y")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Attr("min_val")
-                .AttrType(REQUIRED)
-                .Float(-1.0);
-            this->Attr("max_val")
-                .AttrType(REQUIRED)
-                .Float(1.0);
-            this->AICore().AddConfig("ascend910b");
-        }
+public:
+    explicit HardtanhGrad(const char* name) : OpDef(name)
+    {
+        this->Input("result")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("grad")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("min_val").AttrType(REQUIRED).Float(-1.0);
+        this->Attr("max_val").AttrType(REQUIRED).Float(1.0);
+        this->AICore().AddConfig("ascend910b");
+    }
 };
 
 OP_ADD(HardtanhGrad);
-}  // namespace ops
+} // namespace ops

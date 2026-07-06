@@ -19,15 +19,9 @@
 
 class SyncBatchNormBackwardReduceInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardReduce Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SyncBatchNormBackwardReduce Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardReduce Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SyncBatchNormBackwardReduce Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(SyncBatchNormBackwardReduceInferShapeTest, SyncBatchNormBackwardReduce_infershape_case_0)

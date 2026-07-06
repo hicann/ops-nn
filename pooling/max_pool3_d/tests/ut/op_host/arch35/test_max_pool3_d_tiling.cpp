@@ -31,26 +31,23 @@ using namespace std;
 using namespace ge;
 
 class MaxPool3DTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "MaxPool3DTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "MaxPool3DTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "MaxPool3DTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "MaxPool3DTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-static string to_string(void* buf, size_t size) {
-  std::string result;
-  const T* data = reinterpret_cast<const T*>(buf);
-  size_t len = size / sizeof(T);
-  for (size_t i = 0; i < len; i++) {
-    result += std::to_string(data[i]);
-    result += " ";
-  }
-  return result;
+static string to_string(void* buf, size_t size)
+{
+    std::string result;
+    const T* data = reinterpret_cast<const T*>(buf);
+    size_t len = size / sizeof(T);
+    for (size_t i = 0; i < len; i++) {
+        result += std::to_string(data[i]);
+        result += " ";
+    }
+    return result;
 }
 
 static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, std::vector<int64_t> ksize,
@@ -161,9 +158,9 @@ TEST_F(MaxPool3DTiling, MaxPool3DTiling_TreeDim)
     std::string padding_mode = "CALCULATED";
     bool global_pooling = false;
     uint64_t except_tilingkey = 211110;
-    std::string expect =
-        "21 12 7 17 3 2 3 5 4 2 5 4 3 4 4 4 1 3 3 2 1 1 1 38 1 1 1 3 17 3 2 1 4 10608 16 0 1 0 2 2 0 0 0 0 ";
-    
+    std::string
+        expect = "21 12 7 17 3 2 3 5 4 2 5 4 3 4 4 4 1 3 3 2 1 1 1 38 1 1 1 3 17 3 2 1 4 10608 16 0 1 0 2 2 0 0 0 0 ";
+
     ExecuteTestCase(xShape, yShape, ksize, strides, padding_mode, pads, dilation, data_format, ceil_mode, dtype,
-                         except_tilingkey, expect);
+                    except_tilingkey, expect);
 }

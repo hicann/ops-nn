@@ -27,7 +27,7 @@
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) QuantBatchMatmulV4MsdTilingData{
+struct alignas(8) QuantBatchMatmulV4MsdTilingData {
     uint8_t coreNum;
     uint32_t vBaseM;
     uint32_t ubRestBytes;
@@ -43,7 +43,7 @@ struct alignas(8) QuantBatchMatmulV4MsdTilingData{
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) QuantBatchMatmulV4PerblockTilingData{
+struct alignas(8) QuantBatchMatmulV4PerblockTilingData {
     TCubeTiling matmulTiling;
     L2cacheTileParam tileL2cacheTiling;
     uint32_t groupSizeM;

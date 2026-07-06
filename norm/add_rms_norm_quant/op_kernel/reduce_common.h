@@ -25,10 +25,11 @@ constexpr int32_t INDEX_SIXTEEN = 16;
 constexpr int32_t INDEX_FOUR = 4;
 constexpr int32_t INDEX_EIGHT = 8;
 
-__aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
-    const uint32_t elemNum, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
-    const uint8_t repStride)
+__aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(const LocalTensor<float>& dstLocal,
+                                                           const LocalTensor<float>& srcLocal,
+                                                           const LocalTensor<float>& tmpLocal, const uint32_t elemNum,
+                                                           const uint32_t numLastDim, const uint32_t tailCount,
+                                                           const uint32_t repeat, const uint8_t repStride)
 {
     uint32_t elemIndex2 = 0;
     for (; elemIndex2 + ELEM_PER_REP_FP32 <= numLastDim; elemIndex2 += ELEM_PER_REP_FP32) {
@@ -55,28 +56,29 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
  * reduce dim form (N, D) to (N, 1)
  * this reduce sum is for small reduce dim.
  */
-__aicore__ inline void ReduceSumForSmallReduceDim(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
-    const uint32_t numLastDimAligned, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
-    const uint8_t repStride)
+__aicore__ inline void ReduceSumForSmallReduceDim(const LocalTensor<float>& dstLocal,
+                                                  const LocalTensor<float>& srcLocal,
+                                                  const LocalTensor<float>& tmpLocal, const uint32_t numLastDimAligned,
+                                                  const uint32_t numLastDim, const uint32_t tailCount,
+                                                  const uint32_t repeat, const uint8_t repStride)
 {
     uint32_t repeatTimes = repeat / MAX_REP_NUM;
     if (repeatTimes == 0) {
-        ReduceSumForSmallReduceDimPreRepeat(
-            dstLocal, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDimPreRepeat(dstLocal, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount,
+                                            repeat, repStride);
     } else {
         uint32_t repTailNum = repeat % MAX_REP_NUM;
         uint32_t repIndex = 0;
         uint32_t repElem;
         for (; repIndex + MAX_REP_NUM <= repeat; repIndex += MAX_REP_NUM) {
-            ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
-                ELEM_PER_REP_FP32, numLastDim, tailCount, MAX_REP_NUM, repStride);
+            ReduceSumForSmallReduceDimPreRepeat(dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned],
+                                                tmpLocal[repIndex * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, numLastDim,
+                                                tailCount, MAX_REP_NUM, repStride);
         }
         if (repTailNum != 0) {
-            ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
-                ELEM_PER_REP_FP32, numLastDim, tailCount, repTailNum, repStride);
+            ReduceSumForSmallReduceDimPreRepeat(dstLocal[repIndex], srcLocal[repIndex * numLastDimAligned],
+                                                tmpLocal[repIndex * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, numLastDim,
+                                                tailCount, repTailNum, repStride);
         }
     }
 }
@@ -86,9 +88,9 @@ __aicore__ inline void ReduceSumForSmallReduceDim(
  * this reduce sum is for small reduce dim, require D < 255 * 8.
  * size of tmpLocal: (N, 64)
  */
-__aicore__ inline void ReduceSumMultiN(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal2,
-    const uint32_t numRow, const uint32_t numCol, const uint32_t numColAlign)
+__aicore__ inline void ReduceSumMultiN(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                       const LocalTensor<float>& tmpLocal2, const uint32_t numRow,
+                                       const uint32_t numCol, const uint32_t numColAlign)
 {
     const uint32_t tailCount = numCol % ELEM_PER_REP_FP32;
     const uint32_t repeat = numRow;
@@ -109,8 +111,8 @@ __aicore__ inline int32_t findPowerTwo(int32_t n5)
     return (n5 + 1) >> 1;
 }
 
-__aicore__ inline void ReduceSumHalfInterval(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local1, int32_t count)
+__aicore__ inline void ReduceSumHalfInterval(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local1,
+                                             int32_t count)
 {
     if (likely(count > ELEM_PER_REP_FP32)) {
         int32_t bodyCount = findPowerTwo(count);

@@ -111,9 +111,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* epsilon = attrs->GetFloat(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
-    OP_CHECK_IF(
-        *epsilon < 0, OP_LOGE(context, "Epsilon less than zero, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*epsilon < 0, OP_LOGE(context, "Epsilon less than zero, please check."), return ge::GRAPH_FAILED);
     uint32_t numCol = gammaShape.GetShapeSize();
     float avgFactor = (numCol == 0U) ? 0.0f : 1.0f / static_cast<float>(numCol);
     size_t xDimNum = xShape.GetDimNum();
@@ -165,9 +163,8 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     context->SetBlockDim(useCoreNum);
 
     auto dtypeByteIterator = dTypeByteMap.find(dataType);
-    OP_CHECK_IF(
-        dtypeByteIterator == dTypeByteMap.end(), OP_LOGE(context, "Fail to get dtype factor."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtypeByteIterator == dTypeByteMap.end(), OP_LOGE(context, "Fail to get dtype factor."),
+                return ge::GRAPH_FAILED);
     uint32_t curElementByte = dtypeByteIterator->second;
     numColAlign = CeilDiv(numCol * curElementByte, ALING_FACTOR_512) * ALING_FACTOR_512 / curElementByte;
 
@@ -213,15 +210,14 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     tiling.set_colBuferLength(colBuferLength);
     tiling.set_multiNNum(multiNNum);
     tiling.set_isNddma(isNddma);
-    OP_LOGI(
-        context,
-        "TilingData numCore: %u, ubSize: %lu, numRow: %u, numCol: %u, numColAlign: %u, colBuferLength: %u, "
-        "blockFactor: %u, rowFactor: %u, ubFactor: %u, "
-        "epsilon: %f, avgFactor: %f, ubLoop: %u, multiNNum: %u, isNddma: %u.",
-        numCore, ubSize, tiling.get_numRow(), tiling.get_numCol(), tiling.get_numColAlign(),
-        tiling.get_colBuferLength(), tiling.get_blockFactor(), tiling.get_rowFactor(), tiling.get_ubFactor(),
-        tiling.get_epsilon(), tiling.get_avgFactor(), tiling.get_ubLoop(), tiling.get_multiNNum(),
-        tiling.get_isNddma());
+    OP_LOGI(context,
+            "TilingData numCore: %u, ubSize: %lu, numRow: %u, numCol: %u, numColAlign: %u, colBuferLength: %u, "
+            "blockFactor: %u, rowFactor: %u, ubFactor: %u, "
+            "epsilon: %f, avgFactor: %f, ubLoop: %u, multiNNum: %u, isNddma: %u.",
+            numCore, ubSize, tiling.get_numRow(), tiling.get_numCol(), tiling.get_numColAlign(),
+            tiling.get_colBuferLength(), tiling.get_blockFactor(), tiling.get_rowFactor(), tiling.get_ubFactor(),
+            tiling.get_epsilon(), tiling.get_avgFactor(), tiling.get_ubLoop(), tiling.get_multiNNum(),
+            tiling.get_isNddma());
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());

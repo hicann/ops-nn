@@ -33,20 +33,13 @@ static Status ParseParamsNpuGeglu(const Message* op_src, ge::Operator& op_dest)
 // register npu_ge_glu_v2 op info to GE
 REGISTER_CUSTOM_OP("GeGluV2")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {
-            ge::AscendString("npu::1::NPUGeglu"), 
-            ge::AscendString("ai.onnx::11::NPUGeglu"), 
-            ge::AscendString("ai.onnx::12::NPUGeglu"), 
-            ge::AscendString("ai.onnx::13::NPUGeglu"),
-         
-            ge::AscendString("ai.onnx::14::NPUGeglu"), 
-            ge::AscendString("ai.onnx::15::NPUGeglu"), 
-            ge::AscendString("ai.onnx::16::NPUGeglu"), 
-            ge::AscendString("ai.onnx::17::NPUGeglu"),
-         
-            ge::AscendString("ai.onnx::18::NPUGeglu")
-        })
+    .OriginOpType({ge::AscendString("npu::1::NPUGeglu"), ge::AscendString("ai.onnx::11::NPUGeglu"),
+                   ge::AscendString("ai.onnx::12::NPUGeglu"), ge::AscendString("ai.onnx::13::NPUGeglu"),
+
+                   ge::AscendString("ai.onnx::14::NPUGeglu"), ge::AscendString("ai.onnx::15::NPUGeglu"),
+                   ge::AscendString("ai.onnx::16::NPUGeglu"), ge::AscendString("ai.onnx::17::NPUGeglu"),
+
+                   ge::AscendString("ai.onnx::18::NPUGeglu")})
     .ParseParamsFn(ParseParamsNpuGeglu)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -25,13 +25,13 @@
 #include "conv3d_backprop_input_v2_tiling_key.h"
 #endif
 
-
 using namespace AscendC;
 
 #if __CCE_AICORE__ == 310
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBaseBlockTiling, uint8_t loadB1Condition>
-__global__ __aicore__ void conv3d_backprop_input_v2(
-    GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBaseBlockTiling,
+          uint8_t loadB1Condition>
+__global__ __aicore__ void conv3d_backprop_input_v2(GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y,
+                                                    GM_ADDR workSpace, GM_ADDR tiling)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     conv3d_backprop_input_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBaseBlockTiling,
@@ -41,8 +41,8 @@ __global__ __aicore__ void conv3d_backprop_input_v2(
 }
 #else
 template <uint8_t loadB2Condition, bool enableKernelSplit, bool useBasicBlock>
-__global__ __aicore__ void conv3d_backprop_input_v2(
-    GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void conv3d_backprop_input_v2(GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y,
+                                                    GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -66,11 +66,15 @@ __global__ __aicore__ void conv3d_backprop_input_v2(
     }
     if (enableKernelSplit == false) {
         if (useBasicBlock == false) {
-            Conv3dDx<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, loadB2Condition> op;
+            Conv3dDx<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y,
+                     loadB2Condition>
+                op;
             op.Init(filter, out_backprop, y, usrWsp, &tilingData);
             op.Process();
         } else {
-            Conv3dDxBasicBlockSplitMN<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, loadB2Condition> op;
+            Conv3dDxBasicBlockSplitMN<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y,
+                                      FORMAT_Y, loadB2Condition>
+                op;
             op.Init(filter, out_backprop, y, usrWsp, &tilingData);
             op.Process();
         }

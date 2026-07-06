@@ -29,21 +29,19 @@ class CeluV2 : public OpDef {
 public:
     explicit CeluV2(const char* name) : OpDef(name)
     {
-        this->Input("x")                                      
-            .ParamType(REQUIRED)                                
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})             
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND})             
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND}) 
-            .AutoContiguous();                                  
-        this->Output("y") 
+        this->Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Attr("alpha")
-            .AttrType(OPTIONAL)
-            .Float(); 
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Attr("alpha").AttrType(OPTIONAL).Float();
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
@@ -51,9 +49,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "celu_v2");    
-        this->AICore().AddConfig("ascend910b", aicoreConfig); 
+            .ExtendCfgInfo("opFile.value", "celu_v2");
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
     }
 };
-OP_ADD(CeluV2); 
+OP_ADD(CeluV2);
 } // namespace ops

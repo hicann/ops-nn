@@ -57,9 +57,8 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = static_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                    return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->totalCoreNum;
         ubSize = compileInfoPtr->maxUbSize;
     } else {
@@ -88,12 +87,11 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
     const char* data_format = runtimeAttrs->GetAttrPointer<char>(FORMAT_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, data_format);
     inputData.data_format = data_format;
-    std::transform(
-        inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
-        [](unsigned char c) { return std::tolower(c); });
+    std::transform(inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
     if (!(inputData.data_format == "ndhwc" || inputData.data_format == "ncdhw")) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            opName_, "Attribute data_format", data_format, "expect [NDHWC] or [NCDHW]");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "Attribute data_format", data_format,
+                                                "expect [NDHWC] or [NCDHW]");
         return ge::GRAPH_FAILED;
     }
     auto inputX = context_->GetInputShape(FIRPOS);
@@ -207,8 +205,8 @@ ge::graphStatus MaxPool3DGradSimtTiling::DoLibApiTiling()
     tilingData_->dilationH = inputData.dilation[H_IDX_];
     tilingData_->dilationW = inputData.dilation[W_IDX_];
     tilingData_->ceilMode = inputData.ceilMode;
-    int64_t outputDataCount =
-        tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
+    int64_t outputDataCount = tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim *
+                              tilingData_->wOutDim;
     int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
     int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
     blockNum = std::min(blockNum, static_cast<int64_t>(coreNum));

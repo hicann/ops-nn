@@ -23,20 +23,20 @@
 namespace EmbeddingBag {
 using namespace AscendC;
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 class EmbeddingBagRegBaseIndx2d {
 public:
-    __aicore__ inline EmbeddingBagRegBaseIndx2d(const EmbeddingBagTilingData &tilingData, TPipe &pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline EmbeddingBagRegBaseIndx2d(const EmbeddingBagTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR gmParam[TENSOR_COUNT]);
     __aicore__ inline void CopyInIndices(int64_t indiceLpIdx, int64_t indicesNum);
     __aicore__ inline float PromoteType(W sampleValue);
-    __aicore__ inline void CopyInWeightAndSum(
-        int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen, int64_t weightDimLen);
-    __aicore__ inline void CopyInWeightAndMax(
-        int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen, int64_t weightDimLen);
-    __aicore__ inline void CopyInWeightAndMean(
-        int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen, int64_t weightDimLen);
+    __aicore__ inline void CopyInWeightAndSum(int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen,
+                                              int64_t weightDimLen);
+    __aicore__ inline void CopyInWeightAndMax(int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen,
+                                              int64_t weightDimLen);
+    __aicore__ inline void CopyInWeightAndMean(int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen,
+                                               int64_t weightDimLen);
     __aicore__ inline void TensorAlloc();
     __aicore__ inline void TensorFree();
     __aicore__ inline void Process();
@@ -75,7 +75,7 @@ private:
     int64_t weightRowTailLen_{0};
 };
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::Init(GM_ADDR gmParam[TENSOR_COUNT])
 {
     weightGm_.SetGlobalBuffer((__gm__ W*)(gmParam[WEIGHT_INPUT_IDX]));
@@ -87,16 +87,18 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::Init(GM_ADDR gmParam[
     bagSizeGm_.SetGlobalBuffer((__gm__ P*)(gmParam[BAGSIZE_OUTPUT_IDX]));
     maxIndicesGm_.SetGlobalBuffer((__gm__ P*)(gmParam[MAXINDICES_OUTPUT_IDX]));
 
-    pipe_.InitBuffer(weightQue_, DOUBLE_BUFFER,
-                    ops::CeilAlign((tilingData_.weightRowFactor * tilingData_.weightDimFactor) * sizeof(W), UB_AGLIN_VALUE));         
+    pipe_.InitBuffer(
+        weightQue_, DOUBLE_BUFFER,
+        ops::CeilAlign((tilingData_.weightRowFactor * tilingData_.weightDimFactor) * sizeof(W), UB_AGLIN_VALUE));
     pipe_.InitBuffer(weightOutQue_, DOUBLE_BUFFER,
-                    ops::CeilAlign((tilingData_.weightDimFactor) * sizeof(W), UB_AGLIN_VALUE));
+                     ops::CeilAlign((tilingData_.weightDimFactor) * sizeof(W), UB_AGLIN_VALUE));
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER,
-                    ops::CeilAlign((tilingData_.indicesFactor) * tilingData_.indiceSize * sizeof(I), UB_AGLIN_VALUE));
-       
+                     ops::CeilAlign((tilingData_.indicesFactor) * tilingData_.indiceSize * sizeof(I), UB_AGLIN_VALUE));
+
     if (tilingData_.isNeedSampleWeight == 1) {
-        pipe_.InitBuffer(perSamplWeightQue_, DOUBLE_BUFFER,
-                        ops::CeilAlign((tilingData_.indicesFactor) * tilingData_.indiceSize * sizeof(W), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(
+            perSamplWeightQue_, DOUBLE_BUFFER,
+            ops::CeilAlign((tilingData_.indicesFactor) * tilingData_.indiceSize * sizeof(W), UB_AGLIN_VALUE));
     }
 
     /* output que */
@@ -106,19 +108,21 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::Init(GM_ADDR gmParam[
     if (tilingData_.mode == MODE_MAX) {
         pipe_.InitBuffer(maxIndicesOutBuf_, ops::CeilAlign(tilingData_.weightDimFactor * sizeof(P), UB_AGLIN_VALUE));
         pipe_.InitBuffer(maxIndicesCalcBuf_, ops::CeilAlign(tilingData_.weightDimFactor * sizeof(P), UB_AGLIN_VALUE));
-        pipe_.InitBuffer(compareMaskBuf_, ops::CeilAlign(tilingData_.weightDimFactor * sizeof(uint8_t), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(compareMaskBuf_,
+                         ops::CeilAlign(tilingData_.weightDimFactor * sizeof(uint8_t), UB_AGLIN_VALUE));
     }
 
     /* 计算搬运的起始偏移 */
     indiceStart_ = GetBlockIdx() / tilingData_.colTileNum * tilingData_.rowNormalNum;
     weightDimStart_ = GetBlockIdx() % tilingData_.colTileNum * tilingData_.colNormalNum;
-    curCoreIndices_ = (GetBlockIdx() / tilingData_.colTileNum == tilingData_.rowTileNum - 1) ?
-                      tilingData_.rowTailNum : tilingData_.rowNormalNum;
+    curCoreIndices_ = (GetBlockIdx() / tilingData_.colTileNum == tilingData_.rowTileNum - 1) ? tilingData_.rowTailNum :
+                                                                                               tilingData_.rowNormalNum;
     curCoreEmbedDim_ = (GetBlockIdx() % tilingData_.colTileNum == tilingData_.colTileNum - 1) ?
-                      tilingData_.colTailNum : tilingData_.colNormalNum;
+                           tilingData_.colTailNum :
+                           tilingData_.colNormalNum;
 }
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 __aicore__ inline float EmbeddingBagRegBaseIndx2d<W, I, P>::PromoteType(W sampleValue)
 {
     if constexpr (IsSameType<W, half>::value) {
@@ -130,36 +134,32 @@ __aicore__ inline float EmbeddingBagRegBaseIndx2d<W, I, P>::PromoteType(W sample
     }
 }
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInIndices(int64_t loopIdx, int64_t indicesNum)
 {
     LocalTensor<I> inidcesLocal = indicesQue_.DeQue<I>();
 
     int64_t indicesLen = static_cast<uint32_t>(indicesNum * tilingData_.indiceSize);
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), 
-                                    static_cast<uint32_t>(indicesLen * sizeof(I)),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<I> padParams = {
-        false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<I>(0)};
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(indicesLen * sizeof(I)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<I> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<I>(0)};
 
     auto indicesOfset = (indiceStart_ + loopIdx * tilingData_.indicesFactor) * tilingData_.indiceSize;
     DataCopyPad(inidcesLocal, indicesGm_[indicesOfset], copyParams, padParams);
     if (tilingData_.isNeedSampleWeight == 1) {
         perSampleWeightLocal_ = perSamplWeightQue_.DeQue<W>();
         copyParams.blockLen = static_cast<uint32_t>(indicesLen * sizeof(W));
-        DataCopyPadExtParams<W> samplePadParams = {
-            false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
+        DataCopyPadExtParams<W> samplePadParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                                   static_cast<W>(0)};
         DataCopyPad(perSampleWeightLocal_, perSampleWeightsGm_[indicesOfset], copyParams, samplePadParams);
         perSamplWeightQue_.EnQue(perSampleWeightLocal_);
     }
     indicesQue_.EnQue(inidcesLocal);
 }
 
-template<typename W, typename I, typename P>
-__aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
-    int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen, int64_t weightDimLen)
+template <typename W, typename I, typename P>
+__aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(int64_t indiceLpIdx, int64_t weightLpIdx,
+                                                                              int64_t indicesLen, int64_t weightDimLen)
 {
     LocalTensor<I> inidcesLocal = indicesQue_.DeQue<I>();
     LocalTensor<float> weightLocalOut = weightOutQue_.DeQue<float>();
@@ -168,13 +168,9 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
     LocalTensor<P> bagSizeBuf = bagSizeBuf_.Get<P>();
     LocalTensor<P> offset2BagBuf = offset2BagBuf_.Get<P>();
 
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), 
-                                    static_cast<uint32_t>(weightDimLen * sizeof(W)),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<W> padParams = {
-        false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(weightDimLen * sizeof(W)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<W> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
 
     int64_t weightDimOfset = weightDimStart_ + weightLpIdx * tilingData_.weightDimFactor;
     int64_t indicesOutOfset = indiceStart_ + indiceLpIdx * tilingData_.indicesFactor;
@@ -207,7 +203,8 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
                 event_t eventIdMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
                 SetFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
                 WaitFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
-                ComputeSumWithWeight<W>(weightLocal, weightLocalOut, PromoteType(sampleVale), 1, weightDimLen, tilingData_.weightDimFactor);
+                ComputeSumWithWeight<W>(weightLocal, weightLocalOut, PromoteType(sampleVale), 1, weightDimLen,
+                                        tilingData_.weightDimFactor);
             }
             event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
@@ -217,14 +214,17 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
                 Cast(weightLocalOut.ReinterpretCast<W>(), weightLocalOut, RoundMode::CAST_RINT, weightDimLen);
                 weightOutQue_.EnQue(weightLocalOut);
                 LocalTensor<W> wLocalOut = weightOutQue_.DeQue<W>();
-                DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], wLocalOut, copyParams);
+                DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], wLocalOut,
+                            copyParams);
                 weightOutQue_.EnQue(wLocalOut);
             } else {
-                DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], weightLocalOut, copyParams);
+                DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset],
+                            weightLocalOut, copyParams);
                 weightOutQue_.EnQue(weightLocalOut);
             }
 
-            Duplicate(offset2BagBuf, static_cast<P>(indicesOutOfset + bagIdx), static_cast<int32_t>(tilingData_.indiceSize));
+            Duplicate(offset2BagBuf, static_cast<P>(indicesOutOfset + bagIdx),
+                      static_cast<int32_t>(tilingData_.indiceSize));
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             copyParams.blockLen = static_cast<uint32_t>(tilingData_.indiceSize * sizeof(P));
@@ -260,7 +260,8 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
                 event_t eventIdMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
                 SetFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
                 WaitFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
-                ComputeSum<W>(weightLocal, weightLocalOut, weightRowNum - padNumInLoop, weightDimLen, tilingData_.weightDimFactor);
+                ComputeSum<W>(weightLocal, weightLocalOut, weightRowNum - padNumInLoop, weightDimLen,
+                              tilingData_.weightDimFactor);
                 padNum += padNumInLoop;
             }
             event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -271,10 +272,10 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
                 Cast(weightLocalOut.ReinterpretCast<W>(), weightLocalOut, RoundMode::CAST_RINT, weightDimLen);
                 weightOutQue_.EnQue(weightLocalOut);
                 LocalTensor<W> wLocalOut = weightOutQue_.DeQue<W>();
-                DataCopyPad(yGm_[(outRowIdx) * tilingData_.embeddingDim + weightDimOfset], wLocalOut, copyParams);
+                DataCopyPad(yGm_[(outRowIdx)*tilingData_.embeddingDim + weightDimOfset], wLocalOut, copyParams);
                 weightOutQue_.EnQue(wLocalOut);
             } else {
-                DataCopyPad(yGm_[(outRowIdx) * tilingData_.embeddingDim + weightDimOfset], weightLocalOut, copyParams);
+                DataCopyPad(yGm_[(outRowIdx)*tilingData_.embeddingDim + weightDimOfset], weightLocalOut, copyParams);
                 weightOutQue_.EnQue(weightLocalOut);
             }
 
@@ -282,7 +283,7 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             copyParams.blockLen = static_cast<uint32_t>(tilingData_.indiceSize * sizeof(P));
-            DataCopyPad(offset2bagGm_[(outRowIdx) * tilingData_.indiceSize], offset2BagBuf, copyParams);
+            DataCopyPad(offset2bagGm_[(outRowIdx)*tilingData_.indiceSize], offset2BagBuf, copyParams);
             bagSizeBuf(bagIdx) = tilingData_.indiceSize - padNum;
         }
     }
@@ -293,9 +294,9 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndSum(
     weightQue_.EnQue(weightLocal);
 }
 
-template<typename W, typename I, typename P>
-__aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMax(
-    int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen, int64_t weightDimLen)
+template <typename W, typename I, typename P>
+__aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMax(int64_t indiceLpIdx, int64_t weightLpIdx,
+                                                                              int64_t indicesLen, int64_t weightDimLen)
 {
     LocalTensor<I> inidcesLocal = indicesQue_.DeQue<I>();
     LocalTensor<W> weightLocalOut = weightOutQue_.DeQue<W>();
@@ -307,13 +308,9 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMax(
     LocalTensor<P> maxIndicesCalcBuf = maxIndicesCalcBuf_.Get<P>();
     LocalTensor<uint8_t> compareMaskBuf = compareMaskBuf_.Get<uint8_t>();
 
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), 
-                                    static_cast<uint32_t>(weightDimLen * sizeof(W)),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<W> padParams = {
-        false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(weightDimLen * sizeof(W)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<W> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
 
     /* mode为max的情况 */
     int64_t weightDimOfset = weightDimStart_ + weightLpIdx * tilingData_.weightDimFactor;
@@ -344,27 +341,34 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMax(
             SetFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
             CompareScalar(compareMaskBuf, maxIndicesOutBuf, static_cast<P>(-1), CMPMODE::EQ, weightDimLen);
-            Select(maxIndicesOutBuf, compareMaskBuf, maxIndicesCalcBuf, maxIndicesOutBuf, SELMODE::VSEL_TENSOR_TENSOR_MODE, weightDimLen);
-            Select(weightLocalOut, compareMaskBuf, weightLocal, weightLocalOut, SELMODE::VSEL_TENSOR_TENSOR_MODE, weightDimLen);
+            Select(maxIndicesOutBuf, compareMaskBuf, maxIndicesCalcBuf, maxIndicesOutBuf,
+                   SELMODE::VSEL_TENSOR_TENSOR_MODE, weightDimLen);
+            Select(weightLocalOut, compareMaskBuf, weightLocal, weightLocalOut, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                   weightDimLen);
             Compare(compareMaskBuf, weightLocal, weightLocalOut, CMPMODE::GT, weightDimLen);
-            Select(maxIndicesOutBuf, compareMaskBuf, maxIndicesCalcBuf, maxIndicesOutBuf, SELMODE::VSEL_TENSOR_TENSOR_MODE, weightDimLen);
-            Select(weightLocalOut, compareMaskBuf, weightLocal, weightLocalOut, SELMODE::VSEL_TENSOR_TENSOR_MODE, weightDimLen);
+            Select(maxIndicesOutBuf, compareMaskBuf, maxIndicesCalcBuf, maxIndicesOutBuf,
+                   SELMODE::VSEL_TENSOR_TENSOR_MODE, weightDimLen);
+            Select(weightLocalOut, compareMaskBuf, weightLocal, weightLocalOut, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                   weightDimLen);
         }
         event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
 
         copyParams.blockLen = static_cast<uint32_t>(weightDimLen * sizeof(W));
-        DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], weightLocalOut, copyParams);
+        DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], weightLocalOut,
+                    copyParams);
 
-        Duplicate(offset2BagBuf, static_cast<P>(indicesOutOfset + bagIdx), static_cast<int32_t>(tilingData_.indiceSize));
+        Duplicate(offset2BagBuf, static_cast<P>(indicesOutOfset + bagIdx),
+                  static_cast<int32_t>(tilingData_.indiceSize));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         copyParams.blockLen = static_cast<uint32_t>(tilingData_.indiceSize * sizeof(P));
         DataCopyPad(offset2bagGm_[(indicesOutOfset + bagIdx) * tilingData_.indiceSize], offset2BagBuf, copyParams);
 
         copyParams.blockLen = static_cast<uint32_t>(weightDimLen * sizeof(P));
-        DataCopyPad(maxIndicesGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], maxIndicesOutBuf, copyParams);
+        DataCopyPad(maxIndicesGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset],
+                    maxIndicesOutBuf, copyParams);
         bagSizeBuf(bagIdx) = tilingData_.indiceSize - padNum;
     }
     copyParams.blockLen = static_cast<uint32_t>(indicesLen * sizeof(P));
@@ -375,9 +379,9 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMax(
     weightQue_.EnQue(weightLocal);
 }
 
-template<typename W, typename I, typename P>
-__aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMean(
-    int64_t indiceLpIdx, int64_t weightLpIdx, int64_t indicesLen, int64_t weightDimLen)
+template <typename W, typename I, typename P>
+__aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMean(int64_t indiceLpIdx, int64_t weightLpIdx,
+                                                                               int64_t indicesLen, int64_t weightDimLen)
 {
     LocalTensor<I> inidcesLocal = indicesQue_.DeQue<I>();
     LocalTensor<float> weightLocalOut = weightOutQue_.DeQue<float>();
@@ -386,13 +390,9 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMean(
     LocalTensor<P> bagSizeBuf = bagSizeBuf_.Get<P>();
     LocalTensor<P> offset2BagBuf = offset2BagBuf_.Get<P>();
 
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), 
-                                    static_cast<uint32_t>(weightDimLen * sizeof(W)),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<W> padParams = {
-        false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(weightDimLen * sizeof(W)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<W> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<W>(0)};
 
     int64_t weightDimOfset = weightDimStart_ + weightLpIdx * tilingData_.weightDimFactor;
     int64_t indicesOutOfset = indiceStart_ + indiceLpIdx * tilingData_.indicesFactor;
@@ -425,7 +425,8 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMean(
             event_t eventIdMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMTE2ToV);
-            ComputeSum<W>(weightLocal, weightLocalOut, weightRowNum - padNumInLoop, weightDimLen, tilingData_.weightDimFactor);
+            ComputeSum<W>(weightLocal, weightLocalOut, weightRowNum - padNumInLoop, weightDimLen,
+                          tilingData_.weightDimFactor);
             padNum += padNumInLoop;
         }
         DivForMean<float>(weightLocalOut, tilingData_.indiceSize - padNum, weightDimLen);
@@ -437,21 +438,24 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMean(
             Cast(weightLocalOut.ReinterpretCast<W>(), weightLocalOut, RoundMode::CAST_RINT, weightDimLen);
             weightOutQue_.EnQue(weightLocalOut);
             LocalTensor<W> wLocalOut = weightOutQue_.DeQue<W>();
-            DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], wLocalOut, copyParams);
+            DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], wLocalOut,
+                        copyParams);
             weightOutQue_.EnQue(wLocalOut);
         } else {
-            DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], weightLocalOut, copyParams);
+            DataCopyPad(yGm_[(indicesOutOfset + bagIdx) * tilingData_.embeddingDim + weightDimOfset], weightLocalOut,
+                        copyParams);
             weightOutQue_.EnQue(weightLocalOut);
         }
-        
-        Duplicate(offset2BagBuf, static_cast<P>(indicesOutOfset + bagIdx), static_cast<int32_t>(tilingData_.indiceSize));
+
+        Duplicate(offset2BagBuf, static_cast<P>(indicesOutOfset + bagIdx),
+                  static_cast<int32_t>(tilingData_.indiceSize));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         copyParams.blockLen = static_cast<uint32_t>(tilingData_.indiceSize * sizeof(P));
         DataCopyPad(offset2bagGm_[(indicesOutOfset + bagIdx) * tilingData_.indiceSize], offset2BagBuf, copyParams);
         bagSizeBuf(bagIdx) = tilingData_.indiceSize - padNum;
     }
-    
+
     copyParams.blockLen = static_cast<uint32_t>(indicesLen * sizeof(P));
     DataCopyPad(bagSizeGm_[indicesOutOfset], bagSizeBuf, copyParams);
 
@@ -459,7 +463,7 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::CopyInWeightAndMean(
     weightQue_.EnQue(weightLocal);
 }
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::TensorAlloc()
 {
     LocalTensor<I> inidcesLocal = indicesQue_.AllocTensor<I>();
@@ -475,7 +479,7 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::TensorAlloc()
     weightQue_.EnQue(weightLocal);
 }
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::TensorFree()
 {
     LocalTensor<I> inidcesLocal = indicesQue_.DeQue<I>();
@@ -491,7 +495,7 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::TensorFree()
     weightQue_.FreeTensor(weightLocal);
 }
 
-template<typename W, typename I, typename P>
+template <typename W, typename I, typename P>
 __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::Process()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNum) {
@@ -500,16 +504,16 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::Process()
 
     /* offsets和indices能全载，tiling里做判断 */
     int64_t indicesLoop = ops::CeilDiv(curCoreIndices_, tilingData_.indicesFactor);
-    int64_t indicesMainLen =  tilingData_.indicesFactor;
-    int64_t indicesTailLen =  curCoreIndices_ - tilingData_.indicesFactor * (indicesLoop - 1);
+    int64_t indicesMainLen = tilingData_.indicesFactor;
+    int64_t indicesTailLen = curCoreIndices_ - tilingData_.indicesFactor * (indicesLoop - 1);
 
     int64_t weightDimLoop = ops::CeilDiv(curCoreEmbedDim_, tilingData_.weightDimFactor);
-    int64_t weightDimMainLen =  tilingData_.weightDimFactor;
-    int64_t weightDimTailLen =  curCoreEmbedDim_ - tilingData_.weightDimFactor * (weightDimLoop - 1);
+    int64_t weightDimMainLen = tilingData_.weightDimFactor;
+    int64_t weightDimTailLen = curCoreEmbedDim_ - tilingData_.weightDimFactor * (weightDimLoop - 1);
 
     weightRowLoop_ = ops::CeilDiv(tilingData_.indiceSize, tilingData_.weightRowFactor);
-    weightRowMainLen_ =  tilingData_.weightRowFactor;
-    weightRowTailLen_ =  tilingData_.indiceSize - tilingData_.weightRowFactor * (weightRowLoop_ - 1);
+    weightRowMainLen_ = tilingData_.weightRowFactor;
+    weightRowTailLen_ = tilingData_.indiceSize - tilingData_.weightRowFactor * (weightRowLoop_ - 1);
 
     TensorAlloc();
     for (int64_t indiceLpIdx = 0; indiceLpIdx < indicesLoop; indiceLpIdx++) {
@@ -529,6 +533,6 @@ __aicore__ inline void EmbeddingBagRegBaseIndx2d<W, I, P>::Process()
     }
     TensorFree();
 }
-}
+} // namespace EmbeddingBag
 
 #endif // EMBEDDING_BAG_H_REGBASE_2D_H

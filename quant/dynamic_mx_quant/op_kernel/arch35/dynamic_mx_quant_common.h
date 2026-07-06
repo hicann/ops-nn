@@ -212,8 +212,8 @@ __aicore__ inline constexpr T GetSpecialExp()
 }
 
 template <AscendC::RoundMode roundMode, typename outType, typename inType>
-__aicore__ inline void CalcElement(
-    AscendC::Reg::RegTensor<inType>& in, AscendC::Reg::RegTensor<int32_t>& maxEle, AscendC::Reg::MaskReg mask)
+__aicore__ inline void CalcElement(AscendC::Reg::RegTensor<inType>& in, AscendC::Reg::RegTensor<int32_t>& maxEle,
+                                   AscendC::Reg::MaskReg mask)
 {
     AscendC::Reg::RegTensor<float> y1;
     AscendC::Reg::MaskReg negValueMask;
@@ -222,8 +222,8 @@ __aicore__ inline void CalcElement(
     AscendC::Reg::MaskReg zeroNegMask;
     AscendC::Reg::RegTensor<int32_t> negZero;
     AscendC::Reg::Duplicate(negZero, FP32_NEG_ZERO_BITS);
-    AscendC::Reg::CompareScalar<int32_t, AscendC::CMPMODE::EQ>(
-        zeroNegMask, (AscendC::Reg::RegTensor<int32_t>&)in, FP32_NEG_ZERO_BITS, mask);
+    AscendC::Reg::CompareScalar<int32_t, AscendC::CMPMODE::EQ>(zeroNegMask, (AscendC::Reg::RegTensor<int32_t>&)in,
+                                                               FP32_NEG_ZERO_BITS, mask);
     if constexpr (IsSame<outType, fp4x2_e2m1_t>::value) {
         AscendC::Reg::RegTensor<int32_t> exp1;
         AscendC::Reg::RegTensor<int32_t> exp2;
@@ -255,12 +255,13 @@ __aicore__ inline void CalcElement(
 }
 
 template <AscendC::RoundMode roundMode, typename outType, typename inType, typename calcTypeInt>
-__aicore__ inline void CalcElement(
-    AscendC::Reg::RegTensor<inType>& in, AscendC::Reg::RegTensor<calcTypeInt>& scaleReprocal,
-    AscendC::Reg::RegTensor<calcTypeInt>& maxEle, AscendC::Reg::RegTensor<uint8_t>& out, AscendC::Reg::MaskReg mask)
+__aicore__ inline void CalcElement(AscendC::Reg::RegTensor<inType>& in,
+                                   AscendC::Reg::RegTensor<calcTypeInt>& scaleReprocal,
+                                   AscendC::Reg::RegTensor<calcTypeInt>& maxEle, AscendC::Reg::RegTensor<uint8_t>& out,
+                                   AscendC::Reg::MaskReg mask)
 {
-    static constexpr AscendC::Reg::CastTrait castTrait = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr AscendC::Reg::CastTrait castTrait = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                          AscendC::Reg::MaskMergeMode::ZEROING, roundMode};
     static constexpr AscendC::Reg::CastTrait castTraitFp32ToBf16 = {
         AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING, roundMode};
     AscendC::Reg::RegTensor<bfloat16_t> valueRegTensor;
@@ -270,8 +271,8 @@ __aicore__ inline void CalcElement(
     if constexpr (IsSame<inType, float>::value) {
         CalcElement<roundMode, outType, inType>(in, (AscendC::Reg::RegTensor<int32_t>&)maxEle, mask);
         AscendC::Reg::Cast<bfloat16_t, inType, castTraitFp32ToBf16>(valueRegTensor, in, mask);
-        AscendC::Reg::Pack(
-            (AscendC::Reg::RegTensor<uint16_t>&)valueRegTensor, (AscendC::Reg::RegTensor<uint32_t>&)valueRegTensor);
+        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint16_t>&)valueRegTensor,
+                           (AscendC::Reg::RegTensor<uint32_t>&)valueRegTensor);
         AscendC::Reg::Cast<outType, bfloat16_t, castTrait>(y, valueRegTensor, mask);
     } else {
         AscendC::Reg::Cast<outType, inType, castTrait>(y, in, mask);

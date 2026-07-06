@@ -17,8 +17,9 @@
 
 using namespace FakeQuantAffineCachemaskN;
 
-extern "C" __global__ __aicore__ void fake_quant_affine_cachemask(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR zero_point, GM_ADDR y, GM_ADDR mask, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void fake_quant_affine_cachemask(GM_ADDR x, GM_ADDR scale, GM_ADDR zero_point,
+                                                                  GM_ADDR y, GM_ADDR mask, GM_ADDR workspace,
+                                                                  GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     if (TILING_KEY_IS(1)) {

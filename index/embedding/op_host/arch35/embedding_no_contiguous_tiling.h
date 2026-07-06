@@ -44,7 +44,7 @@ TILING_DATA_FIELD_DEF(int64_t, xDim0Stride);       // 输入x第0维stride
 TILING_DATA_FIELD_DEF(int64_t, xDim1Stride);       // 输入x第1维stride
 TILING_DATA_FIELD_DEF(int64_t, indicesDim0Stride); // 输入indices第0维stride
 TILING_DATA_FIELD_DEF(int64_t, indicesDim1Stride); // 输入indices第1维stride
-TILING_DATA_FIELD_DEF(int64_t, needCoreNum); 
+TILING_DATA_FIELD_DEF(int64_t, needCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, perCoreElements);
 TILING_DATA_FIELD_DEF(int64_t, lastCoreElements);
 END_TILING_DATA_DEF;
@@ -58,11 +58,9 @@ REGISTER_TILING_DATA_CLASS(Embedding_112, EmbeddingNoContiguousTilingData)
 REGISTER_TILING_DATA_CLASS(Embedding_114, EmbeddingNoContiguousTilingData)
 REGISTER_TILING_DATA_CLASS(Embedding_118, EmbeddingNoContiguousTilingData)
 
-class EmbeddingNoContiguousTiling : public TilingBaseClass
-{
+class EmbeddingNoContiguousTiling : public TilingBaseClass {
 public:
-    explicit EmbeddingNoContiguousTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit EmbeddingNoContiguousTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     // 执行顺序 2 -> 1 -> 0 -> 3 -> 4 -> 6 -> 7 -> 5 -> 8

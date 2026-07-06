@@ -20,14 +20,13 @@
 namespace ForeachMulScalar {
 using namespace AscendC;
 template <typename T, typename ScalarT, typename Tiling>
-class ForeachMulScalarRegbase : public ForeachRegbaseUnary<T, Tiling, ForeachMulScalarRegbase<T, ScalarT, Tiling>>
-{
+class ForeachMulScalarRegbase : public ForeachRegbaseUnary<T, Tiling, ForeachMulScalarRegbase<T, ScalarT, Tiling>> {
 public:
     using Base = ForeachRegbaseUnary<T, Tiling, ForeachMulScalarRegbase<T, ScalarT, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachMulScalarRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(inputs, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ ScalarT*)scalar, 1);

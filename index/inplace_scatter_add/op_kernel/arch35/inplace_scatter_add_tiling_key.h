@@ -20,19 +20,14 @@
 
 // 两种模式：Default（innerSize > 1，需坐标分解）和 1D（innerSize == 1，直接索引）
 #define SCATTER_ADD_MODE_DEFAULT 0
-#define SCATTER_ADD_MODE_1D      1
+#define SCATTER_ADD_MODE_1D 1
 
-ASCENDC_TPL_ARGS_DECL(
-    InplaceScatterAdd,
-    ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, SCATTER_ADD_MODE_DEFAULT, SCATTER_ADD_MODE_1D)
-);
+ASCENDC_TPL_ARGS_DECL(InplaceScatterAdd, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST,
+                                                               SCATTER_ADD_MODE_DEFAULT, SCATTER_ADD_MODE_1D));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SCATTER_ADD_MODE_DEFAULT, SCATTER_ADD_MODE_1D),
-        ASCENDC_TPL_TILING_STRUCT_SEL(InplaceScatterAddTilingData)
-    )
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SCATTER_ADD_MODE_DEFAULT,
+                                                          SCATTER_ADD_MODE_1D),
+                                     ASCENDC_TPL_TILING_STRUCT_SEL(InplaceScatterAddTilingData)));
 
 #endif // INPLACE_SCATTER_ADD_TILING_KEY_H

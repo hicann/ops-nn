@@ -27,15 +27,9 @@ using namespace ge;
 
 class DynamicMxQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicMxQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicMxQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicMxQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicMxQuantTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -43,7 +37,7 @@ static string to_string(void* buf, size_t size)
 {
     std::string result;
     const size_t metadata_size = 3 * sizeof(float);
-    size_t data_size = size - metadata_size;                                  // 减去最后三个float数据类型
+    size_t data_size = size - metadata_size; // 减去最后三个float数据类型
     const T* data = reinterpret_cast<const T*>(buf);
     size_t len = data_size / sizeof(T);
     for (size_t i = 0; i < len; i++) {
@@ -61,9 +55,9 @@ static string to_string(void* buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape, gert::StorageShape scaleShape, int64_t axis,
-    int64_t blockSize, string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
+                            gert::StorageShape scaleShape, int64_t axis, int64_t blockSize, string expectTilingData,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -102,8 +96,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -122,14 +116,13 @@ static void ExecuteTestCase(
                       .NodeInputTd(0, inDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
-                       .NodeAttrs(
-                           {{"axis", Ops::NN::AnyValue::CreateFrom(axis)},
-                            {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
-                            {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
-                            {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                            {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
-                            {"max_low_bound", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom(axis)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
+                                  {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                  {"max_low_bound", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -172,8 +165,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e2m1_not_
     gert::StorageShape scaleShape = {{60, 14, 1, 128, 2}, {60, 14, 1, 128, 2}};
     int64_t axis = -2;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "64 60 32 0 32 292 32 128 128 1 1 1 1 840 5 1680 10 168 0 0 0 0 0 0 0 0 0 0 0 0";
+    string expectTilingData = "64 60 32 0 32 292 32 128 128 1 1 1 1 840 5 1680 10 168 0 0 0 0 0 0 0 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -184,8 +176,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e1m2_not_
     gert::StorageShape scaleShape = {{1024, 512, 1, 32, 2}, {1024, 512, 1, 32, 2}};
     int64_t axis = 2;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "64 64 32 0 32 292 64 32 128 2 1 1 0 524288 5 1048576 10 104858 0 0 1 0 0 0 0 0 0 0 0 0";
+    string expectTilingData = "64 64 32 0 32 292 64 32 128 2 1 1 0 524288 5 1048576 10 104858 0 0 1 0 0 0 0 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -196,8 +187,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e1m2_tail
     gert::StorageShape scaleShape = {{1024, 512, 64, 1, 2}, {1024, 512, 64, 1, 2}};
     int64_t axis = 3;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "33 253952 4 32 64 64 64 1 33554432 32 2 32 524288 524288 1528 0 0 0";
+    string expectTilingData = "33 253952 4 32 64 64 64 1 33554432 32 2 32 524288 524288 1528 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -208,8 +198,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e2m1_tail_
     gert::StorageShape scaleShape = {{60, 14, 16, 1, 2}, {60, 14, 16, 1, 2}};
     int64_t axis = -1;
     int64_t blockSize = 64;
-    string expectTilingData =
-        "64 41 2 2 0 82 328 312 4 40 64 0 2 64 0 1 13440 1 26880 8192 0 0 0 0 0";
+    string expectTilingData = "64 41 2 2 0 82 328 312 4 40 64 0 2 64 0 1 13440 1 26880 8192 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -220,8 +209,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e2m1_not_t
     gert::StorageShape scaleShape = {{60, 14, 1, 128, 2}, {60, 14, 1, 128, 2}};
     int64_t axis = -2;
     int64_t blockSize = 64;
-    string expectTilingData =
-        "64 60 7 7 0 420 2 2 4 40 64 0 1 64 0 0 840 128 215040 4098 0 0 0 0 0";
+    string expectTilingData = "64 60 7 7 0 420 2 2 4 40 64 0 1 64 0 0 840 128 215040 4098 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -232,8 +220,8 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e1m2_not_t
     gert::StorageShape scaleShape = {{4, 512, 64, 32, 2}, {4, 512, 64, 32, 2}};
     int64_t axis = 0;
     int64_t blockSize = 128;
-    string expectTilingData =
-        "64 64 128 0 128 293 1024 1048576 1048576 4 8192 4 0 0 1 0 0 32768 512 512 0 128 128 256 256 32768 8 0 0 0";
+    string expectTilingData = "64 64 128 0 128 293 1024 1048576 1048576 4 8192 4 0 0 1 0 0 32768 512 512 0 128 128 256 "
+                              "256 32768 8 0 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -244,8 +232,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float16_fp4e1m2_tail_
     gert::StorageShape scaleShape = {{1024, 512, 64, 1, 2}, {1024, 512, 64, 1, 2}};
     int64_t axis = 3;
     int64_t blockSize = 64;
-    string expectTilingData =
-        "64 64 3197 3190 0 204601 328 64 4 41 64 0 2 64 0 1 33554432 1 67108864 8192 0 0 0 0 0";
+    string expectTilingData = "64 64 3197 3190 0 204601 328 64 4 41 64 0 2 64 0 1 33554432 1 67108864 8192 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -256,8 +243,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_no
     gert::StorageShape scaleShape = {{60, 14, 16, 1, 2}, {60, 14, 16, 1, 2}};
     int64_t axis = -1;
     int64_t blockSize = 64;
-    string expectTilingData =
-        "64 41 2 2 0 82 328 312 4 36 64 0 2 64 0 1 13440 1 26880 8192 0 0 0 0 0";
+    string expectTilingData = "64 41 2 2 0 82 328 312 4 36 64 0 2 64 0 1 13440 1 26880 8192 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -268,8 +254,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_no
     gert::StorageShape scaleShape = {{60, 14, 1, 128, 2}, {60, 14, 1, 128, 2}};
     int64_t axis = -2;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "64 60 32 0 32 292 32 128 128 1 1 1 1 840 5 1680 10 168 0 0 0 0 0 0 0 0 0 0 0 0";
+    string expectTilingData = "64 60 32 0 32 292 32 128 128 1 1 1 1 840 5 1680 10 168 0 0 0 0 0 0 0 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -280,8 +265,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_no
     gert::StorageShape scaleShape = {{1024, 512, 1, 32, 2}, {1024, 512, 1, 32, 2}};
     int64_t axis = 2;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "64 64 32 0 32 292 64 32 128 2 1 1 0 524288 5 1048576 10 104858 0 0 1 0 0 0 0 0 0 0 0 0";
+    string expectTilingData = "64 64 32 0 32 292 64 32 128 2 1 1 0 524288 5 1048576 10 104858 0 0 1 0 0 0 0 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -292,8 +276,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e4m3fn_ta
     gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
     int64_t axis = -1;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "33 253952 4 32 64 64 64 1 13440 128 2 128 210 210 1280 0 0 0";
+    string expectTilingData = "33 253952 4 32 64 64 64 1 13440 128 2 128 210 210 1280 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -304,8 +287,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_not_
     gert::StorageShape scaleShape = {{15, 60, 16, 1, 2}, {15, 60, 16, 1, 2}};
     int64_t axis = -1;
     int64_t blockSize = 64;
-    string expectTilingData =
-        "64 44 2 2 0 88 328 264 4 35 64 0 2 64 0 1 14400 1 28800 8192 0 0 0 0 0";
+    string expectTilingData = "64 44 2 2 0 88 328 264 4 35 64 0 2 64 0 1 14400 1 28800 8192 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -316,8 +298,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_not_
     gert::StorageShape scaleShape = {{15, 60, 1, 128, 2}, {15, 60, 1, 128, 2}};
     int64_t axis = -2;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "64 60 32 0 32 292 32 128 128 1 1 1 1 900 5 1800 10 180 0 0 0 0 0 0 0 0 0 0 0 0";
+    string expectTilingData = "64 60 32 0 32 292 32 128 128 1 1 1 1 900 5 1800 10 180 0 0 0 0 0 0 0 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -328,8 +309,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_not_
     gert::StorageShape scaleShape = {{1, 300, 1, 32, 2}, {1, 300, 1, 32, 2}};
     int64_t axis = 2;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "64 60 32 0 32 292 64 32 128 2 1 1 0 300 5 600 10 60 0 0 1 0 0 0 0 0 0 0 0 0";
+    string expectTilingData = "64 60 32 0 32 292 64 32 128 2 1 1 0 300 5 600 10 60 0 0 1 0 0 0 0 0 0 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -340,8 +320,7 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp8e5m2_tail
     gert::StorageShape scaleShape = {{15, 60, 16, 2, 2}, {15, 60, 16, 2, 2}};
     int64_t axis = -1;
     int64_t blockSize = 32;
-    string expectTilingData =
-        "33 253952 4 32 64 64 64 1 14400 128 2 128 225 225 1280 0 0 0";
+    string expectTilingData = "33 253952 4 32 64 64 64 1 14400 128 2 128 225 225 1280 0 0 0";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData);
 }
@@ -355,8 +334,8 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_error_inDtype)
     string expectTilingData = "";
 
     // DT_INT32 不在支持的输入 dtype 集合中（fp16/bf16/fp32 之外的类型应当 GRAPH_FAILED）
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_FLOAT4_E1M2, shape, scaleShape, axis, blockSize, expectTilingData,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_error_outDtype)
@@ -367,8 +346,8 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_error_outDtype)
     int64_t blockSize = 64;
     string expectTilingData = "";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, shape, scaleShape, axis, blockSize, expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, shape, scaleShape, axis, blockSize, expectTilingData,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_error_outrank)
@@ -379,8 +358,8 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_error_outrank)
     int64_t blockSize = 64;
     string expectTilingData = "";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, blockSize, expectTilingData,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float32_fp4e2m1_tail_axis)

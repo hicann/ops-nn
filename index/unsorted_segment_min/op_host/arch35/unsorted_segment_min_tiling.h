@@ -27,63 +27,51 @@
 namespace optiling {
 
 // ---------------------------UnsortedSegmentMin Simt Tiling---------------------------
-class UnsortedSegmentMinSimtTiling : public UnsortedSegmentSimtTiling
-{
+class UnsortedSegmentMinSimtTiling : public UnsortedSegmentSimtTiling {
 public:
-    explicit UnsortedSegmentMinSimtTiling(gert::TilingContext* context) : UnsortedSegmentSimtTiling(context)
-    {}
-    ~UnsortedSegmentMinSimtTiling() override
-    {}
+    explicit UnsortedSegmentMinSimtTiling(gert::TilingContext* context) : UnsortedSegmentSimtTiling(context) {}
+    ~UnsortedSegmentMinSimtTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMin Simt Sort Tiling---------------------------
-class UnsortedSegmentMinSortSimtTiling : public UnsortedSegmentSortSimtTiling
-{
+class UnsortedSegmentMinSortSimtTiling : public UnsortedSegmentSortSimtTiling {
 public:
-    explicit UnsortedSegmentMinSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSortSimtTiling(context)
-    {}
-    ~UnsortedSegmentMinSortSimtTiling() override
-    {}
+    explicit UnsortedSegmentMinSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSortSimtTiling(context) {}
+    ~UnsortedSegmentMinSortSimtTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMin Simd Split Column Tiling---------------------------
-class UnsortedSegmentMinSimdSplitColTiling : public UnsortedSegmentSimdSplitColTiling
-{
+class UnsortedSegmentMinSimdSplitColTiling : public UnsortedSegmentSimdSplitColTiling {
 public:
-    explicit UnsortedSegmentMinSimdSplitColTiling(gert::TilingContext* context) : UnsortedSegmentSimdSplitColTiling(context)
+    explicit UnsortedSegmentMinSimdSplitColTiling(gert::TilingContext* context)
+        : UnsortedSegmentSimdSplitColTiling(context)
     {}
-    ~UnsortedSegmentMinSimdSplitColTiling() override
-    {}
+    ~UnsortedSegmentMinSimdSplitColTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMin Simd Non Sort Tiling---------------------------
-class UnsortedSegmentMinSimdNonSortTiling : public UnsortedSegmentSimdNonSortTiling
-{
+class UnsortedSegmentMinSimdNonSortTiling : public UnsortedSegmentSimdNonSortTiling {
 public:
-    explicit UnsortedSegmentMinSimdNonSortTiling(gert::TilingContext* context) : UnsortedSegmentSimdNonSortTiling(context)
+    explicit UnsortedSegmentMinSimdNonSortTiling(gert::TilingContext* context)
+        : UnsortedSegmentSimdNonSortTiling(context)
     {}
-    ~UnsortedSegmentMinSimdNonSortTiling() override
-    {}
+    ~UnsortedSegmentMinSimdNonSortTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMin Simd Dynamic Sort Tiling---------------------------
-class UnsortedSegmentMinSimdDynSortTiling : public UnsortedSegmentSimdDynSortTiling
-{
+class UnsortedSegmentMinSimdDynSortTiling : public UnsortedSegmentSimdDynSortTiling {
 public:
-    explicit UnsortedSegmentMinSimdDynSortTiling(gert::TilingContext* context) : UnsortedSegmentSimdDynSortTiling(context)
+    explicit UnsortedSegmentMinSimdDynSortTiling(gert::TilingContext* context)
+        : UnsortedSegmentSimdDynSortTiling(context)
     {}
-    ~UnsortedSegmentMinSimdDynSortTiling() override
-    {}
+    ~UnsortedSegmentMinSimdDynSortTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMin Out Full Load Tiling---------------------------
-class UnsortedSegmentMinOutFlTiling : public UnsortedSegmentOutFlTiling
-{
+class UnsortedSegmentMinOutFlTiling : public UnsortedSegmentOutFlTiling {
 public:
-    explicit UnsortedSegmentMinOutFlTiling(gert::TilingContext* context) : UnsortedSegmentOutFlTiling(context)
-    {}
-    ~UnsortedSegmentMinOutFlTiling() override
-    {}
+    explicit UnsortedSegmentMinOutFlTiling(gert::TilingContext* context) : UnsortedSegmentOutFlTiling(context) {}
+    ~UnsortedSegmentMinOutFlTiling() override {}
 };
 
 } // namespace optiling

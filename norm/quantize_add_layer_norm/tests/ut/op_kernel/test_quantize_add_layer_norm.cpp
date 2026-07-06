@@ -21,21 +21,14 @@
 
 using namespace std;
 
-extern "C" void quantize_add_layer_norm(
-    uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias, uint8_t* scales, uint8_t* zeroPoints,
-    uint8_t* y, uint8_t* x, uint8_t* workspace, uint8_t* tiling);
+extern "C" void quantize_add_layer_norm(uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias,
+                                        uint8_t* scales, uint8_t* zeroPoints, uint8_t* y, uint8_t* x,
+                                        uint8_t* workspace, uint8_t* tiling);
 
-class quantize_add_layer_norm_test : public testing::Test
-{
+class quantize_add_layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "quantize_add_layer_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "quantize_add_layer_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "quantize_add_layer_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "quantize_add_layer_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(quantize_add_layer_norm_test, test_case_bf16_per_channel)
@@ -78,14 +71,12 @@ TEST_F(quantize_add_layer_norm_test, test_case_bf16_per_channel)
 
     // single row bf16 per channel
     ICPU_SET_TILING_KEY(3100);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(3000);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -204,13 +195,11 @@ TEST_F(quantize_add_layer_norm_test, test_case_fp16_per_channel)
 
     // single row bf16 per channel
     ICPU_SET_TILING_KEY(1100);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -266,9 +255,8 @@ TEST_F(quantize_add_layer_norm_test, test_case_fp16_per_tensor)
 
     // single row bf16 per channel
     ICPU_SET_TILING_KEY(1101);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -324,9 +312,8 @@ TEST_F(quantize_add_layer_norm_test, test_case_bf16_per_tensor)
 
     // single row bf16 per channel
     ICPU_SET_TILING_KEY(3101);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -382,9 +369,8 @@ TEST_F(quantize_add_layer_norm_test, test_case_fp32_per_tensor)
 
     // single row bf16 per channel
     ICPU_SET_TILING_KEY(2101);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -440,21 +426,17 @@ TEST_F(quantize_add_layer_norm_test, test_case_bf16_fp16_per_channel_v2)
 
     // single row bf16 per channel
     ICPU_SET_TILING_KEY(3002);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(3102);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(1002);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(1102);
-    ICPU_RUN_KF(
-        quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales, zeroPoints, y, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

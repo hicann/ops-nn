@@ -15,7 +15,8 @@
 
 #include "quant_batch_matmul_v3.h"
 #include "quant_batch_matmul_v3_init_output.h"
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #include "quant_batch_matmul_v3_cube_basic.h"
 #if (ORIG_DTYPE_Y == DT_BF16 || ORIG_DTYPE_SCALE == DT_FLOAT)
 #include "quant_batch_matmul_v3_bf16_basic.h"
@@ -37,11 +38,11 @@
 // if run with ttk without bias, can't get DTYPE_BIAS macro
 #undef DTYPE_BIAS
 #if defined(ORIG_DTYPE_X1) && defined(DT_INT8) && ORIG_DTYPE_X1 == DT_INT8
-    // s8->s32
-    #define DTYPE_BIAS int32_t
+// s8->s32
+#define DTYPE_BIAS int32_t
 #else
-    // fp8/hif8->fp32
-    #define DTYPE_BIAS float
+// fp8/hif8->fp32
+#define DTYPE_BIAS float
 #endif
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_SCALE))
@@ -83,71 +84,77 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 #endif
 
 #if defined(ORIG_DTYPE_X1) && defined(DT_INT8) && ORIG_DTYPE_X1 == DT_INT8
-    #define DTYPE_LOC_LOCAL int32_t
+#define DTYPE_LOC_LOCAL int32_t
 #else
-    #define DTYPE_LOC_LOCAL float
+#define DTYPE_LOC_LOCAL float
 #endif
 
 #define INVOKE_QUANT_BATCH_MATMUL_V3_CUBE_IMPL(transposeX1, transposeX2)                                          \
     do {                                                                                                          \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                                       \
+        GET_TILING_DATA(tilingData, tiling);                                                                      \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                       \
         QuantBatchMatmulV3BaseKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, FORMAT_X1, FORMAT_X2, transposeX1, \
-                                     transposeX2, QuantBatchMatmulV3Update> op;                                   \
+                                     transposeX2, QuantBatchMatmulV3Update>                                       \
+            op;                                                                                                   \
         op.Init(x1, x2, scale, bias, y, user1, qBmmV3TilingData, &tPipe);                                         \
         op.Process();                                                                                             \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(transposeX1, transposeX2)                             \
-    do {                                                                                                  \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                               \
-        const TCubeTiling *mmTiling = &(qBmmV3TilingData->matmulTiling);                                  \
+#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(transposeX1, transposeX2)                                        \
+    do {                                                                                                             \
+        GET_TILING_DATA(tilingData, tiling);                                                                         \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                          \
+        const TCubeTiling* mmTiling = &(qBmmV3TilingData->matmulTiling);                                             \
         BmmDequantBf16<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, transposeX2> op; \
-        REGIST_MATMUL_OBJ(&tPipe, GetSysWorkSpacePtr(), op.mm, mmTiling);                                 \
-        op.Init(x1, x2, bias, scale, y, user1, qBmmV3TilingData, &tPipe);                                 \
-        op.Process();                                                                                     \
-        tPipe.Destroy();                                                                                  \
+        REGIST_MATMUL_OBJ(&tPipe, GetSysWorkSpacePtr(), op.mm, mmTiling);                                            \
+        op.Init(x1, x2, bias, scale, y, user1, qBmmV3TilingData, &tPipe);                                            \
+        op.Process();                                                                                                \
+        tPipe.Destroy();                                                                                             \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(transposeX1, transposeX2)                            \
-    do {                                                                                                     \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                                  \
-        BmmDequantBf16Opt<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, transposeX2> op; \
-        op.Init(x1, x2, bias, scale, y, user1, qBmmV3TilingData, &tPipe);                                    \
-        op.Process();                                                                                        \
-        tPipe.Destroy();                                                                                     \
+#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(transposeX1, transposeX2)                                   \
+    do {                                                                                                            \
+        GET_TILING_DATA(tilingData, tiling);                                                                        \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                         \
+        BmmDequantBf16Opt<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, transposeX2> \
+            op;                                                                                                     \
+        op.Init(x1, x2, bias, scale, y, user1, qBmmV3TilingData, &tPipe);                                           \
+        op.Process();                                                                                               \
+        tPipe.Destroy();                                                                                            \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(transposeX1, transposeX2)                             \
-    do {                                                                                                      \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                                   \
-        const TCubeTiling *mmTiling = &(qBmmV3TilingData->matmulTiling);                                      \
-        BmmDequantPertoken<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, transposeX2> op; \
-        REGIST_MATMUL_OBJ(&tPipe, GetSysWorkSpacePtr(), op.mm, mmTiling);                                     \
-        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, qBmmV3TilingData, &tPipe);                      \
-        op.Process();                                                                                         \
-        tPipe.Destroy();                                                                                      \
+#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(transposeX1, transposeX2)                                    \
+    do {                                                                                                             \
+        GET_TILING_DATA(tilingData, tiling);                                                                         \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                          \
+        const TCubeTiling* mmTiling = &(qBmmV3TilingData->matmulTiling);                                             \
+        BmmDequantPertoken<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, transposeX2> \
+            op;                                                                                                      \
+        REGIST_MATMUL_OBJ(&tPipe, GetSysWorkSpacePtr(), op.mm, mmTiling);                                            \
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, qBmmV3TilingData, &tPipe);                             \
+        op.Process();                                                                                                \
+        tPipe.Destroy();                                                                                             \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(transposeX1, transposeX2)                            \
-    do {                                                                                                         \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                                      \
-        BmmDequantPertokenOpt<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, transposeX2> op; \
-        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, qBmmV3TilingData, &tPipe);                         \
-        op.Process();                                                                                            \
-        tPipe.Destroy();                                                                                         \
+#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(transposeX1, transposeX2)                      \
+    do {                                                                                                   \
+        GET_TILING_DATA(tilingData, tiling);                                                               \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                \
+        BmmDequantPertokenOpt<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, DTYPE_SCALE, DTYPE_Y, transposeX1, \
+                              transposeX2>                                                                 \
+            op;                                                                                            \
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, qBmmV3TilingData, &tPipe);                   \
+        op.Process();                                                                                      \
+        tPipe.Destroy();                                                                                   \
     } while (0)
 
 #define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(transposeX1, transposeX2)                      \
     do {                                                                                                     \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                                  \
+        GET_TILING_DATA(tilingData, tiling);                                                                 \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                  \
         BmmDequantPertokenBasic<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, FORMAT_X1, FORMAT_X2, transposeX1, \
-                                transposeX2, QuantBatchMatmulV3Update> op;                                   \
+                                transposeX2, QuantBatchMatmulV3Update>                                       \
+            op;                                                                                              \
         op.Init(x1, x2, scale, bias, pertokenScale, y, user1, qBmmV3TilingData, &tPipe);                     \
         op.Process();                                                                                        \
         tPipe.Destroy();                                                                                     \
@@ -155,55 +162,56 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 
 #define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(transposeX1, transposeX2)                                  \
     do {                                                                                                              \
-        GET_TILING_DATA(tilingData, tiling); \
-        const QuantBatchMatmulV3TilingData *qBmmV3TilingData = &tilingData;                                           \
+        GET_TILING_DATA(tilingData, tiling);                                                                          \
+        const QuantBatchMatmulV3TilingData* qBmmV3TilingData = &tilingData;                                           \
         BmmBasicDequantBf16<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, FORMAT_X1, FORMAT_X2, transposeX1, transposeX2, \
-                            QuantBatchMatmulV3Update>  op;                                                            \
+                            QuantBatchMatmulV3Update>                                                                 \
+            op;                                                                                                       \
         op.Init(x1, x2, scale, bias, y, user1, qBmmV3TilingData, &tPipe);                                             \
         op.Process();                                                                                                 \
         tPipe.Destroy();                                                                                              \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_SPLITK_IMPL(transposeX1, transposeX2)                         \
-    do {                                                                                                \
-        GET_TILING_DATA(tilingData, tiling); \
-        BmmDequantInitOutput<DTYPE_Y> clearOp;                                                          \
-        clearOp.Init(y, user1, &tilingData, &tPipe);                                                    \
-        clearOp.Process();                                                                              \
-        tPipe.Destroy();                                                                                \
-        TPipe tPipeOp;                                                                                  \
+#define INVOKE_QUANT_BATCH_MATMUL_DEQUANT_SPLITK_IMPL(transposeX1, transposeX2)                                    \
+    do {                                                                                                           \
+        GET_TILING_DATA(tilingData, tiling);                                                                       \
+        BmmDequantInitOutput<DTYPE_Y> clearOp;                                                                     \
+        clearOp.Init(y, user1, &tilingData, &tPipe);                                                               \
+        clearOp.Process();                                                                                         \
+        tPipe.Destroy();                                                                                           \
+        TPipe tPipeOp;                                                                                             \
         BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, transposeX1, transposeX2, \
-                   BMM_DEQUANT_PRELOAD_CFG> op;                                                         \
-        op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipeOp);                                  \
-        op.Process(true);                                                                               \
+                   BMM_DEQUANT_PRELOAD_CFG>                                                                        \
+            op;                                                                                                    \
+        op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipeOp);                                             \
+        op.Process(true);                                                                                          \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_PERTOKEN_ARCH20_IMPL(templateClass)                                                 \
-    do {                                                                                                              \
+#define INVOKE_QUANT_BATCH_MATMUL_PERTOKEN_ARCH20_IMPL(templateClass)                         \
+    do {                                                                                      \
         GET_TILING_DATA_WITH_STRUCT(QuantMatmulPertokenTilingDataArch20, tilingData, tiling); \
-        if (tilingData.swizzleDirect == 0 && tilingData.withBias == false) {               \
-            templateClass<0, false> op;                                    \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
-            op.Process();                                                                                             \
-        } else if (tilingData.swizzleDirect == 0 && tilingData.withBias == true) {         \
-            templateClass<0, true> op;                                     \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
-            op.Process();                                                                                             \
-        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == false) {         \
-            templateClass<1, false> op;                                     \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
-            op.Process();                                                                                             \
-        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == true) {          \
-            templateClass<1, true> op;                                      \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                                              \
-            op.Process();                                                                                             \
-        }                                                                                                             \
+        if (tilingData.swizzleDirect == 0 && tilingData.withBias == false) {                  \
+            templateClass<0, false> op;                                                       \
+            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
+            op.Process();                                                                     \
+        } else if (tilingData.swizzleDirect == 0 && tilingData.withBias == true) {            \
+            templateClass<0, true> op;                                                        \
+            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
+            op.Process();                                                                     \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == false) {           \
+            templateClass<1, false> op;                                                       \
+            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
+            op.Process();                                                                     \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == true) {            \
+            templateClass<1, true> op;                                                        \
+            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
+            op.Process();                                                                     \
+        }                                                                                     \
     } while (0)
 
 template <int TRANS, int KERNEL_TEMPLATE_TYPE, int PERTOKEN, int OPTIONATTR>
-__global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset,
-                                                            GM_ADDR bias, GM_ADDR pertokenScale, GM_ADDR y,
-                                                            GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias,
+                                                 GM_ADDR pertokenScale, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -215,11 +223,13 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
     }
     REGISTER_TILING_DEFAULT(QuantBatchMatmulV3TilingData);
 // 6bit from hight to low: needClean, pertoken, opt, basic, transX1, transX2
-#if (ORIG_DTYPE_Y == DT_FLOAT16 || ORIG_DTYPE_Y == DT_INT8 || ORIG_DTYPE_Y == DT_INT32)  // fp16, int8, int32
+#if (ORIG_DTYPE_Y == DT_FLOAT16 || ORIG_DTYPE_Y == DT_INT8 || ORIG_DTYPE_Y == DT_INT32) // fp16, int8, int32
 #if (ORIG_DTYPE_SCALE != DT_FLOAT || ORIG_DTYPE_Y == DT_INT32)
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
-    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_PPMATMUL &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                  KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_PPMATMUL &&
+                  PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                  OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 13", PpMatmulTilingData);
         GET_TILING_DATA_WITH_STRUCT(PpMatmulTilingData, tilingData, tiling);
         PpMatmul<0, false, true, false, int8_t, uint64_t, int32_t, half> kernel;
@@ -228,15 +238,19 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
         kernel.Init(x1, x2, bias, scale, y, &(tilingData));
         kernel.Process();
     } else {
-        if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+        if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                      KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                      PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                      OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
             GET_TILING_DATA(tilingData, tiling);
             BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;
             op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
             op.Process();
         }
-        if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_NEED_ATOMICLEAN) {  // false true
+        if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                      KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                      PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                      OPTIONATTR == QUANT_BATCH_MATMUL_V3_NEED_ATOMICLEAN) { // false true
             GET_TILING_DATA(tilingData, tiling);
             BmmDequantInitOutput<DTYPE_Y> clearOp;
             clearOp.Init(y, user1, &tilingData, &tPipe);
@@ -253,40 +267,48 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
 #endif
 #if ORIG_DTYPE_SCALE == DT_FLOAT
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
-    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+    if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                  KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                  PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                  OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
         INVOKE_QUANT_BATCH_MATMUL_PERTOKEN_ARCH20_IMPL(PpMatMulNS::QuantBatchMatMulPertokenArch20);
     }
 #endif
 #endif
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #if (ORIG_DTYPE_SCALE != DT_FLOAT || ORIG_DTYPE_Y == DT_INT32)
     if constexpr (
 #if ORIG_DTYPE_X1 == DT_INT8
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
         GET_TILING_DATA(tilingData, tiling);
         BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, false> op;
         op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
         op.Process();
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
         GET_TILING_DATA(tilingData, tiling);
         BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;
         op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
         op.Process();
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true false
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true false
         GET_TILING_DATA(tilingData, tiling);
         BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, true, false> op;
         op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
         op.Process();
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true true
         GET_TILING_DATA(tilingData, tiling);
         BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, true, true> op;
         op.Init(x1, x2, bias, scale, y, user1, &tilingData, &tPipe);
@@ -294,28 +316,34 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
     } else if constexpr (
 #endif
 #endif
-#if ORIG_DTYPE_Y == DT_INT32 && (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ) && (defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ)
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+#if ORIG_DTYPE_Y == DT_INT32 && (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ) && \
+    (defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ)
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_NEED_ATOMICLEAN) {
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_SPLITK_IMPL(false, false);
     } else if constexpr (
 #endif
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
         INVOKE_QUANT_BATCH_MATMUL_V3_CUBE_IMPL(false, false);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
         INVOKE_QUANT_BATCH_MATMUL_V3_CUBE_IMPL(false, true);
 #if ORIG_DTYPE_X1 == DT_INT8
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
         INVOKE_QUANT_BATCH_MATMUL_V3_CUBE_IMPL(true, false);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
         INVOKE_QUANT_BATCH_MATMUL_V3_CUBE_IMPL(true, true);
 #endif
 #endif
@@ -323,176 +351,222 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
 #else
     if constexpr (
 #if ORIG_DTYPE_X1 == DT_INT8
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(false, false);
     } else if constexpr (
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(false, true);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true false
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true false
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(true, false);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true true
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(true, true);
     } else if constexpr (
 #endif
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(false, false);
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(false, true);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true false
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true false
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(true, false);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true true
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(true, true);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true false
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true false
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(true, false);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true true
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(true, true);
     } else if constexpr (
 #endif
 #endif
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, false);
-    } else if constexpr (
-        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, true);
 #endif
     }
 #endif
 #endif
-#else  //  bf16
+#else //  bf16
     if constexpr (
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ) && (defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ)
-        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_IS_AICAIV_1_2) {
         INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, false);
-        } else if constexpr (
-#endif            
+    } else if constexpr (
+#endif
 #if ORIG_DTYPE_X1 == DT_INT8
-            TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(false, false);
-        } else if constexpr (
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(false, false);
+    } else if constexpr (
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-            TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(false, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(true, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(true, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(false, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(false, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(true, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(true, true);
-        }else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(false, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(false, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(true, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(true, true);
-        } else if constexpr (
+        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(false, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(true, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_IMPL(true, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(false, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(false, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(true, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BF16_OPT_IMPL(true, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(false, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(false, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(true, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_BASIC_BLOCK_IMPL(true, true);
+    } else if constexpr (
 #endif
-            TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false pertoken begin
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(false, false);
-        } else if constexpr (
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false pertoken begin
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(false, false);
+    } else if constexpr (
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-            TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(false, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(true, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(true, true);
-        } else if constexpr (
+        TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(false, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(true, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_IMPL(true, true);
+    } else if constexpr (
 #endif
-            TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(false, false);
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+        OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(false, false);
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(false, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  false
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(true, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // true  true
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(true, true);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(true, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(true, true);
-        } else if constexpr (
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // false true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(false, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  false
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(true, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_OPT &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) { // true  true
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_OPT_IMPL(true, true);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_A_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(true, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_ALL_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(true, true);
+    } else if constexpr (
 #endif
 #endif
 #if (defined(FORMAT_X1) && FORMAT_X1 != FORMAT_FRACTAL_NZ)
-            TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, false);
-        } else if constexpr (
-            TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
-            PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
-            INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, true);
-#endif            
-        }
+        TRANS == QUANT_BATCH_MATMUL_V3_NOT_TRANS &&
+        KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+        PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, false);
+    } else if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS &&
+                         KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_BASIC &&
+                         PERTOKEN == QUANT_BATCH_MATMUL_V3_IS_PERTOKEN &&
+                         OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {
+        INVOKE_QUANT_BATCH_MATMUL_DEQUANT_PERTOKEN_BASIC_IMPL(false, true);
+#endif
+    }
 #endif
 }

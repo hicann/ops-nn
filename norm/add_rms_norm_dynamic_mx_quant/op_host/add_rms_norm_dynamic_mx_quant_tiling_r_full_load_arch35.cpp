@@ -29,8 +29,7 @@ uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalUBTotalSize()
     // binAdd buffer per row
     uint64_t vlfp32 = vecLengthFP32_;
     uint64_t ubfp32 = ubBlockSize_ / FP32_SIZE;
-    uint64_t binAddBufPerRow = Ops::Base::CeilAlign(
-        Ops::Base::CeilDiv(binAddQuotient_, vlfp32), ubfp32) * FP32_SIZE;
+    uint64_t binAddBufPerRow = Ops::Base::CeilAlign(Ops::Base::CeilDiv(binAddQuotient_, vlfp32), ubfp32) * FP32_SIZE;
 
     // Max_tmp and Half_tmp per row: CeilDiv(R, 32) * B16_SIZE, 32-byte aligned
     uint64_t maxTmpPerRow = Ops::Base::CeilAlign(blockNumInColAxis_ * xDtypeSize_, ubBlockSize_);
@@ -59,9 +58,8 @@ uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalUBTotalSize()
     uint64_t maxTmpBuf = maxTmpPerRow;
     uint64_t halfTmpBuf = halfTmpPerRow;
 
-    uint64_t total = x1Buf + x2Buf +
-                     yBuf + xOutBuf + mxscaleBuf + rstdBuf +
-                     xTmpBuf + binAddBuf + xReduceBuff + maxTmpBuf + halfTmpBuf;
+    uint64_t total = x1Buf + x2Buf + yBuf + xOutBuf + mxscaleBuf + rstdBuf + xTmpBuf + binAddBuf + xReduceBuff +
+                     maxTmpBuf + halfTmpBuf;
 
     return total;
 }
@@ -101,8 +99,8 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
 
     rowFactor_ = std::min(rowFactor, blockFactor_);
 
-    OP_LOGI(context_->GetNodeName(), "R-full-load: rowFactor=%lu, numCol=%lu, numColAlign=%lu.",
-            rowFactor_, numCol_, numColAlign_);
+    OP_LOGI(context_->GetNodeName(), "R-full-load: rowFactor=%lu, numCol=%lu, numColAlign=%lu.", rowFactor_, numCol_,
+            numColAlign_);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -112,11 +110,10 @@ bool AddRmsNormDynamicMxQuantRFullLoadTiling::IsCapable()
         return false;
     }
     if (numCol_ > FULL_LOAD_R_MAX) {
-        OP_LOGD(
-            context_->GetNodeName(),
-            "FullLoad IsCapable false: numCol=%ld >= fullLoadRMax=%ld, "
-            "binary add rounds increase, recommend SplitR mode.",
-            numCol_, FULL_LOAD_R_MAX);
+        OP_LOGD(context_->GetNodeName(),
+                "FullLoad IsCapable false: numCol=%ld >= fullLoadRMax=%ld, "
+                "binary add rounds increase, recommend SplitR mode.",
+                numCol_, FULL_LOAD_R_MAX);
         return false;
     }
     return true;
@@ -171,22 +168,16 @@ void AddRmsNormDynamicMxQuantRFullLoadTiling::PrintTilingData()
             "TilingData numRow: %lu, numCol: %lu, numColAlign: %lu, "
             "blockFactor: %lu, rowFactor: %lu, binAddQuotient: %lu, "
             "epsilon: %f, avgFactor: %f.",
-            tilingData.numRow, tilingData.numCol, tilingData.numColAlign,
-            tilingData.blockFactor, tilingData.rowFactor, tilingData.binAddQuotient,
-            tilingData.epsilon, tilingData.avgFactor);
+            tilingData.numRow, tilingData.numCol, tilingData.numColAlign, tilingData.blockFactor, tilingData.rowFactor,
+            tilingData.binAddQuotient, tilingData.epsilon, tilingData.avgFactor);
     OP_LOGI(context_->GetNodeName(),
             "TilingData roundMode: %ld, mxBlockSize: %ld, scaleAlg: %ld, "
             "blockNumInColAxis: %ld, dstStrideUbBlocks: %ld, mxScaleSize: %ld, betaFlag: %u, rstdFlag: %u.",
-            tilingData.roundMode, tilingData.mxBlockSize,
-            tilingData.scaleAlg, tilingData.blockNumInColAxis,
-            tilingData.dstStrideUbBlocks, tilingData.mxScaleSize,
-            tilingData.betaFlag, tilingData.rstdFlag);
+            tilingData.roundMode, tilingData.mxBlockSize, tilingData.scaleAlg, tilingData.blockNumInColAxis,
+            tilingData.dstStrideUbBlocks, tilingData.mxScaleSize, tilingData.betaFlag, tilingData.rstdFlag);
 }
 
-ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::PostTiling()
 {
@@ -194,20 +185,17 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
 
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(tilingData) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(tilingData),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(tilingData) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(tilingData), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(tilingData));
 
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
@@ -228,5 +216,6 @@ uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::GetTilingKey() const
     return tilingKey.GetTilingKey();
 }
 
-REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantRFullLoadTiling, ARND_R_FULL_LOAD_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantRFullLoadTiling,
+                             ARND_R_FULL_LOAD_PRIORITY);
 } // namespace optiling

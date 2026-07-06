@@ -21,12 +21,11 @@ namespace GeGluV2 {
 using namespace AscendC;
 
 template <typename T>
-class GeGluV2Fp32Stride310P : public GeGluV2Base310P<T>
-{
+class GeGluV2Fp32Stride310P : public GeGluV2Base310P<T> {
 public:
     __aicore__ inline GeGluV2Fp32Stride310P(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, const GeGluV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                const GeGluV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -47,8 +46,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32Stride310P<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, const GeGluV2TilingData* tilingData)
+__aicore__ inline void GeGluV2Fp32Stride310P<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                                      const GeGluV2TilingData* tilingData)
 {
     this->BaseInit(x, y, gelu, tilingData);
     this->BaseInit310P(workspace);
@@ -155,8 +154,8 @@ __aicore__ inline void GeGluV2Fp32Stride310P<T>::ComputeMul(const int64_t& lengt
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32Stride310P<T>::CopyOutGelu(
-    const int64_t& index, const int64_t& length, const int64_t& group)
+__aicore__ inline void GeGluV2Fp32Stride310P<T>::CopyOutGelu(const int64_t& index, const int64_t& length,
+                                                             const int64_t& group)
 {
     LocalTensor<T> outLocal = m_outQueue.DeQue<T>();
     LocalTensor<T> tmpGeluLocal = m_resultTempBuf1.Get<T>();
@@ -165,8 +164,8 @@ __aicore__ inline void GeGluV2Fp32Stride310P<T>::CopyOutGelu(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32Stride310P<T>::CopyOutMul(
-    const int64_t& index, const int64_t& length, const int64_t& group)
+__aicore__ inline void GeGluV2Fp32Stride310P<T>::CopyOutMul(const int64_t& index, const int64_t& length,
+                                                            const int64_t& group)
 {
     LocalTensor<T> outLocal = m_outQueue.DeQue<T>();
     LocalTensor<T> yLocal = outLocal[BUFFER_SIZE];

@@ -78,4 +78,4 @@ ACLNN_API aclnnStatus aclnnUniqueConsecutive(void* workspace, uint64_t workspace
 }
 #endif
 
-#endif  // OP_API_INC_UNIQUE_CONSECUTIVE_H_
+#endif // OP_API_INC_UNIQUE_CONSECUTIVE_H_

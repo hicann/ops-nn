@@ -32,14 +32,12 @@ struct QuantBatchMatmulPergroupInfo : public QuantBatchMatmulInfo {
     ge::DataType x2OffsetDtype;
 };
 
-
 class QuantBatchMatmulV4PergroupTiling : public QuantBatchMatmulV3BasicTiling {
 public:
-    explicit QuantBatchMatmulV4PergroupTiling(gert::TilingContext *contextIn)
-     : QuantBatchMatmulV3BasicTiling(contextIn)
+    explicit QuantBatchMatmulV4PergroupTiling(gert::TilingContext* contextIn) : QuantBatchMatmulV3BasicTiling(contextIn)
     {}
-    QuantBatchMatmulV4PergroupTiling(gert::TilingContext *contextIn, QuantBatchMatmulV3TilingData *out)
-     : QuantBatchMatmulV3BasicTiling(contextIn, out)
+    QuantBatchMatmulV4PergroupTiling(gert::TilingContext* contextIn, QuantBatchMatmulV3TilingData* out)
+        : QuantBatchMatmulV3BasicTiling(contextIn, out)
     {}
     ~QuantBatchMatmulV4PergroupTiling() override = default;
 
@@ -53,12 +51,10 @@ protected:
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
     bool CheckInputLen(size_t actualLen, size_t expectedLen, const string& inputParamName);
-    bool CheckInputsLen(
-        const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
-        const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape);
-    bool CheckInputsShape(
-        const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
-        const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape);
+    bool CheckInputsLen(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
+                        const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape);
+    bool CheckInputsShape(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
+                          const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape);
     bool CheckFormat();
     ge::graphStatus CalcDequantTiling(uint32_t baseM, uint32_t baseN, uint32_t groupSizeK);
     QuantBatchMatmulPergroupInfo inputParamsPergroup_;
@@ -66,5 +62,5 @@ protected:
     uint64_t singleCoreM_ = 0;
     uint64_t singleCoreN_ = 0;
 };
-}   // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V4_PERGROUP_TILING_H
+} // namespace optiling
+#endif // QUANT_BATCH_MATMUL_V4_PERGROUP_TILING_H

@@ -34,23 +34,20 @@ static std::map<op::DataType, std::string> quantizeDataTypeToStr = {
     {op::DataType::DT_FLOAT8_E5M2, "torch.float8_e5m2"}};
 }; // namespace
 
-static const aclTensor* QuantizeAiCore(
-    const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, op::DataType dtype, int32_t axis,
-    aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* QuantizeAiCore(const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints,
+                                       op::DataType dtype, int32_t axis, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(QuantizeAiCore, x, scales, zeroPoints, dtype, axis, out);
     std::string dtypeStr = quantizeDataTypeToStr[dtype];
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(Quantize, OP_INPUT(x, scales, zeroPoints), OP_OUTPUT(out), OP_ATTR(dtypeStr, axis));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "QuantizeAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Quantize, OP_INPUT(x, scales, zeroPoints), OP_OUTPUT(out),
+                                           OP_ATTR(dtypeStr, axis));
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "QuantizeAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* Quantize(
-    const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, op::DataType dtype, int32_t axis,
-    aclOpExecutor* executor)
+const aclTensor* Quantize(const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, op::DataType dtype,
+                          int32_t axis, aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(x->GetViewShape(), dtype);
     if (out == nullptr) {

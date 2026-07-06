@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
@@ -24,10 +23,10 @@ using namespace matmul_v3_advanced;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 class BatchMatMulV3IterBatchBasicApiTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3IterBatchBasicApiTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    BatchMatMulV3IterBatchBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BaseTiling(context, cfg){};
 
-    ~BatchMatMulV3IterBatchBasicApiTiling() override {};
+    ~BatchMatMulV3IterBatchBasicApiTiling() override{};
 
 protected:
     bool IsCapable() override;
@@ -43,9 +42,9 @@ protected:
     bool IsMat2TransposeNonContiguous(const gert::Shape& viewShape) const;
 
     bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;
-    
+
     MatMulV3L0C2Out GetL0C2OutFlag() const;
-    
+
     MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
 
 private:
@@ -59,6 +58,5 @@ private:
     uint64_t iterBatchL1_{0};
     bool l0CanLoadBatch_{false};
 };
-}
-}
-
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

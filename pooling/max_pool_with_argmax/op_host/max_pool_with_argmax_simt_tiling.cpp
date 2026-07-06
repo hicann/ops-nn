@@ -25,8 +25,8 @@ static constexpr int64_t NAN_BASE = 100;
 
 ge::graphStatus MaxPoolWithArgmaxTilingSIMT::DoOpTiling()
 {
-    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData>();
+    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData>();
     tilingData->nDim = inputData.nInput;
     tilingData->cDim = inputData.cInput;
     tilingData->hInDim = inputData.inputShape[H_IDX_];
@@ -69,16 +69,16 @@ uint64_t MaxPoolWithArgmaxTilingSIMT::GetTilingKey() const
 
 ge::graphStatus MaxPoolWithArgmaxTilingSIMT::PostTiling()
 {
-    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData>();
+    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData>();
     context_->SetBlockDim(tilingData->blockNums);
     return ge::GRAPH_SUCCESS;
 }
 
 void MaxPoolWithArgmaxTilingSIMT::DumpTilingInfo()
 {
-    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData>();
+    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData>();
     std::ostringstream info;
     info << "nDim: " << tilingData->nDim;
     info << ", hInDim: " << tilingData->hInDim;
@@ -95,7 +95,6 @@ void MaxPoolWithArgmaxTilingSIMT::DumpTilingInfo()
     info << ", includeBatchInIndex: " << tilingData->includeBatchInIndex;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
-
 
 REGISTER_TILING_TEMPLATE("MaxPoolWithArgmax", MaxPoolWithArgmaxTilingSIMT, 100);
 } // namespace optiling

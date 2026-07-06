@@ -30,8 +30,8 @@ using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2;
 
 template <typename T>
-__aicore__ inline void CopyGmToLocalPad(
-    const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t dataNum, uint32_t alignedDataNum)
+__aicore__ inline void CopyGmToLocalPad(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t dataNum,
+                                        uint32_t alignedDataNum)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataNum * sizeof(T)), 0, 0, 0};
     uint32_t rightPadding = alignedDataNum > dataNum ? alignedDataNum - dataNum : 0;
@@ -51,18 +51,18 @@ class Prelu {
 public:
     __aicore__ inline Prelu() {}
 
-    __aicore__ inline void InitScalar(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe);
-    __aicore__ inline void InitChannel(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe);
-    __aicore__ inline void InitChannelSplitLParallel(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe);
-    __aicore__ inline void InitChannelNcResidentWeightReuse(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe);
-    __aicore__ inline void InitChannelNcWeightReuse(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe);
-    __aicore__ inline void InitChannelNcSplitCWeightReuse(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void InitScalar(GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData,
+                                      TPipe* pipe);
+    __aicore__ inline void InitChannel(GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData,
+                                       TPipe* pipe);
+    __aicore__ inline void InitChannelSplitLParallel(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                     const PreluTilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void InitChannelNcResidentWeightReuse(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                            const PreluTilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void InitChannelNcWeightReuse(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                    const PreluTilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void InitChannelNcSplitCWeightReuse(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                          const PreluTilingData* tilingData, TPipe* pipe);
     __aicore__ inline void ProcessScalar();
     __aicore__ inline void ProcessChannelFullL();
     __aicore__ inline void ProcessChannelSplitL();
@@ -157,10 +157,7 @@ __aicore__ inline float LoadBf16ScalarAsFloat(GM_ADDR weight)
     return *reinterpret_cast<float*>(&floatBits);
 }
 
-__aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t align)
-{
-    return ((value + align - 1U) / align) * align;
-}
+__aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t align) { return ((value + align - 1U) / align) * align; }
 
 template <typename T>
 __aicore__ inline void FillWeightSpan(const LocalTensor<T>& weightVec, int64_t offset, int64_t length, T value)
@@ -239,8 +236,8 @@ __aicore__ inline void Prelu<T>::InitNcResidentWeightBuffers()
 }
 
 template <typename T>
-__aicore__ inline void Prelu<T>::InitScalar(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void Prelu<T>::InitScalar(GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData,
+                                            TPipe* pipe)
 {
     pipe_ = pipe;
     int64_t blockIdx = GetBlockIdx();
@@ -268,8 +265,8 @@ __aicore__ inline void Prelu<T>::InitScalar(
 }
 
 template <typename T>
-__aicore__ inline void Prelu<T>::InitChannel(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void Prelu<T>::InitChannel(GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData,
+                                             TPipe* pipe)
 {
     pipe_ = pipe;
     int64_t blockIdx = GetBlockIdx();
@@ -299,8 +296,8 @@ __aicore__ inline void Prelu<T>::InitChannel(
 }
 
 template <typename T>
-__aicore__ inline void Prelu<T>::InitChannelSplitLParallel(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void Prelu<T>::InitChannelSplitLParallel(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                           const PreluTilingData* tilingData, TPipe* pipe)
 {
     pipe_ = pipe;
     int64_t blockIdx = GetBlockIdx();
@@ -329,8 +326,8 @@ __aicore__ inline void Prelu<T>::InitChannelSplitLParallel(
 }
 
 template <typename T>
-__aicore__ inline void Prelu<T>::InitChannelNcResidentWeightReuse(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void Prelu<T>::InitChannelNcResidentWeightReuse(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                                  const PreluTilingData* tilingData, TPipe* pipe)
 {
     pipe_ = pipe;
     int64_t blockIdx = GetBlockIdx();
@@ -365,21 +362,21 @@ __aicore__ inline void Prelu<T>::InitChannelNcResidentWeightReuse(
     if constexpr (std::is_same_v<T, bfloat16_t>) {
         LocalTensor<T> weightLocal = weightBuf.Get<T>();
         CopyGmToLocalPad(weightLocal, weightTensor, static_cast<uint32_t>(channelSize),
-            static_cast<uint32_t>(alignedWeightSize));
+                         static_cast<uint32_t>(alignedWeightSize));
         SyncMte2ToV();
         LocalTensor<float> weightFp32 = weightFp32Buf.Get<float>();
         Cast(weightFp32, weightLocal, RoundMode::CAST_NONE, static_cast<uint32_t>(alignedWeightSize));
     } else {
         LocalTensor<T> weightVec = weightVecBuf.Get<T>();
         CopyGmToLocalPad(weightVec, weightTensor, static_cast<uint32_t>(channelSize),
-            static_cast<uint32_t>(alignedWeightSize));
+                         static_cast<uint32_t>(alignedWeightSize));
     }
     BuildNcResidentWeightVec(rowsPerTile);
 }
 
 template <typename T>
-__aicore__ inline void Prelu<T>::InitChannelNcWeightReuse(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void Prelu<T>::InitChannelNcWeightReuse(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                          const PreluTilingData* tilingData, TPipe* pipe)
 {
     pipe_ = pipe;
     int64_t blockIdx = GetBlockIdx();
@@ -413,7 +410,7 @@ __aicore__ inline void Prelu<T>::InitChannelNcWeightReuse(
     weightTensor.SetGlobalBuffer((__gm__ T*)weightGM, channelSize);
     LocalTensor<T> weightLocal = weightBuf.Get<T>();
     CopyGmToLocalPad(weightLocal, weightTensor, static_cast<uint32_t>(channelSize),
-        static_cast<uint32_t>(alignedWeightSize));
+                     static_cast<uint32_t>(alignedWeightSize));
     if constexpr (std::is_same_v<T, bfloat16_t>) {
         SyncMte2ToV();
         LocalTensor<float> weightFp32 = weightFp32Buf.Get<float>();
@@ -422,8 +419,8 @@ __aicore__ inline void Prelu<T>::InitChannelNcWeightReuse(
 }
 
 template <typename T>
-__aicore__ inline void Prelu<T>::InitChannelNcSplitCWeightReuse(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR y, const PreluTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void Prelu<T>::InitChannelNcSplitCWeightReuse(GM_ADDR x, GM_ADDR weight, GM_ADDR y,
+                                                                const PreluTilingData* tilingData, TPipe* pipe)
 {
     pipe_ = pipe;
     int64_t blockIdx = GetBlockIdx();
@@ -486,7 +483,7 @@ __aicore__ inline void Prelu<T>::CopyInNcByRows(int64_t nOffset, int64_t tileRow
             int64_t gmOffset = (nOffset + row) * rowElements;
             int64_t localOffset = row * alignedChannelSize;
             CopyGmToLocalPad(xLocal[localOffset], inputGMX[gmOffset], static_cast<uint32_t>(rowElements),
-                static_cast<uint32_t>(alignedChannelSize));
+                             static_cast<uint32_t>(alignedChannelSize));
         }
         inputQueueX.EnQue(xLocal);
     }
@@ -579,8 +576,7 @@ __aicore__ inline void Prelu<T>::BuildNcWeightVec(int64_t tileRows)
             PipeBarrier<PIPE_V>();
             if (tileRows > 1) {
                 for (int64_t row = 1; row < tileRows; ++row) {
-                    DataCopy(weightVec[row * alignedChannelSize], weightVec,
-                        static_cast<uint32_t>(alignedChannelSize));
+                    DataCopy(weightVec[row * alignedChannelSize], weightVec, static_cast<uint32_t>(alignedChannelSize));
                 }
                 PipeBarrier<PIPE_V>();
             }
@@ -606,8 +602,7 @@ __aicore__ inline void Prelu<T>::BuildNcWeightVec(int64_t tileRows)
             PipeBarrier<PIPE_V>();
             if (tileRows > 1) {
                 for (int64_t row = 1; row < tileRows; ++row) {
-                    DataCopy(weightVec[row * alignedChannelSize], weightVec,
-                        static_cast<uint32_t>(alignedChannelSize));
+                    DataCopy(weightVec[row * alignedChannelSize], weightVec, static_cast<uint32_t>(alignedChannelSize));
                 }
                 PipeBarrier<PIPE_V>();
             }
@@ -629,7 +624,7 @@ __aicore__ inline void Prelu<T>::BuildNcResidentWeightVec(int64_t tileRows)
             int64_t rowsToCopy = tileRows - copiedRows;
             rowsToCopy = rowsToCopy > copiedRows ? copiedRows : rowsToCopy;
             DataCopy(weightVec[copiedRows * alignedChannelSize], weightVec,
-                static_cast<uint32_t>(rowsToCopy * alignedChannelSize));
+                     static_cast<uint32_t>(rowsToCopy * alignedChannelSize));
             PipeBarrier<PIPE_V>();
             copiedRows += rowsToCopy;
         }
@@ -641,7 +636,7 @@ __aicore__ inline void Prelu<T>::BuildNcResidentWeightVec(int64_t tileRows)
             int64_t rowsToCopy = tileRows - copiedRows;
             rowsToCopy = rowsToCopy > copiedRows ? copiedRows : rowsToCopy;
             DataCopy(weightVec[copiedRows * alignedChannelSize], weightVec,
-                static_cast<uint32_t>(rowsToCopy * alignedChannelSize));
+                     static_cast<uint32_t>(rowsToCopy * alignedChannelSize));
             PipeBarrier<PIPE_V>();
             copiedRows += rowsToCopy;
         }
@@ -835,7 +830,7 @@ __aicore__ inline void Prelu<T>::ProcessChannelNcSplitCWeightReuse()
         uint32_t realC = static_cast<uint32_t>(remainC > cTileChannels ? cTileChannels : remainC);
         uint32_t realLen = static_cast<uint32_t>(realC * innerSize);
         uint32_t computeLen = innerSize == 1 ? static_cast<uint32_t>(alignedChannelSize) :
-            AlignUp(realLen, alignElements);
+                                               AlignUp(realLen, alignElements);
         uint32_t weightLen = innerSize == 1 ? computeLen : AlignUp(realC, alignElements);
         int64_t gmOffset = nIdx * channelSize * innerSize + cOffset * innerSize;
 

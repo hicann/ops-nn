@@ -28,8 +28,8 @@ OP_TYPE_REGISTER(NLLLossGrad310p);
 
 static const std::initializer_list<op::DataType> ASCEND910_AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                         op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
@@ -65,48 +65,47 @@ static bool IsAiCoreSupport(const aclTensor* self)
 }
 
 // AICORE算子kernel
-static const aclTensor* NLLLossGradAiCore(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const string& reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* NLLLossGradAiCore(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                          const aclTensor* weight, const string& reduction, int64_t ignoreIndex,
+                                          const aclTensor* totalWeight, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(NLLLossGradAiCore, gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight);
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        NLLLossGrad, OP_INPUT(self, gradOutput, target, weight, totalWeight), OP_OUTPUT(out),
-        OP_ATTR(reduction, ignoreIndex));
+    ADD_TO_LAUNCHER_LIST_AICORE(NLLLossGrad, OP_INPUT(self, gradOutput, target, weight, totalWeight), OP_OUTPUT(out),
+                                OP_ATTR(reduction, ignoreIndex));
 
     return out;
 }
 
-static const aclTensor* NLLLossGradAiCore310p(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    int64_t reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* NLLLossGradAiCore310p(const aclTensor* gradOutput, const aclTensor* self,
+                                              const aclTensor* target, const aclTensor* weight, int64_t reduction,
+                                              int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out,
+                                              aclOpExecutor* executor)
 {
     L0_DFX(NLLLossGradAiCore310p, gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight);
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        NLLLossGrad310p, OP_INPUT(gradOutput, self, target, weight, totalWeight), OP_OUTPUT(out),
-        OP_ATTR(reduction, ignoreIndex));
+    ADD_TO_LAUNCHER_LIST_AICORE(NLLLossGrad310p, OP_INPUT(gradOutput, self, target, weight, totalWeight),
+                                OP_OUTPUT(out), OP_ATTR(reduction, ignoreIndex));
 
     return out;
 }
 
 // AICPU算子kernel
-static const aclTensor* NLLLossGradAiCpu(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const string& reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* NLLLossGradAiCpu(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                         const aclTensor* weight, const string& reduction, int64_t ignoreIndex,
+                                         const aclTensor* totalWeight, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(NLLLossGradAiCpu, gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight);
     static internal::AicpuTaskSpace space("NLLLossGrad");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        NLLLossGrad, OP_ATTR_NAMES({"reduction", "ignore_index"}),
-        OP_INPUT(self, gradOutput, target, weight, totalWeight), OP_OUTPUT(out), OP_ATTR(reduction, ignoreIndex));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(NLLLossGrad, OP_ATTR_NAMES({"reduction", "ignore_index"}),
+                                          OP_INPUT(self, gradOutput, target, weight, totalWeight), OP_OUTPUT(out),
+                                          OP_ATTR(reduction, ignoreIndex));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
     return out;
 }
 
-const aclTensor* NLLLossGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const std::string& reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclOpExecutor* executor)
+const aclTensor* NLLLossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                             const aclTensor* weight, const std::string& reduction, int64_t ignoreIndex,
+                             const aclTensor* totalWeight, aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
@@ -121,8 +120,8 @@ const aclTensor* NLLLossGrad(
         if (reduction == "sum") {
             reduction_int = SUM;
         }
-        return NLLLossGradAiCore310p(
-            gradOutput, self, target, weight, reduction_int, ignoreIndex, totalWeight, out, executor);
+        return NLLLossGradAiCore310p(gradOutput, self, target, weight, reduction_int, ignoreIndex, totalWeight, out,
+                                     executor);
     }
     if (IsAiCoreSupport(self)) {
         return NLLLossGradAiCore(gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight, out, executor);

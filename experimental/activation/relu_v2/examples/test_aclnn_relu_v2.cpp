@@ -50,13 +50,12 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
 {
     auto size = GetShapeSize(shape);
     std::vector<DataType> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
         // LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);       // float
-        LOG_PRINT("mean result[%ld] is: %d\n", i, resultData[i]);       // int
+        LOG_PRINT("mean result[%ld] is: %d\n", i, resultData[i]); // int
     }
 }
 
@@ -73,9 +72,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 2. 申请device侧内存
@@ -92,9 +90,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -130,17 +127,17 @@ int aclnnReluV2Test(int32_t deviceId, aclrtStream& stream)
     aclOpExecutor* executor;
 
     LOG_PRINT("Before GetWorkspaceSize: selfX=%p, out=%p\n", (void*)selfX, (void*)out);
-    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, selfYDeviceAddr=%p, outDeviceAddr=%p\n",
-          selfXDeviceAddr,outDeviceAddr);
+    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, selfYDeviceAddr=%p, outDeviceAddr=%p\n", selfXDeviceAddr,
+              outDeviceAddr);
     // 4. 调用aclnnReluV2第一段接口
-    ret = aclnnReluV2GetWorkspaceSize(selfX,  out, &workspaceSize, &executor);
-    LOG_PRINT("aclnnReluV2GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n",
-          ret, (unsigned long long)workspaceSize, (void*)executor);
+    ret = aclnnReluV2GetWorkspaceSize(selfX, out, &workspaceSize, &executor);
+    LOG_PRINT("aclnnReluV2GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n", ret,
+              (unsigned long long)workspaceSize, (void*)executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnReluV2ExampleGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
-    std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtr(nullptr, aclrtFree);
+    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > static_cast<uint64_t>(0)) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);

@@ -15,8 +15,7 @@
 
 namespace ops {
 // Inplace: x = acos(x), x serves as both input and output (no Output declared).
-class ForeachACosInplace : public OpDef
-{
+class ForeachACosInplace : public OpDef {
 public:
     explicit ForeachACosInplace(const char* name) : OpDef(name)
     {
@@ -28,9 +27,7 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig regbaseCfg;
-        regbaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
 
         this->AICore().AddConfig("ascend950", regbaseCfg);
     }

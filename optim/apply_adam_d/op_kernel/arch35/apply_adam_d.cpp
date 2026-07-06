@@ -21,11 +21,11 @@
 
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void apply_adam_d(GM_ADDR var, GM_ADDR m, GM_ADDR v,
-                                                   GM_ADDR beta1_power,GM_ADDR beta2_power, GM_ADDR lr,
-                                                   GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
-                                                   GM_ADDR var_out, GM_ADDR m_out, GM_ADDR v_out,
-                                                   GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void apply_adam_d(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR beta1_power,
+                                                   GM_ADDR beta2_power, GM_ADDR lr, GM_ADDR beta1, GM_ADDR beta2,
+                                                   GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out, GM_ADDR m_out,
+                                                   GM_ADDR v_out, GM_ADDR workspace, GM_ADDR tiling)
+{
     REGISTER_TILING_DEFAULT(ApplyAdamDTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdamDTilingData, tilingData, tiling);
 
@@ -46,7 +46,7 @@ extern "C" __global__ __aicore__ void apply_adam_d(GM_ADDR var, GM_ADDR m, GM_AD
             sch.Process();
         }
     }
-    
+
     if (TILING_KEY_IS(102UL)) {
         if (tilingData.useNesterov > 0) {
             ElementwiseSch<0UL, ApplyAdamDDagFusionNesterov<bfloat16_t>::OpDag> sch(&(tilingData.baseTiling), &pipe);
@@ -57,8 +57,8 @@ extern "C" __global__ __aicore__ void apply_adam_d(GM_ADDR var, GM_ADDR m, GM_AD
             sch.Init(var, m, v, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, var_out, m_out, v_out);
             sch.Process();
         }
-    }  
-    
+    }
+
     if (TILING_KEY_IS(103UL)) {
         if (tilingData.useNesterov > 0) {
             ElementwiseSch<0UL, ApplyAdamDDagFusionNesterov<float>::OpDag> sch(&(tilingData.baseTiling), &pipe);

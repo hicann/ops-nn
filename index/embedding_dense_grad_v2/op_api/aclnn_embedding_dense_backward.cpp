@@ -48,8 +48,8 @@ static const int64_t SIZE_OF_HALF = 2;
 static const int64_t FIR_DIM_POS = 0;
 static const int64_t SEC_DIM_POS = 1;
 
-static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_F32_F16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_F32_F16 = {op::DataType::DT_FLOAT,
+                                                                                op::DataType::DT_FLOAT16};
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<DataType> INDICES_DTYPE_SUPPORT_LIST = {
@@ -57,8 +57,8 @@ static const std::initializer_list<DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_INT16,
     op::DataType::DT_INT32,   op::DataType::DT_INT64, op::DataType::DT_BOOL};
 
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_F32_F16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_F32_F16 = {op::DataType::DT_FLOAT,
+                                                                               op::DataType::DT_FLOAT16};
 static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -72,12 +72,13 @@ static bool CheckNotNull(const aclTensor* grad, const aclTensor* indices, const 
 
 static bool CheckDtypeValid(const aclTensor* grad, const aclTensor* indices, const aclTensor* out)
 {
-    bool is910BSocVersion =
-        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase());
-    const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST =
-        is910BSocVersion ? GRAD_DTYPE_SUPPORT_LIST_WITH_BF16 : GRAD_DTYPE_SUPPORT_LIST_F32_F16;
-    const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST =
-        is910BSocVersion ? OUT_DTYPE_SUPPORT_LIST_WITH_BF16 : OUT_DTYPE_SUPPORT_LIST_F32_F16;
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+                             Ops::NN::AclnnUtil::IsRegbase());
+    const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST = is910BSocVersion ?
+                                                                        GRAD_DTYPE_SUPPORT_LIST_WITH_BF16 :
+                                                                        GRAD_DTYPE_SUPPORT_LIST_F32_F16;
+    const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = is910BSocVersion ? OUT_DTYPE_SUPPORT_LIST_WITH_BF16 :
+                                                                                      OUT_DTYPE_SUPPORT_LIST_F32_F16;
 
     // 检查grad的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(grad, GRAD_DTYPE_SUPPORT_LIST, return false);
@@ -114,9 +115,8 @@ static bool CheckDimension(const aclTensor* grad, const aclTensor* indices)
         indicesShapeSum *= indicesShape.GetDim(i);
     }
     if (indicesShapeSum != gradShapeSum) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "grad shape [%s] is not match with indices shape [%s].",
-            op::ToString(grad->GetViewShape()).GetString(), op::ToString(indices->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad shape [%s] is not match with indices shape [%s].",
+                op::ToString(grad->GetViewShape()).GetString(), op::ToString(indices->GetViewShape()).GetString());
         return false;
     }
     return true;
@@ -133,9 +133,8 @@ static bool CheckOutShape(const aclTensor* out, const aclTensor* grad, const uin
     }
     if (static_cast<uint64_t>(outShape.GetDim(0)) != numWeights ||
         outShape.GetDim(1) != gradShape.GetDim(gradShape.GetDimNum() - 1)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "outshape [%s] is not match with infershape {%lu, %ld}.",
-            op::ToString(out->GetViewShape()).GetString(), numWeights, gradShape.GetDim(gradShape.GetDimNum() - 1));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outshape [%s] is not match with infershape {%lu, %ld}.",
+                op::ToString(out->GetViewShape()).GetString(), numWeights, gradShape.GetDim(gradShape.GetDimNum() - 1));
         return false;
     }
     return true;
@@ -152,8 +151,8 @@ static bool CheckFormat(const aclTensor* grad, const aclTensor* indices, const a
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* grad, const aclTensor* indices, const aclTensor* out, const uint64_t numWeights)
+static aclnnStatus CheckParams(const aclTensor* grad, const aclTensor* indices, const aclTensor* out,
+                               const uint64_t numWeights)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(grad, indices, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -192,8 +191,7 @@ static bool CheckIsSmallDimMode(const aclTensor* grad, const uint64_t embeddingD
 
 static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, const bool scaleGradByFreq)
 {
-    bool is910BSocVersion =
-        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
     if (!is910BSocVersion && !Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
@@ -207,13 +205,13 @@ static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, cons
         return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) && (numWeights <= INT32_MAX_LIMIT);
     }
 
-    int64_t gradRowLimit = (grad->GetDataType() == ge::DT_FLOAT) ? \
-                            GRAD_ROW_LIMIT : (GRAD_ROW_LIMIT + GRAD_ROW_LIMIT);
+    int64_t gradRowLimit = (grad->GetDataType() == ge::DT_FLOAT) ? GRAD_ROW_LIMIT : (GRAD_ROW_LIMIT + GRAD_ROW_LIMIT);
 
     return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) &&
            ((gradRow >= embeddingDim && gradRow >= gradRowLimit) ||
             ((numWeights > embeddingDim * MULTIPLES ||
-            (numWeights != 0 && embeddingDim / numWeights < SCALE_LIMIT_RATIO && scaleGradByFreq)) && embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
+              (numWeights != 0 && embeddingDim / numWeights < SCALE_LIMIT_RATIO && scaleGradByFreq)) &&
+             embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
 }
 
 static int64_t ComputeGradRow(const aclTensor* grad)
@@ -247,8 +245,8 @@ static void ViewDataType(const aclTensor* input, const op::DataType dtype)
     input = tmpTensor;
 }
 
-static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
-    const aclTensor* indicesContiguous, const aclTensor* grad, aclOpExecutor* executor)
+static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(const aclTensor* indicesContiguous,
+                                                                    const aclTensor* grad, aclOpExecutor* executor)
 {
     int64_t gradRow = ComputeGradRow(grad);
     if (gradRow == 1) {
@@ -257,8 +255,8 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
         return std::make_pair(indicesContiguous, posIdx);
     }
 
-    const aclTensor* indiceViewFloat =
-        executor->CreateView(indicesContiguous, {gradRow}, indicesContiguous->GetViewOffset());
+    const aclTensor* indiceViewFloat = executor->CreateView(indicesContiguous, {gradRow},
+                                                            indicesContiguous->GetViewOffset());
     if (indiceViewFloat == nullptr) {
         return {nullptr, nullptr};
     }
@@ -294,13 +292,14 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
     return std::make_pair(sortIndice, posIdx);
 }
 
-aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
-    const aclTensor* grad, const aclTensor* indices, uint64_t numWeights, uint64_t paddingIdx, bool scaleGradByFreq,
-    const aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(const aclTensor* grad, const aclTensor* indices,
+                                                        uint64_t numWeights, uint64_t paddingIdx, bool scaleGradByFreq,
+                                                        const aclTensor* out, uint64_t* workspaceSize,
+                                                        aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(
-        aclnnEmbeddingDenseBackward, DFX_IN(grad, indices, numWeights, paddingIdx, scaleGradByFreq), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnEmbeddingDenseBackward, DFX_IN(grad, indices, numWeights, paddingIdx, scaleGradByFreq),
+                   DFX_OUT(out));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -333,8 +332,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     auto gradCasted = gradContiguous;
     bool is950 = Ops::NN::AclnnUtil::IsRegbase();
     bool needCast = IsNeedCast(grad, out, scaleGradByFreq);
-    bool is910BSocVersion =
-        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
     needCast = (is910BSocVersion && needCast) || !is910BSocVersion;
     if (!is950 && needCast) {
         // grad如果是float16/bfloat16，需要cast为float32
@@ -390,9 +388,9 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
             embeddingDenseBackwardResult = l0op::EmbeddingDenseGradV2(
                 gradCasted, sortIndice, posIdx, outZero, numWeights, paddingIdx, scaleGradByFreq, uniqueExecutor.get());
         } else {
-            embeddingDenseBackwardResult = l0op::EmbeddingDenseGradV2(
-                gradCasted, indicesContiguous, indicesContiguous, outs, numWeights, paddingIdx, scaleGradByFreq,
-                uniqueExecutor.get());
+            embeddingDenseBackwardResult = l0op::EmbeddingDenseGradV2(gradCasted, indicesContiguous, indicesContiguous,
+                                                                      outs, numWeights, paddingIdx, scaleGradByFreq,
+                                                                      uniqueExecutor.get());
         }
     } else {
         if (castDtype != op::DataType::DT_INT32 && castDtype != op::DataType::DT_INT64) {
@@ -400,8 +398,8 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
             indicesContiguous = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
             CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
-        embeddingDenseBackwardResult = l0op::EmbeddingDenseGrad(
-            gradCasted, indicesContiguous, numWeights, paddingIdx, scaleGradByFreq, uniqueExecutor.get());
+        embeddingDenseBackwardResult = l0op::EmbeddingDenseGrad(gradCasted, indicesContiguous, numWeights, paddingIdx,
+                                                                scaleGradByFreq, uniqueExecutor.get());
     }
     CHECK_RET(embeddingDenseBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -419,8 +417,8 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnEmbeddingDenseBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnEmbeddingDenseBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnEmbeddingDenseBackward);
     // 固定写法，调用框架能力，完成计算

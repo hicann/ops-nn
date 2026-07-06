@@ -30,7 +30,7 @@ extern "C" {
  * Silu计算公式为：
  * f(x) = x * sigmoid(x)
  * 当x大于0时,Silu激活函数将会放大x,而当x小于0时,Silu激活函数将会降低x,可以抑制过拟合
- * 
+ *
  * Quant计算公式为：
  * out = round((x / quantScale))
  *
@@ -61,15 +61,17 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGroupNormSiluQuantGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* quantScale, int64_t group, double eps, bool activateSilu,
-    aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGroupNormSiluQuantGetWorkspaceSize(const aclTensor* self, const aclTensor* gamma,
+                                                              const aclTensor* beta, const aclTensor* quantScale,
+                                                              int64_t group, double eps, bool activateSilu,
+                                                              aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut,
+                                                              uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnGroupNormSiluQuant的第二段接口，用于执行计算
-*/
-ACLNN_API aclnnStatus
-aclnnGroupNormSiluQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ */
+ACLNN_API aclnnStatus aclnnGroupNormSiluQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              aclrtStream stream);
 
 #ifdef __cplusplus
 }

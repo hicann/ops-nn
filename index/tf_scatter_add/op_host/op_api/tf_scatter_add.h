@@ -14,9 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* ScatterAdd(
-    const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, bool use_locking,
-    aclOpExecutor* executor);
+const aclTensor* ScatterAdd(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
+                            bool use_locking, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_OP_TF_SCATTER_ADD_OP_H_

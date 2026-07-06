@@ -24,7 +24,6 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 
-
 namespace optiling {
 static constexpr int X1_IDX = 0;
 static constexpr int X2_IDX = 1;
@@ -109,7 +108,6 @@ TILING_DATA_FIELD_DEF(uint32_t, sliceSizeAlignedFp32);
 TILING_DATA_FIELD_DEF(uint32_t, tailSliceSizeAlignedFp32);
 END_TILING_DATA_DEF;
 
-
 BEGIN_TILING_DATA_DEF(AddLayerNormQuantEmptyTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(uint64_t, isDyn);
@@ -168,21 +166,13 @@ REGISTER_TILING_DATA_CLASS(AddLayerNormQuant_8120, AddLayerNormQuantRegbaseTilin
 REGISTER_TILING_DATA_CLASS(AddLayerNormQuant_8121, AddLayerNormQuantRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNormQuant_8122, AddLayerNormQuantRegbaseTilingData);
 
-enum class BIAS_TYPE {
-    NO_BIAS,
-    BROADCAST_BIAS,
-    ELEWISE_BIAS
-};
-enum class UB_TILING_POLICY {
-    FULL_LOAD,
-    WELFORD
-};
+enum class BIAS_TYPE { NO_BIAS, BROADCAST_BIAS, ELEWISE_BIAS };
+enum class UB_TILING_POLICY { FULL_LOAD, WELFORD };
 
 inline ge::graphStatus GenSimplifiedKey4AddLayerNormQuant(gert::TilingContext* context, ge::char_t* simplifiedKey);
 
 template <typename T>
-static auto GetOptionalAttr(const gert::RuntimeAttrs* attrs,
-    const int idx, const T& defaultValue) -> T
+static auto GetOptionalAttr(const gert::RuntimeAttrs* attrs, const int idx, const T& defaultValue) -> T
 {
     const T* attrPtr = attrs->GetAttrPointer<T>(idx);
     if (nullptr == attrPtr) {
@@ -194,23 +184,23 @@ static auto GetOptionalAttr(const gert::RuntimeAttrs* attrs,
 
 class AddLayerNormQuantEmptyTiling {
 public:
-    explicit AddLayerNormQuantEmptyTiling(gert::TilingContext* context) : context_(context)
-    {}
+    explicit AddLayerNormQuantEmptyTiling(gert::TilingContext* context) : context_(context) {}
     // Tilingִ�п��
     //     1��GRAPH_SUCCESS: �ɹ������Ҳ���Ҫ����ִ�к���Tiling���ʵ��
     //     2��GRAPH_FAILED: ʧ�ܣ���ֹ����Tiling����
-    //     3��GRAPH_PARAM_INVALID: ���಻֧�֣���Ҫ��������ִ������Tiling���ʵ��
+    //     3��GRAPH_PARAM_INVALID:
+    //     ���಻֧�֣���Ҫ��������ִ������Tiling���ʵ��
     ge::graphStatus DoTiling();
 
 protected:
     ge::graphStatus GetAttrs();
-    ge::graphStatus GetPlatformInfo() ;
-    ge::graphStatus GetShapeAttrsInfo() ;
+    ge::graphStatus GetPlatformInfo();
+    ge::graphStatus GetShapeAttrsInfo();
 
-    ge::graphStatus DoOpTiling() ;
-    uint64_t GetTilingKey() const ;
-    ge::graphStatus GetWorkspaceSize() ;
-    ge::graphStatus PostTiling() ;
+    ge::graphStatus DoOpTiling();
+    uint64_t GetTilingKey() const;
+    ge::graphStatus GetWorkspaceSize();
+    ge::graphStatus PostTiling();
 
 private:
     gert::TilingContext* context_{nullptr};
@@ -233,7 +223,7 @@ private:
     uint64_t workspaceSize_{0};
     uint32_t tilingKey_{0};
     AddLayerNormQuantEmptyTilingData tilingData_;
-    
+
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
     ge::graphStatus CheckInputsShape();
     void CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape);
@@ -245,8 +235,7 @@ private:
 
 class AddLayerNormQuantRegbaseTiling {
 public:
-    explicit AddLayerNormQuantRegbaseTiling(gert::TilingContext* context) : context_(context)
-    {}
+    explicit AddLayerNormQuantRegbaseTiling(gert::TilingContext* context) : context_(context) {}
 
     ~AddLayerNormQuantRegbaseTiling() = default;
     bool DoTiling();

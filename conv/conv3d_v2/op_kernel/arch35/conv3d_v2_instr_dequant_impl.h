@@ -15,7 +15,7 @@
 
 #ifndef CONV3D_V2_INSTR_DEQUANT_IMPL_H
 #define CONV3D_V2_INSTR_DEQUANT_IMPL_H
- 
+
 #include "conv3d_v2_config.h"
 #include "conv3d_v2_util.h"
 
@@ -26,10 +26,9 @@ using namespace conv;
 template <class Intf>
 class DeQuantL0C2UBTools {
 public:
-    __aicore__ inline DeQuantL0C2UBTools()
-    {}
+    __aicore__ inline DeQuantL0C2UBTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
 
@@ -61,7 +60,7 @@ public:
             mUbTail = self_->ctx.currentWoL0 % self_->ctx.convTilingData->mUB;
         }
         mUbTail = mUbTail == 0 ? self_->ctx.convTilingData->mUB : mUbTail;
-        
+
         fixpipeParams.nSize = self_->ctx.currentNL0Align;
 
         uint32_t srcOffset = 0;
@@ -90,7 +89,7 @@ public:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     FixpipeParamsC310<CFG_ROW_MAJOR_UB.format> fixpipeParams;
 
@@ -109,10 +108,9 @@ private:
 template <class Intf>
 class DeQuantLoadParamsTools {
 public:
-    __aicore__ inline DeQuantLoadParamsTools()
-    {}
+    __aicore__ inline DeQuantLoadParamsTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
 
@@ -130,24 +128,27 @@ public:
         copyParams.blockLen = self_->ctx.currentNUb * Intf::sizeOfScale;
         uint64_t srcOffset = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
                              self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
-        DataCopyPad<typename Intf::ScaleT>(self_->ctx.scaleTensor, self_->ctx.scalegm[srcOffset], copyParams, padParams);
+        DataCopyPad<typename Intf::ScaleT>(self_->ctx.scaleTensor, self_->ctx.scalegm[srcOffset], copyParams,
+                                           padParams);
 
         copyParams.blockLen = self_->ctx.currentNUb * Intf::sizeOfBias;
         if constexpr (AscendC::IsSameType<typename Intf::BiasT, float>::value) {
-            DataCopyPad<typename Intf::BiasT>(self_->ctx.biasB32Tensor, self_->ctx.biasgm[srcOffset], copyParams, padParams);
+            DataCopyPad<typename Intf::BiasT>(self_->ctx.biasB32Tensor, self_->ctx.biasgm[srcOffset], copyParams,
+                                              padParams);
         } else {
-            DataCopyPad<typename Intf::BiasT>(self_->ctx.biasB16Tensor, self_->ctx.biasgm[srcOffset], copyParams, padParams);
+            DataCopyPad<typename Intf::BiasT>(self_->ctx.biasB16Tensor, self_->ctx.biasgm[srcOffset], copyParams,
+                                              padParams);
 
             eventId = static_cast<event_t>(self_->ctx.pipe.FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventId);
             WaitFlag<HardEvent::MTE2_V>(eventId);
-            Cast<float, typename Intf::BiasT>(self_->ctx.biasB32Tensor, self_->ctx.biasB16Tensor,
-                RoundMode::CAST_NONE, self_->ctx.currentNUb);
+            Cast<float, typename Intf::BiasT>(self_->ctx.biasB32Tensor, self_->ctx.biasB16Tensor, RoundMode::CAST_NONE,
+                                              self_->ctx.currentNUb);
         }
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     DataCopyParams copyParams;
     DataCopyPadParams padParams;
@@ -156,10 +157,9 @@ private:
 template <class Intf>
 class DeQuantCalcTools {
 public:
-    __aicore__ inline DeQuantCalcTools()
-    {}
+    __aicore__ inline DeQuantCalcTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
 
@@ -200,21 +200,21 @@ public:
                 uint32_t nOffset = nIter * UB_CALC_ONE_REPEAT;
                 uint32_t offset = mOffset + nOffset;
 
-                Mul<float>(ubCalcTensor[offset], ubCalcTensor[offset], self_->ctx.scaleTensor[nOffset],
-                    calcCount, repeatTime, repeatParams);
+                Mul<float>(ubCalcTensor[offset], ubCalcTensor[offset], self_->ctx.scaleTensor[nOffset], calcCount,
+                           repeatTime, repeatParams);
                 PipeBarrier<PIPE_V>();
-                Add<float>(ubCalcTensor[offset], ubCalcTensor[offset], self_->ctx.biasB32Tensor[nOffset],
-                    calcCount, repeatTime, repeatParams);
+                Add<float>(ubCalcTensor[offset], ubCalcTensor[offset], self_->ctx.biasB32Tensor[nOffset], calcCount,
+                           repeatTime, repeatParams);
             }
         }
 
         PipeBarrier<PIPE_V>();
-        Cast<typename Intf::OutputT, float>(self_->ctx.outputResUbTensor, ubCalcTensor,
-            RoundMode::CAST_RINT, calcCount);
+        Cast<typename Intf::OutputT, float>(self_->ctx.outputResUbTensor, ubCalcTensor, RoundMode::CAST_RINT,
+                                            calcCount);
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     uint32_t calcCount = 0;
 
@@ -226,16 +226,16 @@ private:
 template <class Intf>
 class DeQuantUB2GMTools {
 public:
-    __aicore__ inline DeQuantUB2GMTools()
-    {}
+    __aicore__ inline DeQuantUB2GMTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
-        doStride = self_->ctx.convTilingData->orgHo * self_->ctx.convTilingData->orgWo * self_->ctx.convTilingData->orgCo;
+        doStride = self_->ctx.convTilingData->orgHo * self_->ctx.convTilingData->orgWo *
+                   self_->ctx.convTilingData->orgCo;
     }
 
-    __aicore__ inline void SetOutputGm(const GlobalTensor<typename Intf::OutputT> &output)
+    __aicore__ inline void SetOutputGm(const GlobalTensor<typename Intf::OutputT>& output)
     {
         outputGm.SetGlobalBuffer(output.GetPhyAddr(0), output.GetSize());
     }
@@ -248,18 +248,20 @@ public:
         copyParams.dstStride = (self_->ctx.convTilingData->orgCo - self_->ctx.currentNUb) * Intf::sizeOfOutput;
 
         uint64_t dstOffset = self_->ctx.batchIter * self_->ctx.outputOneBatchSize + self_->ctx.dOutIter * doStride +
-            self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 + self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
+                             self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
+                             self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
 
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             dstOffset += self_->ctx.mUbIter * self_->ctx.convTilingData->mUB * self_->ctx.convTilingData->orgCo +
-                (self_->ctx.mAL1Iter * self_->ctx.mAL1 + self_->ctx.mL0Iter * self_->ctx.mL0) * self_->ctx.convTilingData->orgCo;
+                         (self_->ctx.mAL1Iter * self_->ctx.mAL1 + self_->ctx.mL0Iter * self_->ctx.mL0) *
+                             self_->ctx.convTilingData->orgCo;
         } else {
             uint64_t offsetH = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->hoL1 +
                                self_->ctx.hoL0Iter * self_->ctx.convTilingData->hoL0;
             uint64_t offsetW;
             if (self_->ctx.woL1SmallTail == 0) {
                 offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
-                        self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
+                          self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
             } else {
                 if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
                     offsetW = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) +
@@ -269,7 +271,8 @@ public:
                               self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
                 }
             }
-            dstOffset += offsetH * self_->ctx.convTilingData->orgWo * self_->ctx.convTilingData->orgCo + offsetW * self_->ctx.convTilingData->orgCo;
+            dstOffset += offsetH * self_->ctx.convTilingData->orgWo * self_->ctx.convTilingData->orgCo +
+                         offsetW * self_->ctx.convTilingData->orgCo;
 
             uint32_t woUbIter = self_->ctx.mUbIter % self_->ctx.l0C2UbLoopWo;
             uint32_t hoUbIter = self_->ctx.mUbIter / self_->ctx.l0C2UbLoopWo;
@@ -284,7 +287,7 @@ public:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     GlobalTensor<typename Intf::OutputT> outputGm;
     DataCopyParams copyParams;

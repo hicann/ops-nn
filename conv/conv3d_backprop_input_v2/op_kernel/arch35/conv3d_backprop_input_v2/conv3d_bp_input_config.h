@@ -31,5 +31,5 @@ public:
     constexpr static Conv3dConfig conv3dConfig_ = CONV3D_CONFIG;
 };
 
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 #endif

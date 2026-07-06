@@ -51,8 +51,8 @@ typedef struct OutputParamS {
 } OutputParamT;
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 static const std::initializer_list<DataType> ASCEND910_DTYPE_SUPPORT_LIST{DataType::DT_FLOAT, DataType::DT_FLOAT16};
-static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST{
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST{DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                           DataType::DT_BF16};
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
@@ -97,7 +97,7 @@ static bool CheckInputNotNull(InputParamT* inputParamTensorList, size_t inputLis
 }
 
 // 出参nullptr检查，注意出参受mask控制，如果对应mask为false，则不输出出参，出参可以为空
-namespace{
+namespace {
 static bool CheckOutputNotNull(OutputParamT* outputParamTensorList, size_t outputListSize, const bool* outputMask)
 {
     for (size_t i = 0; i < outputListSize; i++) {
@@ -113,24 +113,21 @@ static bool CheckOutputNotNull(OutputParamT* outputParamTensorList, size_t outpu
 
     return true;
 }
-}
-
+} // namespace
 
 static inline bool CheckDtypeInSupportList(const aclTensor* checkParam, const char* paramName, bool mask)
 {
     auto dtypeList = GetDtypeSupportList();
     if (mask && !CheckType(checkParam->GetDataType(), dtypeList)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "%s not implemented for %s, should be in dtype support list %s.", paramName,
-            ToString(checkParam->GetDataType()).GetString(), ToString(dtypeList).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s not implemented for %s, should be in dtype support list %s.", paramName,
+                ToString(checkParam->GetDataType()).GetString(), ToString(dtypeList).GetString());
         return false;
     }
 
     return true;
 }
-static bool CheckDtypeValid(
-    InputParamT* inputParamTensorList, size_t inputListSize, OutputParamT* outputParamTensorList, size_t outputListSize,
-    const bool* outputMask)
+static bool CheckDtypeValid(InputParamT* inputParamTensorList, size_t inputListSize,
+                            OutputParamT* outputParamTensorList, size_t outputListSize, const bool* outputMask)
 {
     // 检查数据类型是否在支持列表内，out类型需要根据对应mask值来确定是否需要判断
     bool dtypeInList = true;
@@ -140,8 +137,8 @@ static bool CheckDtypeValid(
     }
 
     // gradOut和input数据类型必须一样
-    OP_CHECK_DTYPE_NOT_MATCH(
-        inputParamTensorList[0].param, (inputParamTensorList[1].param)->GetDataType(), return false);
+    OP_CHECK_DTYPE_NOT_MATCH(inputParamTensorList[0].param, (inputParamTensorList[1].param)->GetDataType(),
+                             return false);
     for (size_t i = 0; i < outputListSize; i++) {
         size_t maskIdx = GetMaskIdx(i);
         bool mask = outputMask[maskIdx];
@@ -152,43 +149,38 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static inline bool CheckFormatEqual(
-    const aclTensor* leftParam, const char* leftParamName, const aclTensor* rightParam, const char* rightParamName,
-    bool mask)
+static inline bool CheckFormatEqual(const aclTensor* leftParam, const char* leftParamName, const aclTensor* rightParam,
+                                    const char* rightParamName, bool mask)
 {
     if (mask && leftParam->GetStorageFormat() != rightParam->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of %s and %s should be equal. self [%s], out [%s].", leftParamName,
-            rightParamName, ToString(leftParam->GetStorageFormat()).GetString(),
-            ToString(rightParam->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of %s and %s should be equal. self [%s], out [%s].", leftParamName,
+                rightParamName, ToString(leftParam->GetStorageFormat()).GetString(),
+                ToString(rightParam->GetStorageFormat()).GetString());
         return false;
     }
 
     return true;
 }
 
-static bool CheckFormat(
-    InputParamT* inputParamTensorList, size_t inputListSize, OutputParamT* outputParamTensorList, size_t outputListSize,
-    const bool* outputMask)
+static bool CheckFormat(InputParamT* inputParamTensorList, size_t inputListSize, OutputParamT* outputParamTensorList,
+                        size_t outputListSize, const bool* outputMask)
 {
     // 输入的格式需要一致
     if ((inputParamTensorList[0].param)->GetStorageFormat() != (inputParamTensorList[1].param)->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of gradOut and input should be equal. self [%s], out [%s].",
-            ToString((inputParamTensorList[0].param)->GetStorageFormat()).GetString(),
-            ToString((inputParamTensorList[1].param)->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of gradOut and input should be equal. self [%s], out [%s].",
+                ToString((inputParamTensorList[0].param)->GetStorageFormat()).GetString(),
+                ToString((inputParamTensorList[1].param)->GetStorageFormat()).GetString());
         return false;
     }
 
     // 输入格式不能是私有格式
     for (size_t i = 0; i < inputListSize; i++) {
         if (IsPrivateFormat((inputParamTensorList[i].param)->GetStorageFormat())) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW;"
-                "but %s format is %s, please check.",
-                inputParamTensorList[i].paramName,
-                ToString((inputParamTensorList[i].param)->GetStorageFormat()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW;"
+                    "but %s format is %s, please check.",
+                    inputParamTensorList[i].paramName,
+                    ToString((inputParamTensorList[i].param)->GetStorageFormat()).GetString());
             return false;
         }
     }
@@ -198,12 +190,11 @@ static bool CheckFormat(
         size_t maskIdx = GetMaskIdx(i);
         bool mask = outputMask[maskIdx];
         if (mask && IsPrivateFormat((outputParamTensorList[i].param)->GetStorageFormat())) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW;"
-                "but %s format is %s, please check.",
-                outputParamTensorList[i].paramName,
-                ToString((outputParamTensorList[i].param)->GetStorageFormat()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW;"
+                    "but %s format is %s, please check.",
+                    outputParamTensorList[i].paramName,
+                    ToString((outputParamTensorList[i].param)->GetStorageFormat()).GetString());
             return false;
         }
     }
@@ -211,9 +202,8 @@ static bool CheckFormat(
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOut, const aclTensor* input, OutputParamT* outputParamTensorList, size_t outputListSize,
-    const bool* outputMask)
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, OutputParamT* outputParamTensorList,
+                       size_t outputListSize, const bool* outputMask)
 {
     // 所有输入的维度都不能低于2且不能超过8
     OP_CHECK_MIN_DIM(gradOut, BN_MIN_SUPPORT_DIMS_NUMS, return false);
@@ -234,20 +224,19 @@ static bool CheckShape(
         size_t maskIdx = GetMaskIdx(i);
         bool mask = outputMask[maskIdx];
         if (mask && outputParamTensorList[i].param->GetViewShape() != expectShape) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "expected tensor for %s to have same size as %s, but got %s.",
-                outputParamTensorList[i].paramName, op::ToString(expectShape).GetString(),
-                op::ToString(outputParamTensorList[i].param->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected tensor for %s to have same size as %s, but got %s.",
+                    outputParamTensorList[i].paramName, op::ToString(expectShape).GetString(),
+                    op::ToString(outputParamTensorList[i].param->GetViewShape()).GetString());
             return false;
         }
     }
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const bool inputG, const bool weightG, const bool biasG, const aclTensor* sumDy, const aclTensor* sumDyXmu,
-    const aclTensor* gradWeight, const aclTensor* gradBias)
+static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                               const aclTensor* invstd, const bool inputG, const bool weightG, const bool biasG,
+                               const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* gradWeight,
+                               const aclTensor* gradBias)
 {
     // 0. 参数组装
     InputParamT inputParamTensorList[DEFAULT_INPUT_TENSOR_PARAM_CNT] = {
@@ -278,9 +267,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus InputParamContiguousAndCast(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, TupleArrayOutCast& outCast, aclOpExecutor* executor)
+static aclnnStatus InputParamContiguousAndCast(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                               const aclTensor* invstd, const aclTensor* weight,
+                                               TupleArrayOutCast& outCast, aclOpExecutor* executor)
 {
     // 输入如果非连续，需要转换
     auto gradOutContiguous = l0op::Contiguous(gradOut, executor);
@@ -316,8 +305,8 @@ static aclnnStatus InputParamContiguousAndCast(
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus SingleOutParamCastAndViewCopy(
-    const aclTensor* outCast, aclTensor* out, aclOpExecutor* executor)
+static inline aclnnStatus SingleOutParamCastAndViewCopy(const aclTensor* outCast, aclTensor* out,
+                                                        aclOpExecutor* executor)
 {
     // reverse cast
     auto outRevCast = l0op::Cast(outCast, out->GetDataType(), executor);
@@ -330,10 +319,10 @@ static inline aclnnStatus SingleOutParamCastAndViewCopy(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus OutputParamCastAndViewCopy(
-    const aclTensor* sumDyOut, const aclTensor* sumDyXmuOut, const aclTensor* gradWeightOut, const bool inputG,
-    const bool weightG, const bool biasG, aclTensor* sumDy, aclTensor* sumDyXmu, aclTensor* gradWeight,
-    aclTensor* gradBias, aclOpExecutor* executor)
+static aclnnStatus OutputParamCastAndViewCopy(const aclTensor* sumDyOut, const aclTensor* sumDyXmuOut,
+                                              const aclTensor* gradWeightOut, const bool inputG, const bool weightG,
+                                              const bool biasG, aclTensor* sumDy, aclTensor* sumDyXmu,
+                                              aclTensor* gradWeight, aclTensor* gradBias, aclOpExecutor* executor)
 {
     aclnnStatus outCopyRet = ACLNN_SUCCESS;
     if (inputG) {
@@ -359,17 +348,16 @@ static aclnnStatus OutputParamCastAndViewCopy(
 static bool CheckSyncResultNotNull(TupleArraySum outArray)
 {
     if (std::tuple_size<decltype(outArray)>::value != 2) { // 2: for sumDyXmu and gradWeight output
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "sync return %lu out tensors, less than 2",
-            std::tuple_size<decltype(outArray)>::value);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "sync return %lu out tensors, less than 2",
+                std::tuple_size<decltype(outArray)>::value);
         return false;
     }
 
     return (std::get<0>(outArray) != nullptr && std::get<1>(outArray) != nullptr);
 }
 
-static aclnnStatus aclnnBatchNormReduceBackwardForSumDy(
-    const aclTensor* gradOut, const aclTensor* input, TupleArraySum& sumOut, aclOpExecutor* executor)
+static aclnnStatus aclnnBatchNormReduceBackwardForSumDy(const aclTensor* gradOut, const aclTensor* input,
+                                                        TupleArraySum& sumOut, aclOpExecutor* executor)
 {
     // 计算(dl/dy)*x
     auto mulRet = l0op::Mul(gradOut, input, executor);
@@ -401,10 +389,12 @@ static aclnnStatus aclnnBatchNormReduceBackwardForSumDy(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus aclnnBatchNormReduceBackwardNpuImpl(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const bool inputG, const bool weightG, const bool biasG, aclTensor* sumDy,
-    aclTensor* sumDyXmu, aclTensor* gradWeight, aclTensor* gradBias, aclOpExecutor* executor)
+static aclnnStatus aclnnBatchNormReduceBackwardNpuImpl(const aclTensor* gradOut, const aclTensor* input,
+                                                       const aclTensor* mean, const aclTensor* invstd,
+                                                       const aclTensor* weight, const bool inputG, const bool weightG,
+                                                       const bool biasG, aclTensor* sumDy, aclTensor* sumDyXmu,
+                                                       aclTensor* gradWeight, aclTensor* gradBias,
+                                                       aclOpExecutor* executor)
 {
     // 非连续转换和类型转换
     TupleArrayOutCast outCast;
@@ -432,16 +422,16 @@ static aclnnStatus aclnnBatchNormReduceBackwardNpuImpl(
     CHECK_RET(sumDyXmuOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     aclTensor* gradWeightOut = std::get<1>(outArray);
     CHECK_RET(gradWeightOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    ret = OutputParamCastAndViewCopy(
-        sumDyTmp, sumDyXmuOut, gradWeightOut, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias, executor);
+    ret = OutputParamCastAndViewCopy(sumDyTmp, sumDyXmuOut, gradWeightOut, inputG, weightG, biasG, sumDy, sumDyXmu,
+                                     gradWeight, gradBias, executor);
     CHECK_RET((ret == ACLNN_SUCCESS), ret);
 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus OutputParamFillZeroForEmptyTensor(
-    const aclTensor* input, bool inputG, bool weightG, bool biasG, aclTensor* sumDy,
-    aclTensor* sumDyXmu, aclTensor* gradWeight, aclTensor* gradBias, aclOpExecutor* executor)
+static aclnnStatus OutputParamFillZeroForEmptyTensor(const aclTensor* input, bool inputG, bool weightG, bool biasG,
+                                                     aclTensor* sumDy, aclTensor* sumDyXmu, aclTensor* gradWeight,
+                                                     aclTensor* gradBias, aclOpExecutor* executor)
 {
     auto dimC = input->GetViewShape()[1];
     aclnnStatus outFillRet = ACLNN_SUCCESS;
@@ -451,25 +441,25 @@ static aclnnStatus OutputParamFillZeroForEmptyTensor(
         // 空Tensor情况下，输出都为0
         aclTensor* fillZeroTensorTmp = FillScalar(dimC, 0, executor);
         CHECK_RET(fillZeroTensorTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        outFillRet = OutputParamCastAndViewCopy(
-            fillZeroTensorTmp, fillZeroTensorTmp, fillZeroTensorTmp, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias,
-            executor);
+        outFillRet = OutputParamCastAndViewCopy(fillZeroTensorTmp, fillZeroTensorTmp, fillZeroTensorTmp, inputG,
+                                                weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias, executor);
         CHECK_RET((outFillRet == ACLNN_SUCCESS), outFillRet);
     }
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const bool inputG, const bool weightG, const bool biasG, aclTensor* sumDy,
-    aclTensor* sumDyXmu, aclTensor* gradWeight, aclTensor* gradBias, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
+                                                         const aclTensor* mean, const aclTensor* invstd,
+                                                         const aclTensor* weight, const bool inputG, const bool weightG,
+                                                         const bool biasG, aclTensor* sumDy, aclTensor* sumDyXmu,
+                                                         aclTensor* gradWeight, aclTensor* gradBias,
+                                                         uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnBatchNormReduceBackward, DFX_IN(gradOut, input, mean, invstd, weight, inputG, weightG, biasG),
-        DFX_OUT(sumDy, sumDyXmu, gradWeight, gradBias));
+    L2_DFX_PHASE_1(aclnnBatchNormReduceBackward, DFX_IN(gradOut, input, mean, invstd, weight, inputG, weightG, biasG),
+                   DFX_OUT(sumDy, sumDyXmu, gradWeight, gradBias));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -481,8 +471,8 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
 
     // 空Tensor处理
     if (gradOut->IsEmpty() || input->IsEmpty() || mean->IsEmpty() || invstd->IsEmpty()) {
-        auto fillZeroRet = OutputParamFillZeroForEmptyTensor(
-            input, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias, uniqueExecutor.get());
+        auto fillZeroRet = OutputParamFillZeroForEmptyTensor(input, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight,
+                                                             gradBias, uniqueExecutor.get());
         CHECK_RET(fillZeroRet == ACLNN_SUCCESS, fillZeroRet);
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
@@ -496,9 +486,9 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
     }
 
     // 开始BN reduce反向
-    auto bnBwReduceRet = aclnnBatchNormReduceBackwardNpuImpl(
-        gradOut, input, mean, invstd, weight, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias,
-        uniqueExecutor.get());
+    auto bnBwReduceRet = aclnnBatchNormReduceBackwardNpuImpl(gradOut, input, mean, invstd, weight, inputG, weightG,
+                                                             biasG, sumDy, sumDyXmu, gradWeight, gradBias,
+                                                             uniqueExecutor.get());
     CHECK_RET(bnBwReduceRet == ACLNN_SUCCESS, bnBwReduceRet);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
@@ -507,8 +497,8 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormReduceBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnBatchNormReduceBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnBatchNormReduceBackward);
 

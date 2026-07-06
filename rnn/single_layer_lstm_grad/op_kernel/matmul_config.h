@@ -21,16 +21,13 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 
-
-constexpr MatmulConfig MM_CFG = GetNormalConfig(
-    false  // intrinsicsLimit
+constexpr MatmulConfig MM_CFG = GetNormalConfig(false // intrinsicsLimit
 );
-constexpr MatmulConfig MM_HUGE_CFG = GetNormalConfig(
-    true  // intrinsicsLimit
+constexpr MatmulConfig MM_HUGE_CFG = GetNormalConfig(true // intrinsicsLimit
 );
 
 #ifdef __CCE_KT_TEST__
-void EmptyTestFunc() {};
-#endif  // __CCE_KT_TEST__
+void EmptyTestFunc(){};
+#endif // __CCE_KT_TEST__
 
-#endif  // MATMUL_CONFIG_H
+#endif // MATMUL_CONFIG_H

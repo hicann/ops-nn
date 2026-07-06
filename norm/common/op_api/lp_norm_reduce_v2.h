@@ -18,8 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* LpNormReduceV2(
-    const aclTensor* x, float p, const aclIntArray* dims, bool keepDim, float epsilon, aclOpExecutor* executor);
+const aclTensor* LpNormReduceV2(const aclTensor* x, float p, const aclIntArray* dims, bool keepDim, float epsilon,
+                                aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_LPNORMREDUCEV2_H_

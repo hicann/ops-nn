@@ -24,13 +24,11 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListRSBLE : public ScatterListBase<T1>
-{
+class ScatterListRSBLE : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListRSBLE(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -69,9 +67,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRSBLE<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListRSBLE<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                      GM_ADDR varOut, GM_ADDR workspace,
+                                                      const ScatterListTilingData* tilingData)
 {
     varPtr = var;
     blockIdx = GetBlockIdx();
@@ -189,8 +187,8 @@ __aicore__ inline void ScatterListRSBLE<T1, T2>::CopyOutNotEqLen(const int64_t& 
             dim2UpdateLen = indiceUb.GetValue(dim0Idx * 2 + 1);
             dim2Idx = curCoreBatchIdx % m_tilingData.dim2Count;
             if (dim2Idx < dim2UpdateLen) {
-                dstGmOffset =
-                    dim1Idx * m_tilingData.dstBatchStride + (dim2OffsetIdx + dim2Idx) * m_tilingData.dim3Count;
+                dstGmOffset = dim1Idx * m_tilingData.dstBatchStride +
+                              (dim2OffsetIdx + dim2Idx) * m_tilingData.dim3Count;
                 srcGmOffset = eachCoreBatchIdx * m_tilingData.dim3Count;
                 DataCopy(varGm[dstGmOffset], updatesUb[srcGmOffset], m_tilingData.dim3Count);
             }

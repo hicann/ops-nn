@@ -34,29 +34,25 @@ bool MaxPool3DGradWithArgmaxTilingBase::CheckInputShape()
     size_t argmaxDimNum = argmaxShape->GetStorageShape().GetDimNum();
 
     // xDimNum should be 5(format:NCDHW)
-    OP_CHECK_IF(
-        (xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM) || (argmaxDimNum != NCDHW_DIM_NUM),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Input dim num should equal = %lu, actual is xDim: %lu, gradDim: %lu, argmaxDim: %lu.", NCDHW_DIM_NUM,
-            xDimNum, gradDimNum, argmaxDimNum),
-        return false);
+    OP_CHECK_IF((xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM) || (argmaxDimNum != NCDHW_DIM_NUM),
+                OP_LOGE(context_->GetNodeName(),
+                        "Input dim num should equal = %lu, actual is xDim: %lu, gradDim: %lu, argmaxDim: %lu.",
+                        NCDHW_DIM_NUM, xDimNum, gradDimNum, argmaxDimNum),
+                return false);
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_CHECK_IF(
-            xShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context_->GetNodeName(), "Input x shape can not be 0."),
-            return false);
+        OP_CHECK_IF(xShape->GetStorageShape().GetDim(i) == 0,
+                    OP_LOGE(context_->GetNodeName(), "Input x shape can not be 0."), return false);
     }
 
     // gradShape&argmaxShape's shape should be equal
     for (size_t i = 0; i < xDimNum; i++) {
         uint64_t gradDimValue = gradShape->GetStorageShape().GetDim(i);
         uint64_t argmaxDimValue = argmaxShape->GetStorageShape().GetDim(i);
-        OP_CHECK_IF(
-            gradDimValue != argmaxDimValue,
-            OP_LOGE(
-                context_->GetNodeName(), "Input dim check invalid, grad[%lu] is %lu, argmax[%lu] is %lu, not equal.", i,
-                gradDimValue, i, argmaxDimValue),
-            return false);
+        OP_CHECK_IF(gradDimValue != argmaxDimValue,
+                    OP_LOGE(context_->GetNodeName(),
+                            "Input dim check invalid, grad[%lu] is %lu, argmax[%lu] is %lu, not equal.", i,
+                            gradDimValue, i, argmaxDimValue),
+                    return false);
     }
 
     // Input NCDim should be equal
@@ -65,9 +61,8 @@ bool MaxPool3DGradWithArgmaxTilingBase::CheckInputShape()
         uint64_t gradDimValue = gradShape->GetStorageShape().GetDim(i);
         OP_CHECK_IF(
             (gradDimValue != xDimValue),
-            OP_LOGE(
-                context_->GetNodeName(), "Input dim check invalid, grad[%lu] is %lu, x[%lu] is %lu, not equal.", i,
-                gradDimValue, i, xDimValue),
+            OP_LOGE(context_->GetNodeName(), "Input dim check invalid, grad[%lu] is %lu, x[%lu] is %lu, not equal.", i,
+                    gradDimValue, i, xDimValue),
             return false);
     }
 
@@ -85,22 +80,18 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckInputDtype()
     auto argmaxDataType = context_->GetInputDesc(ARGMAX_INDEX)->GetDataType();
     auto yOutDataType = context_->GetOutputDesc(Y_INDEX)->GetDataType();
 
-    OP_CHECK_IF(
-        xDataType != gradDataType,
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not equal grad data type."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        xDataType != yOutDataType,
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not equal y data type."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not fp32/fp16/bf16."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        argmaxDataType != ge::DT_INT32,
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, argmax data type not equal int32."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDataType != gradDataType,
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not equal grad data type."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDataType != yOutDataType,
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not equal y data type."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not fp32/fp16/bf16."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(argmaxDataType != ge::DT_INT32,
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, argmax data type not equal int32."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -114,22 +105,18 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckAttrShape()
     int32_t dilationsDimNum = attrs->GetListInt(DILATION_ATTR_INDEX)->GetSize();
 
     // Check attr dim num
-    OP_CHECK_IF(
-        (kSizeDimNum != DHW_DIM_NUM) && (kSizeDimNum != 1),
-        OP_LOGE(context_->GetNodeName(), "Attr kSize dim num invalid, dim num should equal 3 or 1."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (stridesDimNum != DHW_DIM_NUM) && (stridesDimNum != 1) && (stridesDimNum != 0),
-        OP_LOGE(context_->GetNodeName(), "Attr strides dim num invalid, dim num should equal 3 or 1 or 0."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (padsDimNum != DHW_DIM_NUM) && (padsDimNum != 1),
-        OP_LOGE(context_->GetNodeName(), "Attr pads dim num invalid, dim num should equal 3 or 1."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (dilationsDimNum != DHW_DIM_NUM) && (dilationsDimNum != 1),
-        OP_LOGE(context_->GetNodeName(), "Attr dilations dim num invalid, dim num should equal 3 or 1."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((kSizeDimNum != DHW_DIM_NUM) && (kSizeDimNum != 1),
+                OP_LOGE(context_->GetNodeName(), "Attr kSize dim num invalid, dim num should equal 3 or 1."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((stridesDimNum != DHW_DIM_NUM) && (stridesDimNum != 1) && (stridesDimNum != 0),
+                OP_LOGE(context_->GetNodeName(), "Attr strides dim num invalid, dim num should equal 3 or 1 or 0."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((padsDimNum != DHW_DIM_NUM) && (padsDimNum != 1),
+                OP_LOGE(context_->GetNodeName(), "Attr pads dim num invalid, dim num should equal 3 or 1."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dilationsDimNum != DHW_DIM_NUM) && (dilationsDimNum != 1),
+                OP_LOGE(context_->GetNodeName(), "Attr dilations dim num invalid, dim num should equal 3 or 1."),
+                return ge::GRAPH_FAILED);
 
     // Check attr value bigger than 0
     auto kSizeVector = attrs->GetListInt(KSIZE_ATTR_INDEX)->GetData();
@@ -137,36 +124,28 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckAttrShape()
     auto padsVector = attrs->GetListInt(PADS_ATTR_INDEX)->GetData();
     auto dilationsVector = attrs->GetListInt(DILATION_ATTR_INDEX)->GetData();
     for (uint32_t i = 0; i < (uint32_t)kSizeDimNum; i++) {
-        OP_CHECK_IF(
-            (kSizeVector[i] <= 0),
-            OP_LOGE(
-                context_->GetNodeName(), "Attr value invalid, kSize[%u] is %ld, should bigger than 0.", i,
-                kSizeVector[i]),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((kSizeVector[i] <= 0),
+                    OP_LOGE(context_->GetNodeName(), "Attr value invalid, kSize[%u] is %ld, should bigger than 0.", i,
+                            kSizeVector[i]),
+                    return ge::GRAPH_FAILED);
     }
     for (uint32_t i = 0; i < (uint32_t)stridesDimNum; i++) {
-        OP_CHECK_IF(
-            (stridesVector[i] <= 0),
-            OP_LOGE(
-                context_->GetNodeName(), "Attr value invalid, strides[%u] is %ld, should bigger than 0.", i,
-                stridesVector[i]),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((stridesVector[i] <= 0),
+                    OP_LOGE(context_->GetNodeName(), "Attr value invalid, strides[%u] is %ld, should bigger than 0.", i,
+                            stridesVector[i]),
+                    return ge::GRAPH_FAILED);
     }
     for (uint32_t i = 0; i < (uint32_t)padsDimNum; i++) {
-        OP_CHECK_IF(
-            (padsVector[i] < 0),
-            OP_LOGE(
-                context_->GetNodeName(), "Attr value invalid, pads[%u] is %ld, should bigger or equal 0.", i,
-                padsVector[i]),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((padsVector[i] < 0),
+                    OP_LOGE(context_->GetNodeName(), "Attr value invalid, pads[%u] is %ld, should bigger or equal 0.",
+                            i, padsVector[i]),
+                    return ge::GRAPH_FAILED);
     }
     for (uint32_t i = 0; i < (uint32_t)dilationsDimNum; i++) {
-        OP_CHECK_IF(
-            (dilationsVector[i] <= 0),
-            OP_LOGE(
-                context_->GetNodeName(), "Attr value invalid, dilations[%u] is %ld, should bigger than 0.", i,
-                dilationsVector[i]),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((dilationsVector[i] <= 0),
+                    OP_LOGE(context_->GetNodeName(), "Attr value invalid, dilations[%u] is %ld, should bigger than 0.",
+                            i, dilationsVector[i]),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -243,28 +222,25 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckInputValid()
     const uint64_t dilationW = maxPoolGradParams.dilationW;
 
     // check 1
-    OP_CHECK_IF(
-        (pDTop > (kd / 2)) || (pHTop > (kh / 2)) || (pWTop > (kw / 2)),
-        OP_LOGE(context_->GetNodeName(), "Attr size invalid, padSize should smaller than kernelSize div 2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((pDTop > (kd / 2)) || (pHTop > (kh / 2)) || (pWTop > (kw / 2)),
+                OP_LOGE(context_->GetNodeName(), "Attr size invalid, padSize should smaller than kernelSize div 2"),
+                return ge::GRAPH_FAILED);
     // check 2
-    OP_CHECK_IF(
-        (pDTop > ((kd - 1) * dilationD + 1) / 2) || (pHTop > ((kh - 1) * dilationH + 1) / 2) ||
-            (pWTop > ((kw - 1) * dilationW + 1) / 2),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Attr size invalid, padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((pDTop > ((kd - 1) * dilationD + 1) / 2) || (pHTop > ((kh - 1) * dilationH + 1) / 2) ||
+                    (pWTop > ((kw - 1) * dilationW + 1) / 2),
+                OP_LOGE(context_->GetNodeName(),
+                        "Attr size invalid, padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2."),
+                return ge::GRAPH_FAILED);
     // check 3
     // Check outerDim invaild
     int64_t doExpected, hoExpected, woExpected;
     if (maxPoolGradParams.ceilMode) {
-        doExpected =
-            Ops::Base::CeilDiv((maxPoolGradParams.diDim + NUM_TWO * pDTop + sd - dilationD * (kd - 1) - 1), sd);
-        hoExpected =
-            Ops::Base::CeilDiv((maxPoolGradParams.hiDim + NUM_TWO * pHTop + sh - dilationH * (kh - 1) - 1), sh);
-        woExpected =
-            Ops::Base::CeilDiv((maxPoolGradParams.wiDim + NUM_TWO * pWTop + sw - dilationW * (kw - 1) - 1), sw);
+        doExpected = Ops::Base::CeilDiv((maxPoolGradParams.diDim + NUM_TWO * pDTop + sd - dilationD * (kd - 1) - 1),
+                                        sd);
+        hoExpected = Ops::Base::CeilDiv((maxPoolGradParams.hiDim + NUM_TWO * pHTop + sh - dilationH * (kh - 1) - 1),
+                                        sh);
+        woExpected = Ops::Base::CeilDiv((maxPoolGradParams.wiDim + NUM_TWO * pWTop + sw - dilationW * (kw - 1) - 1),
+                                        sw);
     } else {
         doExpected = (maxPoolGradParams.diDim + NUM_TWO * pDTop + sd - dilationD * (kd - 1) - 1) / sd;
         hoExpected = (maxPoolGradParams.hiDim + NUM_TWO * pHTop + sh - dilationH * (kh - 1) - 1) / sh;
@@ -277,17 +253,15 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckInputValid()
         (doExpected <= 0) || (static_cast<uint64_t>(doExpected) != maxPoolGradParams.doDim) || (hoExpected <= 0) ||
             (static_cast<uint64_t>(hoExpected) != maxPoolGradParams.hoDim) || (woExpected <= 0) ||
             (static_cast<uint64_t>(woExpected) != maxPoolGradParams.woDim),
-        OP_LOGE(
-            context_->GetNodeName(), "OuterDim size invalid, doExpected: %ld, hoExpected: %ld, woExpected: %ld.",
-            doExpected, hoExpected, woExpected),
+        OP_LOGE(context_->GetNodeName(), "OuterDim size invalid, doExpected: %ld, hoExpected: %ld, woExpected: %ld.",
+                doExpected, hoExpected, woExpected),
         return ge::GRAPH_FAILED);
     // check 4
     // Check index range
-    OP_CHECK_IF(
-        maxPoolGradParams.diDim * maxPoolGradParams.hiDim * maxPoolGradParams.wiDim > MAX_INT32,
-        OP_LOGE(
-            context_->GetNodeName(), "Shape too big, diDim * hiDim * wiDim should not bigger than max range of int32."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maxPoolGradParams.diDim * maxPoolGradParams.hiDim * maxPoolGradParams.wiDim > MAX_INT32,
+                OP_LOGE(context_->GetNodeName(),
+                        "Shape too big, diDim * hiDim * wiDim should not bigger than max range of int32."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -312,42 +286,27 @@ void MaxPool3DGradWithArgmaxTilingBase::SetOtherInputParams()
 ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "Enter MaxPool3DGradWithArgmaxTilingBase GetShapeAttrsInfo.");
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckAttrShape(), OP_LOGE(context_->GetNodeName(), "The attr shape is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetAttrParams(), OP_LOGE(context_->GetNodeName(), "Set attr shape failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != CheckInputValid(), OP_LOGE(context_->GetNodeName(), "The input shape is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckAttrShape(), OP_LOGE(context_->GetNodeName(), "The attr shape is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetAttrParams(), OP_LOGE(context_->GetNodeName(), "Set attr shape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputValid(), OP_LOGE(context_->GetNodeName(), "The input shape is invalid."),
+                return ge::GRAPH_FAILED);
     SetOtherInputParams();
     return ge::GRAPH_SUCCESS;
 }
 
-bool MaxPool3DGradWithArgmaxTilingBase::IsCapable()
-{
-    return false;
-}
+bool MaxPool3DGradWithArgmaxTilingBase::IsCapable() { return false; }
 
-ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::GetPlatformInfo()
 {
@@ -371,10 +330,7 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 void MaxPool3DGradWithArgmaxTilingBase::SetCntTailTilingParams()
 {
@@ -386,8 +342,8 @@ void MaxPool3DGradWithArgmaxTilingBase::SetCntTailTilingParams()
     maxPoolGradParams.doTail = maxPoolGradParams.doDim - (maxPoolGradParams.doCnt - 1) * maxPoolGradParams.baseDo;
     maxPoolGradParams.hoTail = maxPoolGradParams.hoDim - (maxPoolGradParams.hoCnt - 1) * maxPoolGradParams.baseHo;
     maxPoolGradParams.woTail = maxPoolGradParams.woDim - (maxPoolGradParams.woCnt - 1) * maxPoolGradParams.baseWo;
-    maxPoolGradParams.totalCnt =
-        maxPoolGradParams.ncCnt * maxPoolGradParams.doCnt * maxPoolGradParams.hoCnt * maxPoolGradParams.woCnt;
+    maxPoolGradParams.totalCnt = maxPoolGradParams.ncCnt * maxPoolGradParams.doCnt * maxPoolGradParams.hoCnt *
+                                 maxPoolGradParams.woCnt;
 }
 
 void MaxPool3DGradWithArgmaxTilingBase::SetBaseTilingData()
@@ -430,36 +386,35 @@ void MaxPool3DGradWithArgmaxTilingBase::SetBaseTilingData()
 
 void MaxPool3DGradWithArgmaxTilingBase::PrintTilingData()
 {
-    maxPoolGradParams.isInitOutput = 
-        (maxPoolGradParams.doDim * maxPoolGradParams.kd < maxPoolGradParams.diDim + maxPoolGradParams.pDTop + 
-            maxPoolGradParams.pDBottom) ||
-        (maxPoolGradParams.hoDim * maxPoolGradParams.kh < maxPoolGradParams.hiDim + maxPoolGradParams.pHTop +
-            maxPoolGradParams.pHBottom) ||
-        (maxPoolGradParams.woDim * maxPoolGradParams.kw < maxPoolGradParams.wiDim + maxPoolGradParams.pWTop +
-            maxPoolGradParams.pWBottom) ||
-        (maxPoolGradParams.doDim - 1) * maxPoolGradParams.sd + maxPoolGradParams.kd < maxPoolGradParams.diDim +
-        maxPoolGradParams.pDTop ||
-        (maxPoolGradParams.hoDim - 1) * maxPoolGradParams.sh + maxPoolGradParams.kh < maxPoolGradParams.hiDim +
-        maxPoolGradParams.pHTop ||
-        (maxPoolGradParams.woDim - 1) * maxPoolGradParams.sw + maxPoolGradParams.kw < maxPoolGradParams.wiDim +
-        maxPoolGradParams.pWTop || maxPoolGradParams.isOverLap;
-    OP_LOGI(
-        context_->GetNodeName(),
-        "TilingData nc: %lu, di: %lu, hi: %lu, wi: %lu do: %lu, ho: %lu, wo: %lu, "
-        "kd: %lu, kh: %lu, kw: %lu sd: %lu, sh: %lu, sw: %lu, "
-        "pDTop: %lu, pHTop: %lu, pWTop: %lu pDBottom: %lu, pHBottom: %lu, pWBottom: %lu, "
-        "baseNc: %lu, baseDo: %lu, baseHo: %lu, baseWo: %lu ncTail: %lu, doTail: %lu, hoTail: %lu, woTail: %lu, "
-        "ncCnt: %lu, doCnt: %lu, hoCnt: %lu, woCnt: %lu totalCnt: %lu, usedCoreNum: %lu, totalUBSize: %lu, "
-        "ceilMode: %d, isOverLap: %d.",
-        tilingData.get_ncDim(), tilingData.get_diDim(), tilingData.get_hiDim(), tilingData.get_wiDim(),
-        tilingData.get_doDim(), tilingData.get_hoDim(), tilingData.get_woDim(), tilingData.get_kd(),
-        tilingData.get_kh(), tilingData.get_kw(), tilingData.get_sd(), tilingData.get_sh(), tilingData.get_sw(),
-        tilingData.get_padDTop(), tilingData.get_padHTop(), tilingData.get_padWTop(), tilingData.get_padDBottom(),
-        tilingData.get_padHBottom(), tilingData.get_padWBottom(), tilingData.get_baseNc(), tilingData.get_baseDo(),
-        tilingData.get_baseHo(), tilingData.get_baseWo(), tilingData.get_ncTail(), tilingData.get_doTail(),
-        tilingData.get_hoTail(), tilingData.get_woTail(), tilingData.get_ncCnt(), tilingData.get_doCnt(),
-        tilingData.get_hoCnt(), tilingData.get_woCnt(), tilingData.get_totalCnt(), tilingData.get_usedCoreNum(),
-        tilingData.get_totalUBSize(), maxPoolGradParams.ceilMode, maxPoolGradParams.isOverLap);
+    maxPoolGradParams.isInitOutput = (maxPoolGradParams.doDim * maxPoolGradParams.kd <
+                                      maxPoolGradParams.diDim + maxPoolGradParams.pDTop + maxPoolGradParams.pDBottom) ||
+                                     (maxPoolGradParams.hoDim * maxPoolGradParams.kh <
+                                      maxPoolGradParams.hiDim + maxPoolGradParams.pHTop + maxPoolGradParams.pHBottom) ||
+                                     (maxPoolGradParams.woDim * maxPoolGradParams.kw <
+                                      maxPoolGradParams.wiDim + maxPoolGradParams.pWTop + maxPoolGradParams.pWBottom) ||
+                                     (maxPoolGradParams.doDim - 1) * maxPoolGradParams.sd + maxPoolGradParams.kd <
+                                         maxPoolGradParams.diDim + maxPoolGradParams.pDTop ||
+                                     (maxPoolGradParams.hoDim - 1) * maxPoolGradParams.sh + maxPoolGradParams.kh <
+                                         maxPoolGradParams.hiDim + maxPoolGradParams.pHTop ||
+                                     (maxPoolGradParams.woDim - 1) * maxPoolGradParams.sw + maxPoolGradParams.kw <
+                                         maxPoolGradParams.wiDim + maxPoolGradParams.pWTop ||
+                                     maxPoolGradParams.isOverLap;
+    OP_LOGI(context_->GetNodeName(),
+            "TilingData nc: %lu, di: %lu, hi: %lu, wi: %lu do: %lu, ho: %lu, wo: %lu, "
+            "kd: %lu, kh: %lu, kw: %lu sd: %lu, sh: %lu, sw: %lu, "
+            "pDTop: %lu, pHTop: %lu, pWTop: %lu pDBottom: %lu, pHBottom: %lu, pWBottom: %lu, "
+            "baseNc: %lu, baseDo: %lu, baseHo: %lu, baseWo: %lu ncTail: %lu, doTail: %lu, hoTail: %lu, woTail: %lu, "
+            "ncCnt: %lu, doCnt: %lu, hoCnt: %lu, woCnt: %lu totalCnt: %lu, usedCoreNum: %lu, totalUBSize: %lu, "
+            "ceilMode: %d, isOverLap: %d.",
+            tilingData.get_ncDim(), tilingData.get_diDim(), tilingData.get_hiDim(), tilingData.get_wiDim(),
+            tilingData.get_doDim(), tilingData.get_hoDim(), tilingData.get_woDim(), tilingData.get_kd(),
+            tilingData.get_kh(), tilingData.get_kw(), tilingData.get_sd(), tilingData.get_sh(), tilingData.get_sw(),
+            tilingData.get_padDTop(), tilingData.get_padHTop(), tilingData.get_padWTop(), tilingData.get_padDBottom(),
+            tilingData.get_padHBottom(), tilingData.get_padWBottom(), tilingData.get_baseNc(), tilingData.get_baseDo(),
+            tilingData.get_baseHo(), tilingData.get_baseWo(), tilingData.get_ncTail(), tilingData.get_doTail(),
+            tilingData.get_hoTail(), tilingData.get_woTail(), tilingData.get_ncCnt(), tilingData.get_doCnt(),
+            tilingData.get_hoCnt(), tilingData.get_woCnt(), tilingData.get_totalCnt(), tilingData.get_usedCoreNum(),
+            tilingData.get_totalUBSize(), maxPoolGradParams.ceilMode, maxPoolGradParams.isOverLap);
 }
 
 uint64_t MaxPool3DGradWithArgmaxTilingBase::GetTilingKey() const

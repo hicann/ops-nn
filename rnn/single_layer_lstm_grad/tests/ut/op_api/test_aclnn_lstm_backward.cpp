@@ -25,15 +25,9 @@ using namespace std;
 
 class l2_lstm_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_lstm_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_lstm_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_lstm_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_lstm_backward_test TearDown" << std::endl; }
 };
 
 // 正常input场景
@@ -95,12 +89,10 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float)
     auto db_hh = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto dparams_out = TensorListDesc({dw_ih, dw_hh, db_ih, db_hh});
-    auto ut = OP_API_UT(
-        aclnnLstmBackward,
-        INPUT(
-            input, hx_list, params_list, dy, dh, dc, i_list, j_list, f_list, o_list, h_list, c_list, tanhc_list, nullptr, true, 1, 0.0d, true, false, false, 
-            output_mask_desc),
-        OUTPUT(dx_out, dh_prev_out, dc_prev_out, dparams_out));
+    auto ut = OP_API_UT(aclnnLstmBackward,
+                        INPUT(input, hx_list, params_list, dy, dh, dc, i_list, j_list, f_list, o_list, h_list, c_list,
+                              tanhc_list, nullptr, true, 1, 0.0d, true, false, false, output_mask_desc),
+                        OUTPUT(dx_out, dh_prev_out, dc_prev_out, dparams_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -115,7 +107,7 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float_laryer_2_bid)
     vector<int64_t> init_h_shape = {4, 1, 8};
     vector<int64_t> w_ih_shape_0 = {32, 8};
     vector<int64_t> w_hh_shape_0 = {32, 8};
-    vector<int64_t> w_ih_shape_1= {32, 16};
+    vector<int64_t> w_ih_shape_1 = {32, 16};
     vector<int64_t> w_hh_shape_1 = {32, 8};
     vector<int64_t> b_shape = {32};
     vector<int64_t> gates_shape = {2, 1, 8};
@@ -133,7 +125,8 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float_laryer_2_bid)
     auto w_hh_1 = TensorDesc(w_hh_shape_1, ACL_FLOAT, ACL_FORMAT_ND);
     auto b = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto params_list = TensorListDesc({w_ih_0, w_hh_0, b, b, w_ih_0, w_hh_0, b, b, w_ih_1, w_hh_1, b, b, w_ih_1, w_hh_1, b, b});
+    auto params_list = TensorListDesc(
+        {w_ih_0, w_hh_0, b, b, w_ih_0, w_hh_0, b, b, w_ih_1, w_hh_1, b, b, w_ih_1, w_hh_1, b, b});
     auto dy = TensorDesc(y_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto dh = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
     auto dc = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
@@ -169,14 +162,12 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float_laryer_2_bid)
     auto dw_hh_1 = TensorDesc(w_hh_shape_1, ACL_FLOAT, ACL_FORMAT_ND);
     auto db = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto dparams_out = TensorListDesc({dw_ih_0, dw_hh_0, db, db, dw_ih_0, dw_hh_0, db, db, dw_ih_1, dw_hh_1, db, db,
-                                       dw_ih_1, dw_hh_1, db, db});
-    auto ut = OP_API_UT(
-        aclnnLstmBackward,
-        INPUT(
-            input, hx_list, params_list, dy, dh, dc, i_list, j_list, f_list, o_list, h_list, c_list, tanhc_list,
-            nullptr, true, 2, 0.0, true, true, false, output_mask_desc),
-        OUTPUT(dx_out, dh_prev_out, dc_prev_out, dparams_out));
+    auto dparams_out = TensorListDesc(
+        {dw_ih_0, dw_hh_0, db, db, dw_ih_0, dw_hh_0, db, db, dw_ih_1, dw_hh_1, db, db, dw_ih_1, dw_hh_1, db, db});
+    auto ut = OP_API_UT(aclnnLstmBackward,
+                        INPUT(input, hx_list, params_list, dy, dh, dc, i_list, j_list, f_list, o_list, h_list, c_list,
+                              tanhc_list, nullptr, true, 2, 0.0, true, true, false, output_mask_desc),
+                        OUTPUT(dx_out, dh_prev_out, dc_prev_out, dparams_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

@@ -21,9 +21,9 @@
 namespace optiling {
 
 struct AdaLayerNormCompileInfo {
-  int32_t coreNum = 0;
-  uint64_t ubSizePlatForm = 0;
-  bool isRegBase = false;
+    int32_t coreNum = 0;
+    uint64_t ubSizePlatForm = 0;
+    bool isRegBase = false;
 };
 
 BEGIN_TILING_DATA_DEF(AdaLayerNormTilingData)
@@ -51,6 +51,6 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(AdaLayerNorm, AdaLayerNormTilingData)
 REGISTER_TILING_DATA_CLASS(AdaLayerNormV2, AdaLayerNormTilingData)
 REGISTER_TILING_DATA_CLASS(AdaLayerNormQuant, AdaLayerNormTilingData)
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_ADA_LAYER_NORM_TILING_H
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_ADA_LAYER_NORM_TILING_H

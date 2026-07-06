@@ -83,26 +83,26 @@ auto max(T a, T b) -> T
     return a >= b ? a : b;
 }
 
-inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context) {
-  auto json_str = context->GetCompiledJson();
-  OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
-  std::unique_ptr<nlohmann::json> parsed_object_cinfo =
-      std::make_unique<nlohmann::json>(nlohmann::json(nlohmann::json::parse(json_str)));
-  return parsed_object_cinfo;
+inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context)
+{
+    auto json_str = context->GetCompiledJson();
+    OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
+    std::unique_ptr<nlohmann::json> parsed_object_cinfo = std::make_unique<nlohmann::json>(
+        nlohmann::json(nlohmann::json::parse(json_str)));
+    return parsed_object_cinfo;
 }
 
 class AvgPool3dGradTiling {
 public:
-    explicit AvgPool3dGradTiling(gert::TilingContext* context) : tilingContext_(context)
-    {}
+    explicit AvgPool3dGradTiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     ge::graphStatus SetKernelTiling();
     void TilingDataPrint() const;
 
 private:
     inline ge::graphStatus InitDHW();
-    inline void Tiling4CParam(
-        const uint64_t ubSizePlatform, const int64_t cShape, const int64_t ndhwShape, const ge::DataType& dtype);
+    inline void Tiling4CParam(const uint64_t ubSizePlatform, const int64_t cShape, const int64_t ndhwShape,
+                              const ge::DataType& dtype);
     inline void Tiling4HWParam(const uint64_t ubSizePlatform, const ge::DataType& dtype);
     inline void Tiling4CastCopyOut(const int64_t ubSizePlatform, const int64_t ncShape, const int64_t dhwShape);
     inline void SetTilingKey(const ge::DataType& dtype);
@@ -112,17 +112,17 @@ private:
     inline void BasicBlockSizeGet(const uint64_t ubSizePlatform, const ge::DataType& dtype);
     inline void BasicBlockCore();
     inline void BasicBlockUb(const uint64_t ubSizePlatform, const ge::DataType& dtype);
-    inline uint64_t BasicBlockComputerUbSize(
-        const uint64_t baseDo, const uint64_t baseHo, const uint64_t baseWo, const uint64_t baseDi,
-        const uint64_t baseHi, const uint64_t baseWi, const ge::DataType& dtype);
+    inline uint64_t BasicBlockComputerUbSize(const uint64_t baseDo, const uint64_t baseHo, const uint64_t baseWo,
+                                             const uint64_t baseDi, const uint64_t baseHi, const uint64_t baseWi,
+                                             const ge::DataType& dtype);
 
     ge::graphStatus InitBaseParams(gert::Shape& gradShape, ge::DataType& dtype);
     void CalcShapeVars(const gert::Shape& gradShape, int64_t& ncShape, int64_t& ndhwShape, int64_t& cShape);
     void SetWorkspace(ge::DataType dtype, int64_t ncShape);
-    void CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo,
-                                                      int64_t ncShape, int64_t ndhwShape, int64_t gradDim0);
-    void DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype,
-                                                 int64_t cShape, int64_t ndhwShape);
+    void CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo, int64_t ncShape,
+                                     int64_t ndhwShape, int64_t gradDim0);
+    void DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype, int64_t cShape, int64_t ndhwShape);
+
 private:
     gert::TilingContext* tilingContext_ = nullptr;
     AvgPool3dGradTilingParam tilingData_;
@@ -205,10 +205,7 @@ private:
     uint64_t ubSize = 0;
 };
 
-int64_t AvgPool3dGradTiling::AlignDown(int64_t num, int64_t rnd)
-{
-    return ((rnd) == 0 ? 0 : ((num / rnd) * rnd));
-}
+int64_t AvgPool3dGradTiling::AlignDown(int64_t num, int64_t rnd) { return ((rnd) == 0 ? 0 : ((num / rnd) * rnd)); }
 
 int64_t AvgPool3dGradTiling::AlignUp(int64_t num, int64_t rnd) const
 {
@@ -279,8 +276,8 @@ ge::graphStatus AvgPool3dGradTiling::InitDHW()
     return ge::GRAPH_SUCCESS;
 }
 
-void AvgPool3dGradTiling::Tiling4CastCopyOut(
-    const int64_t ubSizePlatform, const int64_t ncShape, const int64_t dhwShape)
+void AvgPool3dGradTiling::Tiling4CastCopyOut(const int64_t ubSizePlatform, const int64_t ncShape,
+                                             const int64_t dhwShape)
 {
     OP_LOGD(tilingContext_->GetNodeName(), "tiling for cast copy out start");
     auto gradShape = dhwShape * ncShape;
@@ -306,8 +303,8 @@ void AvgPool3dGradTiling::Tiling4CastCopyOut(
     OP_LOGD(tilingContext_->GetNodeName(), "tiling for cast copy out end");
 }
 
-void AvgPool3dGradTiling::Tiling4CParam(
-    const uint64_t ubSizePlatform, const int64_t cShape, const int64_t ndhwShape, const ge::DataType& dtype)
+void AvgPool3dGradTiling::Tiling4CParam(const uint64_t ubSizePlatform, const int64_t cShape, const int64_t ndhwShape,
+                                        const ge::DataType& dtype)
 {
     OP_LOGD(tilingContext_->GetNodeName(), "tiling for c param start");
     auto ubSizeLeft = ubSizePlatform - static_cast<uint64_t>(SCALR_UB_SIZE);
@@ -460,9 +457,10 @@ void AvgPool3dGradTiling::BasicBlockCore()
     totalCnt = ncCnt * doCnt * hoCnt * woCnt;
 }
 
-uint64_t AvgPool3dGradTiling::BasicBlockComputerUbSize(
-    const uint64_t baseDo, const uint64_t baseHo, const uint64_t baseWo, const uint64_t baseDi, const uint64_t baseHi,
-    const uint64_t baseWi, const ge::DataType& dtype)
+uint64_t AvgPool3dGradTiling::BasicBlockComputerUbSize(const uint64_t baseDo, const uint64_t baseHo,
+                                                       const uint64_t baseWo, const uint64_t baseDi,
+                                                       const uint64_t baseHi, const uint64_t baseWi,
+                                                       const ge::DataType& dtype)
 {
     uint64_t baseDoHoWo = baseDo * baseHo * baseWo;
     uint64_t baseDiHiWi = baseDi * baseHi * baseWi;
@@ -476,11 +474,11 @@ uint64_t AvgPool3dGradTiling::BasicBlockComputerUbSize(
     uint64_t castUbSize = 0;
 
     if (dtype == ge::DT_FLOAT) {
-        outputGradUbSize = static_cast<uint64_t>(
-            max(uint64_t(baseDoHoWoAlign8), uint64_t(baseDiHiWiAlign8)) * singleCoreNc *
-            DTYPE_LEN_B32); // 输入UB空间，以及计算过程中UB累加时候的空间
-        inputGradUbSize =
-            static_cast<uint64_t>(baseDiHiWiAlign8 * singleCoreNc * DTYPE_LEN_B32); // 累加计算完，转置后的输出UB空间
+        outputGradUbSize = static_cast<uint64_t>(max(uint64_t(baseDoHoWoAlign8), uint64_t(baseDiHiWiAlign8)) *
+                                                 singleCoreNc *
+                                                 DTYPE_LEN_B32); // 输入UB空间，以及计算过程中UB累加时候的空间
+        inputGradUbSize = static_cast<uint64_t>(baseDiHiWiAlign8 * singleCoreNc *
+                                                DTYPE_LEN_B32); // 累加计算完，转置后的输出UB空间
         TranUbSize = static_cast<uint64_t>(baseDoHoWoAlign8 * singleCoreNc * DTYPE_LEN_B32); // 输入转置操作所需UB空间
     } else if (dtype != ge::DT_FLOAT && isOverlap_) {
         outputGradUbSize = static_cast<uint64_t>(baseDoHoWoAlign16 * singleCoreNc * DTYPE_LEN_B16);
@@ -490,8 +488,8 @@ uint64_t AvgPool3dGradTiling::BasicBlockComputerUbSize(
             max(uint64_t(outputGradUbSize), uint64_t(baseDiHiWiAlign8 * singleCoreNc * DTYPE_LEN_B32)));
         inputGradUbSize = static_cast<uint64_t>(baseDiHiWiAlign8 * singleCoreNc * DTYPE_LEN_B32);
     } else {
-        outputGradUbSize = static_cast<uint64_t>(
-            max(uint64_t(baseDoHoWoAlign16), uint64_t(baseDiHiWiAlign16)) * singleCoreNc * DTYPE_LEN_B16);
+        outputGradUbSize = static_cast<uint64_t>(max(uint64_t(baseDoHoWoAlign16), uint64_t(baseDiHiWiAlign16)) *
+                                                 singleCoreNc * DTYPE_LEN_B16);
         TranUbSize = static_cast<uint64_t>(baseDoHoWoAlign16 * singleCoreNc * DTYPE_LEN_B16);
         castUbSize = static_cast<uint64_t>(FRACTOR_TWO * singleCoreNc * DTYPE_LEN_B32);
         inputGradUbSize = static_cast<uint64_t>(baseDiHiWiAlign16 * singleCoreNc * DTYPE_LEN_B16);
@@ -524,9 +522,8 @@ void AvgPool3dGradTiling::BasicBlockUb(const uint64_t ubSizePlatform, const ge::
                 std::min(static_cast<uint64_t>((i - 1) * dDHW_.w + kDHW_.w), static_cast<uint64_t>(inDHW_.w)),
                 dtype) <= ubSizeLeft) {
             baseWo_ = i;
-            baseWi_ = std::min(
-                (i - 1UL) * static_cast<uint64_t>(dDHW_.w) + static_cast<uint64_t>(kDHW_.w),
-                static_cast<uint64_t>(inDHW_.w));
+            baseWi_ = std::min((i - 1UL) * static_cast<uint64_t>(dDHW_.w) + static_cast<uint64_t>(kDHW_.w),
+                               static_cast<uint64_t>(inDHW_.w));
             break;
         }
     }
@@ -537,7 +534,8 @@ void AvgPool3dGradTiling::SetTilingKey(const ge::DataType& dtype)
     bool isFp32 = dtype == ge::DT_FLOAT;
     uint64_t tilingKey;
     if ((isOnlyT_ != 0UL) && dataFormat_ == "NCDHW") {
-        tilingKey = isFp32 ? static_cast<uint64_t>(TILINGKEY_ONLY_T_FP32) : static_cast<uint64_t>(TILINGKEY_ONLY_T_BF16);
+        tilingKey = isFp32 ? static_cast<uint64_t>(TILINGKEY_ONLY_T_FP32) :
+                             static_cast<uint64_t>(TILINGKEY_ONLY_T_BF16);
     } else if (dataFormat_ == "NCDHW") {
         tilingKey = isScatter ? static_cast<uint64_t>(TILINGKEY_SCATTER) : static_cast<uint64_t>(TILINGKEY_NORMAL);
     } else {
@@ -550,15 +548,13 @@ ge::graphStatus AvgPool3dGradTiling::Init()
 {
     OP_LOGD(tilingContext_->GetNodeName(), "Tiling initing");
     auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(tilingContext_->GetCompileInfo());
-    OP_CHECK_IF(compileInfo == nullptr,
-                OP_LOGE(tilingContext_->GetNodeName(), "compile info is nullptr"),
+    OP_CHECK_IF(compileInfo == nullptr, OP_LOGE(tilingContext_->GetNodeName(), "compile info is nullptr"),
                 return ge::GRAPH_FAILED);
 
     gert::Shape gradShape;
     ge::DataType dtype;
     OP_CHECK_IF(InitBaseParams(gradShape, dtype) != ge::GRAPH_SUCCESS,
-                OP_LOGE(tilingContext_->GetNodeName(), "InitBaseParams failed"),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext_->GetNodeName(), "InitBaseParams failed"), return ge::GRAPH_FAILED);
 
     int64_t ndhwShape = 1;
     int64_t ncShape = 1;
@@ -573,8 +569,7 @@ ge::graphStatus AvgPool3dGradTiling::Init()
     SetWorkspace(dtype, ncShape);
     CalcCoreNumAndDetermineFlag(compileInfo, ncShape, ndhwShape, gradShape.GetDim(0));
 
-    OP_CHECK_IF(coreNum_ == 0UL,
-                OP_LOGE(tilingContext_->GetNodeName(), "CoreNum is zero, error."),
+    OP_CHECK_IF(coreNum_ == 0UL, OP_LOGE(tilingContext_->GetNodeName(), "CoreNum is zero, error."),
                 return ge::GRAPH_FAILED);
     uint64_t ubSizePlatform = compileInfo->ub_size;
     DispatchTilingStrategy(ubSizePlatform, dtype, cShape, ndhwShape);
@@ -597,20 +592,20 @@ ge::graphStatus AvgPool3dGradTiling::InitBaseParams(gert::Shape& gradShape, ge::
     divisorOverride_ = static_cast<int64_t>(*attrs->GetAttrPointer<int>(DIVISOR_IDX));
     dataFormat_ = attrs->GetStr(FORMAT_IDX);
     if (dataFormat_ != "NDHWC" && dataFormat_ != "NCDHW") {
-        OP_LOGE_FOR_INVALID_FORMAT(
-            tilingContext_->GetNodeName(), "data_format", dataFormat_.c_str(), "NCDHW or NDHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(tilingContext_->GetNodeName(), "data_format", dataFormat_.c_str(), "NCDHW or NDHWC");
         return ge::GRAPH_FAILED;
     }
 
     if (gradShape.GetDimNum() != GRAD_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            tilingContext_->GetNodeName(), "grad", std::to_string(gradShape.GetDimNum()).c_str(), "5");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext_->GetNodeName(), "grad",
+                                     std::to_string(gradShape.GetDimNum()).c_str(), "5");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-void AvgPool3dGradTiling::CalcShapeVars(const gert::Shape& gradShape, int64_t& ncShape, int64_t& ndhwShape, int64_t& cShape)
+void AvgPool3dGradTiling::CalcShapeVars(const gert::Shape& gradShape, int64_t& ncShape, int64_t& ndhwShape,
+                                        int64_t& cShape)
 {
     if (dataFormat_ == "NDHWC") {
         cShape = gradShape.GetDim(GRAD_SHAPE - 1);
@@ -642,8 +637,8 @@ void AvgPool3dGradTiling::SetWorkspace(ge::DataType dtype, int64_t ncShape)
     currentWorkSpace[0] = sysWorkspaceSize + castWorkspaceSize;
 }
 
-void AvgPool3dGradTiling::CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo,
-                                                      int64_t ncShape, int64_t ndhwShape, int64_t gradDim0)
+void AvgPool3dGradTiling::CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCompileInfo* compileInfo, int64_t ncShape,
+                                                      int64_t ndhwShape, int64_t gradDim0)
 {
     if (dataFormat_ == "NDHWC") {
         coreNum_ = std::min(compileInfo->core_num, static_cast<uint32_t>(ndhwShape));
@@ -672,8 +667,8 @@ void AvgPool3dGradTiling::CalcCoreNumAndDetermineFlag(const AvgPool3DGradCubeCom
     }
 }
 
-void AvgPool3dGradTiling::DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype,
-                                                 int64_t cShape, int64_t ndhwShape)
+void AvgPool3dGradTiling::DispatchTilingStrategy(uint64_t ubSizePlatform, ge::DataType dtype, int64_t cShape,
+                                                 int64_t ndhwShape)
 {
     if (dataFormat_ == "NCDHW") {
         if (isOnlyT_ == 0) {
@@ -686,7 +681,6 @@ void AvgPool3dGradTiling::DispatchTilingStrategy(uint64_t ubSizePlatform, ge::Da
         Tiling4CParam(ubSizePlatform, cShape, ndhwShape, dtype);
     }
 }
-
 
 ge::graphStatus AvgPool3dGradTiling::SetKernelTiling()
 {
@@ -768,8 +762,8 @@ ge::graphStatus AvgPool3dGradTiling::SetKernelTiling()
     tilingData_.blockParam.set_baseWi(baseWi_);
     tilingData_.blockParam.set_ubSize(ubSize);
     tilingData_.blockParam.set_isScatter(isScatter);
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     tilingContext_->SetScheduleMode(BATCH_MODE);
     TilingDataPrint();
@@ -872,9 +866,8 @@ ge::graphStatus TilingPrepareForAvgPool3dGradVec(gert::TilingParseContext* conte
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ub_size = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ub_size <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ub_size <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ub_size);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
@@ -886,8 +879,7 @@ ge::graphStatus TilingPrepareForAvgPool3dGradVec(gert::TilingParseContext* conte
 
 ge::graphStatus TilingForAvgPool3DGrad(gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3DGrad", "context is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3DGrad", "context is null"), return ge::GRAPH_FAILED);
     auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     if (compileInfo->is_ascend_c) {

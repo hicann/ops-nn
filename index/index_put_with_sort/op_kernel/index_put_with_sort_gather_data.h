@@ -21,19 +21,20 @@
 namespace IndexPutWithSort {
 using namespace AscendC;
 
-template<typename IT, typename CT>
+template <typename IT, typename CT>
 class GatherDataOp : public ScatterDataInKernelOp<IT, CT> {
 public:
     __aicore__ inline GatherDataOp() {}
-    __aicore__ inline void Init(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, 
-                                GM_ADDR values, GM_ADDR userWorkspace,
-                                const IndexPutWithSortTilingData* tilingData, TPipe* tpipe) {
+    __aicore__ inline void Init(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, GM_ADDR values,
+                                GM_ADDR userWorkspace, const IndexPutWithSortTilingData* tilingData, TPipe* tpipe)
+    {
         this->InitTilingData(tilingData, tpipe);
         this->InitLocalTensor(INDEX_UB_NUMS, VALUES_UB_NUMS, VALUES_UB_NUMS);
         this->InitGmTensor(out, linear_index, pos_idx, values, userWorkspace);
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         this->GetHeadTailIndexValue();
         // 索引切块
         uint64_t coreIndicesNums = this->coreEndIndex - this->coreStartIndex;
@@ -62,7 +63,8 @@ public:
         因为ub容纳的vlaues和out有限，索引处理一整块索引时需要继续划分为batch，每个batch里的索引对应的values和out可以完全搬入ub
         处理每个batch任务时使用double buffer。
     */
-    __aicore__ inline void ProcessIndicesBlock(uint64_t indicesStart, uint64_t indicesNums) {
+    __aicore__ inline void ProcessIndicesBlock(uint64_t indicesStart, uint64_t indicesNums)
+    {
         // 搬入index, pos
         this->CopyInIndices(indicesStart, indicesNums);
         this->CopyInPosIdx(indicesStart, indicesNums);
@@ -89,7 +91,8 @@ public:
         @param indexStart 该批次索引在ub上的起始下标
         @param indicesNums 该批次索引个数
     */
-    __aicore__ inline void ComputeOfBatch(uint64_t indexStart, uint64_t indicesNums) {
+    __aicore__ inline void ComputeOfBatch(uint64_t indexStart, uint64_t indicesNums)
+    {
         if (this->castEnable) {
             BatchCastIT2CT(indexStart, indicesNums);
         }
@@ -121,7 +124,8 @@ public:
         @brief 将一批索引对应的values和out做类型转化
         @param indicesNums 该批次索引个数
     */
-    __aicore__ inline void BatchCastIT2CT(uint64_t batchIndexStart, uint64_t indicesNums) {
+    __aicore__ inline void BatchCastIT2CT(uint64_t batchIndexStart, uint64_t indicesNums)
+    {
         // fp16/bf16->fp32 eg [000111].fp16 => [111].fp32
         uint64_t bufferStartIT = VALUES_UB_NUMS;
         LocalTensor<IT> valuesLocalIT = this->valuesLocal[bufferStartIT];
@@ -147,7 +151,8 @@ public:
         @param segmentStart 段起始位置
         @param segmentEnd 段截止位置
     */
-    __aicore__ inline void ComputeHeadOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices) {
+    __aicore__ inline void ComputeHeadOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices)
+    {
         GroupAccumulation(segmentStart, segmentEnd, frontIndices, false);
         PIPE_V_S();
         uint64_t src = frontIndices * this->sliceSizeAligned;
@@ -162,7 +167,8 @@ public:
         @param segmentStart 段起始位置
         @param segmentEnd 段截止位置
     */
-    __aicore__ inline void ComputeTailOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices) {
+    __aicore__ inline void ComputeTailOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices)
+    {
         GroupAccumulation(segmentStart, segmentEnd, frontIndices, false);
         PIPE_V_S();
         uint64_t src = frontIndices * this->sliceSizeAligned;
@@ -179,7 +185,8 @@ public:
         @param segmentEnd 中值段索引在ub上的截止位置
     */
     __aicore__ inline void ComputeMidOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices,
-                                             uint64_t batchIndexEnd) {
+                                             uint64_t batchIndexEnd)
+    {
         uint64_t segmentNums = segmentEnd - segmentStart;
         if (segmentNums == 1) { //必须注重分支覆盖率
             GroupAccumulation(segmentStart, segmentEnd, frontIndices, this->castEnable, batchIndexEnd);
@@ -190,20 +197,23 @@ public:
                 int32_t indexValue = this->indexLocal.GetValue(segmentStart + i);
                 if (indexValue != preIndexValue) {
                     // 遇到不相等的索引值，前面相等的索引值使用分组累加
-                    GroupAccumulation(segmentStart + pre, segmentStart + i, frontIndices + pre, this->castEnable, batchIndexEnd);
+                    GroupAccumulation(segmentStart + pre, segmentStart + i, frontIndices + pre, this->castEnable,
+                                      batchIndexEnd);
                     pre = i;
                     preIndexValue = indexValue;
                 }
                 if (i == segmentNums - 1) {
                     // 最后一个索引值，无论与前面是相等还是不等，都是同索引范围都是[pre, i + 1)
-                    GroupAccumulation(segmentStart + pre, segmentStart + i + 1, frontIndices + pre, this->castEnable, batchIndexEnd);
+                    GroupAccumulation(segmentStart + pre, segmentStart + i + 1, frontIndices + pre, this->castEnable,
+                                      batchIndexEnd);
                 }
             }
         }
         PIPE_V_S();
     }
 
-    __aicore__ inline void CopyOutMidOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices) {
+    __aicore__ inline void CopyOutMidOfBatch(uint64_t segmentStart, uint64_t segmentEnd, uint64_t frontIndices)
+    {
         uint64_t segmentNums = segmentEnd - segmentStart;
         if (segmentNums == 1) { //必须注重分支覆盖率
             int32_t indexValue = this->indexLocal.GetValue(segmentStart);
@@ -226,7 +236,8 @@ public:
         PIPE_MTE3_S();
     }
 
-    __aicore__ inline void OneIndexCopyToOut(uint64_t frontIndices, uint64_t indexOffset, int32_t indexValue) {
+    __aicore__ inline void OneIndexCopyToOut(uint64_t frontIndices, uint64_t indexOffset, int32_t indexValue)
+    {
         uint64_t src = (frontIndices + indexOffset) * this->sliceSizeAligned;
         src += src * this->castEnable;
         uint64_t dst = indexValue * this->sliceSize;
@@ -239,8 +250,9 @@ public:
         @param indexEnd 同索引段在ub上的截止下标
         @param dataStart 记录indicesStart对应的“valuesLocal”上的位置，因为同索引相加时起始索引对应的values起始并不是0
     */
-    __aicore__ inline void GroupAccumulation(uint64_t indexStart, uint64_t indexEnd, uint64_t dataStart, bool needCast=false,
-                                             uint64_t batchIndexEnd=0) {
+    __aicore__ inline void GroupAccumulation(uint64_t indexStart, uint64_t indexEnd, uint64_t dataStart,
+                                             bool needCast = false, uint64_t batchIndexEnd = 0)
+    {
         if (this->accumulate == 0) {
             // indexEnd - 1处的values转移至indexStart处，此时已经是升精度的。
             // 如果是头尾进来，不用再执行cast。如果是mid进来需要cast到IT
@@ -317,7 +329,8 @@ public:
         @param segmentStart 传入的时候是batch索引在ub上的起始下标，计算完成后会刷新为中值段的起始位置
         @param segmentEnd 传入的时候是batch索引在ub上的截止下标，计算完成后会刷新为中值段的截止位置
     */
-    __aicore__ inline void ComputeSegmentEdges(uint64_t& segmentStart, uint64_t& segmentEnd) {
+    __aicore__ inline void ComputeSegmentEdges(uint64_t& segmentStart, uint64_t& segmentEnd)
+    {
         int64_t start = segmentStart;
         int64_t end = segmentEnd;
         segmentStart = end;
@@ -326,7 +339,7 @@ public:
             // 该段"尾索引值"和该核"首索引值"相同，认为没有中间段，无需搜索
             return;
         }
-        for(int64_t i = start; i < end; i++) {
+        for (int64_t i = start; i < end; i++) {
             int32_t indexValue = this->indexLocal.GetValue(i);
             if (indexValue != this->headIndexValue) {
                 segmentStart = i;
@@ -348,7 +361,8 @@ public:
         @param indicesStart 该batch索引在ub上的起始下标
         @param indicesNums 该batch索引的个数
     */
-    __aicore__ inline void CopyInDataOfBatch(uint64_t indicesStart, uint64_t indicesNums) {
+    __aicore__ inline void CopyInDataOfBatch(uint64_t indicesStart, uint64_t indicesNums)
+    {
         if (this->accumulate == 0) {
             this->CopyInSingleOfBatch(indicesStart, indicesNums);
             return;
@@ -369,18 +383,21 @@ public:
         for (uint64_t i = 1; i < indicesNums; i++) {
             int32_t indexValue = this->indexLocal.GetValue(indicesStart + i);
             int32_t posIdxValue = this->posIdxLocal.GetValue(indicesStart + i);
-            DataCopyPad(valuesLocalNow[i * this->sliceSizeAligned], this->valuesGm[posIdxValue * this->sliceSize], copyParams, padParams);
+            DataCopyPad(valuesLocalNow[i * this->sliceSizeAligned], this->valuesGm[posIdxValue * this->sliceSize],
+                        copyParams, padParams);
             // 同索引直接调过，不同索引立即搬入。牺牲scalar 提升mte2
             if (indexValue == preIndexValue) {
                 continue;
             } else {
-                DataCopyPad(outLocalNow[i * this->sliceSizeAligned], this->outGm[indexValue * this->sliceSize], copyParams, padParams);
+                DataCopyPad(outLocalNow[i * this->sliceSizeAligned], this->outGm[indexValue * this->sliceSize],
+                            copyParams, padParams);
                 preIndexValue = indexValue;
             }
         }
     }
 
-    __aicore__ inline void CopyInSingleOfBatch(uint64_t indicesStart, uint64_t indicesNums) {
+    __aicore__ inline void CopyInSingleOfBatch(uint64_t indicesStart, uint64_t indicesNums)
+    {
         uint64_t bufferStart = this->castEnable * VALUES_UB_NUMS;
         LocalTensor<IT> valuesLocalNow = this->valuesLocal[bufferStart];
 
@@ -416,5 +433,5 @@ public:
     }
 };
 
-}
+} // namespace IndexPutWithSort
 #endif // INDEX_PUT_WITH_SORT_SCATTER_DATA

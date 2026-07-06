@@ -21,31 +21,31 @@
 namespace ge {
 
 /**
-* @brief Computes the Euclidean norm along the given axes:
-*        y = sqrt( sum( x^2 ) along axes )
-*
-* @par Inputs:
-* Two inputs, including:
-* @li x: A ND tensor of type NumberType.
-*Must be one of the following types: float32, float64, int32, uint8, int16,
-*int8, complex64, int64, qint8, quint8, qint32, bfloat16, uint16, complex128, float16, uint32, uint64.
-* @li axes: An IndexNumberType tensor (int32/int64), 1-D, listing the axes to reduce.
-*
-* @par Attributes:
-* keep_dims: Optional bool, default false. If true, the reduced axes are
-*            retained as size-1 dimensions in the output.
-*
-* @par Outputs:
-* y: A tensor with the same dtype as x. Output shape is derived from x's shape,
-*    axes, and keep_dims.
-*
-* @par Third-party framework compatibility
-* Compatible with the TensorFlow operator tf.math.reduce_euclidean_norm.
-*/
+ * @brief Computes the Euclidean norm along the given axes:
+ *        y = sqrt( sum( x^2 ) along axes )
+ *
+ * @par Inputs:
+ * Two inputs, including:
+ * @li x: A ND tensor of type NumberType.
+ *Must be one of the following types: float32, float64, int32, uint8, int16,
+ *int8, complex64, int64, qint8, quint8, qint32, bfloat16, uint16, complex128, float16, uint32, uint64.
+ * @li axes: An IndexNumberType tensor (int32/int64), 1-D, listing the axes to reduce.
+ *
+ * @par Attributes:
+ * keep_dims: Optional bool, default false. If true, the reduced axes are
+ *            retained as size-1 dimensions in the output.
+ *
+ * @par Outputs:
+ * y: A tensor with the same dtype as x. Output shape is derived from x's shape,
+ *    axes, and keep_dims.
+ *
+ * @par Third-party framework compatibility
+ * Compatible with the TensorFlow operator tf.math.reduce_euclidean_norm.
+ */
 REG_OP(EuclideanNorm)
-    .INPUT(x,    TensorType::NumberType())
+    .INPUT(x, TensorType::NumberType())
     .INPUT(axes, TensorType::IndexNumberType())
-    .OUTPUT(y,   TensorType::NumberType())
+    .OUTPUT(y, TensorType::NumberType())
     .ATTR(keep_dims, Bool, false)
     .OP_END_FACTORY_REG(EuclideanNorm)
 

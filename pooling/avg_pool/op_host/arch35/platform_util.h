@@ -48,7 +48,7 @@ inline uint32_t GetCacheLineSize(T* context)
     return 256U;
 }
 
-}  // namespace platform
-}  // namespace optiling
+} // namespace platform
+} // namespace optiling
 
-#endif  // AVG_POOL_OP_HOST_ARCH35_PLATFORM_UTIL_H_
+#endif // AVG_POOL_OP_HOST_ARCH35_PLATFORM_UTIL_H_

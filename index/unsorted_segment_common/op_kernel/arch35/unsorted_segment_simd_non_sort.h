@@ -21,8 +21,7 @@ using namespace AscendC;
 constexpr uint32_t NON_SORT_DB_BUF = 2;
 
 template <typename X_T, typename IDS_T, typename GmInitFunc, typename SetAtomicModeFunc>
-class KernelSimdNonSort
-{
+class KernelSimdNonSort {
 public:
     __aicore__ inline KernelSimdNonSort(const UnsortedSegmentSimdNonSortTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
@@ -40,7 +39,8 @@ private:
 };
 
 template <typename X_T, typename IDS_T, typename GmInitFunc, typename SetAtomicModeFunc>
-__aicore__ inline void KernelSimdNonSort<X_T, IDS_T, GmInitFunc, SetAtomicModeFunc>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+__aicore__ inline void KernelSimdNonSort<X_T, IDS_T, GmInitFunc, SetAtomicModeFunc>::Init(GM_ADDR x, GM_ADDR segmentIds,
+                                                                                          GM_ADDR output)
 {
     InitGm<X_T, GmInitFunc>(output, td_->outputOuterDim * td_->innerDim);
 
@@ -49,8 +49,8 @@ __aicore__ inline void KernelSimdNonSort<X_T, IDS_T, GmInitFunc, SetAtomicModeFu
     yGm_.SetGlobalBuffer((__gm__ X_T*)(output));
 
     pipe_->InitBuffer(xQue_, NON_SORT_DB_BUF, td_->baseS * td_->baseA * sizeof(X_T));
-    pipe_->InitBuffer(
-        idsQue_, NON_SORT_DB_BUF, Aligned(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
+    pipe_->InitBuffer(idsQue_, NON_SORT_DB_BUF,
+                      Aligned(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
 }
 
 template <typename X_T, typename IDS_T, typename GmInitFunc, typename SetAtomicModeFunc>

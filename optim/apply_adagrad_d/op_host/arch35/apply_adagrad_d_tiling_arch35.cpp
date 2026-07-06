@@ -32,7 +32,7 @@ namespace optiling {
 const size_t ASCEND_WORKSPACE = 16777216; // 16MB
 const int32_t VAR_INDEX = 0;
 const int32_t ACCUM_INDEX = 1;
-const int32_t LR_INDEX = 2; 
+const int32_t LR_INDEX = 2;
 const int32_t GRAD_INDEX = 3;
 const int32_t INPUT_NUM = 4;
 const int32_t OUTPUT_NUM = 2;
@@ -46,7 +46,8 @@ const gert::Shape g_vec_1_shape = {1};
  * @param in_shape input shape
  * @return non-scalar shape
  */
-inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.IsScalar()) {
         return g_vec_1_shape;
     }
@@ -65,13 +66,14 @@ ge::graphStatus ApplyAdagradDTiling::SetTilingData()
     auto rawTilingData = tilingContext_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, rawTilingData);
 
-    size_t *currentWorkspace = tilingContext_->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = tilingContext_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, currentWorkspace);
     currentWorkspace[0] = ASCEND_WORKSPACE;
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
+ge::graphStatus ApplyAdagradDTiling::CheckDtype()
+{
     auto varDesc = tilingContext_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, varDesc);
 
@@ -100,8 +102,8 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
 
         auto curDtype = outputDesc->GetDataType();
         if (curDtype != varDtype_) {
-            std::string paramNames =
-                std::string(kOutputNames[outputIdx]) + "(output parameter) and var(input parameter)";
+            std::string paramNames = std::string(kOutputNames[outputIdx]) +
+                                     "(output parameter) and var(input parameter)";
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), paramNames.c_str(),
                 (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
@@ -113,7 +115,8 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
     return ge::GRAPH_SUCCESS;
 }
 
-bool ApplyAdagradDTiling::CheckIsScalar(int32_t inputIdx) {
+bool ApplyAdagradDTiling::CheckIsScalar(int32_t inputIdx)
+{
     auto inputShape = tilingContext_->GetInputShape(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto storageShape = inputShape->GetStorageShape();
@@ -123,11 +126,11 @@ bool ApplyAdagradDTiling::CheckIsScalar(int32_t inputIdx) {
     return false;
 }
 
-ge::graphStatus ApplyAdagradDTiling::CheckShape() {
-    OP_CHECK_IF(!CheckIsScalar(LR_INDEX),
-                    OP_LOGE(tilingContext_->GetNodeName(), "Input lr must be a scalar."),
-                    return ge::GRAPH_FAILED);
-    auto varStorageShape  = tilingContext_->GetInputShape(VAR_INDEX);
+ge::graphStatus ApplyAdagradDTiling::CheckShape()
+{
+    OP_CHECK_IF(!CheckIsScalar(LR_INDEX), OP_LOGE(tilingContext_->GetNodeName(), "Input lr must be a scalar."),
+                return ge::GRAPH_FAILED);
+    auto varStorageShape = tilingContext_->GetInputShape(VAR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, varStorageShape);
     auto accumStorageShape = tilingContext_->GetInputShape(ACCUM_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, accumStorageShape);
@@ -141,75 +144,78 @@ ge::graphStatus ApplyAdagradDTiling::CheckShape() {
         std::string varShapeStr = Ops::Base::ToString(varShape);
         std::string accumShapeStr = Ops::Base::ToString(accumShape);
         std::string gradShapeStr = Ops::Base::ToString(gradShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            tilingContext_->GetNodeName(), "var, accum and grad",
-            (varShapeStr + ", " + accumShapeStr + " and " + gradShapeStr).c_str(),
-            "The shapes of var, accum and grad should be the same");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "var, accum and grad",
+                                               (varShapeStr + ", " + accumShapeStr + " and " + gradShapeStr).c_str(),
+                                               "The shapes of var, accum and grad should be the same");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdagradDTiling::DoUpdateSlotsTiling() {
+ge::graphStatus ApplyAdagradDTiling::DoUpdateSlotsTiling()
+{
     ElewiseBaseTiling eleBaseTiling(tilingContext_);
     updateSlots = static_cast<uint64_t>(UPDATE_SLOTS_TPL_TRUE);
     if (this->varDtype_ == ge::DT_FLOAT16) {
         dType = static_cast<uint64_t>(APPLY_ADAGRAD_D_TPL_FP16);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradDUpdateSlots<half>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp16/bf16 with updates_slots"),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradDUpdateSlots<half>::OpDag>(
+                        tiling_->baseTiling) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp16/bf16 with updates_slots"),
+                    return ge::GRAPH_FAILED);
     } else if (this->varDtype_ == ge::DT_BF16) {
         dType = static_cast<uint64_t>(APPLY_ADAGRAD_D_TPL_BF16);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradDUpdateSlots<bfloat16_t>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp16/bf16 with updates_slots"),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradDUpdateSlots<bfloat16_t>::OpDag>(
+                        tiling_->baseTiling) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp16/bf16 with updates_slots"),
+                    return ge::GRAPH_FAILED);
     } else if (this->varDtype_ == ge::DT_FLOAT) {
         dType = static_cast<uint64_t>(APPLY_ADAGRAD_D_TPL_FP32);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradDUpdateSlots<float>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp32 with updates_slots"),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradDUpdateSlots<float>::OpDag>(
+                        tiling_->baseTiling) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp32 with updates_slots"),
+                    return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(), "fp16, bf16 or fp32");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(),
+                                  "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdagradDTiling::DoNonUpdateSlotsTiling() {
+ge::graphStatus ApplyAdagradDTiling::DoNonUpdateSlotsTiling()
+{
     ElewiseBaseTiling eleBaseTiling(tilingContext_);
     updateSlots = static_cast<uint64_t>(UPDATE_SLOTS_TPL_FALSE);
     if (this->varDtype_ == ge::DT_FLOAT16) {
         dType = static_cast<uint64_t>(APPLY_ADAGRAD_D_TPL_FP16);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradD<half>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp16."),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradD<half>::OpDag>(tiling_->baseTiling) !=
+                        ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp16."), return ge::GRAPH_FAILED);
     } else if (this->varDtype_ == ge::DT_BF16) {
         dType = static_cast<uint64_t>(APPLY_ADAGRAD_D_TPL_BF16);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradD<bfloat16_t>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for bf16."),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradD<bfloat16_t>::OpDag>(tiling_->baseTiling) !=
+                        ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for bf16."), return ge::GRAPH_FAILED);
     } else if (this->varDtype_ == ge::DT_FLOAT) {
         dType = static_cast<uint64_t>(APPLY_ADAGRAD_D_TPL_FP32);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradD<float>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp32."),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(eleBaseTiling.DoTiling<ApplyAdagradDOp::ApplyAdagradD<float>::OpDag>(tiling_->baseTiling) !=
+                        ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp32."), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(), "fp16, bf16 or fp32");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(),
+                                  "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdagradDTiling::RunTiling() {
-    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "Dtype check failed."),
-                    return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "Shape check failed."),
-                    return ge::GRAPH_FAILED);
+ge::graphStatus ApplyAdagradDTiling::RunTiling()
+{
+    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext_->GetNodeName(), "Dtype check failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext_->GetNodeName(), "Shape check failed."),
+                return ge::GRAPH_FAILED);
 
     auto attrs = tilingContext_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, attrs);
@@ -217,20 +223,19 @@ ge::graphStatus ApplyAdagradDTiling::RunTiling() {
     const bool* updateSlotsAttr = attrs->GetAttrPointer<bool>(0);
     updateSlots_ = updateSlotsAttr != nullptr ? *updateSlotsAttr : true;
     tiling_ = tilingContext_->GetTilingData<ApplyAdagradDTilingDataStruct>();
-    OP_CHECK_IF((tiling_ == nullptr), OP_LOGE(tilingContext_, "Get EleBaseTilingData from context failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling_ == nullptr), OP_LOGE(tilingContext_, "Get EleBaseTilingData from context failed"),
+                return ge::GRAPH_FAILED);
     if (updateSlots_) {
         OP_CHECK_IF(DoUpdateSlotsTiling() != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed."),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed."), return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(DoNonUpdateSlotsTiling() != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed."),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed."), return ge::GRAPH_FAILED);
     }
     return SetTilingData();
 }
 
-static ge::graphStatus TilingForApplyAdagradD(gert::TilingContext *context)
+static ge::graphStatus TilingForApplyAdagradD(gert::TilingContext* context)
 {
     OP_LOGD("ApplyAdagradDTiling", "Enter TilingForApplyAdagradD");
     if (context == nullptr) {
@@ -257,6 +262,7 @@ static ge::graphStatus TilingPrepareForElewiseApplyAdagradD(gert::TilingParseCon
     return ge::GRAPH_SUCCESS;
 }
 
-
-IMPL_OP_OPTILING(ApplyAdagradD).Tiling(TilingForApplyAdagradD).TilingParse<ApplyAdagradDCompileInfo>(TilingPrepareForElewiseApplyAdagradD);
-}
+IMPL_OP_OPTILING(ApplyAdagradD)
+    .Tiling(TilingForApplyAdagradD)
+    .TilingParse<ApplyAdagradDCompileInfo>(TilingPrepareForElewiseApplyAdagradD);
+} // namespace optiling

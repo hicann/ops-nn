@@ -26,17 +26,10 @@
 #endif
 
 using namespace std;
-class cross_v2_test : public testing::Test
-{
+class cross_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "cross_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "cross_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "cross_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "cross_v2_test TearDown\n" << endl; }
 };
 
 extern "C" __global__ __aicore__ void cross_v2(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);

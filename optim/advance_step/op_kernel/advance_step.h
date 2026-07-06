@@ -24,14 +24,13 @@ namespace AdvanceStepNs {
 using namespace AscendC;
 
 template <typename T>
-class KernelAdvanceStep
-{
+class KernelAdvanceStep {
 public:
     TPipe pipe;
     __aicore__ inline KernelAdvanceStep(){};
-    __aicore__ inline void Init(
-        GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions, GM_ADDR seq_lens,
-        GM_ADDR slot_mapping, GM_ADDR block_tables, GM_ADDR workspace, const AdvanceStepTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions,
+                                GM_ADDR seq_lens, GM_ADDR slot_mapping, GM_ADDR block_tables, GM_ADDR workspace,
+                                const AdvanceStepTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -51,9 +50,10 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void KernelAdvanceStep<T>::Init(
-    GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
-    GM_ADDR block_tables, GM_ADDR workspace, const AdvanceStepTilingData* tilingData)
+__aicore__ inline void KernelAdvanceStep<T>::Init(GM_ADDR input_tokens, GM_ADDR sampled_token_ids,
+                                                  GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
+                                                  GM_ADDR block_tables, GM_ADDR workspace,
+                                                  const AdvanceStepTilingData* tilingData)
 {
     input_tokens_ptr.SetGlobalBuffer((__gm__ T*)input_tokens);
     sampled_token_ids_ptr.SetGlobalBuffer((__gm__ T*)sampled_token_ids);
@@ -101,8 +101,8 @@ __aicore__ inline void KernelAdvanceStep<T>::Process()
         int64_t block_index = next_input_pos / block_size; // 第几个q块
         int64_t block_offset = next_input_pos % block_size;
 
-        int64_t slot_num =
-            (block_tables_ptr.GetValue(block_index) + block_tables_stride * index) * block_size + block_offset;
+        int64_t slot_num = (block_tables_ptr.GetValue(block_index) + block_tables_stride * index) * block_size +
+                           block_offset;
         // Update slot_mapping
         slot_mapping_ptr.SetValue(index, slot_num);
     }

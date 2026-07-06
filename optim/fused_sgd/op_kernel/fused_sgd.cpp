@@ -20,11 +20,9 @@ using namespace AscendC;
 using namespace FusedSgd;
 
 #ifdef __CCE_UT_TEST__
-extern "C" __global__ __aicore__ void fused_sgd(
-    GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
-    GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref, 
-    GM_ADDR momentum_buffer_list_out, GM_ADDR workspace, 
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void fused_sgd(GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
+                                                GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref,
+                                                GM_ADDR momentum_buffer_list_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     AscendC::TPipe pipe;
@@ -38,17 +36,14 @@ extern "C" __global__ __aicore__ void fused_sgd(
     }
 
     FusedSgdF32<DTYPE_X> op(&pipe);
-    op.Init(params, grads, momentum_buffer_list, grad_scale,
-            params_ref, grads_ref, momentum_buffer_list_out,
+    op.Init(params, grads, momentum_buffer_list, grad_scale, params_ref, grads_ref, momentum_buffer_list_out,
             tilingData, tensorStart, tensorEnd);
     op.Process();
 }
 #else
-extern "C" __global__ __aicore__ void fused_sgd(
-    GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
-    GM_ADDR grad_scale,
-    GM_ADDR params_ref, GM_ADDR grads_ref, GM_ADDR momentum_buffer_list_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void fused_sgd(GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
+                                                GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref,
+                                                GM_ADDR momentum_buffer_list_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     AscendC::TPipe pipe;
@@ -63,24 +58,21 @@ extern "C" __global__ __aicore__ void fused_sgd(
         tensorEnd = tilingData.tensorNum;
     }
 
-    #if (ORIG_DTYPE_PARAMS == DT_BF16)
-        FusedSgdF16Bf16<bfloat16_t> op(&pipe);
-        op.Init(params, grads, momentum_buffer_list, grad_scale,
-            params_ref, grads_ref, momentum_buffer_list_out,
+#if (ORIG_DTYPE_PARAMS == DT_BF16)
+    FusedSgdF16Bf16<bfloat16_t> op(&pipe);
+    op.Init(params, grads, momentum_buffer_list, grad_scale, params_ref, grads_ref, momentum_buffer_list_out,
             tilingData, tensorStart, tensorEnd);
-        op.Process();
-    #elif (ORIG_DTYPE_PARAMS == DT_FLOAT16)
-        FusedSgdF16Bf16<half> op(&pipe);
-        op.Init(params, grads, momentum_buffer_list, grad_scale,
-            params_ref, grads_ref, momentum_buffer_list_out,
+    op.Process();
+#elif (ORIG_DTYPE_PARAMS == DT_FLOAT16)
+    FusedSgdF16Bf16<half> op(&pipe);
+    op.Init(params, grads, momentum_buffer_list, grad_scale, params_ref, grads_ref, momentum_buffer_list_out,
             tilingData, tensorStart, tensorEnd);
-        op.Process();
-    #elif (ORIG_DTYPE_PARAMS == DT_FLOAT32)
-        FusedSgdF32<float> op(&pipe);
-        op.Init(params, grads, momentum_buffer_list, grad_scale,
-            params_ref, grads_ref, momentum_buffer_list_out,
+    op.Process();
+#elif (ORIG_DTYPE_PARAMS == DT_FLOAT32)
+    FusedSgdF32<float> op(&pipe);
+    op.Init(params, grads, momentum_buffer_list, grad_scale, params_ref, grads_ref, momentum_buffer_list_out,
             tilingData, tensorStart, tensorEnd);
-        op.Process();
-    #endif
+    op.Process();
+#endif
 }
 #endif

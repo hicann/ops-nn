@@ -51,11 +51,11 @@ constexpr uint32_t OUTPUT_VARIANCE_INDEX = 2;
 constexpr uint32_t ATTR_DATA_FORMAT_IDX = 0;
 constexpr uint32_t ATTR_EPSILON_IDX = 1;
 
-struct InstanceNormCompileInfo{
-    uint64_t coreNum;       // 系统核数
-    uint64_t ubSize;        // UB空间
-    uint32_t vectorLength;  // 256
-    uint64_t ubBlockSize;     // 32B，UB的字节对齐单位
+struct InstanceNormCompileInfo {
+    uint64_t coreNum;      // 系统核数
+    uint64_t ubSize;       // UB空间
+    uint32_t vectorLength; // 256
+    uint64_t ubBlockSize;  // 32B，UB的字节对齐单位
 };
 
 class InstanceNormRegbaseTilingBase : public Ops::NN::Optiling::TilingBaseClass {
@@ -73,6 +73,7 @@ public:
         ubBlockSize = 0;
         epsilon = 0;
     }
+
 protected:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -84,13 +85,14 @@ protected:
     ge::graphStatus CheckGammaBettaShapeValid();
     ge::graphStatus CheckMeanVarianceShapeValid();
     ge::graphStatus CheckShapeAllNotNegative(gert::Shape& shape);
+
 protected:
     int64_t a1;
     int64_t a0;
     int64_t r;
     int64_t vlfp32;
     int64_t vectorLength;
-    int64_t ubBlockSize;  // 用于在UB上进行32B的字节对齐
+    int64_t ubBlockSize; // 用于在UB上进行32B的字节对齐
     float epsilon;
 
     int64_t blockNum_{1};
@@ -109,23 +111,23 @@ protected:
 
 class InstanceNormReduceEmptyTiling : public InstanceNormRegbaseTilingBase {
 public:
-    explicit InstanceNormReduceEmptyTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context)
-    {}
+    explicit InstanceNormReduceEmptyTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context) {}
     ~InstanceNormReduceEmptyTiling() override = default;
     void Reset(gert::TilingContext* context) override;
+
 protected:
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
+
 private:
     InstanceNormReduceEmptyTilingData td_;
 };
 
 class InstanceNormARFullReduceTiling : public InstanceNormRegbaseTilingBase {
 public:
-    explicit InstanceNormARFullReduceTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context)
-    {}
+    explicit InstanceNormARFullReduceTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context) {}
     ~InstanceNormARFullReduceTiling() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -141,18 +143,18 @@ protected:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus BinaryAddTiling();
+
 private:
     int64_t binaryAddQuotient;
     InstanceNormARFullReduceTilingData td_;
 };
 
-
 class InstanceNormARWelfordTiling : public InstanceNormRegbaseTilingBase {
 public:
-    explicit InstanceNormARWelfordTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context)
-    {}
+    explicit InstanceNormARWelfordTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context) {}
     ~InstanceNormARWelfordTiling() override = default;
     void Reset(gert::TilingContext* context) override;
+
 protected:
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
@@ -161,21 +163,23 @@ protected:
     ge::graphStatus PostTiling() override;
     bool IsValidwelfordTileLength(int64_t welfordTileLength);
     int64_t GammaBetaTypeSize = 1;
+
 private:
     InstanceNormARWelfordTilingData td_;
 };
 
 class InstanceNormARAFullReduceTiling : public InstanceNormRegbaseTilingBase {
 public:
-    explicit InstanceNormARAFullReduceTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context)
-    {}
+    explicit InstanceNormARAFullReduceTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context) {}
     ~InstanceNormARAFullReduceTiling() override = default;
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus BinaryAddTiling();
+
 private:
     int64_t binaryAddQuotient;
     InstanceNormARAFullReduceTilingData td_;
@@ -183,9 +187,9 @@ private:
 
 class InstanceNormARAWelfordTiling : public InstanceNormRegbaseTilingBase {
 public:
-    explicit InstanceNormARAWelfordTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context)
-    {}
+    explicit InstanceNormARAWelfordTiling(gert::TilingContext* context) : InstanceNormRegbaseTilingBase(context) {}
     ~InstanceNormARAWelfordTiling() override = default;
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -193,8 +197,9 @@ protected:
     ge::graphStatus PostTiling() override;
     void SetInputInfo();
     ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t gammaElemSize, int64_t tileA0Len);
+
 private:
-    int64_t blockNum;   // 这个变量要合并到基类里面去
+    int64_t blockNum; // 这个变量要合并到基类里面去
     InstanceNormARAWelfordTilingData td_;
 };
 

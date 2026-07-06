@@ -40,28 +40,24 @@ struct CompressedParam {
 };
 
 // key of map is mask of 4 input value, value is {the fiest non-zero index, the second non-zero index, int8 index value}
-static const unordered_map<uint8_t, CompressedParam> SPARSE_MAP{
-    {0b0000, {0UL, 0UL, 0b0}},
-    {0b0001, {0UL, 3UL, (0b10 << 2) | 0b00}},
-    {0b0010, {2UL, 3UL, (0b00 << 2) | 0b10}},
-    {0b0011, {2UL, 3UL, (0b10 << 2) | 0b10}},
-    {0b0100, {1UL, 2UL, (0b00 << 2) | 0b01}},
-    {0b0101, {1UL, 3UL, (0b10 << 2) | 0b01}},
-    {0b0110, {1UL, 2UL, (0b01 << 2) | 0b01}},
-    {0b1000, {0UL, 1UL, (0b00 << 2) | 0b00}},
-    {0b1001, {0UL, 3UL, (0b10 << 2) | 0b00}},
-    {0b1010, {0UL, 2UL, (0b01 << 2) | 0b00}},
-    {0b1100, {0UL, 1UL, (0b00 << 2) | 0b00}}
-};
+static const unordered_map<uint8_t, CompressedParam> SPARSE_MAP{{0b0000, {0UL, 0UL, 0b0}},
+                                                                {0b0001, {0UL, 3UL, (0b10 << 2) | 0b00}},
+                                                                {0b0010, {2UL, 3UL, (0b00 << 2) | 0b10}},
+                                                                {0b0011, {2UL, 3UL, (0b10 << 2) | 0b10}},
+                                                                {0b0100, {1UL, 2UL, (0b00 << 2) | 0b01}},
+                                                                {0b0101, {1UL, 3UL, (0b10 << 2) | 0b01}},
+                                                                {0b0110, {1UL, 2UL, (0b01 << 2) | 0b01}},
+                                                                {0b1000, {0UL, 1UL, (0b00 << 2) | 0b00}},
+                                                                {0b1001, {0UL, 3UL, (0b10 << 2) | 0b00}},
+                                                                {0b1010, {0UL, 2UL, (0b01 << 2) | 0b00}},
+                                                                {0b1100, {0UL, 1UL, (0b00 << 2) | 0b00}}};
 
-static aclnnStatus CalcSparse4to2ParaSize(
-    const aclIntArray* shape, uint64_t& sparseWeightSize, uint64_t& indexSize, vector<int64_t>& sparseWeightShape,
-    vector<int64_t>& indexShape)
+static aclnnStatus CalcSparse4to2ParaSize(const aclIntArray* shape, uint64_t& sparseWeightSize, uint64_t& indexSize,
+                                          vector<int64_t>& sparseWeightShape, vector<int64_t>& indexShape)
 {
     const aclIntArray& weightShape = *shape;
-    OP_CHECK(
-        weightShape.Size() == WEIGHT_SHAPE_DIM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension of shape must be 2"),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(weightShape.Size() == WEIGHT_SHAPE_DIM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension of shape must be 2"),
+             return ACLNN_ERR_PARAM_INVALID);
     const int64_t shapeN = weightShape[0];
     const int64_t shapeK = weightShape[1];
     sparseWeightShape.push_back(CeilDiv(CeilDiv(shapeK, NZ_K0_INT8_SIZE), SPARSE_MULTI)); // ceil(K1 / 2)
@@ -100,15 +96,16 @@ void ReleaseMalloc(int8_t** sparseWeight, uint8_t** index, int64_t** sparseWeigh
     }
 }
 
-void ProcessWeightPattern(uint8_t& weightPattern, int8_t weightValue) {
+void ProcessWeightPattern(uint8_t& weightPattern, int8_t weightValue)
+{
     weightPattern <<= 1; // 用二进制的0和1分别来表示weight值为零/非零
     if (weightValue != 0) {
         weightPattern |= 1;
     }
 }
 
-bool ProcessWeightBlock(
-    std::vector<int8_t>& sparseWeightBlock, std::vector<int8_t>& compressedWeightBlock, uint8_t& weightIndexBlock)
+bool ProcessWeightBlock(std::vector<int8_t>& sparseWeightBlock, std::vector<int8_t>& compressedWeightBlock,
+                        uint8_t& weightIndexBlock)
 {
     // 单次处理8个weight数据，生成4个sparseWeight数据以及1个index
     uint8_t weightPattern0 = 0; // 前4个数pattern
@@ -132,13 +129,12 @@ bool ProcessWeightBlock(
     compressedWeightBlock.push_back(sparseWeightBlock[compressedParam0->second.secondIndex]);
     compressedWeightBlock.push_back(sparseWeightBlock[compressedParam1->second.firstIndex + SPARSE_INDEX_MULTI]);
     compressedWeightBlock.push_back(sparseWeightBlock[compressedParam1->second.secondIndex + SPARSE_INDEX_MULTI]);
-    weightIndexBlock =
-        (compressedParam1->second.weightIndexValue << SPARSE_INDEX_MULTI) | compressedParam0->second.weightIndexValue;
+    weightIndexBlock = (compressedParam1->second.weightIndexValue << SPARSE_INDEX_MULTI) |
+                       compressedParam0->second.weightIndexValue;
     return true;
 }
 
-bool SetOneBlockDense(
-    const int8_t* weight, int8_t* sparseWeight, uint8_t* index, int32_t validWeightCount)
+bool SetOneBlockDense(const int8_t* weight, int8_t* sparseWeight, uint8_t* index, int32_t validWeightCount)
 {
     if (validWeightCount < 0) {
         return true;
@@ -165,9 +161,8 @@ bool SetOneBlockDense(
     return true;
 }
 
-bool CalParseWeightAndIndex(
-    const int8_t* weight, const aclIntArray* shape, int8_t* sparseWeight, uint8_t* index,
-    const int64_t* sparseWeightShape)
+bool CalParseWeightAndIndex(const int8_t* weight, const aclIntArray* shape, int8_t* sparseWeight, uint8_t* index,
+                            const int64_t* sparseWeightShape)
 {
     int64_t nDimNzShape = sparseWeightShape[1] * sparseWeightShape[2];
     int64_t nDimNdShape = (*shape)[0];
@@ -185,15 +180,13 @@ bool CalParseWeightAndIndex(
                                                (kDimNdShape - kNdOffset) :
                                                SPARSE_ATOMIC_SIZE;
                 int64_t ndOffset = nLoop * kDimNdShape + kNdOffset;
-                int64_t sparseWeightOffset =
-                    (k1Loop * nDimNzShape + nLoop) * NZ_K0_INT8_SIZE + k0Loop * SPARSE_INDEX_MULTI;
+                int64_t sparseWeightOffset = (k1Loop * nDimNzShape + nLoop) * NZ_K0_INT8_SIZE +
+                                             k0Loop * SPARSE_INDEX_MULTI;
                 int64_t sparseIndexOffset = (k1Loop * nDimNzShape + nLoop) * INDEX_C0_SIZE + k0Loop;
 
-                CHECK_RET(
-                    SetOneBlockDense(
-                        &weight[ndOffset], &sparseWeight[sparseWeightOffset], &index[sparseIndexOffset],
-                        validWeightCount),
-                    false);
+                CHECK_RET(SetOneBlockDense(&weight[ndOffset], &sparseWeight[sparseWeightOffset],
+                                           &index[sparseIndexOffset], validWeightCount),
+                          false);
             }
         }
     }
@@ -212,9 +205,9 @@ void SetOutputDims(const vector<int64_t>& shape, int64_t* dims)
 }
 } // namespace
 
-aclnnStatus aclnnTransSparse4to2Para(
-    const int8_t* weight, aclIntArray* shape, int8_t** sparseWeight, int64_t** sparseWeightDims,
-    uint64_t* sparseWeightDimsNum, uint8_t** index, int64_t** indexDims, uint64_t* indexDimsNum)
+aclnnStatus aclnnTransSparse4to2Para(const int8_t* weight, aclIntArray* shape, int8_t** sparseWeight,
+                                     int64_t** sparseWeightDims, uint64_t* sparseWeightDimsNum, uint8_t** index,
+                                     int64_t** indexDims, uint64_t* indexDimsNum)
 {
     CHECK_RET(shape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -230,14 +223,12 @@ aclnnStatus aclnnTransSparse4to2Para(
     vector<int64_t> idxShape;
     // 计算输出的size以及shape
     auto ret = CalcSparse4to2ParaSize(shape, sparseWeightSize, indexSize, sparseWShape, idxShape);
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Calculate size of sparseWeight and index failed"),
-        return ret);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Calculate size of sparseWeight and index failed"),
+             return ret);
     // align
     *sparseWeight = (int8_t*)calloc(sparseWeightSize, sizeof(int8_t));
-    OP_CHECK(
-        *sparseWeight != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The *sparseWeight is nullptr."),
-        return ACLNN_ERR_INNER_NULLPTR);
+    OP_CHECK(*sparseWeight != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The *sparseWeight is nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
     *index = static_cast<uint8_t*>(calloc(indexSize, sizeof(uint8_t)));
     if (*index == nullptr) {
         ReleaseMalloc(sparseWeight, index, sparseWeightDims, indexDims);

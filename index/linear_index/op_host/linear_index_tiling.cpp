@@ -42,10 +42,9 @@ const int DATA_ALIGN = 32;
 } // namespace
 
 namespace optiling {
-class LinearIndexTiling
-{
+class LinearIndexTiling {
 public:
-    explicit LinearIndexTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit LinearIndexTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -210,8 +209,8 @@ ge::graphStatus LinearIndexTiling::RunKernelTiling()
     tilingData.set_target(target);
     tilingData.set_selfStride(selfStride);
     tilingData.set_indicesStride(indicesStride);
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(usedCoreNum);
@@ -265,8 +264,8 @@ ge::graphStatus TilingPrepareForLinearIndex(gert::TilingParseContext* context)
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

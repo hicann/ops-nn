@@ -27,8 +27,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(
-    GM_ADDR sorted_value, GM_ADDR sorted_indices, GM_ADDR p, GM_ADDR k, GM_ADDR out, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sorted_value, GM_ADDR sorted_indices,
+                                                                    GM_ADDR p, GM_ADDR k, GM_ADDR out,
+                                                                    GM_ADDR workSpace, GM_ADDR tiling);
 
 class apply_top_k_top_p_with_sorted_test : public testing::Test {
 protected:
@@ -70,11 +71,10 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32)
     kernel_ut::RunGenTiling("./apply_top_k_top_p_with_sorted_data", {"test_case_4_152064_fp32"});
 
     string path = kernel_ut::GetTestWorkDir();
-    ReadFile(
-        path + "/apply_top_k_top_p_with_sorted_data/sortedValue.bin", sortedValueSize, sortedValue, sortedValueSize);
-    ReadFile(
-        path + "/apply_top_k_top_p_with_sorted_data/sortedIndices.bin", sortedIndicesSize, sortedIndices,
-        sortedIndicesSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/sortedValue.bin", sortedValueSize, sortedValue,
+             sortedValueSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/sortedIndices.bin", sortedIndicesSize, sortedIndices,
+             sortedIndicesSize);
     ReadFile(path + "/apply_top_k_top_p_with_sorted_data/p.bin", pSize, p, pSize);
     ReadFile(path + "/apply_top_k_top_p_with_sorted_data/k.bin", kSize, k, kSize);
     ReadFile(path + "/apply_top_k_top_p_with_sorted_data/tiling.bin", tilingSize, tiling, tilingSize);

@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool_grad_with_argmax_infershape.cpp
@@ -36,9 +36,8 @@ static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
         output_shape->SetDim(i, UNKNOWN_DIM_VALUE_);
@@ -59,7 +58,8 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xOriFormat = xDesc->GetOriginFormat();
     if (xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x", ge::TypeUtils::FormatToSerialString(xOriFormat).c_str(), "format only supports ND, NCHW, NHWC");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x", ge::TypeUtils::FormatToSerialString(xOriFormat).c_str(),
+                                                "format only supports ND, NCHW, NHWC");
         return GRAPH_FAILED;
     }
     auto attrs = context->GetAttrs();
@@ -81,9 +81,10 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
     if (ksize_data[INDEX_ZERO] != KSIZE_STRIDES_VALUE || strides_data[INDEX_ZERO] != KSIZE_STRIDES_VALUE) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "ksize[0], strides[0]", 
-                                                (std::to_string(ksize_data[INDEX_ZERO]) + ", " + std::to_string(strides_data[INDEX_ZERO])).c_str(), 
-                                                "Pooling ksize[0] and strides[0] must be 1");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "ksize[0], strides[0]",
+            (std::to_string(ksize_data[INDEX_ZERO]) + ", " + std::to_string(strides_data[INDEX_ZERO])).c_str(),
+            "Pooling ksize[0] and strides[0] must be 1");
         return GRAPH_FAILED;
     }
     auto padsPtr = attrs->GetAttrPointer<char>(ATTR_INDEX_PADS);
@@ -128,7 +129,8 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
     gert::Shape* yShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     size_t xDimNum = xShape->GetDimNum();
-    if (Ops::Base::IsUnknownShape(*xShape) || Ops::Base::IsUnknownShape(*gradShape) || Ops::Base::IsUnknownShape(*argmaxShape)) {
+    if (Ops::Base::IsUnknownShape(*xShape) || Ops::Base::IsUnknownShape(*gradShape) ||
+        Ops::Base::IsUnknownShape(*argmaxShape)) {
         SetAllUnknownDim(xDimNum, yShape);
         OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPoolGradWithArgmax infershape handle unknown rank or shape.");
         return ge::GRAPH_SUCCESS;

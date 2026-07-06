@@ -24,19 +24,12 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void ascend_anti_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ascend_anti_quant(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 class ascend_anti_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ascend_anti_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ascend_anti_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ascend_anti_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ascend_anti_quant_test TearDown\n" << endl; }
 };
 
 static void FillBaseTiling(AscendAntiQuantTilingData* tilingDatafromBin, int64_t elemNum, int64_t blockNum)

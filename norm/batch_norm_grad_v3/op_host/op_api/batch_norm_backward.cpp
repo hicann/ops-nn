@@ -22,17 +22,16 @@ namespace l0op {
 
 OP_TYPE_REGISTER(BNTrainingUpdateGrad);
 
-const std::array<aclTensor*, 2> BNTrainingUpdateGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
-    aclOpExecutor* executor)
+const std::array<aclTensor*, 2> BNTrainingUpdateGrad(const aclTensor* gradOut, const aclTensor* x,
+                                                     const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
+                                                     aclOpExecutor* executor)
 {
     L0_DFX(BNTrainingUpdateGrad, gradOut, x, saveMean, saveInvstd, eps);
     auto gradWeight = executor->AllocTensor(saveMean->GetViewShape(), DataType::DT_FLOAT, saveMean->GetViewFormat());
     auto gradBias = executor->AllocTensor(saveMean->GetViewShape(), DataType::DT_FLOAT, saveMean->GetViewFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        BNTrainingUpdateGrad, OP_INPUT(gradOut, x, saveMean, saveInvstd), OP_OUTPUT(gradWeight, gradBias),
-        OP_ATTR(eps));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BNTrainingUpdateGrad, OP_INPUT(gradOut, x, saveMean, saveInvstd),
+                                           OP_OUTPUT(gradWeight, gradBias), OP_ATTR(eps));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BNTrainingUpdateGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr};
@@ -42,21 +41,19 @@ const std::array<aclTensor*, 2> BNTrainingUpdateGrad(
 
 OP_TYPE_REGISTER(BN3DTrainingUpdateGrad);
 
-const std::array<aclTensor*, 2> BN3DTrainingUpdateGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
-    aclOpExecutor* executor)
+const std::array<aclTensor*, 2> BN3DTrainingUpdateGrad(const aclTensor* gradOut, const aclTensor* x,
+                                                       const aclTensor* saveMean, const aclTensor* saveInvstd,
+                                                       float eps, aclOpExecutor* executor)
 {
     L0_DFX(BN3DTrainingUpdateGrad, gradOut, x, saveMean, saveInvstd, eps);
-    auto gradWeight = executor->AllocTensor(
-        saveMean->GetStorageShape(), saveMean->GetOriginalShape(), DataType::DT_FLOAT, saveMean->GetStorageFormat(),
-        saveMean->GetOriginalFormat());
-    auto gradBias = executor->AllocTensor(
-        saveMean->GetStorageShape(), saveMean->GetOriginalShape(), DataType::DT_FLOAT, saveMean->GetStorageFormat(),
-        saveMean->GetOriginalFormat());
+    auto gradWeight = executor->AllocTensor(saveMean->GetStorageShape(), saveMean->GetOriginalShape(),
+                                            DataType::DT_FLOAT, saveMean->GetStorageFormat(),
+                                            saveMean->GetOriginalFormat());
+    auto gradBias = executor->AllocTensor(saveMean->GetStorageShape(), saveMean->GetOriginalShape(), DataType::DT_FLOAT,
+                                          saveMean->GetStorageFormat(), saveMean->GetOriginalFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        BN3DTrainingUpdateGrad, OP_INPUT(gradOut, x, saveMean, saveInvstd), OP_OUTPUT(gradWeight, gradBias),
-        OP_ATTR(eps));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BN3DTrainingUpdateGrad, OP_INPUT(gradOut, x, saveMean, saveInvstd),
+                                           OP_OUTPUT(gradWeight, gradBias), OP_ATTR(eps));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BN3DTrainingUpdateGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr};
@@ -66,57 +63,54 @@ const std::array<aclTensor*, 2> BN3DTrainingUpdateGrad(
 
 OP_TYPE_REGISTER(BNTrainingReduceGrad);
 
-const aclTensor* BNTrainingReduceGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight, const aclTensor* gradBias,
-    const aclTensor* weight, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps, aclOpExecutor* executor)
+const aclTensor* BNTrainingReduceGrad(const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight,
+                                      const aclTensor* gradBias, const aclTensor* weight, const aclTensor* saveMean,
+                                      const aclTensor* saveInvstd, float eps, aclOpExecutor* executor)
 {
     L0_DFX(BNTrainingReduceGrad, gradOut, x, gradWeight, gradBias, weight, saveMean, saveInvstd, eps);
     auto gradInput = executor->AllocTensor(x->GetViewShape(), x->GetDataType(), x->GetViewFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        BNTrainingReduceGrad, OP_INPUT(gradOut, x, gradWeight, gradBias, weight, saveMean, saveInvstd),
-        OP_OUTPUT(gradInput), OP_ATTR(eps));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BNTrainingReduceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BNTrainingReduceGrad,
+                                           OP_INPUT(gradOut, x, gradWeight, gradBias, weight, saveMean, saveInvstd),
+                                           OP_OUTPUT(gradInput), OP_ATTR(eps));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BNTrainingReduceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return gradInput;
 }
 
 OP_TYPE_REGISTER(BN3DTrainingReduceGrad);
 
-const aclTensor* BN3DTrainingReduceGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight, const aclTensor* gradBias,
-    const aclTensor* weight, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps, aclOpExecutor* executor)
+const aclTensor* BN3DTrainingReduceGrad(const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight,
+                                        const aclTensor* gradBias, const aclTensor* weight, const aclTensor* saveMean,
+                                        const aclTensor* saveInvstd, float eps, aclOpExecutor* executor)
 {
     L0_DFX(BN3DTrainingReduceGrad, gradOut, x, gradWeight, gradBias, weight, saveMean, saveInvstd, eps);
-    auto gradInput = executor->AllocTensor(
-        x->GetStorageShape(), x->GetOriginalShape(), x->GetDataType(), x->GetStorageFormat(), x->GetOriginalFormat());
+    auto gradInput = executor->AllocTensor(x->GetStorageShape(), x->GetOriginalShape(), x->GetDataType(),
+                                           x->GetStorageFormat(), x->GetOriginalFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        BN3DTrainingReduceGrad, OP_INPUT(gradOut, x, gradWeight, gradBias, weight, saveMean, saveInvstd),
-        OP_OUTPUT(gradInput), OP_ATTR(eps));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BN3DTrainingReduceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BN3DTrainingReduceGrad,
+                                           OP_INPUT(gradOut, x, gradWeight, gradBias, weight, saveMean, saveInvstd),
+                                           OP_OUTPUT(gradInput), OP_ATTR(eps));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BN3DTrainingReduceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return gradInput;
 }
 
 OP_TYPE_REGISTER(BNInferGrad);
 
-const aclTensor* BNInferGrad(
-    const aclTensor* gradOut, const aclTensor* weight, const aclTensor* runningVar, float eps, aclOpExecutor* executor)
+const aclTensor* BNInferGrad(const aclTensor* gradOut, const aclTensor* weight, const aclTensor* runningVar, float eps,
+                             aclOpExecutor* executor)
 {
     L0_DFX(BNInferGrad, gradOut, weight, runningVar, eps);
-    auto gradInput =
-        executor->AllocTensor(gradOut->GetStorageShape(), gradOut->GetDataType(), gradOut->GetStorageFormat());
+    auto gradInput = executor->AllocTensor(gradOut->GetStorageShape(), gradOut->GetDataType(),
+                                           gradOut->GetStorageFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        BNInferGrad, OP_INPUT(gradOut, weight, runningVar), OP_OUTPUT(gradInput), OP_ATTR(eps));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BNInferGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BNInferGrad, OP_INPUT(gradOut, weight, runningVar), OP_OUTPUT(gradInput),
+                                           OP_ATTR(eps));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BNInferGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return gradInput;
 }
 

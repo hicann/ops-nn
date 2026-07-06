@@ -26,18 +26,16 @@
 #include "../op_kernel/arch35/cross_entropy_loss_grad_tiling_key.h"
 namespace optiling {
 
-struct CrossEntropyLossGradRegbaseTilingKey
-{
+struct CrossEntropyLossGradRegbaseTilingKey {
     uint32_t schId = 0;
     uint32_t reduction = 1;
     uint32_t isWeight = 0;
     uint32_t labelS = 0;
     uint32_t isIgnore = 0;
 };
-class CrossEntropyLossGradRegbaseTiling
-{
+class CrossEntropyLossGradRegbaseTiling {
 public:
-    explicit CrossEntropyLossGradRegbaseTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit CrossEntropyLossGradRegbaseTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:
@@ -54,11 +52,12 @@ protected:
     int64_t FindNearestPower2(const int64_t value);
     int64_t CalLog2(int64_t value);
     int64_t GetMod(int64_t l_value, int64_t r_value);
+
 private:
     gert::TilingContext* tilingContext;
     ge::DataType outputDtype;
     ge::DataType inputXDtype;
-    const char *reducationStr = "";
+    const char* reducationStr = "";
     int64_t reductionKey = 0;
     uint64_t dtypeSize = 4;
     uint64_t targetDtypeSize = 0;
@@ -93,8 +92,8 @@ private:
     uint64_t bufferNum = 1;
 
     CrossEntropyLossGradRegbaseTilingKey ceLossGradTilingKey;
-    CrossEntropyLossGradRegbaseTilingData *ceLossGradRegbaseTiling{ nullptr };
+    CrossEntropyLossGradRegbaseTilingData* ceLossGradRegbaseTiling{nullptr};
 };
 // ge::graphStatus Tiling4CrossEntropyLossGradRegbase(gert::TilingContext* context);
-}  // namespace optiling
-#endif  // CROSS_ENTROPY_LOSS_GRAD_REGBASE_TILING_H
+} // namespace optiling
+#endif // CROSS_ENTROPY_LOSS_GRAD_REGBASE_TILING_H

@@ -23,12 +23,11 @@
 
 #define __CCE_UT_TEST__
 
-
 struct SiluMulTilingData {
-  int32_t lastDimSize = 4;
-  int32_t batchSize = 2;
-  int32_t PPMaxCalNum = 6144;
-  uint32_t needCoreNum = 1;
+    int32_t lastDimSize = 4;
+    int32_t batchSize = 2;
+    int32_t PPMaxCalNum = 6144;
+    uint32_t needCoreNum = 1;
 };
 
 inline void ISiluMulTilingData(uint8_t* tiling, SiluMulTilingData* const_data)
@@ -36,7 +35,7 @@ inline void ISiluMulTilingData(uint8_t* tiling, SiluMulTilingData* const_data)
     memcpy(const_data, tiling, sizeof(SiluMulTilingData));
 }
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  SiluMulTilingData tilingData;                           \
-  ISiluMulTilingData(tilingPointer, &tilingData)
+#define GET_TILING_DATA(tilingData, tilingPointer) \
+    SiluMulTilingData tilingData;                  \
+    ISiluMulTilingData(tilingPointer, &tilingData)
 #endif

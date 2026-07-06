@@ -45,14 +45,10 @@ __global__ __aicore__ void binary_cross_entropy(GM_ADDR x, GM_ADDR y, GM_ADDR we
     } else if constexpr (Reduction == 1 || Reduction == 2) {
         using Op = std::conditional_t<
             Reduction == 1,
-            std::conditional_t<
-                HasWeight,
-                ReduceSch<REDUCE_TPL_VALUE, BCEHasWeightSumDag<DTYPE_X, PromoteType>::OpDag>,
-                ReduceSch<REDUCE_TPL_VALUE, BCESumDag<DTYPE_X, PromoteType>::OpDag>>,
-            std::conditional_t<
-                HasWeight,
-                ReduceSch<REDUCE_TPL_VALUE, BCEHasWeightMeanDag<DTYPE_X, PromoteType>::OpDag>,
-                ReduceSch<REDUCE_TPL_VALUE, BCEMeanDag<DTYPE_X, PromoteType>::OpDag>>>;
+            std::conditional_t<HasWeight, ReduceSch<REDUCE_TPL_VALUE, BCEHasWeightSumDag<DTYPE_X, PromoteType>::OpDag>,
+                               ReduceSch<REDUCE_TPL_VALUE, BCESumDag<DTYPE_X, PromoteType>::OpDag>>,
+            std::conditional_t<HasWeight, ReduceSch<REDUCE_TPL_VALUE, BCEHasWeightMeanDag<DTYPE_X, PromoteType>::OpDag>,
+                               ReduceSch<REDUCE_TPL_VALUE, BCEMeanDag<DTYPE_X, PromoteType>::OpDag>>>;
 
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         if constexpr (Reduction == 2) {

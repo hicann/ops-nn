@@ -17,15 +17,9 @@
 
 class NonZeroProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "NonZeroProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "NonZeroProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "NonZeroProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "NonZeroProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(NonZeroProtoTest, nonzero_test_1)
@@ -284,9 +278,8 @@ TEST_F(NonZeroProtoTest, nonzero_inferdatatype_test_1)
                       .NodeIoNum(1, 1)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .Build();
 
     auto context = holder.GetContext<gert::InferDataTypeContext>();
@@ -305,9 +298,8 @@ TEST_F(NonZeroProtoTest, nonzero_inferdatatype_test_2)
                       .NodeIoNum(1, 1)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(5)}})
+                      .NodeAttrs({{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(5)}})
                       .Build();
 
     auto context = holder.GetContext<gert::InferDataTypeContext>();
@@ -326,9 +318,8 @@ TEST_F(NonZeroProtoTest, nonzero_inferdatatype_test_3)
                       .NodeIoNum(1, 1)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
+                      .NodeAttrs({{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
                       .Build();
 
     auto context = holder.GetContext<gert::InferDataTypeContext>();

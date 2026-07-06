@@ -27,20 +27,16 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void quantized_batch_norm(
-    GM_ADDR x, GM_ADDR mean, GM_ADDR variance, GM_ADDR input_scale, GM_ADDR input_zero_point, GM_ADDR output_scale,
-    GM_ADDR output_zero_point, GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void quantized_batch_norm(GM_ADDR x, GM_ADDR mean, GM_ADDR variance,
+                                                           GM_ADDR input_scale, GM_ADDR input_zero_point,
+                                                           GM_ADDR output_scale, GM_ADDR output_zero_point,
+                                                           GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                                           GM_ADDR tiling);
 
 class quantized_batch_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << " quantized_batch_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << " quantized_batch_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << " quantized_batch_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << " quantized_batch_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(quantized_batch_norm_test, test_case_1001)
@@ -69,8 +65,8 @@ TEST_F(quantized_batch_norm_test, test_case_1001)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    QuantizedBatchNormWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(tiling);
+    QuantizedBatchNormWelfordTilingData* tilingDatafromBin = reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(
+        tiling);
 
     tilingDatafromBin->patternR1 = 1;
     tilingDatafromBin->patternR0 = 32;
@@ -93,9 +89,8 @@ TEST_F(quantized_batch_norm_test, test_case_1001)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1001);
-    ICPU_RUN_KF(
-        quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
-        output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
+                output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -138,8 +133,8 @@ TEST_F(quantized_batch_norm_test, test_case_1002)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    QuantizedBatchNormWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(tiling);
+    QuantizedBatchNormWelfordTilingData* tilingDatafromBin = reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(
+        tiling);
 
     tilingDatafromBin->patternR1 = 5;
     tilingDatafromBin->patternR0 = 5;
@@ -162,9 +157,8 @@ TEST_F(quantized_batch_norm_test, test_case_1002)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1002);
-    ICPU_RUN_KF(
-        quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
-        output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
+                output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -207,8 +201,8 @@ TEST_F(quantized_batch_norm_test, test_case_1012)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    QuantizedBatchNormWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(tiling);
+    QuantizedBatchNormWelfordTilingData* tilingDatafromBin = reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(
+        tiling);
 
     tilingDatafromBin->patternR1 = 5;
     tilingDatafromBin->patternR0 = 8;
@@ -231,9 +225,8 @@ TEST_F(quantized_batch_norm_test, test_case_1012)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1012);
-    ICPU_RUN_KF(
-        quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
-        output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
+                output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -276,8 +269,8 @@ TEST_F(quantized_batch_norm_test, test_case_1003)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    QuantizedBatchNormWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(tiling);
+    QuantizedBatchNormWelfordTilingData* tilingDatafromBin = reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(
+        tiling);
 
     tilingDatafromBin->patternR1 = 8;
     tilingDatafromBin->patternR0 = 5;
@@ -300,9 +293,8 @@ TEST_F(quantized_batch_norm_test, test_case_1003)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1003);
-    ICPU_RUN_KF(
-        quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
-        output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
+                output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -345,8 +337,8 @@ TEST_F(quantized_batch_norm_test, test_case_1013)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    QuantizedBatchNormWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(tiling);
+    QuantizedBatchNormWelfordTilingData* tilingDatafromBin = reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(
+        tiling);
 
     tilingDatafromBin->patternR1 = 8;
     tilingDatafromBin->patternR0 = 8;
@@ -369,9 +361,8 @@ TEST_F(quantized_batch_norm_test, test_case_1013)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1013);
-    ICPU_RUN_KF(
-        quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
-        output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(quantized_batch_norm, blockDim, x, mean, variance, input_scale, input_zero_point, output_scale,
+                output_zero_point, weight, bias, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);

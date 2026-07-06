@@ -27,15 +27,14 @@ constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t DIM_2 = 2;
 
 template <typename IDX_T, const uint16_t SIMD_MODE>
-class ScatterSimd
-{
+class ScatterSimd {
 public:
     __aicore__ inline ScatterSimd(const ScatterTilingData* tiling, TPipe* pipe) : tilingData_(tiling), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y);
     __aicore__ inline void Process();
     template <typename T>
-    __aicore__ inline void CopyIn(
-        LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst, uint32_t copyLen);
+    __aicore__ inline void CopyIn(LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst,
+                                  uint32_t copyLen);
     __aicore__ inline void CopyOut(LocalTensor<int8_t> yLocal, int64_t offset, uint32_t nBurst, uint32_t copyLen);
     template <const uint16_t IDX_DIM>
     __aicore__ inline void GetIndex(int64_t idx, int64_t endIdx, int64_t& batchDst, int64_t& scatterDst);
@@ -87,8 +86,8 @@ __aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::Init(GM_ADDR x, GM_ADDR in
 
 template <typename IDX_T, const uint16_t SIMD_MODE>
 template <typename T>
-__aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::CopyIn(
-    LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst, uint32_t copyLen)
+__aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::CopyIn(LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset,
+                                                             uint32_t nBurst, uint32_t copyLen)
 {
     DataCopyPadExtParams<T> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -105,8 +104,8 @@ __aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::CopyIn(
 }
 
 template <typename IDX_T, const uint16_t SIMD_MODE>
-__aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::CopyOut(
-    LocalTensor<int8_t> yLocal, int64_t offset, uint32_t nBurst, uint32_t copyLen)
+__aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::CopyOut(LocalTensor<int8_t> yLocal, int64_t offset,
+                                                              uint32_t nBurst, uint32_t copyLen)
 {
     DataCopyExtParams dataCoptExtParams;
     dataCoptExtParams.blockCount = nBurst;
@@ -118,8 +117,8 @@ __aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::CopyOut(
 
 template <typename IDX_T, const uint16_t SIMD_MODE>
 template <const uint16_t IDX_DIM>
-__aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::GetIndex(
-    int64_t idx, int64_t endIdx, int64_t& batchDst, int64_t& scatterDst)
+__aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::GetIndex(int64_t idx, int64_t endIdx, int64_t& batchDst,
+                                                               int64_t& scatterDst)
 {
     if (idx >= indicesOffsetBase_ + curIndexSize_) {
         int64_t copyLen = 0;
@@ -315,8 +314,8 @@ __aicore__ inline void ScatterSimd<IDX_T, SIMD_MODE>::SplitColProcessForMode1(in
 
         int64_t srcIndex = (srcStart + i) * tilingData_->updatesDim3;
         for (int64_t j = 0; j < loopNum; j++) {
-            int64_t cols =
-                (j == loopNum - 1) ? (tilingData_->updatesDim3 - j * tilingData_->loopLength) : tilingData_->loopLength;
+            int64_t cols = (j == loopNum - 1) ? (tilingData_->updatesDim3 - j * tilingData_->loopLength) :
+                                                tilingData_->loopLength;
             int64_t srcOffset = (srcIndex + j * tilingData_->loopLength) * tilingData_->dtypeSize;
             int64_t dstOffset = (dstIndex + j * tilingData_->loopLength) * tilingData_->dtypeSize;
             CopyInAndOut(srcOffset, dstOffset, cols);

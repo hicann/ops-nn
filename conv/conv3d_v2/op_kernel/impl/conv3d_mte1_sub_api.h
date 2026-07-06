@@ -28,19 +28,15 @@ static constexpr IsResetLoad3dConfig CONV3D_LOAD3DV2_DEFAULT_CONFIG = {false, fa
 template <class Intf>
 class LoadAL0Tools {
 public:
-    __aicore__ inline LoadAL0Tools()
-    {}
+    __aicore__ inline LoadAL0Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self, LoadAL1Tools<Intf> *aL1Tools)
+    __aicore__ inline void SetParams(Intf* self, LoadAL1Tools<Intf>* aL1Tools)
     {
         self_ = self;
         aL1Tools_ = aL1Tools;
     }
 
-    __aicore__ inline void SetM(uint64_t m)
-    {
-        currentML0_ = m;
-    }
+    __aicore__ inline void SetM(uint64_t m) { currentML0_ = m; }
 
     __aicore__ inline void LoadAL0()
     {
@@ -55,8 +51,8 @@ public:
         LoadData3DParamsV2<typename Intf::FmapT> loadData3Dv2Params = aL1Tools_->GetLoadData3DParams();
         SetLoadData3DParamsV2(loadData3Dv2Params);
 
-        LoadData<typename Intf::FmapT, CONV3D_LOAD3DV2_DEFAULT_CONFIG>(
-            self_->ctx.al0, self_->ctx.al1, loadData3Dv2Params);
+        LoadData<typename Intf::FmapT, CONV3D_LOAD3DV2_DEFAULT_CONFIG>(self_->ctx.al0, self_->ctx.al1,
+                                                                       loadData3Dv2Params);
     };
 
     __aicore__ inline void SetAl02d()
@@ -75,7 +71,7 @@ public:
     }
 
 private:
-    __aicore__ inline void SetLoadData3DParamsV2(LoadData3DParamsV2<typename Intf::FmapT> &loadData3Dv2Params)
+    __aicore__ inline void SetLoadData3DParamsV2(LoadData3DParamsV2<typename Intf::FmapT>& loadData3Dv2Params)
     {
         // params about k dicision
         loadData3Dv2Params.kExtension = currentKL0_;
@@ -83,22 +79,22 @@ private:
         // params about m dicision
         loadData3Dv2Params.mExtension = currentML0_;
         loadData3Dv2Params.mStartPt = self_->ctx.mL0IsDivisibleByWo ?
-            self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 + self_->ctx.mStartPos % self_->ctx.orgWo :
-            self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 +
-            (self_->ctx.mStartPos + self_->ctx.mAL1Iter * self_->ctx.conv3dTiling->mAL1) % self_->ctx.orgWo;
+                                          self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 +
+                                              self_->ctx.mStartPos % self_->ctx.orgWo :
+                                          self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 +
+                                              (self_->ctx.mStartPos +
+                                               self_->ctx.mAL1Iter * self_->ctx.conv3dTiling->mAL1) %
+                                                  self_->ctx.orgWo;
         ASC_OP_LOGD(
             "[LoadAL0] loadData3Dv2Params.channelSize %d, loadData3Dv2Params.kExtension %d, "
             "loadData3Dv2Params.kStartPt %d, loadData3Dv2Params.mExtension %d, loadData3Dv2Params.mStartPt %d.\n",
-            loadData3Dv2Params.channelSize,
-            loadData3Dv2Params.kExtension,
-            loadData3Dv2Params.kStartPt,
-            loadData3Dv2Params.mExtension,
-            loadData3Dv2Params.mStartPt);
+            loadData3Dv2Params.channelSize, loadData3Dv2Params.kExtension, loadData3Dv2Params.kStartPt,
+            loadData3Dv2Params.mExtension, loadData3Dv2Params.mStartPt);
     }
 
 private:
-    Intf *self_ = nullptr;
-    LoadAL1Tools<Intf> *aL1Tools_;
+    Intf* self_ = nullptr;
+    LoadAL1Tools<Intf>* aL1Tools_;
     uint64_t currentML0_ = 0;
     uint64_t currentKL0_ = 0;
     uint64_t al0Set2dSpacesize_ = 0;
@@ -107,10 +103,9 @@ private:
 template <class Intf>
 class LoadBL0Tools {
 public:
-    __aicore__ inline LoadBL0Tools()
-    {}
+    __aicore__ inline LoadBL0Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         k0_ = ONE_BLK_SIZE / self_->ctx.sizeOfWeight;
@@ -127,11 +122,10 @@ public:
         if constexpr (Intf::bl1bypass) {
             tilingNBSrc_ = self_->ctx.orgCoAlignN0;
         } else {
-            tilingNBSrc_ = self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter ? self_->ctx.nBL1TailAlign
-                                                                         : self_->ctx.conv3dTiling->nBL1;
+            tilingNBSrc_ = self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter ? self_->ctx.nBL1TailAlign :
+                                                                           self_->ctx.conv3dTiling->nBL1;
         }
-        uint64_t currentKL0 =
-            self_->ctx.kIter == self_->ctx.maxKL0Iter ? self_->ctx.kL0Tail : self_->ctx.singleCoreKL0;
+        uint64_t currentKL0 = self_->ctx.kIter == self_->ctx.maxKL0Iter ? self_->ctx.kL0Tail : self_->ctx.singleCoreKL0;
         // set LoadData2DParamsV2
         LoadData2DParams loadData2dParams;
         load2dSrcOffset = self_->ctx.kBL0Iter * self_->ctx.singleCoreKL0 * tilingNBSrc_ +
@@ -147,8 +141,8 @@ public:
                 uint64_t tmp2 = tilingNBSrc_ * k0_;
                 for (uint32_t copy_part = 0; copy_part < currentKL0 / k0_; ++copy_part) {
                     LoadData<typename Intf::WeightT>(self_->ctx.bl0[copy_part * tmp1],
-                        self_->ctx.bl1[load2dSrcOffset + copy_part * tmp2],
-                        loadData2dParams);
+                                                     self_->ctx.bl1[load2dSrcOffset + copy_part * tmp2],
+                                                     loadData2dParams);
                 }
             }
         } else {
@@ -161,15 +155,15 @@ public:
                 uint64_t tmp2 = tilingNBSrc_ * k0_;
                 for (uint32_t copy_part = 0; copy_part < currentKL0 / k0_; ++copy_part) {
                     LoadData<typename Intf::WeightT>(self_->ctx.bl0[copy_part * tmp1],
-                        self_->ctx.bgm[load2dSrcOffset + copy_part * tmp2],
-                        loadData2dParams);
+                                                     self_->ctx.bgm[load2dSrcOffset + copy_part * tmp2],
+                                                     loadData2dParams);
                 }
             }
         }
     }
 
 private:
-    __aicore__ inline void SetLoadData2DParams(LoadData2DParams &loadData2dParams, const uint64_t &repeatTimes)
+    __aicore__ inline void SetLoadData2DParams(LoadData2DParams& loadData2dParams, const uint64_t& repeatTimes)
     {
         loadData2dParams.repeatTimes = repeatTimes;
         loadData2dParams.srcStride = 1;
@@ -177,7 +171,7 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t tilingNBSrc_ = 0;
     uint64_t k0_ = 16;
     uint64_t currentNL0_ = 0;
@@ -186,6 +180,6 @@ private:
     uint64_t load2dSrcOffset = 0;
 };
 
-};  // namespace Conv3dFunc
+}; // namespace Conv3dFunc
 
-#endif  // __CcONV3D_MTE1_SUB_API_H__
+#endif // __CcONV3D_MTE1_SUB_API_H__

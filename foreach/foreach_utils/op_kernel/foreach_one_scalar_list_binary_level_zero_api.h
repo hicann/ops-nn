@@ -24,22 +24,20 @@ namespace Common {
 namespace OpKernel {
 using namespace AscendC;
 
-template <
-    typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+template <typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
 class ForeachOneScalarListBinaryLevelZeroApi
-    : public KernelForeachUnary<
-          T, ForeachOneScalarListBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
-          paramsCount, needCopyOut>
-{
+    : public KernelForeachUnary<T,
+                                ForeachOneScalarListBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                bufferNum, paramsCount, needCopyOut> {
 public:
     using Base = KernelForeachUnary<
         T, ForeachOneScalarListBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
         paramsCount, needCopyOut>;
     using Operator = OneScalarBinaryLevelZeroApiOp<P>;
     __aicore__ inline ForeachOneScalarListBinaryLevelZeroApi() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     using Base::Process;
 
 protected:
@@ -50,25 +48,23 @@ protected:
     P scalarVal = 0;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> outLocal = Base::outQueue.template AllocTensor<T>();
 
         InnerComputer<T, P, op, paramsCount> computer;
-        computer.Compute(
-            dataLocal, outLocal, float32Tensor, scalarOneBlockLM, Base::maxCastDataCount, dataCount, elementsPerRepeat);
+        computer.Compute(dataLocal, outLocal, float32Tensor, scalarOneBlockLM, Base::maxCastDataCount, dataCount,
+                         elementsPerRepeat);
 
         Base::dataQueue.FreeTensor(dataLocal);
         Base::outQueue.template EnQue<T>(outLocal);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
     __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
     {
@@ -97,15 +93,13 @@ private:
         return true;
     }
 
-    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
-    {}
+    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder) {}
 
     friend Base;
 };
 
-template <
-    typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
-    bool needCopyOut>
+template <typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
+          bool needCopyOut>
 __aicore__ inline void ForeachOneScalarListBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>::Init(
     GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
 {

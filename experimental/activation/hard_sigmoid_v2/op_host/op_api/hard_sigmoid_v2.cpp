@@ -22,17 +22,16 @@ namespace l0op {
 
 OP_TYPE_REGISTER(HardSigmoidV2);
 
-const aclTensor *HardSigmoidV2(const aclTensor *self, aclOpExecutor *executor)
+const aclTensor* HardSigmoidV2(const aclTensor* self, aclOpExecutor* executor)
 {
     L0_DFX(HardSigmoidV2, self);
-    auto *hardSigmoidOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
+    auto* hardSigmoidOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
     CHECK_RET(hardSigmoidOut != nullptr, nullptr);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSigmoidV2, OP_INPUT(self), OP_OUTPUT(hardSigmoidOut));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidV2 ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return hardSigmoidOut;
 }
 
-}  // namespace l0op
+} // namespace l0op

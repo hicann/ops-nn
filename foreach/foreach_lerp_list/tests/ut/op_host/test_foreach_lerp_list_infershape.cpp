@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_lerp_list_proto.h"
 
-class ForeachLerpListTest : public testing::Test
-{
+class ForeachLerpListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachLerpList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachLerpList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachLerpList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachLerpList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachLerpListTest, infer_shape_known_success)

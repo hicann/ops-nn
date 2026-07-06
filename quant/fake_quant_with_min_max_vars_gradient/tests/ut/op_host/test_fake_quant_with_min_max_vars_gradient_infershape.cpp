@@ -48,22 +48,17 @@ using namespace ge;
 
 class FakeQuantWithMinMaxVarsGradientProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsGradientProto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FakeQuantWithMinMaxVarsGradientProto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsGradientProto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FakeQuantWithMinMaxVarsGradientProto TearDown" << std::endl; }
 };
 
 // Helper: convert gert::Shape to vector for assertions
 static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 {
     std::vector<int64_t> v;
-    if (s == nullptr) return v;
+    if (s == nullptr)
+        return v;
     for (size_t i = 0; i < s->GetDimNum(); ++i) {
         v.push_back(s->GetDim(i));
     }
@@ -71,14 +66,10 @@ static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 }
 
 // Helper: run InferShape and return status + output shapes
-static ge::graphStatus RunInferShape(
-    gert::StorageShape& gradShape,
-    gert::StorageShape& xShape,
-    gert::StorageShape& minShape,
-    gert::StorageShape& maxShape,
-    std::vector<int64_t>& outYDims,
-    std::vector<int64_t>& outMinDims,
-    std::vector<int64_t>& outMaxDims)
+static ge::graphStatus RunInferShape(gert::StorageShape& gradShape, gert::StorageShape& xShape,
+                                     gert::StorageShape& minShape, gert::StorageShape& maxShape,
+                                     std::vector<int64_t>& outYDims, std::vector<int64_t>& outMinDims,
+                                     std::vector<int64_t>& outMaxDims)
 {
     auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient");
     if (opImpl == nullptr) {
@@ -282,8 +273,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_0_shape_mismatch)
     gert::StorageShape maxShape = {{1}, {1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
-              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
 }
 
 // fail_1: gradients and x rank mismatch
@@ -297,8 +287,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_1_rank_mismatch)
     gert::StorageShape maxShape = {{1}, {1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
-              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
 }
 
 // fail_2: min shape invalid (shape=[2] instead of [1])
@@ -312,8 +301,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_2_min_shape)
     gert::StorageShape maxShape = {{1}, {1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
-              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
 }
 
 // fail_3: max shape invalid (shape=[2] instead of [1])
@@ -327,8 +315,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_3_max_shape)
     gert::StorageShape maxShape = {{2}, {2}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
-              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
 }
 
 // fail_4: min rank invalid (shape=[1,1] instead of [1])
@@ -342,8 +329,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_4_min_rank)
     gert::StorageShape maxShape = {{1}, {1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
-              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
 }
 
 // ============================================================
@@ -351,16 +337,10 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_4_min_rank)
 // ============================================================
 
 // Helper: run InferShape with custom num_bits and narrow_range attributes
-static ge::graphStatus RunInferShapeWithAttrs(
-    gert::StorageShape& gradShape,
-    gert::StorageShape& xShape,
-    gert::StorageShape& minShape,
-    gert::StorageShape& maxShape,
-    std::vector<int64_t>& outYDims,
-    std::vector<int64_t>& outMinDims,
-    std::vector<int64_t>& outMaxDims,
-    int64_t numBits,
-    bool narrowRange)
+static ge::graphStatus RunInferShapeWithAttrs(gert::StorageShape& gradShape, gert::StorageShape& xShape,
+                                              gert::StorageShape& minShape, gert::StorageShape& maxShape,
+                                              std::vector<int64_t>& outYDims, std::vector<int64_t>& outMinDims,
+                                              std::vector<int64_t>& outMaxDims, int64_t numBits, bool narrowRange)
 {
     auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient");
     if (opImpl == nullptr) {
@@ -461,8 +441,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_case_10_num_bits_2_narro
     gert::StorageShape maxShape = {{1}, {1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    ASSERT_EQ(RunInferShapeWithAttrs(gradShape, xShape, minShape, maxShape,
-              outYDims, outMinDims, outMaxDims, 2, true),
+    ASSERT_EQ(RunInferShapeWithAttrs(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims, 2, true),
               ge::GRAPH_SUCCESS);
 
     ASSERT_EQ(outYDims.size(), 2u);
@@ -481,8 +460,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_case_11_num_bits_16_narr
     gert::StorageShape maxShape = {{1}, {1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    ASSERT_EQ(RunInferShapeWithAttrs(gradShape, xShape, minShape, maxShape,
-              outYDims, outMinDims, outMaxDims, 16, true),
+    ASSERT_EQ(RunInferShapeWithAttrs(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims, 16, true),
               ge::GRAPH_SUCCESS);
 
     ASSERT_EQ(outYDims.size(), 1u);
@@ -502,10 +480,8 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_case_12_determinism)
     std::vector<int64_t> outY1, outMin1, outMax1;
     std::vector<int64_t> outY2, outMin2, outMax2;
 
-    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outY1, outMin1, outMax1),
-              ge::GRAPH_SUCCESS);
-    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outY2, outMin2, outMax2),
-              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outY1, outMin1, outMax1), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outY2, outMin2, outMax2), ge::GRAPH_SUCCESS);
 
     EXPECT_EQ(outY1, outY2);
     EXPECT_EQ(outMin1, outMin2);
@@ -523,8 +499,7 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_5_max_rank)
     gert::StorageShape maxShape = {{1, 1}, {1, 1}};
     std::vector<int64_t> outYDims, outMinDims, outMaxDims;
 
-    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
-              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
 }
 
 // ============================================================

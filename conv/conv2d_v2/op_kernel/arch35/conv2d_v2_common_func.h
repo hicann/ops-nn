@@ -40,7 +40,7 @@ using TypeFalse = struct {
 };
 
 template <class Intf>
-static __aicore__ inline void InitKDirectionValueC04(Intf *self)
+static __aicore__ inline void InitKDirectionValueC04(Intf* self)
 {
     size_t multiKL1 = self->ctx.convTilingData->kAL1 / self->ctx.convTilingData->kL0;
     self->ctx.maxKAL1Iter = 0;
@@ -57,7 +57,7 @@ static __aicore__ inline void InitKDirectionValueC04(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void InitKDirectionValue(Intf *self)
+static __aicore__ inline void InitKDirectionValue(Intf* self)
 {
     // K direction variable calculate
     if constexpr (Intf::c04Flag) {
@@ -69,14 +69,16 @@ static __aicore__ inline void InitKDirectionValue(Intf *self)
     self->ctx.maxKBL1Iter = CeilDiv(totalKAlignK0, self->ctx.convTilingData->kBL1) - 1;
     self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTilingData->kL0);
     self->ctx.maxKL0Iter = self->ctx.ddr2l0LoopK - 1;
-    self->ctx.kAL1Tail = (self->ctx.singleCoreCi * self->ctx.convTilingData->kernelHxkernelW) % self->ctx.convTilingData->kAL1;
+    self->ctx.kAL1Tail = (self->ctx.singleCoreCi * self->ctx.convTilingData->kernelHxkernelW) %
+                         self->ctx.convTilingData->kAL1;
     self->ctx.kAL1Tail = self->ctx.kAL1Tail == 0 ? self->ctx.convTilingData->kAL1 : self->ctx.kAL1Tail;
-    self->ctx.kBL1Tail = (self->ctx.singleCoreCi * self->ctx.convTilingData->kernelHxkernelW) % self->ctx.convTilingData->kBL1;
+    self->ctx.kBL1Tail = (self->ctx.singleCoreCi * self->ctx.convTilingData->kernelHxkernelW) %
+                         self->ctx.convTilingData->kBL1;
     self->ctx.kBL1Tail = self->ctx.kBL1Tail == 0 ? self->ctx.convTilingData->kBL1 : self->ctx.kBL1Tail;
     self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTilingData->kL0;
     if constexpr (Intf::k0 != Intf::k0FmapTail) {
-        self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) * self->ctx.convTilingData->kernelHxkernelW %
-            self->ctx.convTilingData->kL0;
+        self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) *
+                             self->ctx.convTilingData->kernelHxkernelW % self->ctx.convTilingData->kL0;
         self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kAL0Tail;
     }
     self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kL0Tail;
@@ -85,22 +87,23 @@ static __aicore__ inline void InitKDirectionValue(Intf *self)
 
     if constexpr (Intf::kPreLoadFlag || Intf::WEIGHT_NZ_FLAG) {
         self->ctx.kBL1AlignK0Tail = totalKAlignK0 % self->ctx.convTilingData->kBL1;
-        self->ctx.kBL1AlignK0Tail =
-            self->ctx.kBL1AlignK0Tail == 0 ? self->ctx.convTilingData->kBL1 : self->ctx.kBL1AlignK0Tail;
+        self->ctx.kBL1AlignK0Tail = self->ctx.kBL1AlignK0Tail == 0 ? self->ctx.convTilingData->kBL1 :
+                                                                     self->ctx.kBL1AlignK0Tail;
     }
     if constexpr (Intf::kPreLoadFlag) {
         self->ctx.kAL1AlignK0Tail = totalKAlignK0 % self->ctx.convTilingData->kAL1;
-        self->ctx.kAL1AlignK0Tail =
-            self->ctx.kAL1AlignK0Tail == 0 ? self->ctx.convTilingData->kAL1 : self->ctx.kAL1AlignK0Tail;
+        self->ctx.kAL1AlignK0Tail = self->ctx.kAL1AlignK0Tail == 0 ? self->ctx.convTilingData->kAL1 :
+                                                                     self->ctx.kAL1AlignK0Tail;
         self->ctx.lastLoopKAL1StartPos = self->ctx.ddr2l0LoopK - self->ctx.multiKAL1;
         self->ctx.lastLoopKBL1StartPos = self->ctx.ddr2l0LoopK - self->ctx.multiKBL1;
-        self->ctx.lastLoopKAL1StartPosTail =
-            self->ctx.ddr2l0LoopK - CeilDiv(self->ctx.kAL1AlignK0Tail, self->ctx.convTilingData->kL0);
-        self->ctx.lastLoopKBL1StartPosTail =
-            self->ctx.ddr2l0LoopK - CeilDiv(self->ctx.kBL1AlignK0Tail, self->ctx.convTilingData->kL0);
+        self->ctx.lastLoopKAL1StartPosTail = self->ctx.ddr2l0LoopK -
+                                             CeilDiv(self->ctx.kAL1AlignK0Tail, self->ctx.convTilingData->kL0);
+        self->ctx.lastLoopKBL1StartPosTail = self->ctx.ddr2l0LoopK -
+                                             CeilDiv(self->ctx.kBL1AlignK0Tail, self->ctx.convTilingData->kL0);
     }
     if constexpr (Intf::isDmaFlag) {
-        self->ctx.cinBL1 = self->ctx.convTilingData->kBL1 / (self->ctx.convTilingData->khL1 * self->ctx.convTilingData->kwL1);
+        self->ctx.cinBL1 = self->ctx.convTilingData->kBL1 /
+                           (self->ctx.convTilingData->khL1 * self->ctx.convTilingData->kwL1);
         self->ctx.cinBL1LoopTimes = CeilDiv(self->ctx.singleCoreCi, self->ctx.cinBL1);
         self->ctx.maxCinBL1Iter = self->ctx.cinBL1LoopTimes - 1;
     }
@@ -108,9 +111,9 @@ static __aicore__ inline void InitKDirectionValue(Intf *self)
 
 template <class Intf, uint32_t ImplType>
 struct Init {
-    static __aicore__ inline void call(Intf *self, const void *__restrict convTiling)
+    static __aicore__ inline void call(Intf* self, const void* __restrict convTiling)
     {
-        self->ctx.convTilingData = (Conv2DTilingData *)convTiling;
+        self->ctx.convTilingData = (Conv2DTilingData*)convTiling;
         self->ctx.singleCoreBatch = self->ctx.convTilingData->singleCoreBatch;
         InitBatchDirectionValue<Intf>(self);
         if ASCEND_IS_AIC_CONV {
@@ -167,13 +170,13 @@ struct Init {
         }
     }
 
-    static __aicore__ inline void InitBaseValue(Intf *self)
+    static __aicore__ inline void InitBaseValue(Intf* self)
     {
         self->ctx.dilatedKernelH = 1 + (self->ctx.convTilingData->kernelH - 1) * self->ctx.convTilingData->dilationH;
         self->ctx.dilatedKernelW = 1 + (self->ctx.convTilingData->kernelW - 1) * self->ctx.convTilingData->dilationW;
         self->ctx.singleCoreCi = self->ctx.convTilingData->singleCoreCi; // Cin Size in Single Core
-        uint64_t alignCinKhKw =
-            AlignB(self->ctx.convTilingData->singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelW;
+        uint64_t alignCinKhKw = AlignB(self->ctx.convTilingData->singleCoreCi, Intf::k0) *
+                                self->ctx.convTilingData->kernelHxkernelW;
         self->ctx.kAL1fullload = alignCinKhKw == self->ctx.convTilingData->kAL1;
         self->ctx.kBL1fullload = alignCinKhKw == self->ctx.convTilingData->kBL1;
         self->ctx.singleCoreCo = self->ctx.convTilingData->singleCoreCo; // Cout Size in Single Core
@@ -183,7 +186,7 @@ struct Init {
                                        self->ctx.convTilingData->orgWo;
     }
 
-    static __aicore__ inline void InitValueMMode(Intf *self)
+    static __aicore__ inline void InitValueMMode(Intf* self)
     {
         self->ctx.mAL1 = self->ctx.convTilingData->hoL1;
         self->ctx.mL0 = self->ctx.convTilingData->hoL0;
@@ -191,7 +194,7 @@ struct Init {
         InitMDirectionValue<Intf>(self);
     }
 
-    static __aicore__ inline void InitValueHWMode(Intf *self)
+    static __aicore__ inline void InitValueHWMode(Intf* self)
     {
         self->ctx.singleCoreHo = self->ctx.convTilingData->singleCoreHo; // Ho Size in Single Core
         self->ctx.singleCoreWo = self->ctx.convTilingData->singleCoreWo; // Wo Size in Single Core
@@ -202,8 +205,8 @@ struct Init {
 
 template <class Intf, uint32_t ImplType>
 struct SetSingleOutputShape {
-    static __aicore__ inline void call(Intf *self, uint64_t singleCo, uint64_t singleHo, uint64_t singleWo,
-        uint64_t singleCoreBatch)
+    static __aicore__ inline void call(Intf* self, uint64_t singleCo, uint64_t singleHo, uint64_t singleWo,
+                                       uint64_t singleCoreBatch)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE)) {
             self->ctx.singleCoreCo = singleCo;
@@ -247,7 +250,7 @@ struct SetSingleOutputShape {
         }
     }
 
-    static __aicore__ inline void call(Intf *self, uint64_t singleCo, uint64_t singleM, uint64_t singleCoreBatch)
+    static __aicore__ inline void call(Intf* self, uint64_t singleCo, uint64_t singleM, uint64_t singleCoreBatch)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             self->ctx.singleCoreCo = singleCo;
@@ -287,7 +290,7 @@ struct SetSingleOutputShape {
 
 template <class Intf, uint32_t ImplType>
 struct SetFmapStartPosition {
-    static __aicore__ inline void call(Intf *self, int64_t hiStartPos, int64_t wiStartPos)
+    static __aicore__ inline void call(Intf* self, int64_t hiStartPos, int64_t wiStartPos)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE)) {
             self->ctx.hiStartPos = hiStartPos;
@@ -295,7 +298,7 @@ struct SetFmapStartPosition {
         }
     }
 
-    static __aicore__ inline void call(Intf *self, int64_t mStartPos)
+    static __aicore__ inline void call(Intf* self, int64_t mStartPos)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             if ASCEND_IS_AIC_CONV {
@@ -307,7 +310,7 @@ struct SetFmapStartPosition {
 
 template <class Intf, uint32_t ImplType>
 struct SetOptGroupParams {
-    static __aicore__ inline void call(Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
+    static __aicore__ inline void call(Intf* self, uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
     {
         self->ctx.singleGroupOpt = singleGroupOpt;
         if constexpr (!Intf::groupOptPreloadFlag) {
@@ -332,5 +335,5 @@ struct SetOptGroupParams {
     }
 };
 
-}  // namespace Conv2dFunc
+} // namespace Conv2dFunc
 #endif // CONV2D_V2_COMMON_FUNC_H

@@ -64,24 +64,25 @@ public:
 
 private:
     __aicore__ inline void InitParams();
-    __aicore__ inline void ProcessOneLoop(
-        int64_t xGmAddr, int64_t smoothScaleGmAddr, int64_t level0ScaleGmOffset, int64_t level1ScaleGmOffset, int64_t inBlockLen, int64_t inBurst);
-    __aicore__ inline void CopyOut(
-        int64_t yGmAddr, int64_t level0ScaleGmAddr, int64_t level1ScaleGmAddr, int64_t outBlockLen, int64_t outBurst);
+    __aicore__ inline void ProcessOneLoop(int64_t xGmAddr, int64_t smoothScaleGmAddr, int64_t level0ScaleGmOffset,
+                                          int64_t level1ScaleGmOffset, int64_t inBlockLen, int64_t inBurst);
+    __aicore__ inline void CopyOut(int64_t yGmAddr, int64_t level0ScaleGmAddr, int64_t level1ScaleGmAddr,
+                                   int64_t outBlockLen, int64_t outBurst);
     __aicore__ inline void CopyIn(int64_t xGmAddr, int64_t inBlockLen, int64_t inBurst);
     __aicore__ inline void CopySmoothScale(int64_t smoothScaleGmAddr, int64_t inBlockLen);
     __aicore__ inline void ComputeAll(int64_t dataLen, int64_t inBurst);
-    __simd_vf__ inline void ComputeSmoothScaleLevel0Quant(
-        int64_t LoopNum, __ubuf__ xDtype* xUbAddr, __ubuf__ xDtype* smoothScaleUbAddr, __ubuf__ xDtype* xTmpUbAddr, __ubuf__ float* level0ScaleUbAddr);
-    __simd_callee__ inline void CalcXTmp(
-        __ubuf__ xDtype* xTmpUbAddr, MicroAPI::RegTensor<float> level0ScaleReg, MicroAPI::RegTensor<xDtype> xReg,
-        MicroAPI::RegTensor<float>& xZeroFP32, MicroAPI::RegTensor<float>& xOneFP32);
-    __simd_vf__ inline void ComputeLevel1Scale(
-        int64_t loopNum, __ubuf__ xDtype* xTmpUbAddr, __ubuf__ uint8_t* level1ScaleUbAddr,
-        __ubuf__ uint16_t* level1ScaleReciprocalUbAddr);
-    __simd_vf__ inline void ComputeY(
-        int64_t loopNum, __ubuf__ xDtype* xTmpUbAddr, __ubuf__ uint8_t* yAddr,
-        __ubuf__ uint16_t* level1ScaleReciprocalUbAddr);
+    __simd_vf__ inline void ComputeSmoothScaleLevel0Quant(int64_t LoopNum, __ubuf__ xDtype* xUbAddr,
+                                                          __ubuf__ xDtype* smoothScaleUbAddr,
+                                                          __ubuf__ xDtype* xTmpUbAddr,
+                                                          __ubuf__ float* level0ScaleUbAddr);
+    __simd_callee__ inline void CalcXTmp(__ubuf__ xDtype* xTmpUbAddr, MicroAPI::RegTensor<float> level0ScaleReg,
+                                         MicroAPI::RegTensor<xDtype> xReg, MicroAPI::RegTensor<float>& xZeroFP32,
+                                         MicroAPI::RegTensor<float>& xOneFP32);
+    __simd_vf__ inline void ComputeLevel1Scale(int64_t loopNum, __ubuf__ xDtype* xTmpUbAddr,
+                                               __ubuf__ uint8_t* level1ScaleUbAddr,
+                                               __ubuf__ uint16_t* level1ScaleReciprocalUbAddr);
+    __simd_vf__ inline void ComputeY(int64_t loopNum, __ubuf__ xDtype* xTmpUbAddr, __ubuf__ uint8_t* yAddr,
+                                     __ubuf__ uint16_t* level1ScaleReciprocalUbAddr);
     __simd_callee__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float>& Reg);
 
 protected:
@@ -91,14 +92,14 @@ protected:
     static constexpr MicroAPI::CastTrait castTraitXdtypetoFp32One = {
         MicroAPI::RegLayout::ONE, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
         AscendC::RoundMode::UNKNOWN};
-    static constexpr MicroAPI::CastTrait castTraitHalf2BF16 = {
-        MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_TRUNC};
-    static constexpr MicroAPI::CastTrait castTraitBF16toFp4 = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
-    static constexpr MicroAPI::CastTrait castTraitFp32toBF16 = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+    static constexpr MicroAPI::CastTrait castTraitHalf2BF16 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN,
+                                                               MicroAPI::MaskMergeMode::ZEROING,
+                                                               AscendC::RoundMode::CAST_TRUNC};
+    static constexpr MicroAPI::CastTrait castTraitBF16toFp4 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
+                                                               MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    static constexpr MicroAPI::CastTrait castTraitFp32toBF16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                                MicroAPI::MaskMergeMode::ZEROING,
+                                                                AscendC::RoundMode::CAST_RINT};
 
 private:
     // tiling data
@@ -263,10 +264,11 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
         // 单行长度较大，分多次搬入ub计算
         for (int64_t i = 0; i < curColLoopNum_; i++) {
             // 均衡搬入，存在多尾块场景，计算正常块与尾块个数
-            int64_t headRowLoopNum =
-                curRowBlockNum_ % curRowLoopNum_ == 0 ? curRowLoopNum_ - 1 : curRowBlockNum_ % curRowLoopNum_;
-            int64_t tailRowLoopNum =
-                curRowBlockNum_ % curRowLoopNum_ == 0 ? 0 : (curRowLoopNum_ - curRowBlockNum_ % curRowLoopNum_ - 1);
+            int64_t headRowLoopNum = curRowBlockNum_ % curRowLoopNum_ == 0 ? curRowLoopNum_ - 1 :
+                                                                             curRowBlockNum_ % curRowLoopNum_;
+            int64_t tailRowLoopNum = curRowBlockNum_ % curRowLoopNum_ == 0 ?
+                                         0 :
+                                         (curRowLoopNum_ - curRowBlockNum_ % curRowLoopNum_ - 1);
             normalBlockLen = ops::CeilDiv(curRowBlockNum_, curRowLoopNum_) * blockSizeRow_;
             tailBlockLen = normalBlockLen - blockSizeRow_;
             // 该场景仅搬一块
@@ -277,9 +279,9 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
                 smoothScaleGmOffset = j * normalBlockLen;
                 level0ScaleGmOffset = i * tilingData_->rowBlockNum + j * (normalBlockLen / blockSizeRow_);
                 level1ScaleGmOffset = i * level1BlockRowNum_ + j * (normalBlockLen / DIGIT_32);
-                ProcessOneLoop(
-                    xGmAddr + xGmOffset, smoothScaleGmAddr + smoothScaleGmOffset, level0ScaleGmAddr + level0ScaleGmOffset,
-                    level1ScaleGmAddr + level1ScaleGmOffset, normalBlockLen, normalBurst);
+                ProcessOneLoop(xGmAddr + xGmOffset, smoothScaleGmAddr + smoothScaleGmOffset,
+                               level0ScaleGmAddr + level0ScaleGmOffset, level1ScaleGmAddr + level1ScaleGmOffset,
+                               normalBlockLen, normalBurst);
             }
             for (int64_t j = 0; j < tailRowLoopNum; j++) {
                 // 对齐尾块场景
@@ -289,9 +291,9 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
                                       j * (tailBlockLen / blockSizeRow_);
                 level1ScaleGmOffset = i * level1BlockRowNum_ + headRowLoopNum * (normalBlockLen / DIGIT_32) +
                                       j * (tailBlockLen / DIGIT_32);
-                ProcessOneLoop(
-                    xGmAddr + xGmOffset, smoothScaleGmAddr + smoothScaleGmOffset, level0ScaleGmAddr + level0ScaleGmOffset,
-                    level1ScaleGmAddr + level1ScaleGmOffset, tailBlockLen, normalBurst);
+                ProcessOneLoop(xGmAddr + xGmOffset, smoothScaleGmAddr + smoothScaleGmOffset,
+                               level0ScaleGmAddr + level0ScaleGmOffset, level1ScaleGmAddr + level1ScaleGmOffset,
+                               tailBlockLen, normalBurst);
             }
             // 非对齐尾块
             xGmOffset = i * tilingData_->rowSize + headRowLoopNum * normalBlockLen + tailRowLoopNum * tailBlockLen;
@@ -300,15 +302,16 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
                                   tailRowLoopNum * (tailBlockLen / blockSizeRow_);
             level1ScaleGmOffset = i * level1BlockRowNum_ + headRowLoopNum * (normalBlockLen / DIGIT_32) +
                                   tailRowLoopNum * (tailBlockLen / DIGIT_32);
-            ProcessOneLoop(
-                xGmAddr + xGmOffset, smoothScaleGmAddr + smoothScaleGmOffset, level0ScaleGmAddr + level0ScaleGmOffset, level1ScaleGmAddr + level1ScaleGmOffset,
-                curRowTileSize_ - headRowLoopNum * normalBlockLen - tailRowLoopNum * tailBlockLen, normalBurst);
+            ProcessOneLoop(xGmAddr + xGmOffset, smoothScaleGmAddr + smoothScaleGmOffset,
+                           level0ScaleGmAddr + level0ScaleGmOffset, level1ScaleGmAddr + level1ScaleGmOffset,
+                           curRowTileSize_ - headRowLoopNum * normalBlockLen - tailRowLoopNum * tailBlockLen,
+                           normalBurst);
         }
     } else {
         // 单行长度较小，单次多行搬入UB计算
         // 均衡搬入，同上
-        int64_t headColLoopNum =
-            curColBlockNum_ % curColLoopNum_ == 0 ? curColLoopNum_ : curColBlockNum_ % curColLoopNum_;
+        int64_t headColLoopNum = curColBlockNum_ % curColLoopNum_ == 0 ? curColLoopNum_ :
+                                                                         curColBlockNum_ % curColLoopNum_;
         normalBurst = ops::CeilDiv(curColBlockNum_, curColLoopNum_);
         tailBurst = normalBurst - 1;
         // 该场景搬入数据块长度固定
@@ -318,9 +321,8 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
             xGmOffset = i * normalBurst * tilingData_->rowSize;
             level0ScaleGmOffset = i * normalBurst * tilingData_->rowBlockNum;
             level1ScaleGmOffset = i * normalBurst * level1BlockRowNum_;
-            ProcessOneLoop(
-                xGmAddr + xGmOffset, smoothScaleGmAddr, level0ScaleGmAddr + level0ScaleGmOffset, level1ScaleGmAddr + level1ScaleGmOffset,
-                normalBlockLen, normalBurst);
+            ProcessOneLoop(xGmAddr + xGmOffset, smoothScaleGmAddr, level0ScaleGmAddr + level0ScaleGmOffset,
+                           level1ScaleGmAddr + level1ScaleGmOffset, normalBlockLen, normalBurst);
         }
         for (int64_t i = headColLoopNum; i < curColLoopNum_; i++) {
             // 尾块
@@ -330,16 +332,16 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
                                   (i - headColLoopNum) * tailBurst * tilingData_->rowBlockNum;
             level1ScaleGmOffset = headColLoopNum * normalBurst * level1BlockRowNum_ +
                                   (i - headColLoopNum) * tailBurst * level1BlockRowNum_;
-            ProcessOneLoop(
-                xGmAddr + xGmOffset, smoothScaleGmAddr, level0ScaleGmAddr + level0ScaleGmOffset, level1ScaleGmAddr + level1ScaleGmOffset,
-                normalBlockLen, tailBurst);
+            ProcessOneLoop(xGmAddr + xGmOffset, smoothScaleGmAddr, level0ScaleGmAddr + level0ScaleGmOffset,
+                           level1ScaleGmAddr + level1ScaleGmOffset, normalBlockLen, tailBurst);
         }
     }
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
 __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::ProcessOneLoop(
-    int64_t xGmAddr, int64_t smoothScaleGmAddr, int64_t level0ScaleGmAddr, int64_t level1ScaleGmAddr, int64_t dataLen, int64_t inBurst)
+    int64_t xGmAddr, int64_t smoothScaleGmAddr, int64_t level0ScaleGmAddr, int64_t level1ScaleGmAddr, int64_t dataLen,
+    int64_t inBurst)
 {
     CopyIn(xGmAddr, dataLen, inBurst);
     if constexpr (needSmoothScale) {
@@ -350,17 +352,19 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
-__aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::CopyIn(
-    int64_t xGmAddr, int64_t dataLen, int64_t inBurst)
+__aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::CopyIn(int64_t xGmAddr,
+                                                                                               int64_t dataLen,
+                                                                                               int64_t inBurst)
 {
-    int64_t rightPadding =
-        ops::CeilAlign(static_cast<int64_t>(dataLen * sizeof(xDtype)), UBBlockSize_) / sizeof(xDtype) - dataLen;
+    int64_t rightPadding = ops::CeilAlign(static_cast<int64_t>(dataLen * sizeof(xDtype)), UBBlockSize_) /
+                               sizeof(xDtype) -
+                           dataLen;
     int64_t srcStride = tilingData_->copyMethod ? 0 : (tilingData_->rowSize - curRowTileSize_);
     int64_t dstStride = (ops::CeilAlign(dataLen, blockSizeRow_) - dataLen) * sizeof(xDtype) / UBBlockSize_;
 
-    DataCopyExtParams copyInParams = {
-        static_cast<uint16_t>(inBurst), static_cast<uint32_t>(dataLen * sizeof(xDtype)),
-        static_cast<uint32_t>(srcStride * sizeof(xDtype)), static_cast<uint32_t>(dstStride), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyInParams = {static_cast<uint16_t>(inBurst), static_cast<uint32_t>(dataLen * sizeof(xDtype)),
+                                      static_cast<uint32_t>(srcStride * sizeof(xDtype)),
+                                      static_cast<uint32_t>(dstStride), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<xDtype> padParams{true, 0, static_cast<uint8_t>(rightPadding), 0};
 
     LocalTensor<xDtype> xLocal = inQueue.AllocTensor<xDtype>();
@@ -377,16 +381,17 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
 __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::CopySmoothScale(
-        int64_t smoothScaleGmAddr, int64_t dataLen)
+    int64_t smoothScaleGmAddr, int64_t dataLen)
 {
-    int64_t rightPadding =
-        ops::CeilAlign(static_cast<int64_t>(dataLen * sizeof(xDtype)), UBBlockSize_) / sizeof(xDtype) - dataLen;
+    int64_t rightPadding = ops::CeilAlign(static_cast<int64_t>(dataLen * sizeof(xDtype)), UBBlockSize_) /
+                               sizeof(xDtype) -
+                           dataLen;
     int64_t srcStride = tilingData_->copyMethod ? 0 : (tilingData_->rowSize - curRowTileSize_);
     int64_t dstStride = (ops::CeilAlign(dataLen, blockSizeRow_) - dataLen) * sizeof(xDtype) / UBBlockSize_;
 
-    DataCopyExtParams copyInParams = {
-        static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(xDtype)),
-        static_cast<uint32_t>(srcStride * sizeof(xDtype)), static_cast<uint32_t>(dstStride), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyInParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(xDtype)),
+                                      static_cast<uint32_t>(srcStride * sizeof(xDtype)),
+                                      static_cast<uint32_t>(dstStride), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<xDtype> padParams{true, 0, static_cast<uint8_t>(rightPadding), 0};
 
     LocalTensor<xDtype> smoothScaleLocal = smoothScaleQueue.AllocTensor<xDtype>();
@@ -402,7 +407,8 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
-__aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::ComputeAll(int64_t dataLen, int64_t inBurst)
+__aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::ComputeAll(int64_t dataLen,
+                                                                                                   int64_t inBurst)
 {
     LocalTensor<xDtype> x = inQueue.DeQue<xDtype>();
     LocalTensor<xDtype> smoothScale;
@@ -444,14 +450,12 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
         level1ScaleUbOffset = i * ops::CeilAlign(ops::CeilDiv(dataLen, DIGIT_32), DIGIT_32);
         level1ScaleReciprocalUbOffset = i * rowLoopNum * UBBlockSize_ / sizeof(bfloat16_t) * DIGIT_TWO;
         xTmpUbOffset = xUbOffset;
-        ComputeSmoothScaleLevel0Quant(
-            rowLoopNum, xUbAddr + xUbOffset, smoothScaleUbAddr, xTmpUbAddr + xTmpUbOffset, level0ScaleUbAddr + level0ScaleUbOffset);
-        ComputeLevel1Scale(
-            rowLoopNum * DIGIT_TWO, xTmpUbAddr + xTmpUbOffset, level1ScaleUbAddr + level1ScaleUbOffset,
-            level1ScaleReciprocalUbAddr + level1ScaleReciprocalUbOffset); // 256
-        ComputeY(
-            rowLoopNum * DIGIT_TWO, xTmpUbAddr + xTmpUbOffset, yUbAddr + yUbOffset,
-            level1ScaleReciprocalUbAddr + level1ScaleReciprocalUbOffset); // 256
+        ComputeSmoothScaleLevel0Quant(rowLoopNum, xUbAddr + xUbOffset, smoothScaleUbAddr, xTmpUbAddr + xTmpUbOffset,
+                                      level0ScaleUbAddr + level0ScaleUbOffset);
+        ComputeLevel1Scale(rowLoopNum * DIGIT_TWO, xTmpUbAddr + xTmpUbOffset, level1ScaleUbAddr + level1ScaleUbOffset,
+                           level1ScaleReciprocalUbAddr + level1ScaleReciprocalUbOffset); // 256
+        ComputeY(rowLoopNum * DIGIT_TWO, xTmpUbAddr + xTmpUbOffset, yUbAddr + yUbOffset,
+                 level1ScaleReciprocalUbAddr + level1ScaleReciprocalUbOffset); // 256
     }
 
     outScaleQueue.EnQue(outScale);
@@ -464,7 +468,8 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
 __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoothScale>::ComputeSmoothScaleLevel0Quant(
-    int64_t loopNum, __ubuf__ xDtype* xUbAddr, __ubuf__ xDtype* smoothScaleUbAddr, __ubuf__ xDtype* xTmpUbAddr, __ubuf__ float* level0ScaleUbAddr)
+    int64_t loopNum, __ubuf__ xDtype* xUbAddr, __ubuf__ xDtype* smoothScaleUbAddr, __ubuf__ xDtype* xTmpUbAddr,
+    __ubuf__ float* level0ScaleUbAddr)
 {
     MicroAPI::RegTensor<xDtype> x0, x1, x2, x3;
     MicroAPI::RegTensor<xDtype> smoothScale0, smoothScale1, smoothScale2, smoothScale3;
@@ -537,14 +542,14 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
             level0Scale, (AscendC::MicroAPI::RegTensor<xDtype>&)absX0, maskAll16);
         MicroAPI::Mul(level0Scale, level0Scale, (AscendC::MicroAPI::RegTensor<float>&)yMaxExp, maskAll32);
         // 当level0_scale是subnormal时，直接赋0
-        MicroAPI::Compare<uint32_t, CMPMODE::LT>(
-            invalidDataMask, (AscendC::MicroAPI::RegTensor<uint32_t>&)level0Scale, invalidData, maskAll32);
-        MicroAPI::Select<float>(
-            level0Scale, (AscendC::MicroAPI::RegTensor<float>&)(zero), level0Scale, invalidDataMask);
+        MicroAPI::Compare<uint32_t, CMPMODE::LT>(invalidDataMask, (AscendC::MicroAPI::RegTensor<uint32_t>&)level0Scale,
+                                                 invalidData, maskAll32);
+        MicroAPI::Select<float>(level0Scale, (AscendC::MicroAPI::RegTensor<float>&)(zero), level0Scale,
+                                invalidDataMask);
 
         // 输出1个值,非对齐搬出
-        MicroAPI::StoreUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            level0ScaleUbAddr, level0Scale, ureg, static_cast<uint32_t>(1));
+        MicroAPI::StoreUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(level0ScaleUbAddr, level0Scale, ureg,
+                                                                               static_cast<uint32_t>(1));
 
         MicroAPI::Duplicate(level0Scale, level0Scale, maskAll32);
 
@@ -554,8 +559,8 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
         CalcXTmp(xTmpUbAddr + j * blockSizeRow_ + DIGIT_256, level0Scale, x2, x2ZeroFP32, x2OneFP32);
         CalcXTmp(xTmpUbAddr + j * blockSizeRow_ + DIGIT_384, level0Scale, x3, x3ZeroFP32, x3OneFP32);
     }
-    MicroAPI::StoreUnAlignPost<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-        level0ScaleUbAddr, ureg, static_cast<int32_t>(0));
+    MicroAPI::StoreUnAlignPost<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(level0ScaleUbAddr, ureg,
+                                                                               static_cast<int32_t>(0));
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
@@ -583,10 +588,10 @@ __simd_callee__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needS
     MicroAPI::Cast<xDtype, float, castTraitFp32toBF16>(xZero, xZeroFP32, maskAll32);
     MicroAPI::Cast<xDtype, float, castTraitFp32toBF16>(xOne, xOneFP32, maskAll32);
 
-    MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-        (MicroAPI::RegTensor<uint16_t>&)xZero, (MicroAPI::RegTensor<uint32_t>&)xZero);
-    MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-        (MicroAPI::RegTensor<uint16_t>&)xOne, (MicroAPI::RegTensor<uint32_t>&)xOne);
+    MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint16_t>&)xZero,
+                                                                      (MicroAPI::RegTensor<uint32_t>&)xZero);
+    MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint16_t>&)xOne,
+                                                                      (MicroAPI::RegTensor<uint32_t>&)xOne);
 
     MicroAPI::Interleave(xZero, xOne, xZero, xOne);
     MicroAPI::Select<xDtype>(xZero, xReg, xZero, zeroMask);
@@ -690,10 +695,10 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
 
         // 采用非对齐搬出
         MicroAPI::UnalignRegForStore ureg;
-        MicroAPI::StoreUnAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            level1ScaleUbAddr, mxScale1B8, ureg, static_cast<uint32_t>(DIGIT_EIGHT));
-        MicroAPI::StoreUnAlignPost<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            level1ScaleUbAddr, ureg, static_cast<int32_t>(0));
+        MicroAPI::StoreUnAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(level1ScaleUbAddr, mxScale1B8, ureg,
+                                                                                 static_cast<uint32_t>(DIGIT_EIGHT));
+        MicroAPI::StoreUnAlignPost<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(level1ScaleUbAddr, ureg,
+                                                                                     static_cast<int32_t>(0));
 
         // 公式中的1/X
         // 只有在E1M2时，yMaxExp=0，xTmp0ExpBF16可能会等于biasE8M0
@@ -840,8 +845,8 @@ __simd_callee__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needS
     MicroAPI::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
     MicroAPI::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
     MicroAPI::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
-    MicroAPI::Select<int32_t>(
-        (MicroAPI::RegTensor<int32_t>&)Reg, negZero, (MicroAPI::RegTensor<int32_t>&)Reg, zeroMask);
+    MicroAPI::Select<int32_t>((MicroAPI::RegTensor<int32_t>&)Reg, negZero, (MicroAPI::RegTensor<int32_t>&)Reg,
+                              zeroMask);
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
@@ -859,9 +864,9 @@ __aicore__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmooth
         dstStrideLevel1Scale = (level1BlockRowNum_ - ops::CeilDiv(dataLen, DIGIT_64) * DIGIT_TWO);
     }
 
-    DataCopyExtParams yCopyOutParams = {
-        static_cast<uint16_t>(outBurst), static_cast<uint32_t>(dataLen / 2), static_cast<uint32_t>(srcStrideY),
-        static_cast<uint32_t>(dstStrideY), static_cast<uint32_t>(0)};
+    DataCopyExtParams yCopyOutParams = {static_cast<uint16_t>(outBurst), static_cast<uint32_t>(dataLen / 2),
+                                        static_cast<uint32_t>(srcStrideY), static_cast<uint32_t>(dstStrideY),
+                                        static_cast<uint32_t>(0)};
 
     DataCopyExtParams level0ScaleCopyOutParams = {
         static_cast<uint16_t>(outBurst), static_cast<uint32_t>(ops::CeilDiv(dataLen, blockSizeRow_) * sizeof(float)),

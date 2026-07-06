@@ -17,36 +17,37 @@
 
 namespace ops {
 class ExpandIntoJaggedPermute : public OpDef {
- public:
-  explicit ExpandIntoJaggedPermute(const char* name) : OpDef(name) {
-    this->Input("permute")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND})
-        .AutoContiguous();
-    this->Input("input_offsets")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND})
-        .AutoContiguous();
-    this->Input("output_offsets")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND})
-        .AutoContiguous();
-    this->Output("output_permute")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND});
-    this->Attr("output_size").AttrType(REQUIRED).Int();
-    this->AICore().AddConfig("ascend910b");
-    this->AICore().AddConfig("ascend910_93");
-  }
+public:
+    explicit ExpandIntoJaggedPermute(const char* name) : OpDef(name)
+    {
+        this->Input("permute")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("input_offsets")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("output_offsets")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Output("output_permute")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Attr("output_size").AttrType(REQUIRED).Int();
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+    }
 };
 
 OP_ADD(ExpandIntoJaggedPermute);
-}  // namespace ops
+} // namespace ops

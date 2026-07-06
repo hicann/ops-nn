@@ -26,8 +26,7 @@
 using namespace Ops::Base;
 using namespace AscendC;
 
-namespace optiling
-{
+namespace optiling {
 
 const gert::Shape g_vec_1_shape = {1};
 /**
@@ -38,7 +37,8 @@ const gert::Shape g_vec_1_shape = {1};
  * @param in_shape input shape
  * @return non-scalar shape
  */
-inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.IsScalar()) {
         return g_vec_1_shape;
     }
@@ -94,17 +94,16 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckDtypes()
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-                        OP_LOGE_FOR_INVALID_DTYPE(
-                            context_->GetNodeName(), "x", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ToString(xDtype_).c_str(),
+                                              "FLOAT, FLOAT16 or BF16"),
+                    return ge::GRAPH_FAILED);
     } else {
         if (xDtype_ != ge::DT_FLOAT16 || yDtype_ != ge::DT_FLOAT) {
             std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
             std::string reasonMsg = "The dtype of input x must be FLOAT16 and"
-                " the dtype of output y must be FLOAT when attribute half_to_float is true";
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
-                reasonMsg.c_str());
+                                    " the dtype of output y must be FLOAT when attribute half_to_float is true";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -137,37 +136,33 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
     int64_t yShapeSize = yStorageShape.GetDimNum();
     if (xShapeSize_ != yShapeSize) {
         std::string dimsMsg = std::to_string(xShapeSize_) + " and " + std::to_string(yShapeSize);
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context_->GetNodeName(), "x and y", dimsMsg.c_str(),
-            "The shape dims of input x and output y must be the same");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and y", dimsMsg.c_str(),
+                                                  "The shape dims of input x and output y must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (xShapeSize_ > MAX_DIMS) {
         std::string correctMsg = "less than or equal to " + std::to_string(MAX_DIMS);
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-            std::to_string(xShapeSize_).c_str(), correctMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(xShapeSize_).c_str(),
+                                     correctMsg.c_str());
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        xShapeSize_ == 0,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", "0",
-            "The shape dim of input x must be greater than 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShapeSize_ == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", "0",
+                                                         "The shape dim of input x must be greater than 0"),
+                return ge::GRAPH_FAILED);
     xShape_.resize(xShapeSize_);
     for (int i = 0; i < xShapeSize_; i++) {
         if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i)) {
             std::string shapesMsg = ToString(xStorageShape) + " and " + ToString(yStorageShape);
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context_->GetNodeName(), "x and y", shapesMsg.c_str(),
-                "The shapes of input x and output y must be the same");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y", shapesMsg.c_str(),
+                                                   "The shapes of input x and output y must be the same");
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(xStorageShape.GetDim(i) <= 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
-                "All axes of input x must be positive numbers"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
+                                                          "All axes of input x must be positive numbers"),
+                    return ge::GRAPH_FAILED);
         xShape_[i] = xStorageShape.GetDim(i);
     }
 
@@ -184,14 +179,14 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckAxes()
         reduceAxes_ = xShapeSize_ - 1;
     } else {
         OP_CHECK_IF(axisListPtr->GetSize() != 1,
-                    OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(),
-                        "axes", std::to_string(axisListPtr->GetSize()).c_str(), "1"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "axes",
+                                                 std::to_string(axisListPtr->GetSize()).c_str(), "1"),
+                    return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[0];
         if (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - 1) {
             std::string reasonMsg = "The value of attribute axes depends on the number of shape axes of input x";
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(),
+                                                  reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
 
@@ -203,15 +198,11 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckAxes()
 
 ge::graphStatus SoftmaxV2TilingBase::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(context_ == nullptr, OP_LOGE("SoftmaxV2TilingBase", "context is nullptr."),
-                        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_ == nullptr, OP_LOGE("SoftmaxV2TilingBase", "context is nullptr."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, ,
-                        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetDimsAndCheckShapeValid() != ge::GRAPH_SUCCESS, ,
-                        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetAndCheckAxes() != ge::GRAPH_SUCCESS, ,
-                        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetDimsAndCheckShapeValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAndCheckAxes() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
     // 合轴(a1_, r_, a0_)
     a1_ = DIM_NUM_ONE;
@@ -260,7 +251,6 @@ ge::graphStatus SoftmaxV2TilingBase::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-
 ge::graphStatus TilingPrepareForSoftmaxV2AscendC(gert::TilingParseContext* context)
 {
     OP_LOGD(context->GetNodeName(), "TilingPrepareForSoftmaxV2AscendC enter.");
@@ -273,26 +263,25 @@ ge::graphStatus TilingPrepareForSoftmaxV2AscendC(gert::TilingParseContext* conte
     compileInfoPtr->vlFp16 = Ops::Base::GetVRegSize(context) / FLOAT16_BYTES;
 
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr,
-                OP_LOGE(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "platformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfoPtr->coreNum <= 0),
-                    OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
-                    static_cast<uint32_t>(compileInfoPtr->coreNum)),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
+                        static_cast<uint32_t>(compileInfoPtr->coreNum)),
+                return ge::GRAPH_FAILED);
     uint64_t ubSizeTemp = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp);
     compileInfoPtr->ubSize = static_cast<int64_t>(ubSizeTemp);
     OP_CHECK_IF((compileInfoPtr->ubSize <= 0),
-                    OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
-                    static_cast<uint32_t>(compileInfoPtr->ubSize)),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
+                        static_cast<uint32_t>(compileInfoPtr->ubSize)),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus TilingForSoftmaxV2(gert::TilingContext* context)
 {
@@ -316,8 +305,7 @@ ge::graphStatus TilingPrepareForSoftmaxV2(gert::TilingParseContext* context)
     OP_LOGD(context->GetNodeName(), "TilingPrepareForSoftmaxV2 enter.");
 
     auto compileInfoPtr = context->GetCompiledInfo<SoftmaxV2CompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr,
-                OP_LOGE(context->GetNodeName(), "compileInfoPtr is null"),
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "compileInfoPtr is null"),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context, "TilingPrepareForSoftmaxV2AscendC enter");
     return TilingPrepareForSoftmaxV2AscendC(context);
@@ -325,4 +313,4 @@ ge::graphStatus TilingPrepareForSoftmaxV2(gert::TilingParseContext* context)
 
 IMPL_OP_OPTILING(SoftmaxV2).Tiling(TilingForSoftmaxV2).TilingParse<SoftmaxV2CompileInfo>(TilingPrepareForSoftmaxV2);
 
-}  // namespace optiling
+} // namespace optiling

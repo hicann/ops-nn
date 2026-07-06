@@ -127,8 +127,8 @@ __aicore__ inline void RunNotTailAxisLargeTailOptiPath(GM_ADDR x, GM_ADDR y, GM_
 {
     GET_TILING_DATA_WITH_STRUCT(DynamicMxQuant4OptimizeTilingData, tilingData, tiling);
     TPipe pipe;
-    DynamicMxQuantNotTailAxisOptimizeLargeTail<DTYPE_X, DTYPE_Y, getRoundMode<roundMode>(), scaleAlg> op(
-        &tilingData, &pipe);
+    DynamicMxQuantNotTailAxisOptimizeLargeTail<DTYPE_X, DTYPE_Y, getRoundMode<roundMode>(), scaleAlg> op(&tilingData,
+                                                                                                         &pipe);
     op.Init(x, y, mxScale);
     op.Process();
 }

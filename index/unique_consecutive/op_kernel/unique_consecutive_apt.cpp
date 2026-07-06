@@ -16,13 +16,8 @@
 #include "./arch35/unique_consecutive_single_core_kernel.h"
 #include "./arch35/unique_consecutive_multi_core_kernel.h"
 
-template <template <typename, typename, typename, bool, bool> 
-    class KERNEL_CLASS, 
-    typename ORIGIN_TYPE, 
-    typename INPUT_TYPE, 
-    typename DTYPE_COUNT, 
-    bool COUNT_OUT, 
-    bool ISINT64>
+template <template <typename, typename, typename, bool, bool> class KERNEL_CLASS, typename ORIGIN_TYPE,
+          typename INPUT_TYPE, typename DTYPE_COUNT, bool COUNT_OUT, bool ISINT64>
 __aicore__ inline void createAndRunKernel(GM_ADDR x, GM_ADDR y, GM_ADDR idx, GM_ADDR count, GM_ADDR shape_out,
                                           GM_ADDR workspace, const UniqueConsecutiveTilingData* tilingData, TPipe* pipe)
 {
@@ -86,20 +81,20 @@ extern "C" __global__ __aicore__ void unique_consecutive(GM_ADDR x, GM_ADDR y, G
     const UniqueConsecutiveTilingData* __restrict tilingData = &tilingDataIn;
 
     if (TILING_KEY_IS(11)) {
-        createAndRunKernel<UniqueConsecutiveSingleCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, true, false>(x, y, idx, count, shape_out, workspace,
-                                                                             tilingData, &pipe);
+        createAndRunKernel<UniqueConsecutiveSingleCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, true, false>(
+            x, y, idx, count, shape_out, workspace, tilingData, &pipe);
     } else if (TILING_KEY_IS(21)) {
-        createAndRunKernel<UniqueConsecutiveMutilCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, true, false>(x, y, idx, count, shape_out, workspace,
-                                                                            tilingData, &pipe);
+        createAndRunKernel<UniqueConsecutiveMutilCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, true, false>(
+            x, y, idx, count, shape_out, workspace, tilingData, &pipe);
     } else if (TILING_KEY_IS(22)) {
-        createAndRunKernel<UniqueConsecutiveMutilCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, true, true>(x, y, idx, count, shape_out, workspace,
-                                                                            tilingData, &pipe);
+        createAndRunKernel<UniqueConsecutiveMutilCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, true, true>(
+            x, y, idx, count, shape_out, workspace, tilingData, &pipe);
     } else if (TILING_KEY_IS(10)) {
-        createAndRunKernel<UniqueConsecutiveSingleCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, false, false>(x, y, idx, count, shape_out, workspace,
-                                                                              tilingData, &pipe);
+        createAndRunKernel<UniqueConsecutiveSingleCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, false, false>(
+            x, y, idx, count, shape_out, workspace, tilingData, &pipe);
     } else if (TILING_KEY_IS(20)) {
-        createAndRunKernel<UniqueConsecutiveMutilCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, false, false>(x, y, idx, count, shape_out, workspace,
-                                                                             tilingData, &pipe);
+        createAndRunKernel<UniqueConsecutiveMutilCoreKerenl, DTYPE_X, DTYPE_X, DTYPE_COUNT, false, false>(
+            x, y, idx, count, shape_out, workspace, tilingData, &pipe);
     } else if (TILING_KEY_IS(666)) {
         // Empty kernel
         CopyOutEmptyShape(shape_out, &pipe);

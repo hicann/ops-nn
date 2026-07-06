@@ -20,15 +20,9 @@ using namespace op;
 
 class FlatQuantProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FlatQuantProto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FlatQuantProto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FlatQuantProto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FlatQuantProto TearDown" << std::endl; }
 };
 
 TEST_F(FlatQuantProto, inferDtype_case_1)
@@ -53,9 +47,8 @@ TEST_F(FlatQuantProto, inferDtype_case_1)
         auto context_holder = gert::InferDataTypeContextFaker()
                                   .IrInputNum(1)
                                   .NodeIoNum(3, 2)
-                                  .NodeAttrs(
-                                      {{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                                       {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
+                                  .NodeAttrs({{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                              {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
                                   .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -64,7 +57,7 @@ TEST_F(FlatQuantProto, inferDtype_case_1)
                                   .InputDataTypes({&input_x_ref, &input_p1_ref, &input_p2_ref})
                                   .OutputDataTypes({&output_out_ref, &output_scale_ref})
                                   .Build();
- 
+
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -98,9 +91,8 @@ TEST_F(FlatQuantProto, inferDtype_950_case_1)
         auto context_holder = gert::InferDataTypeContextFaker()
                                   .IrInputNum(1)
                                   .NodeIoNum(3, 2)
-                                  .NodeAttrs(
-                                      {{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                                       {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(40L)}})
+                                  .NodeAttrs({{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                              {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(40L)}})
                                   .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -109,7 +101,7 @@ TEST_F(FlatQuantProto, inferDtype_950_case_1)
                                   .InputDataTypes({&input_x_ref, &input_p1_ref, &input_p2_ref})
                                   .OutputDataTypes({&output_out_ref, &output_scale_ref})
                                   .Build();
-          
+
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -142,9 +134,8 @@ TEST_F(FlatQuantProto, inferDtype_950_case_2)
         auto context_holder = gert::InferDataTypeContextFaker()
                                   .IrInputNum(1)
                                   .NodeIoNum(3, 2)
-                                  .NodeAttrs(
-                                      {{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                                       {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
+                                  .NodeAttrs({{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                              {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
                                   .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -187,9 +178,8 @@ TEST_F(FlatQuantProto, infershape_case_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 2)
                       .IrInstanceNum({1, 1, 1})
-                      .NodeAttrs(
-                          {{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                           {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
+                      .NodeAttrs({{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
@@ -233,9 +223,8 @@ TEST_F(FlatQuantProto, infershape_950_case_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 2)
                       .IrInstanceNum({1, 1, 1})
-                      .NodeAttrs(
-                          {{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                           {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(40L)}})
+                      .NodeAttrs({{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(40L)}})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
@@ -277,9 +266,8 @@ TEST_F(FlatQuantProto, infershape_950_case_2)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 2)
                       .IrInstanceNum({1, 1, 1})
-                      .NodeAttrs(
-                          {{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                           {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
+                      .NodeAttrs({{"clip_ratio", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(29L)}})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)

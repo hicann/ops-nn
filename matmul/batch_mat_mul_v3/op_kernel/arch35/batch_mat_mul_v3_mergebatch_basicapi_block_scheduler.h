@@ -24,11 +24,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_
->
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_>
 class BlockSchedulerMergeBatchBuiltIn {
 public:
     int64_t m_{0};
@@ -57,8 +53,7 @@ public:
     };
 
 public:
-    __aicore__ inline BlockSchedulerMergeBatchBuiltIn(const ProblemShape& shape, int64_t blockNum,
-                                                     const Params& params)
+    __aicore__ inline BlockSchedulerMergeBatchBuiltIn(const ProblemShape& shape, int64_t blockNum, const Params& params)
     {
         m_ = shape.m;
         n_ = shape.n;
@@ -80,29 +75,17 @@ public:
         mainTailBlock_ = remainderBatch % blockNum_;
     }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return MMV3CeilAlign(MMV3DivCeil(b_, batchAL1_), blockNum_);
-    }
+    __aicore__ inline int64_t GetTileNum() { return MMV3CeilAlign(MMV3DivCeil(b_, batchAL1_), blockNum_); }
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetIterBatchTuple()
     {
         return {batchAL1_, batchBL1_, batchL0_, batchL0_};
     }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape()
-    {
-        return {0, 0, kL1_, batchAL1_};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape() { return {0, 0, kL1_, batchAL1_}; }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape()
-    {
-        return {0, 0, baseK_, batchL0_};
-    }
-    __aicore__ inline int64_t GetHf32Flag()
-    {
-        return isHf32_;
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape() { return {0, 0, baseK_, batchL0_}; }
+    __aicore__ inline int64_t GetHf32Flag() { return isHf32_; }
 
     __aicore__ inline int64_t GetBlockNum(ProblemShape shape, int64_t blockNum)
     {
@@ -144,11 +127,9 @@ public:
             int64_t mainTailIdx = tileIdx % blockNum_;
             if (mainTailBlock_ > 0 && mainTailIdx >= mainTailBlock_) {
                 // 如果是最终尾块
-                return {0,
-                    0,
-                    0,
-                    mainBatchLoop_ * batchAL1_ * blockNum_ + mainTailBlock_ * mainTailBatch_ +
-                        (mainTailBatch_ - 1) * (mainTailIdx - mainTailBlock_)};
+                return {0, 0, 0,
+                        mainBatchLoop_ * batchAL1_ * blockNum_ + mainTailBlock_ * mainTailBatch_ +
+                            (mainTailBatch_ - 1) * (mainTailIdx - mainTailBlock_)};
             } else {
                 // 如果是主尾块
                 return {0, 0, 0, mainBatchLoop_ * batchAL1_ * blockNum_ + mainTailIdx * mainTailBatch_};
@@ -170,24 +151,12 @@ public:
     }
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInMergeBatchScheduler,
-    TransA_,
-    TransB_
-> {
-  using SchedulerOp = BlockSchedulerMergeBatchBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInMergeBatchScheduler,
+                              TransA_, TransB_> {
+    using SchedulerOp = BlockSchedulerMergeBatchBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block
 } // namespace Gemm
-} // namespace Act
-
+} // namespace Cmct

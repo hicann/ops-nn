@@ -37,29 +37,29 @@ struct CTCLossV3GradTilingDataTest {
 };
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                               \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                   \
     CTCLossV3GradTilingDataTest tilingData;                                          \
     INIT_TILING_DATA(CTCLossV3GradTilingDataTest, tilingDataPointer, tilingPointer); \
-    (tilingData).sliceLength = tilingDataPointer->sliceLength;                   \
-    (tilingData).sliceLengthTail = tilingDataPointer->sliceLengthTail;           \
-    (tilingData).probSliceNum = tilingDataPointer->probSliceNum;                 \
-    (tilingData).alphaLength = tilingDataPointer->alphaLength;                   \
-    (tilingData).maxInputLength = tilingDataPointer->maxInputLength;             \
-    (tilingData).symbolSet = tilingDataPointer->symbolSet;                       \
-    (tilingData).batchSize = tilingDataPointer->batchSize;                       \
-    (tilingData).sDimRange = tilingDataPointer->sDimRange;                       \
-    (tilingData).targetsDimNum = tilingDataPointer->targetsDimNum;               \
-    (tilingData).targetsNum = tilingDataPointer->targetsNum;                     \
-    (tilingData).taskPerCore = tilingDataPointer->taskPerCore;                   \
-    (tilingData).taskTailCore = tilingDataPointer->taskTailCore;                 \
-    (tilingData).BLANK = tilingDataPointer->BLANK;                               \
+    (tilingData).sliceLength = tilingDataPointer->sliceLength;                       \
+    (tilingData).sliceLengthTail = tilingDataPointer->sliceLengthTail;               \
+    (tilingData).probSliceNum = tilingDataPointer->probSliceNum;                     \
+    (tilingData).alphaLength = tilingDataPointer->alphaLength;                       \
+    (tilingData).maxInputLength = tilingDataPointer->maxInputLength;                 \
+    (tilingData).symbolSet = tilingDataPointer->symbolSet;                           \
+    (tilingData).batchSize = tilingDataPointer->batchSize;                           \
+    (tilingData).sDimRange = tilingDataPointer->sDimRange;                           \
+    (tilingData).targetsDimNum = tilingDataPointer->targetsDimNum;                   \
+    (tilingData).targetsNum = tilingDataPointer->targetsNum;                         \
+    (tilingData).taskPerCore = tilingDataPointer->taskPerCore;                       \
+    (tilingData).taskTailCore = tilingDataPointer->taskTailCore;                     \
+    (tilingData).BLANK = tilingDataPointer->BLANK;                                   \
     (tilingData).zeroInfinity = tilingDataPointer->zeroInfinity;
 
 #define DTYPE_GRAD float

@@ -34,17 +34,14 @@ using namespace ut_util;
 using namespace std;
 
 class SyncBatchNormGatherStatsTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SyncBatchNormGatherStatsTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SyncBatchNormGatherStatsTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SyncBatchNormGatherStatsTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SyncBatchNormGatherStatsTiling TearDown" << std::endl; }
 };
 
-TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling5) {
+TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling5)
+{
     dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 100}, {16, 100}};
     gert::StorageShape total_square_sum_shape = {{16, 100}, {16, 100}};
@@ -71,68 +68,50 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling5) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec,
-                      intrinsics, soc_version);
-  
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-  
+
     // compile info
     optiling::SyncBatchNormGatherStatsCompileInfo compile_info;
-  
+
     string op_type("SyncBatchNormGatherStats");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()),
-              nullptr);
-    auto tiling_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance()
-                                  .GetOpImpl(op_type.c_str())
-                                  ->tiling_parse;
-  
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char *>(compile_info_string.c_str()),
-                      reinterpret_cast<void *>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()
-                    ->GetPlatformInfo()
-                    ->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("version", soc_version);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-  
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
-              ge::GRAPH_SUCCESS);
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size =
-        reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(5, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
+                      .InputShapes(
+                          {&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
                       .OutputShapes({&batch_mean_shape, &batch_invstd_shape, &running_mean_update, &running_var_update})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dataType, dataFormat, dataFormat)
                       .NodeInputTd(1, dataType, dataFormat, dataFormat)
                       .NodeInputTd(2, countType, dataFormat, dataFormat)
@@ -147,24 +126,19 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling5) {
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    gert::TilingContext *tiling_context =
-        holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-  
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling6) {
+TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling6)
+{
     dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 10000}, {16, 10000}};
     gert::StorageShape total_square_sum_shape = {{16, 10000}, {16, 10000}};
@@ -191,68 +165,50 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling6) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec,
-                      intrinsics, soc_version);
-  
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-  
+
     // compile info
     optiling::SyncBatchNormGatherStatsCompileInfo compile_info;
-  
+
     string op_type("SyncBatchNormGatherStats");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()),
-              nullptr);
-    auto tiling_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance()
-                                  .GetOpImpl(op_type.c_str())
-                                  ->tiling_parse;
-  
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char *>(compile_info_string.c_str()),
-                      reinterpret_cast<void *>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()
-                    ->GetPlatformInfo()
-                    ->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("version", soc_version);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-  
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
-              ge::GRAPH_SUCCESS);
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size =
-        reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(5, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
+                      .InputShapes(
+                          {&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
                       .OutputShapes({&batch_mean_shape, &batch_invstd_shape, &running_mean_update, &running_var_update})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dataType, dataFormat, dataFormat)
                       .NodeInputTd(1, dataType, dataFormat, dataFormat)
                       .NodeInputTd(2, countType, dataFormat, dataFormat)
@@ -267,24 +223,19 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling6) {
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    gert::TilingContext *tiling_context =
-        holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-  
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling7) {
+TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling7)
+{
     dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 100}, {16, 100}};
     gert::StorageShape total_square_sum_shape = {{16, 100}, {16, 100}};
@@ -311,68 +262,50 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling7) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec,
-                      intrinsics, soc_version);
-  
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-  
+
     // compile info
     optiling::SyncBatchNormGatherStatsCompileInfo compile_info;
-  
+
     string op_type("SyncBatchNormGatherStats");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()),
-              nullptr);
-    auto tiling_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance()
-                                  .GetOpImpl(op_type.c_str())
-                                  ->tiling_parse;
-  
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char *>(compile_info_string.c_str()),
-                      reinterpret_cast<void *>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()
-                    ->GetPlatformInfo()
-                    ->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("version", soc_version);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-  
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
-              ge::GRAPH_SUCCESS);
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size =
-        reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(5, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
+                      .InputShapes(
+                          {&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
                       .OutputShapes({&batch_mean_shape, &batch_invstd_shape, &running_mean_update, &running_var_update})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dataType, dataFormat, dataFormat)
                       .NodeInputTd(1, dataType, dataFormat, dataFormat)
                       .NodeInputTd(2, countType, dataFormat, dataFormat)
@@ -387,24 +320,19 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling7) {
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    gert::TilingContext *tiling_context =
-        holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-  
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling8) {
+TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling8)
+{
     dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 10000}, {16, 10000}};
     gert::StorageShape total_square_sum_shape = {{16, 10000}, {16, 10000}};
@@ -431,68 +359,50 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling8) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec,
-                      intrinsics, soc_version);
-  
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-  
+
     // compile info
     optiling::SyncBatchNormGatherStatsCompileInfo compile_info;
-  
+
     string op_type("SyncBatchNormGatherStats");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()),
-              nullptr);
-    auto tiling_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance()
-                                  .GetOpImpl(op_type.c_str())
-                                  ->tiling_parse;
-  
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char *>(compile_info_string.c_str()),
-                      reinterpret_cast<void *>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()
-                    ->GetPlatformInfo()
-                    ->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("version", soc_version);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-  
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
-              ge::GRAPH_SUCCESS);
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size =
-        reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(5, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
+                      .InputShapes(
+                          {&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
                       .OutputShapes({&batch_mean_shape, &batch_invstd_shape, &running_mean_update, &running_var_update})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dataType, dataFormat, dataFormat)
                       .NodeInputTd(1, dataType, dataFormat, dataFormat)
                       .NodeInputTd(2, countType, dataFormat, dataFormat)
@@ -507,24 +417,19 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling8) {
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    gert::TilingContext *tiling_context =
-        holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-  
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling9) {
+TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling9)
+{
     dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{5089, 1678}, {5089, 1678}};
     gert::StorageShape total_square_sum_shape = {{5089, 1678}, {5089, 1678}};
@@ -551,68 +456,50 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling9) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec,
-                      intrinsics, soc_version);
-  
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-  
+
     // compile info
     optiling::SyncBatchNormGatherStatsCompileInfo compile_info;
-  
+
     string op_type("SyncBatchNormGatherStats");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()),
-              nullptr);
-    auto tiling_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance()
-                                  .GetOpImpl(op_type.c_str())
-                                  ->tiling_parse;
-  
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char *>(compile_info_string.c_str()),
-                      reinterpret_cast<void *>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()
-                    ->GetPlatformInfo()
-                    ->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("version", soc_version);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-  
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
-              ge::GRAPH_SUCCESS);
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size =
-        reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(5, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
+                      .InputShapes(
+                          {&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
                       .OutputShapes({&batch_mean_shape, &batch_invstd_shape, &running_mean_update, &running_var_update})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dataType, dataFormat, dataFormat)
                       .NodeInputTd(1, dataType, dataFormat, dataFormat)
                       .NodeInputTd(2, countType, dataFormat, dataFormat)
@@ -627,24 +514,19 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling9) {
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    gert::TilingContext *tiling_context =
-        holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-  
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling10) {
+TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling10)
+{
     dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{5089, 1678}, {5089, 1678}};
     gert::StorageShape total_square_sum_shape = {{5089, 1678}, {5089, 1678}};
@@ -671,68 +553,50 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling10) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec,
-                      intrinsics, soc_version);
-  
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-  
+
     // compile info
     optiling::SyncBatchNormGatherStatsCompileInfo compile_info;
-  
+
     string op_type("SyncBatchNormGatherStats");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()),
-              nullptr);
-    auto tiling_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance()
-                                  .GetOpImpl(op_type.c_str())
-                                  ->tiling_parse;
-  
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char *>(compile_info_string.c_str()),
-                      reinterpret_cast<void *>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()
-                    ->GetPlatformInfo()
-                    ->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("version", soc_version);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()
-        ->GetPlatformInfo()
-        ->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-  
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
-              ge::GRAPH_SUCCESS);
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size =
-        reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(5, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
+                      .InputShapes(
+                          {&total_sum_shape, &total_square_sum_shape, &sample_count_shape, &mean_shape, &var_shape})
                       .OutputShapes({&batch_mean_shape, &batch_invstd_shape, &running_mean_update, &running_var_update})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dataType, dataFormat, dataFormat)
                       .NodeInputTd(1, dataType, dataFormat, dataFormat)
                       .NodeInputTd(2, countType, dataFormat, dataFormat)
@@ -747,19 +611,13 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling10) {
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    gert::TilingContext *tiling_context =
-        holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()
-        ->GetPlatformInfo()
-        ->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-  
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     dlog_setlevel(0, 3, 0);
 }

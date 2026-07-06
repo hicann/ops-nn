@@ -48,6 +48,5 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB32B64 = {
     AscendC::MicroAPI::SatMode::UNKNOWN,
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
 };
-}
+} // namespace SyncBatchNormGatherStats
 #endif
-

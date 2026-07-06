@@ -33,5 +33,5 @@ struct QuantBatchMatmulV4CompileInfo {
     platform_ascendc::SocVersion socVersion;
 };
 
-}
+} // namespace optiling
 #endif // __OP_HOST_QUANT_BATCH_MATMUL_V4_COMPILE_INFO_H__

@@ -20,8 +20,8 @@
 using namespace AscendC;
 
 template <uint64_t schId, uint64_t xDims, uint64_t reduction>
-__global__ __aicore__ void nll_loss(
-    GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void nll_loss(GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight,
+                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);

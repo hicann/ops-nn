@@ -80,10 +80,8 @@ public:
 
     uint64_t GetTilingKey() const
     {
-        return GET_TPL_TILING_KEY(
-            static_cast<uint64_t>(computeModeDx_), static_cast<uint64_t>(computeModeDgamma_),
-            static_cast<uint64_t>(computeModeOffsetX_),
-            static_cast<uint64_t>(computeDivMode_));
+        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeModeDx_), static_cast<uint64_t>(computeModeDgamma_),
+                                  static_cast<uint64_t>(computeModeOffsetX_), static_cast<uint64_t>(computeDivMode_));
     }
 
 private:
@@ -161,10 +159,10 @@ protected:
     ge::graphStatus CheckShapeBeSameWithOne(gert::Shape& shape);
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
     ge::graphStatus CheckShapeDimNum(gert::Shape& shape, int64_t minDimNum, int64_t maxDimNum, const char* name);
-    ge::graphStatus CheckShapePrefixMatch(
-        gert::Shape& prefixShape, gert::Shape& fullShape, const char* prefixName, const char* fullName);
-    ge::graphStatus CheckShapeSuffixMatch(
-        gert::Shape& suffixShape, gert::Shape& fullShape, const char* suffixName, const char* fullName);
+    ge::graphStatus CheckShapePrefixMatch(gert::Shape& prefixShape, gert::Shape& fullShape, const char* prefixName,
+                                          const char* fullName);
+    ge::graphStatus CheckShapeSuffixMatch(gert::Shape& suffixShape, gert::Shape& fullShape, const char* suffixName,
+                                          const char* fullName);
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtype();
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);

@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_expm1_proto.h"
 
-class ForeachExpm1Test : public testing::Test
-{
+class ForeachExpm1Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachExpm1 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachExpm1 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachExpm1 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachExpm1 TearDown" << std::endl; }
 };
 
 TEST_F(ForeachExpm1Test, infer_shape_known_success)

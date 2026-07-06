@@ -31,8 +31,8 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 // 判断走AiCore还是AiCPU
-static bool IsAiCoreSupport(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction)
+static bool IsAiCoreSupport(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            int64_t reduction)
 {
     // 检查self的dtype是否在dtype list内
     if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
@@ -49,22 +49,20 @@ static bool IsAiCoreSupport(
 }
 
 // AiCore的执行逻辑
-static void L1LossGradAiCore(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction,
-    aclTensor* gradInput, aclOpExecutor* executor)
+static void L1LossGradAiCore(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                             int64_t reduction, aclTensor* gradInput, aclOpExecutor* executor)
 {
     L0_DFX(L1LossGradAiCore, gradOutput, self, target, reduction, gradInput);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        L1LossGrad, OP_INPUT(gradOutput, self, target), OP_OUTPUT(gradInput), OP_ATTR(REDUCTION_STR[reduction]));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(L1LossGrad, OP_INPUT(gradOutput, self, target), OP_OUTPUT(gradInput),
+                                           OP_ATTR(REDUCTION_STR[reduction]));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "L1LossGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
     }
 }
 
-const aclTensor* L1LossGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction,
-    aclOpExecutor* executor)
+const aclTensor* L1LossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            int64_t reduction, aclOpExecutor* executor)
 {
     L0_DFX(L1LossGrad, gradOutput, self, target, reduction);
 
@@ -77,17 +75,15 @@ const aclTensor* L1LossGrad(
     op::Shape broadcastShape1;
     op::Shape broadcastShape2;
     if (!BroadcastInferShape(gradOutput->GetViewShape(), self->GetViewShape(), broadcastShape1)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "GradOutput tensor shape:%s and self tensor shape:%s can't broadcast.",
-            ToString(gradOutput->GetViewShape()).GetString(), ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput tensor shape:%s and self tensor shape:%s can't broadcast.",
+                ToString(gradOutput->GetViewShape()).GetString(), ToString(self->GetViewShape()).GetString());
         return nullptr;
     }
     if (!BroadcastInferShape(target->GetViewShape(), broadcastShape1, broadcastShape2)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "GradOutput tensor shape:%s self tensor shape:%s target tensor shape:%s can't broadcast.",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString(),
-            op::ToString(target->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "GradOutput tensor shape:%s self tensor shape:%s target tensor shape:%s can't broadcast.",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString(),
+                op::ToString(target->GetViewShape()).GetString());
         return nullptr;
     }
     auto gradInput = executor->AllocTensor(broadcastShape2, self->GetDataType());

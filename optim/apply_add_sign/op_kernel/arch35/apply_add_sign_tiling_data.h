@@ -24,10 +24,10 @@
 #include <cstdint>
 
 struct ApplyAddSignTilingData {
-    int64_t dim0 = 0;            // 元素总数量（var 所有维度乘积）
-    int64_t blockFactor = 0;     // 每核处理的元素数量（32B 对齐）
-    int64_t ubFactor = 0;        // 每次 UB 循环处理的元素数量（32B 对齐）
-    uint32_t signTmpSize = 0;    // Sign API tmpBuffer 大小（字节，Host 侧 GetSignMaxMinTmpSize 计算）
+    int64_t dim0 = 0;         // 元素总数量（var 所有维度乘积）
+    int64_t blockFactor = 0;  // 每核处理的元素数量（32B 对齐）
+    int64_t ubFactor = 0;     // 每次 UB 循环处理的元素数量（32B 对齐）
+    uint32_t signTmpSize = 0; // Sign API tmpBuffer 大小（字节，Host 侧 GetSignMaxMinTmpSize 计算）
 };
 
 #endif

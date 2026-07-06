@@ -26,20 +26,13 @@ extern "C" {
 constexpr size_t MAX_DIM_LEN = 8;
 
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT,
-    op::DataType::DT_FLOAT16,
-    op::DataType::DT_INT8,
-    op::DataType::DT_INT32,
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT8, op::DataType::DT_INT32,
     op::DataType::DT_INT64};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT,
-    op::DataType::DT_FLOAT16,
-    op::DataType::DT_BF16,
-    op::DataType::DT_INT8,
-    op::DataType::DT_INT32,
-    op::DataType::DT_INT64};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
+    op::DataType::DT_INT8,  op::DataType::DT_INT32,   op::DataType::DT_INT64};
 
-static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -51,14 +44,14 @@ static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
     return ASCEND910_DTYPE_SUPPORT_LIST;
 }
 
-static bool CheckNotNull(const aclTensor *self, const aclTensor *out)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
@@ -67,7 +60,7 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static bool CheckShape(const aclTensor *self, const aclTensor *out)
+static bool CheckShape(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -75,7 +68,7 @@ static bool CheckShape(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
@@ -83,7 +76,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckInplaceParams(const aclTensor *self)
+static aclnnStatus CheckInplaceParams(const aclTensor* self)
 {
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
     auto supportList = GetDtypeSupportList();
@@ -92,8 +85,8 @@ static aclnnStatus CheckInplaceParams(const aclTensor *self)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecReluGetWorkspaceSize(
-    const aclTensor *self, const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+static aclnnStatus ExecReluGetWorkspaceSize(const aclTensor* self, const aclTensor* out, uint64_t* workspaceSize,
+                                            aclOpExecutor** executor)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -121,16 +114,15 @@ static aclnnStatus ExecReluGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnReluGetWorkspaceSize(
-    const aclTensor *self, const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnReluGetWorkspaceSize(const aclTensor* self, const aclTensor* out, uint64_t* workspaceSize,
+                                      aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnRelu, DFX_IN(self), DFX_OUT(out));
     return ExecReluGetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceReluGetWorkspaceSize(
-    aclTensor *selfRef, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnInplaceReluGetWorkspaceSize(aclTensor* selfRef, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnInplaceRelu, DFX_IN(selfRef), DFX_OUT(selfRef));
@@ -141,14 +133,13 @@ aclnnStatus aclnnInplaceReluGetWorkspaceSize(
     return ExecReluGetWorkspaceSize(selfRef, selfRef, workspaceSize, executor);
 }
 
-aclnnStatus aclnnRelu(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRelu);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceRelu(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnInplaceRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceRelu);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

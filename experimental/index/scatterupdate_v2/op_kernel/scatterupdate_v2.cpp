@@ -26,11 +26,12 @@
 #include "scatterupdate_v2.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void scatterupdate_v2(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR xout, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void scatterupdate_v2(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR xout, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ScatterupdateV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(ScatterupdateV2TilingData, tilingData, tiling);
-    NsScatterupdateV2::ScatterupdateV2<DTYPE_INPUT, DTYPE_INDICES, DTYPE_UPDATES> op; 
-    op.Init(x, y, z, xout,&tilingData);      
-    op.Process();                      
+    NsScatterupdateV2::ScatterupdateV2<DTYPE_INPUT, DTYPE_INDICES, DTYPE_UPDATES> op;
+    op.Init(x, y, z, xout, &tilingData);
+    op.Process();
 }

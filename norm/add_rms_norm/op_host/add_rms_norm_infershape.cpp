@@ -53,9 +53,8 @@ static ge::graphStatus InferShape4AddRmsNorm(gert::InferShapeContext* context)
         return GRAPH_SUCCESS;
     }
 
-    OP_CHECK_IF(
-        xDimNum < gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(xDimNum < gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
+                return GRAPH_FAILED);
 
     rstdShape->SetDimNum(xDimNum);
     for (size_t rmsIdx = 0; rmsIdx < xDimNum; rmsIdx++) {

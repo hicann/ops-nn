@@ -21,13 +21,11 @@
 
 namespace AdaptiveAvgPool3d {
 template <typename T, int32_t QUEUE_DEPTH>
-class KernelAdaptiveAvgPool3dSplitC
-{
+class KernelAdaptiveAvgPool3dSplitC {
 public:
-    __aicore__ inline KernelAdaptiveAvgPool3dSplitC()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AdaptiveAvgPool3dTilingData* __restrict__ tiling, TPipe* pipe);
+    __aicore__ inline KernelAdaptiveAvgPool3dSplitC() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                const AdaptiveAvgPool3dTilingData* __restrict__ tiling, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
@@ -36,8 +34,8 @@ private:
     __aicore__ inline void CopyOut(int64_t offset, int64_t len);
     __aicore__ inline void DataCopyOutNonPad(LocalTensor<T>& outputLocal, int64_t offset, int64_t validDataLen);
     __aicore__ inline void ReduceMean(int64_t outputPointIdx, int64_t bufIdx);
-    __aicore__ inline void ReduceSum(
-        const Index& index, LocalTensor<float>& sumBufLocal, int64_t cOffset, int64_t len, int64_t nOffset);
+    __aicore__ inline void ReduceSum(const Index& index, LocalTensor<float>& sumBufLocal, int64_t cOffset, int64_t len,
+                                     int64_t nOffset);
 
     TPipe* pipe;
     TQue<QuePosition::VECIN, QUEUE_DEPTH> inputQueue;
@@ -84,10 +82,10 @@ __aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::InitTiling
     indexBufLen = tiling->indexBufLen;
 
     outputPointNum = GetBlockIdx() < tiling->formerNum ? tiling->formerLength : tiling->tailLength;
-    outputPointOffset =
-        GetBlockIdx() < tiling->formerNum ?
-            tiling->formerLength * GetBlockIdx() :
-            tiling->formerNum * tiling->formerLength + tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
+    outputPointOffset = GetBlockIdx() < tiling->formerNum ?
+                            tiling->formerLength * GetBlockIdx() :
+                            tiling->formerNum * tiling->formerLength +
+                                tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
     nextCoreAddrOffset = (outputPointOffset + outputPointNum) * cLength;
     atomicAddNum = tiling->atomicAddNum;
     cTailLength = cLength % cTileLength;
@@ -115,8 +113,9 @@ __aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyIn(int
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::DataCopyOutNonPad(
-    LocalTensor<T>& outputLocal, int64_t offset, int64_t validDataLen)
+__aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::DataCopyOutNonPad(LocalTensor<T>& outputLocal,
+                                                                                        int64_t offset,
+                                                                                        int64_t validDataLen)
 {
     if ((validDataLen < numPerBlock) && (offset + validDataLen * atomicAddNum >= nextCoreAddrOffset)) {
         uint64_t mask0 = (1ul << numPerBlock) - (1ul << validDataLen);
@@ -137,16 +136,16 @@ __aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::DataCopyOu
             int32_t preLeftShift = numPerBlock + lastLeftShift;
 
             bufPattern.SetValue(0, (1u << preLeftShift) - (1u << lastLeftShift));
-            GatherMask(
-                outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8}, rsvdCnt);
+            GatherMask(outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8},
+                       rsvdCnt);
         } else {
             LocalTensor<uint16_t> bufPattern = tmpPattern.Get<uint16_t>();
             int32_t preLeftShift = numPerBlock - lastLeftShift;
 
             bufPattern.SetValue(0, ((1u << preLeftShift) - 1u) << lastLeftShift);
             bufPattern.SetValue(1, (1u << lastLeftShift) - 1u);
-            GatherMask(
-                outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8}, rsvdCnt);
+            GatherMask(outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8},
+                       rsvdCnt);
         }
         DataCopy(outputGlobal[nextCoreAddrOffset - numPerBlock], outputLocal[gatherOffset], numPerBlock);
     } else {
@@ -173,8 +172,10 @@ __aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyOut(in
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceSum(
-    const Index& index, LocalTensor<float>& sumBufLocal, int64_t cOffset, int64_t len, int64_t nOffset)
+__aicore__ inline void KernelAdaptiveAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceSum(const Index& index,
+                                                                                LocalTensor<float>& sumBufLocal,
+                                                                                int64_t cOffset, int64_t len,
+                                                                                int64_t nOffset)
 {
     int64_t dstart = index.dstart;
     int64_t dend = index.dend;

@@ -15,18 +15,15 @@
 #include "infershape_test_util.h"
 #include "platform/platform_info.h"
 
-class binary_cross_entropy_grad : public testing::Test{
-  protected:
-      static void SetUpTestCase(){
-          std::cout<<"binary_cross_entropy_grad Proto Test SetUp"<<std::endl;
-      }
+class binary_cross_entropy_grad : public testing::Test {
+protected:
+    static void SetUpTestCase() { std::cout << "binary_cross_entropy_grad Proto Test SetUp" << std::endl; }
 
-      static void TearDownTestCase(){
-          std::cout<<"binary_cross_entropy_grad Proto Test TearDown"<<std::endl;
-      }
+    static void TearDownTestCase() { std::cout << "binary_cross_entropy_grad Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(binary_cross_entropy_grad, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true) {
+TEST_F(binary_cross_entropy_grad, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -46,8 +43,7 @@ TEST_F(binary_cross_entropy_grad, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true) 
                       .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&xShape, &yShape, &gradOutShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)

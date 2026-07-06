@@ -65,10 +65,9 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
     // 1. If reduction='none', when dtype of self is no floating point, than target must not be floating point.
     if (reduction == REDUCTION_NONE_NUM) {
         if (!IsFloatingType(self->GetDataType()) && IsFloatingType(target->GetDataType())) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Input dtype should be either floating point or complex dtypes. Got %s instead.",
-                ToString(self->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Input dtype should be either floating point or complex dtypes. Got %s instead.",
+                    ToString(self->GetDataType()).GetString());
             return false;
         }
     }
@@ -76,10 +75,9 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
     // 2. If reduction=='mean', when dtype of self is no floating point, than target must be floating point.
     if (reduction == REDUCTION_MEAN_NUM) {
         if (!IsFloatingType(self->GetDataType()) && !IsFloatingType(target->GetDataType())) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Input dtype should be either floating point or complex dtypes. Got self %s and target %s instead.",
-                ToString(self->GetDataType()).GetString(), ToString(target->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Input dtype should be either floating point or complex dtypes. Got self %s and target %s instead.",
+                    ToString(self->GetDataType()).GetString(), ToString(target->GetDataType()).GetString());
             return false;
         }
     }
@@ -87,18 +85,16 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
     // 检查self和target能否做数据类型推导
     op::DataType promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Self dtype %s and target dtype %s can not be promoted.",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(target->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and target dtype %s can not be promoted.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(target->GetDataType()).GetString());
         return false;
     }
 
     // 检查promoteType的数据类型是否在支持列表内
     auto dtypeSupportList = CheckNpuArchIsSupportBf16();
     if (!CheckType(promoteType, dtypeSupportList)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list %s.",
-            op::ToString(promoteType).GetString(), op::ToString(dtypeSupportList).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list %s.",
+                op::ToString(promoteType).GetString(), op::ToString(dtypeSupportList).GetString());
         return false;
     }
 
@@ -132,17 +128,15 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, const acl
     // 2、若reduction！='none'，out为0-dimensional Tensor
     if (reduction == REDUCTION_NONE_NUM) {
         if (broadcastShape != out->GetViewShape()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Expected out tensor shape to be %s, but got %s.",
-                op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected out tensor shape to be %s, but got %s.",
+                    op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
             return false;
         }
     }
     if (reduction != REDUCTION_NONE_NUM) {
         if (out->GetViewShape().GetDimNum() >= 1) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Expected a 0-dimensional tensor, but Shape of out is %s.",
-                op::ToString(out->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected a 0-dimensional tensor, but Shape of out is %s.",
+                    op::ToString(out->GetViewShape()).GetString());
             return false;
         }
     }
@@ -153,8 +147,8 @@ static void CheckFormat(const aclTensor* x)
 {
     op::Format format = x->GetStorageFormat();
     if (format == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW(
-            "Format of input gets [%s], this format mat lead to precision failure", op::ToString(format).GetString());
+        OP_LOGW("Format of input gets [%s], this format mat lead to precision failure",
+                op::ToString(format).GetString());
     }
 }
 
@@ -205,8 +199,8 @@ static const aclIntArray* GetSumDim(const aclTensor* self, aclOpExecutor* execut
     return executor->AllocIntArray(appendDim, dimDum);
 }
 
-static const aclTensor* GetL1LossFromInt64(
-    const aclTensor* self, const aclTensor* target, int64_t reduction, aclOpExecutor* executor)
+static const aclTensor* GetL1LossFromInt64(const aclTensor* self, const aclTensor* target, int64_t reduction,
+                                           aclOpExecutor* executor)
 {
     // 不支持复数，输入为int64场景，需要处理none和sum两种模式
     // 调用Sub算子kernel,alpha为1,直接sub
@@ -234,9 +228,8 @@ static const aclTensor* GetL1LossFromInt64(
     return nullptr;
 }
 
-aclnnStatus aclnnL1LossGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* target, int64_t reduction, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnL1LossGetWorkspaceSize(const aclTensor* self, const aclTensor* target, int64_t reduction,
+                                        aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

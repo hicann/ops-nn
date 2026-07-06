@@ -141,19 +141,18 @@ ge::graphStatus RotateQuantAptTiling::GetShapeAttrsInfo()
 
     inputParams_.opName = context_->GetNodeName();
     OP_LOGI(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(
-        CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid context."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid context."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        AnalyzeAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid attrs."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        AnalyzeDtype() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid dtypes."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        AnalyzeShapes() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid shapes."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid attrs."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeDtype() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid dtypes."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeShapes() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid shapes."),
+                    return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        inputParams_.opName, "Input params: MNK[%ld, %ld, %ld], nKRatio[%ld].", inputParams_.M, inputParams_.N,
-        inputParams_.K, inputParams_.nKRatio);
+    OP_LOGD(inputParams_.opName, "Input params: MNK[%ld, %ld, %ld], nKRatio[%ld].", inputParams_.M, inputParams_.N,
+            inputParams_.K, inputParams_.nKRatio);
 
     inputParams_.initFlag = true;
     return ge::GRAPH_SUCCESS;
@@ -173,9 +172,8 @@ ge::graphStatus RotateQuantAptTiling::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(SCALE_INDEX));
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
-            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -198,21 +196,18 @@ ge::graphStatus RotateQuantAptTiling::ParseAttrValues()
     RoundModeList roundMode = GetRoundMode(roundModeStr);
     OP_CHECK_IF(
         (roundMode == RoundModeList::MODE_UNDEFINED),
-        OP_LOGE(
-            context_->GetNodeName(), "invalid round_mode:%s; round_mode should be one of {rint, floor, round}",
-            roundModeStr.c_str()),
+        OP_LOGE(context_->GetNodeName(), "invalid round_mode:%s; round_mode should be one of {rint, floor, round}",
+                roundModeStr.c_str()),
         return ge::GRAPH_FAILED);
     inputParams_.roundMode = static_cast<int32_t>(roundMode);
 
     const int64_t* scaleAlgPtr = attrs->GetAttrPointer<int64_t>(SCALE_ALG_ATTR_INDEX);
     if (scaleAlgPtr != nullptr) {
         inputParams_.scaleAlg = static_cast<int32_t>(*scaleAlgPtr);
-        OP_TILING_CHECK(
-            inputParams_.scaleAlg < MIN_SCALE_ALG || inputParams_.scaleAlg > MAX_SCALE_ALG,
-            OP_LOGE(
-                inputParams_.opName, "The scaleAlg[%d] should be in [%d, %d].", inputParams_.scaleAlg, MIN_SCALE_ALG,
-                MAX_SCALE_ALG),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(inputParams_.scaleAlg < MIN_SCALE_ALG || inputParams_.scaleAlg > MAX_SCALE_ALG,
+                        OP_LOGE(inputParams_.opName, "The scaleAlg[%d] should be in [%d, %d].", inputParams_.scaleAlg,
+                                MIN_SCALE_ALG, MAX_SCALE_ALG),
+                        return ge::GRAPH_FAILED);
     }
 
     tilingData_.invDstTypeMax = DST_TYPE_MAX_DEFAULT;
@@ -237,18 +232,15 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeAttrs()
         return ge::GRAPH_SUCCESS;
     }
 
-    OP_TILING_CHECK(
-        ParseAttrValues() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Failed to parse attrs."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ParseAttrValues() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Failed to parse attrs."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        inputParams_.trans == true, OP_LOGE(inputParams_.opName, "The trans only support false."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.trans == true, OP_LOGE(inputParams_.opName, "The trans only support false."),
+                    return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        inputParams_.opName, "Attrs: yDtype=%d, axis=%d, roundMode=%d, scaleAlg=%d, dstTypeMax=%f, trans=%d",
-        inputParams_.yDtype, inputParams_.axis, inputParams_.roundMode, inputParams_.scaleAlg, inputParams_.dstTypeMax,
-        inputParams_.trans);
+    OP_LOGD(inputParams_.opName, "Attrs: yDtype=%d, axis=%d, roundMode=%d, scaleAlg=%d, dstTypeMax=%f, trans=%d",
+            inputParams_.yDtype, inputParams_.axis, inputParams_.roundMode, inputParams_.scaleAlg,
+            inputParams_.dstTypeMax, inputParams_.trans);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -259,13 +251,11 @@ ge::graphStatus RotateQuantAptTiling::CheckAlphaInput()
         auto alphaDesc = context_->GetInputDesc(ALPHA_INDEX);
         if (alphaDesc != nullptr) {
             auto alphaDtype = alphaDesc->GetDataType();
-            OP_TILING_CHECK(
-                alphaDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "alpha dtype should be bf16."),
-                return ge::GRAPH_FAILED);
+            OP_TILING_CHECK(alphaDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "alpha dtype should be bf16."),
+                            return ge::GRAPH_FAILED);
             auto alphaShape = context_->GetInputShape(ALPHA_INDEX)->GetStorageShape();
-            OP_TILING_CHECK(
-                alphaShape.GetDimNum() != ALPHA_DIM_NUM || alphaShape.GetDim(0) != ALPHA_DIM_SIZE,
-                OP_LOGE(inputParams_.opName, "alpha shape should be (1,)."), return ge::GRAPH_FAILED);
+            OP_TILING_CHECK(alphaShape.GetDimNum() != ALPHA_DIM_NUM || alphaShape.GetDim(0) != ALPHA_DIM_SIZE,
+                            OP_LOGE(inputParams_.opName, "alpha shape should be (1,)."), return ge::GRAPH_FAILED);
             inputParams_.hasAlpha = true;
             OP_LOGD(inputParams_.opName, "hasAlpha detected");
         }
@@ -281,90 +271,87 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeDtype()
     auto scaleDtype = context_->GetOutputDesc(SCALE_INDEX)->GetDataType();
 
     OP_TILING_CHECK(inputParams_.dataType != ge::DT_FLOAT16 && inputParams_.dataType != ge::DT_BF16,
-        OP_LOGE(inputParams_.opName, "x dtype should be fp16 or bf16 for ascend950."), return ge::GRAPH_FAILED);
+                    OP_LOGE(inputParams_.opName, "x dtype should be fp16 or bf16 for ascend950."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(inputParams_.dataType != rotDtype, 
-        OP_LOGE(inputParams_.opName, "x and rotation dtype should be same."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.dataType != rotDtype,
+                    OP_LOGE(inputParams_.opName, "x and rotation dtype should be same."), return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(yDtype != ge::DT_FLOAT4_E2M1 && yDtype != ge::DT_FLOAT8_E4M3FN && yDtype != ge::DT_FLOAT8_E5M2,
+    OP_TILING_CHECK(
+        yDtype != ge::DT_FLOAT4_E2M1 && yDtype != ge::DT_FLOAT8_E4M3FN && yDtype != ge::DT_FLOAT8_E5M2,
         OP_LOGE(inputParams_.opName, "y dtype should be in [FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2] for ascend950."),
         return ge::GRAPH_FAILED);
     if (yDtype == ge::DT_FLOAT4_E2M1) {
         OP_TILING_CHECK(inputParams_.scaleAlg != MIN_SCALE_ALG && inputParams_.scaleAlg != MAX_SCALE_ALG,
-            OP_LOGE(
-                inputParams_.opName, "When y's data type is FLOAT4_E2M1, scaleAlg must be %d or %d.", MIN_SCALE_ALG,
-                MAX_SCALE_ALG),
-            return ge::GRAPH_FAILED);
+                        OP_LOGE(inputParams_.opName, "When y's data type is FLOAT4_E2M1, scaleAlg must be %d or %d.",
+                                MIN_SCALE_ALG, MAX_SCALE_ALG),
+                        return ge::GRAPH_FAILED);
     } else {
         OP_TILING_CHECK(inputParams_.roundMode != static_cast<int32_t>(RoundModeList::MODE_RINT),
-            OP_LOGE(inputParams_.opName, "When y's data type is FLOAT8_E4M3/FLOAT8_E5M2, round_mode only support rint."),
-            return ge::GRAPH_FAILED);
+                        OP_LOGE(inputParams_.opName,
+                                "When y's data type is FLOAT8_E4M3/FLOAT8_E5M2, round_mode only support rint."),
+                        return ge::GRAPH_FAILED);
 
-        OP_TILING_CHECK(inputParams_.scaleAlg != MIN_SCALE_ALG && inputParams_.scaleAlg != SCALE_ALG_PER_CHANNEL,
-            OP_LOGE(
-                inputParams_.opName, "When y's data type is FLOAT8_E4M3/FLOAT8_E5M2, scaleAlg must be %d or %d.",
-                MIN_SCALE_ALG, SCALE_ALG_PER_CHANNEL),
+        OP_TILING_CHECK(
+            inputParams_.scaleAlg != MIN_SCALE_ALG && inputParams_.scaleAlg != SCALE_ALG_PER_CHANNEL,
+            OP_LOGE(inputParams_.opName, "When y's data type is FLOAT8_E4M3/FLOAT8_E5M2, scaleAlg must be %d or %d.",
+                    MIN_SCALE_ALG, SCALE_ALG_PER_CHANNEL),
             return ge::GRAPH_FAILED);
     }
 
     if (yDtype == ge::DT_FLOAT4_E2M1 && inputParams_.scaleAlg == MAX_SCALE_ALG) {
         OP_TILING_CHECK(inputParams_.dstTypeMax < DST_TYPE_MAX_LOWER || inputParams_.dstTypeMax > DST_TYPE_MAX_UPPER,
-            OP_LOGE(
-                inputParams_.opName,
-                "When y's data type is FLOAT4_E2M1 and scaleAlg is %d, dstTypeMax must be in [%f, %f].", MAX_SCALE_ALG,
-                DST_TYPE_MAX_LOWER, DST_TYPE_MAX_UPPER),
-            return ge::GRAPH_FAILED);
+                        OP_LOGE(inputParams_.opName,
+                                "When y's data type is FLOAT4_E2M1 and scaleAlg is %d, dstTypeMax must be in [%f, %f].",
+                                MAX_SCALE_ALG, DST_TYPE_MAX_LOWER, DST_TYPE_MAX_UPPER),
+                        return ge::GRAPH_FAILED);
     } else {
         OP_TILING_CHECK(inputParams_.dstTypeMax != DST_TYPE_MAX_DEFAULT,
-            OP_LOGE(inputParams_.opName, "dstTypeMax must equal %f.", DST_TYPE_MAX_DEFAULT), return ge::GRAPH_FAILED);
+                        OP_LOGE(inputParams_.opName, "dstTypeMax must equal %f.", DST_TYPE_MAX_DEFAULT),
+                        return ge::GRAPH_FAILED);
     }
 
     OP_TILING_CHECK(scaleDtype != ge::DT_FLOAT8_E8M0,
-        OP_LOGE(inputParams_.opName, "scale dtype should be FLOAT8_E8M0 for ascend950."), return ge::GRAPH_FAILED);
+                    OP_LOGE(inputParams_.opName, "scale dtype should be FLOAT8_E8M0 for ascend950."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(CheckAlphaInput() != ge::GRAPH_SUCCESS, 
-        OP_LOGE(inputParams_.opName, "Invalid alpha input."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckAlphaInput() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid alpha input."),
+                    return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RotateQuantAptTiling::ValidateRotShape(const gert::Shape& rotShape)
 {
-    OP_TILING_CHECK(
-        rotShape.GetDimNum() < MIN_ROT_DIM_NUM || rotShape.GetDimNum() > MAX_ROT_DIM_NUM,
-        OP_LOGE(inputParams_.opName, "Input rot rank[%zu] should be in [2, 3].", rotShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(rotShape.GetDimNum() < MIN_ROT_DIM_NUM || rotShape.GetDimNum() > MAX_ROT_DIM_NUM,
+                    OP_LOGE(inputParams_.opName, "Input rot rank[%zu] should be in [2, 3].", rotShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
 
     inputParams_.K = rotShape.GetDim(rotShape.GetDimNum() - 1);
     OP_TILING_CHECK(
         inputParams_.K != ROT_K_SIZE_32 && inputParams_.K != ROT_K_SIZE_64 && inputParams_.K != ROT_K_SIZE_128,
-        OP_LOGE(
-            inputParams_.opName, "Input rot last dim size must be in [%ld, %ld, %ld].", ROT_K_SIZE_32, ROT_K_SIZE_64,
-            ROT_K_SIZE_128),
+        OP_LOGE(inputParams_.opName, "Input rot last dim size must be in [%ld, %ld, %ld].", ROT_K_SIZE_32,
+                ROT_K_SIZE_64, ROT_K_SIZE_128),
         return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        inputParams_.N % inputParams_.K != 0,
-        OP_LOGE(inputParams_.opName, "N(%ld) must be divisible by K(%ld).", inputParams_.N, inputParams_.K),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.N % inputParams_.K != 0,
+                    OP_LOGE(inputParams_.opName, "N(%ld) must be divisible by K(%ld).", inputParams_.N, inputParams_.K),
+                    return ge::GRAPH_FAILED);
 
     inputParams_.nKRatio = inputParams_.N / inputParams_.K;
 
     if (rotShape.GetDimNum() == MIN_ROT_DIM_NUM) {
         inputParams_.rotType = ROT_TYPE_SINGLE;
-        OP_TILING_CHECK(
-            rotShape.GetDim(0) != inputParams_.K,
-            OP_LOGE(
-                inputParams_.opName, "Input rotationMatrix shape should be (%ld, %ld), please check.", inputParams_.K,
-                inputParams_.K),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(rotShape.GetDim(0) != inputParams_.K,
+                        OP_LOGE(inputParams_.opName, "Input rotationMatrix shape should be (%ld, %ld), please check.",
+                                inputParams_.K, inputParams_.K),
+                        return ge::GRAPH_FAILED);
     } else {
         inputParams_.rotType = (inputParams_.nKRatio > 1) ? ROT_TYPE_MULTI : ROT_TYPE_SINGLE;
         OP_TILING_CHECK(
             rotShape.GetDim(0) != inputParams_.nKRatio || rotShape.GetDim(1) != inputParams_.K,
-            OP_LOGE(
-                inputParams_.opName, "Input rotationMatrix shape should be (%ld, %ld, %ld), please check.",
-                inputParams_.nKRatio, inputParams_.K, inputParams_.K),
+            OP_LOGE(inputParams_.opName, "Input rotationMatrix shape should be (%ld, %ld, %ld), please check.",
+                    inputParams_.nKRatio, inputParams_.K, inputParams_.K),
             return ge::GRAPH_FAILED);
     }
 
@@ -375,9 +362,8 @@ ge::graphStatus RotateQuantAptTiling::ValidateScaleShape(const gert::Shape& mxsc
 {
     OP_CHECK_IF(
         mxscaleShape != scaleShape,
-        OP_LOGE(
-            inputParams_.opName, "The shape of output mxscale %s is incorrect, correct shape is %s, please check.",
-            Shape2String(scaleShape).c_str(), Shape2String(mxscaleShape).c_str()),
+        OP_LOGE(inputParams_.opName, "The shape of output mxscale %s is incorrect, correct shape is %s, please check.",
+                Shape2String(scaleShape).c_str(), Shape2String(mxscaleShape).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -387,18 +373,15 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeShapes()
     const auto& xShape = context_->GetInputShape(X_INDEX)->GetStorageShape();
     const auto& rotShape = context_->GetInputShape(ROT_INDEX)->GetStorageShape();
 
-    OP_TILING_CHECK(
-        xShape.GetDimNum() < MIN_X_DIM_NUM || xShape.GetDimNum() > MAX_X_DIM_NUM,
-        OP_LOGE(
-            inputParams_.opName, "Input x rank[%zu] should be in [%d, %d].", MIN_X_DIM_NUM, MAX_X_DIM_NUM,
-            xShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(xShape.GetDimNum() < MIN_X_DIM_NUM || xShape.GetDimNum() > MAX_X_DIM_NUM,
+                    OP_LOGE(inputParams_.opName, "Input x rank[%zu] should be in [%d, %d].", MIN_X_DIM_NUM,
+                            MAX_X_DIM_NUM, xShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
         inputParams_.axis != DEFAULT_AXIS && inputParams_.axis != static_cast<int32_t>(xShape.GetDimNum() - 1),
-        OP_LOGE(
-            inputParams_.opName, "axis should be %d or %d.", DEFAULT_AXIS,
-            static_cast<int32_t>(xShape.GetDimNum() - 1)),
+        OP_LOGE(inputParams_.opName, "axis should be %d or %d.", DEFAULT_AXIS,
+                static_cast<int32_t>(xShape.GetDimNum() - 1)),
         return ge::GRAPH_FAILED);
 
     inputParams_.M = INIT_ACCUMULATE_VALUE;
@@ -407,9 +390,8 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeShapes()
     }
     inputParams_.N = xShape.GetDim(xShape.GetDimNum() - 1);
 
-    OP_TILING_CHECK(
-        ValidateRotShape(rotShape) != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid rot shape."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ValidateRotShape(rotShape) != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid rot shape."),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -444,8 +426,8 @@ ge::graphStatus RotateQuantAptTiling::CalcTilingData()
     tilingData_.M = static_cast<uint32_t>(inputParams_.M);
     tilingData_.N = static_cast<uint32_t>(inputParams_.N);
     tilingData_.K = static_cast<uint32_t>(inputParams_.K);
-    tilingData_.B =
-        (inputParams_.rotType == ROT_TYPE_MULTI) ? static_cast<uint32_t>(inputParams_.nKRatio) : SINGLE_ROTATION_B_SIZE;
+    tilingData_.B = (inputParams_.rotType == ROT_TYPE_MULTI) ? static_cast<uint32_t>(inputParams_.nKRatio) :
+                                                               SINGLE_ROTATION_B_SIZE;
     tilingData_.nKRatio = static_cast<uint32_t>(inputParams_.nKRatio);
 
     tilingData_.dstTypeMax = inputParams_.dstTypeMax;
@@ -463,7 +445,7 @@ ge::graphStatus RotateQuantAptTiling::CalcTilingData()
     return ge::GRAPH_SUCCESS;
 }
 
-bool RotateQuantAptTiling::SetMatmulTiling() 
+bool RotateQuantAptTiling::SetMatmulTiling()
 {
     tilingData_.kL1 = tilingData_.K;
     tilingData_.nL1 = tilingData_.K;
@@ -481,8 +463,8 @@ bool RotateQuantAptTiling::SetMatmulTiling()
         uint32_t mL1PerCore = Ops::Base::CeilDiv(tilingData_.M * tilingData_.nKRatio, totalCoreNum);
         mL1PerCore = Ops::Base::CeilAlign(mL1PerCore, MIN_M); // 16对齐
         tilingData_.mL1 = std::min({mL1Max, mL1PerCore, tilingData_.baseM});
-        inputParams_.realCoreNum =
-            std::min(Ops::Base::CeilDiv(tilingData_.M * tilingData_.nKRatio, tilingData_.mL1), totalCoreNum);
+        inputParams_.realCoreNum = std::min(Ops::Base::CeilDiv(tilingData_.M * tilingData_.nKRatio, tilingData_.mL1),
+                                            totalCoreNum);
         uint32_t totalEffectiveM = tilingData_.M * tilingData_.nKRatio;
         uint32_t remainderM = totalEffectiveM % tilingData_.mL1;
         tilingData_.tailML1 = (remainderM == 0) ? tilingData_.mL1 : remainderM;
@@ -500,17 +482,16 @@ bool RotateQuantAptTiling::SetMatmulTiling()
         tilingData_.tailML1 = (remainderM == 0) ? tilingData_.mL1 : remainderM;
         inputParams_.realCoreNum = std::min(mL1LoopNum * tilingData_.B, totalCoreNum);
     }
-    return true; 
+    return true;
 }
 
 ge::graphStatus RotateQuantAptTiling::DoOpTiling()
 {
-    OP_TILING_CHECK(
-        CalcTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "CalcTilingData failed."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CalcTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "CalcTilingData failed."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        !SetMatmulTiling(), OP_LOGE(inputParams_.opName, "SetMatmulTiling failed."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!SetMatmulTiling(), OP_LOGE(inputParams_.opName, "SetMatmulTiling failed."),
+                    return ge::GRAPH_FAILED);
 
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
@@ -531,9 +512,8 @@ ge::graphStatus RotateQuantAptTiling::PostTiling()
 {
     context_->SetBlockDim(inputParams_.realCoreNum);
     context_->SetScheduleMode(SCHEDULE_MODE_STATIC);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -545,8 +525,8 @@ ge::graphStatus RotateQuantAptTiling::PostTiling()
 }
 
 // 注册tiling类（使用arch特定的注册宏）
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    RotateQuant, RotateQuantAptTiling, static_cast<int32_t>(NpuArch::DAV_3510), TEMPLATE_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(RotateQuant, RotateQuantAptTiling, static_cast<int32_t>(NpuArch::DAV_3510),
+                                   TEMPLATE_PRIORITY);
 
 static ge::graphStatus RotateQuantAptTilingFunc(gert::TilingContext* context)
 {

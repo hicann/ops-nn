@@ -37,8 +37,8 @@ constexpr int64_t DST_TYPE_HIFLOAT8 = 34;
 constexpr int64_t DST_TYPE_FLOAT8_E5M2 = 35;
 constexpr int64_t DST_TYPE_FLOAT8_E4M3FN = 36;
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
 static op::DataType GetOutputDtype(int64_t dstType)
 {
@@ -70,8 +70,8 @@ static bool IsShapeEquals(const aclTensor* tensor1, const aclTensor* tensor2)
 }
 
 // 1. 空指针检查
-static aclnnStatus CheckNullParams(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const aclTensor* y, const aclTensor* amax)
+static aclnnStatus CheckNullParams(const aclTensor* x, const aclTensor* scale, const aclTensor* groupList,
+                                   const aclTensor* y, const aclTensor* amax)
 {
     OP_CHECK_NULL(x, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(scale, return ACLNN_ERR_PARAM_NULLPTR);
@@ -86,47 +86,41 @@ static aclnnStatus CheckInputParams(const aclTensor* x, const aclTensor* scale, 
 {
     // x 数据类型检查
     if (!CheckType(x->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            kOpName, "x", op::ToString(x->GetDataType()).GetString(),
-            "The dtype of x must be within the range FLOAT/FLOAT16/BFLOAT16");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "x", op::ToString(x->GetDataType()).GetString(),
+                                              "The dtype of x must be within the range FLOAT/FLOAT16/BFLOAT16");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // x shape 检查：[2, 8]
     auto xShape = x->GetViewShape();
     if (xShape.GetDimNum() < ACLNN_MIN_SHAPE_RANK || xShape.GetDimNum() > ACLNN_MAX_SHAPE_RANK) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            kOpName, "x", std::to_string(xShape.GetDimNum()).c_str(),
-            "The shape dim of x must be in range [2D, 8D]");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "x", std::to_string(xShape.GetDimNum()).c_str(),
+                                                 "The shape dim of x must be in range [2D, 8D]");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // scale 数据类型检查：必须为 FLOAT
     if (scale->GetDataType() != DataType::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            kOpName, "scale", op::ToString(scale->GetDataType()).GetString(), "FLOAT");
+        OP_LOGE_FOR_INVALID_DTYPE(kOpName, "scale", op::ToString(scale->GetDataType()).GetString(), "FLOAT");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // scale shape 检查：必须为 [num_groups]；不支持空 Tensor；
     auto groupListShape = groupList->GetViewShape();
     if (scale->IsEmpty()) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            kOpName, "scale", "empty", "scale does not support empty tensor");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "scale", "empty", "scale does not support empty tensor");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // groupList 数据类型检查：必须为 INT64
     if (groupList->GetDataType() != DataType::DT_INT64) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            kOpName, "groupList", op::ToString(groupList->GetDataType()).GetString(), "INT64");
+        OP_LOGE_FOR_INVALID_DTYPE(kOpName, "groupList", op::ToString(groupList->GetDataType()).GetString(), "INT64");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // groupList shape 检查：必须为 [num_groups]；不支持空 Tensor；
     if (groupList->IsEmpty()) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            kOpName, "groupList", "empty", "groupList does not support empty tensor");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "groupList", "empty", "groupList does not support empty tensor");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -137,9 +131,8 @@ static aclnnStatus CheckInputParams(const aclTensor* x, const aclTensor* scale, 
 static aclnnStatus CheckDstType(int64_t dstType)
 {
     if (dstType != DST_TYPE_HIFLOAT8 && dstType != DST_TYPE_FLOAT8_E5M2 && dstType != DST_TYPE_FLOAT8_E4M3FN) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            kOpName, "dstType", std::to_string(dstType).c_str(),
-            "dstType must be 34(HIFLOAT8)/35(FLOAT8_E5M2)/36(FLOAT8_E4M3FN)");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "dstType", std::to_string(dstType).c_str(),
+                                              "dstType must be 34(HIFLOAT8)/35(FLOAT8_E5M2)/36(FLOAT8_E4M3FN)");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
@@ -152,15 +145,13 @@ static aclnnStatus CheckRoundMode(int64_t dstType, const char* roundMode)
 {
     // roundMode 不能为 nullptr
     if (roundMode == nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            kOpName, "roundMode", "nullptr", "roundMode cannot be nullptr");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "roundMode", "nullptr", "roundMode cannot be nullptr");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // roundMode 不能为空字符串
     if (strlen(roundMode) == 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            kOpName, "roundMode", "<empty>", "roundMode cannot be empty string");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "roundMode", "<empty>", "roundMode cannot be empty string");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -176,9 +167,8 @@ static aclnnStatus CheckRoundMode(int64_t dstType, const char* roundMode)
     } else if (dstType == DST_TYPE_HIFLOAT8) {
         // HIFLOAT8 只支持 "round" 或 "hybrid"
         if (strcmp(roundMode, "round") != 0 && strcmp(roundMode, "hybrid") != 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                kOpName, "roundMode", roundMode,
-                "roundMode must be 'round' or 'hybrid' for dstType HIFLOAT8(34)");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "roundMode", roundMode,
+                                                  "roundMode must be 'round' or 'hybrid' for dstType HIFLOAT8(34)");
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
@@ -187,40 +177,36 @@ static aclnnStatus CheckRoundMode(int64_t dstType, const char* roundMode)
 }
 
 // 4. 输出参数检查（y 和 amax）
-static aclnnStatus CheckOutputParams(
-    const aclTensor* x, const aclTensor* groupList, int64_t dstType, const aclTensor* y, const aclTensor* amax)
+static aclnnStatus CheckOutputParams(const aclTensor* x, const aclTensor* groupList, int64_t dstType,
+                                     const aclTensor* y, const aclTensor* amax)
 {
     // y 数据类型检查：必须与 dstType 对应
     auto expectedYDtype = GetOutputDtype(dstType);
     if (y->GetDataType() != expectedYDtype) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            kOpName, "y", op::ToString(y->GetDataType()).GetString(),
-            op::ToString(expectedYDtype).GetString());
+        OP_LOGE_FOR_INVALID_DTYPE(kOpName, "y", op::ToString(y->GetDataType()).GetString(),
+                                  op::ToString(expectedYDtype).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // y shape 检查：必须与 x 一致
     if (!IsShapeEquals(y, x)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "y shape [%s] must be equal to x shape [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y shape [%s] must be equal to x shape [%s].",
                 op::ToString(y->GetViewShape()).GetString(), op::ToString(x->GetViewShape()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // amax 数据类型检查：必须与 x 一致
     if (amax->GetDataType() != x->GetDataType()) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            kOpName, "amax", op::ToString(amax->GetDataType()).GetString(),
-            "The dtype of amax must be the same as x");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "amax", op::ToString(amax->GetDataType()).GetString(),
+                                              "The dtype of amax must be the same as x");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType,
-    const aclTensor* y, const aclTensor* amax)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* scale, const aclTensor* groupList,
+                               const char* roundMode, int64_t dstType, const aclTensor* y, const aclTensor* amax)
 {
     // 空指针检查
     auto ret = CheckNullParams(x, scale, groupList, y, amax);
@@ -245,9 +231,10 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType,
-    const aclTensor* y, const aclTensor* amax, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(const aclTensor* x, const aclTensor* scale, const aclTensor* groupList,
+                                                 const char* roundMode, int64_t dstType, const aclTensor* y,
+                                                 const aclTensor* amax, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGroupedQuantMax, DFX_IN(x, scale, groupList, roundMode, dstType), DFX_OUT(y, amax));
 
@@ -280,8 +267,8 @@ aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(
     CHECK_RET(amaxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // roundMode 已在 CheckParams 中校验，直接使用
-    auto opResult = l0op::GroupedQuantMax(
-        xContiguous, scaleContiguous, groupListContiguous, roundMode, dstType, yContiguous, amaxContiguous, uniqueExecutor.get());
+    auto opResult = l0op::GroupedQuantMax(xContiguous, scaleContiguous, groupListContiguous, roundMode, dstType,
+                                          yContiguous, amaxContiguous, uniqueExecutor.get());
     CHECK_RET(opResult[0] != nullptr && opResult[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto yComputeOut = opResult[0];

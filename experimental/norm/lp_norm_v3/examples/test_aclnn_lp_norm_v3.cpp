@@ -28,13 +28,13 @@
 
 #include "aclnn_lp_norm_v3.h"
 
-constexpr float DEFAULT_P = 2.0f;          // Lp范数默认p值（L2）
+constexpr float DEFAULT_P = 2.0f; // Lp范数默认p值（L2）
 // constexpr float DEFAULT_P = std::numeric_limits<float>::infinity();
-constexpr int64_t DEFAULT_AXIS = 0;       // 默认计算轴（1=按列）
-constexpr float EPS = 1e-6f;              // 精度验证阈值 + 除零保护
+constexpr int64_t DEFAULT_AXIS = 0; // 默认计算轴（1=按列）
+constexpr float EPS = 1e-6f;        // 精度验证阈值 + 除零保护
 // 测试输入Shape [2,3] (N=2, C=3)，沿axis=1计算L2范数后归一化
 const std::vector<int64_t> INPUT_SHAPE = {2, 3};
-constexpr bool ENABLE_FP16_TEST = false;   // 是否启用FP16测试
+constexpr bool ENABLE_FP16_TEST = false; // 是否启用FP16测试
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -43,8 +43,8 @@ constexpr bool ENABLE_FP16_TEST = false;   // 是否启用FP16测试
         }                            \
     } while (0)
 
-#define LOG_PRINT(message, ...)         \
-    do {                                \
+#define LOG_PRINT(message, ...)                                             \
+    do {                                                                    \
         printf("[%s:%d] " message "\n", __FILE__, __LINE__, ##__VA_ARGS__); \
     } while (0)
 
@@ -67,10 +67,9 @@ void PrintOutResult(const std::vector<int64_t>& shape, void** deviceAddr)
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("output[%ld] is: %f\n", i, resultData[i]);
     }
@@ -80,11 +79,9 @@ void PrintOutResult16(const std::vector<int64_t>& shape, void** deviceAddr)
     int64_t size = GetShapeSize(shape);
     std::vector<uint16_t> resultDataFp16(size, 0);
     // 1. 从设备拷贝 FP16 数据到 Host
-    auto ret = aclrtMemcpy(
-        resultDataFp16.data(), size * sizeof(uint16_t),
-        *deviceAddr, size * sizeof(uint16_t),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultDataFp16.data(), size * sizeof(uint16_t), *deviceAddr, size * sizeof(uint16_t),
+                           ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
 
     // 2. FP16 -> float 并打印
     for (int64_t i = 0; i < size; i++) {
@@ -92,7 +89,6 @@ void PrintOutResult16(const std::vector<int64_t>& shape, void** deviceAddr)
         LOG_PRINT("output[%ld] is: %f\n", i, val);
     }
 }
-
 
 /**
  * @brief ACL初始化（设备/流创建）
@@ -116,12 +112,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
  * @tparam T 数据类型（float/fp16）
  */
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, 
-    const std::vector<int64_t>& shape, 
-    void** deviceAddr, 
-    aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     const int64_t elemNum = GetShapeSize(shape);
     const size_t memSize = elemNum * sizeof(T);
@@ -141,11 +133,8 @@ int CreateAclTensor(
     }
 
     // 4. 创建ACL张量
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), 
-        dataType, strides.data(), 0, 
-        ACL_FORMAT_ND, shape.data(), shape.size(), 
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, ACL_FORMAT_ND, shape.data(),
+                              shape.size(), *deviceAddr);
     CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed"); return -1);
 
     return 0;
@@ -154,11 +143,8 @@ int CreateAclTensor(
 /**
  * @brief 释放ACL资源
  */
-void ReleaseResources(
-    aclTensor* inputTensor, aclTensor* outputTensor,
-    void* inputDevAddr, void* outputDevAddr,
-    void* workspaceAddr, uint64_t workspaceSize,
-    aclOpExecutor* executor, aclrtStream stream)
+void ReleaseResources(aclTensor* inputTensor, aclTensor* outputTensor, void* inputDevAddr, void* outputDevAddr,
+                      void* workspaceAddr, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     // 释放张量
     if (inputTensor != nullptr) {
@@ -197,7 +183,7 @@ void GenerateInputData(std::vector<T>& hostData)
     hostData.resize(elemNum);
 
     // 随机数生成（固定种子保证复现）
-    std::mt19937 gen(12345); // 固定随机种子
+    std::mt19937 gen(12345);                                // 固定随机种子
     std::uniform_real_distribution<float> dist(1.0f, 5.0f); // 1~5之间的随机数（避免范数为0）
 
     // 生成输入数据
@@ -228,18 +214,15 @@ void GenerateInputData(std::vector<T>& hostData)
  * @param p Lp范数的p值
  * @param axis 计算轴（0=按行，1=按列）
  */
-void ComputeGoldenData(
-    const std::vector<float>& inputData,
-    std::vector<float>& goldenData,
-    float p = DEFAULT_P,
-    int64_t axis = DEFAULT_AXIS)
+void ComputeGoldenData(const std::vector<float>& inputData, std::vector<float>& goldenData, float p = DEFAULT_P,
+                       int64_t axis = DEFAULT_AXIS)
 {
     const int64_t dimNum = INPUT_SHAPE.size();
-    CHECK_RET(axis >= 0 && axis < dimNum, LOG_PRINT("Invalid axis: %ld", axis); return);
-    CHECK_RET(dimNum == 2, LOG_PRINT("Only support 2D input for normalization"); return);
+    CHECK_RET(axis >= 0 && axis < dimNum, LOG_PRINT("Invalid axis: %ld", axis); return );
+    CHECK_RET(dimNum == 2, LOG_PRINT("Only support 2D input for normalization"); return );
 
-    const int64_t rows = INPUT_SHAPE[0];    // 行数（第0维）
-    const int64_t cols = INPUT_SHAPE[1];    // 列数（第1维）
+    const int64_t rows = INPUT_SHAPE[0]; // 行数（第0维）
+    const int64_t cols = INPUT_SHAPE[1]; // 列数（第1维）
     const int64_t totalElem = rows * cols;
     goldenData.resize(totalElem, 0.0f);
 
@@ -250,14 +233,14 @@ void ComputeGoldenData(
         norms.resize(rows, 0.0f);
         for (int64_t r = 0; r < rows; ++r) {
             if (std::isinf(p)) {
-                // L-infinity: 取当前行的最大绝对值 
-                float maxVal = 0.0f; 
+                // L-infinity: 取当前行的最大绝对值
+                float maxVal = 0.0f;
                 for (int64_t c = 0; c < cols; ++c) {
-                     const int64_t idx = r * cols + c; 
-                     maxVal = std::max(maxVal, std::fabs(inputData[idx])); 
-                } 
+                    const int64_t idx = r * cols + c;
+                    maxVal = std::max(maxVal, std::fabs(inputData[idx]));
+                }
                 norms[r] = maxVal;
-            }else{
+            } else {
                 float sum = 0.0f;
                 for (int64_t c = 0; c < cols; ++c) {
                     const int64_t idx = r * cols + c;
@@ -267,23 +250,23 @@ void ComputeGoldenData(
             }
         }
     } else if (axis == 1) {
-        norms.resize(cols, 0.0f); 
+        norms.resize(cols, 0.0f);
         for (int64_t c = 0; c < cols; ++c) {
-            if (std::isinf(p)) { 
-                float maxVal = 0.0f; 
-                for (int64_t r = 0; r < rows; ++r) { 
-                    const int64_t idx = r * cols + c; 
-                    maxVal = std::max(maxVal, std::fabs(inputData[idx])); 
-                } 
-                norms[c] = maxVal; 
-            } else { 
-                float sum = 0.0f; 
-                for (int64_t r = 0; r < rows; ++r) { 
-                    const int64_t idx = r * cols + c; 
-                    sum += std::pow(std::fabs(inputData[idx]), p); 
-                } 
-                norms[c] = std::pow(sum, 1.0f / p); 
-            } 
+            if (std::isinf(p)) {
+                float maxVal = 0.0f;
+                for (int64_t r = 0; r < rows; ++r) {
+                    const int64_t idx = r * cols + c;
+                    maxVal = std::max(maxVal, std::fabs(inputData[idx]));
+                }
+                norms[c] = maxVal;
+            } else {
+                float sum = 0.0f;
+                for (int64_t r = 0; r < rows; ++r) {
+                    const int64_t idx = r * cols + c;
+                    sum += std::pow(std::fabs(inputData[idx]), p);
+                }
+                norms[c] = std::pow(sum, 1.0f / p);
+            }
         }
     }
 
@@ -320,11 +303,8 @@ void ComputeGoldenData(
  * @tparam T 数据类型（float/fp16）
  */
 template <typename T>
-int VerifyResult(
-    const std::vector<float>& goldenData,
-    const std::vector<int64_t>& outputShape,
-    void* outputDevAddr,
-    const std::string& dataTypeStr)
+int VerifyResult(const std::vector<float>& goldenData, const std::vector<int64_t>& outputShape, void* outputDevAddr,
+                 const std::string& dataTypeStr)
 {
     const int64_t elemNum = GetShapeSize(outputShape);
     CHECK_RET(elemNum == goldenData.size(), LOG_PRINT("Output shape mismatch with golden!"); return -1);
@@ -333,10 +313,7 @@ int VerifyResult(
     const size_t memSize = elemNum * sizeof(T);
 
     // 1. Device->Host数据拷贝
-    auto ret = aclrtMemcpy(
-        hostOutput.data(), memSize,
-        outputDevAddr, memSize,
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    auto ret = aclrtMemcpy(hostOutput.data(), memSize, outputDevAddr, memSize, ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d", ret); return ret);
 
     // 2. 计算最大误差和平均误差（逐元素对比）
@@ -344,7 +321,7 @@ int VerifyResult(
     float avgError = 0.0f;
     for (int64_t i = 0; i < elemNum; i++) {
         float outputVal;
-        if(std::is_same<T, uint16_t>::value) {
+        if (std::is_same<T, uint16_t>::value) {
             outputVal = aclFloat16ToFloat(hostOutput[i]); // FP16 -> float
         } else {
             outputVal = static_cast<float>(hostOutput[i]);
@@ -369,15 +346,15 @@ int VerifyResult(
         LOG_PRINT("Mismatched Elements (first 8):");
         for (int64_t i = 0; i < std::min<int64_t>(8, elemNum); i++) {
             float outputVal;
-            if(std::is_same<T, uint16_t>::value) {
+            if (std::is_same<T, uint16_t>::value) {
                 outputVal = aclFloat16ToFloat(hostOutput[i]);
             } else {
                 outputVal = static_cast<float>(hostOutput[i]);
             }
             const float goldenVal = goldenData[i];
             if (std::fabs(outputVal - goldenVal) > errorThreshold) {
-                LOG_PRINT("  idx=%ld: output=%.6f, golden=%.6f, error=%.6f",
-                        i, outputVal, goldenVal, std::fabs(outputVal - goldenVal));
+                LOG_PRINT("  idx=%ld: output=%.6f, golden=%.6f, error=%.6f", i, outputVal, goldenVal,
+                          std::fabs(outputVal - goldenVal));
             }
         }
         return -1;
@@ -385,9 +362,7 @@ int VerifyResult(
         LOG_PRINT("Verification PASSED!");
         return 0;
     }
-
 }
-
 
 /**
  * @brief FP32精度测试
@@ -419,24 +394,17 @@ int testFp32()
         ComputeGoldenData(inputHostData, goldenData, DEFAULT_P, DEFAULT_AXIS);
 
         // 4. 创建输入张量（形状=INPUT_SHAPE）
-        ret = CreateAclTensor<float>(
-            inputHostData, INPUT_SHAPE, 
-            &inputDevAddr, ACL_FLOAT, 
-            &inputTensor);
+        ret = CreateAclTensor<float>(inputHostData, INPUT_SHAPE, &inputDevAddr, ACL_FLOAT, &inputTensor);
         CHECK_RET(ret == ACL_SUCCESS, throw ret);
 
         // 5. 创建输出张量（形状=INPUT_SHAPE，与输入一致）
         std::vector<float> outputHostData(GetShapeSize(INPUT_SHAPE), 0.0f);
-        ret = CreateAclTensor<float>(
-            outputHostData, INPUT_SHAPE, 
-            &outputDevAddr, ACL_FLOAT, 
-            &outputTensor);
+        ret = CreateAclTensor<float>(outputHostData, INPUT_SHAPE, &outputDevAddr, ACL_FLOAT, &outputTensor);
         CHECK_RET(ret == ACL_SUCCESS, throw ret);
 
         // 6. 获取Workspace大小和Executor（确保算子支持归一化输出）
-        ret = aclnnLpNormV3GetWorkspaceSize(
-            inputTensor, DEFAULT_P, DEFAULT_AXIS, outputTensor,
-            &workspaceSize, &executor);
+        ret = aclnnLpNormV3GetWorkspaceSize(inputTensor, DEFAULT_P, DEFAULT_AXIS, outputTensor, &workspaceSize,
+                                            &executor);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLpNormV3GetWorkspaceSize failed. ERROR: %d", ret); throw ret);
 
         // 7. 申请Workspace内存
@@ -446,9 +414,7 @@ int testFp32()
         }
 
         // 8. 执行算子（确保算子输出是归一化后的张量）
-        ret = aclnnLpNormV3(
-            workspaceAddr, workspaceSize,
-            executor, stream);
+        ret = aclnnLpNormV3(workspaceAddr, workspaceSize, executor, stream);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLpNormV3 failed. ERROR: %d", ret); throw ret);
 
         // 9. 同步流（等待算子执行完成）
@@ -467,11 +433,8 @@ int testFp32()
     }
 
     // 11. 释放资源
-    ReleaseResources(
-        inputTensor, outputTensor,
-        inputDevAddr, outputDevAddr,
-        workspaceAddr, workspaceSize,
-        executor, stream);
+    ReleaseResources(inputTensor, outputTensor, inputDevAddr, outputDevAddr, workspaceAddr, workspaceSize, executor,
+                     stream);
 
     // 12. ACL去初始化
     aclrtResetDevice(deviceId);
@@ -503,51 +466,51 @@ int testFp16()
 
     try {
         // 2. 生成输入数据（先按FP32生成，再转FP16，保证数据合理性）
-       std::vector<float> inputHostDataFp32; 
-       GenerateInputData(inputHostDataFp32);
-        
-        // 3. FP32 -> FP16 转换 
-        std::vector<uint16_t> inputHostData(inputHostDataFp32.size()); 
-        for (size_t i = 0; i < inputHostDataFp32.size(); i++) { 
-            inputHostData[i] = aclFloatToFloat16(inputHostDataFp32[i]); 
+        std::vector<float> inputHostDataFp32;
+        GenerateInputData(inputHostDataFp32);
+
+        // 3. FP32 -> FP16 转换
+        std::vector<uint16_t> inputHostData(inputHostDataFp32.size());
+        for (size_t i = 0; i < inputHostDataFp32.size(); i++) {
+            inputHostData[i] = aclFloatToFloat16(inputHostDataFp32[i]);
         }
 
-        // 4. 高精度 golden 计算（FP32） 
-        std::vector<float> goldenDataFp32; 
+        // 4. 高精度 golden 计算（FP32）
+        std::vector<float> goldenDataFp32;
         ComputeGoldenData(inputHostDataFp32, goldenDataFp32, DEFAULT_P, DEFAULT_AXIS);
 
-        // 5. 创建输入张量（FP16） 
-        ret = CreateAclTensor<uint16_t>(inputHostData, INPUT_SHAPE, &inputDevAddr, ACL_FLOAT16, &inputTensor); 
+        // 5. 创建输入张量（FP16）
+        ret = CreateAclTensor<uint16_t>(inputHostData, INPUT_SHAPE, &inputDevAddr, ACL_FLOAT16, &inputTensor);
         CHECK_RET(ret == ACL_SUCCESS, throw ret);
 
-        // 6. 创建输出张量（FP16） 
-        std::vector<uint16_t> outputHostData(GetShapeSize(INPUT_SHAPE), 0x0000); 
-        ret = CreateAclTensor<uint16_t>(outputHostData, INPUT_SHAPE, &outputDevAddr, ACL_FLOAT16, &outputTensor); 
+        // 6. 创建输出张量（FP16）
+        std::vector<uint16_t> outputHostData(GetShapeSize(INPUT_SHAPE), 0x0000);
+        ret = CreateAclTensor<uint16_t>(outputHostData, INPUT_SHAPE, &outputDevAddr, ACL_FLOAT16, &outputTensor);
         CHECK_RET(ret == ACL_SUCCESS, throw ret);
 
-        // 7. 获取 Workspace 和 Executor 
-        ret = aclnnLpNormV3GetWorkspaceSize(inputTensor, DEFAULT_P, DEFAULT_AXIS, outputTensor, &workspaceSize, &executor); 
+        // 7. 获取 Workspace 和 Executor
+        ret = aclnnLpNormV3GetWorkspaceSize(inputTensor, DEFAULT_P, DEFAULT_AXIS, outputTensor, &workspaceSize,
+                                            &executor);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLpNormV3GetWorkspaceSize failed. ERROR: %d", ret); throw ret);
-        // 8. 申请 Workspace 
-        if (workspaceSize > 0) { 
-            ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST); 
-            CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc workspace failed. ERROR: %d", ret); throw ret); 
+        // 8. 申请 Workspace
+        if (workspaceSize > 0) {
+            ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+            CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc workspace failed. ERROR: %d", ret); throw ret);
         }
-        // 9. 执行算子 
-        ret = aclnnLpNormV3(workspaceAddr, workspaceSize, executor, stream); 
+        // 9. 执行算子
+        ret = aclnnLpNormV3(workspaceAddr, workspaceSize, executor, stream);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLpNormV3 failed. ERROR: %d", ret); throw ret);
 
-        // 10. 同步流 
-        ret = aclrtSynchronizeStream(stream); 
+        // 10. 同步流
+        ret = aclrtSynchronizeStream(stream);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d", ret); throw ret);
 
-        // 11. 输出结果打印（可选） 
+        // 11. 输出结果打印（可选）
         PrintOutResult16(INPUT_SHAPE, &outputDevAddr);
 
-        // 12. 验证结果 
-        ret = VerifyResult<uint16_t>(goldenDataFp32, INPUT_SHAPE, outputDevAddr, "FP16"); 
+        // 12. 验证结果
+        ret = VerifyResult<uint16_t>(goldenDataFp32, INPUT_SHAPE, outputDevAddr, "FP16");
         CHECK_RET(ret == ACL_SUCCESS, throw ret);
-        
 
     } catch (int errorCode) {
         ret = errorCode;
@@ -555,11 +518,8 @@ int testFp16()
     }
 
     // 11. 释放资源（与数据类型无关，沿用原有逻辑）
-    ReleaseResources(
-        inputTensor, outputTensor,
-        inputDevAddr, outputDevAddr,
-        workspaceAddr, workspaceSize,
-        executor, stream);
+    ReleaseResources(inputTensor, outputTensor, inputDevAddr, outputDevAddr, workspaceAddr, workspaceSize, executor,
+                     stream);
 
     // 12. ACL去初始化
     aclrtResetDevice(deviceId);
@@ -579,13 +539,13 @@ int main()
     }
 
     int retFp16 = 0;
-    if(ENABLE_FP16_TEST){
+    if (ENABLE_FP16_TEST) {
         retFp16 = testFp16();
-         if (retFp16 != 0) {
-        LOG_PRINT("FP16 Test (归一化模式) Failed!");
+        if (retFp16 != 0) {
+            LOG_PRINT("FP16 Test (归一化模式) Failed!");
         }
     }
-    
+
     // 汇总结果
     if (retFp32 == 0 && retFp16 == 0) {
         LOG_PRINT("All LpNormV3 Tests (归一化模式) PASSED!");

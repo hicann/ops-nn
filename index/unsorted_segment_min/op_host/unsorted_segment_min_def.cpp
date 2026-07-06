@@ -20,35 +20,27 @@ static const std::vector<ge::Format> FORMAT = {
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 static const std::vector<ge::DataType> XY_DATA_TYPE = {
     ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_FLOAT,  ge::DT_FLOAT,
     ge::DT_FLOAT,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,  ge::DT_INT64,  ge::DT_INT64,
     ge::DT_INT64,   ge::DT_INT64,   ge::DT_UINT32,  ge::DT_UINT32,  ge::DT_UINT32, ge::DT_UINT32, ge::DT_UINT64,
-    ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_BF16,    ge::DT_BF16,   ge::DT_BF16,   ge::DT_BF16
-};
+    ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_BF16,    ge::DT_BF16,   ge::DT_BF16,   ge::DT_BF16};
 static const std::vector<ge::DataType> IDS_DATA_TYPE = {
     ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
     ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32,
     ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32,
-    ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64
-};
+    ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64};
 static const std::vector<ge::DataType> NUMSEG_DATA_TYPE = {
     ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
     ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64,
     ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
-    ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64
-};
+    ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64};
 class UnsortedSegmentMin : public OpDef {
 public:
-    explicit UnsortedSegmentMin(const char *name) : OpDef(name)
+    explicit UnsortedSegmentMin(const char* name) : OpDef(name)
     {
-        this->Input("x")
-            .ParamType(REQUIRED)
-            .DataType(XY_DATA_TYPE)
-            .Format(FORMAT)
-            .UnknownShapeFormat(FORMAT);
+        this->Input("x").ParamType(REQUIRED).DataType(XY_DATA_TYPE).Format(FORMAT).UnknownShapeFormat(FORMAT);
         this->Input("segment_ids")
             .ParamType(REQUIRED)
             .DataType(IDS_DATA_TYPE)
@@ -60,11 +52,7 @@ public:
             .Format(FORMAT)
             .UnknownShapeFormat(FORMAT)
             .ValueDepend(OPTIONAL);
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(XY_DATA_TYPE)
-            .Format(FORMAT)
-            .UnknownShapeFormat(FORMAT);
+        this->Output("y").ParamType(REQUIRED).DataType(XY_DATA_TYPE).Format(FORMAT).UnknownShapeFormat(FORMAT);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

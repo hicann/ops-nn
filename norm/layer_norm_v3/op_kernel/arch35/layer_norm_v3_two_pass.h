@@ -139,8 +139,8 @@ public:
         if (this->hasBeta) {
             pipe.InitBuffer(betaQueue, 1, this->rAlign * sizeof(U));
         }
-        int64_t aFactorAlignF32 =
-            (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / FLOAT_BYTES;
+        int64_t aFactorAlignF32 = (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                                  FLOAT_BYTES;
         pipe.InitBuffer(batchMeanQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
         pipe.InitBuffer(batchLastoutQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
 
@@ -168,8 +168,8 @@ public:
         for (int64_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             int64_t offset = ubLoopIdx * this->aFactor * this->r;
             int64_t aOffset = ubLoopIdx * this->aFactor;
-            int64_t currentA =
-                (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) : this->aFactor;
+            int64_t currentA = (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) :
+                                                               this->aFactor;
             CopyInX(offset, currentA);
             CaculateWithHighLevelApi(gammaInUb, betaInUb, currentA);
             CopyOutY(offset, currentA);
@@ -226,8 +226,8 @@ private:
         xQueue.EnQue(xInUb);
     }
 
-    __aicore__ inline void CaculateWithHighLevelApi(
-        LocalTensor<U> gammaInUb, LocalTensor<U> betaInUb, int64_t currentANum)
+    __aicore__ inline void CaculateWithHighLevelApi(LocalTensor<U> gammaInUb, LocalTensor<U> betaInUb,
+                                                    int64_t currentANum)
     {
         LocalTensor<T> xInUb = xQueue.template DeQue<T>();
         LocalTensor<T> yInUb = yQueue.AllocTensor<T>();
@@ -241,27 +241,27 @@ private:
         para.rLengthWithPadding = this->rAlign;
         if constexpr (IsOutRstd) {
             if (this->hasGamma && this->hasBeta) {
-                AscendC::LayerNorm<U, T, true, hasGammaBetaConfig>(
-                    yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
-                    binaryAddTensor, para, this->layerNormTiling);
+                AscendC::LayerNorm<U, T, true, hasGammaBetaConfig>(yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb,
+                                                                   gammaInUb, betaInUb, this->epsilon, binaryAddTensor,
+                                                                   para, this->layerNormTiling);
             } else if (!this->hasGamma && this->hasBeta) {
-                AscendC::LayerNorm<U, T, true, noGammaHasBetaConfig>(
-                    yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
-                    binaryAddTensor, para, this->layerNormTiling);
+                AscendC::LayerNorm<U, T, true, noGammaHasBetaConfig>(yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb,
+                                                                     gammaInUb, betaInUb, this->epsilon,
+                                                                     binaryAddTensor, para, this->layerNormTiling);
             } else if (this->hasGamma && !this->hasBeta) {
-                AscendC::LayerNorm<U, T, true, hasGammaNoBetaConfig>(
-                    yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
-                    binaryAddTensor, para, this->layerNormTiling);
+                AscendC::LayerNorm<U, T, true, hasGammaNoBetaConfig>(yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb,
+                                                                     gammaInUb, betaInUb, this->epsilon,
+                                                                     binaryAddTensor, para, this->layerNormTiling);
             } else {
-                AscendC::LayerNorm<U, T, true, noGammaNoBetaConfig>(
-                    yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
-                    binaryAddTensor, para, this->layerNormTiling);
+                AscendC::LayerNorm<U, T, true, noGammaNoBetaConfig>(yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb,
+                                                                    gammaInUb, betaInUb, this->epsilon, binaryAddTensor,
+                                                                    para, this->layerNormTiling);
             }
         } else {
             if (this->hasGamma && this->hasBeta) {
-                AscendC::LayerNorm<U, T, true, hasGammaBetaOutVarConfig>(
-                    yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
-                    binaryAddTensor, para, this->layerNormTiling);
+                AscendC::LayerNorm<U, T, true, hasGammaBetaOutVarConfig>(yInUb, batchMeanOutUb, batchLastoutOutUb,
+                                                                         xInUb, gammaInUb, betaInUb, this->epsilon,
+                                                                         binaryAddTensor, para, this->layerNormTiling);
             } else if (!this->hasGamma && this->hasBeta) {
                 AscendC::LayerNorm<U, T, true, noGammaHasBetaOutVarConfig>(
                     yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
@@ -271,9 +271,9 @@ private:
                     yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
                     binaryAddTensor, para, this->layerNormTiling);
             } else {
-                AscendC::LayerNorm<U, T, true, noGammaNoBetaOutVarConfig>(
-                    yInUb, batchMeanOutUb, batchLastoutOutUb, xInUb, gammaInUb, betaInUb, this->epsilon,
-                    binaryAddTensor, para, this->layerNormTiling);
+                AscendC::LayerNorm<U, T, true, noGammaNoBetaOutVarConfig>(yInUb, batchMeanOutUb, batchLastoutOutUb,
+                                                                          xInUb, gammaInUb, betaInUb, this->epsilon,
+                                                                          binaryAddTensor, para, this->layerNormTiling);
             }
         }
 
@@ -313,14 +313,14 @@ private:
             for (uint16_t i = 0; i < castLoops; i++) {
                 pregLoop = MicroAPI::UpdateMask<float>(castCount);
                 MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(
-                    input_lastout, batchLastoutInAddr + VL_F32 * i);
+                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_lastout,
+                                                                         batchLastoutInAddr + VL_F32 * i);
                 Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<M, float, castTraitB322B16>(output_lastout, input_lastout, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ M*)batchMeanOutAddr + i * VL_MEAN), output_mean, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ M*)batchLastoutOutAddr + i * VL_MEAN), output_lastout, pregLoop);
+                DataCopy<M, StoreDist::DIST_PACK_B32>(((__local_mem__ M*)batchMeanOutAddr + i * VL_MEAN), output_mean,
+                                                      pregLoop);
+                DataCopy<M, StoreDist::DIST_PACK_B32>(((__local_mem__ M*)batchLastoutOutAddr + i * VL_MEAN),
+                                                      output_lastout, pregLoop);
             }
         }
     }
@@ -355,12 +355,10 @@ private:
                 copyInParamsTail.blockLen = tailSize * sizeof(M);
                 copyInParamsTail.srcStride = 0;
                 copyInParamsTail.dstStride = 0;
-                DataCopyPad(
-                    batchMeanGm[offset + castDmaLoops * VL_F32], batchMeanInUb[castDmaLoops * VL_MEAN],
-                    copyInParamsTail);
-                DataCopyPad(
-                    batchLastoutGm[offset + castDmaLoops * VL_F32], batchLastoutInUb[castDmaLoops * VL_MEAN],
-                    copyInParamsTail);
+                DataCopyPad(batchMeanGm[offset + castDmaLoops * VL_F32], batchMeanInUb[castDmaLoops * VL_MEAN],
+                            copyInParamsTail);
+                DataCopyPad(batchLastoutGm[offset + castDmaLoops * VL_F32], batchLastoutInUb[castDmaLoops * VL_MEAN],
+                            copyInParamsTail);
             }
             batchMeanQueue.FreeTensor(batchMeanInUb);
             batchLastoutQueue.FreeTensor(batchLastoutInUb);

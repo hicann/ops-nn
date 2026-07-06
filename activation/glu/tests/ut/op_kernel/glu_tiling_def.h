@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #ifndef _GLU_TILING_DEF_H_
@@ -37,25 +37,25 @@ struct GluTilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                         \
+#define GET_TILING_DATA(tilingData, tilingPointer)                     \
     GluTilingData tilingData;                                          \
     INIT_TILING_DATA(GluTilingData, tilingDataPointer, tilingPointer); \
-    (tilingData).group = tilingDataPointer->group;                         \
-    (tilingData).loopNum = tilingDataPointer->loopNum;                     \
-    (tilingData).tailLoopNum = tilingDataPointer->tailLoopNum;             \
-    (tilingData).nLastTailGroup = tilingDataPointer->nLastTailGroup;       \
-    (tilingData).lastTailGroup = tilingDataPointer->lastTailGroup;         \
-    (tilingData).ny = tilingDataPointer->ny;                               \
-    (tilingData).splitSize = tilingDataPointer->splitSize;                 \
-    (tilingData).realCoreNum = tilingDataPointer->realCoreNum;             \
-    (tilingData).numPerCore = tilingDataPointer->numPerCore;               \
-    (tilingData).tilingKey = tilingDataPointer->tilingKey;                 \
-    (tilingData).blockSize = tilingDataPointer->blockSize;                 
+    (tilingData).group = tilingDataPointer->group;                     \
+    (tilingData).loopNum = tilingDataPointer->loopNum;                 \
+    (tilingData).tailLoopNum = tilingDataPointer->tailLoopNum;         \
+    (tilingData).nLastTailGroup = tilingDataPointer->nLastTailGroup;   \
+    (tilingData).lastTailGroup = tilingDataPointer->lastTailGroup;     \
+    (tilingData).ny = tilingDataPointer->ny;                           \
+    (tilingData).splitSize = tilingDataPointer->splitSize;             \
+    (tilingData).realCoreNum = tilingDataPointer->realCoreNum;         \
+    (tilingData).numPerCore = tilingDataPointer->numPerCore;           \
+    (tilingData).tilingKey = tilingDataPointer->tilingKey;             \
+    (tilingData).blockSize = tilingDataPointer->blockSize;
 #endif

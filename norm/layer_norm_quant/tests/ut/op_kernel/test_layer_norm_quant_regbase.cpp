@@ -24,20 +24,13 @@
 
 using namespace std;
 
-extern "C" void layer_norm_quant(
-    uint8_t* x, uint8_t* gamma, uint8_t* beta, uint8_t* scales, uint8_t* offset,
-    uint8_t* y, uint8_t* scale_out, uint8_t* workspace, uint8_t* tiling);
+extern "C" void layer_norm_quant(uint8_t* x, uint8_t* gamma, uint8_t* beta, uint8_t* scales, uint8_t* offset,
+                                 uint8_t* y, uint8_t* scale_out, uint8_t* workspace, uint8_t* tiling);
 
 class layer_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "layer_norm_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(layer_norm_quant_test, test_case_fp32_normal)
@@ -68,8 +61,7 @@ TEST_F(layer_norm_quant_test, test_case_fp32_normal)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    LayerNormQuantRegTilingData* tilingDatafromBin =
-        reinterpret_cast<LayerNormQuantRegTilingData*>(tiling);
+    LayerNormQuantRegTilingData* tilingDatafromBin = reinterpret_cast<LayerNormQuantRegTilingData*>(tiling);
 
     tilingDatafromBin->numCore = 3;
     tilingDatafromBin->numLastDim = 128;
@@ -78,16 +70,15 @@ TEST_F(layer_norm_quant_test, test_case_fp32_normal)
     tilingDatafromBin->lFirstdimPerCore = 1;
     tilingDatafromBin->firstDimPerTimes = 1;
     tilingDatafromBin->colsAligned = 128;
-    tilingDatafromBin->epsStr = 1e-6 
-    tilingDatafromBin->aveStr = 0.007812;
+    tilingDatafromBin->epsStr = 1e-6 tilingDatafromBin->aveStr = 0.007812;
     tilingDatafromBin->sliceNum = 1;
     tilingDatafromBin->sliceSize = 128;
     tilingDatafromBin->tailSliceSize = 128;
 
     // normal fp32
     ICPU_SET_TILING_KEY(2310000000);
-    ICPU_RUN_KF(
-        layer_norm_quant, blockDim, x, gamma, beta, s, o, y, out_scale, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_quant, blockDim, x, gamma, beta, s, o, y, out_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -131,8 +122,7 @@ TEST_F(layer_norm_quant_test, test_case_fp32_split)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    LayerNormQuantRegTilingData* tilingDatafromBin =
-        reinterpret_cast<LayerNormQuantRegTilingData*>(tiling);
+    LayerNormQuantRegTilingData* tilingDatafromBin = reinterpret_cast<LayerNormQuantRegTilingData*>(tiling);
 
     tilingDatafromBin->numCore = 1;
     tilingDatafromBin->numLastDim = 11000;
@@ -141,16 +131,15 @@ TEST_F(layer_norm_quant_test, test_case_fp32_split)
     tilingDatafromBin->lFirstdimPerCore = 1;
     tilingDatafromBin->firstDimPerTimes = 1;
     tilingDatafromBin->colsAligned = 11008;
-    tilingDatafromBin->epsStr = 1e-6 
-    tilingDatafromBin->aveStr = 0.000091;
+    tilingDatafromBin->epsStr = 1e-6 tilingDatafromBin->aveStr = 0.000091;
     tilingDatafromBin->sliceNum = 2;
     tilingDatafromBin->sliceSize = 10112;
     tilingDatafromBin->tailSliceSize = 888;
 
     // normal fp32
     ICPU_SET_TILING_KEY(2300000000);
-    ICPU_RUN_KF(
-        layer_norm_quant, blockDim, x, gamma, beta, s, o, y, out_scale, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_quant, blockDim, x, gamma, beta, s, o, y, out_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

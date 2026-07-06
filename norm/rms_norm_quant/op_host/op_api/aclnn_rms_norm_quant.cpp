@@ -39,12 +39,12 @@ static const size_t MAX_DIM_LEN = 8;
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int32_t IDX_0 = 0;
 
-static const std::initializer_list<op::DataType> EXTEND_ATB_DTYPE_SUPPORT_LIST_X = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> EXTEND_ATB_DTYPE_SUPPORT_LIST_X = {op::DataType::DT_FLOAT16,
+                                                                                    op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> ASCEND310_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16};
-static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT8, op::DataType::DT_INT4, op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8, op::DataType::DT_INT4,
+                                                                           op::DataType::DT_INT32};
 static const std::initializer_list<op::DataType> OUT_ASCEND310_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 static const std::initializer_list<op::DataType> IN_REG_BASE_DTYPE_SUPPORT_LIST = {
@@ -113,9 +113,8 @@ static const std::initializer_list<DataType>& GetOutDtypeSupportList()
             return OUT_ASCEND310_DTYPE_SUPPORT_LIST;
         }
         default: {
-            OP_LOGE(
-                ACLNN_ERR_RUNTIME_ERROR, "outputs support for %s is not implemented",
-                op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "outputs support for %s is not implemented",
+                    op::ToString(socVersion).GetString());
             return EMPTY_LIST;
         }
     }
@@ -133,11 +132,10 @@ static bool CheckDtypeValid(RmsNormQuantInputTensor& inputTensor, const aclTenso
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.offset, ZP_REG_BASE_DTYPE_SUPPORT_LIST, return false);
         if (inputTensor.x->GetDataType() == op::DataType::DT_FLOAT) {
-            OP_CHECK(
-                inputTensor.scale->GetDataType() == op::DataType::DT_FLOAT &&
-                    inputTensor.offset->GetDataType() == op::DataType::DT_FLOAT,
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float32, scaleType and offsetType are not float32"),
-                return false);
+            OP_CHECK(inputTensor.scale->GetDataType() == op::DataType::DT_FLOAT &&
+                         inputTensor.offset->GetDataType() == op::DataType::DT_FLOAT,
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float32, scaleType and offsetType are not float32"),
+                     return false);
         }
         if (inputTensor.x->GetDataType() == op::DataType::DT_FLOAT16 ||
             inputTensor.x->GetDataType() == op::DataType::DT_BF16) {
@@ -150,19 +148,15 @@ static bool CheckDtypeValid(RmsNormQuantInputTensor& inputTensor, const aclTenso
                         "if xType is float16 or bfloat16 and scaleType is float, offsetType are not float32 or int32"),
                     return false);
             } else {
-                OP_CHECK(
-                    inputTensor.x->GetDataType() == inputTensor.scale->GetDataType(),
-                    OP_LOGE(
-                        ACLNN_ERR_PARAM_INVALID,
-                        "if xType is float16 or bfloat16 and scaleType is not float, scaleType should be equal to xType"),
-                    return false);
-                OP_CHECK(
-                    inputTensor.scale->GetDataType() == inputTensor.offset->GetDataType() || inputTensor.offset->GetDataType() == op::DataType::DT_INT8,
-                    OP_LOGE(
-                        ACLNN_ERR_PARAM_INVALID,
-                        "if xType is float16 or bfloat16 and scaleType is the same with xType, scaleType should be equal to xType or int8"
-                        ),
-                    return false);
+                OP_CHECK(inputTensor.x->GetDataType() == inputTensor.scale->GetDataType(),
+                         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float16 or bfloat16 and scaleType is not float, "
+                                                          "scaleType should be equal to xType"),
+                         return false);
+                OP_CHECK(inputTensor.scale->GetDataType() == inputTensor.offset->GetDataType() ||
+                             inputTensor.offset->GetDataType() == op::DataType::DT_INT8,
+                         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float16 or bfloat16 and scaleType is the same "
+                                                          "with xType, scaleType should be equal to xType or int8"),
+                         return false);
             }
         }
     }
@@ -188,7 +182,8 @@ aclnnStatus PreDealData(RmsNormQuantInputTensor& inputTensor, aclOpExecutor* exe
     return ACLNN_SUCCESS;
 }
 
-bool CheckShapeDimWithFrontN(const op::Shape& shape1, const op::Shape& shape2, size_t front_n) {
+bool CheckShapeDimWithFrontN(const op::Shape& shape1, const op::Shape& shape2, size_t front_n)
+{
     size_t x1n = shape1.GetDimNum();
     size_t x2n = shape2.GetDimNum();
     if (x1n != x2n) {
@@ -223,9 +218,8 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
     int64_t xDimNum = static_cast<int64_t>(inputTensor.x->GetViewShape().GetDimNum());
     int64_t xLastDim = inputTensor.x->GetViewShape().GetDim(xDimNum - 1);
     if (gammaLastDim != xLastDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "the last dim size(%ld) of x must be same as gamma and beta(%ld).", xLastDim,
-            gammaLastDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the last dim size(%ld) of x must be same as gamma and beta(%ld).", xLastDim,
+                gammaLastDim);
         return false;
     }
     //  check last dim
@@ -239,40 +233,32 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of the first n - 1 dims of x is not equal with that of y"),
                 return false);
         }
-        OP_CHECK(
-            xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int32, the out last dim must be 1/8 of x last dim,"
-                " x last dim is (%ld), out last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
+        OP_CHECK(xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "if outType is int32, the out last dim must be 1/8 of x last dim,"
+                         " x last dim is (%ld), out last dim is (%ld).",
+                         xLastDim, outLastDim),
+                 return false);
     } else if (Ops::NN::AclnnUtil::IsRegbase() && outDtype == op::DataType::DT_INT4) {
-        OP_CHECK(
-            CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
-        OP_CHECK(
-            xLastDim % 2 == 0,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int4 and surport regbase "
-                "x last dim should be even but x last dim is (%ld)",
-                xLastDim),
-            return false);
+        OP_CHECK(CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
+        OP_CHECK(xLastDim % 2 == 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "if outType is int4 and surport regbase "
+                         "x last dim should be even but x last dim is (%ld)",
+                         xLastDim),
+                 return false);
     } else {
-        if (Ops::NN::AclnnUtil::IsRegbase()){
-            OP_CHECK(
-                CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            OP_CHECK(CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
         } else {
-            OP_CHECK(
-                xLastDim == outLastDim,
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "if outType is int4 or int8, x last dim must be equal with out last dim. "
-                    "x last dim is (%ld), out last dim is (%ld).",
-                    xLastDim, outLastDim),
-                return false);
+            OP_CHECK(xLastDim == outLastDim,
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                             "if outType is int4 or int8, x last dim must be equal with out last dim. "
+                             "x last dim is (%ld), out last dim is (%ld).",
+                             xLastDim, outLastDim),
+                     return false);
         }
     }
 
@@ -296,8 +282,7 @@ static aclnnStatus CheckParams(RmsNormQuantInputTensor& inputTensor, aclTensor* 
 }
 } // namespace
 
-aclnnStatus Int42Int32PackedTensor(
-    const aclTensor *y, const aclTensor *&outTensor, aclOpExecutor *executor)
+aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTensor, aclOpExecutor* executor)
 {
     // if outType is int32, pack output
     auto viewShape = y->GetViewShape();
@@ -313,9 +298,9 @@ aclnnStatus Int42Int32PackedTensor(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale, const aclTensor* offset,
-    double epsilon, aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                                              const aclTensor* scale, const aclTensor* offset, double epsilon,
+                                              aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnRmsNormQuant, DFX_IN(x, gamma, beta, scale, offset, epsilon), DFX_OUT(y));
@@ -345,9 +330,9 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
         auto betaCont = l0op::Contiguous(inputTensorOri.beta, uniqueExecutor.get());
         CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        std::array<aclTensor*, 2> addRmsNormQuantOuts = l0op::RmsNormQuantV2(
-            xCont, gammaCont, scaleCont, nullptr, offsetCont, nullptr, betaCont, epsilon, divMode, yType,
-            uniqueExecutor.get());
+        std::array<aclTensor*, 2> addRmsNormQuantOuts = l0op::RmsNormQuantV2(xCont, gammaCont, scaleCont, nullptr,
+                                                                             offsetCont, nullptr, betaCont, epsilon,
+                                                                             divMode, yType, uniqueExecutor.get());
         aclTensor* resultTensor = std::get<IDX_0>(addRmsNormQuantOuts);
         CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* outTensor = resultTensor;
@@ -364,7 +349,8 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
         auto betaCont = l0op::Contiguous(beta, uniqueExecutor.get());
         CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto resultTensor = l0op::RmsNormQuant(xCont, gammaCont, betaCont, scaleCont, offsetCont, epsilon, yType, uniqueExecutor.get());
+        auto resultTensor = l0op::RmsNormQuant(xCont, gammaCont, betaCont, scaleCont, offsetCont, epsilon, yType,
+                                               uniqueExecutor.get());
         const aclTensor* outTensor = resultTensor;
         if (yType == op::DataType::DT_INT4) {
             ret = Int42Int32PackedTensor(resultTensor, outTensor, uniqueExecutor.get());

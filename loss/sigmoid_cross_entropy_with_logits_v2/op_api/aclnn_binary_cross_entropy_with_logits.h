@@ -36,4 +36,4 @@ ACLNN_API aclnnStatus aclnnBinaryCrossEntropyWithLogits(void* workspace, uint64_
 }
 #endif
 
-#endif  // OP_API_INC_BINARY_CROSS_ENTROPY_WITH_LOGITS_H_
+#endif // OP_API_INC_BINARY_CROSS_ENTROPY_WITH_LOGITS_H_

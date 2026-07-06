@@ -46,10 +46,10 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_910B_LIST = {
     DataType::DT_UINT8, DataType::DT_BOOL,  DataType::DT_BF16};
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_950_LIST = {
-    DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_FLOAT16, DataType::DT_INT8,   DataType::DT_DOUBLE,
-    DataType::DT_INT16, DataType::DT_INT64, DataType::DT_UINT64,  DataType::DT_UINT32, DataType::DT_UINT16,
-    DataType::DT_UINT8, DataType::DT_BOOL,  DataType::DT_BF16, DataType::DT_FLOAT8_E5M2, DataType::DT_FLOAT8_E4M3FN,
-    DataType::DT_FLOAT8_E8M0};
+    DataType::DT_FLOAT,  DataType::DT_INT32,       DataType::DT_FLOAT16,       DataType::DT_INT8,
+    DataType::DT_DOUBLE, DataType::DT_INT16,       DataType::DT_INT64,         DataType::DT_UINT64,
+    DataType::DT_UINT32, DataType::DT_UINT16,      DataType::DT_UINT8,         DataType::DT_BOOL,
+    DataType::DT_BF16,   DataType::DT_FLOAT8_E5M2, DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E8M0};
 
 static const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_INT32};
 
@@ -87,9 +87,8 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* index, const ac
 
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const aclTensor* out)
 {
-    bool is910bSocVersion =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    bool is910bSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
     bool is950SocVersion = (Ops::NN::AclnnUtil::IsRegbase());
     std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST;
     if (is910bSocVersion) {
@@ -101,9 +100,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(self, CURRENT_DTYPE_SUPPORT_LIST, return false);
     if (!index->IsEmpty() && !CheckType(index->GetDataType(), INDEX_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "aclnnGather not implemented for index dtype %s.",
-            op::ToString(index->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnGather not implemented for index dtype %s.",
+                op::ToString(index->GetDataType()).GetString());
         return false;
     }
     OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
@@ -135,9 +133,8 @@ static bool CheckShape(const aclTensor* self, const int64_t dim, const aclTensor
 
     // dim取值范围不能超过tensor本身的维度
     if (dim < (-selfDim2) || dim >= selfDim2) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [%ld, %ld], but got %ld)",
-            -selfDim2, selfDim2 - 1, dim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [%ld, %ld], but got %ld)",
+                -selfDim2, selfDim2 - 1, dim);
         return false;
     }
 
@@ -152,16 +149,15 @@ static bool CheckShape(const aclTensor* self, const int64_t dim, const aclTensor
         auto curIndexShape = indexShape.GetDim(i);
         if (i != noNeedCheckDim) {
             if (curIndexShape > curSelfShape) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "Size does not match at dimension %zu, expected index shape %ld smaller than self shape %ld", i,
-                    curIndexShape, curSelfShape);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "Size does not match at dimension %zu, expected index shape %ld smaller than self shape %ld", i,
+                        curIndexShape, curSelfShape);
                 return false;
             }
         } else {
             if (curSelfShape == 0) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "Size does not match at dimension %zu, expected index shape to be 0", i);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Size does not match at dimension %zu, expected index shape to be 0",
+                        i);
                 return false;
             }
         }
@@ -197,14 +193,14 @@ static bool SpecialCheck(const aclTensor* selfContiguous, const aclTensor* index
     auto lastDim = indexShape.GetDim(dimSize - 1);
     bool indexShapeCheck = indexShapeProduct >= SHAPE_PRODUCT_LIMIT && lastDim <= UPPER_LIMIT && lastDim >= LOWER_LIMIT;
     bool lastDimAlignedCheck = lastDim * SIZE_FLOAT16 % ALIGNED_SIZE == 0;
-    bool dTypeCheck =
-        indexContiguous->GetDataType() == DataType::DT_INT64 && selfContiguous->GetDataType() == DataType::DT_FLOAT16;
+    bool dTypeCheck = indexContiguous->GetDataType() == DataType::DT_INT64 &&
+                      selfContiguous->GetDataType() == DataType::DT_FLOAT16;
     return socVersionCheck && indexShapeCheck && lastDimAlignedCheck && dTypeCheck;
 }
 
-static bool MemCheck(
-    const aclTensor* selfContiguous, const aclTensor* indexContiguous, const int64_t& dim, const int64_t& idxPreDim,
-    const int64_t& idxPostDim, const int64_t& selfShapeProduct, const int64_t& indexShapeProduct)
+static bool MemCheck(const aclTensor* selfContiguous, const aclTensor* indexContiguous, const int64_t& dim,
+                     const int64_t& idxPreDim, const int64_t& idxPostDim, const int64_t& selfShapeProduct,
+                     const int64_t& indexShapeProduct)
 {
     bool isTransCase = true;
     bool memCheck = true;
@@ -229,29 +225,27 @@ static bool MemCheck(
     if (memCheck && isTransCase) {
         // 计算申请workspace行数
         int64_t tailGroupCoreNum = std::max(static_cast<int64_t>(1), ASCEND_910B_CORE_NUM / idxPreDim);
-        int64_t workspaceLen =
-            std::min(CAHELINE / selfDtypeSize, (idxPostDim + tailGroupCoreNum - 1) / tailGroupCoreNum);
+        int64_t workspaceLen = std::min(CAHELINE / selfDtypeSize,
+                                        (idxPostDim + tailGroupCoreNum - 1) / tailGroupCoreNum);
         // 不同分核内存占用检查
         if (idxPreDim * idxPostDim <= ASCEND_910B_CORE_NUM) {
             memCheck = selfShapeProduct > idxPreDim * idxPostDim * (idxGatherDim + selfGatherDim);
         } else {
-            memCheck =
-                selfShapeProduct * selfDtypeSize + indexShapeProduct * idxDtypeSize >
-                indexShapeProduct * selfDtypeSize +
-                    ASCEND_910B_CORE_NUM * workspaceLen * (idxGatherDim * idxDtypeSize + selfGatherDim * selfDtypeSize);
+            memCheck = selfShapeProduct * selfDtypeSize + indexShapeProduct * idxDtypeSize >
+                       indexShapeProduct * selfDtypeSize +
+                           ASCEND_910B_CORE_NUM * workspaceLen *
+                               (idxGatherDim * idxDtypeSize + selfGatherDim * selfDtypeSize);
         }
     }
     return memCheck;
 }
 
-static bool IfUseGatherElementsV2(
-    const aclTensor* selfContiguous, const aclTensor* indexContiguous, const int64_t& dim, const int64_t& dimSize,
-    bool& dtypeAndSocCheckFlag)
+static bool IfUseGatherElementsV2(const aclTensor* selfContiguous, const aclTensor* indexContiguous, const int64_t& dim,
+                                  const int64_t& dimSize, bool& dtypeAndSocCheckFlag)
 {
     // soc检查
-    bool socVersionCheck =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    bool socVersionCheck = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
     // self数据类型约束
     bool selfDTypeCheck = CheckType(selfContiguous->GetDataType(), GATHER_ELEMENTS_V2_DTYPE_SUPPORT_LIST);
     dtypeAndSocCheckFlag = socVersionCheck && selfDTypeCheck;
@@ -295,8 +289,8 @@ static bool IfUseGatherElementsV2(
     // 合轴后尾轴 < 32 会放大跳搬影响方案不适用
     dimCheck = dimCheck && selfPostDim > POST_DIM_LIMIT;
     // 核内transpose内存占用与aclnnTranspose比较
-    bool memCheck =
-        MemCheck(selfContiguous, indexContiguous, dim, idxPreDim, idxPostDim, selfShapeProduct, indexShapeProduct);
+    bool memCheck = MemCheck(selfContiguous, indexContiguous, dim, idxPreDim, idxPostDim, selfShapeProduct,
+                             indexShapeProduct);
     return socVersionCheck && selfDTypeCheck && dimCheck && selfShapeCheck && memCheck;
 }
 
@@ -313,9 +307,8 @@ static const aclTensor* GatherAdaptInputZeroDimTensor(const aclTensor* self, acl
     return selfReshape;
 }
 
-static const aclTensor* CalGather(
-    const aclTensor* selfContiguous, const int64_t dimFinal, const aclTensor* index, const int64_t dimSize,
-    aclOpExecutor* executor)
+static const aclTensor* CalGather(const aclTensor* selfContiguous, const int64_t dimFinal, const aclTensor* index,
+                                  const int64_t dimSize, aclOpExecutor* executor)
 {
     // calculation by GatherElements
     const aclTensor* gatherElementsResult = nullptr;
@@ -330,8 +323,8 @@ static const aclTensor* CalGather(
     auto valuePerm = executor->AllocIntArray(perm.data(), dimSize);
     CHECK_RET(valuePerm != nullptr, nullptr);
     bool dtypeAndSocCheckFlag = false;
-    bool needTranspose =
-        !IfUseGatherElementsV2(selfContiguous, indexContiguous, dimFinal, dimSize, dtypeAndSocCheckFlag);
+    bool needTranspose = !IfUseGatherElementsV2(selfContiguous, indexContiguous, dimFinal, dimSize,
+                                                dtypeAndSocCheckFlag);
     if (dimFinal != dimSize - 1 && needTranspose && !Ops::NN::AclnnUtil::IsRegbase()) {
         selfContiguous = l0op::Transpose(selfContiguous, valuePerm, executor);
         CHECK_RET(selfContiguous != nullptr, nullptr);
@@ -377,7 +370,8 @@ static bool IfMoeUseV2(const int64_t dim, const aclTensor* self, const aclTensor
     auto realOutputDim = index->GetViewShape().GetDim(SECOND_DIM);
 
     auto indexDimNum = index->GetViewShape().GetDimNum();
-    bool dimCheckFlag = indexDimNum == MOE_DIM_NUM && selfDimNum == static_cast<int64_t>(indexDimNum) && dim == FIRST_DIM;
+    bool dimCheckFlag = indexDimNum == MOE_DIM_NUM && selfDimNum == static_cast<int64_t>(indexDimNum) &&
+                        dim == FIRST_DIM;
     return dimCheckFlag && strideCheckFlag && (inferOutputDim == realOutputDim);
 }
 
@@ -397,21 +391,21 @@ static bool IsUseNoContiguous(const aclTensor* self, const aclTensor* index)
     return false;
 }
 
-static const aclTensor* CalNoContiguous(
-    const aclTensor* self, const int64_t dimFinal, const aclTensor* index, 
-    aclOpExecutor* executor)
+static const aclTensor* CalNoContiguous(const aclTensor* self, const int64_t dimFinal, const aclTensor* index,
+                                        aclOpExecutor* executor)
 {
     const aclTensor* gatherElementsResult = nullptr;
-    aclTensor *newSelf = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
-    aclTensor *newIndex = executor->CreateView(index, index->GetViewShape(), index->GetStorageShape(), index->GetViewStrides(), index->GetViewOffset());
+    aclTensor* newSelf = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(),
+                                              self->GetViewStrides(), self->GetViewOffset());
+    aclTensor* newIndex = executor->CreateView(index, index->GetViewShape(), index->GetStorageShape(),
+                                               index->GetViewStrides(), index->GetViewOffset());
     gatherElementsResult = l0op::GatherElements(newSelf, dimFinal, newIndex, executor);
     CHECK_RET(gatherElementsResult != nullptr, nullptr);
     return gatherElementsResult;
 }
 
-static const aclTensor* CalGatherV2(
-    const aclTensor* selfContiguous, const int64_t dimFinal, const aclTensor* index, 
-    aclOpExecutor* executor)
+static const aclTensor* CalGatherV2(const aclTensor* selfContiguous, const int64_t dimFinal, const aclTensor* index,
+                                    aclOpExecutor* executor)
 {
     // calculation by GatherV2
     const aclTensor* gatherElementsResult = nullptr;
@@ -443,9 +437,8 @@ static const aclTensor* CalGatherV2(
     return gatherElementsResult;
 }
 
-aclnnStatus aclnnGatherGetWorkspaceSize(
-    const aclTensor* self, const int64_t dim, const aclTensor* index, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnGatherGetWorkspaceSize(const aclTensor* self, const int64_t dim, const aclTensor* index,
+                                        aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -482,14 +475,14 @@ aclnnStatus aclnnGatherGetWorkspaceSize(
 
         // 调用l0算子GatherElements进行计算
         if (IfMoeUseV2(dimFinal, self, indexReshape, dimSize)) {
-            gatherElementsResult =
-                CalGatherV2(selfReshapeContinuous, dimFinal, indexReshape, uniqueExecutor.get());
+            gatherElementsResult = CalGatherV2(selfReshapeContinuous, dimFinal, indexReshape, uniqueExecutor.get());
         } else {
-            gatherElementsResult = CalGather(selfReshapeContinuous, dimFinal, indexReshape, dimSize, uniqueExecutor.get());
+            gatherElementsResult = CalGather(selfReshapeContinuous, dimFinal, indexReshape, dimSize,
+                                             uniqueExecutor.get());
         }
     }
 
-     CHECK_RET(gatherElementsResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(gatherElementsResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
     auto viewCopyRes = l0op::ViewCopy(gatherElementsResult, out, uniqueExecutor.get());
     CHECK_RET(viewCopyRes != nullptr, ACLNN_ERR_INNER_NULLPTR);

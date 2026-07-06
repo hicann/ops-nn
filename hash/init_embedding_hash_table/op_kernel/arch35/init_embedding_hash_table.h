@@ -74,14 +74,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void InitCompute(
 }
 
 template <typename Tkey, typename Tvalue>
-class KernelInitEmbeddingHashTable
-{
+class KernelInitEmbeddingHashTable {
 public:
     __aicore__ inline KernelInitEmbeddingHashTable(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR tableHandle, GM_ADDR sampledValues, int64_t bucketSize, int64_t embeddingDim, int64_t initializerMode,
-        Tvalue constantValue, int64_t bucketLength, uint32_t useThreadNum)
+    __aicore__ inline void Init(GM_ADDR tableHandle, GM_ADDR sampledValues, int64_t bucketSize, int64_t embeddingDim,
+                                int64_t initializerMode, Tvalue constantValue, int64_t bucketLength,
+                                uint32_t useThreadNum)
     {
         tableHanldeGm.SetGlobalBuffer((__gm__ int64_t*)(tableHandle));
         sampledValuesGm.SetGlobalBuffer((__gm__ Tvalue*)(sampledValues));
@@ -99,10 +98,10 @@ public:
     }
     __aicore__ inline void Process()
     {
-        asc_vf_call<InitCompute<Tkey, Tvalue>>(
-            dim3{static_cast<uint32_t>(useThreadNum)}, embeddingDim, bucketSize, bucketLength, initializerMode,
-            constantValue, blockIdx, blockNum, tableHanldeGm.GetPhyAddr(0), sampledValuesGm.GetPhyAddr(0),
-            outputGm.GetPhyAddr(0));
+        asc_vf_call<InitCompute<Tkey, Tvalue>>(dim3{static_cast<uint32_t>(useThreadNum)}, embeddingDim, bucketSize,
+                                               bucketLength, initializerMode, constantValue, blockIdx, blockNum,
+                                               tableHanldeGm.GetPhyAddr(0), sampledValuesGm.GetPhyAddr(0),
+                                               outputGm.GetPhyAddr(0));
     }
 
 private:

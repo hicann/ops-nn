@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_maximum_list_proto.h"
 
-class ForeachMaximumListTest : public testing::Test
-{
+class ForeachMaximumListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMaximumList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMaximumList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMaximumList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMaximumList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMaximumListTest, infer_shape_known_success)

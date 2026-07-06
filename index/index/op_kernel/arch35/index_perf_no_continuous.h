@@ -23,8 +23,7 @@
 #include "kernel_operator_list_tensor_intf.h"
 #include "index_tiling_data.h"
 struct SimtParams {
-    uint64_t indexedStride[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0},
-                                        {0, 0, 0, 0}, {0, 0, 0, 0}};
+    uint64_t indexedStride[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     int64_t indexShape[4] = {0, 0, 0, 0};
     int64_t xShape[4] = {0, 0, 0, 0};
     int64_t xStride[4] = {0, 0, 0, 0};
@@ -49,10 +48,9 @@ constexpr uint32_t LIST_INDEX_THREE = 3;
 template <typename T, typename P, typename T2, int IdxDim>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim2Compute(
     __gm__ T* outputGm_, __gm__ T* inputXGm_, __gm__ P* indexTensor0, __gm__ P* indexTensor1,
-    __ubuf__ SimtParams *simtParamsPtr_, uint64_t outputLength)
+    __ubuf__ SimtParams* simtParamsPtr_, uint64_t outputLength)
 {
-    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength;
-         i = i + gridDim.x * blockDim.x) {
+    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength; i = i + gridDim.x * blockDim.x) {
         T2 indexDim[NOCON_IDX_MAX_DIM_NUM] = {0, 0, 0, 0};
         T2 offset = i;
         T2 inputIndex = 0;
@@ -83,18 +81,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim
             indexValue2 += simtParamsPtr_->xShape[LIST_INDEX_ONE];
         }
 
-        inputIndex = indexValue1 * simtParamsPtr_->xStride[LIST_INDEX_ZERO] + indexValue2 * simtParamsPtr_->xStride[LIST_INDEX_ONE];
+        inputIndex = indexValue1 * simtParamsPtr_->xStride[LIST_INDEX_ZERO] +
+                     indexValue2 * simtParamsPtr_->xStride[LIST_INDEX_ONE];
         outputGm_[i] = inputXGm_[inputIndex];
     }
 }
 
 template <typename T, typename P, typename T2, int IdxDim>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim3Compute(
-    __gm__ T* outputGm_, __gm__ T* inputXGm_, __gm__ P* indexTensor0, __gm__ P* indexTensor1,
-    __gm__ P* indexTensor2, __ubuf__ SimtParams *simtParamsPtr_, uint64_t outputLength)
+    __gm__ T* outputGm_, __gm__ T* inputXGm_, __gm__ P* indexTensor0, __gm__ P* indexTensor1, __gm__ P* indexTensor2,
+    __ubuf__ SimtParams* simtParamsPtr_, uint64_t outputLength)
 {
-    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength;
-         i = i + gridDim.x * blockDim.x) {
+    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength; i = i + gridDim.x * blockDim.x) {
         T2 indexDim[NOCON_IDX_MAX_DIM_NUM] = {0, 0, 0, 0};
         T2 offset = i;
         T2 inputIndex = 0;
@@ -134,7 +132,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim
             indexValue3 += simtParamsPtr_->xShape[LIST_INDEX_TWO];
         }
 
-        inputIndex = indexValue1 * simtParamsPtr_->xStride[LIST_INDEX_ZERO] + indexValue2 * simtParamsPtr_->xStride[LIST_INDEX_ONE] +
+        inputIndex = indexValue1 * simtParamsPtr_->xStride[LIST_INDEX_ZERO] +
+                     indexValue2 * simtParamsPtr_->xStride[LIST_INDEX_ONE] +
                      indexValue3 * simtParamsPtr_->xStride[LIST_INDEX_TWO];
         outputGm_[i] = inputXGm_[inputIndex];
     }
@@ -142,12 +141,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim
 
 template <typename T, typename P, typename T2, int IdxDim>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim4Compute(
-    __gm__ T* outputGm_, __gm__ T* inputXGm_, __gm__ P* indexTensor0, __gm__ P* indexTensor1,
-    __gm__ P* indexTensor2, __gm__ P* indexTensor3, __ubuf__ SimtParams *simtParamsPtr_,
-    uint64_t outputLength)
+    __gm__ T* outputGm_, __gm__ T* inputXGm_, __gm__ P* indexTensor0, __gm__ P* indexTensor1, __gm__ P* indexTensor2,
+    __gm__ P* indexTensor3, __ubuf__ SimtParams* simtParamsPtr_, uint64_t outputLength)
 {
-    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength;
-         i = i + gridDim.x * blockDim.x) {
+    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength; i = i + gridDim.x * blockDim.x) {
         T2 indexDim[NOCON_IDX_MAX_DIM_NUM] = {0, 0, 0, 0};
         T2 offset = i;
         T2 inputIndex = 0;
@@ -196,8 +193,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim
             indexValue4 += simtParamsPtr_->xShape[LIST_INDEX_THREE];
         }
 
-        inputIndex = indexValue1 * simtParamsPtr_->xStride[LIST_INDEX_ZERO] + indexValue2 * simtParamsPtr_->xStride[LIST_INDEX_ONE] +
-                     indexValue3 * simtParamsPtr_->xStride[LIST_INDEX_TWO] + indexValue4 * simtParamsPtr_->xStride[LIST_INDEX_THREE];
+        inputIndex = indexValue1 * simtParamsPtr_->xStride[LIST_INDEX_ZERO] +
+                     indexValue2 * simtParamsPtr_->xStride[LIST_INDEX_ONE] +
+                     indexValue3 * simtParamsPtr_->xStride[LIST_INDEX_TWO] +
+                     indexValue4 * simtParamsPtr_->xStride[LIST_INDEX_THREE];
         outputGm_[i] = inputXGm_[inputIndex];
     }
 }
@@ -205,9 +204,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtDim
 template <typename T, typename P, typename T2>
 class KernelIndexNoContiguousPerf {
 public:
-    __aicore__ inline KernelIndexNoContiguousPerf(TPipe& pipe)
-    : pipe_(pipe){};
-    __aicore__ inline void Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indices, IndexNonContinuousTilingData tilingData);
+    __aicore__ inline KernelIndexNoContiguousPerf(TPipe& pipe) : pipe_(pipe){};
+    __aicore__ inline void Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indices,
+                                IndexNonContinuousTilingData tilingData);
     __aicore__ inline void Process();
     __aicore__ inline __gm__ P* GetInputTensorAddr(GM_ADDR indices, uint16_t index);
     __aicore__ inline void ComputeParameter(IndexNonContinuousTilingData tilingData);
@@ -219,7 +218,7 @@ private:
     TBuf<TPosition::VECCALC> Buf_;
 
     GM_ADDR indices_ = nullptr;
-    __ubuf__ SimtParams *simtParamsPtr_;
+    __ubuf__ SimtParams* simtParamsPtr_;
 
     uint64_t outputLength_ = 0;
     uint64_t indexedDimNum_ = 0;
@@ -227,8 +226,8 @@ private:
 };
 
 template <typename T, typename P, typename T2>
-__aicore__ inline void KernelIndexNoContiguousPerf<T, P, T2>::Init(
-    GM_ADDR output, GM_ADDR inputX, GM_ADDR indices, IndexNonContinuousTilingData tilingData)
+__aicore__ inline void KernelIndexNoContiguousPerf<T, P, T2>::Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indices,
+                                                                   IndexNonContinuousTilingData tilingData)
 {
     uint32_t blockSize = Ops::Base::GetUbBlockSize();
     inputXGm_.SetGlobalBuffer((__gm__ T*)(inputX));
@@ -278,68 +277,68 @@ __aicore__ inline void KernelIndexNoContiguousPerf<T, P, T2>::Process()
     if (inputDimNum_ == INPUTDIMNUMTWO) {
         if (indexedDimNum_ == INDEX_DIM_NUM_ONE) {
             asc_vf_call<SimtDim2Compute<T, P, T2, INDEX_DIM_NUM_ONE>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_TWO) {
             asc_vf_call<SimtDim2Compute<T, P, T2, INDEX_DIM_NUM_TWO>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_THREE) {
             asc_vf_call<SimtDim2Compute<T, P, T2, INDEX_DIM_NUM_THREE>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_FOUR) {
             asc_vf_call<SimtDim2Compute<T, P, T2, INDEX_DIM_NUM_FOUR>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, simtParamsPtr_, outputLength_);
         }
     } else if (inputDimNum_ == INPUTDIMNUMTHREE) {
         if (indexedDimNum_ == INDEX_DIM_NUM_ONE) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             asc_vf_call<SimtDim3Compute<T, P, T2, INDEX_DIM_NUM_ONE>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_TWO) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             asc_vf_call<SimtDim3Compute<T, P, T2, INDEX_DIM_NUM_TWO>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_THREE) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             asc_vf_call<SimtDim3Compute<T, P, T2, INDEX_DIM_NUM_THREE>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_FOUR) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             asc_vf_call<SimtDim3Compute<T, P, T2, INDEX_DIM_NUM_FOUR>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, simtParamsPtr_, outputLength_);
         }
     } else if (inputDimNum_ == INPUTDIMNUMFOUR) {
         if (indexedDimNum_ == INDEX_DIM_NUM_ONE) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             __gm__ P* indexTensor3 = GetInputTensorAddr(indices_, LIST_INDEX_THREE);
             asc_vf_call<SimtDim4Compute<T, P, T2, INDEX_DIM_NUM_ONE>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_TWO) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             __gm__ P* indexTensor3 = GetInputTensorAddr(indices_, LIST_INDEX_THREE);
             asc_vf_call<SimtDim4Compute<T, P, T2, INDEX_DIM_NUM_TWO>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_THREE) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             __gm__ P* indexTensor3 = GetInputTensorAddr(indices_, LIST_INDEX_THREE);
             asc_vf_call<SimtDim4Compute<T, P, T2, INDEX_DIM_NUM_THREE>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
         } else if (indexedDimNum_ == INDEX_DIM_NUM_FOUR) {
             __gm__ P* indexTensor2 = GetInputTensorAddr(indices_, LIST_INDEX_TWO);
             __gm__ P* indexTensor3 = GetInputTensorAddr(indices_, LIST_INDEX_THREE);
             asc_vf_call<SimtDim4Compute<T, P, T2, INDEX_DIM_NUM_FOUR>>(
-                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
-                indexTensor0, indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
+                dim3{USED_THREAD}, (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), indexTensor0,
+                indexTensor1, indexTensor2, indexTensor3, simtParamsPtr_, outputLength_);
         }
     }
 }

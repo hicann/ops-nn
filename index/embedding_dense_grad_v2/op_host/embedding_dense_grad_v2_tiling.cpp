@@ -46,8 +46,7 @@ constexpr uint64_t HALF_SIZE = 2;
 
 class EmbeddingDenseGradV2Tiling {
 public:
-    explicit EmbeddingDenseGradV2Tiling(gert::TilingContext* context) : tilingContext_(context)
-    {}
+    explicit EmbeddingDenseGradV2Tiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     ge::graphStatus SetKernelTiling();
     void TilingDataPrint() const;
@@ -232,7 +231,9 @@ inline size_t EmbeddingDenseGradV2Tiling::CalcWorkSpaceSize()
     size_t alignNum = BLOCK_SIZE / sizeof(int32_t);
     uint64_t gradAlignNum = BLOCK_SIZE / sizeof(float);
     scaleWorkspaceLength_ = scaleGrad_ ? (((numWeights_ + alignNum - 1UL) / alignNum) * alignNum) : 0;
-    outStageWorkspaceLength_ = ((formerEmbeddingDim_ * coreNum_ * DOUBLE_PRE_CORE + gradAlignNum -1UL) / gradAlignNum) * gradAlignNum;
+    outStageWorkspaceLength_ = ((formerEmbeddingDim_ * coreNum_ * DOUBLE_PRE_CORE + gradAlignNum - 1UL) /
+                                gradAlignNum) *
+                               gradAlignNum;
     outIndexWorkspaceLength_ = coreNum_ * DOUBLE_PRE_CORE;
     outCastedWorkspaceLength_ = numWeights_ * embeddingDim_;
     size_t scaleWorkspaceSize = scaleWorkspaceLength_ * sizeof(int32_t);
@@ -243,11 +244,11 @@ inline size_t EmbeddingDenseGradV2Tiling::CalcWorkSpaceSize()
     size_t baseWorkspaceSize = sysWorkspaceSize + scaleWorkspaceSize;
     if (dataTypeSize_ == sizeof(float)) {
         return baseWorkspaceSize;
-    }else if(isDeterministMode_) {
+    } else if (isDeterministMode_) {
         return baseWorkspaceSize;
-    }else if(CheckIsSmallDim(embeddingDim_)) {
+    } else if (CheckIsSmallDim(embeddingDim_)) {
         return baseWorkspaceSize + outCastedWorkspaceSize;
-    }else {
+    } else {
         return baseWorkspaceSize + outStageWorkspaceSize + outIndexWorkspaceSize;
     }
 }
@@ -294,9 +295,8 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
     paddingIdx_ = *(attrs->GetAttrPointer<uint64_t>)(EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX);
     scaleGrad_ = *(attrs->GetAttrPointer<bool>)(EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ);
 
-    coreNum_ = scaleGrad_ ? std::min(
-                                compileInfo->totalCoreNum,
-                                std::min(static_cast<uint64_t>(numWeights_), static_cast<uint64_t>(gradRow))) :
+    coreNum_ = scaleGrad_ ? std::min(compileInfo->totalCoreNum,
+                                     std::min(static_cast<uint64_t>(numWeights_), static_cast<uint64_t>(gradRow))) :
                             std::min(compileInfo->totalCoreNum, static_cast<uint64_t>(gradRow));
     ubSize_ = compileInfo->ubSizePlatForm;
     if (coreNum_ == 0UL || embeddingDim_ == 0UL) {
@@ -409,8 +409,8 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::SetKernelTiling()
     tilingData_.smallDimTiling.set_formerLastRow(formerLastRow_);
     tilingData_.smallDimTiling.set_tailLastRow(tailLastRow_);
 
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     TilingDataPrint();
     return ge::GRAPH_SUCCESS;
@@ -484,8 +484,8 @@ ge::graphStatus TilingEmbeddingDenseGradV2(gert::TilingContext* context)
     }
     OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradV2 enter.");
 
-    const EmbeddingDenseGradV2CompileInfo* compile_info =
-        static_cast<const EmbeddingDenseGradV2CompileInfo*>(context->GetCompileInfo());
+    const EmbeddingDenseGradV2CompileInfo* compile_info = static_cast<const EmbeddingDenseGradV2CompileInfo*>(
+        context->GetCompileInfo());
 
     if (compile_info->isRegBase) {
         OP_LOGD(context->GetNodeName(), "Tiling EmbeddingDenseGradV2 RegBase start");
@@ -514,9 +514,8 @@ ge::graphStatus TilingPrepareForEmbeddingDenseGradV2(gert::TilingParseContext* c
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

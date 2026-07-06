@@ -20,13 +20,9 @@
 
 namespace optiling {
 
-class WhiteListShape
-{
+class WhiteListShape {
 public:
-    bool operator<(const WhiteListShape& right) const
-    {
-        return memcmp(this, &right, sizeof(WhiteListShape)) < 0;
-    }
+    bool operator<(const WhiteListShape& right) const { return memcmp(this, &right, sizeof(WhiteListShape)) < 0; }
 
     uint64_t mSize_;
     uint64_t kSize_;
@@ -37,9 +33,9 @@ public:
     uint64_t aicNum_ : 40;
 };
 
-inline void SetMatmulTilingFromCacheData(
-    WeightQuantBatchMatmulCacheTilingData& cacheTilingData, AscendC::tiling::TCubeTiling& matmulTiling, uint64_t m, uint64_t n,
-    int32_t isBias)
+inline void SetMatmulTilingFromCacheData(WeightQuantBatchMatmulCacheTilingData& cacheTilingData,
+                                         AscendC::tiling::TCubeTiling& matmulTiling, uint64_t m, uint64_t n,
+                                         int32_t isBias)
 {
     matmulTiling.M = m;
     matmulTiling.N = n;

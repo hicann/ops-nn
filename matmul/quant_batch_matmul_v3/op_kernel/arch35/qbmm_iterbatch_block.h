@@ -56,11 +56,9 @@ struct QbmmMultiBatchBaseBlockArgs {
 
 class QbmmMultiBatchBaseBlock {
 public:
-    __aicore__ inline QbmmMultiBatchBaseBlock()
-    {
-    }
+    __aicore__ inline QbmmMultiBatchBaseBlock() {}
     // tilingData改为内部结构体
-    __aicore__ inline void Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData, bool bTrans,
+    __aicore__ inline void Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData, bool bTrans,
                                 bool isWeightNz);
     __aicore__ inline void GetMultiBatchInfo(uint64_t loopIndex, uint32_t blockIdx);
     __aicore__ inline void GetCalcBatchOffset(uint64_t b1Index, uint64_t b2Index, uint64_t b3Index);
@@ -69,42 +67,42 @@ public:
 public:
     QbmmMultiBatchBaseBlockOffset offset_;
     QbmmMultiBatchBaseBlockArgs params_;
-    const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData_;
+    const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData_;
 
 protected:
     __aicore__ inline void UpdateBatchInfo();
     __aicore__ inline void GetBatchInfo(uint64_t batchNum);
 };
-__aicore__ inline void QbmmMultiBatchBaseBlock::Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData,
+__aicore__ inline void QbmmMultiBatchBaseBlock::Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData,
                                                      bool bTrans, bool isWeightNz)
 {
     tilingData_ = tilingData;
-    params_.singleASize =
-        static_cast<uint64_t>(tilingData_->matmulTiling.M) * static_cast<uint64_t>(tilingData_->matmulTiling.Ka);
+    params_.singleASize = static_cast<uint64_t>(tilingData_->matmulTiling.M) *
+                          static_cast<uint64_t>(tilingData_->matmulTiling.Ka);
     uint64_t nAlign = DequantBmm::Align(static_cast<uint64_t>(tilingData_->matmulTiling.N),
                                         static_cast<uint64_t>(bTrans ? BMM_BLOCK_NUM : K0_INT8));
     uint64_t kAlign = DequantBmm::Align(static_cast<uint64_t>(tilingData_->matmulTiling.Kb),
                                         static_cast<uint64_t>(bTrans ? K0_INT8 : BMM_BLOCK_NUM));
-    params_.singleBSize = isWeightNz ? nAlign * kAlign
-                                     : static_cast<uint64_t>(tilingData_->matmulTiling.N) *
+    params_.singleBSize = isWeightNz ? nAlign * kAlign :
+                                       static_cast<uint64_t>(tilingData_->matmulTiling.N) *
                                            static_cast<uint64_t>(tilingData_->matmulTiling.Kb);
-    params_.singleCSize =
-        static_cast<uint64_t>(tilingData_->matmulTiling.M) * static_cast<uint64_t>(tilingData_->matmulTiling.N);
+    params_.singleCSize = static_cast<uint64_t>(tilingData_->matmulTiling.M) *
+                          static_cast<uint64_t>(tilingData_->matmulTiling.N);
 
     params_.useCoreNum = tilingData_->matmulTiling.usedCoreNum;
     params_.mainLoopPreCoreBatchNum = tilingData_->matmulTiling.BatchNum;
-    params_.nBatchOutNum =
-        DequantBmm::Min(L0C_SIZE_256K / (tilingData_->matmulTiling.baseM * tilingData_->matmulTiling.baseN *
-                                         tilingData_->matmulTiling.dbL0C * sizeof(int32_t)),
-                        static_cast<uint64_t>(tilingData_->matmulTiling.BatchNum));
+    params_.nBatchOutNum = DequantBmm::Min(
+        L0C_SIZE_256K / (tilingData_->matmulTiling.baseM * tilingData_->matmulTiling.baseN *
+                         tilingData_->matmulTiling.dbL0C * sizeof(int32_t)),
+        static_cast<uint64_t>(tilingData_->matmulTiling.BatchNum));
     UpdateBatchInfo();
     params_.loopTimes = DequantBmm::CeilDiv(params_.calcBatchNum, params_.mainLoopPreCoreBatchNum * params_.useCoreNum);
 
     params_.lastLoopAllBatchNum = params_.calcBatchNum % (params_.mainLoopPreCoreBatchNum * params_.useCoreNum);
     // 当前仅支持最后一个loop batch整除的场景
-    params_.lastLoopAllBatchNum = params_.lastLoopAllBatchNum == 0
-                                      ? params_.mainLoopPreCoreBatchNum * params_.useCoreNum
-                                      : params_.lastLoopAllBatchNum;
+    params_.lastLoopAllBatchNum = params_.lastLoopAllBatchNum == 0 ?
+                                      params_.mainLoopPreCoreBatchNum * params_.useCoreNum :
+                                      params_.lastLoopAllBatchNum;
 
     params_.lastLoopPreCoreBatchNum = params_.lastLoopAllBatchNum / params_.useCoreNum;
     params_.lastLoopBlockNum = params_.lastLoopAllBatchNum % params_.useCoreNum;
@@ -163,10 +161,10 @@ __aicore__ inline void QbmmMultiBatchBaseBlock::GetBatchInfo(uint64_t batchNum)
     if (params_.innerBatchNum == 0) {
         params_.batchANum = DequantBmm::Min(batchNum, static_cast<uint64_t>(tilingData_->params.batchA));
         params_.batchBNum = DequantBmm::Min(batchNum, static_cast<uint64_t>(tilingData_->params.batchB));
-        params_.batchAIndex =
-            DequantBmm::Min(params_.batchIndex, static_cast<uint64_t>(tilingData_->params.batchA - 1));
-        params_.batchBIndex =
-            DequantBmm::Min(params_.batchIndex, static_cast<uint64_t>(tilingData_->params.batchB - 1));
+        params_.batchAIndex = DequantBmm::Min(params_.batchIndex,
+                                              static_cast<uint64_t>(tilingData_->params.batchA - 1));
+        params_.batchBIndex = DequantBmm::Min(params_.batchIndex,
+                                              static_cast<uint64_t>(tilingData_->params.batchB - 1));
     } else if (params_.batchIndex >= (params_.innerBatchNum - 1) && params_.broadcastFlag == A_NEED_BROADCAST) {
         // 当本次计算需要使用的batch数量超过需要broadcast的batch轴的内轴数量，且A矩阵的batch需要broadcast
         params_.batchANum = DequantBmm::Min(params_.innerBatchNum, batchNum);
@@ -248,5 +246,4 @@ __aicore__ inline void QbmmMultiBatchBaseBlock::CalcGMOffset()
     offset_.offsetScale = 0;
     offset_.offsetBias = 0;
 }
-}  // namespace QuantBatchMatmulV3
-
+} // namespace QuantBatchMatmulV3

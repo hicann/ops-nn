@@ -36,10 +36,7 @@ static void celu_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 
 class celu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "celu_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "celu_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "celu TearDown\n" << endl;

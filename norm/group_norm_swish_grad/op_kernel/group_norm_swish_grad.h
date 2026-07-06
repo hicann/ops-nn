@@ -19,12 +19,11 @@
 using namespace AscendC;
 
 template <typename T, bool isDeterministic>
-class GroupNormSwishGrad
-{
+class GroupNormSwishGrad {
 public:
-    __aicore__ inline GroupNormSwishGrad(
-        GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
-        GM_ADDR dbeta, GM_ADDR workspace, GroupNormSwishGradTilingData* tiling_data)
+    __aicore__ inline GroupNormSwishGrad(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR beta,
+                                         GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                         GroupNormSwishGradTilingData* tiling_data)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         this->curBlockIdx = GetBlockIdx();
@@ -122,25 +121,26 @@ public:
             // reduceSUM TO GM
             //  0 ~ stage2CoreUsed - 2
             if (curBlockIdx < stage2CoreUsed - 1) {
-                reduce_dgamma_dbeta_WSP2GM(
-                    0, static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
+                reduce_dgamma_dbeta_WSP2GM(0, static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum,
+                                           divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
             }
             // stage2CoreUsed ~ 2 * stage2CoreUsed -1
             else if (stage2CoreUsed <= curBlockIdx && curBlockIdx < SPLIT_COUNT * stage2CoreUsed - 1) {
-                reduce_dgamma_dbeta_WSP2GM(
-                    static_cast<uint64_t>(divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)) * C, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
-                    castEleNum, (divceil(N, SPLIT_COUNT) - divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)));
+                reduce_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)) * C,
+                                           static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum, castEleNum,
+                                           (divceil(N, SPLIT_COUNT) - divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)));
             }
             // stage2CoreUsed -1
             else if (curBlockIdx == stage2CoreUsed - 1) {
-                reduce_dgamma_dbeta_WSP2GM(
-                    0, static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
+                reduce_dgamma_dbeta_WSP2GM(0, static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum,
+                                           divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
             }
             // 2 * stage2CoreUsed -1
             else if (curBlockIdx == SPLIT_COUNT * stage2CoreUsed - 1) {
-                reduce_dgamma_dbeta_WSP2GM(
-                    static_cast<uint64_t>(divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)) * C, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
-                    tailCastNum, (divceil(N, SPLIT_COUNT) - divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)));
+                reduce_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)) * C,
+                                           static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
+                                           tailCastNum,
+                                           (divceil(N, SPLIT_COUNT) - divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)));
             }
         } else if constexpr (isDeterministic && !IsSameType<T, float>::value) {
 #ifndef __CCE_KT_TEST__
@@ -150,9 +150,11 @@ public:
             Initbuffer4stage2_mode2();
             // reduceSUM And Cast TO GM
             if (curBlockIdx < stage2CoreUsed - 1) {
-                reduce_cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, divceil(N, SPLIT_COUNT));
+                reduce_cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum,
+                                                divceil(N, SPLIT_COUNT));
             } else if (curBlockIdx == stage2CoreUsed - 1) {
-                reduce_cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, divceil(N, SPLIT_COUNT));
+                reduce_cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum,
+                                                divceil(N, SPLIT_COUNT));
             }
         }
     }
@@ -176,9 +178,8 @@ private:
         SetFlag<HardEvent::S_V>(eventIDSToV);
         WaitFlag<HardEvent::S_V>(eventIDSToV);
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
-        Adds_Muls_template(
-            x_local, x_local, (float(-1.0) * this->mean_scalar * this->rstd_scalar), this->rstd_scalar,
-            this->ele_num_per_group);
+        Adds_Muls_template(x_local, x_local, (float(-1.0) * this->mean_scalar * this->rstd_scalar), this->rstd_scalar,
+                           this->ele_num_per_group);
         in_queue_x.EnQue(x_local);
     }
 
@@ -227,11 +228,12 @@ private:
                 float temp1I = ReduceSum_template(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
                 temp_1_local.SetValue(C_G_idx, temp1I);
                 Mul(temp_hxw_local, x_local[offset], dy_new, this->ele_num_per_channel);
-                float temp2I =
-                    ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local, this->ele_num_per_channel);
+                float temp2I = ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local,
+                                                  this->ele_num_per_channel);
                 temp_2_local.SetValue(C_G_idx, temp2I);
             } else {
-                uint64_t gm_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group + static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
+                uint64_t gm_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group +
+                                     static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
                 LocalTensor<float> unalign_channel_x = in_temp_x.Get<float>(this->ele_num_per_channel);
                 LocalTensor<float> unalign_channel_dy = in_temp_dy.Get<float>(this->ele_num_per_channel);
                 Custom_DataCopy_In(unalign_channel_x, in_tbuf_x_T, x_gm, gm_offset, this->ele_num_per_channel);
@@ -239,9 +241,9 @@ private:
                 event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
                 SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
                 WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
-                Adds_Muls_template(
-                    unalign_channel_x, unalign_channel_x, (float(-1.0) * this->mean_scalar * this->rstd_scalar),
-                    this->rstd_scalar, this->ele_num_per_channel);
+                Adds_Muls_template(unalign_channel_x, unalign_channel_x,
+                                   (float(-1.0) * this->mean_scalar * this->rstd_scalar), this->rstd_scalar,
+                                   this->ele_num_per_channel);
                 Muls(dy_new, unalign_channel_x, gamma, this->ele_num_per_channel);
                 Adds(dy_new, dy_new, beta, this->ele_num_per_channel);
                 Muls(dswish_res, dy_new, scale_factor, this->ele_num_per_channel);
@@ -253,11 +255,11 @@ private:
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(unalign_channel_dy, dswish_res, unalign_channel_dy, this->ele_num_per_channel);
-                float temp1I =
-                    ReduceSum_template(temp_hxw_local, unalign_channel_dy, temp_hxw_local, this->ele_num_per_channel);
+                float temp1I = ReduceSum_template(temp_hxw_local, unalign_channel_dy, temp_hxw_local,
+                                                  this->ele_num_per_channel);
                 Mul(temp_hxw_local, unalign_channel_x, unalign_channel_dy, this->ele_num_per_channel);
-                float temp2I =
-                    ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local, this->ele_num_per_channel);
+                float temp2I = ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local,
+                                                  this->ele_num_per_channel);
                 PipeBarrier<PIPE_ALL>();
                 temp_1_local.SetValue(C_G_idx, temp1I);
                 temp_2_local.SetValue(C_G_idx, temp2I);
@@ -271,7 +273,8 @@ private:
         SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
         for (int32_t C_G_idx = 0; C_G_idx < this->C_G; C_G_idx++) {
             int32_t is_align = (C_G_idx * this->ele_num_per_channel) % this->T_per_block;
-            uint64_t gm_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group + static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
+            uint64_t gm_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group +
+                                 static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
             gamma = gamma_local.GetValue(C_G_idx);
             beta = beta_local.GetValue(C_G_idx);
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
@@ -292,9 +295,8 @@ private:
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(dy_new, dswish_res, dy_local[offset], this->ele_num_per_channel);
                 Muls(dy_new, dy_new, this->rstd_scalar * gamma, this->ele_num_per_channel);
-                Adds_Muls_template(
-                    x_local[offset], x_local[offset], this->rstd_scalar * c1, this->rstd_scalar * c2,
-                    this->ele_num_per_channel);
+                Adds_Muls_template(x_local[offset], x_local[offset], this->rstd_scalar * c1, this->rstd_scalar * c2,
+                                   this->ele_num_per_channel);
                 Sub(temp_hxw_local, dy_new, x_local[offset], this->ele_num_per_channel);
                 event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
                 SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
@@ -308,9 +310,9 @@ private:
                 event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
                 SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
                 WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
-                Adds_Muls_template(
-                    x_local[offset], x_local[offset], (float(-1.0) * this->mean_scalar * this->rstd_scalar),
-                    this->rstd_scalar, this->ele_num_per_channel);
+                Adds_Muls_template(x_local[offset], x_local[offset],
+                                   (float(-1.0) * this->mean_scalar * this->rstd_scalar), this->rstd_scalar,
+                                   this->ele_num_per_channel);
                 Muls(dy_new, x_local[offset], gamma, this->ele_num_per_channel);
                 Adds(dy_new, dy_new, beta, this->ele_num_per_channel);
                 Muls(dswish_res, dy_new, scale_factor, this->ele_num_per_channel);
@@ -323,9 +325,8 @@ private:
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(dy_new, dswish_res, dy_local[offset], this->ele_num_per_channel);
                 Muls(dy_new, dy_new, this->rstd_scalar * gamma, this->ele_num_per_channel);
-                Adds_Muls_template(
-                    x_local[offset], x_local[offset], this->rstd_scalar * c1, this->rstd_scalar * c2,
-                    this->ele_num_per_channel);
+                Adds_Muls_template(x_local[offset], x_local[offset], this->rstd_scalar * c1, this->rstd_scalar * c2,
+                                   this->ele_num_per_channel);
                 Sub(temp_hxw_local, dy_new, x_local[offset], this->ele_num_per_channel);
                 PipeBarrier<PIPE_ALL>();
                 event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -381,9 +382,8 @@ private:
             event_t eventIDMTE2ToV0 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
             WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
-            Adds_Muls_template(
-                x_local, x_local, (-1.0f * this->mean_scalar * this->rstd_scalar), (this->rstd_scalar),
-                this->ele_num_per_channel);
+            Adds_Muls_template(x_local, x_local, (-1.0f * this->mean_scalar * this->rstd_scalar), (this->rstd_scalar),
+                               this->ele_num_per_channel);
             gamma = gamma_local.GetValue(C_G_idx);
             beta = beta_local.GetValue(C_G_idx);
             event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -404,8 +404,8 @@ private:
             Mul(temp_hxw_local, x_local, dy_new, this->ele_num_per_channel);
             in_queue_x.FreeTensor(x_local);
             in_queue_dy.FreeTensor(dy_local);
-            float temp2I =
-                ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local, this->ele_num_per_channel);
+            float temp2I = ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local,
+                                              this->ele_num_per_channel);
             temp_queue_HXW.FreeTensor(temp_hxw_local);
             temp_1_local.SetValue(C_G_idx, temp1I);
             temp_2_local.SetValue(C_G_idx, temp2I);
@@ -426,9 +426,8 @@ private:
             event_t eventIDMTE2ToV0 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
             WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
-            Adds_Muls_template(
-                x_local, x_local, (-1.0f * this->mean_scalar * this->rstd_scalar), (this->rstd_scalar),
-                this->ele_num_per_channel);
+            Adds_Muls_template(x_local, x_local, (-1.0f * this->mean_scalar * this->rstd_scalar), (this->rstd_scalar),
+                               this->ele_num_per_channel);
             gamma = (float)gamma_local.GetValue(C_G_idx);
             beta = (float)beta_local.GetValue(C_G_idx);
             event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -446,8 +445,8 @@ private:
             Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
             Mul(dy_new, dswish_res, dy_local, this->ele_num_per_channel);
             Muls(dy_new, dy_new, this->rstd_scalar * gamma, this->ele_num_per_channel);
-            Adds_Muls_template(
-                x_local, x_local, this->rstd_scalar * c1, this->rstd_scalar * c2, this->ele_num_per_channel);
+            Adds_Muls_template(x_local, x_local, this->rstd_scalar * c1, this->rstd_scalar * c2,
+                               this->ele_num_per_channel);
             Sub(temp_hxw_local, dy_new, x_local, this->ele_num_per_channel);
             in_queue_x.FreeTensor(x_local);
             in_queue_dy.FreeTensor(dy_local);
@@ -471,15 +470,14 @@ private:
         event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
-        Adds_Muls_template(
-            x_local, x_local, (-1.0f * this->mean_scalar * this->rstd_scalar), (this->rstd_scalar),
-            this->mode2_ub_capacity_ele);
+        Adds_Muls_template(x_local, x_local, (-1.0f * this->mean_scalar * this->rstd_scalar), (this->rstd_scalar),
+                           this->mode2_ub_capacity_ele);
         in_queue_x.EnQue(x_local);
         in_queue_dy.EnQue(dy_local);
     }
 
-    __aicore__ inline void compute_dgamma(
-        uint32_t channel_idx, int32_t iter_C_G_idx, float& temp1I, float& temp2I, uint64_t offset, uint32_t process_num)
+    __aicore__ inline void compute_dgamma(uint32_t channel_idx, int32_t iter_C_G_idx, float& temp1I, float& temp2I,
+                                          uint64_t offset, uint32_t process_num)
     {
         LocalTensor<float> x_local = in_queue_x.DeQue<float>();
         LocalTensor<float> dy_local = in_queue_dy.DeQue<float>();
@@ -535,8 +533,10 @@ private:
         in_queue_beta.EnQue(beta_local);
         for (int32_t iter_C_G_idx = 0; iter_C_G_idx < this->C_G * this->mode2_ub_iteration_num; iter_C_G_idx++) {
             uint64_t offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group +
-                              static_cast<uint64_t>(iter_C_G_idx / this->mode2_ub_iteration_num) * this->ele_num_per_channel +
-                              static_cast<uint64_t>(iter_C_G_idx % this->mode2_ub_iteration_num) * this->mode2_ub_capacity_ele;
+                              static_cast<uint64_t>(iter_C_G_idx / this->mode2_ub_iteration_num) *
+                                  this->ele_num_per_channel +
+                              static_cast<uint64_t>(iter_C_G_idx % this->mode2_ub_iteration_num) *
+                                  this->mode2_ub_capacity_ele;
             if (iter_C_G_idx % this->mode2_ub_iteration_num != this->mode2_ub_iteration_num - 1) {
                 CopyIn_x(offset, this->mode2_ub_capacity_ele);
                 compute_dgamma(channel_idx, iter_C_G_idx, temp1I, temp2I, offset, this->mode2_ub_capacity_ele);
@@ -560,8 +560,10 @@ private:
         out_queue_dgamma.FreeTensor(temp_2_local);
         for (int32_t iter_C_G_idx = 0; iter_C_G_idx < this->C_G * this->mode2_ub_iteration_num; iter_C_G_idx++) {
             uint64_t offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group +
-                              static_cast<uint64_t>(iter_C_G_idx / this->mode2_ub_iteration_num) * this->ele_num_per_channel +
-                              static_cast<uint64_t>(iter_C_G_idx % this->mode2_ub_iteration_num) * this->mode2_ub_capacity_ele;
+                              static_cast<uint64_t>(iter_C_G_idx / this->mode2_ub_iteration_num) *
+                                  this->ele_num_per_channel +
+                              static_cast<uint64_t>(iter_C_G_idx % this->mode2_ub_iteration_num) *
+                                  this->mode2_ub_capacity_ele;
             gamma = (float)gamma_local.GetValue(iter_C_G_idx / this->mode2_ub_iteration_num);
             beta = (float)beta_local.GetValue(iter_C_G_idx / this->mode2_ub_iteration_num);
             event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -570,8 +572,8 @@ private:
             if (iter_C_G_idx % this->mode2_ub_iteration_num != this->mode2_ub_iteration_num - 1) {
                 LocalTensor<float> temp_hxw_local = temp_queue_HXW.AllocTensor<float>();
                 LocalTensor<float> dy_new = out_tbuf_dy_new.Get<float>(ceil(this->mode2_ub_capacity_ele, T_per_block));
-                LocalTensor<float> dswish_res =
-                    out_tbuf_dswish.Get<float>(ceil(this->mode2_ub_capacity_ele, T_per_block));
+                LocalTensor<float> dswish_res = out_tbuf_dswish.Get<float>(
+                    ceil(this->mode2_ub_capacity_ele, T_per_block));
                 CopyIn_x(offset, this->mode2_ub_capacity_ele);
                 LocalTensor<float> x_local = in_queue_x.DeQue<float>();
                 LocalTensor<float> dy_local = in_queue_dy.DeQue<float>();
@@ -587,8 +589,8 @@ private:
                 Div(dswish_res, temp_hxw_local, dswish_res, this->mode2_ub_capacity_ele);
                 Mul(dy_new, dswish_res, dy_local, this->mode2_ub_capacity_ele);
                 Muls(dy_new, dy_new, this->rstd_scalar * gamma, this->mode2_ub_capacity_ele);
-                Adds_Muls_template(
-                    x_local, x_local, this->rstd_scalar * c1, this->rstd_scalar * c2, this->mode2_ub_capacity_ele);
+                Adds_Muls_template(x_local, x_local, this->rstd_scalar * c1, this->rstd_scalar * c2,
+                                   this->mode2_ub_capacity_ele);
                 Sub(temp_hxw_local, dy_new, x_local, this->mode2_ub_capacity_ele);
                 in_queue_x.FreeTensor(x_local);
                 in_queue_dy.FreeTensor(dy_local);
@@ -600,8 +602,8 @@ private:
             } else {
                 LocalTensor<float> temp_hxw_local = temp_queue_HXW.AllocTensor<float>();
                 LocalTensor<float> dy_new = out_tbuf_dy_new.Get<float>(ceil(this->mode2_ub_capacity_ele, T_per_block));
-                LocalTensor<float> dswish_res =
-                    out_tbuf_dswish.Get<float>(ceil(this->mode2_ub_capacity_ele, T_per_block));
+                LocalTensor<float> dswish_res = out_tbuf_dswish.Get<float>(
+                    ceil(this->mode2_ub_capacity_ele, T_per_block));
                 CopyIn_x(offset, this->mode2_ub_tail_num);
                 LocalTensor<float> x_local = in_queue_x.DeQue<float>();
                 LocalTensor<float> dy_local = in_queue_dy.DeQue<float>();
@@ -617,8 +619,8 @@ private:
                 Div(dswish_res, temp_hxw_local, dswish_res, this->mode2_ub_tail_num);
                 Mul(dy_new, dswish_res, dy_local, this->mode2_ub_tail_num);
                 Muls(dy_new, dy_new, this->rstd_scalar * gamma, this->mode2_ub_tail_num);
-                Adds_Muls_template(
-                    x_local, x_local, this->rstd_scalar * c1, this->rstd_scalar * c2, this->mode2_ub_tail_num);
+                Adds_Muls_template(x_local, x_local, this->rstd_scalar * c1, this->rstd_scalar * c2,
+                                   this->mode2_ub_tail_num);
                 Sub(temp_hxw_local, dy_new, x_local, this->mode2_ub_tail_num);
                 in_queue_x.FreeTensor(x_local);
                 in_queue_dy.FreeTensor(dy_local);
@@ -806,9 +808,8 @@ private:
         PipeBarrier<PIPE_ALL>();
     }
 
-    __aicore__ inline void Custom_DataCopy_In(
-        const LocalTensor<float>& _in, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<T>& gm, const uint64_t offset,
-        const uint32_t count)
+    __aicore__ inline void Custom_DataCopy_In(const LocalTensor<float>& _in, TBuf<TPosition::VECCALC>& tbuf,
+                                              const GlobalTensor<T>& gm, const uint64_t offset, const uint32_t count)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -822,9 +823,9 @@ private:
         }
     }
 
-    __aicore__ inline void Custom_DataCopy_In(
-        LocalTensor<float>& _in, const uint32_t ub_offset, TBuf<TPosition::VECCALC>& tbuf, GlobalTensor<T>& gm,
-        const uint64_t gm_offset, const uint32_t count)
+    __aicore__ inline void Custom_DataCopy_In(LocalTensor<float>& _in, const uint32_t ub_offset,
+                                              TBuf<TPosition::VECCALC>& tbuf, GlobalTensor<T>& gm,
+                                              const uint64_t gm_offset, const uint32_t count)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -838,8 +839,8 @@ private:
         }
     }
 
-    __aicore__ inline void Custom_DataCopy_Out(
-        LocalTensor<float>& _out, const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf, const uint32_t count)
+    __aicore__ inline void Custom_DataCopy_Out(LocalTensor<float>& _out, const uint64_t gm_offset,
+                                               TBuf<TPosition::VECCALC>& tbuf, const uint32_t count)
     {
         DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
         if constexpr (IsSameType<T, float>::value) {
@@ -855,9 +856,9 @@ private:
         }
     }
 
-    __aicore__ inline void Custom_DataCopy_Out(
-        LocalTensor<float>& _out, const uint32_t ub_offset, const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
-        const uint32_t count)
+    __aicore__ inline void Custom_DataCopy_Out(LocalTensor<float>& _out, const uint32_t ub_offset,
+                                               const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
+                                               const uint32_t count)
     {
         DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
         if constexpr (IsSameType<T, float>::value) {
@@ -873,9 +874,9 @@ private:
         }
     }
 
-    __aicore__ inline void Custom_DataCopy_Out(
-        LocalTensor<float>& _out, GlobalTensor<T>& gm_out, const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
-        const uint32_t count)
+    __aicore__ inline void Custom_DataCopy_Out(LocalTensor<float>& _out, GlobalTensor<T>& gm_out,
+                                               const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
+                                               const uint32_t count)
     {
         DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
         if constexpr (IsSameType<T, float>::value) {
@@ -891,9 +892,9 @@ private:
         }
     }
 
-    __aicore__ inline void fp32_dgamma_dbeta2GM(
-        uint32_t channel_idx, GlobalTensor<float>& dgamma_out, const LocalTensor<float>& dgamma_ub,
-        GlobalTensor<float>& dbeta_out, const LocalTensor<float>& dbeta_ub)
+    __aicore__ inline void fp32_dgamma_dbeta2GM(uint32_t channel_idx, GlobalTensor<float>& dgamma_out,
+                                                const LocalTensor<float>& dgamma_ub, GlobalTensor<float>& dbeta_out,
+                                                const LocalTensor<float>& dbeta_ub)
     {
         event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
@@ -915,10 +916,11 @@ private:
         SetAtomicNone();
     }
 
-    __aicore__ inline void non_fp32_dgamma_dbeta2GM(
-        uint32_t channel_idx, GlobalTensor<T>& dgamma_out, const LocalTensor<float>& dgamma_ub,
-        GlobalTensor<T>& dbeta_out, const LocalTensor<float>& dbeta_ub, TBuf<TPosition::VECCALC>& dgamma_tbuf,
-        TBuf<TPosition::VECCALC>& dbeta_tbuf)
+    __aicore__ inline void non_fp32_dgamma_dbeta2GM(uint32_t channel_idx, GlobalTensor<T>& dgamma_out,
+                                                    const LocalTensor<float>& dgamma_ub, GlobalTensor<T>& dbeta_out,
+                                                    const LocalTensor<float>& dbeta_ub,
+                                                    TBuf<TPosition::VECCALC>& dgamma_tbuf,
+                                                    TBuf<TPosition::VECCALC>& dbeta_tbuf)
     {
         event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
@@ -942,8 +944,8 @@ private:
         }
     }
 
-    __aicore__ inline void Mode_Selection(
-        int32_t task_idx, const LocalTensor<float>& dgamma_ub, const LocalTensor<float>& dbeta_ub)
+    __aicore__ inline void Mode_Selection(int32_t task_idx, const LocalTensor<float>& dgamma_ub,
+                                          const LocalTensor<float>& dbeta_ub)
     {
         uint32_t outChannelIdx;
         constexpr uint32_t SPLIT_COUNT = 2;
@@ -953,8 +955,8 @@ private:
         } else if constexpr (!isDeterministic && !IsSameType<T, float>::value) {
             outChannelIdx = (task_idx % this->G) * this->C_G;
             if (N == 1) {
-                non_fp32_dgamma_dbeta2GM(
-                    outChannelIdx, dgamma_gm, dgamma_ub, dbeta_gm, dbeta_ub, out_tbuf_dgamma_T, out_tbuf_dbeta_T);
+                non_fp32_dgamma_dbeta2GM(outChannelIdx, dgamma_gm, dgamma_ub, dbeta_gm, dbeta_ub, out_tbuf_dgamma_T,
+                                         out_tbuf_dbeta_T);
             } else {
                 fp32_dgamma_dbeta2GM(outChannelIdx, dgamma_workspace, dgamma_ub, dbeta_workspace, dbeta_ub);
             }
@@ -991,26 +993,25 @@ private:
         }
     }
 
-    __aicore__ inline void Adds_Muls_template(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, float adds_scalarValue,
-        float muls_scalarValue, const int32_t calCount)
+    __aicore__ inline void Adds_Muls_template(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                              float adds_scalarValue, float muls_scalarValue, const int32_t calCount)
     {
         Muls(dstLocal, srcLocal, muls_scalarValue, calCount);
         Adds(dstLocal, srcLocal, adds_scalarValue, calCount);
     }
 
-    __aicore__ inline void Adds_Muls_template(
-        const LocalTensor<float>& mul_dstLocal, const LocalTensor<float>& mul_srcLocal,
-        const LocalTensor<float>& add_dstLocal, const LocalTensor<float>& add_srcLocal, float adds_scalarValue,
-        float muls_scalarValue, const int32_t calCount)
+    __aicore__ inline void Adds_Muls_template(const LocalTensor<float>& mul_dstLocal,
+                                              const LocalTensor<float>& mul_srcLocal,
+                                              const LocalTensor<float>& add_dstLocal,
+                                              const LocalTensor<float>& add_srcLocal, float adds_scalarValue,
+                                              float muls_scalarValue, const int32_t calCount)
     {
         Muls(mul_dstLocal, mul_srcLocal, muls_scalarValue, calCount);
         Adds(add_dstLocal, add_srcLocal, adds_scalarValue, calCount);
     }
 
-    __aicore__ inline float ReduceSum_template(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
-        const int32_t calCount)
+    __aicore__ inline float ReduceSum_template(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                               const LocalTensor<float>& workLocal, const int32_t calCount)
     {
         float temp_value = 0;
         ReduceSum<float>(dstLocal, srcLocal, workLocal, calCount);
@@ -1018,9 +1019,10 @@ private:
         return temp_value;
     }
 
-    __aicore__ inline void Mul_ReduceSum_template(
-        const LocalTensor<float>& dstLocal1, const LocalTensor<float>& dstLocal2, const LocalTensor<float>& srcLocal,
-        const int32_t calCount, float& res1, float& res2)
+    __aicore__ inline void Mul_ReduceSum_template(const LocalTensor<float>& dstLocal1,
+                                                  const LocalTensor<float>& dstLocal2,
+                                                  const LocalTensor<float>& srcLocal, const int32_t calCount,
+                                                  float& res1, float& res2)
     {
         Mul(dstLocal1, srcLocal, dstLocal1, calCount);
         Mul(dstLocal2, srcLocal, dstLocal2, calCount);
@@ -1089,14 +1091,14 @@ private:
         }
     }
 
-    __aicore__ inline void reduce_axis_n_WSP2UB(
-        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint64_t workSpaceOffset,
-        uint32_t repeatTime, uint32_t count, const LocalTensor<float>& dstLocal)
+    __aicore__ inline void reduce_axis_n_WSP2UB(TQue<QuePosition::VECIN, 1>& vecInQue,
+                                                const GlobalTensor<float>& workspace, uint64_t workSpaceOffset,
+                                                uint32_t repeatTime, uint32_t count, const LocalTensor<float>& dstLocal)
     {
         LocalTensor<float> vecInLocal = vecInQue.AllocTensor<float>();
-        DataCopyExtParams copyParams_in{
-            (uint16_t)repeatTime, (uint16_t)(count * sizeof(float)), (uint16_t)((C - count) * sizeof(float)),
-            (uint16_t)((castEleNum - count) / float_per_block), 0};
+        DataCopyExtParams copyParams_in{(uint16_t)repeatTime, (uint16_t)(count * sizeof(float)),
+                                        (uint16_t)((C - count) * sizeof(float)),
+                                        (uint16_t)((castEleNum - count) / float_per_block), 0};
         DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
         DataCopyPad(vecInLocal, workspace[workSpaceOffset], copyParams_in, padParams);
         event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -1112,8 +1114,8 @@ private:
         vecInQue.FreeTensor(vecInLocal);
     }
 
-    __aicore__ inline void reduce_dgamma_dbeta_WSP2GM(
-        uint64_t start_offset, uint64_t channel_idx, uint32_t count, uint32_t reduce_axis_num)
+    __aicore__ inline void reduce_dgamma_dbeta_WSP2GM(uint64_t start_offset, uint64_t channel_idx, uint32_t count,
+                                                      uint32_t reduce_axis_num)
     {
         uint32_t repeatTime = 0;
         LocalTensor<float> dbeta_sum_Local = cal_queue_dbeta_reduce.AllocTensor<float>();
@@ -1129,14 +1131,12 @@ private:
                 repeatTime = reduce_axis_num % coreBatchParts == 0 ? coreBatchParts : reduce_axis_num % coreBatchParts;
             }
             if (dgamma_is_require) {
-                reduce_axis_n_WSP2UB(
-                    in_queue_dgamma_channel, dgamma_workspace, start_offset + loop_offset + channel_idx, repeatTime,
-                    count, dgamma_sum_Local);
+                reduce_axis_n_WSP2UB(in_queue_dgamma_channel, dgamma_workspace,
+                                     start_offset + loop_offset + channel_idx, repeatTime, count, dgamma_sum_Local);
             }
             if (dbeta_is_require) {
-                reduce_axis_n_WSP2UB(
-                    in_queue_dbeta_channel, dbeta_workspace, start_offset + loop_offset + channel_idx, repeatTime,
-                    count, dbeta_sum_Local);
+                reduce_axis_n_WSP2UB(in_queue_dbeta_channel, dbeta_workspace, start_offset + loop_offset + channel_idx,
+                                     repeatTime, count, dbeta_sum_Local);
             }
         }
         event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -1157,8 +1157,8 @@ private:
         cal_queue_dbeta_reduce.FreeTensor(dbeta_sum_Local);
     }
 
-    __aicore__ inline void reduce_cast_dgamma_dbeta_WSP2GM(
-        uint64_t channel_idx, uint32_t count, uint32_t reduce_axis_num)
+    __aicore__ inline void reduce_cast_dgamma_dbeta_WSP2GM(uint64_t channel_idx, uint32_t count,
+                                                           uint32_t reduce_axis_num)
     {
         uint32_t repeatTime = 0;
         LocalTensor<float> dbeta_sum_Local = cal_queue_dbeta_reduce.AllocTensor<float>();
@@ -1174,14 +1174,12 @@ private:
                 repeatTime = reduce_axis_num % coreBatchParts == 0 ? coreBatchParts : reduce_axis_num % coreBatchParts;
             }
             if (dgamma_is_require) {
-                reduce_axis_n_WSP2UB(
-                    in_queue_dgamma_channel, dgamma_workspace, loop_offset + channel_idx, repeatTime, count,
-                    dgamma_sum_Local);
+                reduce_axis_n_WSP2UB(in_queue_dgamma_channel, dgamma_workspace, loop_offset + channel_idx, repeatTime,
+                                     count, dgamma_sum_Local);
             }
             if (dbeta_is_require) {
-                reduce_axis_n_WSP2UB(
-                    in_queue_dbeta_channel, dbeta_workspace, loop_offset + channel_idx, repeatTime, count,
-                    dbeta_sum_Local);
+                reduce_axis_n_WSP2UB(in_queue_dbeta_channel, dbeta_workspace, loop_offset + channel_idx, repeatTime,
+                                     count, dbeta_sum_Local);
             }
         }
         PipeBarrier<PIPE_ALL>();

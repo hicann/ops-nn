@@ -19,8 +19,8 @@
 #define PERF_TEMPLATE_TILING_KEY 0
 #define SCALAR_TEMPLATE_TILING_KEY 1
 
-extern "C" __global__ __aicore__ void broadcast_gradient_args(GM_ADDR x1, GM_ADDR x2, GM_ADDR y1, GM_ADDR y2, 
-    GM_ADDR out_shape, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void broadcast_gradient_args(GM_ADDR x1, GM_ADDR x2, GM_ADDR y1, GM_ADDR y2,
+                                                              GM_ADDR out_shape, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

@@ -12,4 +12,3 @@
  * \file assert_infershape.cpp
  * \brief
  */
-

@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -35,13 +34,9 @@ using Ops::NN::Conv3dV2::Conv3DV2TilingDataV2;
 
 class QuantConv3DKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "QuantConv3DKernelTest SetUp." << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantConv3DKernelTest SetUp." << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "QuantConv3DKernelTest TearDown." << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantConv3DKernelTest TearDown." << std::endl; }
 };
 namespace {
 struct Conv3DShape {
@@ -56,7 +51,8 @@ struct Conv3DShape {
 uint64_t CalcOutputShape(const Conv3DShape& convShape)
 {
     return ((convShape.shape + convShape.pad1 + convShape.pad2 - convShape.dilation * (convShape.kernelSize - 1) - 1) /
-        convShape.stride + 1);
+                convShape.stride +
+            1);
 }
 
 size_t VectorReduceMul(const std::vector<uint64_t>& vec)
@@ -65,7 +61,7 @@ size_t VectorReduceMul(const std::vector<uint64_t>& vec)
 }
 
 void SetQuantConv3dTiling(Conv3DV2TilingDataV2* tiling, const std::vector<uint64_t>& inputShape,
-    const std::vector<uint64_t>& weightShape, const std::vector<uint64_t>& outputShape)
+                          const std::vector<uint64_t>& weightShape, const std::vector<uint64_t>& outputShape)
 {
     tiling->din = inputShape[DIM2];
     tiling->hin = inputShape[DIM3];
@@ -219,15 +215,12 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
 {
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     const uint64_t numBlocks = 1;
-    Conv3DShape convShapeD =
-        {inputShape[DIM2], static_cast<uint64_t>(0), static_cast<uint64_t>(0), static_cast<uint64_t>(1),
-         static_cast<uint64_t>(1), weightShape[DIM2]};
-    Conv3DShape convShapeH =
-        {inputShape[DIM3], static_cast<uint64_t>(0), static_cast<uint64_t>(0), static_cast<uint64_t>(1),
-         static_cast<uint64_t>(1), weightShape[DIM3]};
-    Conv3DShape convShapeW =
-        {inputShape[DIM4], static_cast<uint64_t>(0), static_cast<uint64_t>(0), static_cast<uint64_t>(1),
-         static_cast<uint64_t>(1), weightShape[DIM4]};
+    Conv3DShape convShapeD = {inputShape[DIM2],         static_cast<uint64_t>(0), static_cast<uint64_t>(0),
+                              static_cast<uint64_t>(1), static_cast<uint64_t>(1), weightShape[DIM2]};
+    Conv3DShape convShapeH = {inputShape[DIM3],         static_cast<uint64_t>(0), static_cast<uint64_t>(0),
+                              static_cast<uint64_t>(1), static_cast<uint64_t>(1), weightShape[DIM3]};
+    Conv3DShape convShapeW = {inputShape[DIM4],         static_cast<uint64_t>(0), static_cast<uint64_t>(0),
+                              static_cast<uint64_t>(1), static_cast<uint64_t>(1), weightShape[DIM4]};
     uint64_t dout = CalcOutputShape(convShapeD);
     uint64_t hout = CalcOutputShape(convShapeH);
     uint64_t wout = CalcOutputShape(convShapeW);
@@ -249,10 +242,9 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
     SetQuantConv3dTiling(tilingData, inputShape, weightShape, outputShape);
     SetUnionDataXt(tilingData);
 
-    auto quant_conv3d_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR scale, GM_ADDR bias, GM_ADDR offset,
-        GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::quant_conv3d<0, 0, 0, 0, 1, 0, 0, 0>(
-            x, filter, scale, bias, offset, y, workspace, tiling);
+    auto quant_conv3d_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR scale, GM_ADDR bias, GM_ADDR offset, GM_ADDR y,
+                                GM_ADDR workspace, GM_ADDR tiling) {
+        ::quant_conv3d<0, 0, 0, 0, 1, 0, 0, 0>(x, filter, scale, bias, offset, y, workspace, tiling);
     };
     ICPU_RUN_KF(quant_conv3d_func, numBlocks, input, weight, nullptr, nullptr, nullptr, output, workspace, tiling);
 

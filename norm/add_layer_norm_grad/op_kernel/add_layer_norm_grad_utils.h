@@ -25,11 +25,9 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
 namespace AddLayerNormGrad {
 using namespace AscendC;
@@ -49,7 +47,8 @@ constexpr uint32_t MASK_BIT_COUNT = 64;
 constexpr uint32_t FP32_SIZE = 4;
 constexpr uint32_t FP16_SIZE = 2;
 constexpr uint64_t DUPLICATE_FP32_MASK = 0x8080808080808080;
-constexpr uint64_t DUPLICATE_FP16_MASK = (static_cast<uint64_t>(0x80) << 8) | (static_cast<uint64_t>(0x80) << 24) | (static_cast<uint64_t>(0x80) << 40) | (static_cast<uint64_t>(0x80) << 56);
+constexpr uint64_t DUPLICATE_FP16_MASK = (static_cast<uint64_t>(0x80) << 8) | (static_cast<uint64_t>(0x80) << 24) |
+                                         (static_cast<uint64_t>(0x80) << 40) | (static_cast<uint64_t>(0x80) << 56);
 
 // define num_last_dim => reduce(gamma_axis)
 // define num_first_dim => reduce(input_axis except gamma_axis)
@@ -63,14 +62,8 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
 #endif
 }
 
-__aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
-{
-    return x < y ? x : y;
-}
-__aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
-{
-    return x > y ? x : y;
-}
+__aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
+__aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 __aicore__ inline uint32_t ROUND_UP(uint32_t x, uint32_t block_number)
 {
     if (block_number > 0) {
@@ -95,9 +88,8 @@ uint32_t FLOOR_DIV(uint32_t x, uint32_t y)
 }
 
 template <bool forAtomicAdd = false, typename T>
-__aicore__ inline void SafeDataCopy(
-    const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal, const int64_t& calCount,
-    bool recoverUbTailFormat = false)
+__aicore__ inline void SafeDataCopy(const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal,
+                                    const int64_t& calCount, bool recoverUbTailFormat = false)
 {
     constexpr int typeSize = sizeof(T);                                // 元素字节数
     constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize; // 32byte元素数
@@ -123,7 +115,8 @@ __aicore__ inline void SafeDataCopy(
             const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock; // 操作回退的block元素索引
             const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;   // 回退来源元素索引
             if constexpr (!forAtomicAdd) {
-                for (int i = 0; i < numElemsPerBlock; ++i) { // 将整个非对齐的尾块以一个block的size复制填充到前一个block中
+                for (int i = 0; i < numElemsPerBlock;
+                     ++i) { // 将整个非对齐的尾块以一个block的size复制填充到前一个block中
                     srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // 重造local buf
                 }
             } else {
@@ -142,8 +135,8 @@ __aicore__ inline void SafeDataCopy(
                 event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
-                DataCopy(
-                    srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx], numElemsPerBlock); // 还原用于回退的block内容
+                DataCopy(srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
+                         numElemsPerBlock); // 还原用于回退的block内容
             }
         }
     }
@@ -152,7 +145,7 @@ __aicore__ inline void SafeDataCopy(
 template <typename T>
 __aicore__ inline uint64_t* DuplicateWithMask(uint32_t maskCount, uint32_t maskCalcCount, uint64_t* mask)
 {
-    if(sizeof(T) == FP16_SIZE) {
+    if (sizeof(T) == FP16_SIZE) {
         mask[0] = DUPLICATE_FP16_MASK;
         mask[1] = DUPLICATE_FP16_MASK;
     } else {
@@ -165,7 +158,7 @@ __aicore__ inline uint64_t* DuplicateWithMask(uint32_t maskCount, uint32_t maskC
     if (sizeof(T) == FP16_SIZE) {
         mask[1] = mask[0];
     }
-    if(sizeof(T) == FP16_SIZE) {
+    if (sizeof(T) == FP16_SIZE) {
         if (maskCalcCount < MASK_BIT_COUNT) {
             mask[1] = 0;
             mask[0] &= (static_cast<uint64_t>(1) << maskCalcCount) - 1;
@@ -191,9 +184,9 @@ __aicore__ inline float ReduceSumCustom(const LocalTensor<float>& src_local, int
 }
 
 template <typename T>
-__aicore__ inline void DataCopyCustomWithSmallShape(
-    GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, const uint32_t processElem, const uint32_t offset,
-    const uint16_t blockCount)
+__aicore__ inline void DataCopyCustomWithSmallShape(GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor,
+                                                    const uint32_t processElem, const uint32_t offset,
+                                                    const uint16_t blockCount)
 {
     int32_t blockNumel = BLOCK_AlIGN / sizeof(T);
     int32_t blockNum = processElem / blockNumel;
@@ -201,8 +194,8 @@ __aicore__ inline void DataCopyCustomWithSmallShape(
     int32_t blkLength = blockNum * blockNumel;
     int32_t repeatTimes = blockCount / CONSTANT_EIGHT;
     int32_t repeatTimesTail = blockCount % CONSTANT_EIGHT;
-    bool canCompute = tail * blockCount > blockNumel;   //如果cancompute为false理论上必越界
-    if(tail == 0) {
+    bool canCompute = tail * blockCount > blockNumel; //如果cancompute为false理论上必越界
+    if (tail == 0) {
         return;
     } else {
         if (repeatTimes != 0) {
@@ -214,7 +207,8 @@ __aicore__ inline void DataCopyCustomWithSmallShape(
             uint64_t maskTail[2];
             DuplicateWithMask<T>(blockNumel - tail, repeatTimesTail * 32 / sizeof(T), maskTail);
             if (maskTail[0] != 0 || maskTail[1] != 0) {
-                Duplicate(srcTensor[repeatTimes * BLOCK_AlIGN / sizeof(T) * CONSTANT_EIGHT], static_cast<T>(0.0), maskTail, 1, 1, CONSTANT_EIGHT);
+                Duplicate(srcTensor[repeatTimes * BLOCK_AlIGN / sizeof(T) * CONSTANT_EIGHT], static_cast<T>(0.0),
+                          maskTail, 1, 1, CONSTANT_EIGHT);
             }
         }
         PipeBarrier<PIPE_ALL>();
@@ -224,15 +218,16 @@ __aicore__ inline void DataCopyCustomWithSmallShape(
         if (idx == blockCount - 1 && canCompute) {
             SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
-            for (uint32_t i = 0; i < blockNumel; i++) {   // 这里换别的搬运方法会卡死
-                T tensorValue = srcTensor.GetValue(idx * ROUND_UP(processElem, blockNumel) + processElem - blockNumel + i);
+            for (uint32_t i = 0; i < blockNumel; i++) { // 这里换别的搬运方法会卡死
+                T tensorValue = srcTensor.GetValue(idx * ROUND_UP(processElem, blockNumel) + processElem - blockNumel +
+                                                   i);
                 srcTensor.SetValue((idx - 1) * ROUND_UP(processElem, blockNumel) + i, tensorValue);
             }
             SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
             SetAtomicAdd<T>();
-            DataCopy(dstTensor[curOffset + processElem - blockNumel], srcTensor[(idx - 1) * ROUND_UP(processElem, blockNumel)],
-            blockNumel);
+            DataCopy(dstTensor[curOffset + processElem - blockNumel],
+                     srcTensor[(idx - 1) * ROUND_UP(processElem, blockNumel)], blockNumel);
             SetAtomicNone();
         } else {
             SetAtomicAdd<T>();
@@ -243,9 +238,8 @@ __aicore__ inline void DataCopyCustomWithSmallShape(
 }
 
 template <typename T>
-__aicore__ inline void DataCopyCustom(
-    GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, const uint32_t processElem, const uint32_t offset, bool is_float,
-    const uint16_t blockCount)
+__aicore__ inline void DataCopyCustom(GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, const uint32_t processElem,
+                                      const uint32_t offset, bool is_float, const uint16_t blockCount)
 {
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(T)), 0, 0};
@@ -266,23 +260,21 @@ __aicore__ inline void DataCopyCustom(
             SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
             for (uint32_t i = 0; i < blockNumel; i++) {
-                T tensorValue =
-                    srcTensor.GetValue(idx * ROUND_UP(processElem, blockNumel) + processElem - blockNumel + i);
+                T tensorValue = srcTensor.GetValue(idx * ROUND_UP(processElem, blockNumel) + processElem - blockNumel +
+                                                   i);
                 srcTensor.SetValue(idx * ROUND_UP(processElem, blockNumel) + i, tensorValue);
             }
             SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-            DataCopy(
-                dstTensor[curOffset + processElem - blockNumel], srcTensor[idx * ROUND_UP(processElem, blockNumel)],
-                blockNumel);
+            DataCopy(dstTensor[curOffset + processElem - blockNumel],
+                     srcTensor[idx * ROUND_UP(processElem, blockNumel)], blockNumel);
         }
     }
 #endif
 }
 
-__aicore__ inline void DataCopyAutomicAdd(
-    GlobalTensor<float> dstTensor, const LocalTensor<float> srcTensor, const uint32_t processElem,
-    const uint32_t offset, const uint16_t blockCount)
+__aicore__ inline void DataCopyAutomicAdd(GlobalTensor<float> dstTensor, const LocalTensor<float> srcTensor,
+                                          const uint32_t processElem, const uint32_t offset, const uint16_t blockCount)
 {
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(float)), 0, 0};
@@ -291,9 +283,8 @@ __aicore__ inline void DataCopyAutomicAdd(
     SafeDataCopy<true>(dstTensor[offset], srcTensor, blockCount * processElem);
 #endif
 }
-__aicore__ inline void InitGmData(
-    GlobalTensor<float> outputPdGammaGm, GlobalTensor<float> outputPdBetaGm, const uint32_t dDimNum,
-    LocalTensor<float> dbeta, uint32_t elemWithDInUBFp32)
+__aicore__ inline void InitGmData(GlobalTensor<float> outputPdGammaGm, GlobalTensor<float> outputPdBetaGm,
+                                  const uint32_t dDimNum, LocalTensor<float> dbeta, uint32_t elemWithDInUBFp32)
 {
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     InitOutput<float>(outputPdGammaGm, dDimNum, 0);
@@ -329,7 +320,8 @@ __aicore__ inline void InitGmData(
 }
 
 template <typename T>
-__aicore__ inline void InitSingleData(GlobalTensor<T> dstGmTensor, LocalTensor<T> srcLocalTensor, uint32_t elemWithDInUBFp32)
+__aicore__ inline void InitSingleData(GlobalTensor<T> dstGmTensor, LocalTensor<T> srcLocalTensor,
+                                      uint32_t elemWithDInUBFp32)
 {
 #if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     InitOutput<T>(dstGmTensor, elemWithDInUBFp32, 0);
@@ -359,6 +351,6 @@ __aicore__ inline void InitSingleData(GlobalTensor<T> dstGmTensor, LocalTensor<T
     PipeBarrier<PIPE_ALL>();
 #endif
 }
-}
+} // namespace AddLayerNormGrad
 
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_ADD_LAYER_NORM_GRAD_ADD_LAYER_NORM_GRAD_UTILS_H

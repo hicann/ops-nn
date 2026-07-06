@@ -68,10 +68,7 @@ constexpr uint64_t TILING_KEY_SIMT_1D = 300;
 constexpr uint64_t TILING_KEY_SIMT_2D = 400;
 constexpr uint64_t TILING_KEY_SIMT_EMPTY = 500;
 
-bool EmbeddingBagRegBaseTiling::IsCapable()
-{
-    return true;
-}
+bool EmbeddingBagRegBaseTiling::IsCapable() { return true; }
 
 ge::graphStatus EmbeddingBagRegBaseTiling::GetPlatformInfo()
 {
@@ -80,9 +77,7 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetPlatformInfo()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto aivNum = ascendcPlatform.GetCoreNumAiv();
     ubSize_ -= DCACHE_SIZE;
-    OP_CHECK_IF(
-        (aivNum <= 0), OP_LOGE(opName, "fail to get coreNum."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((aivNum <= 0), OP_LOGE(opName, "fail to get coreNum."), return ge::GRAPH_FAILED);
     totalCoreNum_ = aivNum;
 
     return ge::GRAPH_SUCCESS;
@@ -95,10 +90,9 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     auto weightShape = weight->GetStorageShape();
 
     OP_CHECK_IF(weightShape.GetDimNum() != DIM_TWO,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            opName, "weight", std::to_string(weightShape.GetDimNum()).c_str(),
-            "weight shape dim must be 2"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    opName, "weight", std::to_string(weightShape.GetDimNum()).c_str(), "weight shape dim must be 2"),
+                return ge::GRAPH_FAILED);
     auto numEmbeddings_ = weightShape.GetDim(0);
     embeddingDim_ = weightShape.GetDim(1);
     weightShapeSize_ = static_cast<uint64_t>(embeddingDim_ * numEmbeddings_);
@@ -145,10 +139,10 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     const std::string modeStr = std::string(attrs->GetAttrPointer<char>(MODE_INDEX));
     std::map<std::string, int64_t> modeMap = {{"sum", MDOE_SUM}, {"mean", MDOE_MEAN}, {"max", MDOE_MAX}};
     mode_ = modeMap[modeStr];
-    if (mode_ != MDOE_SUM){
+    if (mode_ != MDOE_SUM) {
         isNeedSampleWeight_ = 0;
     }
-    
+
     auto inclueLastOfstPtr = attrs->GetAttrPointer<bool>(ATTR_INCLUDE_LAST_OFFSET);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inclueLastOfstPtr);
     inclueLastOfst_ = *inclueLastOfstPtr;
@@ -156,7 +150,7 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     auto paddingIdxPtr = attrs->GetAttrPointer<int64_t>(ATTR_PADD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, paddingIdxPtr);
     paddingIdx_ = *paddingIdxPtr;
-    
+
     if (embeddingDim_ * weightTypeSize_ <= MAX_SIMT_EMBDDING_BYTES) {
         usedCoreNum_ = totalCoreNum_;
         isSimt_ = 1;
@@ -266,13 +260,13 @@ int64_t EmbeddingBagRegBaseTiling::GetOffsetAlignSize1D(int64_t offsetFactor) co
 int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize1D(int64_t weightRowFactor, int64_t weightDimFactor) const
 {
     /**
-    * inQueueWeight_ -> weightRowFactor * weightDimFactor * weightTypeSize_
-    * outQueueY_ -> weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT)
-    * maxIndicesOutBuf -> weightDimFactor * promoteTypeSize_
-    * maxIndicesCalcBuf_ -> weightRowFactor * promoteTypeSize_
-    * offset2BagBuf_ -> weightRowFactor * promoteTypeSize_
-    * preSampleWeightBuf -> weightRowFactor * weightTypeSize_
-    */
+     * inQueueWeight_ -> weightRowFactor * weightDimFactor * weightTypeSize_
+     * outQueueY_ -> weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT)
+     * maxIndicesOutBuf -> weightDimFactor * promoteTypeSize_
+     * maxIndicesCalcBuf_ -> weightRowFactor * promoteTypeSize_
+     * offset2BagBuf_ -> weightRowFactor * promoteTypeSize_
+     * preSampleWeightBuf -> weightRowFactor * weightTypeSize_
+     */
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     int64_t occupy = weightRowFactor * Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock) +
@@ -324,11 +318,11 @@ void EmbeddingBagRegBaseTiling::Compute1DFactor()
 int64_t EmbeddingBagRegBaseTiling::GetIndicesAlignSize2D(int64_t indicesFactor) const
 {
     /**
-    * indicesQue -> indicesFactor_ * indiceSize_ * indicesTypeSize_
-    * perSampleWeightQue -> indicesFactor_ * indiceSize_ * weightTypeSize_
-    * bagSizeBuf -> indicesFactor_ * promoteTypeSize_
-    * offset2BagBuf -> indiceSize_ * promoteTypeSize_
-    */
+     * indicesQue -> indicesFactor_ * indiceSize_ * indicesTypeSize_
+     * perSampleWeightQue -> indicesFactor_ * indiceSize_ * weightTypeSize_
+     * bagSizeBuf -> indicesFactor_ * promoteTypeSize_
+     * offset2BagBuf -> indiceSize_ * promoteTypeSize_
+     */
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     int64_t occupy = Ops::Base::CeilAlign(indicesFactor * indiceSize_ * indicesTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(indicesFactor_ * promoteTypeSize_, ubBlock) +
@@ -343,10 +337,10 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize2D(int64_t weightRowFactor,
 {
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     /**
-    * sum/mean:
-    * weightInQue -> weightRowFactor * weightDimFactor * weightTypeSize_
-    * weightOutQue -> weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT)
-    */
+     * sum/mean:
+     * weightInQue -> weightRowFactor * weightDimFactor * weightTypeSize_
+     * weightOutQue -> weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT)
+     */
     if (mode_ == MDOE_SUM && isNeedSampleWeight_ == 1) {
         /* persampleWeight时weightRowFactor为1 */
         int64_t occupy = Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
@@ -355,20 +349,20 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize2D(int64_t weightRowFactor,
     }
     if (mode_ == MDOE_SUM || mode_ == MDOE_MEAN) {
         int64_t occupy = weightRowFactor * Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
-                        Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock);
+                         Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock);
         return occupy;
     }
 
     /**
-    * max:
-    * weightInQue -> weightRowFactor * weightDimFactor * weightTypeSize_
-    * weightOutQue -> weightDimFactor * weightTypeSize_
-    * maxIndicesOutBuf + maxIndicesCalcBuf -> weightDimFactor * promoteTypeSize_
-    * compareMaskBuf -> weightDimFactor * uint8
-    */
+     * max:
+     * weightInQue -> weightRowFactor * weightDimFactor * weightTypeSize_
+     * weightOutQue -> weightDimFactor * weightTypeSize_
+     * maxIndicesOutBuf + maxIndicesCalcBuf -> weightDimFactor * promoteTypeSize_
+     * compareMaskBuf -> weightDimFactor * uint8
+     */
     int64_t occupy = weightRowFactor * Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
-                     Ops::Base::CeilAlign(weightDimFactor * promoteTypeSize_, ubBlock) * NUM_TWO + 
+                     Ops::Base::CeilAlign(weightDimFactor * promoteTypeSize_, ubBlock) * NUM_TWO +
                      Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_UINT8), ubBlock);
     return occupy;
 }
@@ -415,7 +409,7 @@ void EmbeddingBagRegBaseTiling::Compute2DFactor()
             resetSize = aviableSizeForIndices - GetIndicesAlignSize2D(indicesFactor_);
         }
         indicesFactor_ = indicesFactor_ == 0 ? 1 : indicesFactor_;
-    
+
         /* 确定indicesFactor_后更新weight的可用ub空间 */
         int64_t aviableSizeForWeight = halfUbSize - GetIndicesAlignSize2D(indicesFactor_);
         if (GetWeightAlignSize2D(1, colNormalNum_) > aviableSizeForWeight) {
@@ -479,16 +473,16 @@ void EmbeddingBagRegBaseTiling::TilingDataPrint() const
 ge::graphStatus EmbeddingBagRegBaseTiling::DoOpTiling()
 {
     OP_LOGD(opName, "EmbeddingBag DoOpTiling Enter.");
-    if (numBags_ <= 0){
+    if (numBags_ <= 0) {
         usedCoreNum_ = 1;
         return ge::GRAPH_SUCCESS;
     }
-    if (embeddingDim_ == 0){
+    if (embeddingDim_ == 0) {
         usedCoreNum_ = totalCoreNum_;
         SetTilingData();
         return ge::GRAPH_SUCCESS;
     }
-    
+
     AutoTiling();
     if (isNeedOffset_ == 1) {
         Compute1DFactor();
@@ -499,16 +493,12 @@ ge::graphStatus EmbeddingBagRegBaseTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus EmbeddingBagRegBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
+ge::graphStatus EmbeddingBagRegBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t EmbeddingBagRegBaseTiling::GetTilingKey() const
 {
     uint64_t tilingKey = 0;
-    if (embeddingDim_ == 0){
+    if (embeddingDim_ == 0) {
         tilingKey = TILING_KEY_SIMT_EMPTY;
         tilingKey += (offsetsType_ == indicesType_) ? 0 : OFFSET_DIFF_TYPE_LARGE;
         auto computeSize = std::max(indicesNumel_, numBags_);
@@ -528,7 +518,7 @@ uint64_t EmbeddingBagRegBaseTiling::GetTilingKey() const
         return tilingKey;
     }
 
-    tilingKey = (isNeedOffset_  == 1 ? TILING_KEY_INDICES_1D : TILING_KEY_INDICES_2D);
+    tilingKey = (isNeedOffset_ == 1 ? TILING_KEY_INDICES_1D : TILING_KEY_INDICES_2D);
     if (offsetsType_ != indicesType_) {
         tilingKey += 1;
     }
@@ -552,9 +542,8 @@ ge::graphStatus EmbeddingBagRegBaseTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_CHECK_IF(
-        (res != ge::GRAPH_SUCCESS), OP_LOGE(opName, "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(opName, "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
+                return ge::GRAPH_FAILED);
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;

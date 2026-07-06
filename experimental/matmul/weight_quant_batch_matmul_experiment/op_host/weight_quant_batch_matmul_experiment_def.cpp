@@ -17,7 +17,7 @@
 namespace ops {
 class WeightQuantBatchMatmulExperiment : public OpDef {
 public:
-    explicit WeightQuantBatchMatmulExperiment(const char *name) : OpDef(name)
+    explicit WeightQuantBatchMatmulExperiment(const char* name) : OpDef(name)
     {
         this->Input("x").ParamType(REQUIRED).DataType({ge::DT_FLOAT16}).Format({ge::FORMAT_ND});
         this->Input("weight").ParamType(REQUIRED).DataType({ge::DT_INT4}).Format({ge::FORMAT_ND});
@@ -27,4 +27,4 @@ public:
     }
 };
 OP_ADD(WeightQuantBatchMatmulExperiment);
-}  // namespace ops
+} // namespace ops

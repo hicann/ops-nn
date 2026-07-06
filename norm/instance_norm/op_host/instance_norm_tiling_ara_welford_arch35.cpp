@@ -40,12 +40,13 @@ bool InstanceNormARAWelfordTiling::IsCapable()
     if (format != FORMAT_NHWC && format != FORMAT_NDHWC) {
         return false;
     }
-    
+
     return true;
 }
 
 // tileA0Len must be aligned
-ge::graphStatus InstanceNormARAWelfordTiling::BinaryAddTiling(int64_t elemSize, int64_t gammaElemSize, int64_t tileA0Len)
+ge::graphStatus InstanceNormARAWelfordTiling::BinaryAddTiling(int64_t elemSize, int64_t gammaElemSize,
+                                                              int64_t tileA0Len)
 {
     // rFactor
     int64_t saveMeanVarianceSize = tileA0Len * static_cast<int64_t>(sizeof(float)) * MEAN_VAR_BUFFER_NUM;
@@ -57,14 +58,13 @@ ge::graphStatus InstanceNormARAWelfordTiling::BinaryAddTiling(int64_t elemSize, 
     int64_t tmpCountPerR = sizeof(float);
 
     int64_t ubSizeCanUse = aicoreParams_.ubSize - tmpRstdSize - saveMeanVarianceSize - betaGammaSize;
-    OP_CHECK_IF(
-        ubSizeCanUse <= 0, OP_LOGI(context_->GetNodeName(), "ubSizeCanUse is not a positive number."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(ubSizeCanUse <= 0, OP_LOGI(context_->GetNodeName(), "ubSizeCanUse is not a positive number."),
+                return ge::GRAPH_PARAM_INVALID);
     int64_t rFactor = ubSizeCanUse / (xSizePerR + ySizePerR + tmpMeanM2PerR + tmpCountPerR);
     rFactor = Ops::Base::FloorAlign(rFactor, ARA_BINARY_ADD_THRESHOLD);
     OP_CHECK_IF(rFactor == 0, OP_LOGI(context_->GetNodeName(), "rfactor is 0."), return ge::GRAPH_PARAM_INVALID);
-    int64_t rFactorAlign =
-        Ops::Base::CeilAlign(static_cast<int64_t>(rFactor * sizeof(float)), ubBlockSize) / sizeof(float);
+    int64_t rFactorAlign = Ops::Base::CeilAlign(static_cast<int64_t>(rFactor * sizeof(float)), ubBlockSize) /
+                           sizeof(float);
     if ((rFactor != rFactorAlign) &&
         ((rFactor * (xSizePerR + ySizePerR + tmpMeanM2PerR) + rFactorAlign * tmpCountPerR) > ubSizeCanUse)) {
         rFactor -= ARA_BINARY_ADD_THRESHOLD;
@@ -127,7 +127,7 @@ ge::graphStatus InstanceNormARAWelfordTiling::DoOpTiling()
     int64_t totalTiles = a1 * a0Outer;
     int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.blockDim));
     blockNum_ = Ops::Base::CeilDiv(totalTiles, tilesPerCore);
-    
+
     td_.a0Outer = a0Outer;
     td_.tileA0Tail = tileA0Tail;
     td_.totalTiles = totalTiles;
@@ -142,10 +142,7 @@ ge::graphStatus InstanceNormARAWelfordTiling::DoOpTiling()
     return BinaryAddTiling(elemSize, gammaElemSize, tileA0Len);
 }
 
-uint64_t InstanceNormARAWelfordTiling::GetTilingKey() const
-{
-    return TILINGKEY_ARA_WELFORD;
-}
+uint64_t InstanceNormARAWelfordTiling::GetTilingKey() const { return TILINGKEY_ARA_WELFORD; }
 
 ge::graphStatus InstanceNormARAWelfordTiling::PostTiling()
 {
@@ -154,20 +151,17 @@ ge::graphStatus InstanceNormARAWelfordTiling::PostTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(td_) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(td_),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(td_), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&td_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(td_));
     return ge::GRAPH_SUCCESS;
 }

@@ -30,14 +30,10 @@ namespace ge {
  * The format support ND. Shape support 1D ~ 8D. Has the same dtype adn shape as input "x".
  */
 REG_OP(ForeachCopy)
-    .DYNAMIC_INPUT(
-        x, TensorType(
-               {DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_UINT32, DT_INT64,
-                DT_DOUBLE, DT_BOOL}))
-    .DYNAMIC_OUTPUT(
-        y, TensorType(
-               {DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_UINT32, DT_INT64,
-                DT_DOUBLE, DT_BOOL}))
+    .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16,
+                                  DT_UINT32, DT_INT64, DT_DOUBLE, DT_BOOL}))
+    .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16,
+                                   DT_UINT32, DT_INT64, DT_DOUBLE, DT_BOOL}))
     .OP_END_FACTORY_REG(ForeachCopy)
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_COPY_H_

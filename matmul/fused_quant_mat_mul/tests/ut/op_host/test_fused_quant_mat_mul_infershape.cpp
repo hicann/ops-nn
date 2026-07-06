@@ -16,9 +16,7 @@
 #include "register/op_impl_registry.h"
 
 namespace {
-class TestFusedQuantMatmulInferShape : public testing::Test
-{
-};
+class TestFusedQuantMatmulInferShape : public testing::Test {};
 
 TEST_F(TestFusedQuantMatmulInferShape, InferShape)
 {
@@ -30,22 +28,20 @@ TEST_F(TestFusedQuantMatmulInferShape, InferShape)
     gert::StorageShape x2ScaleShape = {{1664}, {1664}};
     gert::StorageShape outputShape;
 
-    int64_t dtype = static_cast<int64_t> (ge::DT_FLOAT16);
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(11, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-            .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape,
-                          nullptr, nullptr, nullptr, nullptr, nullptr, nullptr})
-            .OutputShapes({&outputShape})
-            .NodeAttrs(
-                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                 {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                 {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                 {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                 {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                 {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>("swiglu")}})
-            .Build();
+    int64_t dtype = static_cast<int64_t>(ge::DT_FLOAT16);
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape, nullptr, nullptr, nullptr,
+                                    nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                  {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>("swiglu")}})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -62,22 +58,20 @@ TEST_F(TestFusedQuantMatmulInferShape, dimNumNot3)
     gert::StorageShape x2ScaleShape = {{1664}, {1664}};
     gert::StorageShape outputShape;
 
-    int64_t dtype = static_cast<int64_t> (ge::DT_FLOAT16);
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(11, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-            .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape,
-                          nullptr, nullptr, nullptr, nullptr, nullptr, nullptr})
-            .OutputShapes({&outputShape})
-            .NodeAttrs(
-                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                 {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                 {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                 {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                 {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                 {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>("swiglu")}})
-            .Build();
+    int64_t dtype = static_cast<int64_t>(ge::DT_FLOAT16);
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape, nullptr, nullptr, nullptr,
+                                    nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                  {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>("swiglu")}})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
@@ -92,23 +86,21 @@ TEST_F(TestFusedQuantMatmulInferShape, highestDimNot2)
     gert::StorageShape x2ScaleShape = {{1664}, {1664}};
     gert::StorageShape outputShape;
 
-    int64_t dtype = static_cast<int64_t> (ge::DT_FLOAT16);
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(11, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-            .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape,
-                          nullptr, nullptr, nullptr, nullptr, nullptr, nullptr})
-            .OutputShapes({&outputShape})
-            .NodeAttrs(
-                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                 {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                 {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                 {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                 {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                 {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>("swiglu")}})
-            .Build();
+    int64_t dtype = static_cast<int64_t>(ge::DT_FLOAT16);
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape, nullptr, nullptr, nullptr,
+                                    nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                  {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>("swiglu")}})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
-}
+} // namespace

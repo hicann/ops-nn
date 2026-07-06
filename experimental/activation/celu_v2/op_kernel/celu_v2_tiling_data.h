@@ -38,4 +38,4 @@ struct CeluV2TilingData {
     float alpha;
     float invAlpha;
 };
-#endif  
+#endif

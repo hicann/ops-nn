@@ -26,10 +26,7 @@ static const std::set<ge::DataType> SUPPORTED_DTYPE = {ge::DT_FLOAT, ge::DT_FLOA
                                                        ge::DT_BOOL,  ge::DT_BF16,    ge::DT_INT16, ge::DT_UINT16,
                                                        ge::DT_INT32, ge::DT_UINT32,  ge::DT_INT64, ge::DT_UINT64};
 
-bool RepeatInterleaveBaseTiling::IsCapable()
-{
-    return true;
-}
+bool RepeatInterleaveBaseTiling::IsCapable() { return true; }
 ge::graphStatus RepeatInterleaveBaseTiling::GetPlatformInfo()
 {
     auto compileInfo = reinterpret_cast<const RepeatInterleaveCompileInfo*>(context_->GetCompileInfo());
@@ -82,20 +79,21 @@ ge::graphStatus RepeatInterleaveBaseTiling::CheckShape()
     int64_t outputDimMerge = MergeDimExceptAxis(yShape_, axis_);
 
     if ((!isDefaultAxis_) && (axis_ < 0 || axis_ >= static_cast<int64_t>(inputShape_.GetDimNum()))) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_).c_str(), "axis is invalid");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_).c_str(),
+                                              "axis is invalid");
         return ge::GRAPH_FAILED;
     }
 
     if (inputShape_.GetDim(axis_) == 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "Dimension value of input x at axis", "0", "the input x shape of axis dim must be nonzero");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "Dimension value of input x at axis", "0",
+                                              "the input x shape of axis dim must be nonzero");
         return ge::GRAPH_FAILED;
     }
 
     if (repeatShape_.GetDimNum() > 1) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "repeats", std::to_string(repeatShape_.GetDimNum()).c_str(),
-            "the input repeats should be 1D tensor or a scalar");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "repeats",
+                                              std::to_string(repeatShape_.GetDimNum()).c_str(),
+                                              "the input repeats should be 1D tensor or a scalar");
         return ge::GRAPH_FAILED;
     }
 
@@ -118,7 +116,8 @@ ge::graphStatus RepeatInterleaveBaseTiling::CheckShape()
 
     if ((!isDefaultAxis_) && (inputDimMerge != outputDimMerge)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x, y", (std::to_string(inputDimMerge) + ", " + std::to_string(outputDimMerge)).c_str(),
+            context_->GetNodeName(), "x, y",
+            (std::to_string(inputDimMerge) + ", " + std::to_string(outputDimMerge)).c_str(),
             "the output shape is invalid when axis isn't none");
         return ge::GRAPH_FAILED;
     }
@@ -174,20 +173,11 @@ ge::graphStatus RepeatInterleaveBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RepeatInterleaveBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RepeatInterleaveBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus RepeatInterleaveBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RepeatInterleaveBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t RepeatInterleaveBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t RepeatInterleaveBaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus RepeatInterleaveBaseTiling::GetWorkspaceSize()
 {
@@ -199,10 +189,7 @@ ge::graphStatus RepeatInterleaveBaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RepeatInterleaveBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RepeatInterleaveBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 void RepeatInterleaveBaseTiling::MergDimForTensor()
 {

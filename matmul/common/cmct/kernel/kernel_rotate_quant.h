@@ -160,9 +160,8 @@ public:
             blockMmadOp.Init(problemShape_, bs.GetTileL1Shape(), bs.GetTileL0Shape());
         }
         if ASCEND_IS_AIV {
-            epilogueOp.Init(
-                params.epilogueParams, problemShape_, alpha_, needClamp_, bs.GetAxis(), bs.GetRoundMode(),
-                bs.GetScaleAlg(), bs.GetDstTypeMax(), bs.GetInvDstTypeMax());
+            epilogueOp.Init(params.epilogueParams, problemShape_, alpha_, needClamp_, bs.GetAxis(), bs.GetRoundMode(),
+                            bs.GetScaleAlg(), bs.GetDstTypeMax(), bs.GetInvDstTypeMax());
         }
 
         auto ubLocal = epilogueOp.GetTensor();
@@ -178,8 +177,8 @@ public:
                 }
                 blockMmadOp.template operator()<AscendC::LocalTensor<CType>>(
                     ubLocal, aGlobal_[offset * k_], rotGlobal_[rotOffset], blockShape, tileIdx < blockNum);
-                CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                    (roundIdx & 1) == 0 ? SYNC_AIC_AIV_FLAG : SYNC_AIC_AIV_FLAG + FLAG_ID_MAX);
+                CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>((roundIdx & 1) == 0 ? SYNC_AIC_AIV_FLAG :
+                                                                                      SYNC_AIC_AIV_FLAG + FLAG_ID_MAX);
             }
             if ASCEND_IS_AIV {
                 if ((roundIdx & 1) == AscendC::GetSubBlockIdx()) {

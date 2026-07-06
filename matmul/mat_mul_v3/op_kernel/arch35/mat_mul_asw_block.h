@@ -74,7 +74,7 @@ class MatmulAswBlock {
 public:
     __aicore__ inline MatmulAswBlock() {}
     template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
-    __aicore__ inline void Init(const void *tilingData);
+    __aicore__ inline void Init(const void* tilingData);
     template <class A_TYPE, class B_TYPE>
     __aicore__ inline void LoadBalanceInit();
     __aicore__ inline uint64_t GetNewBlockIdx(uint64_t roundIdx);
@@ -85,34 +85,32 @@ public:
     __aicore__ inline void CalcGMOffset();
     template <class A_TYPE, class B_TYPE>
     __aicore__ inline void CalcSplitKGMOffset(uint64_t splitKIndex);
-    template <
-        typename IndexType, typename BaseNormCntType, typename BlockBaseType, typename BaseTailMainType,
-        typename SplitAddrOffsetType>
-    __aicore__ inline uint64_t CalculateOffset(
-        IndexType cntIndex, BaseNormCntType baseNormCnt, BlockBaseType blockBase, BaseTailMainType baseTailMain,
-        SplitAddrOffsetType splitAddrOffset);
+    template <typename IndexType, typename BaseNormCntType, typename BlockBaseType, typename BaseTailMainType,
+              typename SplitAddrOffsetType>
+    __aicore__ inline uint64_t CalculateOffset(IndexType cntIndex, BaseNormCntType baseNormCnt, BlockBaseType blockBase,
+                                               BaseTailMainType baseTailMain, SplitAddrOffsetType splitAddrOffset);
 
 public:
     AswBlockOffset offset_;
     AswBlockArgs params_;
-    const MatMulV3TilingData *matmulTilingData_;
+    const MatMulV3TilingData* matmulTilingData_;
 };
 
 template <class A_TYPE, class B_TYPE>
 __aicore__ inline void MatmulAswBlock::LoadBalanceInit()
 {
     params_.mBaseTailMain = params_.mBaseTailSplitCnt == 1UL ? params_.mBaseTail :
-        static_cast<uint64_t>(matmulTilingData_->mTailMain);
+                                                               static_cast<uint64_t>(matmulTilingData_->mTailMain);
     params_.mBaseTailLast = params_.mBaseTail - (params_.mBaseTailSplitCnt - 1UL) * params_.mBaseTailMain;
     params_.nBaseTailMain = params_.nBaseTailSplitCnt == 1UL ? params_.nBaseTail :
-        static_cast<uint64_t>(matmulTilingData_->nTailMain);
+                                                               static_cast<uint64_t>(matmulTilingData_->nTailMain);
     params_.nBaseTailLast = params_.nBaseTail - (params_.nBaseTailSplitCnt - 1UL) * params_.nBaseTailMain;
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
-__aicore__ inline void MatmulAswBlock::Init(const void *tilingData)
+__aicore__ inline void MatmulAswBlock::Init(const void* tilingData)
 {
-    matmulTilingData_ = static_cast<const MatMulV3TilingData *>(tilingData);
+    matmulTilingData_ = static_cast<const MatMulV3TilingData*>(tilingData);
     params_.index = 0UL;
     params_.singleCoreM = 0UL;
     params_.singleCoreN = 0UL;
@@ -135,8 +133,8 @@ __aicore__ inline void MatmulAswBlock::Init(const void *tilingData)
     LoadBalanceInit<A_TYPE, B_TYPE>();
     params_.round = (params_.totalCnt + matmulTilingData_->tCubeTiling.usedCoreNum - 1UL) /
                     matmulTilingData_->tCubeTiling.usedCoreNum;
-    params_.mainWindow =
-        AscendC::Std::min(static_cast<uint64_t>(matmulTilingData_->aswWindowLen), params_.mCnt); // 主划窗m方向的块个数
+    params_.mainWindow = AscendC::Std::min(static_cast<uint64_t>(matmulTilingData_->aswWindowLen),
+                                           params_.mCnt);                     // 主划窗m方向的块个数
     params_.mainRow = params_.mCnt / params_.mainWindow - 1UL;                // 主划窗数量
     params_.tailWindow = params_.mCnt - params_.mainRow * params_.mainWindow; // 尾划窗m方向的块个数
 
@@ -195,14 +193,14 @@ __aicore__ inline void MatmulAswBlock::UpdateBlockParams(uint64_t roundIdx)
 {
     params_.singleCoreM = params_.blockBaseM;
     if (params_.mCntIndex >= params_.mBaseNormCnt) {
-        params_.singleCoreM =
-            (params_.mCntIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast : params_.mBaseTailMain;
+        params_.singleCoreM = (params_.mCntIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast :
+                                                                            params_.mBaseTailMain;
     }
 
     params_.singleCoreN = params_.blockBaseN;
     if (params_.nCntIndex >= params_.nBaseNormCnt) {
-        params_.singleCoreN =
-            (params_.nCntIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast : params_.nBaseTailMain;
+        params_.singleCoreN = (params_.nCntIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast :
+                                                                            params_.nBaseTailMain;
     }
 
     if (roundIdx == params_.round - 1UL && (params_.mBaseSplitCnt != 1UL || params_.nBaseSplitCnt != 1UL)) {
@@ -236,12 +234,11 @@ __aicore__ inline void MatmulAswBlock::UpdateBlockParams(uint64_t roundIdx)
     }
 }
 
-template <
-    typename IndexType, typename BaseNormCntType, typename BlockBaseType, typename BaseTailMainType,
-    typename SplitAddrOffsetType>
-__aicore__ inline uint64_t MatmulAswBlock::CalculateOffset(
-    IndexType cntIndex, BaseNormCntType baseNormCnt, BlockBaseType blockBase, BaseTailMainType baseTailMain,
-    SplitAddrOffsetType splitAddrOffset)
+template <typename IndexType, typename BaseNormCntType, typename BlockBaseType, typename BaseTailMainType,
+          typename SplitAddrOffsetType>
+__aicore__ inline uint64_t MatmulAswBlock::CalculateOffset(IndexType cntIndex, BaseNormCntType baseNormCnt,
+                                                           BlockBaseType blockBase, BaseTailMainType baseTailMain,
+                                                           SplitAddrOffsetType splitAddrOffset)
 {
     if (cntIndex > baseNormCnt) {
         return baseNormCnt * blockBase + (cntIndex - baseNormCnt) * baseTailMain + splitAddrOffset;
@@ -252,10 +249,10 @@ __aicore__ inline uint64_t MatmulAswBlock::CalculateOffset(
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
 __aicore__ inline void MatmulAswBlock::CalcGMOffset()
 {
-    uint64_t mOffset = CalculateOffset(
-        params_.mCntIndex, params_.mBaseNormCnt, params_.blockBaseM, params_.mBaseTailMain, params_.mSplitAddrOffset);
-    uint64_t nOffset = CalculateOffset(
-        params_.nCntIndex, params_.nBaseNormCnt, params_.blockBaseN, params_.nBaseTailMain, params_.nSplitAddrOffset);
+    uint64_t mOffset = CalculateOffset(params_.mCntIndex, params_.mBaseNormCnt, params_.blockBaseM,
+                                       params_.mBaseTailMain, params_.mSplitAddrOffset);
+    uint64_t nOffset = CalculateOffset(params_.nCntIndex, params_.nBaseNormCnt, params_.blockBaseN,
+                                       params_.nBaseTailMain, params_.nSplitAddrOffset);
     if constexpr (A_TYPE::isTrans) {
         offset_.offsetA = mOffset;
     } else {
@@ -287,10 +284,10 @@ __aicore__ inline void MatmulAswBlock::CalcSplitKGMOffset(uint64_t splitKIndex)
     if (params_.splitKRound == 1) {
         return;
     }
-    uint64_t mOffset = CalculateOffset(
-        params_.mCntIndex, params_.mBaseNormCnt, params_.blockBaseM, params_.mBaseTailMain, params_.mSplitAddrOffset);
-    uint64_t nOffset = CalculateOffset(
-        params_.nCntIndex, params_.nBaseNormCnt, params_.blockBaseN, params_.nBaseTailMain, params_.nSplitAddrOffset);
+    uint64_t mOffset = CalculateOffset(params_.mCntIndex, params_.mBaseNormCnt, params_.blockBaseM,
+                                       params_.mBaseTailMain, params_.mSplitAddrOffset);
+    uint64_t nOffset = CalculateOffset(params_.nCntIndex, params_.nBaseNormCnt, params_.blockBaseN,
+                                       params_.nBaseTailMain, params_.nSplitAddrOffset);
     if constexpr (A_TYPE::isTrans) {
         offset_.offsetA = mOffset + splitKIndex * params_.singleCoreSplitK * matmulTilingData_->tCubeTiling.M;
     } else {
@@ -304,4 +301,3 @@ __aicore__ inline void MatmulAswBlock::CalcSplitKGMOffset(uint64_t splitKIndex)
 }
 
 } // namespace MatmulV3Advanced
-

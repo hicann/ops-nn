@@ -45,13 +45,14 @@ struct CubeTilingCommonParseInfo {
  */
 class InputShapeInfo {
 public:
-    InputShapeInfo(const std::vector<int64_t> &inputXShape, const std::string &inputXFormat)
-            : xShape(inputXShape), xFormat(inputXFormat){}
-    ~InputShapeInfo(){}
+    InputShapeInfo(const std::vector<int64_t>& inputXShape, const std::string& inputXFormat)
+        : xShape(inputXShape), xFormat(inputXFormat)
+    {}
+    ~InputShapeInfo() {}
     std::vector<int64_t> xShape;
     std::string xFormat = "";
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // OPS_BUILT_IN_OP_TILING_CUBE_TILING_H_
+#endif // OPS_BUILT_IN_OP_TILING_CUBE_TILING_H_

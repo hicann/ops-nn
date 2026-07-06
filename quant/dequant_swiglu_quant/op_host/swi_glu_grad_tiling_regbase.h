@@ -23,13 +23,15 @@ namespace optiling {
 
 class GluBaseTiling4RegBase : public TilingBaseClass {
 public:
-    explicit GluBaseTiling4RegBase(gert::TilingContext *context) : TilingBaseClass(context), opName_(context->GetNodeName()) {}
+    explicit GluBaseTiling4RegBase(gert::TilingContext* context)
+        : TilingBaseClass(context), opName_(context->GetNodeName())
+    {}
 
 protected:
-    constexpr static int64_t UB_RESERVED_BUFF {0};
-    constexpr static int64_t BASE_BLOCK_SIZE {8192};
-    constexpr static int64_t MOVE_ALIGN_LIMIT_BYTE {1024};
-    constexpr static int64_t BASE_BLOCK_COPY_ALIGN {512};
+    constexpr static int64_t UB_RESERVED_BUFF{0};
+    constexpr static int64_t BASE_BLOCK_SIZE{8192};
+    constexpr static int64_t MOVE_ALIGN_LIMIT_BYTE{1024};
+    constexpr static int64_t BASE_BLOCK_COPY_ALIGN{512};
 
     bool IsCapable() override;
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
@@ -51,19 +53,19 @@ protected:
 
 private:
     const std::string opName_;
-    uint64_t ubSize_ {0};
+    uint64_t ubSize_{0};
     GluBaseTilingData tilingData_;
-    int64_t rowTotalNum_ {0};
-    int64_t colTotalNum_ {0};
-    int64_t rowNormalNum_ {0};
-    int64_t colNormalNum_ {0};
-    int64_t rowTailNum_ {0};
-    int64_t colTailNum_ {0};
-    uint64_t usedCoreNum_ {0};
-    uint32_t rowTileNum_ {0};
-    uint32_t colTileNum_ {0};
-    ge::DataType dataType_ {DT_FLOAT};
-    uint64_t dataSize_ {0};
+    int64_t rowTotalNum_{0};
+    int64_t colTotalNum_{0};
+    int64_t rowNormalNum_{0};
+    int64_t colNormalNum_{0};
+    int64_t rowTailNum_{0};
+    int64_t colTailNum_{0};
+    uint64_t usedCoreNum_{0};
+    uint32_t rowTileNum_{0};
+    uint32_t colTileNum_{0};
+    ge::DataType dataType_{DT_FLOAT};
+    uint64_t dataSize_{0};
 
     bool CalcShapeTo2D(const gert::Shape& inShape, const int64_t splitDim);
     bool CheckShapeValid(const gert::Shape& gradYShape, const gert::Shape& xShape, const int64_t dim);

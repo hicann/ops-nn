@@ -18,39 +18,36 @@
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status ParseParamsNpuGroupNormSilu(const Message *op_src, ge::Operator &op_dest) {
-  const NodeProto *node = dynamic_cast<const NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  int group = 0;
-  float eps = 0.00001;
-
-  for (auto attr : node->attribute()) {
-    if ((attr.name() == "group" || attr.name() == "num_groups") && attr.type() == ge::onnx::AttributeProto::INT) {
-      group = attr.i();
-    } else if (attr.name() == "eps" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
-      eps = attr.f();
+static Status ParseParamsNpuGroupNormSilu(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
-  op_dest.SetAttr("num_groups", group);
-  op_dest.SetAttr("eps", eps);
-  return SUCCESS;
+
+    int group = 0;
+    float eps = 0.00001;
+
+    for (auto attr : node->attribute()) {
+        if ((attr.name() == "group" || attr.name() == "num_groups") && attr.type() == ge::onnx::AttributeProto::INT) {
+            group = attr.i();
+        } else if (attr.name() == "eps" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
+            eps = attr.f();
+        }
+    }
+    op_dest.SetAttr("num_groups", group);
+    op_dest.SetAttr("eps", eps);
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("GroupNormSilu")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("npu::1::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::11::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::12::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::13::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::14::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::15::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::16::NPUGroupNormSilu"),
-                   ge::AscendString("ai.onnx::17::NPUGroupNormSilu"),
+    .OriginOpType({ge::AscendString("npu::1::NPUGroupNormSilu"), ge::AscendString("ai.onnx::11::NPUGroupNormSilu"),
+                   ge::AscendString("ai.onnx::12::NPUGroupNormSilu"), ge::AscendString("ai.onnx::13::NPUGroupNormSilu"),
+                   ge::AscendString("ai.onnx::14::NPUGroupNormSilu"), ge::AscendString("ai.onnx::15::NPUGroupNormSilu"),
+                   ge::AscendString("ai.onnx::16::NPUGroupNormSilu"), ge::AscendString("ai.onnx::17::NPUGroupNormSilu"),
                    ge::AscendString("ai.onnx::18::NPUGroupNormSilu")})
     .ParseParamsFn(ParseParamsNpuGroupNormSilu)
     .ImplyType(ImplyType::TVM);
-}  // domi
+} // namespace domi

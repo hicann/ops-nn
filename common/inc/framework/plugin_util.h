@@ -24,15 +24,15 @@ namespace domi {
 template <typename T>
 inline std::string GetOpName(const T& op)
 {
-  ge::AscendString op_ascend_name;
-  ge::graphStatus ret = op.GetName(op_ascend_name);
-  if (ret != ge::GRAPH_SUCCESS) {
-    std::string op_name = "None";
-    return op_name;
-  }
-  return op_ascend_name.GetString();
+    ge::AscendString op_ascend_name;
+    ge::graphStatus ret = op.GetName(op_ascend_name);
+    if (ret != ge::GRAPH_SUCCESS) {
+        std::string op_name = "None";
+        return op_name;
+    }
+    return op_ascend_name.GetString();
 }
 
-}  // namespace domi
+} // namespace domi
 
 #endif // FRAMEWORK_PLUGIN_UTIL_H

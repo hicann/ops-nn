@@ -33,12 +33,9 @@ using OpAttr = gert::InfershapeContextPara::OpAttr;
 // Inputs: grads (4D), scale (1D, C), batch_variance (1D, C)
 // Output: x_backprop (same shape as grads)
 // Attr: epsilon (float)
-static gert::InfershapeContextPara MakeInfershapePara(
-    const gert::StorageShape& gradsShape,
-    int64_t channelSize,
-    ge::DataType dtype = ge::DT_FLOAT,
-    ge::Format format = ge::FORMAT_NCHW,
-    float epsilon = 0.0001f)
+static gert::InfershapeContextPara MakeInfershapePara(const gert::StorageShape& gradsShape, int64_t channelSize,
+                                                      ge::DataType dtype = ge::DT_FLOAT,
+                                                      ge::Format format = ge::FORMAT_NCHW, float epsilon = 0.0001f)
 {
     // Attributes: epsilon (index=0)
     std::vector<OpAttr> attrs = {

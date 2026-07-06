@@ -25,15 +25,9 @@ using namespace ge;
 
 class AdamApplyOneWithDecayAssignProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayAssignProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdamApplyOneWithDecayAssignProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayAssignProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdamApplyOneWithDecayAssignProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(AdamApplyOneWithDecayAssignProtoTest, adam_apply_one_with_decay_assign_case_0)
@@ -56,9 +50,8 @@ TEST_F(AdamApplyOneWithDecayAssignProtoTest, adam_apply_one_with_decay_assign_ca
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2})
                       .OutputShapes({&output_shape_0, &output_shape_0, &output_shape_0})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -110,9 +103,8 @@ TEST_F(AdamApplyOneWithDecayAssignProtoTest, infer_axis_type_with_input_dim_num_
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2})
                       .OutputShapes({&output_shape_0, &output_shape_0, &output_shape_0})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -164,9 +156,8 @@ TEST_F(AdamApplyOneWithDecayAssignProtoTest, infer_axis_type_with_input_dim_num_
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2})
                       .OutputShapes({&output_shape_0, &output_shape_0, &output_shape_0})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)

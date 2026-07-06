@@ -28,14 +28,16 @@ public:
     __aicore__ inline void ProcessPreSingleLoop(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
     __aicore__ inline void ProcessPreSmallIndices(int64_t preOfset, int64_t colIdx, int64_t preLen, int64_t colLen);
     __aicore__ inline void ProcessAfterSingleLoop(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
-    __aicore__ inline void ComputeMulWithCast( LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateMulLocal, int16_t alphaValue, int64_t colLen);
+    __aicore__ inline void ComputeMulWithCast(LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateMulLocal,
+                                              int16_t alphaValue, int64_t colLen);
     __aicore__ inline void ProcessPre();
     __aicore__ inline void ProcessAfter();
     __aicore__ inline void ProcessIndicesSingleLoop(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
     __aicore__ inline void ProcessIndices();
     __aicore__ inline void Process();
-    static __simd_vf__ inline void ComputeMulWithCastVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr, uint16_t loopSize, 
-                                                uint32_t maskLen, int16_t alphaValue, uint32_t vfLen);
+    static __simd_vf__ inline void ComputeMulWithCastVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr,
+                                                        uint16_t loopSize, uint32_t maskLen, int16_t alphaValue,
+                                                        uint32_t vfLen);
 
 private:
     using mulsSelType = typename MulsSelType<VAR_T>::type;
@@ -61,8 +63,9 @@ private:
 };
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::Init(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace)
+__aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::Init(GM_ADDR var, GM_ADDR indices,
+                                                                                      GM_ADDR updates, GM_ADDR alpha,
+                                                                                      GM_ADDR workspace)
 {
     updates_.SetGlobalBuffer((__gm__ VAR_T*)(updates));
     indices_.SetGlobalBuffer((__gm__ IDX_T*)(indices));
@@ -72,16 +75,16 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
         alphaValue_ = alpha_(0);
     }
     if (tilingData_.isSplitPreAxis == 1) {
-        curPreAxisCount_ = 
-        (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCorePreAxisCount : 
-                                                                tilingData_.tailCorePreAxisCount);
+        curPreAxisCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCorePreAxisCount :
+                                                                                   tilingData_.tailCorePreAxisCount);
         return;
     }
 }
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
 __simd_vf__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ComputeMulWithCastVf(
-    __ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr, uint16_t loopSize, uint32_t maskLen, int16_t alphaValue, uint32_t vfLen)
+    __ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr, uint16_t loopSize, uint32_t maskLen, int16_t alphaValue,
+    uint32_t vfLen)
 {
     AscendC::MicroAPI::RegTensor<int16_t> sumReg;
     AscendC::MicroAPI::RegTensor<int16_t> castReg;
@@ -110,7 +113,8 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
     int64_t colLenAlignIn16 = ops::CeilAlign(colLen * sizeof(int16_t), UB_AGLIN_VALUE) / sizeof(int16_t);
 
-    ComputeMulWithCastVf(updatesAddr, updateMulAddr, static_cast<uint16_t>(loopSize), static_cast<uint32_t>(colLen), alphaValue, vfLen);
+    ComputeMulWithCastVf(updatesAddr, updateMulAddr, static_cast<uint16_t>(loopSize), static_cast<uint32_t>(colLen),
+                         alphaValue, vfLen);
 }
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
@@ -120,7 +124,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
 
-    int64_t colLenAlignedSize = ops::CeilAlign(sizeof(VAR_T) * colLen , UB_AGLIN_VALUE) / sizeof(VAR_T);
+    int64_t colLenAlignedSize = ops::CeilAlign(sizeof(VAR_T) * colLen, UB_AGLIN_VALUE) / sizeof(VAR_T);
     int64_t rowLen = tilingData_.updatesInAxis * preLen;
     if constexpr (IS_CONTIGUOUS) {
         CopyIn<IDX_T>(indicesLocal, indices_, tilingData_.updatesInAxis);
@@ -133,11 +137,11 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 
     int64_t colOfset = colIdx * tilingData_.afterAxisFactor;
     int64_t startPreAxis = GetBlockIdx() * tilingData_.eachCorePreAxisCount + preOfset;
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
-                                    static_cast<uint32_t>(colLen * sizeof(VAR_T)),
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
     int64_t rowOfset = (startPreAxis * tilingData_.updatesInAxis) * tilingData_.afterAxis;
     int64_t updatesOfset = rowOfset + colOfset;
     DataCopyPad(updatesLocal, updates_[updatesOfset], copyParams, padParams);
@@ -146,7 +150,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     if (tilingData_.isWithAlpha) {
         if constexpr (IsSameType<VAR_T, bool>::value || IsSameType<VAR_T, int8_t>::value) {
-            ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_,  rowLen * colLenAlignedSize);
+            ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignedSize);
         } else {
             AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignedSize);
         }
@@ -162,11 +166,11 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
         for (int64_t i = 0; i < tilingData_.updatesInAxis; i++) {
             int64_t rowOutOfset = rowPreOfset + indicesLocal(i) * tilingData_.afterAxis;
             int64_t outOfset = rowOutOfset + colOfset;
-            int64_t localOfset = (rowLocalOfset +  i) * colLenAlignedSize;
+            int64_t localOfset = (rowLocalOfset + i) * colLenAlignedSize;
             if constexpr (IsSameType<VAR_T, bool>::value) {
                 SetAtomicMax<int8_t>();
                 CopyOut<VAR_T>(var_[outOfset], updatesLocal[localOfset], colLen);
-                SetAtomicNone();      
+                SetAtomicNone();
             } else {
                 SetAtomicAdd<VAR_T>();
                 CopyOut<VAR_T>(var_[outOfset], updatesLocal[localOfset], colLen);
@@ -180,8 +184,10 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 }
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ProcessPreSingleLoop(
-    int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+__aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ProcessPreSingleLoop(int64_t rowIdx,
+                                                                                                      int64_t colIdx,
+                                                                                                      int64_t rowLen,
+                                                                                                      int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -191,7 +197,8 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     if constexpr (IS_CONTIGUOUS) {
         CopyIn<IDX_T>(indicesLocal, indices_[indicesOfset], rowLen);
     } else {
-        CopyInNoContiguous<IDX_T>(indicesLocal, indices_[indicesOfset * tilingData_.indicesStride], rowLen, 1, tilingData_.indicesStride - 1);
+        CopyInNoContiguous<IDX_T>(indicesLocal, indices_[indicesOfset * tilingData_.indicesStride], rowLen, 1,
+                                  tilingData_.indicesStride - 1);
     }
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -203,8 +210,9 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
-    
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
+
     for (int64_t preAxisIdx = startPreAxis; preAxisIdx < startPreAxis + curPreAxisCount_; preAxisIdx++) {
         int64_t rowOfset = (preAxisIdx * tilingData_.updatesInAxis + indicesOfset) * tilingData_.afterAxis;
         int64_t updatesOfset = rowOfset + colOfset;
@@ -218,7 +226,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 
         if (tilingData_.isWithAlpha) {
             if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, bool>::value) {
-                 ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, colLenAlignSize * rowLen);
+                ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, colLenAlignSize * rowLen);
             } else {
                 AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, colLenAlignSize * rowLen);
             }
@@ -234,7 +242,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
             if constexpr (IsSameType<VAR_T, bool>::value) {
                 SetAtomicMax<int8_t>();
                 CopyOut<VAR_T>(var_[outOfset], updatesLocal[colLenAlignSize * i], colLen);
-                SetAtomicNone();    
+                SetAtomicNone();
             } else {
                 SetAtomicAdd<VAR_T>();
                 CopyOut<VAR_T>(var_[outOfset], updatesLocal[colLenAlignSize * i], colLen);
@@ -253,7 +261,8 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
         return;
     }
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, (tilingData_.ubIndexFactor) * sizeof(IDX_T));
-    pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER, tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
+    pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER,
+                     tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
 
     int64_t colLoopNum = tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
@@ -291,18 +300,21 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 }
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ProcessAfterSingleLoop(
-    int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+__aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ProcessAfterSingleLoop(int64_t rowIdx,
+                                                                                                        int64_t colIdx,
+                                                                                                        int64_t rowLen,
+                                                                                                        int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
 
-    int64_t colLenAlignSize = ops::CeilAlign(sizeof(VAR_T) *colLen, UB_AGLIN_VALUE) / sizeof(VAR_T);
-    int64_t indicesOfset = rowIdx * tilingData_.ubIndexFactor;	
+    int64_t colLenAlignSize = ops::CeilAlign(sizeof(VAR_T) * colLen, UB_AGLIN_VALUE) / sizeof(VAR_T);
+    int64_t indicesOfset = rowIdx * tilingData_.ubIndexFactor;
     if constexpr (IS_CONTIGUOUS) {
         CopyIn<IDX_T>(indicesLocal, indices_[indicesOfset], rowLen);
     } else {
-        CopyInNoContiguous<IDX_T>(indicesLocal, indices_[indicesOfset * tilingData_.indicesStride], rowLen, 1, tilingData_.indicesStride - 1);
+        CopyInNoContiguous<IDX_T>(indicesLocal, indices_[indicesOfset * tilingData_.indicesStride], rowLen, 1,
+                                  tilingData_.indicesStride - 1);
     }
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -313,7 +325,8 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
     for (int64_t preAxisIdx = 0; preAxisIdx < tilingData_.preAxis; preAxisIdx++) {
         int64_t rowOfset = (preAxisIdx * tilingData_.updatesInAxis + indicesOfset) * tilingData_.afterAxis;
         int64_t updatesOfset = rowOfset + BlockCount + colOfset;
@@ -329,7 +342,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 
         if (tilingData_.isWithAlpha) {
             if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, bool>::value) {
-                 ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+                ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
             } else {
                 AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
             }
@@ -341,11 +354,11 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
         int64_t AxisOfset = preAxisIdx * tilingData_.varInAxis * tilingData_.afterAxis;
         for (int64_t i = 0; i < rowLen; i++) {
             rowOfset = AxisOfset + indicesLocal(i) * tilingData_.afterAxis;
-            int64_t outOfset = rowOfset + BlockCount +colOfset;
+            int64_t outOfset = rowOfset + BlockCount + colOfset;
             if constexpr (IsSameType<VAR_T, bool>::value) {
                 SetAtomicMax<int8_t>();
                 CopyOut<VAR_T>(var_[outOfset], updatesLocal[i * colLenAlignSize], colLen);
-                SetAtomicNone();      
+                SetAtomicNone();
             } else {
                 SetAtomicAdd<VAR_T>();
                 CopyOut<VAR_T>(var_[outOfset], updatesLocal[i * colLenAlignSize], colLen);
@@ -363,7 +376,8 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
     }
-    pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER, tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
+    pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER,
+                     tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, (tilingData_.ubIndexFactor) * sizeof(IDX_T));
 
     int64_t rowMainDataLen = tilingData_.ubIndexFactor;
@@ -371,10 +385,10 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     int64_t rowTailDataLen = tilingData_.indiceAxisTailNum;
 
     int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize :
-            tilingData_.updateLoopSize;
+                                                                                tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
     int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum :
-            tilingData_.updateTailNum;
+                                                                                    tilingData_.updateTailNum;
 
     for (int64_t rowIdx = 0; rowIdx < rowLoopNum; rowIdx++) {
         int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
@@ -392,12 +406,13 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
 
-    int64_t colLenAlignSize = ops::CeilAlign(sizeof(VAR_T) *colLen, UB_AGLIN_VALUE) / sizeof(VAR_T);
-    int64_t indicesOfset =  GetBlockIdx() * tilingData_.eachCoreIndexCount + rowIdx * tilingData_.ubIndexFactor;
+    int64_t colLenAlignSize = ops::CeilAlign(sizeof(VAR_T) * colLen, UB_AGLIN_VALUE) / sizeof(VAR_T);
+    int64_t indicesOfset = GetBlockIdx() * tilingData_.eachCoreIndexCount + rowIdx * tilingData_.ubIndexFactor;
     if constexpr (IS_CONTIGUOUS) {
         CopyIn<IDX_T>(indicesLocal, indices_[indicesOfset], rowLen);
     } else {
-        CopyInNoContiguous<IDX_T>(indicesLocal, indices_[indicesOfset * tilingData_.indicesStride], rowLen, 1, tilingData_.indicesStride - 1);
+        CopyInNoContiguous<IDX_T>(indicesLocal, indices_[indicesOfset * tilingData_.indicesStride], rowLen, 1,
+                                  tilingData_.indicesStride - 1);
     }
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -407,7 +422,8 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
     for (int64_t preAxisIdx = 0; preAxisIdx < tilingData_.preAxis; preAxisIdx++) {
         int64_t rowOfset = (preAxisIdx * tilingData_.updatesInAxis + indicesOfset) * tilingData_.afterAxis;
         int64_t updatesOfset = rowOfset + colOfset;
@@ -423,7 +439,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 
         if (tilingData_.isWithAlpha) {
             if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, bool>::value) {
-                 ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
+                ComputeMulWithCast(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
             } else {
                 AscendC::Muls(updatesLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
             }
@@ -458,13 +474,14 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
         return;
     }
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, (tilingData_.ubIndexFactor) * sizeof(IDX_T));
-    pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER, tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
+    pipe_.InitBuffer(updatesQue_, DOUBLE_BUFFER,
+                     tilingData_.ubIndexFactor * tilingData_.afterAxisFactor * sizeof(VAR_T));
 
     int64_t rowLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailCoreIndicesLoop :
-                         tilingData_.mainCoreIndicesLoop;
+                                                                                tilingData_.mainCoreIndicesLoop;
     int64_t rowMainDataLen = tilingData_.ubIndexFactor;
     int64_t rowTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailCoreTailIndices :
-                              tilingData_.mainCoreTailIndices;
+                                                                                    tilingData_.mainCoreTailIndices;
 
     int64_t colLoopNum = tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
@@ -482,14 +499,14 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
 __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::Process()
 {
-    if (tilingData_.isSplitPreAxis == 1) {   
+    if (tilingData_.isSplitPreAxis == 1) {
         ProcessPre();
     } else if (tilingData_.isSplitAfterAxis == 1) {
-        ProcessAfter();   
+        ProcessAfter();
     } else if (tilingData_.isSplitIndicesAxis == 1) {
         ProcessIndices();
     }
 }
-}  // namespace InplaceIndexAdd
+} // namespace InplaceIndexAdd
 
 #endif

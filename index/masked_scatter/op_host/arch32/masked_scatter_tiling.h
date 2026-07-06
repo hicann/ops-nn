@@ -27,5 +27,5 @@ struct MaskedScatterV1CompileInfo {
     uint64_t ubSize = 0;
     uint32_t sysWorkspace = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 #endif

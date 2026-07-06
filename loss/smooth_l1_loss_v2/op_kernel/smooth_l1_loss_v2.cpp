@@ -18,7 +18,7 @@
 #include "arch35/smooth_l1_loss_v2_dag.h"
 #include "arch35/smooth_l1_loss_v2_tiling_key.h"
 #include "arch35/smooth_l1_loss_v2_tilingdata.h"
-#include "atvoss/elewise/elewise_sch.h" 
+#include "atvoss/elewise/elewise_sch.h"
 #include "atvoss/util/dfx.h"
 #include "atvoss/reduce/reduce_sch.h"
 
@@ -36,14 +36,15 @@ __global__ __aicore__ void smooth_l1_loss_v2(GM_ADDR predict, GM_ADDR label, GM_
     using PromoteType = Ops::Base::ReduceOpTmpl::__reduceType::GetPromoteType<DTYPE_PREDICT>::T;
     if constexpr (Reduction == 0) {
         ElementwiseSch<0UL, SmoothL1LossV2::SmoothL1LossV2OpDag<DTYPE_PREDICT>::OpDag> sch(&(tilingData.baseTiling),
-                                                                                           &pipe);  // 获取Schedule
+                                                                                           &pipe); // 获取Schedule
         sch.SetVar<PromoteType, 0>(tilingData.Sigma);
         sch.SetVar<PromoteType, 1>(tilingData.MultiplyValue);
         sch.SetVar<PromoteType, 2>(tilingData.AddsValue);
         sch.Init(predict, label, y);
         sch.Process();
     } else if constexpr (Reduction == 1) {
-        using Op = Ops::Base::ReduceOpTmpl::ReduceSch<REDUCE_TPL_VALUE, SmoothL1LossV2::SmoothL1LossV2SumDag<DTYPE_PREDICT, PromoteType>::OpDag>;
+        using Op = Ops::Base::ReduceOpTmpl::ReduceSch<
+            REDUCE_TPL_VALUE, SmoothL1LossV2::SmoothL1LossV2SumDag<DTYPE_PREDICT, PromoteType>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<PromoteType, 0>(tilingData.Sigma);
         op.template SetVar<PromoteType, 1>(tilingData.MultiplyValue);
@@ -51,8 +52,8 @@ __global__ __aicore__ void smooth_l1_loss_v2(GM_ADDR predict, GM_ADDR label, GM_
         op.Init(&pipe, predict, label, y, workspace);
         op.Process(static_cast<DTYPE_PREDICT>(0));
     } else if constexpr (Reduction == 2) {
-        using Op = Ops::Base::ReduceOpTmpl::ReduceSch<REDUCE_TPL_VALUE,
-                             SmoothL1LossV2::SmoothL1LossV2MeanDag<DTYPE_PREDICT, PromoteType>::OpDag>;
+        using Op = Ops::Base::ReduceOpTmpl::ReduceSch<
+            REDUCE_TPL_VALUE, SmoothL1LossV2::SmoothL1LossV2MeanDag<DTYPE_PREDICT, PromoteType>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<PromoteType, 0>(tilingData.Sigma);
         op.template SetVar<PromoteType, 1>(tilingData.MultiplyValue);

@@ -83,34 +83,22 @@ public:
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
     // 1、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     // 2、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 3、计算数据切分TilingData
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
     // 4、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override;
     // 5、计算高阶API的TilingData
     ge::graphStatus DoLibApiTiling() override;
     // 6、计算TilingKey
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    }
+    uint64_t GetTilingKey() const override { return 0; }
     // 7、保存Tiling数据
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }
 
     void Reset();
     void CalcBasicInfo();

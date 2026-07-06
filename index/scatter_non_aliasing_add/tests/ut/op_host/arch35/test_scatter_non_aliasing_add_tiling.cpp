@@ -36,14 +36,8 @@ struct ScatterNonAliasingAddCompileInfo {
 
 class ScatterNonAliasingAddTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ScatterNonAliasingAddTilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ScatterNonAliasingAddTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ScatterNonAliasingAddTilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ScatterNonAliasingAddTilingTest TearDown" << std::endl; }
 };
 
 TEST_F(ScatterNonAliasingAddTilingTest, fp32_int32)

@@ -20,8 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "batch_norm_grad_common.h"
 
-namespace BatchNormGrad
-{
+namespace BatchNormGrad {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 
@@ -34,11 +33,10 @@ static constexpr int64_t BLOCK_SIZE = platform::GetUbBlockSize();
 static constexpr int32_t BLOCK_FP32_NUMS = BLOCK_SIZE / sizeof(float);
 
 template <typename DY_DTYPE, typename WEIGHT_DTYPE>
-class BatchNormGradRARSplitCoreR1
-{
+class BatchNormGradRARSplitCoreR1 {
 public:
     __aicore__ inline BatchNormGradRARSplitCoreR1(TPipe* pipeIn,
-                                                    const BatchNormGradRARSplitCoreR1TilingData* tilingDataIn)
+                                                  const BatchNormGradRARSplitCoreR1TilingData* tilingDataIn)
     {
         pipe_ = pipeIn;
         tilingData_ = tilingDataIn;
@@ -152,8 +150,8 @@ public:
     __aicore__ inline void CalcDbetaDgammaInCore()
     {
         for (int64_t i = 0; i < tilingData_->aOuterStg0; i++) {
-            uint32_t curAInnerLen =
-                i != (tilingData_->aOuterStg0 - 1) ? tilingData_->aInnerStg0 : tilingData_->aTailStg0;
+            uint32_t curAInnerLen = i != (tilingData_->aOuterStg0 - 1) ? tilingData_->aInnerStg0 :
+                                                                         tilingData_->aTailStg0;
             int64_t aOffset = i * tilingData_->aInnerStg0;
 
             CopyInMeanAndRstd(aOffset, curAInnerLen);
@@ -238,16 +236,16 @@ public:
                         tilingData_->aInnerAlignedStg0);
         }
 
-        if (basicLoop == 0) {  // 直接输出到dbetaMainTmpTensor_，dgammaMainTmpTensor_
+        if (basicLoop == 0) { // 直接输出到dbetaMainTmpTensor_，dgammaMainTmpTensor_
             int64_t dyOffset = aOffset * tilingData_->r0Dim;
             ProcessMainBlock(meanLocal, rstdLocal, curAInnerLen, r1TailIncore, tilingData_->r0TailStg0,
                              tilingData_->r0TailAlignedStg0, dyOffset);
         } else {
             // ub to ub copy
-            uint32_t resCacheId =
-                isLastCore_ ? tilingData_->lastCoreBinAddResultCacheID : tilingData_->binAddResultCacheID;
+            uint32_t resCacheId = isLastCore_ ? tilingData_->lastCoreBinAddResultCacheID :
+                                                tilingData_->binAddResultCacheID;
             DataCopy(dbetaMainTmpTensor_, dbetaCacheTensor[resCacheId * tilingData_->aInnerAlignedStg0],
-                     tilingData_->aInnerAlignedStg0);  // curAInnerLen < tilingData_->aInnerAlignedStg0
+                     tilingData_->aInnerAlignedStg0); // curAInnerLen < tilingData_->aInnerAlignedStg0
             DataCopy(dgammaMainTmpTensor_, dgammaCacheTensor[resCacheId * tilingData_->aInnerAlignedStg0],
                      tilingData_->aInnerAlignedStg0);
         }
@@ -350,8 +348,8 @@ public:
         __local_mem__ DY_DTYPE* xLocal = (__local_mem__ DY_DTYPE*)xTensor.GetPhyAddr();
         __local_mem__ float* dgammaReduceTmpLocal = (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr();
 
-        __local_mem__ float* dbetaReduceTmpLocal =
-            (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr() + reduceTmpBufOffset_;
+        __local_mem__ float* dbetaReduceTmpLocal = (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr() +
+                                                   reduceTmpBufOffset_;
 
         uint16_t loopNum = ops::CeilDiv(curR0AlignedLen, VL_FP32);
 
@@ -442,8 +440,8 @@ public:
     __aicore__ inline void CalcDbetaDgamma()
     {
         for (int64_t i = 0; i < tilingData_->aOuterStg1; i++) {
-            uint16_t curAInnerLen =
-                i != (tilingData_->aOuterStg1 - 1) ? tilingData_->aInnerStg1 : tilingData_->aTailStg1;
+            uint16_t curAInnerLen = i != (tilingData_->aOuterStg1 - 1) ? tilingData_->aInnerStg1 :
+                                                                         tilingData_->aTailStg1;
 
             int64_t offset = i * tilingData_->aInnerStg1;
             CopyInDbetaDgammaTmp(offset, curAInnerLen);
@@ -561,8 +559,8 @@ public:
     __aicore__ inline void CalcOutput()
     {
         for (int64_t i = 0; i < tilingData_->aOuterStg2; i++) {
-            uint16_t curAInnerLen =
-                i != (tilingData_->aOuterStg2 - 1) ? tilingData_->aInnerStg2 : tilingData_->aTailStg2;
+            uint16_t curAInnerLen = i != (tilingData_->aOuterStg2 - 1) ? tilingData_->aInnerStg2 :
+                                                                         tilingData_->aTailStg2;
             int64_t aOffset = i * tilingData_->aInnerStg2;
             CopyInSmallShapes(aOffset, curAInnerLen);
 
@@ -614,8 +612,8 @@ public:
 
                     __VEC_SCOPE__
                     {
-                        MaskReg pregMaskAll =
-                            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                        MaskReg
+                            pregMaskAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
 
                         MaskReg pregMask;
 
@@ -629,11 +627,11 @@ public:
                             LoadsTensorForDtypeT<WEIGHT_DTYPE>(gammaAddr, regGamma, pregMaskAll, i);
 
                             uint32_t sreg = curR0Len;
-                            for (uint16_t j = 0; j < loopNum; j++) {  // r0
+                            for (uint16_t j = 0; j < loopNum; j++) { // r0
                                 pregMask = UpdateMask<float>(sreg);
                                 for (uint16_t k = 0; k < curR1Len; k++) {
-                                    uint32_t offset =
-                                        i * curR1Len * curR0AlignedLen + k * curR0AlignedLen + j * VL_FP32;
+                                    uint32_t offset = i * curR1Len * curR0AlignedLen + k * curR0AlignedLen +
+                                                      j * VL_FP32;
                                     LoadOneTensor<DY_DTYPE>(dyLocal, regDy, pregMask, offset);
                                     LoadOneTensor<DY_DTYPE>(xLocal, regX, pregMask, offset);
 
@@ -682,7 +680,7 @@ public:
         DataCopyPadExtParams<DY_DTYPE> dataCopyPadExtParams;
         dataCopyPadExtParams.isPad = true;
         dataCopyPadExtParams.leftPadding = 0;
-        dataCopyPadExtParams.rightPadding = 0;  // 默认补齐到block对齐，实际大小（curR0AlignedLen - curR0Len）;
+        dataCopyPadExtParams.rightPadding = 0; // 默认补齐到block对齐，实际大小（curR0AlignedLen - curR0Len）;
         dataCopyPadExtParams.paddingValue = 0;
 
         DataCopyExtParams copyInParams;
@@ -843,5 +841,5 @@ private:
     float hRecipVal_{0};
     bool isLastCore_{false};
 };
-}  // namespace BatchNormGrad
-#endif  // __BATCH_NORM_GRAD_SPLIT_CORE_R1_H__
+} // namespace BatchNormGrad
+#endif // __BATCH_NORM_GRAD_SPLIT_CORE_R1_H__

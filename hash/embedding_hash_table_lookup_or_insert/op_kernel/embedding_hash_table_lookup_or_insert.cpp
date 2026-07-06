@@ -20,8 +20,9 @@
 
 using namespace Hashtbl;
 
-extern "C" __global__ __aicore__ void embedding_hash_table_lookup_or_insert(
-    GM_ADDR tableHandle, GM_ADDR keys, GM_ADDR values, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void embedding_hash_table_lookup_or_insert(GM_ADDR tableHandle, GM_ADDR keys,
+                                                                            GM_ADDR values, GM_ADDR workspace,
+                                                                            GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (workspace == nullptr) {

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -38,8 +38,7 @@ ge::graphStatus SigmoidTiling::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
         auto compileInfoPtr = context_->GetCompileInfo<SigmoidCompileInfo>();
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
         ubSize = compileInfoPtr->ubSize;
     } else {
@@ -78,7 +77,7 @@ uint64_t SigmoidTiling::GenerateTilingKey(uint64_t innerKey) const
 std::map<uint64_t, Ops::Base::ComputeParams> SigmoidTiling::GetComputeMap(uint64_t opKey_) const
 {
     ComputeParams computeParams0;
-        switch (opKey_) {
+    switch (opKey_) {
         case OP_KEY_1:
             computeParams0.maxDtypeBits = static_cast<int64_t>(BITS_SIZE::BITS32_SIZE);
             computeParams0.minDtypeBits = static_cast<int64_t>(BITS_SIZE::BITS16_SIZE);
@@ -113,17 +112,15 @@ ge::graphStatus SigmoidTiling::GetShapeAttrsInfo()
 
     opKey = GetOpKey(xDtype, yDtype);
     OP_CHECK_IF((opKey == OP_KEY_INVALID),
-                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, y",
-                        ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype),
-                        "The dtypes of x and y must be the same"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, y",
+                                                       ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(yDtype),
+                                                       "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool SigmoidTiling::IsCapable()
-{
-    return true;
-}
+bool SigmoidTiling::IsCapable() { return true; }
 
 ge::graphStatus SigmoidTiling::DoOpTiling()
 {
@@ -138,9 +135,8 @@ ge::graphStatus SigmoidTiling::DoOpTiling()
 
     ElewiseTilingData elewiseTilingData;
     auto status = ElewiseTiling(elewiseTilingParams, elewiseTilingData);
-    OP_CHECK_IF((status == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "elewise tiling failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((status == ge::GRAPH_FAILED), OP_LOGE(context_->GetNodeName(), "elewise tiling failed"),
+                return ge::GRAPH_FAILED);
 
     tilingKey_ = GenerateTilingKey(elewiseTilingData.innerKey);
     blockNum = elewiseTilingData.blockNum;
@@ -156,7 +152,8 @@ ge::graphStatus SigmoidTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SigmoidTiling::ToString(SigmoidTilingData &tilingData_) const {
+std::string SigmoidTiling::ToString(SigmoidTilingData& tilingData_) const
+{
     std::string str;
     str += " dim0:" + std::to_string(tilingData_.get_dim0());
     str += " blockFormer:" + std::to_string(tilingData_.get_blockFormer());
@@ -169,15 +166,9 @@ std::string SigmoidTiling::ToString(SigmoidTilingData &tilingData_) const {
     return str;
 }
 
-ge::graphStatus SigmoidTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SigmoidTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t SigmoidTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t SigmoidTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus SigmoidTiling::GetWorkspaceSize()
 {
@@ -190,8 +181,7 @@ ge::graphStatus SigmoidTiling::PostTiling()
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(blockNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    OP_CHECK_IF(workspaces == nullptr, OP_LOGE(context_, "workspace is null"),
-            return ge::GRAPH_FAILED);
+    OP_CHECK_IF(workspaces == nullptr, OP_LOGE(context_, "workspace is null"), return ge::GRAPH_FAILED);
     workspaces[0] = workspaceSize_;
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
@@ -208,12 +198,13 @@ ge::graphStatus TilingForSigmoid(gert::TilingContext* context)
     return tiling.DoTiling();
 }
 
-inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(const gert::TilingParseContext* context) {
-  auto json_str = context->GetCompiledJson();
-  OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
-  std::unique_ptr<nlohmann::json> parsed_object_cinfo =
-      std::make_unique<nlohmann::json>(nlohmann::json::parse(json_str));
-  return parsed_object_cinfo;
+inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(const gert::TilingParseContext* context)
+{
+    auto json_str = context->GetCompiledJson();
+    OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
+    std::unique_ptr<nlohmann::json> parsed_object_cinfo = std::make_unique<nlohmann::json>(
+        nlohmann::json::parse(json_str));
+    return parsed_object_cinfo;
 }
 
 ge::graphStatus TilingPrepareForSigmoid(gert::TilingParseContext* context)
@@ -223,7 +214,7 @@ ge::graphStatus TilingPrepareForSigmoid(gert::TilingParseContext* context)
     std::unique_ptr<nlohmann::json> parsedObjectCInfo = GetCompileInfoJson(context);
     OP_CHECK_NULL_WITH_CONTEXT(context, parsedObjectCInfo);
 
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -231,8 +222,6 @@ ge::graphStatus TilingPrepareForSigmoid(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Sigmoid)
-    .Tiling(TilingForSigmoid)
-    .TilingParse<SigmoidCompileInfo>(TilingPrepareForSigmoid);
+IMPL_OP_OPTILING(Sigmoid).Tiling(TilingForSigmoid).TilingParse<SigmoidCompileInfo>(TilingPrepareForSigmoid);
 
-}  // namespace optiling
+} // namespace optiling

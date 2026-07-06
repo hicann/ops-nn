@@ -53,9 +53,9 @@ constexpr uint64_t G_MASK_6 = 0x3f;
 constexpr uint64_t G_NINTH_BIT_MASK = 0x100;
 
 // L0 buffer half sizes (bytes) for ping-pong double buffering
-constexpr uint32_t G_L0A_HALF_BYTES = 32768;   // 32KB, L0A single buffer half
-constexpr uint32_t G_L0B_HALF_BYTES = 32768;   // 32KB, L0B single buffer half
-constexpr uint32_t G_L0C_HALF_BYTES = 131072;  // 128KB, L0C single buffer half
+constexpr uint32_t G_L0A_HALF_BYTES = 32768;  // 32KB, L0A single buffer half
+constexpr uint32_t G_L0B_HALF_BYTES = 32768;  // 32KB, L0B single buffer half
+constexpr uint32_t G_L0C_HALF_BYTES = 131072; // 128KB, L0C single buffer half
 // M_MTE1 event id base for L0A/L0B ping-pong (uses base and base+1)
 constexpr uint16_t G_MTE1_EVENT_BASE = 6;
 
@@ -64,12 +64,12 @@ __aicore__ inline uint32_t GAlignUp(uint32_t a, uint32_t b) { return GCeilDiv(a,
 
 // Default CONV_CFG for standalone direct-invoke builds (OPT_GROUP + M_MODE)
 struct DefaultConvCfg {
-    static constexpr int8_t groupType = 3;   // OPT_GROUP_CONV
-    static constexpr int8_t outputOrder = 1; // M_MODE
-    static constexpr int8_t fmapTiling = 0;  // FULLLOAD_AL1
+    static constexpr int8_t groupType = 3;    // OPT_GROUP_CONV
+    static constexpr int8_t outputOrder = 1;  // M_MODE
+    static constexpr int8_t fmapTiling = 0;   // FULLLOAD_AL1
     static constexpr int8_t weightTiling = 0; // FULLLOAD_BL1
-    static constexpr int8_t l1PingPong = 3;  // ALL_OPEN
-    static constexpr int8_t l0PingPong = 3;  // ALL_OPEN
+    static constexpr int8_t l1PingPong = 3;   // ALL_OPEN
+    static constexpr int8_t l0PingPong = 3;   // ALL_OPEN
     static constexpr int8_t iterOrder = 0;
     static constexpr int8_t enableSmallChannel = 0;
     static constexpr int8_t weightUbTrans = 0;
@@ -93,8 +93,7 @@ public:
     // Init with global kTiling (direct-invoke mode)
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y);
     // Init with runtime tiling pointer (ops-nn integration)
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-                                const Conv2DTilingData* tiling);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const Conv2DTilingData* tiling);
     __aicore__ inline const Conv2DTilingData& Tiling() const { return *tiling_; }
     __aicore__ inline void Process();
 
@@ -103,21 +102,18 @@ private:
     __aicore__ inline void SetIndex();
     __aicore__ inline void TransNCHW2NZ();
     __aicore__ inline void LoadAL1(uint16_t l1BufId, uint32_t mGlobal, uint32_t curMAL1);
-    __aicore__ inline void ComputeL0(LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& bl1,
-                                      uint32_t mGlobal, uint32_t curMAL1,
-                                      uint32_t nIter, uint32_t curN, uint32_t kTotal);
-    __aicore__ inline void DoLoadAL0(LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& al0,
-                                      uint32_t posM, uint32_t kOff,
-                                      uint32_t mVal, uint32_t mAlign, uint32_t curK);
-    __aicore__ inline void DoLoadBL0(LocalTensor<DTYPE>& bl0, LocalTensor<DTYPE>& bl1,
-                                      uint32_t nOff, uint32_t kOff,
-                                      uint32_t curN, uint32_t curK);
+    __aicore__ inline void ComputeL0(LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& bl1, uint32_t mGlobal,
+                                     uint32_t curMAL1, uint32_t nIter, uint32_t curN, uint32_t kTotal);
+    __aicore__ inline void DoLoadAL0(LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& al0, uint32_t posM, uint32_t kOff,
+                                     uint32_t mVal, uint32_t mAlign, uint32_t curK);
+    __aicore__ inline void DoLoadBL0(LocalTensor<DTYPE>& bl0, LocalTensor<DTYPE>& bl1, uint32_t nOff, uint32_t kOff,
+                                     uint32_t curN, uint32_t curK);
     __aicore__ inline void DoMmad(LocalTensor<L0cT>& cl0, LocalTensor<DTYPE>& al0, LocalTensor<DTYPE>& bl0,
-                                   uint32_t curM, uint32_t curN, uint32_t curK, bool isFirst, bool useBias);
-    __aicore__ inline void DoCopyOut(LocalTensor<L0cT>& cl0, uint32_t mGlobal, uint32_t nStart,
-                                      uint32_t curM, uint32_t curN, uint32_t mAligned);
+                                  uint32_t curM, uint32_t curN, uint32_t curK, bool isFirst, bool useBias);
+    __aicore__ inline void DoCopyOut(LocalTensor<L0cT>& cl0, uint32_t mGlobal, uint32_t nStart, uint32_t curM,
+                                     uint32_t curN, uint32_t mAligned);
 
-    const Conv2DTilingData* tiling_;  // points to &kTiling (default) or runtime ptr
+    const Conv2DTilingData* tiling_; // points to &kTiling (default) or runtime ptr
     bool coreActive_ = false;
     bool isVec0_ = false;
     uint32_t batchIdx_, groupIdx_, mIdxStart_, actualM_, enlargeActual_;
@@ -125,8 +121,8 @@ private:
     uint64_t fmBatchStride_, outBatchStride_, fmGroupOff_, filterGroupOff_, outGroupOff_, biasGroupOff_;
     uint32_t hiLoadStart_, curHiLoadL1_, padTopL1_, padBottomL1_;
     uint32_t nzBufElems_, kTotal_, kUbSize_;
-    uint32_t groupOptIter_;      // current groupOpt iteration index
-    uint32_t vecId_;             // 0 for vec0, 1 for vec1 (even for AIC)
+    uint32_t groupOptIter_; // current groupOpt iteration index
+    uint32_t vecId_;        // 0 for vec0, 1 for vec1 (even for AIC)
     uint16_t l0cPP = 0;
 
     uint32_t al1HalfSize_;
@@ -155,17 +151,16 @@ private:
 };
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-    const Conv2DTilingData* tiling)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                                                              GM_ADDR y, const Conv2DTilingData* tiling)
 {
     tiling_ = tiling;
     Init(x, filter, bias, y);
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                                                              GM_ADDR y)
 {
     const auto& t = Tiling();
     uint32_t blockIdx;
@@ -204,7 +199,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(
         return;
     }
     actualM_ = maxMPerCore;
-    if (mIdxStart_ + actualM_ > totalM) actualM_ = totalM - mIdxStart_;
+    if (mIdxStart_ + actualM_ > totalM)
+        actualM_ = totalM - mIdxStart_;
 
     coreActive_ = true;
     cinAligned_ = GAlignUp(t.cinOpt, K0_VAL);
@@ -230,7 +226,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(
 
     // L1 buffers: both AIC and AIV allocate in same order/size for address agreement
     uint32_t hiAL1 = t.aL1SpaceSize / (orgWin_ * cinAligned_ * sizeof(DTYPE));
-    if (hiAL1 == 0) hiAL1 = 1;
+    if (hiAL1 == 0)
+        hiAL1 = 1;
     uint32_t al1Size = hiAL1 * orgWin_ * cinAligned_;
     al1HalfSize_ = al1Size;
     uint32_t al1BufCount = AL1_PINGPONG ? 2 : 1;
@@ -290,14 +287,16 @@ template <class CONV_CFG, typename DTYPE>
 __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process()
 {
     const auto& t = Tiling();
-    if (!coreActive_) return;
+    if (!coreActive_)
+        return;
 
     uint32_t singleGroupOpt = t.singleCoreGroupOpt;
 
     if ASCEND_IS_AIV {
         // BL1 single buffer: vec1 does not work, only vec0 processes all groups serially
         if constexpr (!BL1_PINGPONG) {
-            if (vecId_ != 0) return;
+            if (vecId_ != 0)
+                return;
         }
 
         uint8_t syncBase = 0;
@@ -306,11 +305,13 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
 
         for (uint32_t g = 0; g < singleGroupOpt; g++) {
             if constexpr (BL1_PINGPONG) {
-                if (vecId_ != (g % G_NUM_AIV)) continue;
+                if (vecId_ != (g % G_NUM_AIV))
+                    continue;
             }
 
             uint32_t curGroup = groupIdx_ + g;
-            if (curGroup >= t.groupOpt) break;
+            if (curGroup >= t.groupOpt)
+                break;
             SetupGroup(curGroup);
 
             uint32_t bl1Off = BL1_PINGPONG ? vecId_ * bl1HalfBytes_ : 0;
@@ -335,8 +336,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
             copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP1_INDEX] = kUbSize_;
             copyParams.loopInfo.loopSize[G_NDDMA_LOOP2_INDEX] = enlargeActual_;
             copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups) * srcKSize;
-            copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP2_INDEX] =
-                (t.cout / t.groups) * kUbSize_ + static_cast<uint32_t>(srcKSize);
+            copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups) * kUbSize_ +
+                                                                     static_cast<uint32_t>(srcKSize);
             DataCopy<DTYPE, G_NDDMA_DIMS, kDefaultMultiCopyConfig>(ubNd, filterGm_[0], copyParams);
 
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
@@ -369,13 +370,13 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
     }
 
     if ASCEND_IS_AIC {
-        const uint64_t hwIn  = static_cast<uint64_t>(t.hin) * t.win;
+        const uint64_t hwIn = static_cast<uint64_t>(t.hin) * t.win;
         const uint64_t hwOut = static_cast<uint64_t>(t.hout) * t.wout;
         const uint32_t batchCount = static_cast<uint32_t>(GCeilDiv(t.batch, t.batchDim));
-        const uint32_t mAL1   = t.hoL1;
+        const uint32_t mAL1 = t.hoL1;
         const uint32_t coutOpt = t.coutOpt;
-        const uint32_t cinOpt  = t.cinOpt;
-        const uint32_t nL0    = t.nL0;
+        const uint32_t cinOpt = t.cinOpt;
+        const uint32_t nL0 = t.nL0;
         const uint32_t groupOpt = t.groupOpt;
 
         SetFlag<HardEvent::MTE1_MTE2>(EVENT_ID0);
@@ -392,7 +393,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
         uint16_t al1PP = 0;
         for (uint32_t g = 0; g < singleGroupOpt; g++) {
             uint32_t curGroup = groupIdx_ + g;
-            if (curGroup >= groupOpt) break;
+            if (curGroup >= groupOpt)
+                break;
             SetupGroup(curGroup);
 
             uint8_t aicSyncBase = BL1_PINGPONG ? (g % G_NUM_AIV) * G_CV_SYNC_STRIDE : 0;
@@ -404,7 +406,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
 
             for (uint32_t bIter = 0; bIter < batchCount; bIter++) {
                 uint32_t realBatch = batchIdx_ * batchCount + bIter;
-                if (realBatch >= t.batch) break;
+                if (realBatch >= t.batch)
+                    break;
                 uint64_t fmBase = static_cast<uint64_t>(realBatch) * fmBatchStride_ + fmGroupOff_;
                 uint64_t outBase = static_cast<uint64_t>(realBatch) * outBatchStride_ + outGroupOff_;
                 fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(rawX_) + fmBase, cinOpt * hwIn);
@@ -412,7 +415,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
 
                 for (uint32_t mAL1Iter = 0; mAL1Iter < actualM_; mAL1Iter += mAL1) {
                     uint32_t curMAL1 = mAL1;
-                    if (mAL1Iter + curMAL1 > actualM_) curMAL1 = actualM_ - mAL1Iter;
+                    if (mAL1Iter + curMAL1 > actualM_)
+                        curMAL1 = actualM_ - mAL1Iter;
                     uint32_t mGlobal = mIdxStart_ + mAL1Iter;
                     uint16_t l1BufId = al1PP & 1;
 
@@ -464,7 +468,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetInde
     SetFlag<HardEvent::S_V>(EVENT_ID0);
     WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
-    __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+    __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
     uint16_t repeatTimes = static_cast<uint16_t>(G_REG_SIZE / sizeof(IndexT) / K0_VAL - 1);
     uint8_t dstOffset = K0_VAL;
     uint8_t elesPerRepeat = K0_VAL;
@@ -512,10 +516,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNC
         MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg vstsMaskReg = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
 
-        __local_mem__ DTYPE *srcAddr = (__local_mem__ DTYPE *)ndTensor.GetPhyAddr();
+        __local_mem__ DTYPE* srcAddr = (__local_mem__ DTYPE*)ndTensor.GetPhyAddr();
         LocalTensor<DTYPE> nzTmp(TPosition::VECIN, ubNzOffBytes_, nzBufElems_);
-        __local_mem__ DTYPE *dstAddr = (__local_mem__ DTYPE *)nzTmp.GetPhyAddr();
-        __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+        __local_mem__ DTYPE* dstAddr = (__local_mem__ DTYPE*)nzTmp.GetPhyAddr();
+        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
 
         MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
 
@@ -526,11 +530,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNC
                     uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
                                          coOptIndex * dstCoStride;
 
-                    MicroAPI::DataCopyGather<DTYPE, DTYPE, IndexT>(
-                        gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
+                    MicroAPI::DataCopyGather<DTYPE, DTYPE, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
+                                                                   gatherMaskReg);
 
-                    MicroAPI::DataCopy<DTYPE>(
-                        dstAddr + dstOffset, (MicroAPI::RegTensor<DTYPE> &)gatherReg, vstsMaskReg);
+                    MicroAPI::DataCopy<DTYPE>(dstAddr + dstOffset, (MicroAPI::RegTensor<DTYPE>&)gatherReg, vstsMaskReg);
                 }
             }
         }
@@ -538,8 +541,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNC
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1(
-    uint16_t l1BufId, uint32_t mGlobal, uint32_t curMAL1)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1(uint16_t l1BufId, uint32_t mGlobal,
+                                                                                 uint32_t curMAL1)
 {
     const auto& t = Tiling();
     uint32_t hoStart = mGlobal / orgWo_;
@@ -578,9 +581,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1
     SetFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
 
     // Set FMatrix and Padding for Load3D (once per AL1 load)
-    uint8_t padList[G_LOAD3D_PAD_DIMS] = {
-        (uint8_t)t.padLeft, (uint8_t)t.padRight,
-        (uint8_t)padTopL1_, G_LOAD3D_NO_BOTTOM_PAD};
+    uint8_t padList[G_LOAD3D_PAD_DIMS] = {(uint8_t)t.padLeft, (uint8_t)t.padRight, (uint8_t)padTopL1_,
+                                          G_LOAD3D_NO_BOTTOM_PAD};
     Load3DSetFMatrixCal(curHiLoadL1_, orgWin_, padList);
     Load3DSetPaddingCal(0);
 
@@ -597,18 +599,20 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::ComputeL0(
-    LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& bl1, uint32_t mGlobal, uint32_t curMAL1,
-    uint32_t nIter, uint32_t curN, uint32_t kTotal)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::ComputeL0(LocalTensor<DTYPE>& al1,
+                                                                                   LocalTensor<DTYPE>& bl1,
+                                                                                   uint32_t mGlobal, uint32_t curMAL1,
+                                                                                   uint32_t nIter, uint32_t curN,
+                                                                                   uint32_t kTotal)
 {
     const auto& t = Tiling();
-    const uint32_t mL0   = t.hoL0;
-    const uint32_t kL0   = t.kL0;
-    const uint32_t nL0   = t.nL0;
-    const uint32_t dilH  = t.dilationH;
-    const uint32_t dilW  = t.dilationW;
-    const uint32_t strH  = t.strideH;
-    const uint32_t strW  = t.strideW;
+    const uint32_t mL0 = t.hoL0;
+    const uint32_t kL0 = t.kL0;
+    const uint32_t nL0 = t.nL0;
+    const uint32_t dilH = t.dilationH;
+    const uint32_t dilW = t.dilationW;
+    const uint32_t strH = t.strideH;
+    const uint32_t strW = t.strideW;
 
     const uint32_t dilatedKH = (t.kh - 1) * dilH + 1;
     const uint32_t dilatedKW = (t.kw - 1) * dilW + 1;
@@ -629,8 +633,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
         // GM→L1: MTE2 writes bias to L1
         uint64_t biasByteNum = curN * sizeof(DTYPE);
         LocalTensor<DTYPE> biasL1(TPosition::A1, biasL1OffBytes_, t.coutOpt);
-        InitConstValueParams<DTYPE> initParams(
-            1, static_cast<uint16_t>(AlignB(curN, GN0) * sizeof(DTYPE) / C0_SIZE), 0, 0);
+        InitConstValueParams<DTYPE> initParams(1, static_cast<uint16_t>(AlignB(curN, GN0) * sizeof(DTYPE) / C0_SIZE), 0,
+                                               0);
         WaitFlag<HardEvent::MTE1_MTE2>(EVENT_ID2);
         InitConstValue<DTYPE>(biasL1, initParams);
         PipeBarrier<PIPE_MTE2>();
@@ -654,13 +658,15 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
 
     for (uint32_t mL0It = 0; mL0It < curMAL1; mL0It += mL0) {
         uint32_t curML0 = mL0;
-        if (mL0It + curML0 > curMAL1) curML0 = curMAL1 - mL0It;
+        if (mL0It + curML0 > curMAL1)
+            curML0 = curMAL1 - mL0It;
         uint32_t curML0Align = GAlignUp(curML0, GM0);
         uint32_t mL0Pos = mL0It + (mGlobal % orgWo_);
         uint32_t safeMAlign = curML0Align;
         if (mL0Pos + safeMAlign > maxLocalM && maxLocalM > mL0Pos) {
             safeMAlign = GAlignUp(maxLocalM - mL0Pos, GM0);
-            if (safeMAlign < GM0) safeMAlign = GM0;
+            if (safeMAlign < GM0)
+                safeMAlign = GM0;
         }
         uint32_t loadMValue = safeMAlign;
         if (mL0Pos + safeMAlign > maxLocalM && maxLocalM > mL0Pos) {
@@ -672,11 +678,12 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
         SetLoadDataRepeatWithStride(repeatParams);
         // Cache xmTmp (mStep + posM)
         load3dXmTmp_ = ((static_cast<uint64_t>(loadMValue) & G_MASK_16) << G_MSTEP_OFFSET) |
-                        ((static_cast<uint64_t>(mL0Pos) & G_MASK_16) << G_POSM_OFFSET);
+                       ((static_cast<uint64_t>(mL0Pos) & G_MASK_16) << G_POSM_OFFSET);
 
         for (uint32_t nL0It = 0; nL0It < curN; nL0It += nL0) {
             uint32_t curNL0 = nL0;
-            if (nL0It + curNL0 > curN) curNL0 = curN - nL0It;
+            if (nL0It + curNL0 > curN)
+                curNL0 = curN - nL0It;
 
             uint16_t cl0BufId = l0cPP & 1;
             WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(cl0BufId));
@@ -684,7 +691,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
 
             for (uint32_t kIt = 0; kIt < kTotal; kIt += kL0) {
                 uint32_t curK = kL0;
-                if (kIt + curK > kTotal) curK = kTotal - kIt;
+                if (kIt + curK > kTotal)
+                    curK = kTotal - kIt;
 
                 constexpr uint32_t L0A_HALF = G_L0A_HALF_BYTES;
                 constexpr uint32_t L0B_HALF = G_L0B_HALF_BYTES;
@@ -721,9 +729,11 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadAL0(
-    LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& al0, uint32_t posM, uint32_t kOff,
-    uint32_t mVal, uint32_t mAlign, uint32_t curK)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadAL0(LocalTensor<DTYPE>& al1,
+                                                                                   LocalTensor<DTYPE>& al0,
+                                                                                   uint32_t posM, uint32_t kOff,
+                                                                                   uint32_t mVal, uint32_t mAlign,
+                                                                                   uint32_t curK)
 {
     const auto& t = Tiling();
     uint64_t posK = kOff;
@@ -735,9 +745,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadA
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadBL0(
-    LocalTensor<DTYPE>& bl0, LocalTensor<DTYPE>& bl1,
-    uint32_t nOff, uint32_t kOff, uint32_t curN, uint32_t curK)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadBL0(LocalTensor<DTYPE>& bl0,
+                                                                                   LocalTensor<DTYPE>& bl1,
+                                                                                   uint32_t nOff, uint32_t kOff,
+                                                                                   uint32_t curN, uint32_t curK)
 {
     const auto& t = Tiling();
     uint32_t kStep = GCeilDiv(curK, K0_VAL);
@@ -754,9 +765,11 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadB
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoMmad(
-    LocalTensor<L0cT>& cl0, LocalTensor<DTYPE>& al0, LocalTensor<DTYPE>& bl0,
-    uint32_t curM, uint32_t curN, uint32_t curK, bool isFirst, bool useBias)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoMmad(LocalTensor<L0cT>& cl0,
+                                                                                LocalTensor<DTYPE>& al0,
+                                                                                LocalTensor<DTYPE>& bl0, uint32_t curM,
+                                                                                uint32_t curN, uint32_t curK,
+                                                                                bool isFirst, bool useBias)
 {
     const auto& t = Tiling();
     MmadParams mp;
@@ -764,15 +777,16 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoMmad(
     mp.n = curN;
     mp.k = curK;
     mp.cmatrixInitVal = isFirst && !useBias;
-    mp.cmatrixSource  = isFirst && useBias;
+    mp.cmatrixSource = isFirst && useBias;
     mp.unitFlag = false;
     Mmad(cl0, al0, bl0, mp);
 }
 
 template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoCopyOut(
-    LocalTensor<L0cT>& cl0, uint32_t mGlobal, uint32_t nStart,
-    uint32_t curM, uint32_t curN, uint32_t mAligned)
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoCopyOut(LocalTensor<L0cT>& cl0,
+                                                                                   uint32_t mGlobal, uint32_t nStart,
+                                                                                   uint32_t curM, uint32_t curN,
+                                                                                   uint32_t mAligned)
 {
     const auto& t = Tiling();
     uint64_t hwOut = static_cast<uint64_t>(t.hout) * t.wout;

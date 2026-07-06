@@ -42,7 +42,7 @@ const gert::Shape g_vec_1_shape = {1};
 
 class ReluV2Tiling {
 public:
-    explicit ReluV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ReluV2Tiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
     ReluV2TilingData* tiling = nullptr;
 
@@ -104,23 +104,24 @@ ge::graphStatus ReluV2Tiling::CheckShape()
 
     auto dimNum = inputGradientsShape.GetDimNum();
 
-    OP_CHECK_IF(
-        (dimNum < 1 || inputGradientsShape.GetDim(dimNum - 1) % 8 != 0),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "x",
-            Ops::Base::ToString(inputGradientsShape),
-            "The last dimension of x must be divisible by 8"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dimNum < 1 || inputGradientsShape.GetDim(dimNum - 1) % 8 != 0),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+                                                      Ops::Base::ToString(inputGradientsShape),
+                                                      "The last dimension of x must be divisible by 8"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        inputGradientsShape != outputMaskShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, mask",
-            Ops::Base::ToString(inputGradientsShape) + ", " + Ops::Base::ToString(outputMaskShape),
-            "The shapes of x and mask must be the same"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputGradientsShape != outputShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, backprops",
-            Ops::Base::ToString(inputGradientsShape) + ", " + Ops::Base::ToString(outputShape),
-            "The shapes of x and backprops must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputGradientsShape != outputMaskShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, mask",
+                    Ops::Base::ToString(inputGradientsShape) + ", " + Ops::Base::ToString(outputMaskShape),
+                    "The shapes of x and mask must be the same"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputGradientsShape != outputShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, backprops",
+                    Ops::Base::ToString(inputGradientsShape) + ", " + Ops::Base::ToString(outputShape),
+                    "The shapes of x and backprops must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -134,11 +135,12 @@ ge::graphStatus ReluV2Tiling::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
 
-    OP_CHECK_IF(
-        this->inputDtype != this->outputDtype, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "The dtypes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->inputDtype != this->outputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                                       "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -146,19 +148,16 @@ ge::graphStatus ReluV2Tiling::RunTiling()
 {
     OP_LOGD(tilingContext->GetNodeName(), "ReluV2Tiling RunTiling Enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Get input dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Get output dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Check shape failed"),
+                return ge::GRAPH_FAILED);
 
     tiling = tilingContext->GetTilingData<ReluV2TilingData>();
-    OP_CHECK_IF(
-        (tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
+                return ge::GRAPH_FAILED);
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         res = elewiseBaseTiling.DoTiling<ReluV2DAG<half, half>::OpDag>(tiling->baseTiling);
@@ -183,7 +182,8 @@ ge::graphStatus ReluV2Tiling::RunTiling()
         tilingContext->SetTilingKey(RELU_TILING_KEY_ELEMENTWISE_INT64);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_INT32, DT_UINT8, DT_INT64");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_INT32, DT_UINT8, DT_INT64");
         return ge::GRAPH_FAILED;
     }
 

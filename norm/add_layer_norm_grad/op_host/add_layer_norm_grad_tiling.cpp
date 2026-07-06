@@ -84,9 +84,9 @@ static uint32_t ROUND_DOWN(uint32_t x, uint32_t factor)
     return 0;
 }
 
-static inline void ComputeCoexistFactor(
-    const bool hasDxInput, uint32_t& coexistTensorInput32WithN, uint32_t& coexistFp32TensorInput16WithN,
-    uint32_t& coexistFp16TensorInput16WithN)
+static inline void ComputeCoexistFactor(const bool hasDxInput, uint32_t& coexistTensorInput32WithN,
+                                        uint32_t& coexistFp32TensorInput16WithN,
+                                        uint32_t& coexistFp16TensorInput16WithN)
 {
     if (!hasDxInput) {
         coexistTensorInput32WithN = COEXIST_TENSOR_INPUT32_WITH_N - 1;
@@ -99,9 +99,8 @@ static inline void ComputeCoexistFactor(
     }
 }
 
-void AddLayerNormGradTilingImpl(
-    const uint32_t dtypeKey, const uint32_t actualAvailUb, int32_t& ndAvailUb, bool& cutDPath,
-    TilingStruct& tilingStruct, const bool hasDxInput)
+void AddLayerNormGradTilingImpl(const uint32_t dtypeKey, const uint32_t actualAvailUb, int32_t& ndAvailUb,
+                                bool& cutDPath, TilingStruct& tilingStruct, const bool hasDxInput)
 {
     // ==== float: cut N ====
     // (ROUND_UP(numLastDim, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_ONLY_D +
@@ -136,15 +135,15 @@ void AddLayerNormGradTilingImpl(
     uint32_t coexistTensorInput32WithN;
     uint32_t coexistFp32TensorInput16WithN;
     uint32_t coexistFp16TensorInput16WithN;
-    ComputeCoexistFactor(
-        hasDxInput, coexistTensorInput32WithN, coexistFp32TensorInput16WithN, coexistFp16TensorInput16WithN);
+    ComputeCoexistFactor(hasDxInput, coexistTensorInput32WithN, coexistFp32TensorInput16WithN,
+                         coexistFp16TensorInput16WithN);
     if (dtypeKey == FLOAT_DTYPE_KEY) {
         tilingStruct.dInnerLength = tilingStruct.numLastDim;
         ndAvailUb = actualAvailUb / sizeof(float) -
                     ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_ONLY_D;
-        tilingStruct.nAvailInUb =
-            ndAvailUb / (ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistTensorInput32WithN +
-                         ROUND_UP(1, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_D_1);
+        tilingStruct.nAvailInUb = ndAvailUb /
+                                  (ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistTensorInput32WithN +
+                                   ROUND_UP(1, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_D_1);
         if (tilingStruct.nAvailInUb < 1 || ndAvailUb < 0) {
             cutDPath = true;
             tilingStruct.nAvailInUb = 1;
@@ -158,22 +157,25 @@ void AddLayerNormGradTilingImpl(
                                          COEXIST_FP32_TENSOR_INPUT16_ONLY_D * sizeof(float) +
                                      ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) *
                                          COEXIST_FP16_TENSOR_INPUT16_ONLY_D * SIZE_OF_BF16_FP16);
-        tilingStruct.nAvailInUb =
-            ndAvailUb /
-            (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
-             ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 * SIZE_OF_BF16_FP16 +
-             ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistFp32TensorInput16WithN * sizeof(float) +
-             ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) * coexistFp16TensorInput16WithN * SIZE_OF_BF16_FP16);
+        tilingStruct.nAvailInUb = ndAvailUb /
+                                  (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
+                                   ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 *
+                                       SIZE_OF_BF16_FP16 +
+                                   ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistFp32TensorInput16WithN *
+                                       sizeof(float) +
+                                   ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) *
+                                       coexistFp16TensorInput16WithN * SIZE_OF_BF16_FP16);
         if (tilingStruct.nAvailInUb < 1 || ndAvailUb < 0) {
             cutDPath = true;
             tilingStruct.nAvailInUb = 1;
-            ndAvailUb =
-                actualAvailUb - (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
-                                 ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 * SIZE_OF_BF16_FP16);
-            tilingStruct.dInnerLength =
-                actualAvailUb /
-                ((coexistFp16TensorInput16WithN + COEXIST_FP16_TENSOR_INPUT16_ONLY_D) * SIZE_OF_BF16_FP16 +
-                 (coexistFp32TensorInput16WithN + COEXIST_FP32_TENSOR_INPUT16_ONLY_D) * sizeof(float));
+            ndAvailUb = actualAvailUb -
+                        (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
+                         ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 * SIZE_OF_BF16_FP16);
+            tilingStruct.dInnerLength = actualAvailUb /
+                                        ((coexistFp16TensorInput16WithN + COEXIST_FP16_TENSOR_INPUT16_ONLY_D) *
+                                             SIZE_OF_BF16_FP16 +
+                                         (coexistFp32TensorInput16WithN + COEXIST_FP32_TENSOR_INPUT16_ONLY_D) *
+                                             sizeof(float));
             tilingStruct.dInnerLength = ROUND_DOWN(tilingStruct.dInnerLength, BLOCK_NUMBER_FP16); // 4656
         }
     } else {
@@ -183,8 +185,8 @@ void AddLayerNormGradTilingImpl(
     }
 }
 
-void AddLayerNormGradGetTilingKey(
-    GetTilingKeyParam& tilingKeyParam, const TilingStruct& tilingStruct, const bool hasDxInput)
+void AddLayerNormGradGetTilingKey(GetTilingKeyParam& tilingKeyParam, const TilingStruct& tilingStruct,
+                                  const bool hasDxInput)
 {
     uint32_t dtypeKey = tilingKeyParam.dtypeKey;
     bool cutDPath = tilingKeyParam.cutDPath;
@@ -215,13 +217,12 @@ void AddLayerNormGradGetTilingKey(
 
 static bool CheckDimNumLimit(size_t x1DimNum, size_t gammaDimNum)
 {
-    OP_CHECK_IF(
-        x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
-        OP_LOGE("CheckDimNumLimit", "Input x1's dim num should not greater than 8 or smaller than 1."), return false);
-    OP_CHECK_IF(
-        gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
-        OP_LOGE("CheckDimNumLimit", "Input gamma's dim num should not greater than 8 or smaller than 1."),
-        return false);
+    OP_CHECK_IF(x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
+                OP_LOGE("CheckDimNumLimit", "Input x1's dim num should not greater than 8 or smaller than 1."),
+                return false);
+    OP_CHECK_IF(gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
+                OP_LOGE("CheckDimNumLimit", "Input gamma's dim num should not greater than 8 or smaller than 1."),
+                return false);
     return true;
 }
 
@@ -253,16 +254,14 @@ static inline bool CheckEqualsAll(std::initializer_list<T> eleList)
 static inline bool HasNoZero(const gert::StorageShape* shapePtr, size_t shapeDim)
 {
     for (uint32_t i = 0; i < shapeDim; i++) {
-        OP_CHECK_IF(
-            shapePtr->GetStorageShape().GetDim(i) == 0, OP_LOGE("HasNoZero", "Invaild shape which have zero dim."),
-            return false);
+        OP_CHECK_IF(shapePtr->GetStorageShape().GetDim(i) == 0,
+                    OP_LOGE("HasNoZero", "Invaild shape which have zero dim."), return false);
     }
     return true;
 }
 
-static inline bool CheckDyGammaMean(
-    const gert::StorageShape* dyShape, const gert::StorageShape* gammaShape, const gert::StorageShape* meanShape,
-    size_t dyDimNum, size_t gammaDimNum)
+static inline bool CheckDyGammaMean(const gert::StorageShape* dyShape, const gert::StorageShape* gammaShape,
+                                    const gert::StorageShape* meanShape, size_t dyDimNum, size_t gammaDimNum)
 {
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
@@ -271,13 +270,12 @@ static inline bool CheckDyGammaMean(
     }
     for (uint32_t i = 0; i < dyDimNum; i++) {
         if (i < dyDimNum - gammaDimNum) {
-            OP_CHECK_IF(
-                meanShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i),
-                OP_LOGE("CheckAddLn", "Output mean/rstd reduce dim is not equal dy first few dim."), return false);
+            OP_CHECK_IF(meanShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i),
+                        OP_LOGE("CheckAddLn", "Output mean/rstd reduce dim is not equal dy first few dim."),
+                        return false);
         } else {
-            OP_CHECK_IF(
-                meanShape->GetStorageShape().GetDim(i) != 1,
-                OP_LOGE("CheckAddLn", "Output mean/rstd reduce dim is not equal 1."), return false);
+            OP_CHECK_IF(meanShape->GetStorageShape().GetDim(i) != 1,
+                        OP_LOGE("CheckAddLn", "Output mean/rstd reduce dim is not equal 1."), return false);
         }
     }
     return true;
@@ -294,8 +292,8 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
     const gert::StorageShape* dyShape = context->GetInputShape(INPUT_DY_INDEX);
     const gert::StorageShape* x1Shape = context->GetInputShape(INPUT_X1_INDEX);
     const gert::StorageShape* x2Shape = context->GetInputShape(INPUT_X2_INDEX);
-    bool noNullShape =
-        CheckAllNotNull({dyShape, x1Shape, x2Shape, meanShape, rstdShape, gammaShape, dgammaShape, dbetaShape});
+    bool noNullShape = CheckAllNotNull(
+        {dyShape, x1Shape, x2Shape, meanShape, rstdShape, gammaShape, dgammaShape, dbetaShape});
     OP_CHECK_IF(!noNullShape, OP_LOGE("CheckShape", "Tensor's shape have nullptr"), return false);
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
     size_t dgammaDimNum = dgammaShape->GetStorageShape().GetDimNum();
@@ -306,23 +304,19 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
     size_t rstdDimNum = rstdShape->GetStorageShape().GetDimNum();
 
     OP_CHECK_IF(!CheckDimNumLimit(x1DimNum, gammaDimNum), OP_LOGE("CheckShape", "Bad x1/gamma dim"), return false);
-    OP_CHECK_IF(
-        !CheckEqualsAll<size_t>({dyDimNum, rstdDimNum, meanDimNum}),
-        OP_LOGE("CheckShape", "Dim num of dy/mean/rstd not same."), return false);
-    OP_CHECK_IF(
-        !CheckEqualsAll<size_t>({dgammaDimNum, gammaDimNum, dbetaDimNum}),
-        OP_LOGE("CheckShape", "Dim num of gamma/dgamma/dbeta not same."), return false);
-    OP_CHECK_IF(
-        dyDimNum < gammaDimNum, OP_LOGE("CheckShape", "Input gamma shape invaild, dim num bigger than dy dim num."),
-        return false);
+    OP_CHECK_IF(!CheckEqualsAll<size_t>({dyDimNum, rstdDimNum, meanDimNum}),
+                OP_LOGE("CheckShape", "Dim num of dy/mean/rstd not same."), return false);
+    OP_CHECK_IF(!CheckEqualsAll<size_t>({dgammaDimNum, gammaDimNum, dbetaDimNum}),
+                OP_LOGE("CheckShape", "Dim num of gamma/dgamma/dbeta not same."), return false);
+    OP_CHECK_IF(dyDimNum < gammaDimNum,
+                OP_LOGE("CheckShape", "Input gamma shape invaild, dim num bigger than dy dim num."), return false);
     bool x1NoZeroDim = HasNoZero(x1Shape, x1DimNum);
     bool meanNoZeroDim = HasNoZero(meanShape, meanDimNum);
     OP_CHECK_IF(!(x1NoZeroDim && meanNoZeroDim), OP_LOGE("CheckShape", "Bad x1/mean which have 0 dim."), return false);
     bool x1x2dydxEqs = CheckEqualsAll<const gert::StorageShape>({*(dyShape), *(x1Shape), *(x2Shape), *(dxShape)});
     bool meanRstdEqs = CheckEqualsAll<const gert::StorageShape>({*(meanShape), *(rstdShape)});
-    OP_CHECK_IF(
-        !(x1x2dydxEqs && meanRstdEqs), OP_LOGE("CheckShape", "Tensor x1/x2/dy/dx OR mean/rstd should have same shape."),
-        return false);
+    OP_CHECK_IF(!(x1x2dydxEqs && meanRstdEqs),
+                OP_LOGE("CheckShape", "Tensor x1/x2/dy/dx OR mean/rstd should have same shape."), return false);
     bool checkDyGammaMean = CheckDyGammaMean(dyShape, gammaShape, meanShape, dyDimNum, gammaDimNum);
     OP_CHECK_IF(!checkDyGammaMean, OP_LOGE("CheckShape", "Tensor dy/gamma/mean have bad rels."), return false);
     for (uint32_t i = 0; i < gammaDimNum; i++) {
@@ -330,9 +324,9 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
         int64_t dgammaDimValue = dgammaShape->GetStorageShape().GetDim(i);
         int64_t dyDimValue = dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i);
         int64_t dbetaDimValue = dbetaShape->GetStorageShape().GetDim(i);
-        OP_CHECK_IF(
-            !CheckEqualsAll<int64_t>({gammaDimValue, dgammaDimValue, dyDimValue, dbetaDimValue}),
-            OP_LOGE("CheckShape", "Shape of gamma/dgamma/dbeta should equal to dy last few dim."), return false);
+        OP_CHECK_IF(!CheckEqualsAll<int64_t>({gammaDimValue, dgammaDimValue, dyDimValue, dbetaDimValue}),
+                    OP_LOGE("CheckShape", "Shape of gamma/dgamma/dbeta should equal to dy last few dim."),
+                    return false);
     }
     return true;
 }
@@ -384,37 +378,39 @@ static void CalNInUb(const uint32_t blockNumberTdtype, TilingStruct& tilingStruc
     // == norm N in one core ==
     tilingStruct.nInOneCoreNorm = tilingStruct.nInOneCoreLength;
     tilingStruct.gmOneCoreElemXYNorm = tilingStruct.nInOneCoreNorm * tilingStruct.numLastDim;
-    tilingStruct.nAvailInUbNorm =
-        (tilingStruct.nInOneCoreNorm < tilingStruct.nAvailInUb) ? tilingStruct.nInOneCoreNorm : tilingStruct.nAvailInUb;
+    tilingStruct.nAvailInUbNorm = (tilingStruct.nInOneCoreNorm < tilingStruct.nAvailInUb) ?
+                                      tilingStruct.nInOneCoreNorm :
+                                      tilingStruct.nAvailInUb;
     tilingStruct.nMiddleCountNorm = CEIL_DIV(tilingStruct.nInOneCoreNorm, tilingStruct.nAvailInUbNorm);
-    tilingStruct.nInUbTotalNormTail =
-        tilingStruct.nInOneCoreNorm - (tilingStruct.nAvailInUbNorm * (tilingStruct.nMiddleCountNorm - 1));
+    tilingStruct.nInUbTotalNormTail = tilingStruct.nInOneCoreNorm -
+                                      (tilingStruct.nAvailInUbNorm * (tilingStruct.nMiddleCountNorm - 1));
 
     // == tail N in one core ==
     tilingStruct.nInOneCoreTail = tilingStruct.nInOneCoreLengthTail;
     tilingStruct.gmOneCoreElemXYTail = tilingStruct.nInOneCoreTail * tilingStruct.numLastDim;
-    tilingStruct.nAvailInUbTail =
-        (tilingStruct.nInOneCoreTail < tilingStruct.nAvailInUb) ? tilingStruct.nInOneCoreTail : tilingStruct.nAvailInUb;
+    tilingStruct.nAvailInUbTail = (tilingStruct.nInOneCoreTail < tilingStruct.nAvailInUb) ?
+                                      tilingStruct.nInOneCoreTail :
+                                      tilingStruct.nAvailInUb;
     tilingStruct.nMiddleCountTail = CEIL_DIV(tilingStruct.nInOneCoreTail, tilingStruct.nAvailInUbTail);
-    tilingStruct.nInUbTotalTailTail =
-        tilingStruct.nInOneCoreTail - (tilingStruct.nAvailInUbNorm * (tilingStruct.nMiddleCountTail - 1));
+    tilingStruct.nInUbTotalTailTail = tilingStruct.nInOneCoreTail -
+                                      (tilingStruct.nAvailInUbNorm * (tilingStruct.nMiddleCountTail - 1));
 
     uint32_t dRstdInUb = 1;
     tilingStruct.dyPadRight = ROUND_UP(tilingStruct.numLastDim, blockNumberTdtype) - tilingStruct.numLastDim;
     tilingStruct.rstdPadRight = ROUND_UP(dRstdInUb, BLOCK_NUMBER) - dRstdInUb;
 
     tilingStruct.dOuterLength = CEIL_DIV(tilingStruct.numLastDim, tilingStruct.dInnerLength);
-    tilingStruct.dInnerLengthTail =
-        tilingStruct.numLastDim - tilingStruct.dInnerLength * (tilingStruct.dOuterLength - 1);
+    tilingStruct.dInnerLengthTail = tilingStruct.numLastDim -
+                                    tilingStruct.dInnerLength * (tilingStruct.dOuterLength - 1);
 
     tilingStruct.roundUpNumLastDim = ROUND_UP(tilingStruct.numLastDim, blockNumberTdtype);
     tilingStruct.roundUp1Dtype = ROUND_UP(1, BLOCK_NUMBER);
-    tilingStruct.roundUpNumLastDimFloat = (static_cast<uint64_t>(tilingStruct.numLastDim) + BLOCK_NUMBER -1) / BLOCK_NUMBER * BLOCK_NUMBER * sizeof(float);
+    tilingStruct.roundUpNumLastDimFloat = (static_cast<uint64_t>(tilingStruct.numLastDim) + BLOCK_NUMBER - 1) /
+                                          BLOCK_NUMBER * BLOCK_NUMBER * sizeof(float);
 }
 
-void SetTiling(
-    TilingStruct& tilingStruct, AddLayerNormGradTilingData& tiling, const uint32_t& numCore,
-    const uint32_t& numFirstDim, const uint32_t& roundUpNumLastDimDtype)
+void SetTiling(TilingStruct& tilingStruct, AddLayerNormGradTilingData& tiling, const uint32_t& numCore,
+               const uint32_t& numFirstDim, const uint32_t& roundUpNumLastDimDtype)
 {
     tiling.set_numCore(numCore);
     tiling.set_numLastDim(tilingStruct.numLastDim);
@@ -527,19 +523,16 @@ static ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context)
     context->SetScheduleMode(SCHEDULE_MODE);
     bool hasDxInput = false;
     OP_CHECK_IF(!BasicCheck(context, tilingStruct, hasDxInput), OP_LOGE(context, "Basic check is Invaild."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputOutputShape(context), OP_LOGE(context, "Input shape is Invaild."),
-        return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE(context, "Input shape is Invaild."), return ge::GRAPH_FAILED);
     const gert::StorageShape* dyShape = context->GetInputShape(0);
     const gert::StorageShape* gammaShape = context->GetInputShape(5);
     auto dyTensor = context->GetInputDesc(0);
     auto dyDataType = dyTensor->GetDataType();
     uint32_t dtypeKey = 0;
     uint32_t blockNumberTdtype = 0;
-    OP_CHECK_IF(
-        !CheckAndSetDtype(dyDataType, dtypeKey, blockNumberTdtype),
-        OP_LOGE(context, "Dtype is not support."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckAndSetDtype(dyDataType, dtypeKey, blockNumberTdtype), OP_LOGE(context, "Dtype is not support."),
+                return ge::GRAPH_FAILED);
     uint32_t numFirstDim = 1;
     uint32_t gammaDims = gammaShape->GetStorageShape().GetDimNum();
     for (uint32_t i = 0; i < dyShape->GetStorageShape().GetDimNum() - gammaDims; i++) {
@@ -568,11 +561,10 @@ static ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context)
     uint32_t tilingKey = 0;
     uint32_t roundUpNumLastDimDtype = 1;
 
-    GetTilingKeyParam tilingKeyParam{
-        .dtypeKey = dtypeKey,
-        .cutDPath = cutDPath,
-        .tilingKey = tilingKey,
-        .roundUpNumLastDimDtype = roundUpNumLastDimDtype};
+    GetTilingKeyParam tilingKeyParam{.dtypeKey = dtypeKey,
+                                     .cutDPath = cutDPath,
+                                     .tilingKey = tilingKey,
+                                     .roundUpNumLastDimDtype = roundUpNumLastDimDtype};
     AddLayerNormGradGetTilingKey(tilingKeyParam, tilingStruct, hasDxInput);
     SetTilingDataPart1(&tilingStruct, tilingKeyParam.roundUpNumLastDimDtype);
     tilingStruct.isDeterministicKey = context->GetDeterministic();
@@ -591,7 +583,8 @@ static ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context)
     size_t usrWorkSpaceSize = 20 * 1024 * 1024;
     size_t deterministicWorkSpaceSize = numCore * tilingStruct.roundUpNumLastDimFloat * NUMBER_TWO;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    currentWorkspace[0] = sysWorkspaceSize + usrWorkSpaceSize + tilingStruct.isDeterministicKey * deterministicWorkSpaceSize;
+    currentWorkspace[0] = sysWorkspaceSize + usrWorkSpaceSize +
+                          tilingStruct.isDeterministicKey * deterministicWorkSpaceSize;
     return ge::GRAPH_SUCCESS;
 }
 

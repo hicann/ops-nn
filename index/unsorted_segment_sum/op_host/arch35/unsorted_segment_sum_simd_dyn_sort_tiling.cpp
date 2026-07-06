@@ -20,113 +20,122 @@
 #include "register/tilingdata_base.h"
 
 namespace optiling {
-    static constexpr uint64_t TEMPLATE_SIMD_DYN_SORT = 7000;
-    static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
-    static constexpr uint64_t BUFFER_NUM = 1;
-    static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
-    static constexpr uint64_t BASE_A_SIZE = 512;
-    static constexpr uint64_t BASE_BLOCK_SIZE = 8192;
-    static constexpr uint64_t COL_LIMIT_SIZE = 1024;
-    static constexpr uint64_t DOUBLE = 2;
-    static constexpr uint32_t SORT_STAT_PADDING = 64;
-    static constexpr uint32_t OUTPUT_THRESHOLD = 12000;
-    static constexpr uint32_t RATIO_THRESHOLD = 256;
+static constexpr uint64_t TEMPLATE_SIMD_DYN_SORT = 7000;
+static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
+static constexpr uint64_t BUFFER_NUM = 1;
+static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
+static constexpr uint64_t BASE_A_SIZE = 512;
+static constexpr uint64_t BASE_BLOCK_SIZE = 8192;
+static constexpr uint64_t COL_LIMIT_SIZE = 1024;
+static constexpr uint64_t DOUBLE = 2;
+static constexpr uint32_t SORT_STAT_PADDING = 64;
+static constexpr uint32_t OUTPUT_THRESHOLD = 12000;
+static constexpr uint32_t RATIO_THRESHOLD = 256;
 
-    static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
+static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
 
-    bool UnsortedSegmentSumSimdDynSortTiling::IsCapable()
-    {
-        if (ratio_ >= RATIO_THRESHOLD && innerDim_ * outputOuterDim_ < OUTPUT_THRESHOLD && innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
-            setAtomicNotSupport.find(dataType_) == setAtomicNotSupport.end()) {
-            return true;
-        }
-        return false;
+bool UnsortedSegmentSumSimdDynSortTiling::IsCapable()
+{
+    if (ratio_ >= RATIO_THRESHOLD && innerDim_ * outputOuterDim_ < OUTPUT_THRESHOLD &&
+        innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
+        setAtomicNotSupport.find(dataType_) == setAtomicNotSupport.end()) {
+        return true;
     }
+    return false;
+}
 
-    uint64_t UnsortedSegmentSumSimdDynSortTiling::GetTilingKey() const
-    {
-        uint64_t tilingKey = TEMPLATE_SIMD_DYN_SORT;
-        return tilingKey;
-    }
+uint64_t UnsortedSegmentSumSimdDynSortTiling::GetTilingKey() const
+{
+    uint64_t tilingKey = TEMPLATE_SIMD_DYN_SORT;
+    return tilingKey;
+}
 
-    void UnsortedSegmentSumSimdDynSortTiling::SetTilingData()
-    {
-        tilingData_.set_outputOuterDim(outputOuterDim_);
-        tilingData_.set_innerDim(innerDim_);
-        tilingData_.set_sTileNum(sTileNum_);
-        tilingData_.set_aTileNum(aTileNum_);
-        tilingData_.set_normBlockS(normBlockS_);
-        tilingData_.set_tailBlockS(tailBlockS_);
-        tilingData_.set_normBlockA(normBlockA_);
-        tilingData_.set_tailBlockA(tailBlockA_);
-        tilingData_.set_baseS(baseS_);
-        tilingData_.set_baseA(baseA_);
-        tilingData_.set_sortBaseS(sortBaseS_);
-        tilingData_.set_sortBaseA(sortBaseA_);
-        tilingData_.set_sortSharedBufSize(static_cast<uint64_t>(sortSharedBufSize_));
-        tilingData_.set_indicesCastMode(static_cast<uint64_t>(indicesCastMode_));
-    }
+void UnsortedSegmentSumSimdDynSortTiling::SetTilingData()
+{
+    tilingData_.set_outputOuterDim(outputOuterDim_);
+    tilingData_.set_innerDim(innerDim_);
+    tilingData_.set_sTileNum(sTileNum_);
+    tilingData_.set_aTileNum(aTileNum_);
+    tilingData_.set_normBlockS(normBlockS_);
+    tilingData_.set_tailBlockS(tailBlockS_);
+    tilingData_.set_normBlockA(normBlockA_);
+    tilingData_.set_tailBlockA(tailBlockA_);
+    tilingData_.set_baseS(baseS_);
+    tilingData_.set_baseA(baseA_);
+    tilingData_.set_sortBaseS(sortBaseS_);
+    tilingData_.set_sortBaseA(sortBaseA_);
+    tilingData_.set_sortSharedBufSize(static_cast<uint64_t>(sortSharedBufSize_));
+    tilingData_.set_indicesCastMode(static_cast<uint64_t>(indicesCastMode_));
+}
 
-    void UnsortedSegmentSumSimdDynSortTiling::DoBlockTiling()
-    {
-        uint64_t colNumAlign = Ops::Base::CeilDiv(innerDim_, baseA_);
-        usedCoreNum_ =
-                std::min(totalCoreNum_, static_cast<uint64_t>(inputOuterDim_ * colNumAlign * BASE_A_SIZE / BASE_BLOCK_SIZE));
-        usedCoreNum_ = usedCoreNum_ == 0 ? 1 : usedCoreNum_;
-        std::tie(sTileNum_, aTileNum_) = AutoTiling(usedCoreNum_, colNumAlign, COL_LIMIT_SIZE);
+void UnsortedSegmentSumSimdDynSortTiling::DoBlockTiling()
+{
+    uint64_t colNumAlign = Ops::Base::CeilDiv(innerDim_, baseA_);
+    usedCoreNum_ = std::min(totalCoreNum_,
+                            static_cast<uint64_t>(inputOuterDim_ * colNumAlign * BASE_A_SIZE / BASE_BLOCK_SIZE));
+    usedCoreNum_ = usedCoreNum_ == 0 ? 1 : usedCoreNum_;
+    std::tie(sTileNum_, aTileNum_) = AutoTiling(usedCoreNum_, colNumAlign, COL_LIMIT_SIZE);
 
-        normBlockS_ = Ops::Base::CeilDiv(inputOuterDim_, sTileNum_);
-        sTileNum_ = Ops::Base::CeilDiv(inputOuterDim_, normBlockS_);
+    normBlockS_ = Ops::Base::CeilDiv(inputOuterDim_, sTileNum_);
+    sTileNum_ = Ops::Base::CeilDiv(inputOuterDim_, normBlockS_);
 
-        normBlockA_ = Ops::Base::CeilDiv(innerDim_, aTileNum_);
-        normBlockA_ = Ops::Base::CeilAlign(normBlockA_, ubBlockSize_ / valueTypeBytes_);
-        aTileNum_ = Ops::Base::CeilDiv(innerDim_, normBlockA_);
+    normBlockA_ = Ops::Base::CeilDiv(innerDim_, aTileNum_);
+    normBlockA_ = Ops::Base::CeilAlign(normBlockA_, ubBlockSize_ / valueTypeBytes_);
+    aTileNum_ = Ops::Base::CeilDiv(innerDim_, normBlockA_);
 
-        usedCoreNum_ = sTileNum_ * aTileNum_;
+    usedCoreNum_ = sTileNum_ * aTileNum_;
 
-        tailBlockS_ = inputOuterDim_ - (sTileNum_ - 1UL) * normBlockS_;
-        tailBlockA_ = innerDim_ - (aTileNum_ - 1UL) * normBlockA_;
-    }
+    tailBlockS_ = inputOuterDim_ - (sTileNum_ - 1UL) * normBlockS_;
+    tailBlockA_ = innerDim_ - (aTileNum_ - 1UL) * normBlockA_;
+}
 
 /**
  * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
  */
-    uint64_t UnsortedSegmentSumSimdDynSortTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd)
+uint64_t UnsortedSegmentSumSimdDynSortTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd)
 {
     uint64_t idsSortBufCnt = 2;
     uint64_t baseXoMid;
     uint64_t tmpTotalSize = 0;
     baseXoEnd = baseXoEnd + 1UL;
     while (baseXoEnd - baseXoStart > 1UL) {
-    baseXoMid = (baseXoStart + baseXoEnd) / DOUBLE;
-    if (indicesCastMode_ == 0) {
-    uint64_t sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(idType_, baseXoMid, false));
-    tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) * BUFFER_NUM + // xQue
-                   Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +                 // idQue
-                   Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) +              // resBuf
-                   Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) +                     // sortedkeyBuf
-                   Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt + // sortedIdxBuf
-                   SORT_STAT_PADDING + SORT_STAT_PADDING +                                      // sort padding
-                   Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
-} else {
-uint64_t sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(indicesCastDtype_, baseXoMid, false));
-tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) * BUFFER_NUM + // xQue
-               Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +                 // Cast前的indices
-               Ops::Base::CeilAlign(baseXoMid * indicesCastDtypeSize_, ubBlockSize_) +                         // Cast后的indices
-               Ops::Base::CeilAlign(baseXoMid * indicesCastDtypeSize_, ubBlockSize_) +                         // indices sorted
-               Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) +                  // 存放相加后的临时变量
-               Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt +              // sortedIdxBuf  排序后原始的索引
-               SORT_STAT_PADDING + SORT_STAT_PADDING +                                                   // sort padding
-               Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
-}
+        baseXoMid = (baseXoStart + baseXoEnd) / DOUBLE;
+        if (indicesCastMode_ == 0) {
+            uint64_t sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(idType_, baseXoMid, false));
+            tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) *
+                               BUFFER_NUM +                                                               // xQue
+                           Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +    // idQue
+                           Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) + // resBuf
+                           Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) + // sortedkeyBuf
+                           Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) *
+                               idsSortBufCnt + // sortedIdxBuf
+                           SORT_STAT_PADDING +
+                           SORT_STAT_PADDING +                                  // sort padding
+                           Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
+        } else {
+            uint64_t sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(indicesCastDtype_, baseXoMid, false));
+            tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_, ubBlockSize_) *
+                               BUFFER_NUM + // xQue
+                           Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) *
+                               BUFFER_NUM +                                                        // Cast前的indices
+                           Ops::Base::CeilAlign(baseXoMid * indicesCastDtypeSize_, ubBlockSize_) + // Cast后的indices
+                           Ops::Base::CeilAlign(baseXoMid * indicesCastDtypeSize_, ubBlockSize_) + // indices sorted
+                           Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * valueTypeBytes_,
+                                                ubBlockSize_) + // 存放相加后的临时变量
+                           Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) *
+                               idsSortBufCnt + // sortedIdxBuf  排序后原始的索引
+                           SORT_STAT_PADDING +
+                           SORT_STAT_PADDING +                                  // sort padding
+                           Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
+        }
 
-if (tmpTotalSize <= ubSize_) {
-baseXoStart = baseXoMid;
-} else {
-baseXoEnd = baseXoMid;
-}
-}
-return baseXoStart;
+        if (tmpTotalSize <= ubSize_) {
+            baseXoStart = baseXoMid;
+        } else {
+            baseXoEnd = baseXoMid;
+        }
+    }
+    return baseXoStart;
 }
 
 ge::graphStatus UnsortedSegmentSumSimdDynSortTiling::DoOpTiling()
@@ -143,12 +152,13 @@ ge::graphStatus UnsortedSegmentSumSimdDynSortTiling::DoOpTiling()
     uint64_t coreMaxS = std::max(normBlockS_, tailBlockS_);
 
     // ub split for non sort case
-    uint64_t maxBaseS = (ubSize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM / (baseA_ * valueTypeBytes_ + idTypeBytes_ + indicesCastDtypeSize_);
+    uint64_t maxBaseS = (ubSize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM /
+                        (baseA_ * valueTypeBytes_ + idTypeBytes_ + indicesCastDtypeSize_);
     baseS_ = maxBaseS;
     if (coreMaxS < baseS_) {
         baseS_ = coreMaxS;
-        baseA_ =
-                (ubSize_ - BUFFER_NUM * (ubBlockSize_ + baseS_ * (idTypeBytes_ + indicesCastDtypeSize_))) / BUFFER_NUM / (baseS_ * valueTypeBytes_);
+        baseA_ = (ubSize_ - BUFFER_NUM * (ubBlockSize_ + baseS_ * (idTypeBytes_ + indicesCastDtypeSize_))) /
+                 BUFFER_NUM / (baseS_ * valueTypeBytes_);
         baseA_ = Ops::Base::FloorAlign(baseA_, ubBlockSize_ / valueTypeBytes_);
     }
 
@@ -172,8 +182,8 @@ ge::graphStatus UnsortedSegmentSumSimdDynSortTiling::DoOpTiling()
                          Ops::Base::CeilAlign(sortBaseS_ * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt -
                          Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_) - SORT_STAT_PADDING - SORT_STAT_PADDING;
         }
-        sortBaseA_ =
-                (remainSize - BUFFER_NUM * ubBlockSize_ - ubBlockSize_) / (BUFFER_NUM + 1) / (sortBaseS_ * valueTypeBytes_);
+        sortBaseA_ = (remainSize - BUFFER_NUM * ubBlockSize_ - ubBlockSize_) / (BUFFER_NUM + 1) /
+                     (sortBaseS_ * valueTypeBytes_);
         sortBaseA_ = Ops::Base::FloorAlign(sortBaseA_, ubBlockSize_ / valueTypeBytes_);
     }
     sortSharedBufSize_ = GetSortTmpSize(indicesCastDtype_, sortBaseS_, false);

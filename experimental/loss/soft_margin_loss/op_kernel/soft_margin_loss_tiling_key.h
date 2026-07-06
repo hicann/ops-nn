@@ -13,7 +13,6 @@
  * technically reviewed for functional accuracy and security
  */
 
-
 /**
  * \file soft_margin_loss_tiling_key.h
  * \brief SoftMarginLoss TilingKey definition
@@ -30,20 +29,16 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-#define SML_TPL_SCH_MODE_0 0   // FLOAT32 + NONE
-#define SML_TPL_SCH_MODE_1 1   // FLOAT32 + REDUCE (mean/sum)
-#define SML_TPL_SCH_MODE_2 2   // FLOAT16 + NONE
-#define SML_TPL_SCH_MODE_3 3   // FLOAT16 + REDUCE (mean/sum)
+#define SML_TPL_SCH_MODE_0 0 // FLOAT32 + NONE
+#define SML_TPL_SCH_MODE_1 1 // FLOAT32 + REDUCE (mean/sum)
+#define SML_TPL_SCH_MODE_2 2 // FLOAT16 + NONE
+#define SML_TPL_SCH_MODE_3 3 // FLOAT16 + REDUCE (mean/sum)
 
-ASCENDC_TPL_ARGS_DECL(
-    SoftMarginLoss,
-    ASCENDC_TPL_UINT_DECL(schMode, 2, ASCENDC_TPL_UI_LIST,
-                          SML_TPL_SCH_MODE_0, SML_TPL_SCH_MODE_1,
-                          SML_TPL_SCH_MODE_2, SML_TPL_SCH_MODE_3));
+ASCENDC_TPL_ARGS_DECL(SoftMarginLoss,
+                      ASCENDC_TPL_UINT_DECL(schMode, 2, ASCENDC_TPL_UI_LIST, SML_TPL_SCH_MODE_0, SML_TPL_SCH_MODE_1,
+                                            SML_TPL_SCH_MODE_2, SML_TPL_SCH_MODE_3));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
-    ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
-                         SML_TPL_SCH_MODE_0, SML_TPL_SCH_MODE_1,
-                         SML_TPL_SCH_MODE_2, SML_TPL_SCH_MODE_3)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SML_TPL_SCH_MODE_0,
+                                                          SML_TPL_SCH_MODE_1, SML_TPL_SCH_MODE_2, SML_TPL_SCH_MODE_3)));
 
 #endif

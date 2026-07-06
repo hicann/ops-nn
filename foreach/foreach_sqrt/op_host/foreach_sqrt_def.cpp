@@ -16,8 +16,7 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-class ForeachSqrt : public OpDef
-{
+class ForeachSqrt : public OpDef {
 public:
     explicit ForeachSqrt(const char* name) : OpDef(name)
     {
@@ -35,16 +34,12 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig membaseCfg;
-        membaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        membaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", membaseCfg);
         this->AICore().AddConfig("ascend910_93", membaseCfg);
 
         OpAICoreConfig regbaseCfg;
-        regbaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", regbaseCfg);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

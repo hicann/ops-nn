@@ -21,34 +21,27 @@
 
 using namespace std;
 
-class l2BatchNormElemtTest : public testing::Test
-{
+class l2BatchNormElemtTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2BatchNormElemtTest SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2BatchNormElemtTest SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2BatchNormElemtTest TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2BatchNormElemtTest TearDown" << endl; }
 };
 
 TEST_F(l2BatchNormElemtTest, l2_batch_norm_elemt_float16_4d)
 {
-    auto selfDesc =
-        TensorDesc({1, 4, 2, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW).Value(vector<float>{1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3,
-                                                                                   4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2,
-                                                                                   3, 4, 1, 2, 3, 4, 1, 2, 3, 4});
+    auto selfDesc = TensorDesc({1, 4, 2, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW).Value(vector<float>{1, 2, 3, 4, 1, 2, 3, 4,
+                                                                                               1, 2, 3, 4, 1, 2, 3, 4,
+                                                                                               1, 2, 3, 4, 1, 2, 3, 4,
+                                                                                               1, 2, 3, 4, 1, 2, 3, 4});
     auto weightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
     auto biasDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{10, 11, 12, 13});
     auto MeanDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{2, 3, 4, 5});
     auto InvstdDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{2, 3, 4, 5});
 
     auto outDesc = TensorDesc({1, 4, 2, 4}, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto ut = OP_API_UT(
-        aclnnBatchNormElemt, INPUT(selfDesc, weightDesc, biasDesc, MeanDesc, InvstdDesc, 1e-5), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnBatchNormElemt, INPUT(selfDesc, weightDesc, biasDesc, MeanDesc, InvstdDesc, 1e-5),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

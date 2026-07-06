@@ -35,16 +35,18 @@ struct EluGradV2IsResultOp {
     using Cast0 = Ops::Base::Bind<Ops::Base::Vec::Cast<float, T, 0>, OpCopyIn0>;
     using Cast1 = Ops::Base::Bind<Ops::Base::Vec::Cast<float, T, 0>, OpCopyIn1>;
     using OpAdds = Ops::Base::Bind<Ops::Base::Vec::Adds<float>, Cast1, Ops::Base::Placeholder::Var<float, 0>>;
-    using OpMuls1 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast0, Ops::Base::Placeholder::Var<float, PLACEHOLDER_INDEX_2>>;
+    using OpMuls1 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast0,
+                                    Ops::Base::Placeholder::Var<float, PLACEHOLDER_INDEX_2>>;
     using OpMuls2 = Ops::Base::Bind<Ops::Base::Vec::Mul<float>, OpMuls1, OpAdds>;
     using OpMuls0 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast0, Ops::Base::Placeholder::Var<float, 1>>;
     using OpCompare = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, float, COMPARE_MODE_LE>, Cast1, ConstValue>;
-    using OpSelect = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, float, SELECT_MODE_T_T>, OpCompare, OpMuls2, OpMuls0>;
+    using OpSelect = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, float, SELECT_MODE_T_T>, OpCompare, OpMuls2,
+                                     OpMuls0>;
     using OpResultCast = Ops::Base::Bind<Ops::Base::Vec::Cast<T, float, 1>, OpSelect>;
 
     using OpCopyOut = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out0<T>, OpResultCast>;
     // 指定输出节点
-    using Outputs = Ops::Base::Elems<OpCopyOut>;  // 设置输出
+    using Outputs = Ops::Base::Elems<OpCopyOut>; // 设置输出
     using MemCfg = Ops::Base::MemOptCfg<Ops::Base::MemLevel::LEVEL_2>;
     using OpDag = Ops::Base::DAGSch<Outputs, void, MemCfg>;
 };
@@ -61,21 +63,24 @@ struct EluGradV2NoResultOp {
     using OpCopyIn1 = Ops::Base::Bind<Ops::Base::Vec::CopyIn<T>, Ops::Base::Placeholder::In1<T>>;
     using Cast0 = Ops::Base::Bind<Ops::Base::Vec::Cast<float, T, 0>, OpCopyIn0>;
     using Cast1 = Ops::Base::Bind<Ops::Base::Vec::Cast<float, T, 0>, OpCopyIn1>;
-    using OpMuls1 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast1, Ops::Base::Placeholder::Var<float, PLACEHOLDER_INDEX_2>>;
+    using OpMuls1 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast1,
+                                    Ops::Base::Placeholder::Var<float, PLACEHOLDER_INDEX_2>>;
     using OpExp = Ops::Base::Bind<Ops::Base::Vec::Exp<float>, OpMuls1>;
-    using OpMuls2 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast0, Ops::Base::Placeholder::Var<float, PLACEHOLDER_INDEX_2>>;
-    using OpMuls3 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, OpMuls2,  Ops::Base::Placeholder::Var<float, 0>>;
-    using OpMuls4 = Ops::Base::Bind<Ops::Base::Vec::Mul<float>, OpMuls3,  OpExp>;
+    using OpMuls2 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast0,
+                                    Ops::Base::Placeholder::Var<float, PLACEHOLDER_INDEX_2>>;
+    using OpMuls3 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, OpMuls2, Ops::Base::Placeholder::Var<float, 0>>;
+    using OpMuls4 = Ops::Base::Bind<Ops::Base::Vec::Mul<float>, OpMuls3, OpExp>;
     using OpMuls0 = Ops::Base::Bind<Ops::Base::Vec::Muls<float>, Cast0, Ops::Base::Placeholder::Var<float, 1>>;
     using OpCompare = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, float, COMPARE_MODE_LE>, Cast1, ConstValue>;
-    using OpSelect = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, float, SELECT_MODE_T_T>, OpCompare, OpMuls4, OpMuls0>;
+    using OpSelect = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, float, SELECT_MODE_T_T>, OpCompare, OpMuls4,
+                                     OpMuls0>;
     using OpResultCast = Ops::Base::Bind<Ops::Base::Vec::Cast<T, float, 1>, OpSelect>;
 
     using OpCopyOut = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out0<T>, OpResultCast>;
     // 指定输出节点
-    using Outputs = Ops::Base::Elems<OpCopyOut>;  // 设置输出
+    using Outputs = Ops::Base::Elems<OpCopyOut>; // 设置输出
     using MemCfg = Ops::Base::MemOptCfg<Ops::Base::MemLevel::LEVEL_2>;
     using OpDag = Ops::Base::DAGSch<Outputs, void, MemCfg>;
 };
 
-#endif  // CANN_CUSTOM_OPS_ELU_GRAD_V2_DAG_H
+#endif // CANN_CUSTOM_OPS_ELU_GRAD_V2_DAG_H

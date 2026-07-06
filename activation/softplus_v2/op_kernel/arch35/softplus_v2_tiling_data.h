@@ -21,12 +21,12 @@
 #include <cstdint>
 
 struct SoftplusV2TilingData {
-    int64_t totalLength;      // total number of elements
-    int64_t blockFactor;      // elements per core
-    int64_t tileLength;       // aligned tile length per iteration
-    float beta;               // scaling factor
-    float threshold;          // linearization threshold
-    float invBeta;            // 1.0 / beta, precomputed on Host
+    int64_t totalLength; // total number of elements
+    int64_t blockFactor; // elements per core
+    int64_t tileLength;  // aligned tile length per iteration
+    float beta;          // scaling factor
+    float threshold;     // linearization threshold
+    float invBeta;       // 1.0 / beta, precomputed on Host
 };
 
 #endif // _SOFTPLUS_V2_TILING_DATA_H_

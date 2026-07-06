@@ -21,19 +21,14 @@ namespace BroadcastGradientArgs {
 using namespace AscendC;
 
 template <typename T>
-class BroadcastGradientArgsPerf : public BroadcastGradientArgsBase<T>
-{
+class BroadcastGradientArgsPerf : public BroadcastGradientArgsBase<T> {
 public:
     __aicore__ inline BroadcastGradientArgsPerf(){};
 
-    __aicore__ inline uint16_t CEIL_DIV(uint16_t x, uint16_t y)
-    {
-        return (x + y - 1) / y;
-    }
+    __aicore__ inline uint16_t CEIL_DIV(uint16_t x, uint16_t y) { return (x + y - 1) / y; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR y1, GM_ADDR y2, GM_ADDR outShape,
-        const BroadcastGradientArgsTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y1, GM_ADDR y2, GM_ADDR outShape,
+                                const BroadcastGradientArgsTilingData* __restrict tilingData)
     {
         // init global memory
         tilingData_ = tilingData;
@@ -97,11 +92,11 @@ public:
                     maskCalc = MicroAPI::UpdateMask<int64_t>(srg0);
                     // mask未选择位置会置0，对尾块无影响
                     MicroAPI::Cast<int32_t, int64_t, castTraitB642B32>(x_int32_reg, in_reg, maskCalc);
-                    MicroAPI::Pack(
-                        (MicroAPI::RegTensor<uint32_t>&)x_int32_reg, (MicroAPI::RegTensor<uint64_t>&)x_int32_reg);
+                    MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)x_int32_reg,
+                                   (MicroAPI::RegTensor<uint64_t>&)x_int32_reg);
                     MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(maskCompare, x_int32_reg, 1, maskAll);
-                    MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(
-                        dst_reg, calc_index_reg, maskCompare);
+                    MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
+                                                                                       maskCompare);
                     MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
                 }
             } else {
@@ -110,8 +105,8 @@ public:
                     MicroAPI::Adds(calc_index_reg, init_index_reg, i * vlInput, maskAll);
                     MicroAPI::DataCopy(in_reg, x + i * vlInput);
                     MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(maskCompare, in_reg, 1, maskCalc);
-                    MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(
-                        dst_reg, calc_index_reg, maskCompare);
+                    MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
+                                                                                       maskCompare);
                     MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
                 }
             }
@@ -120,9 +115,8 @@ public:
         return ((MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
     }
 
-    __aicore__ inline void CheckInput(
-        __local_mem__ T* x1, __local_mem__ T* x2, __local_mem__ T* invalidFlag, __local_mem__ T* equalFlag,
-        uint32_t calcLen)
+    __aicore__ inline void CheckInput(__local_mem__ T* x1, __local_mem__ T* x2, __local_mem__ T* invalidFlag,
+                                      __local_mem__ T* equalFlag, uint32_t calcLen)
     {
         __VEC_SCOPE__
         {
@@ -219,7 +213,7 @@ public:
             y2ShapeUb.SetValue(SHAPE_DIM0_IDX, 0);
             SetFlag<HardEvent::S_MTE3>(2);
             WaitFlag<HardEvent::S_MTE3>(2);
-            DataCopyExtParams copyOutShapeParams {1, 2 * sizeof(uint64_t), 0, 0, 0};
+            DataCopyExtParams copyOutShapeParams{1, 2 * sizeof(uint64_t), 0, 0, 0};
             DataCopyPad(this->outShapeGm, y1ShapeUb, copyOutShapeParams);
             DataCopyPad(this->outShapeGm[SHAPE1_GM_IDX], y2ShapeUb, copyOutShapeParams);
             return;
@@ -269,7 +263,7 @@ public:
         y2ShapeUb.SetValue(SHAPE_DIM0_IDX, y2Num);
         SetFlag<HardEvent::S_MTE3>(2);
         WaitFlag<HardEvent::S_MTE3>(2);
-        DataCopyExtParams copyOutShapeParams {1, 2 * sizeof(uint64_t), 0, 0, 0};
+        DataCopyExtParams copyOutShapeParams{1, 2 * sizeof(uint64_t), 0, 0, 0};
         DataCopyPad(this->outShapeGm, y1ShapeUb, copyOutShapeParams);
         DataCopyPad(this->outShapeGm[SHAPE1_GM_IDX], y2ShapeUb, copyOutShapeParams);
     }

@@ -22,15 +22,9 @@ using namespace std;
 
 class l2_add_layer_norm_quant_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_layer_norm_quant_v2_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_layer_norm_quant_v2_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "add_layer_norm_quant_v2_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "add_layer_norm_quant_v2_test TearDown" << endl; }
 };
 
 TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_dyn_001)
@@ -57,10 +51,10 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_dyn_001)
 
     auto ut = OP_API_UT(
         aclnnAddLayerNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
-            tensor_desc_s2, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
+              tensor_desc_s2, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1,
+               tensor_desc_os2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -89,10 +83,10 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_stc_001)
 
     auto ut = OP_API_UT(
         aclnnAddLayerNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
-            (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1,
+               tensor_desc_os2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -122,10 +116,10 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_stc_pertensor_001)
 
     auto ut = OP_API_UT(
         aclnnAddLayerNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
-            (aclTensor*)nullptr, tensor_desc_o1, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
+              (aclTensor*)nullptr, tensor_desc_o1, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1,
+               tensor_desc_os2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -154,10 +148,10 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_bf16_001)
 
     auto ut = OP_API_UT(
         aclnnAddLayerNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
-            (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1,
+               tensor_desc_os2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -187,10 +181,10 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_fp32_001)
 
     auto ut = OP_API_UT(
         aclnnAddLayerNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
-            tensor_desc_s2, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
+              tensor_desc_s2, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1,
+               tensor_desc_os2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -218,10 +212,10 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_no_bias_001)
 
     auto ut = OP_API_UT(
         aclnnAddLayerNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, (aclTensor*)nullptr, tensor_desc_s1,
-            (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, (aclTensor*)nullptr, tensor_desc_s1,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1,
+               tensor_desc_os2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

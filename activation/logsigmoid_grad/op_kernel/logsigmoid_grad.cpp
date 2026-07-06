@@ -24,8 +24,8 @@ using namespace AscendC;
 using namespace LogSigmoidGradOp;
 
 template <uint64_t schMode>
-__global__ __aicore__ void log_sigmoid_grad(
-    GM_ADDR grads, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void log_sigmoid_grad(GM_ADDR grads, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     using OpDag = LogSigmoidGradDag<DTYPE_GRADS>::OpDag;
     BroadcastSch<schMode, OpDag> sch(tiling);

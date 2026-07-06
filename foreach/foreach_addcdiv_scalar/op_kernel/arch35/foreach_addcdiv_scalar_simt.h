@@ -37,35 +37,21 @@ static constexpr uint32_t THREADS = (sizeof(INDEX_T) == 4) ? 1024 : 512;
 
 // ========== Type cast helpers with __simt_callee__ ==========
 
-__simt_callee__ inline float CastHalfToFloat(half val)
-{
-    return __half2float(val);
-}
+__simt_callee__ inline float CastHalfToFloat(half val) { return __half2float(val); }
 
-__simt_callee__ inline half CastFloatToHalf(float val)
-{
-    return __float2half(val);
-}
+__simt_callee__ inline half CastFloatToHalf(float val) { return __float2half(val); }
 
-__simt_callee__ inline float CastBf16ToFloat(bfloat16_t val)
-{
-    return __bfloat162float(val);
-}
+__simt_callee__ inline float CastBf16ToFloat(bfloat16_t val) { return __bfloat162float(val); }
 
-__simt_callee__ inline bfloat16_t CastFloatToBf16(float val)
-{
-    return __float2bfloat16(val);
-}
+__simt_callee__ inline bfloat16_t CastFloatToBf16(float val) { return __float2bfloat16(val); }
 
 // ========== Unified VF kernel (R007: merged 3 dtype-specific VFs into one template) ==========
 
 // R003: INDEX_T parameterized — uses int32_t for dataCount <= INT32_MAX, int64_t otherwise
 // R007: Single template VF replaces 3 separate VFs, with if constexpr for dtype-specific cast
 template <typename T, typename INDEX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREADS<INDEX_T>)
-inline void ForeachAddcdivScalarSimtKernel(
-    INDEX_T dataCount, GM_ADDR scalar,
-    __gm__ T* x1_gm, __gm__ T* x2_gm, __gm__ T* x3_gm, __gm__ T* y_gm)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREADS<INDEX_T>) inline void ForeachAddcdivScalarSimtKernel(
+    INDEX_T dataCount, GM_ADDR scalar, __gm__ T* x1_gm, __gm__ T* x2_gm, __gm__ T* x3_gm, __gm__ T* y_gm)
 {
     // TTK R2 fix: Process already splits data per-core, so VF kernel uses only
     // thread-level stride (GetThreadIdx/GetThreadNum), NOT block-level stride.
@@ -116,12 +102,11 @@ __aicore__ inline __gm__ T* GetTensorAddrFromList(GM_ADDR tensorListPtr, int64_t
 // ========== Process: template function with if constexpr dispatch (MDE 7.2/7.5) ==========
 
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y,
-    const ForeachAddcdivScalarTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y,
+                               const ForeachAddcdivScalarTilingData* tilingData)
 {
     if (tilingData->totalDataCount <= 0) {
-        return;  // Empty TensorList
+        return; // Empty TensorList
     }
 
     int32_t coreId = GetBlockIdx();
@@ -131,11 +116,12 @@ __aicore__ inline void Process(
     int64_t tensorEndOffset = tilingData->tensorEndOffsetList[coreId];
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
         int64_t cursorStart = (i == tensorStart) ? tensorStartOffset : 0;
-        int64_t cursorEnd = (i == tensorEnd) ? tensorEndOffset :
-                            (tilingData->tensorDataCountList[i] - 1);
+        int64_t cursorEnd = (i == tensorEnd) ? tensorEndOffset : (tilingData->tensorDataCountList[i] - 1);
         int64_t dataCount = cursorEnd - cursorStart + 1;
 
-        if (dataCount <= 0) { continue; }
+        if (dataCount <= 0) {
+            continue;
+        }
 
         __gm__ T* x1_gm = GetTensorAddrFromList<T>(x1, static_cast<int64_t>(i)) + cursorStart;
         __gm__ T* x2_gm = GetTensorAddrFromList<T>(x2, static_cast<int64_t>(i)) + cursorStart;
@@ -144,12 +130,10 @@ __aicore__ inline void Process(
 
         if (dataCount <= static_cast<int64_t>(INT32_MAX)) {
             Simt::VF_CALL<ForeachAddcdivScalarSimtKernel<T, uint32_t>>(
-                Simt::Dim3(THREADS<uint32_t>), static_cast<uint32_t>(dataCount), scalar,
-                x1_gm, x2_gm, x3_gm, y_gm);
+                Simt::Dim3(THREADS<uint32_t>), static_cast<uint32_t>(dataCount), scalar, x1_gm, x2_gm, x3_gm, y_gm);
         } else {
-            Simt::VF_CALL<ForeachAddcdivScalarSimtKernel<T, int64_t>>(
-                Simt::Dim3(THREADS<int64_t>), dataCount, scalar,
-                x1_gm, x2_gm, x3_gm, y_gm);
+            Simt::VF_CALL<ForeachAddcdivScalarSimtKernel<T, int64_t>>(Simt::Dim3(THREADS<int64_t>), dataCount, scalar,
+                                                                      x1_gm, x2_gm, x3_gm, y_gm);
         }
     }
 }

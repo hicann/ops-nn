@@ -86,11 +86,9 @@ struct MaxPoolV3CompileInfo {
 
 class MaxPoolV3BaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPoolV3BaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit MaxPoolV3BaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
-    ~MaxPoolV3BaseTiling() override
-    {}
+    ~MaxPoolV3BaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -113,9 +111,8 @@ protected:
     ge::graphStatus PostTiling() override;
     bool IsInvalidType(const ge::DataType dataType);
     bool IsInvalidPaddingMode(std::string padMode);
-    int64_t InferCalculateOutShape(
-        const int64_t ksize, const int64_t padL, const int64_t padR, const int64_t stride, const bool ceilMode,
-        int64_t dimSize);
+    int64_t InferCalculateOutShape(const int64_t ksize, const int64_t padL, const int64_t padR, const int64_t stride,
+                                   const bool ceilMode, int64_t dimSize);
 
 public:
     InputInfo inputData;

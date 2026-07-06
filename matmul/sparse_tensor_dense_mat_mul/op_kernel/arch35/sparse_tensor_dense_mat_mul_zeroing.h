@@ -36,8 +36,8 @@ __aicore__ inline void SparseTensorDenseMatMulZeroing<T_VAL>::InitAndProcessZero
 {
     uint32_t currCoreIdx = static_cast<uint32_t>(GetBlockIdx());
     GlobalTensor<T_VAL> yOutputGm;
-    yOutputGm.SetGlobalBuffer(
-        reinterpret_cast<__gm__ T_VAL*>(y) + currCoreIdx * tilingData_->initAndOutFormerCoreElemNum);
+    yOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T_VAL*>(y) +
+                              currCoreIdx * tilingData_->initAndOutFormerCoreElemNum);
 
     if (currCoreIdx < tilingData_->initAndOutUsedCoreNum) {
         uint64_t initEleNumPerCore = (currCoreIdx == tilingData_->initAndOutUsedCoreNum - 1) ?
@@ -48,4 +48,3 @@ __aicore__ inline void SparseTensorDenseMatMulZeroing<T_VAL>::InitAndProcessZero
 }
 
 } // namespace SparseTensorDenseMatMul
-

@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ extern const std::string ATTR_NAME_SRC_FORMAT;
 extern const std::string ATTR_NAME_DST_FORMAT;
 extern const std::string UNSQUEEZE_V2;
 extern const std::string AXIS_ATTR_NAME;
-extern const std::string ATTR_SCALE; 
+extern const std::string ATTR_SCALE;
 extern const std::string ATTR_OFFSET;
 extern const size_t kPostCubeNodeLimited;
 extern const size_t kPassMinSize;
@@ -169,55 +169,56 @@ extern const ge::AscendString kAscendFusionOpListAsc;
 extern const ge::AscendString kAscendUnitListAsc;
 extern const ge::AscendString kAscendEltwiseModeAsc;
 
-#define GET_DEQUANT_SCALE_DEQ(dequant_scale_date) (((dequant_scale_date) & 0x00000000ffffffff))
+#define GET_DEQUANT_SCALE_DEQ(dequant_scale_date) (((dequant_scale_date)&0x00000000ffffffff))
 
 #ifndef REPORT_OPS_ERROR
 #define REPORT_OPS_ERROR(fmt, ...) OPS_LOG_E("PostCube", fmt, ##__VA_ARGS__)
 #endif
 
 #ifndef OPS_MAKE_SHARED
-#define OPS_MAKE_SHARED(exec_expr0, exec_expr1)   \
-  do {                                            \
-    try {                                         \
-      exec_expr0;                                 \
-    } catch (...) {                               \
-      OPS_LOG_E("PostCube", "Make shared failed"); \
-      exec_expr1;                                 \
-    }                                             \
-  } while (0)
+#define OPS_MAKE_SHARED(exec_expr0, exec_expr1)          \
+    do {                                                 \
+        try {                                            \
+            exec_expr0;                                  \
+        } catch (...) {                                  \
+            OPS_LOG_E("PostCube", "Make shared failed"); \
+            exec_expr1;                                  \
+        }                                                \
+    } while (0)
 #endif
 
 #ifndef OPS_CHECK_NOTNULL
-#define OPS_CHECK_NOTNULL(val)              \
-do {                                        \
-  if ((val) == nullptr) {                   \
-    OPS_LOG_E("PostCube", #val " is null");  \
-    return ge::GRAPH_FAILED;                \
-  }                                         \
-} while (0)
+#define OPS_CHECK_NOTNULL(val)                      \
+    do {                                            \
+        if ((val) == nullptr) {                     \
+            OPS_LOG_E("PostCube", #val " is null"); \
+            return ge::GRAPH_FAILED;                \
+        }                                           \
+    } while (0)
 #endif
 
-enum class ISAArchVersion { EN_ISA_ARCH_V100 = 0, EN_ISA_ARCH_V200, EN_ISA_ARCH_V220, EN_ISA_ARCH_V300,
-                            EN_ISA_ARCH_V350 };
+enum class ISAArchVersion {
+    EN_ISA_ARCH_V100 = 0,
+    EN_ISA_ARCH_V200,
+    EN_ISA_ARCH_V220,
+    EN_ISA_ARCH_V300,
+    EN_ISA_ARCH_V350
+};
 struct Configtype2Datatype {
-  bool has_output_dtype;
-  ge::DataType input_dtype;
-  ge::DataType output_dtype;
+    bool has_output_dtype;
+    ge::DataType input_dtype;
+    ge::DataType output_dtype;
 };
 using CONFIGDTYPE = Configtype2Datatype;
 
-enum class PostCubeCubeType {
-  NotCube = 0,
-  Cube = 1,
-  CubeMerge = 2
-};
+enum class PostCubeCubeType { NotCube = 0, Cube = 1, CubeMerge = 2 };
 
 enum class PostCubeAbilityType {
-  SupportPostEltwiseBroadcast = 0,
-  SupportMultipleOutput = 1,
-  UseGmAtomicAdd = 2,
-  NodeCantAccess = 3,
-  PostCubeAbilityTypeBottom
+    SupportPostEltwiseBroadcast = 0,
+    SupportMultipleOutput = 1,
+    UseGmAtomicAdd = 2,
+    NodeCantAccess = 3,
+    PostCubeAbilityTypeBottom
 };
 
 using PostCubeAbilityAttr = int64_t;
@@ -227,181 +228,197 @@ const PostCubeAbilityAttr kSupportMultipleOutput = 0x02UL;
 const PostCubeAbilityAttr kUseGmAtomicAdd = 0x04UL;
 const PostCubeAbilityAttr kNodeCantAccess = 0x08UL;
 
-extern const std::array<PostCubeAbilityAttr,
-    static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)> kPostCubeAbilityAttrs;
+extern const std::array<PostCubeAbilityAttr, static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)>
+    kPostCubeAbilityAttrs;
 
 class PostCubeUnit {
- public:
-  PostCubeUnit(const std::string &m_unitname, const std::map<std::string, std::vector<CONFIGDTYPE>> &m_optypes)
-      : unitname_(m_unitname), opnodes_(m_optypes) {}
-  const std::map<std::string, std::vector<CONFIGDTYPE>> &GetNode() const { return opnodes_; }
-  const std::string &GetName() const { return unitname_; }
-  const std::vector<std::string> &GetDependsUnits() const { return dependunits_; }
-  void SetDependUnits(const std::vector<std::string> &depenunits) {
-    dependunits_.assign(depenunits.begin(), depenunits.end());
-  }
-  void SetDependUnitsIndex(const std::vector<uint32_t> &index) { dependunitsindex_.assign(index.begin(), index.end()); }
-  const std::vector<uint32_t> &GetDependsUnitsIndex() const { return dependunitsindex_; }
-  ~PostCubeUnit();
- private:
-  std::string unitname_;
-  std::vector<std::string> dependunits_;
-  std::vector<uint32_t> dependunitsindex_;
-  std::map<std::string, std::vector<CONFIGDTYPE>> opnodes_;
+public:
+    PostCubeUnit(const std::string& m_unitname, const std::map<std::string, std::vector<CONFIGDTYPE>>& m_optypes)
+        : unitname_(m_unitname), opnodes_(m_optypes)
+    {}
+    const std::map<std::string, std::vector<CONFIGDTYPE>>& GetNode() const { return opnodes_; }
+    const std::string& GetName() const { return unitname_; }
+    const std::vector<std::string>& GetDependsUnits() const { return dependunits_; }
+    void SetDependUnits(const std::vector<std::string>& depenunits)
+    {
+        dependunits_.assign(depenunits.begin(), depenunits.end());
+    }
+    void SetDependUnitsIndex(const std::vector<uint32_t>& index)
+    {
+        dependunitsindex_.assign(index.begin(), index.end());
+    }
+    const std::vector<uint32_t>& GetDependsUnitsIndex() const { return dependunitsindex_; }
+    ~PostCubeUnit();
+
+private:
+    std::string unitname_;
+    std::vector<std::string> dependunits_;
+    std::vector<uint32_t> dependunitsindex_;
+    std::map<std::string, std::vector<CONFIGDTYPE>> opnodes_;
 };
 
 class PostCubeNodeInfo {
- public:
-  PostCubeNodeInfo() {}
-  explicit PostCubeNodeInfo(const ge::GNodePtr &node)
-      : op_kernel_(node),
-        belong_unit_type_(""),
-        nodeInfo_post_cubeability_(0),
-        isheadnode_(false),
-        cube_node_(),
-        belong_unit_index_(0) {}
-  PostCubeNodeInfo(const ge::GNodePtr &node, const ge::GNodePtr &cube_node)
-      : op_kernel_(node),
-        belong_unit_type_(""),
-        nodeInfo_post_cubeability_(0),
-        isheadnode_(false),
-        cube_node_(cube_node),
-        belong_unit_index_(0) {}
-  const ge::GNodePtr &GetNode() const { return op_kernel_; }
-  const std::string &GetBelongUnitType() const { return belong_unit_type_; }
-  char GetNodePostCubeability() const { return nodeInfo_post_cubeability_; }
-  bool GetIsHeadNode() const { return isheadnode_; }
-  const ge::GNodePtr &GetCubeNode() const { return cube_node_; }
-  void SetBelongUnitType(const std::string &belong_unit_type) { belong_unit_type_ = belong_unit_type; }
-  void SetNodePostCubeability(char nodeInfo_post_cubeability) { nodeInfo_post_cubeability_ = nodeInfo_post_cubeability; }
-  void SetIsHeadNode(bool isheadnode) { isheadnode_ = isheadnode; }
-  void SetBelongUnitIndex(uint32_t belong_unit_index) { belong_unit_index_ = belong_unit_index; }
-  uint32_t GetBelongUnitIndex() const { return belong_unit_index_; }
-  bool operator==(const ge::GNodePtr &input_node) const {
-    return (this->GetNode() == input_node);
-  }
-  ~PostCubeNodeInfo();
+public:
+    PostCubeNodeInfo() {}
+    explicit PostCubeNodeInfo(const ge::GNodePtr& node)
+        : op_kernel_(node),
+          belong_unit_type_(""),
+          nodeInfo_post_cubeability_(0),
+          isheadnode_(false),
+          cube_node_(),
+          belong_unit_index_(0)
+    {}
+    PostCubeNodeInfo(const ge::GNodePtr& node, const ge::GNodePtr& cube_node)
+        : op_kernel_(node),
+          belong_unit_type_(""),
+          nodeInfo_post_cubeability_(0),
+          isheadnode_(false),
+          cube_node_(cube_node),
+          belong_unit_index_(0)
+    {}
+    const ge::GNodePtr& GetNode() const { return op_kernel_; }
+    const std::string& GetBelongUnitType() const { return belong_unit_type_; }
+    char GetNodePostCubeability() const { return nodeInfo_post_cubeability_; }
+    bool GetIsHeadNode() const { return isheadnode_; }
+    const ge::GNodePtr& GetCubeNode() const { return cube_node_; }
+    void SetBelongUnitType(const std::string& belong_unit_type) { belong_unit_type_ = belong_unit_type; }
+    void SetNodePostCubeability(char nodeInfo_post_cubeability)
+    {
+        nodeInfo_post_cubeability_ = nodeInfo_post_cubeability;
+    }
+    void SetIsHeadNode(bool isheadnode) { isheadnode_ = isheadnode; }
+    void SetBelongUnitIndex(uint32_t belong_unit_index) { belong_unit_index_ = belong_unit_index; }
+    uint32_t GetBelongUnitIndex() const { return belong_unit_index_; }
+    bool operator==(const ge::GNodePtr& input_node) const { return (this->GetNode() == input_node); }
+    ~PostCubeNodeInfo();
 
- private:
-  ge::GNodePtr op_kernel_;
-  std::string belong_unit_type_;
-  char nodeInfo_post_cubeability_;
-  bool isheadnode_;
-  ge::GNodePtr cube_node_;
-  uint32_t belong_unit_index_;
-  std::vector<ge::GNodePtr> node_topost_cubelist_;
+private:
+    ge::GNodePtr op_kernel_;
+    std::string belong_unit_type_;
+    char nodeInfo_post_cubeability_;
+    bool isheadnode_;
+    ge::GNodePtr cube_node_;
+    uint32_t belong_unit_index_;
+    std::vector<ge::GNodePtr> node_topost_cubelist_;
 };
 
 struct PostCubeMatchParams {
-  std::stack<PostCubeNodeInfo> cur_pass;
-  std::stack<uint32_t> cur_index;
-  uint64_t post_cube_index;
-  explicit PostCubeMatchParams()
-      : post_cube_index(0) {}
+    std::stack<PostCubeNodeInfo> cur_pass;
+    std::stack<uint32_t> cur_index;
+    uint64_t post_cube_index;
+    explicit PostCubeMatchParams() : post_cube_index(0) {}
 };
 
 struct PostCubePassInfoData {
-  std::vector<PostCubeNodeInfo> m_opnodes;
-  uint32_t pass_index;
-  uint32_t m_flag;
-  uint32_t unit_index;
+    std::vector<PostCubeNodeInfo> m_opnodes;
+    uint32_t pass_index;
+    uint32_t m_flag;
+    uint32_t unit_index;
 };
 using PostCubePassInfo = PostCubePassInfoData;
 
 class PostCubeNodePair {
- public:
-  PostCubeNodePair(const ge::GNodePtr &first, const ge::GNodePtr &second) : parent_(first), child_(second) {}
-  const ge::GNodePtr &GetParent() const { return parent_; }
-  const ge::GNodePtr &GetChild() const { return child_; }
-  ~PostCubeNodePair() {}
+public:
+    PostCubeNodePair(const ge::GNodePtr& first, const ge::GNodePtr& second) : parent_(first), child_(second) {}
+    const ge::GNodePtr& GetParent() const { return parent_; }
+    const ge::GNodePtr& GetChild() const { return child_; }
+    ~PostCubeNodePair() {}
 
- private:
-  ge::GNodePtr parent_;
-  ge::GNodePtr child_;
+private:
+    ge::GNodePtr parent_;
+    ge::GNodePtr child_;
 };
 
 class PostCubeFunctionParam {
- public:
-  PostCubeFunctionParam(const std::string &inputname, const ge::GNodePtr &post_cubenode, const uint32_t &input_index)
-      : inputname_(inputname),
-        post_cubenode_(post_cubenode),
-        inputindex_(input_index),
-        firstnodeindex_(0),
-        secondnodeindex_(0),
-        datatype_(ge::DT_UNDEFINED),
-        srcconstnode_() {}
-  void SetInputName(const std::string &inputname) { inputname_ = inputname; }
-  void SetPostCubeNode(const ge::GNodePtr &post_cubenode) { post_cubenode_ = post_cubenode; }
-  void SetInputindex(uint32_t input_index) { inputindex_ = input_index; }
-  const std::string &GetInputName() const { return inputname_; }
-  const ge::GNodePtr &GetPostCubeNode() const { return post_cubenode_; }
-  uint32_t GetParaIndex() const { return inputindex_; }
-  void SetFirstIndex(uint32_t firstnodeindex) { firstnodeindex_ = firstnodeindex; }
-  uint32_t GetFirstIndex() const { return firstnodeindex_; }
-  void SetSecondIndex(uint32_t secondnodeindex) { secondnodeindex_ = secondnodeindex; }
-  uint32_t GetSecondIndex() const { return secondnodeindex_; }
-  void SetDataType(const ge::DataType datatype) { datatype_ = datatype; }
-  ge::DataType GetDataType() const { return datatype_; }
-  void SetSrcConstNode(const ge::GNodePtr &srcconstnode) { srcconstnode_ = srcconstnode; }
-  const ge::GNodePtr &GetSrcConstNode() const { return srcconstnode_; }
-  ~PostCubeFunctionParam() {}
+public:
+    PostCubeFunctionParam(const std::string& inputname, const ge::GNodePtr& post_cubenode, const uint32_t& input_index)
+        : inputname_(inputname),
+          post_cubenode_(post_cubenode),
+          inputindex_(input_index),
+          firstnodeindex_(0),
+          secondnodeindex_(0),
+          datatype_(ge::DT_UNDEFINED),
+          srcconstnode_()
+    {}
+    void SetInputName(const std::string& inputname) { inputname_ = inputname; }
+    void SetPostCubeNode(const ge::GNodePtr& post_cubenode) { post_cubenode_ = post_cubenode; }
+    void SetInputindex(uint32_t input_index) { inputindex_ = input_index; }
+    const std::string& GetInputName() const { return inputname_; }
+    const ge::GNodePtr& GetPostCubeNode() const { return post_cubenode_; }
+    uint32_t GetParaIndex() const { return inputindex_; }
+    void SetFirstIndex(uint32_t firstnodeindex) { firstnodeindex_ = firstnodeindex; }
+    uint32_t GetFirstIndex() const { return firstnodeindex_; }
+    void SetSecondIndex(uint32_t secondnodeindex) { secondnodeindex_ = secondnodeindex; }
+    uint32_t GetSecondIndex() const { return secondnodeindex_; }
+    void SetDataType(const ge::DataType datatype) { datatype_ = datatype; }
+    ge::DataType GetDataType() const { return datatype_; }
+    void SetSrcConstNode(const ge::GNodePtr& srcconstnode) { srcconstnode_ = srcconstnode; }
+    const ge::GNodePtr& GetSrcConstNode() const { return srcconstnode_; }
+    ~PostCubeFunctionParam() {}
 
- private:
-  std::string inputname_;
-  ge::GNodePtr post_cubenode_;
-  uint32_t inputindex_;
-  uint32_t firstnodeindex_;
-  uint32_t secondnodeindex_;
-  ge::DataType datatype_;
-  ge::GNodePtr srcconstnode_;
+private:
+    std::string inputname_;
+    ge::GNodePtr post_cubenode_;
+    uint32_t inputindex_;
+    uint32_t firstnodeindex_;
+    uint32_t secondnodeindex_;
+    ge::DataType datatype_;
+    ge::GNodePtr srcconstnode_;
 };
 using PostCubeFunctionParamPtr = std::shared_ptr<PostCubeFunctionParam>;
 
 class PostCubeComm {
- public:
-  PostCubeComm() = default;;
-  ~PostCubeComm() = default;;
-  static bool ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans, std::vector<std::string> &unit_list,
-                                 std::map<std::string, std::vector<std::string>> &depends_list,
-                                 std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &post_cube_map);
-  static bool ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext &context);
-  static ge::graphStatus CheckPeerOutNode(const ge::GNodePtr &vectornode, const uint32_t &input_index);
-  static bool CheckConstValueData(const ge::GNodePtr &vectornode);
-  static bool CheckIsInVector(const std::vector<PostCubeNodeInfo> &m_opnodes, const uint32_t &index = 0);
-  static PostCubeCubeType GetPostCubeCubeType(const ge::GNodePtr &node_ptr);
-  static ge::GNodePtr GetMergeNodeByCube(const ge::GNodePtr &node_ptr);
-  static void SetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type);
-  static void UnSetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type);
-  static bool CheckPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type);
-  static bool HasControlEdge(const ge::GNodePtr &src_node_ptr, const ge::GNodePtr &dst_node_ptr);
-  static std::string GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec);
-  // Conv2D Process
-  static bool GetSupportDN2NZSoc(bool &supportOut2L1Dn2Nz);
-  static bool GetConv2DOpType(const ge::GNodePtr &head_node);
-  static ge::graphStatus GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr &head_node);
-  static ge::graphStatus GetPostCubeUtilFuncSupportFlag(const ge::GNodePtr &head_node);
-  static uint32_t GetOutDataNodesSize(const ge::GNodePtr &node);
-  static bool IsShapeEqual(const ge::Shape &shape1, const ge::Shape &shape2);
-  static std::string ShapeToString(const ge::Shape &shape);
+public:
+    PostCubeComm() = default;
+    ;
+    ~PostCubeComm() = default;
+    ;
+    static bool ReadPlatFormConfig(
+        const ge::CustomPassContext& context, const bool& skip_trans, std::vector<std::string>& unit_list,
+        std::map<std::string, std::vector<std::string>>& depends_list,
+        std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>>& post_cube_map);
+    static bool ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext& context);
+    static ge::graphStatus CheckPeerOutNode(const ge::GNodePtr& vectornode, const uint32_t& input_index);
+    static bool CheckConstValueData(const ge::GNodePtr& vectornode);
+    static bool CheckIsInVector(const std::vector<PostCubeNodeInfo>& m_opnodes, const uint32_t& index = 0);
+    static PostCubeCubeType GetPostCubeCubeType(const ge::GNodePtr& node_ptr);
+    static ge::GNodePtr GetMergeNodeByCube(const ge::GNodePtr& node_ptr);
+    static void SetPostCubeAbilityAttr(const ge::GNodePtr& node_ptr, const PostCubeAbilityType& post_cube_ability_type);
+    static void UnSetPostCubeAbilityAttr(const ge::GNodePtr& node_ptr,
+                                         const PostCubeAbilityType& post_cube_ability_type);
+    static bool CheckPostCubeAbilityAttr(const ge::GNodePtr& node_ptr,
+                                         const PostCubeAbilityType& post_cube_ability_type);
+    static bool HasControlEdge(const ge::GNodePtr& src_node_ptr, const ge::GNodePtr& dst_node_ptr);
+    static std::string GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec);
+    // Conv2D Process
+    static bool GetSupportDN2NZSoc(bool& supportOut2L1Dn2Nz);
+    static bool GetConv2DOpType(const ge::GNodePtr& head_node);
+    static ge::graphStatus GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr& head_node);
+    static ge::graphStatus GetPostCubeUtilFuncSupportFlag(const ge::GNodePtr& head_node);
+    static uint32_t GetOutDataNodesSize(const ge::GNodePtr& node);
+    static bool IsShapeEqual(const ge::Shape& shape1, const ge::Shape& shape2);
+    static std::string ShapeToString(const ge::Shape& shape);
 
-  static std::vector<string> Split(const string &str, const string &pattern);
- private:
-  static ge::DataType TranferString(const std::string &configstr);
-  static CONFIGDTYPE TransFerConfig2Dtype(const std::string &configstr);
-  static ge::GNodePtr GetConstNode(const ge::GNodePtr &vectornode, uint32_t &depth);
-  static ge::GNodePtr GetConstNode(const ge::GNodePtr &vectornode);
-  static bool JudegedataUInt64(uint8_t *data, const size_t &data_size);
-  static bool JudgedataFp16(uint8_t *data, const size_t &data_size);
-  template <typename T>
-  static bool JudgedataImpl(uint8_t *data, const size_t &data_size);
-  static bool Judgedata(uint8_t *data, const size_t &data_size, const ge::DataType &data_type);
-  static ge::GNodePtr GetMergeNode(const ge::GNodePtr &node_ptr);
-  static bool CheckMergeInput(const ge::GNodePtr &merge_node);
-  static bool IsEltwiseNode(const ge::GNodePtr &node);
+    static std::vector<string> Split(const string& str, const string& pattern);
+
+private:
+    static ge::DataType TranferString(const std::string& configstr);
+    static CONFIGDTYPE TransFerConfig2Dtype(const std::string& configstr);
+    static ge::GNodePtr GetConstNode(const ge::GNodePtr& vectornode, uint32_t& depth);
+    static ge::GNodePtr GetConstNode(const ge::GNodePtr& vectornode);
+    static bool JudegedataUInt64(uint8_t* data, const size_t& data_size);
+    static bool JudgedataFp16(uint8_t* data, const size_t& data_size);
+    template <typename T>
+    static bool JudgedataImpl(uint8_t* data, const size_t& data_size);
+    static bool Judgedata(uint8_t* data, const size_t& data_size, const ge::DataType& data_type);
+    static ge::GNodePtr GetMergeNode(const ge::GNodePtr& node_ptr);
+    static bool CheckMergeInput(const ge::GNodePtr& merge_node);
+    static bool IsEltwiseNode(const ge::GNodePtr& node);
 };
 
 // GNode 适配函数：返回 AscendString，避免 string 构造
-inline ge::AscendString GNodeGetName(const ge::GNodePtr &node) {
+inline ge::AscendString GNodeGetName(const ge::GNodePtr& node)
+{
     ge::AscendString name;
     if (node != nullptr) {
         node->GetName(name);
@@ -409,7 +426,8 @@ inline ge::AscendString GNodeGetName(const ge::GNodePtr &node) {
     return name;
 }
 
-inline ge::AscendString GNodeGetType(const ge::GNodePtr &node) {
+inline ge::AscendString GNodeGetType(const ge::GNodePtr& node)
+{
     ge::AscendString type;
     if (node != nullptr) {
         node->GetType(type);
@@ -418,21 +436,24 @@ inline ge::AscendString GNodeGetType(const ge::GNodePtr &node) {
 }
 
 // 新增重载版本（接受 GNode&）
-inline ge::AscendString GNodeGetName(const ge::GNode &node) {
+inline ge::AscendString GNodeGetName(const ge::GNode& node)
+{
     ge::AscendString name;
     node.GetName(name);
     return name;
 }
 
-inline ge::AscendString GNodeGetType(const ge::GNode &node) {
+inline ge::AscendString GNodeGetType(const ge::GNode& node)
+{
     ge::AscendString type;
     node.GetType(type);
     return type;
 }
 
 // GNode GetAttr/SetAttr 适配函数 - 将 std::string 转换为 AscendString
-template<typename T>
-inline ge::graphStatus GNodeGetAttr(const ge::GNodePtr &node, const std::string &name, T &value) {
+template <typename T>
+inline ge::graphStatus GNodeGetAttr(const ge::GNodePtr& node, const std::string& name, T& value)
+{
     if (node == nullptr) {
         return ge::GRAPH_FAILED;
     }
@@ -440,8 +461,9 @@ inline ge::graphStatus GNodeGetAttr(const ge::GNodePtr &node, const std::string 
     return node->GetAttr(attr_name, value);
 }
 
-template<typename T>
-inline ge::graphStatus GNodeSetAttr(const ge::GNodePtr &node, const std::string &name, T &value) {
+template <typename T>
+inline ge::graphStatus GNodeSetAttr(const ge::GNodePtr& node, const std::string& name, T& value)
+{
     if (node == nullptr) {
         return ge::GRAPH_FAILED;
     }
@@ -449,5 +471,5 @@ inline ge::graphStatus GNodeSetAttr(const ge::GNodePtr &node, const std::string 
     return node->SetAttr(attr_name, value);
 }
 
-}  // namespace ops
-#endif  // COMMON_GRAPH_FUSION_CUBE_UTILS_CUBE_COMMON_H_
+} // namespace ops
+#endif // COMMON_GRAPH_FUSION_CUBE_UTILS_CUBE_COMMON_H_

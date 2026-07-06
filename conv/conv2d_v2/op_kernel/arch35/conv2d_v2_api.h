@@ -23,21 +23,20 @@
 namespace conv2d {
 using namespace conv;
 
-template <class Config,
-          template<typename, class> class Impl = Conv2dApiImpl,
-          template<class, template<typename, class> class>class Intf = Conv2dIntf>
+template <class Config, template <typename, class> class Impl = Conv2dApiImpl,
+          template <class, template <typename, class> class> class Intf = Conv2dIntf>
 struct Conv2dIntfExt : public Intf<Config, Impl> {
     __aicore__ inline Conv2dIntfExt() {}
 };
 
-#define REGISTER_CONV_API(name, Config, Impl, Intf)                                                                   \
-    template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE,               \
-              class CONV_CFG=Conv2dParam>                                                                             \
-    using name = Conv2dIntfExt<                                                                                       \
+#define REGISTER_CONV_API(name, Config, Impl, Intf)                                                     \
+    template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, \
+              class CONV_CFG = Conv2dParam>                                                             \
+    using name = Conv2dIntfExt<                                                                         \
         Config<ConvDataType<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>>, Impl, Intf>
 
 REGISTER_CONV_API(Conv2d, Conv2dCfg, Conv2dApiImpl, Conv2dIntf);
 
-}  // namespace conv2d
+} // namespace conv2d
 
 #endif // CONV2D_V2_API_H

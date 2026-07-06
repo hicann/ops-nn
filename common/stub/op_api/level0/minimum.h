@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file minimum.h
-* \brief
-*/
+ * \file minimum.h
+ * \brief
+ */
 
 #ifndef OP_API_INC_LEVEL0_OP_MINIMUM_OP_H_
 #define OP_API_INC_LEVEL0_OP_MINIMUM_OP_H_

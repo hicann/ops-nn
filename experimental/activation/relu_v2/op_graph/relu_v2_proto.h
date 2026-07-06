@@ -22,7 +22,7 @@
 /*!
  * \file relu_v2_proto.h
  * \brief
-*/
+ */
 #ifndef OPS_OP_PROTO_INC_RELUV2_H_
 #define OPS_OP_PROTO_INC_RELUV2_H_
 
@@ -43,10 +43,10 @@ namespace ge {
 *Compatible with the TensorFlow operator Relu.
 */
 REG_OP(ReluV2)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16,DT_INT32,DT_INT16,DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16,DT_INT32,DT_INT16,DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT16, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT16, DT_BF16}))
     .OP_END_FACTORY_REG(ReluV2)
-    
+
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_RELUV2_H_

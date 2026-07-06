@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -33,7 +32,7 @@ using namespace std;
 using namespace ge;
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -50,13 +49,13 @@ protected:
     static void SetUpTestCase()
     {
         std::cout << "DequantSwigluQuantTiling SetUp" << std::endl;
-	setenv("ASCEND_SLOG_PRINT_TO_STDOUT", "1", true);
+        setenv("ASCEND_SLOG_PRINT_TO_STDOUT", "1", true);
     }
 
     static void TearDownTestCase()
     {
         std::cout << "DequantSwigluQuantTiling TearDown" << std::endl;
-	unsetenv("ASCEND_SLOG_PRINT_TO_STDOUT");
+        unsetenv("ASCEND_SLOG_PRINT_TO_STDOUT");
     }
 };
 
@@ -73,7 +72,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_30013)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -89,12 +89,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_30013)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -119,27 +119,29 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_30013)
     gert::StorageShape yShape = {{96, 1536}, {96, 1536}};
     gert::StorageShape sCaleShape = {{96}, {96}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, nullptr })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, nullptr})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -166,7 +168,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -182,12 +185,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -212,34 +215,36 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000)
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -266,7 +271,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -282,12 +288,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -312,34 +318,36 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16)
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -366,7 +374,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16_gr
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -382,12 +391,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16_gr
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -412,34 +421,36 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_000_x_dtype_bf16_gr
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -463,7 +474,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_spe_000)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -479,12 +491,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_spe_000)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -509,34 +521,36 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_spe_000)
     gert::StorageShape yShape = {{16, 1024}, {16, 1024}};
     gert::StorageShape sCaleShape = {{16}, {16}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -563,7 +577,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_dtype
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -578,12 +593,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_dtype
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -591,14 +606,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_dtype
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -608,35 +623,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_dtype
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -659,7 +676,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_group_d
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -674,12 +692,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_group_d
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -687,14 +705,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_group_d
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -704,36 +722,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_group_d
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -756,7 +775,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_shape
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -771,12 +791,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_shape
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -784,14 +804,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_shape
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 30}, {128, 30}};
     gert::StorageShape weightScaleShape = {{1, 30}, {1, 30}};
@@ -801,35 +821,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_x_shape
     gert::StorageShape yShape = {{128, 15}, {128, 15}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -852,7 +874,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_bias)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -867,12 +890,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_bias)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -880,14 +903,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_bias)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -897,37 +920,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_bias)
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &xShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &xShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -950,7 +974,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_weight_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -965,12 +990,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_weight_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -978,14 +1003,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_weight_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -995,36 +1020,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_weight_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1047,7 +1073,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_activat
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1062,12 +1089,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_activat
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1075,14 +1102,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_activat
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1092,36 +1119,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_activat
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1144,7 +1172,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_quant_s
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1159,12 +1188,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_quant_s
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1172,14 +1201,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_quant_s
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1189,36 +1218,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_not_support_quant_s
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1242,7 +1272,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1257,12 +1288,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1270,14 +1301,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1288,37 +1319,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1329,7 +1361,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000000);
-
 }
 
 // 测试合法的输入的数据类型: x_dtype_int32_bias_dtype_fp16_qs_dtype_fp32
@@ -1346,7 +1377,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1361,12 +1393,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1374,14 +1406,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1392,37 +1424,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1433,7 +1466,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100001000);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_fp32_qs_dtype_fp32
@@ -1450,7 +1482,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1465,12 +1498,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1478,14 +1511,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1496,37 +1529,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1537,7 +1571,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100002000);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_int32_qs_dtype_fp32
@@ -1554,7 +1587,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1569,12 +1603,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1582,14 +1616,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1600,37 +1634,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1641,7 +1676,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100003000);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_bf16_qs_dtype_fp16
@@ -1658,7 +1692,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1673,12 +1708,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1686,14 +1721,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1704,37 +1739,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1745,7 +1781,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000100);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_fp16_qs_dtype_fp16
@@ -1762,7 +1797,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1777,12 +1813,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1790,14 +1826,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1808,37 +1844,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1849,7 +1886,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100001100);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_fp32_qs_dtype_fp16
@@ -1866,7 +1902,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1881,12 +1918,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1894,14 +1931,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -1912,37 +1949,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1953,7 +1991,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100002100);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_int32_qs_dtype_fp16
@@ -1970,7 +2007,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -1985,12 +2023,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1998,14 +2036,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2016,37 +2054,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2057,7 +2096,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100003100);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_bf16_qs_dtype_bf16
@@ -2074,7 +2112,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2089,12 +2128,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2102,14 +2141,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2120,37 +2159,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2161,7 +2201,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000200);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_fp16_qs_dtype_bf16
@@ -2178,7 +2217,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2193,12 +2233,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2206,14 +2246,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2224,37 +2264,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2265,7 +2306,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100001200);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_fp32_qs_dtype_bf16
@@ -2282,7 +2322,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2297,12 +2338,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2310,14 +2351,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2328,37 +2369,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2369,7 +2411,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100002200);
-
 }
 
 // 测试合法的输入的数据类型:x_dtype_int32_bias_dtype_int32_qs_dtype_bf16
@@ -2386,7 +2427,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2401,12 +2443,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2414,14 +2456,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2432,37 +2474,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2473,7 +2516,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100003200);
-
 }
 
 // 非法类型bias
@@ -2490,7 +2532,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2505,12 +2548,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2518,14 +2561,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2536,37 +2579,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2590,7 +2634,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2605,12 +2650,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2618,14 +2663,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2636,37 +2681,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2690,7 +2736,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_illegal)
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2705,12 +2752,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_illegal)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2718,14 +2765,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_illegal)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2736,37 +2783,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_illegal)
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(5)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(5)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2774,7 +2822,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_illegal)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
 }
 
 // 测试有bias但speGroupType为true的情况
@@ -2791,7 +2838,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_bias_speGroupType_t
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2806,12 +2854,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_bias_speGroupType_t
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2819,14 +2867,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_bias_speGroupType_t
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2837,37 +2885,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_bias_speGroupType_t
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -2891,7 +2940,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_1_speGro
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -2906,12 +2956,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_1_speGro
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -2919,14 +2969,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_1_speGro
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
@@ -2937,36 +2987,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_swiglumode_1_speGro
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -3012,12 +3063,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_111)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3025,14 +3076,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_111)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3041,7 +3092,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_111)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -3049,17 +3100,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_111)
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -3113,12 +3165,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_011)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3126,14 +3178,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_011)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3142,24 +3194,25 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_011)
                       .InputShapes({&xShape, &wScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -3173,7 +3226,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_011)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 11);
     EXPECT_NE(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize())
-                  .find("60 718 359 29 359 3 3 1 1 1"),   // 60 718 359 30 359 2 2 2 1 0 2 0 3
+                  .find("60 718 359 29 359 3 3 1 1 1"), // 60 718 359 30 359 2 2 2 1 0 2 0 3
               string::npos);
 }
 
@@ -3213,12 +3266,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3226,14 +3279,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3242,24 +3295,25 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -3273,7 +3327,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 101);
     EXPECT_NE(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize())
-                  .find("60 718 359 29 359 3 3 1 1 1"),  //60 718 359 30 359 2 2 2 1 0 2 0 3
+                  .find("60 718 359 29 359 3 3 1 1 1"), // 60 718 359 30 359 2 2 2 1 0 2 0 3
               string::npos);
 }
 
@@ -3313,12 +3367,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_110)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3326,14 +3380,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_110)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3342,24 +3396,25 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_110)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                  })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -3373,7 +3428,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_110)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 110);
     EXPECT_NE(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize())
-                  .find("11 5800 2900 3 2900 4 4 0 1 0"),  // 11 5800 2900 3 2900 4 4 0 1 0 2 0 1
+                  .find("11 5800 2900 3 2900 4 4 0 1 0"), // 11 5800 2900 3 2900 4 4 0 1 0 2 0 1
               string::npos);
 }
 
@@ -3396,7 +3451,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1000100
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
+    std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3411,12 +3466,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1000100
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3425,14 +3480,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1000100
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3441,22 +3496,23 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1000100
                       .InputShapes({&xShape, &qScaleShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)},
-                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
-                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                  })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
@@ -3496,7 +3552,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1011111
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
+    std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3511,12 +3567,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1011111
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3525,23 +3581,24 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1011111
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
                       .NodeIoNum(7, 2)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &qOffsetShape, &groupIndexShape})
+                      .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &qOffsetShape,
+                                    &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -3551,17 +3608,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1011111
                       .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                  })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
@@ -3599,7 +3657,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1010110
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
+    std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3614,12 +3672,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1010110
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3628,14 +3686,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1010110
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3644,7 +3702,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1010110
                       .InputShapes({&xShape, &wScaleShape, &biasShape, &qScaleShape, &qOffsetShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -3652,17 +3710,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1010110
                       .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT4_E1M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(41)},
-                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
-                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                  })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(41)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
@@ -3700,7 +3759,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1141100
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
+    std::map<std::string, std::string> npu_arch_infos = {{"NpuArch", "3510"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3715,12 +3774,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1141100
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3729,14 +3788,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1141100
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3745,7 +3804,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1141100
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -3753,17 +3812,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_notfull_1141100
                       .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
-                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                  })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
@@ -3815,12 +3875,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_dtype_fail)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3828,14 +3888,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_dtype_fail)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3844,7 +3904,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_dtype_fail)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -3852,17 +3912,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_dtype_fail)
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -3909,12 +3970,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -3922,14 +3983,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_0)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -3938,7 +3999,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_0)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -3946,17 +4007,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_0)
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4003,12 +4065,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4016,14 +4078,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_1)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4032,7 +4094,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_1)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4040,17 +4102,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_1)
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4097,12 +4160,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_2)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4110,14 +4173,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_2)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4126,7 +4189,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_2)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4134,17 +4197,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_2)
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4191,12 +4255,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_no_exis
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4204,14 +4268,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_no_exis
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4220,24 +4284,25 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_no_exis
                       .InputShapes({&xShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4284,12 +4349,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4297,14 +4362,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4313,7 +4378,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4321,17 +4386,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4378,12 +4444,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4391,14 +4457,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4407,7 +4473,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4415,17 +4481,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4471,12 +4538,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4484,14 +4551,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4500,24 +4567,25 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4564,12 +4632,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_fail_3)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4577,14 +4645,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_fail_3)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4593,7 +4661,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_fail_3)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4601,17 +4669,18 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_fail_3)
                       .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                })
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                      })
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4659,12 +4728,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_last_dim)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4672,14 +4741,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_last_dim)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4688,7 +4757,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_last_dim)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4698,15 +4767,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_last_dim)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4758,12 +4827,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_nlast_dim)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4771,14 +4840,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_nlast_dim)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4787,7 +4856,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_nlast_dim)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4796,15 +4865,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_nlast_dim)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4852,12 +4921,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101110_error)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4865,14 +4934,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101110_error)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4881,7 +4950,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101110_error)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &qScaleShape, &groupIndexShape, &biasShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4891,15 +4960,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101110_error)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -4947,12 +5016,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_activate_scale_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -4960,14 +5029,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_activate_scale_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -4976,7 +5045,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_activate_scale_
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -4986,15 +5055,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_activate_scale_
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -5042,12 +5111,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_bias_type_fail)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5055,14 +5124,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_bias_type_fail)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -5071,7 +5140,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_bias_type_fail)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -5081,15 +5150,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_bias_type_fail)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -5137,12 +5206,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_quant_scale_typ
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5150,14 +5219,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_quant_scale_typ
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -5166,7 +5235,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_quant_scale_typ
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -5176,15 +5245,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_quant_scale_typ
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -5232,12 +5301,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_dst_type_error)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5245,14 +5314,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_dst_type_error)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -5261,7 +5330,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_dst_type_error)
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -5271,15 +5340,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_dst_type_error)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(20)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(20)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -5327,12 +5396,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5340,14 +5409,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType("DequantSwigluQuant")
@@ -5356,7 +5425,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
                       .InputShapes({&xShape, &wScaleShape, &aScaleShape, &biasShape, &qScaleShape, &groupIndexShape})
                       .OutputShapes({&yShape, &scaleShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -5366,15 +5435,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rinttt")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rinttt")},
+                                  {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -5387,8 +5456,6 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement2_activation_scale_is_None)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -5400,7 +5467,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement2_activa
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5416,12 +5484,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement2_activa
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5446,34 +5514,36 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement2_activa
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, nullptr, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    // .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &weightScaleShape, nullptr, nullptr, &quantScaleShape, nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      // .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -5485,14 +5555,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement2_activa
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000100);
-
 }
-
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_scale_H)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -5504,7 +5570,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5520,12 +5587,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5551,35 +5618,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, &quantOffsetShape, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    &quantOffsetShape, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -5591,13 +5660,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000100);
-
 }
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_scale_1)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -5609,7 +5675,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5625,12 +5692,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5650,41 +5717,53 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{1, 2048}, {1, 2048}};
     gert::StorageShape activationScaleShape = {{128, 1}, {128, 1}};
-    gert::StorageShape quantScaleShape = {{1,}, {1,}};
-    gert::StorageShape quantOffsetShape = {{1,}, {1,}};
+    gert::StorageShape quantScaleShape = {{
+                                              1,
+                                          },
+                                          {
+                                              1,
+                                          }};
+    gert::StorageShape quantOffsetShape = {{
+                                               1,
+                                           },
+                                           {
+                                               1,
+                                           }};
     gert::StorageShape groupShape = {{1}, {1}};
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, &quantOffsetShape, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    &quantOffsetShape, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -5696,13 +5775,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000100);
-
 }
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_scale_nullptr)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -5714,7 +5790,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5730,12 +5807,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5761,35 +5838,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, nullptr, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    // .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    // .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &weightScaleShape, &activationScaleShape, nullptr, nullptr, nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      // .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      // .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -5798,13 +5877,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
 }
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_scale_wrong_shape)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -5816,7 +5892,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5832,12 +5909,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5863,35 +5940,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, &quantOffsetShape, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    &quantOffsetShape, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -5900,13 +5979,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
 }
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qs_qo_different_shape)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -5918,7 +5994,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qs_qo_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -5934,12 +6011,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qs_qo_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -5965,35 +6042,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qs_qo_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, &quantOffsetShape, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    &quantOffsetShape, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -6002,13 +6081,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qs_qo_
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
 }
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_nullptr)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -6020,7 +6096,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_nul
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -6036,12 +6113,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_nul
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -6067,35 +6144,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_nul
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    // .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      // .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -6104,13 +6183,10 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_nul
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
 }
 
 TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_qs_different_type)
 {
-
-
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -6122,7 +6198,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_qs_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -6138,12 +6215,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_qs_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -6169,35 +6246,37 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_qs_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape, &quantOffsetShape, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, nullptr, &quantScaleShape,
+                                    &quantOffsetShape, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -6206,12 +6285,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_qo_qs_
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
 }
 
-
 // 测试合法的输入的数据类型: x_dtype_int32_bias_dtype_bf16_qs_dtype_fp32
-TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_dtype_bf16_qs_dtype_fp32_more_expert_fewer_tokens)
+TEST_F(DequantSwigluQuantTiling,
+       dequant_swiglu_quant_tiling_x_dtype_int32_bias_dtype_bf16_qs_dtype_fp32_more_expert_fewer_tokens)
 {
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -6224,7 +6302,8 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     map<string, string> aicore_spec;
 
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};;
+    std::map<std::string, std::string> soc_version = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2001"}};
+    ;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -6239,12 +6318,12 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({ const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platform_info) })
-            .Outputs({ &compile_info })
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -6252,14 +6331,14 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-        intrinsics);
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = {{128, 2048}, {128, 2048}};
     gert::StorageShape weightScaleShape = {{32, 2048}, {32, 2048}};
@@ -6270,37 +6349,38 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
     gert::StorageShape yShape = {{128, 1024}, {128, 1024}};
     gert::StorageShape sCaleShape = {{128}, {128}};
     auto holder = gert::TilingContextFaker()
-                    .SetOpType("DequantSwigluQuant")
-                    .NodeIoNum(7, 2)
-                    .IrInstanceNum({ 1, 1, 1, 1, 1, 1, 1 })
-                    .InputShapes({ &xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape, nullptr, &groupShape })
-                    .OutputShapes({ &yShape, &sCaleShape })
-                    .CompileInfo(&compile_info)
-                    .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                })
-                    .TilingData(param.get())
-                    .Workspace(ws_size)
-                    .Build();
+                      .SetOpType("DequantSwigluQuant")
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightScaleShape, &activationScaleShape, &biasShape, &quantScaleShape,
+                                    nullptr, &groupShape})
+                      .OutputShapes({&yShape, &sCaleShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({
+                          {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                          {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                          {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                          {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                          {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                      })
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
-
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -6311,5 +6391,4 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_x_dtype_int32_bias_
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 110000000);
-
 }

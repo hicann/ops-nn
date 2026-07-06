@@ -22,13 +22,11 @@
 #include "../inc/kernel_utils.h"
 #include "gather_index_impl.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 using namespace AscendC;
 
 template <typename T, int32_t OP_TYPE>
-class Pool3dNDHWCSmallKernel
-{
+class Pool3dNDHWCSmallKernel {
 public:
     __aicore__ inline Pool3dNDHWCSmallKernel(TPipe* pipe, const Pool3DSmallKernelNDHWCTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -54,14 +52,12 @@ private:
     __aicore__ inline void ComputeMultiBatch(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
                                              const Pool3dParam& paramInfo);
     template <typename M, typename U, int32_t GATHER_MODE, bool USE_TRAIT_TWO>
-    __aicore__ inline void Compute(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo);
+    __aicore__ inline void Compute(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
+                                   const Pool3dParam& paramInfo);
     template <typename U, int32_t GATHER_MODE>
     __aicore__ inline void GenGatherIndex(const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal,
                                           uint16_t loopNum = 1);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -156,9 +152,10 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::BaseCompute()
     }
 
     GatherIndexImpl::ShapeInfo info = {
-        {1, channels, oneRowElements, onePlaneElements, oneBatchElements},  // input stride
-        {channels, outUbFactorW, outUbFactorH, outUbFactorD, static_cast<uint32_t>(tilingData_->ubFactorN)}, // gather size
-        {1, sW, sH, sD, 1}  // stride
+        {1, channels, oneRowElements, onePlaneElements, oneBatchElements}, // input stride
+        {channels, outUbFactorW, outUbFactorH, outUbFactorD,
+         static_cast<uint32_t>(tilingData_->ubFactorN)}, // gather size
+        {1, sW, sH, sD, 1}                               // stride
     };
 
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
@@ -178,33 +175,32 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::BaseCompute()
         int64_t dIdx = (idx - nIdx * tilingData_->dLoop * tilingData_->hLoop * tilingData_->wLoop) /
                        (tilingData_->hLoop * tilingData_->wLoop);
         int64_t hIdx = (idx - nIdx * tilingData_->dLoop * tilingData_->hLoop * tilingData_->wLoop -
-                        dIdx * tilingData_->hLoop * tilingData_->wLoop) / tilingData_->wLoop;
+                        dIdx * tilingData_->hLoop * tilingData_->wLoop) /
+                       tilingData_->wLoop;
         int64_t wIdx = idx % tilingData_->wLoop;
-        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                   : tilingData_->ubFactorN;
-        int64_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD
-                                                     : tilingData_->outUbFactorD;
+        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                      tilingData_->ubFactorN;
+        int64_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD :
+                                                        tilingData_->outUbFactorD;
         int64_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * outUbFactorH : outUbFactorH;
         int64_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
         int64_t depStart = dIdx * sD * outUbFactorD;
         int64_t rowStart = hIdx * sH * outUbFactorH;
         int64_t colStart = wIdx * sW * outUbFactorW;
 
-        int64_t srcOffset =
-            nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels +
-            depStart * tilingData_->hInDim * tilingData_->wInDim * channels +
-            rowStart * tilingData_->wInDim * channels + colStart * channels;
+        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim *
+                                tilingData_->wInDim * channels +
+                            depStart * tilingData_->hInDim * tilingData_->wInDim * channels +
+                            rowStart * tilingData_->wInDim * channels + colStart * channels;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim *
                                 tilingData_->wOutDim * channels +
                             dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim * channels +
                             hIdx * outUbFactorH * tilingData_->wOutDim * channels + wIdx * outUbFactorW * channels;
-        int64_t inDeps =
-            tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : (deps - 1) * sD + effectiveKd;
-        int64_t inRows = tilingData_->splitMode == SPLIT_DEPTHS || tilingData_->splitMode == SPLIT_BATCHS
-                              ? tilingData_->hInDim
-                              : (rows - 1) * sH + effectiveKh;
-        int64_t inCols =
-            tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + effectiveKw;
+        int64_t inDeps = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : (deps - 1) * sD + effectiveKd;
+        int64_t inRows = tilingData_->splitMode == SPLIT_DEPTHS || tilingData_->splitMode == SPLIT_BATCHS ?
+                             tilingData_->hInDim :
+                             (rows - 1) * sH + effectiveKh;
+        int64_t inCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + effectiveKw;
         oneRowElements = inCols * channels;
         onePlaneElements = oneRowElements * inRows;
         oneBatchElements = onePlaneElements * inDeps;
@@ -213,7 +209,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::BaseCompute()
             oneBatchElements = onePlaneElements * inDeps;
         }
         TensorDescInfo inputInfo = {
-            {static_cast<uint32_t>(inCols * channels), static_cast<uint32_t>(inRows), static_cast<uint32_t>(inDeps), static_cast<uint32_t>(n)},
+            {static_cast<uint32_t>(inCols * channels), static_cast<uint32_t>(inRows), static_cast<uint32_t>(inDeps),
+             static_cast<uint32_t>(n)},
             {1, oneRowElements, onePlaneElements, oneBatchElements},
             {1, tilingData_->wInDim * channels, tilingData_->wInDim * tilingData_->hInDim * channels,
              tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels}};
@@ -231,7 +228,10 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::BaseCompute()
 
 template <typename T, int32_t OP_TYPE>
 template <typename M, typename U, int32_t GATHER_MODE, bool USE_TRAIT_TWO>
-__aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::Compute(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo) {
+__aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::Compute(const TensorDescInfo& inputInfo,
+                                                                   const ShapeInfo& outInfo,
+                                                                   const Pool3dParam& paramInfo)
+{
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         ComputeSingleRow<M, U, USE_TRAIT_TWO>(inputInfo, outInfo, paramInfo);
     } else if constexpr (GATHER_MODE == GATHER_MULTI_ROW) {
@@ -271,9 +271,10 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::CopyInMultiRows(int64
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     } else if (tilingData_->splitMode == SPLIT_ROWS) {
         extParams.blockCount = inputInfo.size[2];
-        extParams.blockLen = inputInfo .size[0] * inputInfo.size[1] * sizeof(T);
+        extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * sizeof(T);
         extParams.srcStride = (inputInfo.srcStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T);
-        extParams.dstStride = ((inputInfo.dstStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T)) / platform::GetUbBlockSize();
+        extParams.dstStride = ((inputInfo.dstStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T)) /
+                              platform::GetUbBlockSize();
         loopParams.loop2Size = 1;
         loopParams.loop1Size = inputInfo.size[3];
         loopParams.loop1SrcStride = inputInfo.srcStride[3] * sizeof(T);
@@ -284,8 +285,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::CopyInMultiRows(int64
     } else if (tilingData_->splitMode == SPLIT_DEPTHS) {
         extParams.blockCount = inputInfo.size[3];
         extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2] * sizeof(T);
-        extParams.srcStride =
-            (inputInfo.srcStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) * sizeof(T);
+        extParams.srcStride = (inputInfo.srcStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) *
+                              sizeof(T);
         extParams.dstStride = 0;
         DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
     } else {
@@ -316,8 +317,7 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::CopyMaxOut(int64_t of
 template <typename T, int32_t OP_TYPE>
 template <typename U, int32_t GATHER_MODE>
 __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::GenGatherIndex(const GatherIndexImpl::ShapeInfo& param,
-                                                                          LocalTensor<U>& indexLocal,
-                                                                          uint16_t loopNum)
+                                                                          LocalTensor<U>& indexLocal, uint16_t loopNum)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         GatherIndexImpl::GenGatherIndex<U, GatherIndexImpl::TWO>(param, indexLocal, loopNum);
@@ -344,7 +344,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiBatch(con
     __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint32_t channels = tilingData_->channels;
-    uint16_t nFactor = static_cast<uint16_t>(repeatElm / (outInfo.depth * outInfo.width * outInfo.height * outInfo.channel));
+    uint16_t nFactor = static_cast<uint16_t>(repeatElm /
+                                             (outInfo.depth * outInfo.width * outInfo.height * outInfo.channel));
     uint16_t loopN = static_cast<uint16_t>(outInfo.n / nFactor);
     uint16_t tailN = static_cast<uint16_t>(outInfo.n - loopN * nFactor);
 
@@ -358,9 +359,9 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiBatch(con
     U depStrideInUb = inputInfo.dstStride[2] * paramInfo.dilation[2];
     U rowStrideInUb = inputInfo.dstStride[1] * paramInfo.dilation[1];
     U colStrideInUb = static_cast<U>(tilingData_->channels * paramInfo.dilation[0]);
-    Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstLocalAddr, xLocalAddr, indexAddr, kD, kH, kW, depStrideInUb,
-                                             rowStrideInUb, colStrideInUb, oneLoopElements, tailLoopElements,
-                                             oneLoopStride, loopN, paramInfo.divisor);
+    Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+        dstLocalAddr, xLocalAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb, oneLoopElements,
+        tailLoopElements, oneLoopStride, loopN, paramInfo.divisor);
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
@@ -399,9 +400,9 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiDep(const
     for (int i = 0; i < outInfo.n; i++) {
         auto srcAddr = xLocalAddr + i * inputInfo.dstStride[3];
         auto dstAddr = dstLocalAddr + i * outInfo.depth * outInfo.height * outInfo.width;
-        Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstAddr, xLocalAddr, indexAddr, kD, kH, kW, depStrideInUb,
-                                                 rowStrideInUb, colStrideInUb, oneLoopElements, tailLoopElements,
-                                                 oneLoopStride, loopD, paramInfo.divisor);
+        Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+            dstAddr, xLocalAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb, oneLoopElements,
+            tailLoopElements, oneLoopStride, loopD, paramInfo.divisor);
     }
 
     inputQue_.FreeTensor<M>(xLocal);
@@ -445,9 +446,9 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiRow(const
         for (uint16_t dIdx = 0; dIdx < outInfo.depth; dIdx++) {
             auto srcAddr = xLocalAddr + nIdx * oneBatchElements + dIdx * oneLoopStrideD;
             auto dstAddr = dstLocalAddr + nIdx * oneBatchOutElements + dIdx * oneDepOutElements;
-            Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb,
-                                                     rowStrideInUb, colStrideInUb, oneLoopElements,
-                                                     tailLoopElements, oneLoopStrideH, loopH, paramInfo.divisor);
+            Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+                dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb, oneLoopElements,
+                tailLoopElements, oneLoopStrideH, loopH, paramInfo.divisor);
         }
     }
     inputQue_.FreeTensor<M>(xLocal);
@@ -489,8 +490,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeSingleRow(cons
                 __local_mem__ M* srcAddr = xLocalAddr + i * inputInfo.dstStride[3] +
                                            dIdx * paramInfo.stride[2] * inputInfo.dstStride[2] +
                                            hIdx * paramInfo.stride[1] * inputInfo.dstStride[1];
-                __local_mem__ M* dstAddr =
-                    dstLocalAddr + i * oneBatchOutElements + dIdx * oneDepOutElements + hIdx * outInfo.width * outInfo.channel;
+                __local_mem__ M* dstAddr = dstLocalAddr + i * oneBatchOutElements + dIdx * oneDepOutElements +
+                                           hIdx * outInfo.width * outInfo.channel;
                 Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
                     dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb,
                     oneLoopElements, tailLoopElements, oneLoopStrideW, loopW, paramInfo.divisor);
@@ -501,5 +502,5 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeSingleRow(cons
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
 
-}  // namespace Pool3D
-#endif  // MAX_POOL_V3_NDHWC_SMALL_KERNEL_H_
+} // namespace Pool3D
+#endif // MAX_POOL_V3_NDHWC_SMALL_KERNEL_H_

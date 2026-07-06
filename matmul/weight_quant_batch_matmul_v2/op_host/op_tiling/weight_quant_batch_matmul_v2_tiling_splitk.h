@@ -18,8 +18,7 @@
 #include "weight_quant_batch_matmul_v2_tiling.h"
 
 namespace optiling {
-class WeightQuantBatchMatmulV2TilingSplitK : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2TilingSplitK : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2TilingSplitK(gert::TilingContext* context)
         : WeightQuantBatchMatmulV2Tiling(context)

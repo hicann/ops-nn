@@ -55,7 +55,7 @@ const int INPUT_3 = 3;
 namespace optiling {
 class ScatterAddWithSortedTiling {
 public:
-    explicit ScatterAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ScatterAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -281,8 +281,8 @@ ge::graphStatus ScatterAddWithSortedTiling::RunKernelTiling()
     tilingData.set_updatesLoop(updatesLoop);
     tilingData.set_updatesEach(updatesEach);
     tilingData.set_updatesLast(updatesLast);
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(usedCoreNum);
@@ -351,8 +351,8 @@ ge::graphStatus TilingPrepareForScatterAddWithSorted(gert::TilingParseContext* c
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

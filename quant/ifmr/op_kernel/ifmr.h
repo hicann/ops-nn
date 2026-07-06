@@ -43,7 +43,8 @@ template <typename T>
 class KernelIfmr {
 public:
     __aicore__ inline KernelIfmr() {}
-    __aicore__ inline void ParseTilingData(const IfmrTilingData& tilingData) {
+    __aicore__ inline void ParseTilingData(const IfmrTilingData& tilingData)
+    {
         attrs_.minPercentile = tilingData.minPercentile;
         attrs_.maxPercentile = tilingData.maxPercentile;
         attrs_.searchRange[0] = tilingData.searchRange[0];
@@ -57,17 +58,17 @@ public:
         attrs_.stepAlignedBytes = AlignB(attrs_.stepNums * sizeof(float));
     }
 
-    __aicore__ inline void Init(GM_ADDR data, GM_ADDR data_min, GM_ADDR data_max, GM_ADDR cumsum,
-        GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace, const IfmrTilingData& tiling)
+    __aicore__ inline void Init(GM_ADDR data, GM_ADDR data_min, GM_ADDR data_max, GM_ADDR cumsum, GM_ADDR scale,
+                                GM_ADDR offset, GM_ADDR workSpace, const IfmrTilingData& tiling)
     {
         ParseTilingData(tiling);
-        dataGm_.SetGlobalBuffer((__gm__ T *)data, AlignB(attrs_.dataNums * sizeof(T)) / sizeof(T));
-        dataMinGm_.SetGlobalBuffer((__gm__ T *)data_min, ALIGN_LENGTH / sizeof(T));
-        dataMaxGm_.SetGlobalBuffer((__gm__ T *)data_max, ALIGN_LENGTH / sizeof(T));
+        dataGm_.SetGlobalBuffer((__gm__ T*)data, AlignB(attrs_.dataNums * sizeof(T)) / sizeof(T));
+        dataMinGm_.SetGlobalBuffer((__gm__ T*)data_min, ALIGN_LENGTH / sizeof(T));
+        dataMaxGm_.SetGlobalBuffer((__gm__ T*)data_max, ALIGN_LENGTH / sizeof(T));
         cumsumGm_.SetGlobalBuffer((__gm__ int32_t*)cumsum,
                                   AlignB(attrs_.cumsumNums * sizeof(int32_t)) / sizeof(int32_t));
-        scaleGm_.SetGlobalBuffer((__gm__ float *)scale, 1);
-        offsetGm_.SetGlobalBuffer((__gm__ float *)offset, 1);
+        scaleGm_.SetGlobalBuffer((__gm__ float*)scale, 1);
+        offsetGm_.SetGlobalBuffer((__gm__ float*)offset, 1);
 
         pipe_.InitBuffer(dataMaxTQue_, 1, ALIGN_LENGTH);
         pipe_.InitBuffer(dataMinTQue_, 1, ALIGN_LENGTH);
@@ -94,23 +95,21 @@ public:
             ubFactor = 2; // orignal(1) + quant(1) = 2
         }
         // 6 means maxList+minList+scale+offset+lossOut+lossIn
-        eachLoopDataNum_ = (TOTAL_UB_SIZE - attrs_.stepAlignedBytes * 6 - cumsumAlignedSize -
-            coreNum_ * ALIGN_LENGTH - RESERVED_LENGTH) / sizeof(T) / ubFactor / dataEachBlock_ * dataEachBlock_;
+        eachLoopDataNum_ = (TOTAL_UB_SIZE - attrs_.stepAlignedBytes * 6 - cumsumAlignedSize - coreNum_ * ALIGN_LENGTH -
+                            RESERVED_LENGTH) /
+                           sizeof(T) / ubFactor / dataEachBlock_ * dataEachBlock_;
         eachCoreLossNum_ = attrs_.stepAlignedBytes / sizeof(float);
-        mseLossGm_.SetGlobalBuffer((__gm__ float *)workSpace, eachCoreLossNum_ * coreNum_);
+        mseLossGm_.SetGlobalBuffer((__gm__ float*)workSpace, eachCoreLossNum_ * coreNum_);
         pipe_.InitBuffer(dataQueue_, 1, eachLoopDataNum_ * sizeof(float));
         pipe_.InitBuffer(lossOutQueue_, 1, eachCoreLossNum_ * sizeof(float));
         pipe_.InitBuffer(lossInQueue_, 1, eachCoreLossNum_ * sizeof(float));
         syncGm_.SetGlobalBuffer((__gm__ int32_t*)(workSpace) + eachCoreLossNum_ * coreNum_,
-            coreNum_ * ALIGN_LENGTH / sizeof(int32_t));
+                                coreNum_ * ALIGN_LENGTH / sizeof(int32_t));
         pipe_.InitBuffer(syncGmQue_, 1, coreNum_ * ALIGN_LENGTH);
         pipe_.InitBuffer(tempBuf_, eachLoopDataNum_ * sizeof(float));
     }
 
-    __aicore__ inline int32_t Round(float x)
-    {
-        return static_cast<int32_t>(x + 0.5f);
-    }
+    __aicore__ inline int32_t Round(float x) { return static_cast<int32_t>(x + 0.5f); }
 
     __aicore__ inline uint64_t AlignB(uint64_t a, uint64_t b = ALIGN_LENGTH)
     {
@@ -211,22 +210,23 @@ private:
 
     IfmrAttrs attrs_;
 
-    __aicore__ inline void CalScaleOffset(LocalTensor<float>& scaleList, LocalTensor<float>& offsetList, 
-        const LocalTensor<float>& maxList, const LocalTensor<float>& minList);
+    __aicore__ inline void CalScaleOffset(LocalTensor<float>& scaleList, LocalTensor<float>& offsetList,
+                                          const LocalTensor<float>& maxList, const LocalTensor<float>& minList);
 
     __aicore__ inline void GetMinMaxIndex(LocalTensor<float>& minIndex, LocalTensor<float>& maxIndex,
-        const LocalTensor<int32_t>& cumsumLocal);
+                                          const LocalTensor<int32_t>& cumsumLocal);
 
-    __aicore__ inline void CalcMinInitMaxInit(LocalTensor<float>& minIndex, LocalTensor<float>& maxIndex, 
-        const LocalTensor<T>& dataMin, const LocalTensor<T>& dataMax);
+    __aicore__ inline void CalcMinInitMaxInit(LocalTensor<float>& minIndex, LocalTensor<float>& maxIndex,
+                                              const LocalTensor<T>& dataMin, const LocalTensor<T>& dataMax);
 
     __aicore__ inline void GenerateMaxMinCandidates(LocalTensor<float>& maxList, LocalTensor<float>& minList,
-        const LocalTensor<int32_t>& cumsumLocal, const LocalTensor<T>& dataMax, const LocalTensor<T>& dataMin);
+                                                    const LocalTensor<int32_t>& cumsumLocal,
+                                                    const LocalTensor<T>& dataMax, const LocalTensor<T>& dataMin);
 
     __aicore__ inline void GetInputData(uint32_t loopIdx, uint32_t calNum);
 
-    __aicore__ inline void ComputeEachMSELoss(const LocalTensor<float>& scaleList,
-        const LocalTensor<float>& offsetList, LocalTensor<float>& eachCoreLoss, uint32_t calNum);
+    __aicore__ inline void ComputeEachMSELoss(const LocalTensor<float>& scaleList, const LocalTensor<float>& offsetList,
+                                              LocalTensor<float>& eachCoreLoss, uint32_t calNum);
 
     __aicore__ inline void ComputeMSELoss(const LocalTensor<float>& scaleList, const LocalTensor<float>& offsetList);
 
@@ -235,7 +235,8 @@ private:
 
 template <typename T>
 __aicore__ inline void KernelIfmr<T>::CalScaleOffset(LocalTensor<float>& scaleList, LocalTensor<float>& offsetList,
-    const LocalTensor<float>& maxList, const LocalTensor<float>& minList)
+                                                     const LocalTensor<float>& maxList,
+                                                     const LocalTensor<float>& minList)
 {
     LocalTensor<float> tmp = tempBuf_.Get<float>(attrs_.stepNums);
     if (attrs_.withOffset) {
@@ -264,29 +265,28 @@ __aicore__ inline void KernelIfmr<T>::CalScaleOffset(LocalTensor<float>& scaleLi
 }
 
 template <typename T>
-__aicore__ inline void KernelIfmr<T>::GetMinMaxIndex(LocalTensor<float>& minIndex, LocalTensor<float>& maxIndex, 
-    const LocalTensor<int32_t>& cumsumLocal)
+__aicore__ inline void KernelIfmr<T>::GetMinMaxIndex(LocalTensor<float>& minIndex, LocalTensor<float>& maxIndex,
+                                                     const LocalTensor<int32_t>& cumsumLocal)
 {
     LocalTensor<float> cdf = tempBuf_.Get<float>(attrs_.cumsumNums);
     Cast(cdf, cumsumLocal, RoundMode::CAST_NONE, attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
 
-    Muls(cdf, cdf , 1 / static_cast<float>(attrs_.dataNums), attrs_.cumsumNums);
+    Muls(cdf, cdf, 1 / static_cast<float>(attrs_.dataNums), attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
 
     int32_t compareResultSize = AlignB(attrs_.cumsumNums, AscendCUtils::GetBitSize(sizeof(uint8_t))) /
                                 AscendCUtils::GetBitSize(sizeof(uint8_t));
     LocalTensor<uint8_t> compareResult = tempBuf_.GetWithOffset<uint8_t>(compareResultSize,
-        AlignB(attrs_.cumsumNums * sizeof(float)));
+                                                                         AlignB(attrs_.cumsumNums * sizeof(float)));
     CompareScalar(compareResult, cdf, attrs_.maxPercentile, CMPMODE::LT, attrs_.cumsumNums);
 
-    LocalTensor<float> selectResult = tempBuf_.GetWithOffset<float>(attrs_.cumsumNums,
-        AlignB(attrs_.cumsumNums * sizeof(float)) + AlignB(compareResultSize * sizeof(uint8_t)));
+    LocalTensor<float> selectResult = tempBuf_.GetWithOffset<float>(
+        attrs_.cumsumNums, AlignB(attrs_.cumsumNums * sizeof(float)) + AlignB(compareResultSize * sizeof(uint8_t)));
     Duplicate(selectResult, 1.0f, attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
 
-    Select(selectResult, compareResult, selectResult, 0.0f,
-           SELMODE::VSEL_TENSOR_SCALAR_MODE, attrs_.cumsumNums);
+    Select(selectResult, compareResult, selectResult, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
 
     // get max index by reduce sum max percentile comp result
@@ -302,8 +302,7 @@ __aicore__ inline void KernelIfmr<T>::GetMinMaxIndex(LocalTensor<float>& minInde
     Duplicate(selectResult, 1.0f, attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
 
-    Select(selectResult, compareResult, selectResult, 0.0f,
-           SELMODE::VSEL_TENSOR_SCALAR_MODE, attrs_.cumsumNums);
+    Select(selectResult, compareResult, selectResult, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
     ReduceSum(minIndex, selectResult, workSpaceTensor, attrs_.cumsumNums);
     PipeBarrier<PIPE_ALL>();
@@ -311,7 +310,7 @@ __aicore__ inline void KernelIfmr<T>::GetMinMaxIndex(LocalTensor<float>& minInde
 
 template <typename T>
 __aicore__ inline void KernelIfmr<T>::CalcMinInitMaxInit(LocalTensor<float>& minIndex, LocalTensor<float>& maxIndex,
-    const LocalTensor<T>& dataMin, const LocalTensor<T>& dataMax)
+                                                         const LocalTensor<T>& dataMin, const LocalTensor<T>& dataMax)
 {
     TBuf<TPosition::VECCALC> dataMaxFloat32Buf;
     TBuf<TPosition::VECCALC> dataMinFloat32Buf;
@@ -331,13 +330,13 @@ __aicore__ inline void KernelIfmr<T>::CalcMinInitMaxInit(LocalTensor<float>& min
     }
     PipeBarrier<PIPE_ALL>();
 
-    Muls(maxIndex, maxIndex,  1 / static_cast<float>(attrs_.cumsumNums), 1);
+    Muls(maxIndex, maxIndex, 1 / static_cast<float>(attrs_.cumsumNums), 1);
     Sub(dataMaxFloat32, dataMaxFloat32, dataMinFloat32, 1);
     PipeBarrier<PIPE_ALL>();
     Mul(maxIndex, maxIndex, dataMaxFloat32, 1);
     Add(maxIndex, maxIndex, dataMinFloat32, 1);
 
-    // calc min init 
+    // calc min init
     Muls(minIndex, minIndex, 1 / static_cast<float>(attrs_.cumsumNums), 1);
     Mul(minIndex, minIndex, dataMaxFloat32, 1);
     Add(minIndex, minIndex, dataMinFloat32, 1);
@@ -345,9 +344,10 @@ __aicore__ inline void KernelIfmr<T>::CalcMinInitMaxInit(LocalTensor<float>& min
 }
 
 template <typename T>
-__aicore__ inline void KernelIfmr<T>::GenerateMaxMinCandidates(LocalTensor<float>& maxList,
-    LocalTensor<float>& minList, const LocalTensor<int32_t>& cumsumLocal,
-    const LocalTensor<T>& dataMax, const LocalTensor<T>& dataMin)
+__aicore__ inline void KernelIfmr<T>::GenerateMaxMinCandidates(LocalTensor<float>& maxList, LocalTensor<float>& minList,
+                                                               const LocalTensor<int32_t>& cumsumLocal,
+                                                               const LocalTensor<T>& dataMax,
+                                                               const LocalTensor<T>& dataMin)
 {
     // apply local tensor
     TQue<TPosition::VECOUT, 1> maxIndexQueue;
@@ -411,7 +411,8 @@ __aicore__ inline void KernelIfmr<T>::GetInputData(uint32_t loopIdx, uint32_t ca
 
 template <typename T>
 __aicore__ inline void KernelIfmr<T>::ComputeEachMSELoss(const LocalTensor<float>& scaleList,
-    const LocalTensor<float>& offsetList, LocalTensor<float>& eachCoreLoss, uint32_t calNum)
+                                                         const LocalTensor<float>& offsetList,
+                                                         LocalTensor<float>& eachCoreLoss, uint32_t calNum)
 {
     LocalTensor<float> data = dataQueue_.DeQue<float>();
     LocalTensor<float> tempData = tempBuf_.Get<float>(calNum);
@@ -442,7 +443,7 @@ __aicore__ inline void KernelIfmr<T>::ComputeEachMSELoss(const LocalTensor<float
 
 template <typename T>
 __aicore__ inline void KernelIfmr<T>::ComputeMSELoss(const LocalTensor<float>& scaleList,
-    const LocalTensor<float>& offsetList)
+                                                     const LocalTensor<float>& offsetList)
 {
     LocalTensor<float> eachCoreLoss = lossOutQueue_.AllocTensor<float>();
     Duplicate(eachCoreLoss, 0.0f, eachCoreLossNum_);
@@ -469,7 +470,7 @@ __aicore__ inline void KernelIfmr<T>::ComputeMSELoss(const LocalTensor<float>& s
 
 template <typename T>
 __aicore__ inline void KernelIfmr<T>::ReduceAndOutput(const LocalTensor<float>& scaleList,
-    const LocalTensor<float>& offsetList)
+                                                      const LocalTensor<float>& offsetList)
 {
     LocalTensor<float> localLoss = lossInQueue_.AllocTensor<float>();
     LocalTensor<float> tempLoss = tempBuf_.Get<float>(eachCoreLossNum_);
@@ -503,5 +504,5 @@ __aicore__ inline void KernelIfmr<T>::ReduceAndOutput(const LocalTensor<float>& 
     lossInQueue_.FreeTensor(localLoss);
     PipeBarrier<PIPE_ALL>();
 }
-}
+} // namespace Ifmr
 #endif // IFMR_H

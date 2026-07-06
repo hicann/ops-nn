@@ -25,15 +25,9 @@
 
 class PReluInferShapeUTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "PReluInferShapeUTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "PReluInferShapeUTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "PReluInferShapeUTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "PReluInferShapeUTest TearDown" << std::endl; }
 };
 
 TEST_F(PReluInferShapeUTest, p_relu_infershape_succ_1)

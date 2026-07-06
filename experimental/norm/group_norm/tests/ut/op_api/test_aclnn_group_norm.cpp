@@ -69,9 +69,8 @@ TEST_F(TestAclnnGroupNorm, group_norm_null_self)
     auto mean = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto rstd = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(static_cast<aclTensor*>(nullptr), gamma, beta, n, c, hxw, group, eps),
-        OUTPUT(out, mean, rstd));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(static_cast<aclTensor*>(nullptr), gamma, beta, n, c, hxw, group, eps),
+                        OUTPUT(out, mean, rstd));
     uint64_t workspaceSize = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_NULLPTR);
 }

@@ -25,9 +25,7 @@
 #include "simt_api/asc_fp16.h"
 #include "simt_api/asc_bf16.h"
 
-
-namespace InplaceIndexAdd
-{
+namespace InplaceIndexAdd {
 using namespace AscendC;
 
 constexpr int64_t DOUBLE_BUFFER = 2;
@@ -59,27 +57,32 @@ constexpr int64_t VFLEN_UINT8HALFHALF = platform::GetVRegSize() / sizeof(uint8_t
 
 static constexpr MicroAPI::CastTrait castTraitB8B162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-template <typename T>  
-struct MulsSelType {                                                         
+template <typename T>
+struct MulsSelType {
     using type = typename std::conditional<
-        IsSameType<T, int8_t>::value, half, 
-            typename std::conditional<IsSameType<T, uint8_t>::value, half,
-                typename std::conditional<IsSameType<T, bool>::value, int32_t, T>::type>::type>::type;
+        IsSameType<T, int8_t>::value, half,
+        typename std::conditional<IsSameType<T, uint8_t>::value, half,
+                                  typename std::conditional<IsSameType<T, bool>::value, int32_t, T>::type>::type>::type;
 };
 
-template <typename T, uint32_t CAST_MODE>  
-struct CastType {                                                         
+template <typename T, uint32_t CAST_MODE>
+struct CastType {
     using type = typename std::conditional<
-        CAST_MODE == CAST_1, int16_t, typename std::conditional<CAST_MODE == CAST_2, int32_t, 
-            typename std::conditional<CAST_MODE == CAST_3, int16_t, typename std::conditional<CAST_MODE == CAST_4, uint8_t,
-                typename std::conditional<CAST_MODE == CAST_5, uint8_t, T>::type>::type>::type>::type>::type;
+        CAST_MODE == CAST_1, int16_t,
+        typename std::conditional<
+            CAST_MODE == CAST_2, int32_t,
+            typename std::conditional<
+                CAST_MODE == CAST_3, int16_t,
+                typename std::conditional<CAST_MODE == CAST_4, uint8_t,
+                                          typename std::conditional<CAST_MODE == CAST_5, uint8_t, T>::type>::type>::
+                type>::type>::type;
 };
 
-template <typename T>  
-struct AtomicSelType { 
+template <typename T>
+struct AtomicSelType {
     using type = typename std::conditional<
-        IsSameType<T, bool>::value, int8_t, 
-            typename std::conditional<IsSameType<T, uint8_t>::value, uint32_t, T>::type>::type;
+        IsSameType<T, bool>::value, int8_t,
+        typename std::conditional<IsSameType<T, uint8_t>::value, uint32_t, T>::type>::type;
 };
 
 template <typename T>
@@ -92,11 +95,13 @@ __aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTenso
 }
 
 template <typename T>
-__aicore__ inline void CopyInNoContiguous(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, int64_t dataCount,
-                                          int64_t dataLen, int64_t srcStride = 0, int64_t dstStride = 0)
+__aicore__ inline void CopyInNoContiguous(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                          int64_t dataCount, int64_t dataLen, int64_t srcStride = 0,
+                                          int64_t dstStride = 0)
 {
     DataCopyExtParams copyParams = {static_cast<uint16_t>(dataCount), static_cast<uint32_t>(dataLen * sizeof(T)),
-                                    static_cast<uint32_t>(srcStride * sizeof(T)), static_cast<uint32_t>(dstStride), static_cast<uint32_t>(0)};
+                                    static_cast<uint32_t>(srcStride * sizeof(T)), static_cast<uint32_t>(dstStride),
+                                    static_cast<uint32_t>(0)};
     DataCopyPadExtParams<T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
     DataCopyPad<T, PaddingMode::Compact>(dstTensor, srcTensor, copyParams, padParams);
 }
@@ -110,7 +115,8 @@ __aicore__ inline void CopyOut(const GlobalTensor<T>& dstTensor, const LocalTens
 }
 
 template <typename T, typename CAST_T>
-__simd_vf__ inline void CastToInt32Vf(__ubuf__ T* srcAddr, __ubuf__ CAST_T* dstAddr, uint16_t loopTimes, uint32_t dataLen)
+__simd_vf__ inline void CastToInt32Vf(__ubuf__ T* srcAddr, __ubuf__ CAST_T* dstAddr, uint16_t loopTimes,
+                                      uint32_t dataLen)
 {
     MicroAPI::RegTensor<T> srcValue;
     MicroAPI::RegTensor<CAST_T> dstValue;
@@ -142,7 +148,8 @@ __aicore__ inline void CastToInt32(LocalTensor<CAST_T>& dstLocal, LocalTensor<T>
 }
 
 template <typename T, typename CAST_T>
-__simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ T* dstAddr, uint16_t loopTimes, uint32_t dataLen)
+__simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ T* dstAddr, uint16_t loopTimes,
+                                       uint32_t dataLen)
 {
     MicroAPI::RegTensor<CAST_T> srcValue;
     MicroAPI::MaskReg preg;
@@ -154,10 +161,10 @@ __simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ T* dst
         MicroAPI::DataCopy<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr, srcReg);
         if constexpr (IsSameType<T, int16_t>::value) {
             MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr, (MicroAPI::RegTensor<T>&)srcValue,
-                                                                     dstReg, preg);
+                                                                      dstReg, preg);
         } else {
             MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK4_B32>(dstAddr, (MicroAPI::RegTensor<T>&)srcValue,
-                                                                     dstReg, preg);
+                                                                       dstReg, preg);
         }
     }
 }
@@ -173,38 +180,38 @@ __aicore__ inline void CastToOrigin(LocalTensor<T>& dstLocal, LocalTensor<CAST_T
     CastToOriginVf<T, CAST_T>(srcAddr, dstAddr, loopTimes, dataLen);
 }
 template <typename T>
-__simd_callee__ inline void LoadOneTensorForDtypeInt(__ubuf__ T *input, MicroAPI::RegTensor<int16_t> &dst,
-    MicroAPI::MaskReg &preg, uint32_t offset)
+__simd_callee__ inline void LoadOneTensorForDtypeInt(__ubuf__ T* input, MicroAPI::RegTensor<int16_t>& dst,
+                                                     MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, int8_t>::value) {
         DataCopy<int8_t, MicroAPI::LoadDist::DIST_UNPACK_B8>((MicroAPI::RegTensor<int8_t>&)(dst),
-            ((__local_mem__ int8_t *)(input) + (offset)));
+                                                             ((__local_mem__ int8_t*)(input) + (offset)));
     } else if constexpr (IsSameType<T, bool>::value) {
         DataCopy<bool, MicroAPI::LoadDist::DIST_UNPACK_B8>((MicroAPI::RegTensor<bool>&)(dst),
-            ((__local_mem__ bool *)(input) + (offset)));
+                                                           ((__local_mem__ bool*)(input) + (offset)));
     } else {
-        DataCopy(dst, ((__local_mem__ int16_t *)(input) + (offset)));
+        DataCopy(dst, ((__local_mem__ int16_t*)(input) + (offset)));
     }
 }
 
 template <typename T>
-__simd_callee__ inline void StoreOneTensorForDtypeInt(__ubuf__ T *output, MicroAPI::RegTensor<int16_t> &src,
-    MicroAPI::MaskReg &preg, uint32_t offset)
+__simd_callee__ inline void StoreOneTensorForDtypeInt(__ubuf__ T* output, MicroAPI::RegTensor<int16_t>& src,
+                                                      MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, int8_t>::value) {
-        DataCopy<int8_t, MicroAPI::StoreDist::DIST_PACK_B16>(((__local_mem__ int8_t *)output + offset),
-            (MicroAPI::RegTensor<int8_t>&)src, preg);
+        DataCopy<int8_t, MicroAPI::StoreDist::DIST_PACK_B16>(((__local_mem__ int8_t*)output + offset),
+                                                             (MicroAPI::RegTensor<int8_t>&)src, preg);
     } else if constexpr (IsSameType<T, bool>::value) {
-        DataCopy<bool, MicroAPI::StoreDist::DIST_PACK_B16>(((__local_mem__ bool *)output + offset),
-            (MicroAPI::RegTensor<bool>&)src, preg);
+        DataCopy<bool, MicroAPI::StoreDist::DIST_PACK_B16>(((__local_mem__ bool*)output + offset),
+                                                           (MicroAPI::RegTensor<bool>&)src, preg);
     } else {
-        DataCopy(((__local_mem__ int16_t *)output + offset), src, preg);
+        DataCopy(((__local_mem__ int16_t*)output + offset), src, preg);
     }
 }
 
 template <typename VAR_T>
 __simd_vf__ inline void ComputeMulWithIntCastVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr,
-    uint16_t loopSize, uint32_t maskLen, int16_t alphaValue, uint32_t vfLen)
+                                                uint16_t loopSize, uint32_t maskLen, int16_t alphaValue, uint32_t vfLen)
 {
     AscendC::MicroAPI::RegTensor<int16_t> sumReg;
     AscendC::MicroAPI::RegTensor<int16_t> castReg;
@@ -221,8 +228,8 @@ __simd_vf__ inline void ComputeMulWithIntCastVf(__ubuf__ VAR_T* updatesAddr, __u
 }
 
 template <typename VAR_T>
-__aicore__ inline void ComputeMulWithIntCast(
-    LocalTensor<VAR_T> updateMulLocal, LocalTensor<VAR_T> updatesLocal, VAR_T alphaValue, int64_t colLen)
+__aicore__ inline void ComputeMulWithIntCast(LocalTensor<VAR_T> updateMulLocal, LocalTensor<VAR_T> updatesLocal,
+                                             VAR_T alphaValue, int64_t colLen)
 {
     __local_mem__ VAR_T* updatesAddr = (__local_mem__ VAR_T*)updatesLocal.GetPhyAddr();
     __local_mem__ VAR_T* updateMulAddr = (__local_mem__ VAR_T*)updateMulLocal.GetPhyAddr();
@@ -231,12 +238,12 @@ __aicore__ inline void ComputeMulWithIntCast(
     int32_t loopSize = ops::CeilDiv(static_cast<uint32_t>(colLen), vfLen);
 
     ComputeMulWithIntCastVf<VAR_T>(updatesAddr, updateMulAddr, static_cast<uint16_t>(loopSize),
-        static_cast<uint32_t>(colLen), static_cast<int16_t>(alphaValue), vfLen);
+                                   static_cast<uint32_t>(colLen), static_cast<int16_t>(alphaValue), vfLen);
 }
 
 template <typename VAR_T, typename UPDATES_CT, typename COMPUTE_T>
-__simd_vf__ inline void ComputeSumSingleRowVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ UPDATES_CT* updateSumAddr, uint16_t loopSize, 
-                                            uint32_t maskLen, COMPUTE_T alpha, uint32_t vfLen)
+__simd_vf__ inline void ComputeSumSingleRowVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ UPDATES_CT* updateSumAddr,
+                                              uint16_t loopSize, uint32_t maskLen, COMPUTE_T alpha, uint32_t vfLen)
 {
     AscendC::MicroAPI::RegTensor<COMPUTE_T> sumReg;
     AscendC::MicroAPI::RegTensor<COMPUTE_T> castReg;
@@ -309,18 +316,19 @@ public:
         updatesGm_.SetGlobalBuffer((__gm__ VAR_T*)(updates));
 
         pipe.InitBuffer(maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
-        pipe.InitBuffer(
-            sortIndicesBuf_,
-            ops::CeilAlign(indicesFactor_ * sizeof(CAST_T) + SORT_PAD_NUM * UB_AGLIN_VALUE, UB_AGLIN_VALUE));
+        pipe.InitBuffer(sortIndicesBuf_, ops::CeilAlign(indicesFactor_ * sizeof(CAST_T) + SORT_PAD_NUM * UB_AGLIN_VALUE,
+                                                        UB_AGLIN_VALUE));
         pipe.InitBuffer(updatesOriginIdexQue_, DOUBLE_BUFFER, indicesFactor_ * sizeof(uint32_t));
-        pipe.InitBuffer(
-            uniqueIdCountQue_, DOUBLE_BUFFER, ops::CeilAlign((indicesFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
-        pipe.InitBuffer(
-            updateSumIdxQue_, DOUBLE_BUFFER, ops::CeilAlign((indicesFactor_ + 1) * sizeof(IDX_T), UB_AGLIN_VALUE));
+        pipe.InitBuffer(uniqueIdCountQue_, DOUBLE_BUFFER,
+                        ops::CeilAlign((indicesFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
+        pipe.InitBuffer(updateSumIdxQue_, DOUBLE_BUFFER,
+                        ops::CeilAlign((indicesFactor_ + 1) * sizeof(IDX_T), UB_AGLIN_VALUE));
         pipe.InitBuffer(indicesCastQue_, DOUBLE_BUFFER, (indicesFactor_) * sizeof(CAST_T));
     }
 
-    __simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -336,14 +344,17 @@ public:
             AscendC::MicroAPI::DataCopyUnAlign<CAST_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
             AscendC::MicroAPI::Compare<CAST_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
             AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                 maskHalf);
             AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 uniqueIdCountsAddr, selReg, uOut);
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -358,14 +369,17 @@ public:
             AscendC::MicroAPI::DataCopyUnAlignPre(u0, startAddr - 1);
             AscendC::MicroAPI::DataCopyUnAlign<CAST_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
             AscendC::MicroAPI::Compare<CAST_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                 cmpMask);
             AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 uniqueIdCountsAddr, selReg, uOut);
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __simd_callee__ inline void ComputeUniqueIdNumInt16(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumInt16(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, selReg, selReg2;
@@ -383,15 +397,21 @@ public:
             AscendC::MicroAPI::Compare<CAST_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
             AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskDouble1, cmpMask);
             AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskDouble2, cmpMask);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, maskDouble1);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg, uOut);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg2, orderReg2, maskDouble2);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg2, uOut);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                 maskDouble1);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                uniqueIdCountsAddr, selReg, uOut);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg2, orderReg2,
+                                                                                                 maskDouble2);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                uniqueIdCountsAddr, selReg2, uOut);
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __simd_callee__ inline void ComputeUniqueIdNumUint8(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumUint8(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, orderReg3, orderReg4;
@@ -416,19 +436,28 @@ public:
             AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskFour2, maskFour3);
             AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskFour3, maskFour4);
             AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskFour4, maskFour4);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, maskFour1);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg, uOut);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg2, orderReg2, maskFour2);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg2, uOut);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg3, orderReg3, maskFour3);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg3, uOut);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg4, orderReg4, maskFour4);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg4, uOut);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                 maskFour1);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                uniqueIdCountsAddr, selReg, uOut);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg2, orderReg2,
+                                                                                                 maskFour2);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                uniqueIdCountsAddr, selReg2, uOut);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg3, orderReg3,
+                                                                                                 maskFour3);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                uniqueIdCountsAddr, selReg3, uOut);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg4, orderReg4,
+                                                                                                 maskFour4);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                uniqueIdCountsAddr, selReg4, uOut);
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+    __simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr,
+                                                 uint16_t loopCnt, int64_t dataLen)
     {
         AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
@@ -438,15 +467,16 @@ public:
             ComputeUniqueIdNumInt32(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
         } else if constexpr (std::is_same<int16_t, CAST_T>::value) {
             ComputeUniqueIdNumInt16(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else {  // uint8
+        } else { // uint8
             ComputeUniqueIdNumUint8(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
         }
     }
 
     __aicore__ uint32_t inline ComputeUniqueIdNum(LocalTensor<CAST_T> indicesLocal,
-        LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
+                                                  LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
     {
-        __local_mem__ CAST_T* indicesAddr = (__local_mem__ CAST_T*)indicesLocal[(UB_AGLIN_VALUE / sizeof(CAST_T))].GetPhyAddr();
+        __local_mem__ CAST_T* indicesAddr = (__local_mem__ CAST_T*)indicesLocal[(UB_AGLIN_VALUE / sizeof(CAST_T))]
+                                                .GetPhyAddr();
         __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
 
         constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(CAST_T);
@@ -458,7 +488,8 @@ public:
         return uniqueIdNum;
     }
 
-    __simd_vf__ inline void ComputeUinqueIdTimesVf(__ubuf__ int32_t* uniqueIdCountsAddr, uint32_t vfLen, uint16_t loopSize, uint32_t uniqueIdNum)
+    __simd_vf__ inline void ComputeUinqueIdTimesVf(__ubuf__ int32_t* uniqueIdCountsAddr, uint32_t vfLen,
+                                                   uint16_t loopSize, uint32_t uniqueIdNum)
     {
         AscendC::MicroAPI::RegTensor<int32_t> preReg;
         AscendC::MicroAPI::RegTensor<int32_t> postReg;
@@ -487,33 +518,36 @@ public:
     }
 
     __aicore__ uint32_t inline SortAndComputeUniqueIdx(int64_t rowLen, LocalTensor<CAST_T> indicesSrcLocal,
-        LocalTensor<CAST_T> sortIndicesLocal, LocalTensor<int32_t> uniqueIdxLocal,
-        LocalTensor<uint32_t> updatesOriginIdexLocal, LocalTensor<uint8_t> sharedTmpBuffer)
+                                                       LocalTensor<CAST_T> sortIndicesLocal,
+                                                       LocalTensor<int32_t> uniqueIdxLocal,
+                                                       LocalTensor<uint32_t> updatesOriginIdexLocal,
+                                                       LocalTensor<uint8_t> sharedTmpBuffer)
     {
         int64_t shiftOffset = UB_AGLIN_VALUE / sizeof(CAST_T);
         LocalTensor<CAST_T> shiftSortLocal = sortIndicesLocal[shiftOffset];
-        AscendC::Sort<CAST_T, false, sortConfig>(
-            shiftSortLocal, updatesOriginIdexLocal, indicesSrcLocal, sharedTmpBuffer, static_cast<uint32_t>(rowLen));
+        AscendC::Sort<CAST_T, false, sortConfig>(shiftSortLocal, updatesOriginIdexLocal, indicesSrcLocal,
+                                                 sharedTmpBuffer, static_cast<uint32_t>(rowLen));
         Duplicate(sortIndicesLocal, (CAST_T)-1, shiftOffset);
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
         shiftSortLocal(rowLen) = -1;
-        
+
         event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventIdSToV);
         WaitFlag<HardEvent::S_V>(eventIdSToV);
         return ComputeUniqueIdNum(sortIndicesLocal, uniqueIdxLocal, rowLen);
     }
 
-    __aicore__ void inline ComputeIdxCount(LocalTensor<IDX_T> indicesLocal, int64_t rowLen, int64_t& uniqueIdNumDuplicateIdx_)
+    __aicore__ void inline ComputeIdxCount(LocalTensor<IDX_T> indicesLocal, int64_t rowLen,
+                                           int64_t& uniqueIdNumDuplicateIdx_)
     {
         LocalTensor<IDX_T> sortIndicesLocal = sortIndicesBuf_.Get<IDX_T>();
         LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.AllocTensor<int32_t>();
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.AllocTensor<uint32_t>();
         LocalTensor<IDX_T> shiftSortLocal = sortIndicesLocal[shiftOffset_];
-        AscendC::Sort<IDX_T, false, sortConfig>(
-            shiftSortLocal, updatesOriginIdexLocal, indicesLocal, static_cast<uint32_t>(rowLen));
+        AscendC::Sort<IDX_T, false, sortConfig>(shiftSortLocal, updatesOriginIdexLocal, indicesLocal,
+                                                static_cast<uint32_t>(rowLen));
         Duplicate(sortIndicesLocal, (IDX_T)-1, shiftOffset_);
         shiftSortLocal(rowLen) = -1;
         PipeBarrier<PIPE_V>();
@@ -523,7 +557,7 @@ public:
         updatesOriginIdexQue_.FreeTensor(updatesOriginIdexLocal);
         sortIndicesBuf_.FreeTensor(sortIndicesLocal);
     }
-    
+
     __aicore__ void inline SortIndices(LocalTensor<CAST_T> indicesLocal, int64_t rowLen)
     {
         LocalTensor<CAST_T> sortIndicesLocal = sortIndicesBuf_.Get<CAST_T>();
@@ -531,8 +565,8 @@ public:
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.AllocTensor<uint32_t>();
         LocalTensor<IDX_T> updateSumIdxLocal = updateSumIdxQue_.AllocTensor<IDX_T>();
         LocalTensor<CAST_T> shiftSortLocal = sortIndicesLocal[shiftOffset_];
-        AscendC::Sort<CAST_T, false, sortConfig>(
-            shiftSortLocal, updatesOriginIdexLocal, indicesLocal, static_cast<uint32_t>(rowLen));
+        AscendC::Sort<CAST_T, false, sortConfig>(shiftSortLocal, updatesOriginIdexLocal, indicesLocal,
+                                                 static_cast<uint32_t>(rowLen));
         Duplicate(sortIndicesLocal, (CAST_T)-1, shiftOffset_);
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -560,8 +594,10 @@ public:
     }
 
     __simd_vf__ inline void ComputeSumWithCastVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateSumAddr,
-        __ubuf__ int32_t* uniqueIdCountAddr, __ubuf__ uint32_t* updatesOriginIdexAddr,
-        uint32_t uniqueIdNum, uint32_t colLen, uint16_t loopSize, uint32_t vfLen, int64_t colLenAlignSize)
+                                                 __ubuf__ int32_t* uniqueIdCountAddr,
+                                                 __ubuf__ uint32_t* updatesOriginIdexAddr, uint32_t uniqueIdNum,
+                                                 uint32_t colLen, uint16_t loopSize, uint32_t vfLen,
+                                                 int64_t colLenAlignSize)
     {
         int32_t idLocation = 0;
         for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
@@ -584,10 +620,10 @@ public:
             }
             idLocation += idRepeatTimes;
         }
-    }     
+    }
 
-    __aicore__ void inline ComputeSumWithCast(
-        LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateSumLocal, uint32_t uniqueIdNum, int64_t colLen)
+    __aicore__ void inline ComputeSumWithCast(LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateSumLocal,
+                                              uint32_t uniqueIdNum, int64_t colLen)
     {
         LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.DeQue<int32_t>();
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.DeQue<uint32_t>();
@@ -601,17 +637,19 @@ public:
         int32_t loopSize = ops::CeilDiv(static_cast<uint32_t>(colLen), vfLen);
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
 
-        ComputeSumWithCastVf(updatesAddr, updateSumAddr,
-            uniqueIdCountAddr, updatesOriginIdexAddr, uniqueIdNum, static_cast<uint32_t>(colLen),
-            static_cast<uint16_t>(loopSize), vfLen, colLenAlignSize);
+        ComputeSumWithCastVf(updatesAddr, updateSumAddr, uniqueIdCountAddr, updatesOriginIdexAddr, uniqueIdNum,
+                             static_cast<uint32_t>(colLen), static_cast<uint16_t>(loopSize), vfLen, colLenAlignSize);
 
         uniqueIdCountQue_.EnQue(uniqueIdCountLocal);
         updatesOriginIdexQue_.EnQue(updatesOriginIdexLocal);
     }
 
-    __simd_vf__ inline void ComputeSumWithOutCastVf(__ubuf__ selRegType* updatesAddr, __ubuf__ selRegType* updateSumAddr,
-        __ubuf__ int32_t* uniqueIdCountAddr, __ubuf__ uint32_t* updatesOriginIdexAddr,
-        uint32_t uniqueIdNum, uint32_t colLen, uint16_t loopSize, uint32_t vfLen, int64_t colLenAlignSize)
+    __simd_vf__ inline void ComputeSumWithOutCastVf(__ubuf__ selRegType* updatesAddr,
+                                                    __ubuf__ selRegType* updateSumAddr,
+                                                    __ubuf__ int32_t* uniqueIdCountAddr,
+                                                    __ubuf__ uint32_t* updatesOriginIdexAddr, uint32_t uniqueIdNum,
+                                                    uint32_t colLen, uint16_t loopSize, uint32_t vfLen,
+                                                    int64_t colLenAlignSize)
     {
         int32_t idLocation = 0;
         for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
@@ -637,8 +675,8 @@ public:
         }
     }
 
-    __aicore__ void inline ComputeSumWithOutCast(
-        LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateSumLocal, uint32_t uniqueIdNum, int64_t colLen)
+    __aicore__ void inline ComputeSumWithOutCast(LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateSumLocal,
+                                                 uint32_t uniqueIdNum, int64_t colLen)
     {
         LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.DeQue<int32_t>();
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.DeQue<uint32_t>();
@@ -652,16 +690,16 @@ public:
         int32_t loopSize = (colLen + vfLen - 1) / vfLen;
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(selRegType), UB_AGLIN_VALUE) / sizeof(selRegType);
 
-        ComputeSumWithOutCastVf(updatesAddr, updateSumAddr,
-            uniqueIdCountAddr, updatesOriginIdexAddr, uniqueIdNum, static_cast<uint32_t>(colLen),
-            static_cast<uint16_t>(loopSize), vfLen, colLenAlignSize);
+        ComputeSumWithOutCastVf(updatesAddr, updateSumAddr, uniqueIdCountAddr, updatesOriginIdexAddr, uniqueIdNum,
+                                static_cast<uint32_t>(colLen), static_cast<uint16_t>(loopSize), vfLen, colLenAlignSize);
 
         uniqueIdCountQue_.EnQue(uniqueIdCountLocal);
         updatesOriginIdexQue_.EnQue(updatesOriginIdexLocal);
     }
-    
+
     __simd_vf__ inline void ExecConvertAlignVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ float* updateSumAddr,
-        uint16_t rowLen, uint32_t colLen, uint16_t loopSize, uint32_t vfLen, int64_t colLenAlignSize, int64_t colLenAlignFp32)
+                                               uint16_t rowLen, uint32_t colLen, uint16_t loopSize, uint32_t vfLen,
+                                               int64_t colLenAlignSize, int64_t colLenAlignFp32)
     {
         for (uint16_t i = 0; i < rowLen; i++) {
             AscendC::MicroAPI::RegTensor<float> castReg;
@@ -677,8 +715,8 @@ public:
         }
     }
 
-    __aicore__ void inline ExecConvertAlign(
-        LocalTensor<VAR_T> updatesLocal, LocalTensor<float> updateSumLocal, int64_t rowLen, int64_t colLen)
+    __aicore__ void inline ExecConvertAlign(LocalTensor<VAR_T> updatesLocal, LocalTensor<float> updateSumLocal,
+                                            int64_t rowLen, int64_t colLen)
     {
         __local_mem__ VAR_T* updatesAddr = (__local_mem__ VAR_T*)updatesLocal.GetPhyAddr();
         __local_mem__ float* updateSumAddr = (__local_mem__ float*)updateSumLocal.GetPhyAddr();
@@ -688,13 +726,12 @@ public:
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
         int64_t colLenAlignFp32 = ops::CeilAlign(colLen * sizeof(float), UB_AGLIN_VALUE) / sizeof(float);
 
-        ExecConvertAlignVf(updatesAddr, updateSumAddr,
-            static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen), loopSize, vfLen, colLenAlignSize, colLenAlignFp32);
+        ExecConvertAlignVf(updatesAddr, updateSumAddr, static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen),
+                           loopSize, vfLen, colLenAlignSize, colLenAlignFp32);
     }
-    
-    __aicore__ inline void CopyOutSplitPre(
-        LocalTensor<IDX_T> indicesLocal, LocalTensor<VAR_T> updateOutLocal, 
-        int64_t startPreAxis, int64_t preLen, int64_t colLen, int64_t colIdx)
+
+    __aicore__ inline void CopyOutSplitPre(LocalTensor<IDX_T> indicesLocal, LocalTensor<VAR_T> updateOutLocal,
+                                           int64_t startPreAxis, int64_t preLen, int64_t colLen, int64_t colIdx)
     {
         LocalTensor<atomicSelType> updateOutLocalCast = updateOutLocal.template ReinterpretCast<atomicSelType>();
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
@@ -725,9 +762,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOutSplitIndices(
-        LocalTensor<IDX_T> indicesLocal, LocalTensor<VAR_T> updateOutLocal, 
-        int64_t preAxisIdx, int64_t rowLen, int64_t colLen, int64_t colIdx)
+    __aicore__ inline void CopyOutSplitIndices(LocalTensor<IDX_T> indicesLocal, LocalTensor<VAR_T> updateOutLocal,
+                                               int64_t preAxisIdx, int64_t rowLen, int64_t colLen, int64_t colIdx)
     {
         LocalTensor<atomicSelType> updateOutLocalCast = updateOutLocal.template ReinterpretCast<atomicSelType>();
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
@@ -750,9 +786,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOutSplitAfter(
-        LocalTensor<IDX_T> indicesLocal, LocalTensor<VAR_T> updateOutLocal, 
-        int64_t preAxisIdx, int64_t rowLen, int64_t colLen, int64_t colIdx)
+    __aicore__ inline void CopyOutSplitAfter(LocalTensor<IDX_T> indicesLocal, LocalTensor<VAR_T> updateOutLocal,
+                                             int64_t preAxisIdx, int64_t rowLen, int64_t colLen, int64_t colIdx)
     {
         LocalTensor<atomicSelType> updateOutLocalCast = updateOutLocal.template ReinterpretCast<atomicSelType>();
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
@@ -775,26 +810,29 @@ public:
         }
     }
 
-    __aicore__ inline void IndicesSortCast(LocalTensor<IDX_T> indicesLocal, LocalTensor<CAST_T> indicesCastLocal, uint32_t indicesCount)
+    __aicore__ inline void IndicesSortCast(LocalTensor<IDX_T> indicesLocal, LocalTensor<CAST_T> indicesCastLocal,
+                                           uint32_t indicesCount)
     {
         LocalTensor<int32_t> indicesCastTmpLocal = uniqueIdCountQue_.AllocTensor<int32_t>();
-        if constexpr (CAST_MODE == CAST_4) {  // int32 Cast uint8
+        if constexpr (CAST_MODE == CAST_4) { // int32 Cast uint8
             CompareScalar(indicesCastLocal, indicesLocal, static_cast<IDX_T>(0), CMPMODE::GE, indicesCount);
-            Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8), SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
+            Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8),
+                   SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
             Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
-        } else if constexpr (CAST_MODE == CAST_3) {  // int64 Cast int16
+        } else if constexpr (CAST_MODE == CAST_3) { // int64 Cast int16
             Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
             Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
-        } else if constexpr (CAST_MODE == CAST_5) {  // int64 Cast uint8
+        } else if constexpr (CAST_MODE == CAST_5) { // int64 Cast uint8
             CompareScalar(indicesCastLocal, indicesLocal, static_cast<IDX_T>(0), CMPMODE::GE, indicesCount);
-            Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8), SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
+            Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8),
+                   SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
             Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
             Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
-        } else {    // CAST_1 + CAST_2, int32 Cast int16 + int64 Cast int32
+        } else { // CAST_1 + CAST_2, int32 Cast int16 + int64 Cast int32
             Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
         }
         uniqueIdCountQue_.FreeTensor(indicesCastTmpLocal);
     }
 };
-}  // namespace InplaceIndexAdd
+} // namespace InplaceIndexAdd
 #endif

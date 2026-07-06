@@ -37,11 +37,13 @@ std::set<int64_t> ComputeFactors(int64_t usedCoreNum)
     return result;
 }
 
-void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum)
+void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum,
+                      int64_t colTotalNum)
 {
     int64_t tmpEleNum = BASE_BLOCK_ALIGN / sizeof(float);
     int64_t colBlockTotalNum = (colTotalNum + tmpEleNum - 1) / tmpEleNum;
-    usedCoreNum = std::min(usedCoreNum, std::max(int64_t(1), rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
+    usedCoreNum = std::min(usedCoreNum,
+                           std::max(int64_t(1), rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
 
     std::set<int64_t> cutSet = ComputeFactors(usedCoreNum);
     std::vector<std::vector<int64_t>> allTiling;
@@ -81,10 +83,7 @@ void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCore
     colTileNum = static_cast<uint16_t>(allTiling[0][1]);
 }
 
-bool SparseSegmentMeanSimdTiling::IsCapable()
-{
-    return true;
-}
+bool SparseSegmentMeanSimdTiling::IsCapable() { return true; }
 
 uint64_t SparseSegmentMeanSimdTiling::GetTilingKey() const
 {
@@ -102,14 +101,17 @@ void SparseSegmentMeanSimdTiling::DoUBTiling()
     uint32_t maxValue = 0;
     uint32_t minValue = 0;
 
-    AscendC::GetReduceSumMaxMinTmpSize(
-        shape, ge::DataType::DT_FLOAT, AscendC::ReducePattern::RA, true, true, maxValue, minValue);
+    AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DataType::DT_FLOAT, AscendC::ReducePattern::RA, true, true, maxValue,
+                                       minValue);
     splitData.sharedTmpBufferSize = maxValue;
-    
+
     int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
-    splitData.workspaceBufferSize = Ops::Base::CeilAlign(GM_NUM_OFFSET + static_cast<int64_t>(sizeof(int64_t)), ubBlockSize);
-    splitData.yBufferSize = (hardwareData.ubSize - splitData.sharedTmpBufferSize - splitData.xBufferSize - splitData.workspaceBufferSize * WORKSPACE_BUFFER_NUM) / DOUBLE;
-   
+    splitData.workspaceBufferSize = Ops::Base::CeilAlign(GM_NUM_OFFSET + static_cast<int64_t>(sizeof(int64_t)),
+                                                         ubBlockSize);
+    splitData.yBufferSize = (hardwareData.ubSize - splitData.sharedTmpBufferSize - splitData.xBufferSize -
+                             splitData.workspaceBufferSize * WORKSPACE_BUFFER_NUM) /
+                            DOUBLE;
+
     splitData.inBufferSize = hardwareData.ubSize / DOUBLE;
     splitData.outBufferSize = (hardwareData.ubSize - splitData.sharedTmpBufferSize - splitData.inBufferSize) / DOUBLE;
 }
@@ -137,12 +139,13 @@ void SparseSegmentMeanSimdTiling::DoBlockTiling()
     int64_t totalOutputSize = inputData.segmentNum * inputData.innerSize;
     splitData.normalCoreProcessNumForClear = Ops::Base::CeilDiv(totalOutputSize, splitData.usedCoreNum);
     splitData.usedCoreNumForClear = Ops::Base::CeilDiv(totalOutputSize, splitData.normalCoreProcessNumForClear);
-    splitData.tailCoreProcessNumForClear =
-        totalOutputSize - (splitData.usedCoreNumForClear - 1) * splitData.normalCoreProcessNumForClear;
+    splitData.tailCoreProcessNumForClear = totalOutputSize -
+                                           (splitData.usedCoreNumForClear - 1) * splitData.normalCoreProcessNumForClear;
 
     splitData.perCoreInnerElements = Ops::Base::CeilDiv(inputData.innerSize, splitData.usedCoreNum);
     splitData.usedCoreNumForMulCore = Ops::Base::CeilDiv(inputData.innerSize, splitData.perCoreInnerElements);
-    splitData.tailCoreInnerElements = inputData.innerSize - (splitData.usedCoreNumForMulCore - 1) * splitData.perCoreInnerElements;
+    splitData.tailCoreInnerElements = inputData.innerSize -
+                                      (splitData.usedCoreNumForMulCore - 1) * splitData.perCoreInnerElements;
 }
 
 void SparseSegmentMeanSimdTiling::PrintSplitData() const
@@ -204,7 +207,7 @@ void SparseSegmentMeanSimdTiling::SetTilingData()
     tilingData->inBufferSize = splitData.inBufferSize;
     tilingData->outBufferSize = splitData.outBufferSize;
     tilingData->workspaceBufferSize = splitData.workspaceBufferSize;
-    
+
     tilingData->normalCoreProcessNumForClear = splitData.normalCoreProcessNumForClear;
     tilingData->tailCoreProcessNumForClear = splitData.tailCoreProcessNumForClear;
     tilingData->usedCoreNumForClear = splitData.usedCoreNumForClear;
@@ -225,7 +228,7 @@ ge::graphStatus SparseSegmentMeanSimdTiling::GetWorkspaceSize()
     sysWorkspace += inputData.innerSize * splitData.indicesOuter * DOUBLE * sizeof(float);
     sysWorkspace += GM_NUM_OFFSET;
     sysWorkspace += splitData.indicesOuter * DOUBLE * DOUBLE * GM_NUM_OFFSET;
-    sysWorkspace += GM_NUM_OFFSET;  // 预留 防止越界访问
+    sysWorkspace += GM_NUM_OFFSET; // 预留 防止越界访问
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = static_cast<size_t>(sysWorkspace);

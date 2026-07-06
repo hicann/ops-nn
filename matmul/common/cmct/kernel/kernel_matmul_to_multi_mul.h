@@ -38,17 +38,16 @@ namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 
-template <
-    class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_, typename Enable_ = void>
+template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
+          typename Enable_ = void>
 class KernelMatmulToVector {
-    static_assert(
-        AscendC::Std::always_false_v<BlockEpilogue_>, "KernelMatmulToVector is not implemented for this BlockEpilogue");
+    static_assert(AscendC::Std::always_false_v<BlockEpilogue_>,
+                  "KernelMatmulToVector is not implemented for this BlockEpilogue");
 };
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
-class KernelMatmulToVector<
-    ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-    std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
+class KernelMatmulToVector<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+                           std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
     __aicore__ inline KernelMatmulToVector() {}
     __aicore__ inline ~KernelMatmulToVector() {}
@@ -191,10 +190,7 @@ public:
         }
     }
 
-    __aicore__ inline void operator()(const Params& params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(const Params& params) { Run(params); }
 };
 
 } // namespace Kernel

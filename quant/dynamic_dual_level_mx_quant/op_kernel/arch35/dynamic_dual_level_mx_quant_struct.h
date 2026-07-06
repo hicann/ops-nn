@@ -23,12 +23,11 @@
 #define TPL_FLOOR 1
 
 namespace DynamicDualLevelMxQuantOp {
-ASCENDC_TPL_ARGS_DECL(
-    DynamicDualLevelMxQuant,
-    ASCENDC_TPL_UINT_DECL(roundMode, 3, ASCENDC_TPL_UI_LIST, TPL_RINT, TPL_ROUND, TPL_FLOOR));
+ASCENDC_TPL_ARGS_DECL(DynamicDualLevelMxQuant,
+                      ASCENDC_TPL_UINT_DECL(roundMode, 3, ASCENDC_TPL_UI_LIST, TPL_RINT, TPL_ROUND, TPL_FLOOR));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_RINT, TPL_ROUND, TPL_FLOOR)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_RINT, TPL_ROUND,
+                                                          TPL_FLOOR)));
 
 } // namespace DynamicDualLevelMxQuantOp
 

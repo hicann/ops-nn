@@ -21,44 +21,43 @@
 #include "tiling/tiling_api.h"
 using namespace ge;
 namespace optiling {
-  const static int64_t SIZE = 512;
-  constexpr int64_t TILINGKEY = 0;
-  
-  struct ExpandIntoJaggedPermuteParam {
-  int64_t permute = 0;
-  int64_t inputoffset = 0;
-  int64_t outputoffset = 0;
-  int64_t outputSize = 0;
-  int64_t dtypeSize = 0;
-  int64_t coreNum = 0;
-  int64_t oneTaskLen = 0;
-  int64_t taskNum = 0;
-  int64_t numBlocks = 0;
-  int64_t tilingKey = 0;
-  int64_t oneTaskInputOffsetLen = 0;
-  int64_t cacheLine = 0;
-  int64_t maxCoreMemery = 0;
-  int64_t numTail = 0;
-  int64_t offsetLen = 0;
-};
+const static int64_t SIZE = 512;
+constexpr int64_t TILINGKEY = 0;
 
+struct ExpandIntoJaggedPermuteParam {
+    int64_t permute = 0;
+    int64_t inputoffset = 0;
+    int64_t outputoffset = 0;
+    int64_t outputSize = 0;
+    int64_t dtypeSize = 0;
+    int64_t coreNum = 0;
+    int64_t oneTaskLen = 0;
+    int64_t taskNum = 0;
+    int64_t numBlocks = 0;
+    int64_t tilingKey = 0;
+    int64_t oneTaskInputOffsetLen = 0;
+    int64_t cacheLine = 0;
+    int64_t maxCoreMemery = 0;
+    int64_t numTail = 0;
+    int64_t offsetLen = 0;
+};
 
 struct ExpandIntoJaggedPermuteCompileInfo {};
 
 BEGIN_TILING_DATA_DEF(ExpandIntoJaggedPermuteTilingData)
-  TILING_DATA_FIELD_DEF(int64_t, realCoreNum);
-  TILING_DATA_FIELD_DEF(int64_t, frontCoreNum);
-  TILING_DATA_FIELD_DEF(int64_t, blockFactor);  // 任务数
-  TILING_DATA_FIELD_DEF(int64_t, oneTaskLen);
-  TILING_DATA_FIELD_DEF(int64_t, tailCoreBlockFactor);
-  TILING_DATA_FIELD_DEF(int64_t, lastTaskLen);
-  TILING_DATA_FIELD_DEF(int64_t, oneTaskOffsetLen);
-  TILING_DATA_FIELD_DEF(int64_t, inputLen);
-  TILING_DATA_FIELD_DEF(int64_t, offsetLen);
-  TILING_DATA_FIELD_DEF(int64_t, outputSize);
+TILING_DATA_FIELD_DEF(int64_t, realCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, frontCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, blockFactor); // 任务数
+TILING_DATA_FIELD_DEF(int64_t, oneTaskLen);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, lastTaskLen);
+TILING_DATA_FIELD_DEF(int64_t, oneTaskOffsetLen);
+TILING_DATA_FIELD_DEF(int64_t, inputLen);
+TILING_DATA_FIELD_DEF(int64_t, offsetLen);
+TILING_DATA_FIELD_DEF(int64_t, outputSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ExpandIntoJaggedPermute, ExpandIntoJaggedPermuteTilingData)
 
-} //namespce optiling
-#endif  
+} // namespace optiling
+#endif

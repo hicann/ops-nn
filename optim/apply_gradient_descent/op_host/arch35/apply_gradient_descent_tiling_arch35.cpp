@@ -59,23 +59,25 @@ ge::graphStatus ApplyGradientDescentTiling::CalcInputDtype()
     this->alphaDtype = alphaDesc->GetDataType();
     this->deltaDtype = deltaDesc->GetDataType();
 
-    OP_CHECK_IF(
-        this->varDtype != ge::DT_FLOAT && this->varDtype != ge::DT_FLOAT16 && this->varDtype != ge::DT_BF16,
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "var",
-            ge::TypeUtils::DataTypeToSerialString(this->varDtype).c_str(), "float32, float16 or bfloat16"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        this->alphaDtype != this->varDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "alpha and var",
-            (ge::TypeUtils::DataTypeToSerialString(this->alphaDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
-            "The dtypes of alpha and var must be the same"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        this->deltaDtype != this->varDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "delta and var",
-            (ge::TypeUtils::DataTypeToSerialString(this->deltaDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
-            "The dtypes of delta and var must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->varDtype != ge::DT_FLOAT && this->varDtype != ge::DT_FLOAT16 && this->varDtype != ge::DT_BF16,
+                OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "var",
+                                          ge::TypeUtils::DataTypeToSerialString(this->varDtype).c_str(),
+                                          "float32, float16 or bfloat16"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->alphaDtype != this->varDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "alpha and var",
+                                                       (ge::TypeUtils::DataTypeToSerialString(this->alphaDtype) +
+                                                        " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype))
+                                                           .c_str(),
+                                                       "The dtypes of alpha and var must be the same"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->deltaDtype != this->varDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "delta and var",
+                                                       (ge::TypeUtils::DataTypeToSerialString(this->deltaDtype) +
+                                                        " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype))
+                                                           .c_str(),
+                                                       "The dtypes of delta and var must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -88,17 +90,18 @@ ge::graphStatus ApplyGradientDescentTiling::CalcOutputDtype()
     OP_CHECK_IF(
         this->outputDtype != this->varDtype,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "output var",
-            (ge::TypeUtils::DataTypeToSerialString(this->outputDtype)).c_str(),
-            "The dtype of output var must be the same as dtype of input var"),
+                                              (ge::TypeUtils::DataTypeToSerialString(this->outputDtype)).c_str(),
+                                              "The dtype of output var must be the same as dtype of input var"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
-  if (in_shape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return in_shape;
+static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
 }
 
 ge::graphStatus ApplyGradientDescentTiling::CheckShape()
@@ -106,21 +109,24 @@ ge::graphStatus ApplyGradientDescentTiling::CheckShape()
     OP_LOGD(tilingContext->GetNodeName(), "ApplyGradientDescentTiling CheckShape enter.");
     auto varStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, varStorageShape);
-    const gert::Shape &varShape = EnsureNotScalar(varStorageShape->GetStorageShape());
+    const gert::Shape& varShape = EnsureNotScalar(varStorageShape->GetStorageShape());
 
     auto deltaStorageShape = tilingContext->GetInputShape(2);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, deltaStorageShape);
-    const gert::Shape &deltaShape = EnsureNotScalar(deltaStorageShape->GetStorageShape());
+    const gert::Shape& deltaShape = EnsureNotScalar(deltaStorageShape->GetStorageShape());
 
     auto outputStorageShape = tilingContext->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
-    const gert::Shape &outputShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
+    const gert::Shape& outputShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(varShape != deltaShape || varShape != outputShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "input var, delta and output var",
-            (Ops::Base::ToString(varShape) + " and " + Ops::Base::ToString(deltaShape) + " and " + Ops::Base::ToString(outputShape)).c_str(),
-            "The shapes of input var, delta and output var must be the same"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "input var, delta and output var",
+                    (Ops::Base::ToString(varShape) + " and " + Ops::Base::ToString(deltaShape) + " and " +
+                     Ops::Base::ToString(outputShape))
+                        .c_str(),
+                    "The shapes of input var, delta and output var must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -128,14 +134,15 @@ ge::graphStatus ApplyGradientDescentTiling::RunTiling()
 {
     OP_LOGD(tilingContext->GetNodeName(), "ApplyGradientDescentTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "get input dtype failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "get output dtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
-               return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
     tiling = tilingContext->GetTilingData<ApplyGradientDescentNs::ApplyGradientDescentTilingData>();
-    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
+                return ge::GRAPH_FAILED);
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         baseTilingResult = elewiseBaseTiling.DoTiling<ApplyGradientDescentDAG<half>::OpDag>(tiling->baseTiling);
@@ -143,11 +150,12 @@ ge::graphStatus ApplyGradientDescentTiling::RunTiling()
         baseTilingResult = elewiseBaseTiling.DoTiling<ApplyGradientDescentDAG<float>::OpDag>(tiling->baseTiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output var",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(), "float32, float16 or bfloat16");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
+                                  "float32, float16 or bfloat16");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
     return SetTilingData();
 }
@@ -174,5 +182,7 @@ ge::graphStatus TilingPrepareForApplyGradientDescent(gert::TilingParseContext* c
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ApplyGradientDescent).Tiling(Tiling4ApplyGradientDescent).TilingParse<ApplyGradientDescentCompileInfo>(TilingPrepareForApplyGradientDescent);
+IMPL_OP_OPTILING(ApplyGradientDescent)
+    .Tiling(Tiling4ApplyGradientDescent)
+    .TilingParse<ApplyGradientDescentCompileInfo>(TilingPrepareForApplyGradientDescent);
 } // namespace optiling

@@ -52,17 +52,17 @@ constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr uint32_t ALIGN_SPACE = 1 * 1024;
 constexpr uint32_t DOUBLE_BUFFER = 2;
 
-ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(
-    ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
+ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(ge::DataType& srcDtype,
+                                                                     std::vector<ge::DataType>& supportDtypeList,
+                                                                     string srcName)
 {
     for (const auto& supportedDtype : supportDtypeList) {
         if (supportedDtype == srcDtype) {
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(
-        nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-        Ops::Base::ToString(srcDtype).c_str());
+    OP_LOGE(nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
+            Ops::Base::ToString(srcDtype).c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -74,8 +74,8 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckShapeNull()
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
 
-    OP_CHECK_IF(
-        (nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), , return false);
+    OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), ,
+                return false);
     return true;
 }
 
@@ -94,12 +94,11 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
         tilingParams.hasSmoothScale2 = true;
         tilingParams.quantBufCnt++;
     }
-    if (betaShape != nullptr){
+    if (betaShape != nullptr) {
         tilingParams.hasBeta = true;
     }
-    OP_CHECK_IF(
-        !tilingParams.hasSmoothScale1 && tilingParams.hasSmoothScale2,
-        OP_LOGE(nodeName.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
+    OP_CHECK_IF(!tilingParams.hasSmoothScale1 && tilingParams.hasSmoothScale2,
+                OP_LOGE(nodeName.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
     tilingParams.hasY2Scale2 = tilingParams.hasSmoothScale2;
     return true;
 }
@@ -122,7 +121,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
         return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
-    OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(),  ,return false);
+    OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(), , return false);
     return true;
 }
 
@@ -155,8 +154,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
         return false;
     };
     // Check gamma&beta's shape should be equal
-    if (tilingParams.hasBeta &&          
-        !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta")) {
+    if (tilingParams.hasBeta && !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta")) {
         return false;
     };
     // Check gamma should be last dim of x
@@ -172,14 +170,15 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
 bool AddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckOutputDtype.");
-    std::vector<ge::DataType> supportedYDtypes = {
-        ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8,
+                                                  ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
     auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
     auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
     if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
         (y1DataType != y2DataType)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "y1 and y2",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "y1 and y2",
             (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
             "The dtypes of y1 and y2 should be int8, fp8e4m3, fp8e5m2 or hifp8, and y1, y2 should have the same dtype");
         return false;
@@ -205,11 +204,11 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputDtype()
         smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
     }
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            nodeName.c_str(), "x1, x2 and gamma",
-            (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) + " and " +
-             Ops::Base::ToString(gammaDtype)).c_str(),
-            "The dtypes of x1, x2 and gamma should be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1, x2 and gamma",
+                                               (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) +
+                                                " and " + Ops::Base::ToString(gammaDtype))
+                                                   .c_str(),
+                                               "The dtypes of x1, x2 and gamma should be the same");
         return false;
     }
     if (tilingParams.hasSmoothScale1 && (x1Dtype != smoothScale1Dtype)) {
@@ -282,21 +281,19 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::GetShapeAttrsInfo()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling GetShapeAttrsInfo.");
-    OP_CHECK_IF(
-        !CheckShapeNull(), OP_LOGE(nodeName.c_str(), "The not optional input is null."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckOptionalInput(), OP_LOGE(nodeName.c_str(), "The optional input is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShapeDim(), OP_LOGE(nodeName.c_str(), "The input shape dim is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName.c_str(), "The not optional input is null."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOptionalInput(), OP_LOGE(nodeName.c_str(), "The optional input is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName.c_str(), "The input shape dim is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -315,10 +312,7 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AddRmsNormDynamicQuantRegbaseTiling::IsCapable()
-{
-    return true;
-}
+bool AddRmsNormDynamicQuantRegbaseTiling::IsCapable() { return true; }
 
 /**
  * @brief: Cal base UB total size
@@ -326,8 +320,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::IsCapable()
  * @param N dim Num
  * @return Bytes of UBSize
  */
-uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(
-    uint64_t baseM, uint64_t baseN, const uint32_t tilingType)
+uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType)
 {
     uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
     uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
@@ -337,16 +330,16 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(
     uint64_t reduceSumBufLen = baseNReduceAlign / (2 * tilingParams.vecLength);
     uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
 
-    uint64_t totalSize =
-        3 * baseNReduceAlign * tilingParams.xDtypeSize +                       // x1/x2/xout
-        1 * baseNReduceAlign * sizeof(float) +                                 // xoutTmp(alloc bigger than use)
-        1 * reduceSumBufLenAlign * sizeof(float) +                             // reduceBuf
-        1 * baseNDtypeAlign * tilingParams.xDtypeSize +                        // gamma
-        tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize + // smoothScale1/smoothScale2
-        1 * baseNB8Align * sizeof(int8_t) +                                    // y1
-        1 * baseNB32Align * sizeof(float);                                     // y1Tmp
-    
-    if(tilingParams.hasBeta){
+    uint64_t totalSize = 3 * baseNReduceAlign * tilingParams.xDtypeSize + // x1/x2/xout
+                         1 * baseNReduceAlign * sizeof(float) +           // xoutTmp(alloc bigger than use)
+                         1 * reduceSumBufLenAlign * sizeof(float) +       // reduceBuf
+                         1 * baseNDtypeAlign * tilingParams.xDtypeSize +  // gamma
+                         tilingParams.quantBufCnt * baseNDtypeAlign *
+                             tilingParams.xDtypeSize +       // smoothScale1/smoothScale2
+                         1 * baseNB8Align * sizeof(int8_t) + // y1
+                         1 * baseNB32Align * sizeof(float);  // y1Tmp
+
+    if (tilingParams.hasBeta) {
         totalSize += 1 * baseNDtypeAlign * tilingParams.xDtypeSize; // beta
     }
 
@@ -382,11 +375,11 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
     int64_t blockSize = Ops::Base::GetUbBlockSize(context_);
     int64_t vectorLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
     int64_t firstVcaddLength = Ops::Base::CeilDiv(Ops::Base::CeilDiv(tmpPower, vectorLength), blockSize) * blockSize;
-    int64_t LastUbSize =
-        tilingParams.maxUbSize - baseNDtypeAlign * tilingParams.xDtypeSize - // gamma
-        tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize -   // smoothScale1/smoothScale2
-        ALIGN_SPACE;                                                             // Scale1/rstd/xReduceTmp align space
-    if(tilingParams.hasBeta){
+    int64_t LastUbSize = tilingParams.maxUbSize - baseNDtypeAlign * tilingParams.xDtypeSize - // gamma
+                         tilingParams.quantBufCnt * baseNDtypeAlign *
+                             tilingParams.xDtypeSize - // smoothScale1/smoothScale2
+                         ALIGN_SPACE;                  // Scale1/rstd/xReduceTmp align space
+    if (tilingParams.hasBeta) {
         LastUbSize -= baseNDtypeAlign * tilingParams.xDtypeSize; // beta
     }
     int64_t mutilBaseM = 3 * baseNDtypeAlign * tilingParams.xDtypeSize + // x1/x2/xout
@@ -402,37 +395,34 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
                       DOUBLE_BUFFER * sizeof(float);                  // Scale2 * double
     }
     int64_t fullLoadBaseM = LastUbSize / mutilBaseM;
-    uint64_t usedUbSize =
-        CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
+    uint64_t usedUbSize = CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
     while (usedUbSize > tilingParams.maxUbSize && fullLoadBaseM > 0) {
         fullLoadBaseM--;
-        usedUbSize =
-            CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
+        usedUbSize = CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
     }
     return fullLoadBaseM;
 }
 
-uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(
-    uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign, 
-    int64_t firstVcaddLength)
+uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align,
+                                                          uint64_t baseNDtypeAlign, int64_t firstVcaddLength)
 {
     uint64_t ubFactorRstd = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
     uint64_t totalSize = 0;
     totalSize += baseNDtypeAlign * tilingParams.xDtypeSize +
                  tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize + ALIGN_SPACE;
-    totalSize +=
-        baseM * (3 * baseNDtypeAlign * tilingParams.xDtypeSize + baseNDtypeAlign * sizeof(float)); // x1/x2/xout + xTmp
-    totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER +                          // y1 * double
-                          baseNB32Align * sizeof(float));                                          // y1Tmp
-    totalSize += 2 * ubFactorRstd * sizeof(float);                                                 // rstd/xReduceTmp
-    totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);                                     // Scale1 * double
-    totalSize += baseM * firstVcaddLength * sizeof(float);                                         // xTmp
+    totalSize += baseM *
+                 (3 * baseNDtypeAlign * tilingParams.xDtypeSize + baseNDtypeAlign * sizeof(float)); // x1/x2/xout + xTmp
+    totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER +                           // y1 * double
+                          baseNB32Align * sizeof(float));                                           // y1Tmp
+    totalSize += 2 * ubFactorRstd * sizeof(float);                                                  // rstd/xReduceTmp
+    totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);                                      // Scale1 * double
+    totalSize += baseM * firstVcaddLength * sizeof(float);                                          // xTmp
     if (tilingParams.hasY2Scale2) {
         totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER); // y2 * double
         totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);            // Scale2 * double
     }
-    if(tilingParams.hasBeta){
-        totalSize += baseNDtypeAlign * tilingParams.xDtypeSize;// beta
+    if (tilingParams.hasBeta) {
+        totalSize += baseNDtypeAlign * tilingParams.xDtypeSize; // beta
     }
     return totalSize;
 }
@@ -587,23 +577,19 @@ void AddRmsNormDynamicQuantRegbaseTiling::SetTilingData()
 
 void AddRmsNormDynamicQuantRegbaseTiling::PrintTilingData()
 {
-    OP_LOGI(
-        nodeName.c_str(),
-        "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
-        "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
-        "mPerCore: %lu, mLastCore: %lu, "
-        "hasS1: %u, hasS2: %u, hasBeta: %u, epsilon: %f, avgFactor: %f.",
-        tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
-        tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
-        tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(),
-        tilingData.get_hasSmoothScale1(), tilingData.get_hasSmoothScale2(), tilingData.get_hasBeta(),
-        tilingData.get_epsilon(), tilingData.get_avgFactor());
+    OP_LOGI(nodeName.c_str(),
+            "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
+            "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
+            "mPerCore: %lu, mLastCore: %lu, "
+            "hasS1: %u, hasS2: %u, hasBeta: %u, epsilon: %f, avgFactor: %f.",
+            tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
+            tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
+            tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(),
+            tilingData.get_hasSmoothScale1(), tilingData.get_hasSmoothScale2(), tilingData.get_hasBeta(),
+            tilingData.get_epsilon(), tilingData.get_avgFactor());
 }
 
-ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::GetWorkspaceSize()
 {

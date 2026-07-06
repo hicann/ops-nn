@@ -26,9 +26,9 @@ class GroupNormGradSmallNGCFullLoad : public GroupNormGradBase<T, U> {
 public:
     __aicore__ inline GroupNormGradSmallNGCFullLoad() : GroupNormGradBase<T, U>(){};
     __aicore__ inline ~GroupNormGradSmallNGCFullLoad(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-        GM_ADDR workspace, const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
+                                GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 protected:
@@ -36,11 +36,11 @@ protected:
     __aicore__ inline void ComputeStage0();
     __aicore__ inline void ComputeStage1(int32_t taskIdx);
     __aicore__ inline void ComputeStage2();
-    __aicore__ inline void VFMode0DbetaDs(
-        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-        const LocalTensor<float>& dgamma, const uint32_t loopIdx, const uint32_t curCNum);
-    __aicore__ inline void VFComputeStage1Ds(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor);
+    __aicore__ inline void VFMode0DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
+                                          const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma,
+                                          const uint32_t loopIdx, const uint32_t curCNum);
+    __aicore__ inline void VFComputeStage1Ds(const LocalTensor<float>& dstTensor, const LocalTensor<float>& dsTensor,
+                                             const LocalTensor<float>& dbetaTensor);
 
     uint32_t stage0TaskNumPerCore_;
     uint32_t stage0TaskNumPerTailCore_;
@@ -121,9 +121,9 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::InitBuffer()
     // for cast mean, rstd, for store sum1, sum2
     this->pipe->InitBuffer(this->tempMeanBuf_, this->BLOCK_BYTES);
     this->pipe->InitBuffer(this->tempRstdBuf_, this->BLOCK_BYTES);
-    uint32_t capElemAllocSpace =
-        CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * this->mode1UbCapCNum_), this->elemTPerBlock_) *
-        sizeof(T);
+    uint32_t capElemAllocSpace = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * this->mode1UbCapCNum_),
+                                           this->elemTPerBlock_) *
+                                 sizeof(T);
     uint32_t cGAllocSpace = CeilAlign(this->C_G_, this->elemUPerBlock_) * sizeof(float);
     // VEC_IN
     this->pipe->InitBuffer(this->inQueDy_, DOUBLE_BUFFER, capElemAllocSpace);
@@ -161,7 +161,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage0()
 
         xTensor = this->inQueX_.template AllocTensor<T>();
         dyTensor = this->inQueDy_.template AllocTensor<T>();
-        this->CopyInDyAndX(dyTensor, xTensor, offset, this->eleNumPerC_ * curCNum);        
+        this->CopyInDyAndX(dyTensor, xTensor, offset, this->eleNumPerC_ * curCNum);
         this->inQueX_.EnQue(xTensor);
         this->inQueDy_.EnQue(dyTensor);
 
@@ -170,8 +170,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage0()
         if (isLessEqualVL) {
             VFMode0DbetaDs(xTensor, dyTensor, dbetaTensor, dsTensor, loopIdx, curCNum);
         } else {
-            this->VFDbetaDgammaBinaryFoldCommon(
-                xTensor, dyTensor, dbetaTensor, dsTensor, loopIdx * this->mode1UbCapCNum_, curCNum);
+            this->VFDbetaDgammaBinaryFoldCommon(xTensor, dyTensor, dbetaTensor, dsTensor,
+                                                loopIdx * this->mode1UbCapCNum_, curCNum);
         }
         this->inQueX_.FreeTensor(xTensor);
         this->inQueDy_.FreeTensor(dyTensor);
@@ -223,7 +223,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage1(int32_
         LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
         this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
         float s = 1.0f / this->eleNumPerG_;
-        float C2 = (sum2 * this->meanScalar_ + (0 - sum1)) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
+        float C2 = (sum2 * this->meanScalar_ + (0 - sum1)) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ *
+                   s;
         float C3 = (0 - C2) * this->meanScalar_ + (0 - sum2 * this->rstdScalar_ * s);
         if (this->dgammaIsRequire_ || this->dbetaIsRequire_) {
             // 需要计算(ds - mean*db)*rstd
@@ -258,8 +259,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage1(int32_
             xLocal = this->inQueX_.template DeQue<T>();
             dyLocal = this->inQueDy_.template DeQue<T>();
             LocalTensor<T> dxTensor = this->outQueDx_.template AllocTensor<T>();
-            this->VFComputeMode1DxCommon(
-                dxTensor, xLocal, dyLocal, gammaTensor, C2, C3, loopIdx * this->mode1UbCapCNum_, curCNum);
+            this->VFComputeMode1DxCommon(dxTensor, xLocal, dyLocal, gammaTensor, C2, C3,
+                                         loopIdx * this->mode1UbCapCNum_, curCNum);
             this->inQueX_.FreeTensor(xLocal);
             this->inQueDy_.FreeTensor(dyLocal);
             this->outQueDx_.EnQue(dxTensor);
@@ -343,8 +344,9 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
   ds = reduceSum(dy * x)
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFComputeStage1Ds(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor)
+__aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFComputeStage1Ds(const LocalTensor<float>& dstTensor,
+                                                                              const LocalTensor<float>& dsTensor,
+                                                                              const LocalTensor<float>& dbetaTensor)
 {
     __ubuf__ float* ubDb = (__ubuf__ float*)dbetaTensor.GetPhyAddr();
     __ubuf__ float* ubDs = (__ubuf__ float*)dsTensor.GetPhyAddr();
@@ -383,13 +385,13 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage2()
     if (this->curBlockIdx_ < this->stage2CoreUsed_) {
         // stage2mode must be 1
         this->InitStage2Mode1Buffer();
-        uint32_t stage2CurCoreCNum =
-            (this->curBlockIdx_ == (this->stage2CoreUsed_ - 1)) ? this->cTailBlockFactor_ : this->cBlockFactor_;
+        uint32_t stage2CurCoreCNum = (this->curBlockIdx_ == (this->stage2CoreUsed_ - 1)) ? this->cTailBlockFactor_ :
+                                                                                           this->cBlockFactor_;
         uint32_t quotient = (stage2CurCoreCNum + this->cFactor_ - 1) / this->cFactor_;
         for (uint32_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             uint32_t cOffset = ubLoopIdx * this->cFactor_ + this->curBlockIdx_ * this->cBlockFactor_;
-            uint32_t currentC =
-                (ubLoopIdx == (quotient - 1)) ? (stage2CurCoreCNum - (quotient - 1) * this->cFactor_) : this->cFactor_;
+            uint32_t currentC = (ubLoopIdx == (quotient - 1)) ? (stage2CurCoreCNum - (quotient - 1) * this->cFactor_) :
+                                                                this->cFactor_;
             this->stage2Mode1Process(cOffset, currentC);
         }
     }

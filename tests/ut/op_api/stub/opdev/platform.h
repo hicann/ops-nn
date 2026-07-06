@@ -61,7 +61,7 @@ class PlatformInfo {
     friend class PlatformThreadLockCtx;
 
 public:
-    PlatformInfo() {};
+    PlatformInfo(){};
 
     PlatformInfo(int32_t deviceId) : deviceId_(deviceId){};
 
@@ -85,24 +85,24 @@ public:
 
     bool GetFftsPlusMode() const;
 
-    fe::PlatFormInfos *GetPlatformInfos() const;
+    fe::PlatFormInfos* GetPlatformInfos() const;
 
     uint32_t coreNum_ = 0;
 
 private:
-    PlatformInfo &operator=(const PlatformInfo &other) = delete;
+    PlatformInfo& operator=(const PlatformInfo& other) = delete;
 
-    PlatformInfo &operator=(const PlatformInfo &&other) = delete;
+    PlatformInfo& operator=(const PlatformInfo&& other) = delete;
 
-    PlatformInfo(const PlatformInfo &other) = delete;
+    PlatformInfo(const PlatformInfo& other) = delete;
 
-    PlatformInfo(const PlatformInfo &&other) = delete;
+    PlatformInfo(const PlatformInfo&& other) = delete;
 
-    void SetPlatformImpl(PlatformInfoImpl *impl);
+    void SetPlatformImpl(PlatformInfoImpl* impl);
 
     bool valid_ = false;
     int32_t deviceId_{-1};
-    PlatformInfoImpl *impl_ = nullptr;
+    PlatformInfoImpl* impl_ = nullptr;
 
     ~PlatformInfo();
 };
@@ -131,21 +131,21 @@ private:
 };
 
 class NpuArchManager {
- 	 public:
- 	     explicit NpuArchManager(NpuArch newArch);
- 	 
- 	     ~NpuArchManager();
- 	 
- 	 private:
- 	     NpuArch originalArch_; //保存原始的npu arch
- 	 
- 	     NpuArchManager(const NpuArchManager&) = delete;
- 	     NpuArchManager(const NpuArchManager&&) = delete;
- 	     NpuArchManager& operator=(const NpuArchManager&) = delete;
- 	     NpuArchManager& operator=(const NpuArchManager&&) = delete;
- 	 
- 	     void SetPlatformNpuArch(NpuArch npuArch);
- 	 };
+public:
+    explicit NpuArchManager(NpuArch newArch);
+
+    ~NpuArchManager();
+
+private:
+    NpuArch originalArch_; //保存原始的npu arch
+
+    NpuArchManager(const NpuArchManager&) = delete;
+    NpuArchManager(const NpuArchManager&&) = delete;
+    NpuArchManager& operator=(const NpuArchManager&) = delete;
+    NpuArchManager& operator=(const NpuArchManager&&) = delete;
+
+    void SetPlatformNpuArch(NpuArch npuArch);
+};
 
 void SetCubeCoreNum(uint32_t coreNum);
 

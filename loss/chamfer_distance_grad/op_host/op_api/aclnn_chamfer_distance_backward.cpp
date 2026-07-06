@@ -30,9 +30,9 @@ using namespace op;
 extern "C" {
 #endif
 
-static bool CheckNotNull(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, aclTensor* gradXyz1, aclTensor* gradXyz2)
+static bool CheckNotNull(const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
+                         const aclTensor* gradDist1, const aclTensor* gradDist2, aclTensor* gradXyz1,
+                         aclTensor* gradXyz2)
 {
     OP_CHECK_NULL(xyz1, return false);
     OP_CHECK_NULL(xyz2, return false);
@@ -45,14 +45,14 @@ static bool CheckNotNull(
     return true;
 }
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                       op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> IDX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32};
 
-static bool CheckDtypeValid(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, const aclTensor* gradXyz1, const aclTensor* gradXyz2)
+static bool CheckDtypeValid(const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
+                            const aclTensor* gradDist1, const aclTensor* gradDist2, const aclTensor* gradXyz1,
+                            const aclTensor* gradXyz2)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(xyz1, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(xyz2, DTYPE_SUPPORT_LIST, return false);
@@ -66,30 +66,30 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, aclTensor* gradXyz1, aclTensor* gradXyz2)
+static aclnnStatus CheckParams(const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1,
+                               const aclTensor* idx2, const aclTensor* gradDist1, const aclTensor* gradDist2,
+                               aclTensor* gradXyz1, aclTensor* gradXyz2)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2, gradXyz1, gradXyz2), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查数据类型是否正确
-    CHECK_RET(
-        CheckDtypeValid(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2, gradXyz1, gradXyz2), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2, gradXyz1, gradXyz2),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, aclTensor* gradXyz1, aclTensor* gradXyz2,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(const aclTensor* xyz1, const aclTensor* xyz2,
+                                                         const aclTensor* idx1, const aclTensor* idx2,
+                                                         const aclTensor* gradDist1, const aclTensor* gradDist2,
+                                                         aclTensor* gradXyz1, aclTensor* gradXyz2,
+                                                         uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnChamferDistanceBackward, DFX_IN(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2),
-        DFX_OUT(gradXyz1, gradXyz2));
+    L2_DFX_PHASE_1(aclnnChamferDistanceBackward, DFX_IN(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2),
+                   DFX_OUT(gradXyz1, gradXyz2));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -134,8 +134,8 @@ aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(
     auto gradDist2Cast = l0op::Cast(gradDist2Contiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
     CHECK_RET(gradDist2Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto out = l0op::ChamferDistanceGrad(
-        xyz1Cast, xyz2Cast, idx1Contiguous, idx2Contiguous, gradDist1Cast, gradDist2Cast, uniqueExecutor.get());
+    auto out = l0op::ChamferDistanceGrad(xyz1Cast, xyz2Cast, idx1Contiguous, idx2Contiguous, gradDist1Cast,
+                                         gradDist2Cast, uniqueExecutor.get());
     auto gradXyz1Contiguous = std::get<0>(out);
     auto gradXyz2Contiguous = std::get<1>(out);
     auto gradXyz1Cast = l0op::Cast(gradXyz1Contiguous, curType, uniqueExecutor.get());
@@ -155,8 +155,8 @@ aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnChamferDistanceBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnChamferDistanceBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnChamferDistanceBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

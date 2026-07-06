@@ -22,16 +22,13 @@ using namespace op;
 
 class SortedSparseSegmentMeanGradProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "SortedSparseSegmentMeanGradProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SortedSparseSegmentMeanGradProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "SortedSparseSegmentMeanGradProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SortedSparseSegmentMeanGradProtoTest TearDown" << std::endl; }
 };
 
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_1d) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_1d)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8}, {8}};
@@ -42,16 +39,14 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_1d) {
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -62,7 +57,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_1d) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -72,7 +68,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_1d) {
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedShape));
 }
 
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_2d) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_2d)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16}, {8, 16}};
@@ -83,16 +80,14 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_2d) {
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -103,7 +98,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_2d) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -113,7 +109,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_2d) {
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedShape));
 }
 
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_3d) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_3d)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16, 32}, {8, 16, 32}};
@@ -124,16 +121,14 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_3d) {
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -144,7 +139,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_3d) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -154,7 +150,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_3d) {
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedShape));
 }
 
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad"), nullptr);
     auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_datatype;
 
@@ -166,16 +163,16 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float) {
         ge::DataType inputRef5 = ge::DT_INT32;
         ge::DataType outputRef = ge::DT_FLOAT;
         auto contextHolder = gert::InferDataTypeContextFaker()
-            .NodeIoNum(5, 1)
-            .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .InputDataTypes({&inputRef1, &inputRef2, &inputRef3, &inputRef4, &inputRef5})
-            .OutputDataTypes({&outputRef})
-            .Build();
+                                 .NodeIoNum(5, 1)
+                                 .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .InputDataTypes({&inputRef1, &inputRef2, &inputRef3, &inputRef4, &inputRef5})
+                                 .OutputDataTypes({&outputRef})
+                                 .Build();
         auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -183,7 +180,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float) {
     }
 }
 
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float16) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float16)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad"), nullptr);
     auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_datatype;
 
@@ -195,16 +193,16 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float16) {
         ge::DataType inputRef5 = ge::DT_INT32;
         ge::DataType outputRef = ge::DT_FLOAT16;
         auto contextHolder = gert::InferDataTypeContextFaker()
-            .NodeIoNum(5, 1)
-            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .InputDataTypes({&inputRef1, &inputRef2, &inputRef3, &inputRef4, &inputRef5})
-            .OutputDataTypes({&outputRef})
-            .Build();
+                                 .NodeIoNum(5, 1)
+                                 .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .InputDataTypes({&inputRef1, &inputRef2, &inputRef3, &inputRef4, &inputRef5})
+                                 .OutputDataTypes({&outputRef})
+                                 .Build();
         auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -212,7 +210,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_float16) {
     }
 }
 
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_bf16) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_bf16)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad"), nullptr);
     auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_datatype;
 
@@ -224,16 +223,16 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_bf16) {
         ge::DataType inputRef5 = ge::DT_INT32;
         ge::DataType outputRef = ge::DT_BF16;
         auto contextHolder = gert::InferDataTypeContextFaker()
-            .NodeIoNum(5, 1)
-            .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .InputDataTypes({&inputRef1, &inputRef2, &inputRef3, &inputRef4, &inputRef5})
-            .OutputDataTypes({&outputRef})
-            .Build();
+                                 .NodeIoNum(5, 1)
+                                 .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .InputDataTypes({&inputRef1, &inputRef2, &inputRef3, &inputRef4, &inputRef5})
+                                 .OutputDataTypes({&outputRef})
+                                 .Build();
         auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -242,7 +241,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_dtype_test_bf16) {
 }
 
 // Failure test: wrong number of inputs (4 instead of 5) triggers CheckInputAndOutputNum failure
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_input_num) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_input_num)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16}, {8, 16}};
@@ -267,7 +267,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_input_num) {
 }
 
 // Failure test: wrong number of outputs (2 instead of 1) triggers CheckInputAndOutputNum failure
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_output_num) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_output_num)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16}, {8, 16}};
@@ -287,7 +288,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_output_num) 
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -295,10 +297,11 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_wrong_output_num) 
 }
 
 // Failure test: x rank 0 (scalar) triggers WithRankAtLeast failure in SortedSparseSegmentMeanGradCheck
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_x_rank0) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_x_rank0)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
-    gert::StorageShape xShape = {{}, {}};  // Scalar (0-dim)
+    gert::StorageShape xShape = {{}, {}}; // Scalar (0-dim)
     gert::StorageShape sortedIndicesShape = {{8}, {8}};
     gert::StorageShape preLocationIndicesShape = {{8}, {8}};
     gert::StorageShape segmentIdsShape = {{8}, {8}};
@@ -306,16 +309,14 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_x_rank0) {
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -326,7 +327,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_x_rank0) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -334,27 +336,26 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_x_rank0) {
 }
 
 // Failure test: indices not 1D triggers WithRank failure in SortedSparseSegmentMeanGradCheck
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_not_1d) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_not_1d)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16}, {8, 16}};
-    gert::StorageShape sortedIndicesShape = {{8, 4}, {8, 4}};  // 2D instead of 1D
+    gert::StorageShape sortedIndicesShape = {{8, 4}, {8, 4}}; // 2D instead of 1D
     gert::StorageShape preLocationIndicesShape = {{8}, {8}};
     gert::StorageShape segmentIdsShape = {{8}, {8}};
     gert::Shape yShape;
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -365,7 +366,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_not_1d) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -373,27 +375,26 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_not_1d) {
 }
 
 // Failure test: location not 1D triggers WithRank failure in SortedSparseSegmentMeanGradCheck
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_location_not_1d) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_location_not_1d)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16}, {8, 16}};
     gert::StorageShape sortedIndicesShape = {{8}, {8}};
-    gert::StorageShape preLocationIndicesShape = {{8, 4}, {8, 4}};  // 2D instead of 1D
+    gert::StorageShape preLocationIndicesShape = {{8, 4}, {8, 4}}; // 2D instead of 1D
     gert::StorageShape segmentIdsShape = {{8}, {8}};
     gert::Shape yShape;
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -404,7 +405,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_location_not_1d) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -412,7 +414,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_location_not_1d) {
 }
 
 // Success test: x unknown rank (-2) → output should be unknown rank
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_rank) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_rank)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     // Create unknown rank shape: dim_num=1, dim[0]=-2 (matches IsUnknownRank check)
@@ -437,7 +440,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_rank) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xUnknownRankShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
+                      .InputShapes({&xUnknownRankShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape,
+                                    &outputDim0Shape})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -449,10 +453,11 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_rank) {
 }
 
 // Success test: x unknown shape (-1 dims) → output dims should all be -1
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_shape) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
-    gert::StorageShape xShape = {{-1, 16}, {-1, 16}};  // Unknown shape (dim[0] = -1)
+    gert::StorageShape xShape = {{-1, 16}, {-1, 16}}; // Unknown shape (dim[0] = -1)
     gert::StorageShape sortedIndicesShape = {{8}, {8}};
     gert::StorageShape preLocationIndicesShape = {{8}, {8}};
     gert::StorageShape segmentIdsShape = {{8}, {8}};
@@ -468,7 +473,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_shape) {
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -480,7 +486,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_unknown_shape) {
 }
 
 // Success test: cannot get output_dim0 (can_get_output_dim0 = false) → output dims all -1
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_cannot_get_output_dim0) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_cannot_get_output_dim0)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     // Use regular known x_shape, but no output_dim0 tensor data → can_get_output_dim0 = false
@@ -488,7 +495,7 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_cannot_get_output_
     gert::StorageShape sortedIndicesShape = {{8}, {8}};
     gert::StorageShape preLocationIndicesShape = {{8}, {8}};
     gert::StorageShape segmentIdsShape = {{8}, {8}};
-    gert::StorageShape outputDim0Shape = {{1}, {1}};  // Plain StorageShape, no tensor data
+    gert::StorageShape outputDim0Shape = {{1}, {1}}; // Plain StorageShape, no tensor data
     gert::Shape yShape;
 
     auto holder = gert::InferShapeContextFaker()
@@ -500,7 +507,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_cannot_get_output_
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
+                      .InputShapes(
+                          {&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
                       .OutputShapes({&yShape})
                       .Build();
 
@@ -512,7 +520,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_cannot_get_output_
 }
 
 // Success test: indices with unknown rank → covers SetAllUnknownDim in WithRank
-TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_unknown_rank) {
+TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_unknown_rank)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SortedSparseSegmentMeanGrad")->infer_shape;
 
     gert::StorageShape xShape = {{8, 16}, {8, 16}};
@@ -528,16 +537,14 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_unknown_ra
 
     vector<int32_t> outputDim0Data{4};
     size_t totalSize = 0;
-    auto outputDim0TensorHolder =
-        gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
+    auto outputDim0TensorHolder = gert::Tensor::CreateFollowing(1, ge::DT_INT32, totalSize);
     auto outputDim0Tensor = reinterpret_cast<gert::Tensor*>(outputDim0TensorHolder.get());
     outputDim0Tensor->MutableStorageShape().AppendDim(1);
     outputDim0Tensor->MutableOriginShape().AppendDim(1);
     outputDim0Tensor->SetOriginFormat(ge::FORMAT_ND);
     outputDim0Tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(
-        outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor),
-        outputDim0Data.data(), outputDim0Data.size() * sizeof(int32_t));
+    (void)memcpy_s(outputDim0Tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), outputDim0Data.data(),
+                   outputDim0Data.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 1)
@@ -548,7 +555,8 @@ TEST_F(SortedSparseSegmentMeanGradProtoTest, infer_shape_test_indices_unknown_ra
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(4, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .InputShapes({&xShape, &sortedIndicesUnknownRankShape, &preLocationIndicesShape, &segmentIdsShape, outputDim0Tensor})
+                      .InputShapes({&xShape, &sortedIndicesUnknownRankShape, &preLocationIndicesShape, &segmentIdsShape,
+                                    outputDim0Tensor})
                       .OutputShapes({&yShape})
                       .Build();
 

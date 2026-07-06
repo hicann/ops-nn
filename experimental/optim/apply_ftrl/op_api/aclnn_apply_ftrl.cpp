@@ -48,12 +48,12 @@ extern "C" {
 #endif
 
 // Supported input dtypes (all inputs/outputs share one dtype): FLOAT / FLOAT16 / BFLOAT16.
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
-static bool CheckNotNull(const aclTensor *varRef, const aclTensor *accumRef, const aclTensor *linearRef,
-                         const aclTensor *grad, const aclTensor *lr, const aclTensor *l1, const aclTensor *l2,
-                         const aclTensor *lrPower)
+static bool CheckNotNull(const aclTensor* varRef, const aclTensor* accumRef, const aclTensor* linearRef,
+                         const aclTensor* grad, const aclTensor* lr, const aclTensor* l1, const aclTensor* l2,
+                         const aclTensor* lrPower)
 {
     OP_CHECK_NULL(varRef, return false);
     OP_CHECK_NULL(accumRef, return false);
@@ -66,9 +66,9 @@ static bool CheckNotNull(const aclTensor *varRef, const aclTensor *accumRef, con
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *varRef, const aclTensor *accumRef, const aclTensor *linearRef,
-                            const aclTensor *grad, const aclTensor *lr, const aclTensor *l1, const aclTensor *l2,
-                            const aclTensor *lrPower)
+static bool CheckDtypeValid(const aclTensor* varRef, const aclTensor* accumRef, const aclTensor* linearRef,
+                            const aclTensor* grad, const aclTensor* lr, const aclTensor* l1, const aclTensor* l2,
+                            const aclTensor* lrPower)
 {
     // var dtype must be in the support list; every other input must match var exactly.
     OP_CHECK_DTYPE_NOT_SUPPORT(varRef, DTYPE_SUPPORT_LIST, return false);
@@ -82,9 +82,9 @@ static bool CheckDtypeValid(const aclTensor *varRef, const aclTensor *accumRef, 
     return true;
 }
 
-static bool CheckShape(const aclTensor *varRef, const aclTensor *accumRef, const aclTensor *linearRef,
-                       const aclTensor *grad, const aclTensor *lr, const aclTensor *l1, const aclTensor *l2,
-                       const aclTensor *lrPower)
+static bool CheckShape(const aclTensor* varRef, const aclTensor* accumRef, const aclTensor* linearRef,
+                       const aclTensor* grad, const aclTensor* lr, const aclTensor* l1, const aclTensor* l2,
+                       const aclTensor* lrPower)
 {
     // var/accum/linear/grad must share the exact same shape.
     OP_CHECK_SHAPE_NOT_EQUAL(accumRef, varRef, return false);
@@ -100,9 +100,9 @@ static bool CheckShape(const aclTensor *varRef, const aclTensor *accumRef, const
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *varRef, const aclTensor *accumRef, const aclTensor *linearRef,
-                               const aclTensor *grad, const aclTensor *lr, const aclTensor *l1, const aclTensor *l2,
-                               const aclTensor *lrPower)
+static aclnnStatus CheckParams(const aclTensor* varRef, const aclTensor* accumRef, const aclTensor* linearRef,
+                               const aclTensor* grad, const aclTensor* lr, const aclTensor* l1, const aclTensor* l2,
+                               const aclTensor* lrPower)
 {
     // 1. nullptr check.
     CHECK_RET(CheckNotNull(varRef, accumRef, linearRef, grad, lr, l1, l2, lrPower), ACLNN_ERR_PARAM_NULLPTR);
@@ -113,10 +113,10 @@ static aclnnStatus CheckParams(const aclTensor *varRef, const aclTensor *accumRe
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnApplyFtrlGetWorkspaceSize(aclTensor *varRef, aclTensor *accumRef, aclTensor *linearRef,
-                                           const aclTensor *grad, const aclTensor *lr, const aclTensor *l1,
-                                           const aclTensor *l2, const aclTensor *lrPower, bool useLocking,
-                                           uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnApplyFtrlGetWorkspaceSize(aclTensor* varRef, aclTensor* accumRef, aclTensor* linearRef,
+                                           const aclTensor* grad, const aclTensor* lr, const aclTensor* l1,
+                                           const aclTensor* l2, const aclTensor* lrPower, bool useLocking,
+                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // useLocking maps to attribute use_locking; only false is supported.  It does not
     // affect the math and is not read by tiling/kernel, so it is traced but not lowered.
@@ -177,7 +177,7 @@ aclnnStatus aclnnApplyFtrlGetWorkspaceSize(aclTensor *varRef, aclTensor *accumRe
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnApplyFtrl(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)
+aclnnStatus aclnnApplyFtrl(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnApplyFtrl);
     // Fixed pattern: run the executor.

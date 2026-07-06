@@ -23,13 +23,11 @@ using namespace AscendC;
 template <typename inType, typename outType>
 class SwiGluQuant : public SwiGluQuantBase {
 public:
-    __aicore__ inline SwiGluQuant(TPipe *pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline SwiGluQuant(TPipe* pipe) { pPipe = pipe; }
 
     __aicore__ inline void Init(GM_ADDR input_gm, GM_ADDR smooth_scales, GM_ADDR offsets, GM_ADDR group_index,
-        GM_ADDR y_gm, GM_ADDR scale_gm, GM_ADDR workspace, const SwiGluQuantTilingData *__restrict tilingData)
+                                GM_ADDR y_gm, GM_ADDR scale_gm, GM_ADDR workspace,
+                                const SwiGluQuantTilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitParams(sizeof(inType), sizeof(outType));
@@ -61,18 +59,18 @@ public:
 
 private:
     __aicore__ inline void InitAndSetBuffer(GM_ADDR input_gm, GM_ADDR smooth_scales, GM_ADDR offsets,
-        GM_ADDR group_index, GM_ADDR y_gm, GM_ADDR scale_gm)
+                                            GM_ADDR group_index, GM_ADDR y_gm, GM_ADDR scale_gm)
     {
         // gm数据
-        xGm.SetGlobalBuffer((__gm__ inType *)input_gm, SPLIT_NUM * tilingData_.rowLen * tilingData_.colLen);
-        yGm.SetGlobalBuffer((__gm__ int8_t *)y_gm, tilingData_.rowLen * tilingData_.colLen);
+        xGm.SetGlobalBuffer((__gm__ inType*)input_gm, SPLIT_NUM * tilingData_.rowLen * tilingData_.colLen);
+        yGm.SetGlobalBuffer((__gm__ int8_t*)y_gm, tilingData_.rowLen * tilingData_.colLen);
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        yGmInt4.SetGlobalBuffer((__gm__ int4b_t *)y_gm, tilingData_.rowLen * tilingData_.colLen);
+        yGmInt4.SetGlobalBuffer((__gm__ int4b_t*)y_gm, tilingData_.rowLen * tilingData_.colLen);
 #endif
-        smooth_scales_Gm.SetGlobalBuffer((__gm__ float *)smooth_scales, tilingData_.groupLen * tilingData_.colLen);
-        group_index_Gm.SetGlobalBuffer((__gm__ int32_t *)group_index, tilingData_.groupLen);
-        offsetsGm.SetGlobalBuffer((__gm__ float *)offsets, tilingData_.groupLen);
-        scale_Gm.SetGlobalBuffer((__gm__ float *)scale_gm, tilingData_.rowLen);
+        smooth_scales_Gm.SetGlobalBuffer((__gm__ float*)smooth_scales, tilingData_.groupLen * tilingData_.colLen);
+        group_index_Gm.SetGlobalBuffer((__gm__ int32_t*)group_index, tilingData_.groupLen);
+        offsetsGm.SetGlobalBuffer((__gm__ float*)offsets, tilingData_.groupLen);
+        scale_Gm.SetGlobalBuffer((__gm__ float*)scale_gm, tilingData_.rowLen);
 
         // queue
         pPipe->InitBuffer(inQueueA, BUFFER_NUM, tileLength * sizeof(inType));
@@ -89,7 +87,7 @@ private:
         pPipe->InitBuffer(tempYUnit, sizeHalfLen * sizeof(float));
     }
 
-    __aicore__ inline uint32_t GetSmoothIndex(uint32_t realRowNum, int32_t &groupNum, uint32_t smoothIndex)
+    __aicore__ inline uint32_t GetSmoothIndex(uint32_t realRowNum, int32_t& groupNum, uint32_t smoothIndex)
     {
         // 获取符合条件的smooth_scales的index
         for (size_t index = smoothIndex; index < tilingData_.groupLen; index++) {
@@ -143,9 +141,9 @@ private:
             offsetRow = baseRow + ridx * basicRowLen;
 
             // 处理最后一行
-            basicRowLenCal = static_cast<uint16_t>((ridx == rowLoop - 1)
-                                                       ? (rowLenPerCore - (rowLoop - 1) * basicRowLen)
-                                                       : basicRowLen);  // 每核处理的最后一个行循环单独处理
+            basicRowLenCal = static_cast<uint16_t>((ridx == rowLoop - 1) ?
+                                                       (rowLenPerCore - (rowLoop - 1) * basicRowLen) :
+                                                       basicRowLen); // 每核处理的最后一个行循环单独处理
             ProcessCoreMultiUbMultiAlign(ridx, smoothIndex, offsetRow);
         }
     }
@@ -153,11 +151,13 @@ private:
     __aicore__ inline void ComputeVecInGmOffset(uint32_t ridx)
     {
         if (coreIdx < headCoreNum) {
-            offsetParam.tmpVecGmOffset = static_cast<uint64_t>(coreIdx) * rowLenPerCore * mergedColLen + ridx * basicRowLen * mergedColLen;
-            splitCopyoutOffset = static_cast<uint64_t>(coreIdx) * rowLenPerCore * colLen + ridx * basicRowLen * basicColLen;
-        }
-        else {
-            offsetParam.tmpVecGmOffset = static_cast<uint64_t>(headCoreNum) * tilingData_.rowLenPerHeadCore * mergedColLen +
+            offsetParam.tmpVecGmOffset = static_cast<uint64_t>(coreIdx) * rowLenPerCore * mergedColLen +
+                                         ridx * basicRowLen * mergedColLen;
+            splitCopyoutOffset = static_cast<uint64_t>(coreIdx) * rowLenPerCore * colLen +
+                                 ridx * basicRowLen * basicColLen;
+        } else {
+            offsetParam.tmpVecGmOffset = static_cast<uint64_t>(headCoreNum) * tilingData_.rowLenPerHeadCore *
+                                             mergedColLen +
                                          static_cast<uint64_t>(coreIdx - headCoreNum) * rowLenPerCore * mergedColLen +
                                          ridx * basicRowLen * mergedColLen;
             splitCopyoutOffset = static_cast<uint64_t>(headCoreNum) * tilingData_.rowLenPerHeadCore * colLen +
@@ -166,32 +166,29 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessCoreMultiUbMultiAlign(uint32_t ridx, uint32_t &smoothIndex, uint32_t offsetRow)
+    __aicore__ inline void ProcessCoreMultiUbMultiAlign(uint32_t ridx, uint32_t& smoothIndex, uint32_t offsetRow)
     {
         DataCopyParams splitCopyinParams;
         DataCopyParams splitCopyoutParams;
 
-        splitCopyinParams = {basicRowLenCal,
-            (uint16_t)(basicColLen * sizeof(inType) / blockUnit),
-            (uint16_t)((mergedColLen - basicColLen) * sizeof(inType) / blockUnit),
-            0};
+        splitCopyinParams = {basicRowLenCal, (uint16_t)(basicColLen * sizeof(inType) / blockUnit),
+                             (uint16_t)((mergedColLen - basicColLen) * sizeof(inType) / blockUnit), 0};
 
         uint16_t dstStride = (uint16_t)((colLen - basicColLen) * sizeof(outType));
         uint16_t blockLen = (uint16_t)(basicColLen * sizeof(outType));
         if (tilingData_.dstType == DT_INT4) {
             dstStride = CeilDiv(dstStride, (uint16_t)ONE_BYTE_INT4_NUM_TWO);
-            blockLen =  CeilDiv(blockLen, (uint16_t)ONE_BYTE_INT4_NUM_TWO);
+            blockLen = CeilDiv(blockLen, (uint16_t)ONE_BYTE_INT4_NUM_TWO);
         }
 
         splitCopyoutParams = {basicRowLenCal, blockLen, 0, dstStride};
 
         ComputeVecInGmOffset(ridx);
 
-        if (tilingData_.activateLeft == 1){
+        if (tilingData_.activateLeft == 1) {
             offsetParam.splitVecGmOffset1 = offsetParam.tmpVecGmOffset;
             offsetParam.splitVecGmOffset2 = offsetParam.splitVecGmOffset1 + tilingData_.colLen;
-        }
-        else{
+        } else {
             offsetParam.splitVecGmOffset2 = offsetParam.tmpVecGmOffset;
             offsetParam.splitVecGmOffset1 = offsetParam.splitVecGmOffset2 + tilingData_.colLen;
         }
@@ -203,8 +200,8 @@ private:
         CopyOut(splitCopyoutOffset, splitCopyoutParams, ridx, basicRowLenCal);
     }
 
-    __aicore__ inline void CopyIn(
-        XxGluSingleTileOffsetParam &offsetParam, uint32_t smoothScalesOffset, DataCopyParams &splitCopyinParams)
+    __aicore__ inline void CopyIn(XxGluSingleTileOffsetParam& offsetParam, uint32_t smoothScalesOffset,
+                                  DataCopyParams& splitCopyinParams)
     {
         LocalTensor<inType> aLocal = this->inQueueA.template AllocTensor<inType>();
         LocalTensor<inType> bLocal = this->inQueueB.template AllocTensor<inType>();
@@ -215,7 +212,7 @@ private:
             DataCopyPad(aLocal, this->xGm[offsetParam.splitVecGmOffset1], splitCopyinParams, padParams);
             // Copy B
             DataCopyPad(bLocal, this->xGm[offsetParam.splitVecGmOffset2], splitCopyinParams, padParams);
-        }else {
+        } else {
             // Copy A
             DataCopy(aLocal, this->xGm[offsetParam.splitVecGmOffset1], splitCopyinParams);
             // Copy B
@@ -228,7 +225,7 @@ private:
         SmoothCopyIn(smoothScalesOffset);
     }
 
-    __aicore__ inline void Compute(uint32_t offsetRow, uint32_t &smoothIndex)
+    __aicore__ inline void Compute(uint32_t offsetRow, uint32_t& smoothIndex)
     {
         LocalTensor<float> scaleLocal = scaleQueue.AllocTensor<float>();
         LocalTensor<float> tmpALocal = sharedTempBuf.Get<float>();
@@ -325,5 +322,5 @@ private:
 private:
     GlobalTensor<inType> xGm;
 };
-}  // namespace SwiGluQuantOpt
-#endif  // SWI_GLU_QUANT_H
+} // namespace SwiGluQuantOpt
+#endif // SWI_GLU_QUANT_H

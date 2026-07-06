@@ -37,11 +37,11 @@ static ge::graphStatus TilingPrepare4AdaptiveMaxPool3DGrad(gert::TilingParseCont
     compileInfoPtr->curSocVersion = ascendcPlatform.GetSocVersion();
     compileInfoPtr->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->maxUbSize);
-    OP_CHECK_IF(
-        (compileInfoPtr->totalCoreNum <= 0), OP_LOGE(context, "Failed to get corenum size"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfoPtr->totalCoreNum <= 0), OP_LOGE(context, "Failed to get corenum size"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (compileInfoPtr->maxUbSize <= 0), OP_LOGE(context, "Failed to get maxub size"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfoPtr->maxUbSize <= 0), OP_LOGE(context, "Failed to get maxub size"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

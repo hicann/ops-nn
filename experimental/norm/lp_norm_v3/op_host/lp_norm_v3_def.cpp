@@ -29,13 +29,13 @@ class LpNormV3 : public OpDef {
 public:
     explicit LpNormV3(const char* name) : OpDef(name)
     {
-        this->Input("x")                                       // 输入x1定义
+        this->Input("x")                                        // 输入x1定义
             .ParamType(REQUIRED)                                // 必选输入
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})             // 支持数据类型
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})           // 支持数据类型
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})             // 支持format格式
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND}) // 未确定大小shape对应format格式
             .AutoContiguous();                                  // 内存自动连续化
-        this->Output("y") // 输出y定义
+        this->Output("y")                                       // 输出y定义
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})

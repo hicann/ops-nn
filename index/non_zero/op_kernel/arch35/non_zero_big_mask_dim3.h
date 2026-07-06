@@ -28,8 +28,8 @@ class NonZeroBigMaskDim3 : public NonZeroBigMask<T1, T2> {
 public:
     __aicore__ inline NonZeroBigMaskDim3(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                const NonZeroTilingData* tilingData);
     template <typename CLS_NAME, void (CLS_NAME::*ComputeOutputPtr)(LocalTensor<int32_t>& yUb)>
     __aicore__ inline void Process(CLS_NAME* objPtr);
     __aicore__ inline void ComputeOutput(LocalTensor<int32_t>& yUb);
@@ -80,9 +80,8 @@ __aicore__ inline void NonZeroBigMaskDim3<T1, T2>::ComputeOutput(LocalTensor<int
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
             AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
-            this->ComputeOutputBaseFunc(
-                srcPtr, dstPtr0, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg, mReg, divReg0, divReg1,
-                dim0SValue, dim0MValue, dim0KValue);
+            this->ComputeOutputBaseFunc(srcPtr, dstPtr0, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
+                                        mReg, divReg0, divReg1, dim0SValue, dim0MValue, dim0KValue);
         }
         mem_bar(VST_VLD);
         // 处理3维
@@ -90,9 +89,8 @@ __aicore__ inline void NonZeroBigMaskDim3<T1, T2>::ComputeOutput(LocalTensor<int
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
             AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
-            this->ComputeOutputBaseFunc(
-                dstLastPtr, dstPtr1, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg, mReg, divReg0, divReg1,
-                dim1SValue, dim1MValue, dim1KValue);
+            this->ComputeOutputBaseFunc(dstLastPtr, dstPtr1, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
+                                        mReg, divReg0, divReg1, dim1SValue, dim1MValue, dim1KValue);
         }
         mem_bar(VST_VLD);
     }
@@ -101,8 +99,8 @@ __aicore__ inline void NonZeroBigMaskDim3<T1, T2>::ComputeOutput(LocalTensor<int
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMaskDim3<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData)
+__aicore__ inline void NonZeroBigMaskDim3<T1, T2>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                                        const NonZeroTilingData* tilingData)
 {
     this->InitBase(x, y, outShape, workspace, tilingData);
 }

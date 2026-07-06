@@ -17,12 +17,11 @@ namespace GeGluV2 {
 using namespace AscendC;
 
 template <typename T>
-class GeGluV2Bf16AlignErf : public GeGluV2Base<T>
-{
+class GeGluV2Bf16AlignErf : public GeGluV2Base<T> {
 public:
     __aicore__ inline GeGluV2Bf16AlignErf(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, const GeGluV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                const GeGluV2TilingData* tilingData);
     __aicore__ inline void Process();
 
     constexpr static int32_t bufferNum = 2;
@@ -50,8 +49,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignErf<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, const GeGluV2TilingData* tilingData)
+__aicore__ inline void GeGluV2Bf16AlignErf<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                                    const GeGluV2TilingData* tilingData)
 {
     this->BaseInit(x, y, gelu, tilingData);
     pipe.InitBuffer(inQueueX1, bufferNum, bufferSize * sizeof(T));
@@ -154,8 +153,8 @@ __aicore__ inline void GeGluV2Bf16AlignErf<T>::ComputeGeluAndMul(const int64_t& 
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignErf<T>::CopyOutGelu(
-    const int64_t& index, const int64_t& ub_num, const int64_t& group)
+__aicore__ inline void GeGluV2Bf16AlignErf<T>::CopyOutGelu(const int64_t& index, const int64_t& ub_num,
+                                                           const int64_t& group)
 {
     LocalTensor<T> outLocalGelu = outQueueGelu.DeQue<T>();
     this->CopyOutGeluBase(index, ub_num, group, outLocalGelu);
@@ -163,8 +162,8 @@ __aicore__ inline void GeGluV2Bf16AlignErf<T>::CopyOutGelu(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignErf<T>::CopyOutMul(
-    const int64_t& index, const int64_t& ub_num, const int64_t& group)
+__aicore__ inline void GeGluV2Bf16AlignErf<T>::CopyOutMul(const int64_t& index, const int64_t& ub_num,
+                                                          const int64_t& group)
 {
     LocalTensor<T> outLocalMul = outQueueMul.DeQue<T>();
     this->CopyOutMulBase(index, ub_num, group, outLocalMul);

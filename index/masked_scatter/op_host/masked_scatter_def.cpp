@@ -15,22 +15,20 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> SUPPORT_DTYPE = {
-    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8, ge::DT_INT8,
-    ge::DT_INT16, ge::DT_INT32, ge::DT_INT64, ge::DT_BOOL, ge::DT_BF16
-};
+static const std::vector<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8,
+                                                        ge::DT_INT8,  ge::DT_INT16,   ge::DT_INT32,  ge::DT_INT64,
+                                                        ge::DT_BOOL,  ge::DT_BF16};
 
-static const std::vector<ge::DataType> MASK_SUPPORT_DTYPE = {
-    ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL,
-    ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL
-};
+static const std::vector<ge::DataType> MASK_SUPPORT_DTYPE = {ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL,
+                                                             ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL,
+                                                             ge::DT_BOOL, ge::DT_BOOL};
 
-static const std::vector<ge::Format> SUPPORT_FORMAT = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> SUPPORT_FORMAT = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                       ge::FORMAT_ND, ge::FORMAT_ND};
 
-static ge::graphStatus CheckIfAICoreSupported(const ge::Operator& op, ge::AscendString& result) {
+static ge::graphStatus CheckIfAICoreSupported(const ge::Operator& op, ge::AscendString& result)
+{
     auto xShape = op.GetInputDesc("x").GetShape();
     auto maskShape = op.GetInputDesc("mask").GetShape();
     auto updatesShape = op.GetInputDesc("updates").GetShape();
@@ -51,64 +49,65 @@ static ge::graphStatus CheckIfAICoreSupported(const ge::Operator& op, ge::Ascend
     }
     if (maskShape.GetDim(maskDimNum - 1) != xShape.GetDim(xDimNum - 1) &&
         !(maskShape.GetDim(maskDimNum - 1) == 1 &&
-        xShape.GetDim(xDimNum - 1) == updatesShape.GetDim(updatesDimNum - 1))) {
+          xShape.GetDim(xDimNum - 1) == updatesShape.GetDim(updatesDimNum - 1))) {
         result = ge::AscendString(
             R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Unsupported Shape."})");
         return ge::GRAPH_FAILED;
     }
     result = ge::AscendString(
-            R"({"isSupported": "True", "dynamicCompileStatic": "True", "reason": "AICore CheckSupport Passed."})");
+        R"({"isSupported": "True", "dynamicCompileStatic": "True", "reason": "AICore CheckSupport Passed."})");
     return ge::GRAPH_SUCCESS;
 }
 
 class MaskedScatter : public OpDef {
- public:
-  explicit MaskedScatter(const char* name) : OpDef(name) {
-    this->Input("x")
-        .ParamType(REQUIRED)
-        .AutoContiguous()
-        .DataType(SUPPORT_DTYPE)
-        .Format(SUPPORT_FORMAT)
-        .UnknownShapeFormat(SUPPORT_FORMAT);
-    this->Input("mask")
-        .ParamType(REQUIRED)
-        .AutoContiguous()
-        .DataType(MASK_SUPPORT_DTYPE)
-        .Format(SUPPORT_FORMAT)
-        .UnknownShapeFormat(SUPPORT_FORMAT);
-    this->Input("updates")
-        .ParamType(REQUIRED)
-        .AutoContiguous()
-        .DataType(SUPPORT_DTYPE)
-        .Format(SUPPORT_FORMAT)
-        .UnknownShapeFormat(SUPPORT_FORMAT);
-    this->Output("y")
-        .ParamType(REQUIRED)
-        .DataType(SUPPORT_DTYPE)
-        .Format(SUPPORT_FORMAT)
-        .UnknownShapeFormat(SUPPORT_FORMAT);
+public:
+    explicit MaskedScatter(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .AutoContiguous()
+            .DataType(SUPPORT_DTYPE)
+            .Format(SUPPORT_FORMAT)
+            .UnknownShapeFormat(SUPPORT_FORMAT);
+        this->Input("mask")
+            .ParamType(REQUIRED)
+            .AutoContiguous()
+            .DataType(MASK_SUPPORT_DTYPE)
+            .Format(SUPPORT_FORMAT)
+            .UnknownShapeFormat(SUPPORT_FORMAT);
+        this->Input("updates")
+            .ParamType(REQUIRED)
+            .AutoContiguous()
+            .DataType(SUPPORT_DTYPE)
+            .Format(SUPPORT_FORMAT)
+            .UnknownShapeFormat(SUPPORT_FORMAT);
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType(SUPPORT_DTYPE)
+            .Format(SUPPORT_FORMAT)
+            .UnknownShapeFormat(SUPPORT_FORMAT);
 
-    OpAICoreConfig aicore_config;
-    aicore_config.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(false)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .PrecisionReduceFlag(true)
-        .ExtendCfgInfo("opFile.value", "masked_scatter_apt");
-    this->AICore().AddConfig("ascend950", aicore_config);
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "masked_scatter_apt");
+        this->AICore().AddConfig("ascend950", aicore_config);
 
-    OpAICoreConfig aicore_config_910B;
-    aicore_config_910B.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(false)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(true)
-        .PrecisionReduceFlag(true);
-    this->AICore().AddConfig("ascend910b", aicore_config_910B);
-    this->AICore().AddConfig("ascend910_93", aicore_config_910B);
-    this->AICore().SetCheckSupport(CheckIfAICoreSupported);
-  }
+        OpAICoreConfig aicore_config_910B;
+        aicore_config_910B.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(true)
+            .PrecisionReduceFlag(true);
+        this->AICore().AddConfig("ascend910b", aicore_config_910B);
+        this->AICore().AddConfig("ascend910_93", aicore_config_910B);
+        this->AICore().SetCheckSupport(CheckIfAICoreSupported);
+    }
 };
 
 OP_ADD(MaskedScatter);
@@ -120,4 +119,4 @@ static int MASKED_SCATTER_REGISTERED = [](const char* name) {
     optiling::OpCheckFuncHelper(FUNC_CHECK_SUPPORTED, name, opDef.AICore().GetCheckSupport());
     return 0;
 }("MaskedScatter");
-}  // namespace ops
+} // namespace ops

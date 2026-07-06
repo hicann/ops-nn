@@ -17,22 +17,15 @@
 
 using namespace std;
 
-class l2_ada_layer_norm_v2_test : public testing::Test
-{
+class l2_ada_layer_norm_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_ada_layer_norm_v2_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_ada_layer_norm_v2_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_ada_layer_norm_v2_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_ada_layer_norm_v2_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& scaleShape, const vector<int64_t>& weightShape,
-        const vector<int64_t>& outShape, const vector<int64_t>& meanShape, aclDataType dtype, aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& scaleShape,
+                    const vector<int64_t>& weightShape, const vector<int64_t>& outShape,
+                    const vector<int64_t>& meanShape, aclDataType dtype, aclnnStatus expectRet)
     {
         auto x = TensorDesc(xShape, dtype, ACL_FORMAT_NCL);
         auto scale = TensorDesc(scaleShape, dtype, ACL_FORMAT_ND);
@@ -43,7 +36,8 @@ public:
         auto mean = TensorDesc(meanShape, dtype, ACL_FORMAT_NCL);
         auto rstd = TensorDesc(meanShape, dtype, ACL_FORMAT_NCL);
         uint64_t workspace_size = 0;
-        auto ut = OP_API_UT(aclnnAdaLayerNormV2, INPUT(x, scale, shift, weight, bias, 0.00001), OUTPUT(out, mean, rstd));
+        auto ut = OP_API_UT(aclnnAdaLayerNormV2, INPUT(x, scale, shift, weight, bias, 0.00001),
+                            OUTPUT(out, mean, rstd));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 
         EXPECT_EQ(aclRet, expectRet);

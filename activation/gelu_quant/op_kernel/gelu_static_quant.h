@@ -25,26 +25,22 @@ using namespace AscendC;
 // static quant function template   单行处理或者大尾轴UB内for循环
 
 template <typename T1, typename T2>
-class GeluQuant : public GeluQuantBase
-{
+class GeluQuant : public GeluQuantBase {
 public:
     __aicore__ inline GeluQuant(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-        const GeluQuantTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const GeluQuantTilingData& tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessPerLoop(int64_t endAxisOffset, int32_t calCount);
-    __aicore__ inline void ProcessOptionalInput(
-        LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal, int64_t endAxisOffset,
-        int32_t calCount);
+    __aicore__ inline void ProcessOptionalInput(LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal,
+                                                int64_t endAxisOffset, int32_t calCount);
     __aicore__ inline void CopyIn(int64_t endAxisOffset, int32_t calCount, int64_t loopNum);
-    __aicore__ inline void Compute(
-        LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32, int32_t calCount);
+    __aicore__ inline void Compute(LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32,
+                                   int32_t calCount);
     __aicore__ inline void CopyOut(int64_t endAxisOffset, int32_t calCount, int64_t loopNum);
     __aicore__ inline void ComputeGelu(LocalTensor<float>& geluRes, int32_t calCount);
-    __aicore__ inline void ComputeQuant(
-        LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32,
-        int32_t calCount);
+    __aicore__ inline void ComputeQuant(LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32,
+                                        LocalTensor<float>& offsetLocalFp32, int32_t calCount);
 
 private:
     /* ascendc variable */
@@ -64,9 +60,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluQuant<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void GeluQuant<T1, T2>::Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y,
+                                               GM_ADDR outScale, GM_ADDR workspace,
+                                               const GeluQuantTilingData& tilingData)
 {
     // Init tiling data
     GeluQuantBase::ParseTilingData(tilingData);
@@ -143,9 +139,8 @@ __aicore__ inline void GeluQuant<T1, T2>::CopyIn(int64_t endAxisOffset, int32_t 
 
 {
     LocalTensor<T1> xLocal = inQueue_.AllocTensor<T1>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T1)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T1> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
     DataCopyPad(xLocal, xGm_[endAxisLen_ * loopNum + endAxisOffset], copyParams, padParams);
@@ -154,13 +149,13 @@ __aicore__ inline void GeluQuant<T1, T2>::CopyIn(int64_t endAxisOffset, int32_t 
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluQuant<T1, T2>::ProcessOptionalInput(
-    LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal, int64_t endAxisOffset, int32_t calCount)
+__aicore__ inline void GeluQuant<T1, T2>::ProcessOptionalInput(LocalTensor<float>& optionalLocalFp32,
+                                                               GlobalTensor<T2>& optionalGlobal, int64_t endAxisOffset,
+                                                               int32_t calCount)
 {
     LocalTensor<T2> optionalInput = inQueue_.AllocTensor<T2>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T2> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
 
@@ -179,8 +174,8 @@ __aicore__ inline void GeluQuant<T1, T2>::ProcessOptionalInput(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluQuant<T1, T2>::Compute(
-    LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32, int32_t calCount)
+__aicore__ inline void GeluQuant<T1, T2>::Compute(LocalTensor<float>& scaleLocalFp32,
+                                                  LocalTensor<float>& offsetLocalFp32, int32_t calCount)
 {
     LocalTensor<float> geluRes = tempQueue_.AllocTensor<float>();
     ComputeGelu(geluRes, calCount);
@@ -192,9 +187,8 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluQuant<T1, T2>::CopyOut(int64_t endAxisOffset, int32_t calCount, int64_t loopNum)
 {
     LocalTensor<int8_t> outLocal = outQueue_.DeQue<int8_t>();
-    DataCopyExtParams copyParamsInt8{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int8_t)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsInt8{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int8_t)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(yGm_[endAxisLen_ * loopNum + endAxisOffset], outLocal, copyParamsInt8);
 
@@ -228,9 +222,8 @@ __aicore__ inline void GeluQuant<T1, T2>::ComputeGelu(LocalTensor<float>& geluRe
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluQuant<T1, T2>::ComputeQuant(
-    LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32,
-    int32_t calCount)
+__aicore__ inline void GeluQuant<T1, T2>::ComputeQuant(LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32,
+                                                       LocalTensor<float>& offsetLocalFp32, int32_t calCount)
 {
     if (inputScaleType_ == NORMAL_TENSOR) {
         Mul(geluRes, geluRes, scaleLocalFp32, calCount);

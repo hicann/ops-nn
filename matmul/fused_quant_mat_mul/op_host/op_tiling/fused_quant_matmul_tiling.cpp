@@ -30,8 +30,8 @@
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
 using AscendC::BLOCK_CUBE;
-using Ops::NN::Optiling::TilingRegistry;
 using Ops::NN::TilingPrepareForOpCache;
+using Ops::NN::Optiling::TilingRegistry;
 
 namespace optiling {
 
@@ -39,7 +39,8 @@ REGISTER_TILING_TEMPLATE("FusedQuantMatMul", FusedQuantMatMulASWTiling, 0);
 REGISTER_TILING_TEMPLATE("FusedQuantMatMul", FusedQuantMatMulSwigluTiling, 1);
 REGISTER_TILING_TEMPLATE("FusedQuantMatMul", FusedQuantMatMulUnaryTiling, 2);
 
-ge::graphStatus FusedQuantMatMulTilingFunc(gert::TilingContext *context) {
+ge::graphStatus FusedQuantMatMulTilingFunc(gert::TilingContext* context)
+{
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "FusedQuantMatMul", "TilingContext is null!");
     auto compileInfoPtr = context->GetCompileInfo<QuantBatchMatmulV3CompileInfo>();
     if (compileInfoPtr->supportMmadS8S4) {
@@ -51,7 +52,8 @@ ge::graphStatus FusedQuantMatMulTilingFunc(gert::TilingContext *context) {
     }
 }
 
-ge::graphStatus TilingParseForFusedQuantMatMul(gert::TilingParseContext *context) {
+ge::graphStatus TilingParseForFusedQuantMatMul(gert::TilingParseContext* context)
+{
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "FusedQuantMatMul", "TilingParseContext is null!");
     auto platformInfoPtr = context->GetPlatformInfo();
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "The platformInfoPtr is null!");

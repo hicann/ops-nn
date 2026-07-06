@@ -33,11 +33,11 @@ public:
 
     InferShapeRangeContextFaker& IrInstanceNum(const std::vector<uint32_t>& instanceNum);
 
-    InferShapeRangeContextFaker& NodeInputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
+    InferShapeRangeContextFaker& NodeInputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                             ge::Format storageFormat);
 
-    InferShapeRangeContextFaker& NodeOutputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
+    InferShapeRangeContextFaker& NodeOutputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                              ge::Format storageFormat);
 
     template <typename T>
     InferShapeRangeContextFaker& Attr(const std::string& attrName, T attr)

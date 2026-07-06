@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file multi_scale_deformable_attn_function.h
  * \brief
@@ -20,12 +19,10 @@
 
 namespace l0op {
 
-const std::tuple<aclTensor*> MultiScaleDeformableAttnFunction(const aclTensor *value,
-                                                              const aclTensor *spatialShape,
-                                                              const aclTensor *levelStartIndex,
-                                                              const aclTensor *location,
-                                                              const aclTensor *attnWeight,
-                                                              aclOpExecutor *executor);
-} // l0op
+const std::tuple<aclTensor*> MultiScaleDeformableAttnFunction(const aclTensor* value, const aclTensor* spatialShape,
+                                                              const aclTensor* levelStartIndex,
+                                                              const aclTensor* location, const aclTensor* attnWeight,
+                                                              aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_MULTI_SCALE_DEFORMABLE_ATTN_FUNCTION_H_

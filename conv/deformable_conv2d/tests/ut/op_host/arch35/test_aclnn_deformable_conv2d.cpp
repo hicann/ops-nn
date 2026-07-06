@@ -16,15 +16,9 @@
 
 class DeformableConv2dV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2DeformableConv2dTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2DeformableConv2dTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2DeformableConv2dTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2DeformableConv2dTest TearDown" << std::endl; }
 };
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32)
@@ -51,12 +45,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -87,12 +79,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_noOptional)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = nullptr;
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -123,12 +113,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_noBias)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -159,12 +147,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float16)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -195,12 +181,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -231,12 +215,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16_error_format)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -267,12 +249,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16_error_dtype)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_INT8, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_INT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -303,12 +283,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape1)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -339,12 +317,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape2)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -375,12 +351,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape3)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -411,12 +385,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -447,12 +419,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs1)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -483,12 +453,10 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs2)
     auto outDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto deformOutOptionalDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnDeformableConv2d,
-        INPUT(
-            xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray, paddingSizeArray,
-            dilationSizeArray, groups, deformableGroups, modulated),
-        OUTPUT(outDesc, deformOutOptionalDesc));
+    auto ut = OP_API_UT(aclnnDeformableConv2d,
+                        INPUT(xDesc, weightDesc, offsetDesc, biasOptionalDesc, kernelSizeArray, strideSizeArray,
+                              paddingSizeArray, dilationSizeArray, groups, deformableGroups, modulated),
+                        OUTPUT(outDesc, deformOutOptionalDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

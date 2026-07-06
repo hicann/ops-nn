@@ -31,66 +31,67 @@ namespace l0op {
 OP_TYPE_REGISTER(ReverseV2);
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
-    op::DataType::DT_INT16, op::DataType::DT_INT64};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT16,
+    op::DataType::DT_INT64};
 
 static const std::initializer_list<DataType> REGBASE_DTYPE_SUPPORT_LIST = {
-  op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_UINT16,
-  op::DataType::DT_INT32, op::DataType::DT_UINT32, op::DataType::DT_INT64, op::DataType::DT_UINT64,
-  op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE,
-  op::DataType::DT_BOOL, op::DataType::DT_COMPLEX64};
+    op::DataType::DT_INT8,    op::DataType::DT_UINT8,    op::DataType::DT_INT16, op::DataType::DT_UINT16,
+    op::DataType::DT_INT32,   op::DataType::DT_UINT32,   op::DataType::DT_INT64, op::DataType::DT_UINT64,
+    op::DataType::DT_FLOAT16, op::DataType::DT_BF16,     op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE,
+    op::DataType::DT_BOOL,    op::DataType::DT_COMPLEX64};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-static inline bool IsAiCoreSupport(const aclTensor *self) {
-  // ReverseV2只需要判断dtype
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return CheckType(self->GetDataType(), REGBASE_DTYPE_SUPPORT_LIST);
-  }
-  return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
+static inline bool IsAiCoreSupport(const aclTensor* self)
+{
+    // ReverseV2只需要判断dtype
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(self->GetDataType(), REGBASE_DTYPE_SUPPORT_LIST);
+    }
+    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
-static inline bool ReverseV2InferShape(const op::Shape &selfShape, op::Shape &outShape) {
-  outShape = selfShape;
-  return true;
+static inline bool ReverseV2InferShape(const op::Shape& selfShape, op::Shape& outShape)
+{
+    outShape = selfShape;
+    return true;
 }
 
+const aclTensor* ReverseV2Aicpu(const aclTensor* self, const aclTensor* dim, aclTensor* out, aclOpExecutor* executor)
+{
+    L0_DFX(ReverseV2Aicpu, self, dim, out)
 
-const aclTensor *ReverseV2Aicpu(const aclTensor *self, const aclTensor *dim, aclTensor *out, aclOpExecutor *executor) {
-  L0_DFX(ReverseV2Aicpu, self, dim, out)
+    static internal::AicpuTaskSpace space("ReverseV2", ge::DEPEND_IN_SHAPE, true);
+    op::DataType dtype = dim->GetDataType();
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ReverseV2, OP_ATTR_NAMES({"Tidx"}), OP_INPUT(self, dim), OP_OUTPUT(out),
+                                          OP_ATTR(dtype));
+    CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
 
-  static internal::AicpuTaskSpace space("ReverseV2", ge::DEPEND_IN_SHAPE, true);
-  op::DataType dtype = dim->GetDataType();
-  auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ReverseV2, OP_ATTR_NAMES({"Tidx"}), OP_INPUT(self, dim), OP_OUTPUT(out), OP_ATTR(dtype));
-  CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
-
-  return out;
+    return out;
 }
 
-
-const aclTensor *ReverseV2Aicore(const aclTensor *self, const aclTensor *dim, aclTensor *out, aclOpExecutor *executor) {
-  L0_DFX(ReverseV2Aicore, self, dim, out)
-  ADD_TO_LAUNCHER_LIST_AICORE(ReverseV2,
-                              OP_INPUT(self, dim),
-                              OP_OUTPUT(out));
-  return out;
+const aclTensor* ReverseV2Aicore(const aclTensor* self, const aclTensor* dim, aclTensor* out, aclOpExecutor* executor)
+{
+    L0_DFX(ReverseV2Aicore, self, dim, out)
+    ADD_TO_LAUNCHER_LIST_AICORE(ReverseV2, OP_INPUT(self, dim), OP_OUTPUT(out));
+    return out;
 }
 
-const aclTensor *ReverseV2(const aclTensor *self, const aclIntArray *dims, aclOpExecutor *executor) {
-  op::Shape outShape;
-  if (!ReverseV2InferShape(self->GetViewShape(), outShape)) {
-    OP_LOGE(ACL_ERROR_INVALID_PARAM, "infer shape failed. StroageShape[%s], ViewShape[%s] ",
-            op::ToString(self->GetStorageShape()).GetString(),
-            op::ToString(self->GetViewShape()).GetString());
-    return nullptr;
-  }
+const aclTensor* ReverseV2(const aclTensor* self, const aclIntArray* dims, aclOpExecutor* executor)
+{
+    op::Shape outShape;
+    if (!ReverseV2InferShape(self->GetViewShape(), outShape)) {
+        OP_LOGE(ACL_ERROR_INVALID_PARAM, "infer shape failed. StroageShape[%s], ViewShape[%s] ",
+                op::ToString(self->GetStorageShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        return nullptr;
+    }
 
-  auto dim = executor->ConvertToTensor(dims, op::ToOpDataType(ACL_INT64));
-  auto out = executor->AllocTensor(outShape, self->GetDataType());
+    auto dim = executor->ConvertToTensor(dims, op::ToOpDataType(ACL_INT64));
+    auto out = executor->AllocTensor(outShape, self->GetDataType());
 
-  if (IsAiCoreSupport(self)) {
-    return ReverseV2Aicore(self, dim, out, executor);
-  } else {
-    return ReverseV2Aicpu(self, dim, out, executor);
-  }
+    if (IsAiCoreSupport(self)) {
+        return ReverseV2Aicore(self, dim, out, executor);
+    } else {
+        return ReverseV2Aicpu(self, dim, out, executor);
+    }
 }
-} // l0op
+} // namespace l0op

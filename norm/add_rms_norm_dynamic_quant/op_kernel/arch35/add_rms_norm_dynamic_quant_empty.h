@@ -23,9 +23,10 @@ using namespace AscendC;
 template <int32_t BUFFER_NUM = 2>
 class KernelAddRmsNormDynamicQuantEmpty {
 public:
-    __aicore__ inline KernelAddRmsNormDynamicQuantEmpty(TPipe* pipe, const AddRmsNormDynamicQuantEmptyTilingData *tilingData) : pipe_(pipe), tiling_(tilingData)
-    {
-    }
+    __aicore__ inline KernelAddRmsNormDynamicQuantEmpty(TPipe* pipe,
+                                                        const AddRmsNormDynamicQuantEmptyTilingData* tilingData)
+        : pipe_(pipe), tiling_(tilingData)
+    {}
 
     __aicore__ inline void Init(GM_ADDR scale1, GM_ADDR scale2)
     {
@@ -108,7 +109,7 @@ private:
     uint64_t mTailUb_{0};
     uint64_t mlastCoreTailUb_{0};
 
-    const AddRmsNormDynamicQuantEmptyTilingData *tiling_;
+    const AddRmsNormDynamicQuantEmptyTilingData* tiling_;
 };
 } // namespace AddRmsNormDynamicQuant
 #endif // _ADD_RMS_NORM_DYNAMIC_QUANT_EMPTY_H_

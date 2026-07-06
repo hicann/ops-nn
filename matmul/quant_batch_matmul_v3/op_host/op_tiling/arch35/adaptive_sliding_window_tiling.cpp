@@ -47,8 +47,8 @@ AdaptiveSlidingWindowTiling::AdaptiveSlidingWindowTiling(gert::TilingContext* co
     : QuantBatchMatmulV3TilingBase(context, false), tilingData_(tilingDataSelf_)
 {}
 
-AdaptiveSlidingWindowTiling::AdaptiveSlidingWindowTiling(
-    gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3TilingDataParams* out)
+AdaptiveSlidingWindowTiling::AdaptiveSlidingWindowTiling(gert::TilingContext* context,
+                                                         DequantBmm::QuantBatchMatmulV3TilingDataParams* out)
     : QuantBatchMatmulV3TilingBase(context, true), tilingData_(out == nullptr ? tilingDataSelf_ : *out)
 {}
 
@@ -67,8 +67,7 @@ ge::graphStatus AdaptiveSlidingWindowTiling::GetShapeAttrsInfo()
         auto tilingDataCapacity = context_->GetRawTilingData()->GetCapacity();
         OP_TILING_CHECK(
             memset_s(context_->GetRawTilingData()->GetData(), tilingDataCapacity, 0, tilingDataCapacity) != EOK,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."),
-            return ge::GRAPH_FAILED);
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."), return ge::GRAPH_FAILED);
     }
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
@@ -116,34 +115,28 @@ bool AdaptiveSlidingWindowTiling::CheckDtype() const
     return QuantBatchMatMulV3TilingUtil::CheckDtype(context_, inputParams_, compileInfo_);
 }
 
-bool AdaptiveSlidingWindowTiling::CheckShape(
-    const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
-    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const
+bool AdaptiveSlidingWindowTiling::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                             const gert::StorageShape* biasShape,
+                                             const gert::StorageShape* pertokenShape,
+                                             const std::vector<int64_t>& dimValueOfMKN) const
 {
-    return QuantBatchMatMulV3TilingUtil::CheckShape(
-        context_, inputParams_, compileInfo_, mandtoryShape, biasShape, pertokenShape, dimValueOfMKN);
+    return QuantBatchMatMulV3TilingUtil::CheckShape(context_, inputParams_, compileInfo_, mandtoryShape, biasShape,
+                                                    pertokenShape, dimValueOfMKN);
 }
 
-bool AdaptiveSlidingWindowTiling::AnalyzeInputs()
-{
-    return QuantBatchMatmulV3TilingBase::AnalyzeInputs();
-}
+bool AdaptiveSlidingWindowTiling::AnalyzeInputs() { return QuantBatchMatmulV3TilingBase::AnalyzeInputs(); }
 
 ge::graphStatus AdaptiveSlidingWindowTiling::GetPlatformInfo()
 {
     if (aicoreParams_.aicNum == 0UL || aicoreParams_.l1Size == 0UL || aicoreParams_.l0cSize == 0UL) {
-        OP_LOGE(
-            inputParams_.opName, "CoreNum/L1Size/L0cSize should not be 0. CoreNum: %lu, L1Size: %lu, L0cSize: %lu.",
-            aicoreParams_.aicNum, aicoreParams_.l1Size, aicoreParams_.l0cSize);
+        OP_LOGE(inputParams_.opName, "CoreNum/L1Size/L0cSize should not be 0. CoreNum: %lu, L1Size: %lu, L0cSize: %lu.",
+                aicoreParams_.aicNum, aicoreParams_.l1Size, aicoreParams_.l0cSize);
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdaptiveSlidingWindowTiling::CheckCoreNum() const
-{
-    return true;
-}
+bool AdaptiveSlidingWindowTiling::CheckCoreNum() const { return true; }
 
 bool AdaptiveSlidingWindowTiling::AnalyseSlidingWinInfo()
 {
@@ -186,15 +179,17 @@ ge::graphStatus AdaptiveSlidingWindowTiling::DoLibApiTiling()
 {
     QuantBatchMatMulV3TilingUtil::SetBasicLibApiTiling(inputParams_, basicTiling_, tilingData_);
     if (inputParams_.isMxPerGroup) {
-        tilingData_.matmulTiling.mxTypePara =
-            (qmmv3_tiling_const::SCALER_FACTOR_MIN << SCALER_FACTOR_N_BIT) + (qmmv3_tiling_const::SCALER_FACTOR_MIN << SCALER_FACTOR_M_BIT);
-        if (basicTiling_.scaleFactorA >= qmmv3_tiling_const::SCALER_FACTOR_MIN && basicTiling_.scaleFactorA <= qmmv3_tiling_const::SCALER_FACTOR_MAX &&
-            basicTiling_.scaleFactorB >= qmmv3_tiling_const::SCALER_FACTOR_MIN && basicTiling_.scaleFactorB <= qmmv3_tiling_const::SCALER_FACTOR_MAX) {
-            tilingData_.matmulTiling.mxTypePara +=
-                (basicTiling_.scaleFactorB << SCALER_FACTOR_B_BIT) + basicTiling_.scaleFactorA;
+        tilingData_.matmulTiling.mxTypePara = (qmmv3_tiling_const::SCALER_FACTOR_MIN << SCALER_FACTOR_N_BIT) +
+                                              (qmmv3_tiling_const::SCALER_FACTOR_MIN << SCALER_FACTOR_M_BIT);
+        if (basicTiling_.scaleFactorA >= qmmv3_tiling_const::SCALER_FACTOR_MIN &&
+            basicTiling_.scaleFactorA <= qmmv3_tiling_const::SCALER_FACTOR_MAX &&
+            basicTiling_.scaleFactorB >= qmmv3_tiling_const::SCALER_FACTOR_MIN &&
+            basicTiling_.scaleFactorB <= qmmv3_tiling_const::SCALER_FACTOR_MAX) {
+            tilingData_.matmulTiling.mxTypePara += (basicTiling_.scaleFactorB << SCALER_FACTOR_B_BIT) +
+                                                   basicTiling_.scaleFactorA;
         } else {
-            tilingData_.matmulTiling.mxTypePara +=
-                (SCALER_FACTOR_DEFAULT << SCALER_FACTOR_B_BIT) + SCALER_FACTOR_DEFAULT;
+            tilingData_.matmulTiling.mxTypePara += (SCALER_FACTOR_DEFAULT << SCALER_FACTOR_B_BIT) +
+                                                   SCALER_FACTOR_DEFAULT;
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -207,8 +202,8 @@ uint64_t AdaptiveSlidingWindowTiling::GetBiasMode() const
 
 uint64_t AdaptiveSlidingWindowTiling::GetKernelType() const
 {
-    return QuantBatchMatMulV3TilingUtil::GetKernelType(
-        inputParams_, basicTiling_, isBf16Mix_, isAFullLoad_, isBFullLoad_, isABFullLoad_);
+    return QuantBatchMatMulV3TilingUtil::GetKernelType(inputParams_, basicTiling_, isBf16Mix_, isAFullLoad_,
+                                                       isBFullLoad_, isABFullLoad_);
 }
 
 uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch) const
@@ -219,9 +214,8 @@ uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch) const
 uint64_t AdaptiveSlidingWindowTiling::GetTilingKey() const
 {
     uint64_t kernelType = GetKernelType();
-    return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetBiasMode(),
-        kernelType, GetApiLevel(compileInfo_.npuArch));
+    return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
+                              GetBiasMode(), kernelType, GetApiLevel(compileInfo_.npuArch));
 }
 
 ge::graphStatus AdaptiveSlidingWindowTiling::GetWorkspaceSize()
@@ -241,9 +235,8 @@ ge::graphStatus AdaptiveSlidingWindowTiling::PostTiling()
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
                               context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), GetTilingData(),
-        tilingDataSize_);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           GetTilingData(), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "Failed to copy memory with memcpy_s, ret=%d.", ret);
         return ge::GRAPH_FAILED;
@@ -262,9 +255,9 @@ ge::graphStatus AdaptiveSlidingWindowTiling::CalcUbTiling()
     basicTiling_.ubCalcN = basicTiling_.baseN;
     // UB stores source int32, scale, per-token scale, and output, with double buffering for IO.
     // BF16 output is accounted for with int16-sized storage when estimating buffer usage.
-    uint64_t ubCalc =
-        static_cast<uint64_t>(qmmv3_tiling_const::DOUBLE_BUFFER_NUM * (sizeof(int32_t) + ge::GetSizeByDataType(inputParams_.cDtype))) *
-        static_cast<uint64_t>(basicTiling_.ubCalcN);
+    uint64_t ubCalc = static_cast<uint64_t>(qmmv3_tiling_const::DOUBLE_BUFFER_NUM *
+                                            (sizeof(int32_t) + ge::GetSizeByDataType(inputParams_.cDtype))) *
+                      static_cast<uint64_t>(basicTiling_.ubCalcN);
     // Reserve per-channel scale space when the quantization mode is not per-tensor.
     if (!inputParams_.isPerTensor) {
         ubSize -= ge::GetSizeByDataType(inputParams_.scaleDtype) * basicTiling_.ubCalcN;
@@ -272,7 +265,8 @@ ge::graphStatus AdaptiveSlidingWindowTiling::CalcUbTiling()
     // Reserve per-token scale space.
     ubCalc += qmmv3_tiling_const::DOUBLE_BUFFER_NUM * ge::GetSizeByDataType(inputParams_.perTokenScaleDtype);
     // Keep the UB allocation 32-byte aligned.
-    ubSize -= qmmv3_tiling_const::DOUBLE_BUFFER_NUM * (UB_ALIGN_SIZE - ge::GetSizeByDataType(inputParams_.perTokenScaleDtype));
+    ubSize -= qmmv3_tiling_const::DOUBLE_BUFFER_NUM *
+              (UB_ALIGN_SIZE - ge::GetSizeByDataType(inputParams_.perTokenScaleDtype));
     basicTiling_.ubCalcM = static_cast<uint32_t>(ubSize / ubCalc);
     basicTiling_.ubCalcM = std::min(
         std::min(basicTiling_.ubCalcM, ops::CeilDiv(basicTiling_.baseM, VEC_CORE_GROUP_NUM)),
@@ -291,15 +285,9 @@ void AdaptiveSlidingWindowTiling::CalcBlockWindowInfo()
     adaptiveWin_.tailWinBlockCnt = adaptiveWin_.totalBlockCnt % aicoreParams_.aicNum;
 }
 
-uint64_t AdaptiveSlidingWindowTiling::GetBatchCoreCnt() const
-{
-    return 1UL;
-}
+uint64_t AdaptiveSlidingWindowTiling::GetBatchCoreCnt() const { return 1UL; }
 
-const void* AdaptiveSlidingWindowTiling::GetTilingData() const
-{
-    return &tilingData_;
-}
+const void* AdaptiveSlidingWindowTiling::GetTilingData() const { return &tilingData_; }
 
 void AdaptiveSlidingWindowTiling::SetBf16Compat()
 {
@@ -317,7 +305,9 @@ void AdaptiveSlidingWindowTiling::SetBf16Compat()
 bool AdaptiveSlidingWindowTiling::IsMxKOdd() const
 {
     return inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 &&
-           ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MX_GROUP_SIZE) % qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE != 0;
+           ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MX_GROUP_SIZE) %
+                   qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE !=
+               0;
 }
 
 bool AdaptiveSlidingWindowTiling::IsMxBackwardTrans() const
@@ -375,24 +365,27 @@ bool AdaptiveSlidingWindowTiling::IsInValidWeighNzTailSplit(uint64_t splitCnt, b
     return tailN % GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype) != 0UL;
 }
 
-uint64_t AdaptiveSlidingWindowTiling::GetTailBasicBlockSplitMax(
-    bool isMSplit, uint64_t tileMax, uint64_t splitSize) const
+uint64_t AdaptiveSlidingWindowTiling::GetTailBasicBlockSplitMax(bool isMSplit, uint64_t tileMax,
+                                                                uint64_t splitSize) const
 {
-    const uint64_t baseMAlignSize =
-        (inputParams_.isPerBlock ||
-         (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transA &&
-          adaptiveWin_.totalWinCnt == 1UL)) ?
-            qmmv3_tiling_const::L2_ALIGN_SIZE :
-            qmmv3_tiling_const::L1_ALIGN_SIZE;
-    const uint64_t baseNAlignSize = inputParams_.isPerBlock ? qmmv3_tiling_const::L2_ALIGN_SIZE : qmmv3_tiling_const::L1_ALIGN_SIZE;
-    const uint64_t splitAlignNum =
-        isMSplit ? (inputParams_.transA ? GetShapeWithDataType(baseMAlignSize, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK) :
-                   (!inputParams_.transB ? GetShapeWithDataType(baseNAlignSize, inputParams_.bDtype) : qmmv3_tiling_const::CUBE_BLOCK);
+    const uint64_t baseMAlignSize = (inputParams_.isPerBlock ||
+                                     (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transA &&
+                                      adaptiveWin_.totalWinCnt == 1UL)) ?
+                                        qmmv3_tiling_const::L2_ALIGN_SIZE :
+                                        qmmv3_tiling_const::L1_ALIGN_SIZE;
+    const uint64_t baseNAlignSize = inputParams_.isPerBlock ? qmmv3_tiling_const::L2_ALIGN_SIZE :
+                                                              qmmv3_tiling_const::L1_ALIGN_SIZE;
+    const uint64_t splitAlignNum = isMSplit ? (inputParams_.transA ?
+                                                   GetShapeWithDataType(baseMAlignSize, inputParams_.aDtype) :
+                                                   qmmv3_tiling_const::CUBE_BLOCK) :
+                                              (!inputParams_.transB ?
+                                                   GetShapeWithDataType(baseNAlignSize, inputParams_.bDtype) :
+                                                   qmmv3_tiling_const::CUBE_BLOCK);
     return std::min(tileMax, MathUtil::CeilDivision(splitSize, splitAlignNum));
 }
 
-bool AdaptiveSlidingWindowTiling::CanIncreaseTailSplit(
-    bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit, uint64_t splitMax)
+bool AdaptiveSlidingWindowTiling::CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit,
+                                                       uint64_t secSplit, uint64_t splitMax)
 {
     const uint64_t nextPreSplit = isPreSplit ? preSplit + 1UL : preSplit;
     const uint64_t nextSecSplit = isPreSplit ? secSplit : secSplit + 1UL;
@@ -402,12 +395,12 @@ bool AdaptiveSlidingWindowTiling::CanIncreaseTailSplit(
            CalUsedCoreNum(static_cast<uint32_t>(mTile), static_cast<uint32_t>(nTile)) <= aicoreParams_.aicNum;
 }
 
-uint64_t AdaptiveSlidingWindowTiling::GetTailSplitState(
-    bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const
+uint64_t AdaptiveSlidingWindowTiling::GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split,
+                                                        uint64_t splitSize) const
 {
     const bool isMSplit = isPreSplit == isPreSplitM;
-    const bool needWeightNzCheck =
-        !inputParams_.isPerBlock && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && (isAFullLoad_ || !isMSplit);
+    const bool needWeightNzCheck = !inputParams_.isPerBlock && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
+                                   (isAFullLoad_ || !isMSplit);
     // 0: invalid split, 1: valid split, 2: valid and preferred-aligned split.
     if (needWeightNzCheck && IsInValidWeighNzTailSplit(split, isPreSplit)) {
         return 0UL;
@@ -418,14 +411,15 @@ uint64_t AdaptiveSlidingWindowTiling::GetTailSplitState(
         return 1UL;
     }
 
-    const uint64_t splitAlignNum =
-        isMSplit ? GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
-                   GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_32, inputParams_.bDtype);
+    const uint64_t splitAlignNum = isMSplit ? GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_32,
+                                                                   inputParams_.aDtype) :
+                                              GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_32,
+                                                                   inputParams_.bDtype);
     return MathUtil::CeilDivision(splitSize, split) % splitAlignNum == 0UL ? 2UL : 1UL;
 }
 
-void AdaptiveSlidingWindowTiling::CalcTailBasicBlockSplit(
-    bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax, uint64_t preSplitSize, uint64_t secSplitSize)
+void AdaptiveSlidingWindowTiling::CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax,
+                                                          uint64_t preSplitSize, uint64_t secSplitSize)
 {
     uint64_t preSplitValid = 1UL;
     uint64_t secSplitValid = 1UL;
@@ -579,8 +573,7 @@ void AdaptiveSlidingWindowTiling::CalcTailRoundBasicBlockSplit()
 void AdaptiveSlidingWindowTiling::GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)
 {
     uint64_t mTailSize = inputParams_.mSize % adaptiveWin_.baseM;
-    uint64_t baseTailCntMax = std::min((adaptiveWin_.baseM - mTailSize) / BASIC_BLOCK_SIZE_16,
-                                       adaptiveWin_.mBlockCnt);
+    uint64_t baseTailCntMax = std::min((adaptiveWin_.baseM - mTailSize) / BASIC_BLOCK_SIZE_16, adaptiveWin_.mBlockCnt);
     uint64_t windowSize = std::min(qmmv3_tiling_const::WINDOW_LEN, adaptiveWin_.mBlockCnt);
     uint64_t mainWindowNum = adaptiveWin_.mBlockCnt / windowSize - 1UL;
     uint64_t tailWindowSize = adaptiveWin_.mBlockCnt - mainWindowNum * windowSize;
@@ -600,28 +593,26 @@ void AdaptiveSlidingWindowTiling::GetOuterMAxisTailCnt(uint64_t& baseTailSplitCn
     }
 }
 
-void AdaptiveSlidingWindowTiling::CalculateCurrentPerf(
-    uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain, uint64_t& curPerf)
+void AdaptiveSlidingWindowTiling::CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain,
+                                                       uint64_t& curPerf)
 {
-    const uint64_t totalWindows = MathUtil::CeilDivision(
-        adaptiveWin_.nBlockCnt * adaptiveWin_.mBlockCnt, aicoreParams_.aicNum);
-    newTailMain = MathUtil::Align(
-        MathUtil::CeilDivision((mergeLen * adaptiveWin_.baseN + nTail), mergeLen + 1UL), BASIC_BLOCK_SIZE_16);
+    const uint64_t totalWindows = MathUtil::CeilDivision(adaptiveWin_.nBlockCnt * adaptiveWin_.mBlockCnt,
+                                                         aicoreParams_.aicNum);
+    newTailMain = MathUtil::Align(MathUtil::CeilDivision((mergeLen * adaptiveWin_.baseN + nTail), mergeLen + 1UL),
+                                  BASIC_BLOCK_SIZE_16);
     uint64_t newTailLast = mergeLen * (adaptiveWin_.baseN - newTailMain) + nTail;
     uint64_t newMainRound = 0UL;
     uint64_t newTailRound = 0UL;
 
     if (mergeLen < adaptiveWin_.nBlockCnt - 1UL) {
-        newMainRound = MathUtil::CeilDivision(
-            (adaptiveWin_.nBlockCnt - 1UL - mergeLen) * adaptiveWin_.mBlockCnt +
-                (mergeLen + 1UL) * adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
-            aicoreParams_.aicNum);
+        newMainRound = MathUtil::CeilDivision((adaptiveWin_.nBlockCnt - 1UL - mergeLen) * adaptiveWin_.mBlockCnt +
+                                                  (mergeLen + 1UL) * adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
+                                              aicoreParams_.aicNum);
     }
     if (mergeLen > 0UL) {
         newTailRound = std::min(
-            MathUtil::CeilDivision(
-                mergeLen * adaptiveWin_.mBlockCnt + adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
-                aicoreParams_.aicNum),
+            MathUtil::CeilDivision(mergeLen * adaptiveWin_.mBlockCnt + adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
+                                   aicoreParams_.aicNum),
             totalWindows - newMainRound);
     }
 
@@ -637,13 +628,12 @@ void AdaptiveSlidingWindowTiling::GetOuterNAxisTailCnt(uint64_t& baseTailSplitCn
     uint64_t totalWindows = MathUtil::CeilDivision(blockCnt, aicoreParams_.aicNum);
 
     uint64_t mainWindows = MathUtil::CeilDivision(
-        (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.mBlockCnt +
-            adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
+        (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.mBlockCnt + adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
         aicoreParams_.aicNum);
 
-    if (blockCnt <= aicoreParams_.aicNum ||
-        (adaptiveWin_.mBlockCnt % aicoreParams_.aicNum == 0UL &&
-         (adaptiveWin_.nBlockCnt % qmmv3_tiling_const::WINDOW_LEN == 0UL || qmmv3_tiling_const::WINDOW_LEN % adaptiveWin_.nBlockCnt == 0UL))) {
+    if (blockCnt <= aicoreParams_.aicNum || (adaptiveWin_.mBlockCnt % aicoreParams_.aicNum == 0UL &&
+                                             (adaptiveWin_.nBlockCnt % qmmv3_tiling_const::WINDOW_LEN == 0UL ||
+                                              qmmv3_tiling_const::WINDOW_LEN % adaptiveWin_.nBlockCnt == 0UL))) {
         mainWindows = totalWindows;
     }
     uint64_t tailWindows = totalWindows - mainWindows;
@@ -676,13 +666,12 @@ void AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
     uint64_t mBaseTail = static_cast<uint64_t>(inputParams_.mSize % adaptiveWin_.baseM);
     uint64_t nBaseTail = static_cast<uint64_t>(inputParams_.nSize % adaptiveWin_.baseN);
     bool isMxfp4 = inputParams_.isMxPerGroup && (inputParams_.aDtype == ge::DT_FLOAT4_E2M1);
-    bool balanceAfterFixp =
-        (inputParams_.kSize < BASIC_BLOCK_SIZE_1024 ||
-         (inputParams_.kSize == BASIC_BLOCK_SIZE_1024 &&
-          adaptiveWin_.nBlockCnt >= 8)); // With enough N tiles, imbalance impact is negligible.
-    bool isInnerAxisAlign =
-        GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) %
-            qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE == 0UL;
+    bool balanceAfterFixp = (inputParams_.kSize < BASIC_BLOCK_SIZE_1024 ||
+                             (inputParams_.kSize == BASIC_BLOCK_SIZE_1024 &&
+                              adaptiveWin_.nBlockCnt >= 8)); // With enough N tiles, imbalance impact is negligible.
+    bool isInnerAxisAlign = GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) %
+                                qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
+                            0UL;
     if (mBaseTail > 0UL && !inputParams_.transA &&
         (isInnerAxisAlign || (inputParams_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
         GetOuterMAxisTailCnt(adaptiveWin_.mBaseTailSplitCnt, adaptiveWin_.mTailMain);
@@ -691,7 +680,6 @@ void AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
         (isInnerAxisAlign || (inputParams_.nSize >= LOAD_BALANCE_THRESHOLD))) {
         GetOuterNAxisTailCnt(adaptiveWin_.nBaseTailSplitCnt, adaptiveWin_.nTailMain);
     }
-
 }
 
 } // namespace optiling

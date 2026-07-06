@@ -28,10 +28,8 @@
 #include "apply_adamax.h"
 
 template <typename D_T, int K_ALIGN>
-__global__ __aicore__ void apply_adamax(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_adamax(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad, GM_ADDR varOut, GM_ADDR mOut,
+                                        GM_ADDR vOut, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAdamaxTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdamaxTilingData, tilingData, tiling);

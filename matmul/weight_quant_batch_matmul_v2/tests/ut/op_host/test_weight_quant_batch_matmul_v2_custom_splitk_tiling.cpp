@@ -36,9 +36,7 @@ struct WeightQuantBatchMatmulV2TilingCustomSplitKTestParam {
 };
 
 class TestWeightQuantBatcatmulV2TilingCustomSplitK
-    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingCustomSplitKTestParam>
-{
-};
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingCustomSplitKTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -222,11 +220,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomSplitKTes
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(hasTilingCompileInfo ? &compileInfo : nullptr)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -238,10 +236,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomSplitKTes
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -284,29 +281,31 @@ static WeightQuantBatchMatmulV2TilingCustomSplitKTestParam casesParams2448[] = {
     {"newworkcase1_80_4096_1536_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40_supportL0C2Out_1", 20,
      367239572230145}, // 1000010001000012001UL
     {"newworkcase2_80_1024_4096_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40_supportL0C2Out_1", 20,
-     367239572230145}, //1000010001000012001UL
+     367239572230145}, // 1000010001000012001UL
     {"newworkcase3_256_1024_4096_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40_supportL0C2Out_1", 20,
-     367239568035841}, //1000010000000012001UL
+     367239568035841}, // 1000010000000012001UL
     {"newworkcase4_128_4096_4096_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40_supportL0C2Out_1", 20,
-     367514450137089}, //1000010001000012021UL
-    {"randomcase4_96_2048_4096_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16_20_40_supportL0C2Out_1", 20, 367514450137089}, //1000010001000012021UL
-    {"randomcase5_100_1344_128_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16_20_40_supportL0C2Out_1", 20, 367514450137089}, //1000010001000012021UL
-    {"randomcase4_96_512_4096_1_0_0_0_0_1_-1_BF16_INT4_UINT64_BF16_20_40_supportL0C2Out_1", 20, 367514450137089}, //1000010001000012021UL
-    };
+     367514450137089}, // 1000010001000012021UL
+    {"randomcase4_96_2048_4096_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16_20_40_supportL0C2Out_1", 20,
+     367514450137089}, // 1000010001000012021UL
+    {"randomcase5_100_1344_128_1_0_0_0_0_1_-1_BF16_INT8_UINT64_BF16_20_40_supportL0C2Out_1", 20,
+     367514450137089}, // 1000010001000012021UL
+    {"randomcase4_96_512_4096_1_0_0_0_0_1_-1_BF16_INT4_UINT64_BF16_20_40_supportL0C2Out_1", 20,
+     367514450137089}, // 1000010001000012021UL
+};
 
 INSTANTIATE_TEST_CASE_P(MM2448, TestWeightQuantBatcatmulV2TilingCustomSplitK, testing::ValuesIn(casesParams2448));
 
-static void ThreadFunc(
-    const WeightQuantBatchMatmulV2TilingCustomSplitKTestParam* params, size_t testcase_num, size_t thread_idx,
-    size_t thread_num)
+static void ThreadFunc(const WeightQuantBatchMatmulV2TilingCustomSplitKTestParam* params, size_t testcase_num,
+                       size_t thread_idx, size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
 }
 
-static void TestMultiThread(
-    const WeightQuantBatchMatmulV2TilingCustomSplitKTestParam* params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const WeightQuantBatchMatmulV2TilingCustomSplitKTestParam* params, size_t testcase_num,
+                            size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {
@@ -321,6 +320,6 @@ static void TestMultiThread(
 TEST_F(TestWeightQuantBatcatmulV2TilingCustomSplitK, multi_thread_2448)
 {
     // 用3个线程测试
-    TestMultiThread(
-        casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingCustomSplitKTestParam), 3);
+    TestMultiThread(casesParams2448,
+                    sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingCustomSplitKTestParam), 3);
 }

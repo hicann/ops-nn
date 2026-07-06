@@ -28,18 +28,11 @@
 using namespace std;
 using namespace ge;
 
-class InplaceIndexAddWithSortedTiling : public testing::Test
-{
+class InplaceIndexAddWithSortedTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "InplaceIndexAddWithSortedTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "InplaceIndexAddWithSortedTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "InplaceIndexAddWithSortedTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "InplaceIndexAddWithSortedTiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -87,18 +80,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_float
         uint64_t workspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -108,20 +101,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_float
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{65535, 4096}, {65535, 4096}};
     gert::StorageShape srcShape = {{63806, 4096}, {63806, 4096}};
-    gert::StorageShape indicShape = {
-        {
-            63806,
-        },
-        {
-            63806,
-        }};
-    gert::StorageShape posShape = {
-        {
-            63806,
-        },
-        {
-            63806,
-        }};
+    gert::StorageShape indicShape = {{
+                                         63806,
+                                     },
+                                     {
+                                         63806,
+                                     }};
+    gert::StorageShape posShape = {{
+                                       63806,
+                                   },
+                                   {
+                                       63806,
+                                   }};
     gert::StorageShape outputShape = {{65535, 4096}, {65535, 4096}};
 
     // tilingParseFunc simulate
@@ -188,18 +179,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_float
         uint64_t workspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -209,20 +200,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_float
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{2, 4096}, {2, 4096}};
     gert::StorageShape srcShape = {{1, 4096}, {1, 4096}};
-    gert::StorageShape indicShape = {
-        {
-            1,
-        },
-        {
-            1,
-        }};
-    gert::StorageShape posShape = {
-        {
-            1,
-        },
-        {
-            1,
-        }};
+    gert::StorageShape indicShape = {{
+                                         1,
+                                     },
+                                     {
+                                         1,
+                                     }};
+    gert::StorageShape posShape = {{
+                                       1,
+                                   },
+                                   {
+                                       1,
+                                   }};
     gert::StorageShape outputShape = {{2, 4096}, {2, 4096}};
 
     // tilingParseFunc simulate
@@ -279,18 +268,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_bfloa
         uint64_t workspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -300,20 +289,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_bfloa
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{23, 4096}, {23, 4096}};
     gert::StorageShape srcShape = {{10, 4096}, {10, 4096}};
-    gert::StorageShape indicShape = {
-        {
-            10,
-        },
-        {
-            10,
-        }};
-    gert::StorageShape posShape = {
-        {
-            10,
-        },
-        {
-            10,
-        }};
+    gert::StorageShape indicShape = {{
+                                         10,
+                                     },
+                                     {
+                                         10,
+                                     }};
+    gert::StorageShape posShape = {{
+                                       10,
+                                   },
+                                   {
+                                       10,
+                                   }};
     gert::StorageShape outputShape = {{23, 4096}, {23, 4096}};
 
     // tilingParseFunc simulate
@@ -380,18 +367,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_no_ma
         uint64_t workspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -401,20 +388,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_no_ma
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{23, 4096}, {23, 4096}};
     gert::StorageShape srcShape = {{10, 4096}, {10, 4096}};
-    gert::StorageShape indicShape = {
-        {
-            10,
-        },
-        {
-            10,
-        }};
-    gert::StorageShape posShape = {
-        {
-            10,
-        },
-        {
-            10,
-        }};
+    gert::StorageShape indicShape = {{
+                                         10,
+                                     },
+                                     {
+                                         10,
+                                     }};
+    gert::StorageShape posShape = {{
+                                       10,
+                                   },
+                                   {
+                                       10,
+                                   }};
     gert::StorageShape outputShape = {{23, 4096}, {23, 4096}};
 
     // tilingParseFunc simulate
@@ -471,18 +456,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_int32
         uint64_t workspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -492,20 +477,18 @@ TEST_F(InplaceIndexAddWithSortedTiling, test_inplace_index_add_with_sorted_int32
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{23, 4096}, {23, 4096}};
     gert::StorageShape srcShape = {{10, 4096}, {10, 4096}};
-    gert::StorageShape indicShape = {
-        {
-            10,
-        },
-        {
-            10,
-        }};
-    gert::StorageShape posShape = {
-        {
-            10,
-        },
-        {
-            10,
-        }};
+    gert::StorageShape indicShape = {{
+                                         10,
+                                     },
+                                     {
+                                         10,
+                                     }};
+    gert::StorageShape posShape = {{
+                                       10,
+                                   },
+                                   {
+                                       10,
+                                   }};
     gert::StorageShape outputShape = {{23, 4096}, {23, 4096}};
 
     // tilingParseFunc simulate

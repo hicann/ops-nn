@@ -67,4 +67,4 @@ ACLNN_API aclnnStatus aclnnLogSigmoidForward(void* workspace, uint64_t workspace
 }
 #endif
 
-#endif  // OP_API_INC_LOG_SIGMOID_H_
+#endif // OP_API_INC_LOG_SIGMOID_H_

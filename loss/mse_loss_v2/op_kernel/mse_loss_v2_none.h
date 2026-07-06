@@ -20,8 +20,7 @@
 
 namespace MSELossV2Namespace {
 template <typename T>
-class MSELossV2None : public MSELossV2Base<T>
-{
+class MSELossV2None : public MSELossV2Base<T> {
 public:
     __aicore__ inline MSELossV2None(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : MSELossV2Base<T>(pipe, tilingData)
@@ -58,8 +57,8 @@ public:
     }
 
 private:
-    __aicore__ inline void Compute(
-        const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1, const uint64_t length)
+    __aicore__ inline void Compute(const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1,
+                                   const uint64_t length)
     {
         AscendC::Sub(cast0, cast0, cast1, length);
         AscendC::Mul(cast1, cast0, cast0, length);
@@ -85,8 +84,7 @@ private:
 };
 
 template <>
-class MSELossV2None<float> : public MSELossV2Base<float>
-{
+class MSELossV2None<float> : public MSELossV2Base<float> {
 public:
     __aicore__ inline MSELossV2None(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : MSELossV2Base<float>(pipe, tilingData)

@@ -19,8 +19,8 @@
 namespace optiling {
 
 struct DequantSwigluQuantCompileInfo {
-uint64_t coreNum = 0;
-uint64_t ubSize = 0;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
 };
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TEST_TILING_RUNTIME_DEQUANT_SWIGLU_QUANT_H_

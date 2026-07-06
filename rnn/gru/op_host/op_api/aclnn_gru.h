@@ -29,9 +29,9 @@ extern "C" {
  *                   定长模式（batchSizes为nullptr）：shape为(T, B, I)或batchFirst=true时为(B, T, I)。
  *                   不定长模式（batchSizes非nullptr）：shape为(sum(batch_size), I)。
  * @param [in] params: 权重和偏置参数列表，数据类型与input保持一致，format支持：ND。
- *                     列表长度 = 2 * bScale * dScale * numLayers，其中 bScale = hasBias ? 2 : 1，dScale = bidirection ? 2 : 1。
- *                     排列顺序：先层后方向，每组内依次为 W_ih、W_hh、b_ih（有偏置时）、b_hh（有偏置时）。
- *                     W_ih 形状为 [3H, I]（首层）或 [3H, D*H]（非首层），W_hh 形状为 [3H, H]，偏置形状为 [3H]。
+ *                     列表长度 = 2 * bScale * dScale * numLayers，其中 bScale = hasBias ? 2 : 1，dScale = bidirection ?
+ * 2 : 1。 排列顺序：先层后方向，每组内依次为 W_ih、W_hh、b_ih（有偏置时）、b_hh（有偏置时）。 W_ih 形状为 [3H,
+ * I]（首层）或 [3H, D*H]（非首层），W_hh 形状为 [3H, H]，偏置形状为 [3H]。
  * @param [in] hx: 初始隐状态，对应公式中的 h_0。可选参数，传入空指针表示初始隐状态为零向量。
  *                 数据类型与input保持一致，shape为(L*D, B, H)。
  * @param [in] batchSizes: 不定长序列的batch大小数组，对应PackedSequence模式。可选参数，传入空指针表示使用定长模式。
@@ -62,26 +62,12 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnGRUGetWorkspaceSize(
-    const aclTensor *input,
-    const aclTensorList *params,
-    const aclTensor *hx,
-    const aclTensor *batchSizes,
-    bool hasBias,
-    int64_t numLayers,
-    double dropout,
-    bool train,
-    bool bidirection,
-    bool batchFirst,
-    aclTensor *output,
-    aclTensor *hy,
-    aclTensorList *rOut,
-    aclTensorList *zOut,
-    aclTensorList *nOut,
-    aclTensorList *hnOut,
-    aclTensorList *hOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList* params, const aclTensor* hx,
+                                               const aclTensor* batchSizes, bool hasBias, int64_t numLayers,
+                                               double dropout, bool train, bool bidirection, bool batchFirst,
+                                               aclTensor* output, aclTensor* hy, aclTensorList* rOut,
+                                               aclTensorList* zOut, aclTensorList* nOut, aclTensorList* hnOut,
+                                               aclTensorList* hOut, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnGRU的第二段接口，用于执行计算。
@@ -91,11 +77,10 @@ ACLNN_API aclnnStatus aclnnGRUGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnGRU(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                            aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGRU(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif//OP_API_INC_LEVEL2_ACLNN_GRU_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_GRU_H_

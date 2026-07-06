@@ -6,19 +6,18 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef OP_API_INC_LEVEL0_MAX_POOL_WITH_ARGMAX_V3_H_
 #define OP_API_INC_LEVEL0_MAX_POOL_WITH_ARGMAX_V3_H_
 
 #include "opdev/op_executor.h"
 
-namespace l0op
-{
+namespace l0op {
 const std::tuple<const aclTensor*, const aclTensor*> MaxPoolWithArgmaxV3(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
     const op::DataType dtype, const aclIntArray* dilation, bool ceilMode, std::string& dataFormat,
     aclOpExecutor* executor);
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_MAX_POOL_WITH_ARGMAX_V3_H_
+#endif // OP_API_INC_LEVEL0_MAX_POOL_WITH_ARGMAX_V3_H_

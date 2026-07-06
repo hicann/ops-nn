@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -72,9 +72,9 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Proces
     cacheTensor0 = cacheBuffer0.Get<float>();
     cacheTensor1 = cacheBuffer1.Get<float>();
 
-    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop
-                              ? td_->gammaBetaMfactor
-                              : (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
+    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop ?
+                              td_->gammaBetaMfactor :
+                              (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
     int64_t loopCount = td_->gammaBetaBasicBlockLoop ? td_->gammaBetaBasicBlockLoop : 1;
     for (int64_t ni = 0; ni < NTotalloop; ++ni) {
         Prologue();
@@ -87,8 +87,8 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Proces
             if (td_->gammaBetaBasicBlockLoop > 0 &&
                 ((basicBlockIdx < td_->gammaBetaMainFoldCount) ||
                  (basicBlockIdx == td_->gammaBetaMainFoldCount && td_->gammaBetaMtail > 0))) {
-                const int64_t mfactorFold =
-                    (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor : td_->gammaBetaMtail;
+                const int64_t mfactorFold = (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor :
+                                                                                            td_->gammaBetaMtail;
                 ProcessFoldBlock(ni, basicBlockIdx, mfactorFold, nfactor);
             }
 
@@ -113,7 +113,8 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Prolog
 }
 
 template <typename T, typename PD_GAMMA_TYPE>
-__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Epilogue(const int64_t offset, const int64_t extent)
+__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Epilogue(const int64_t offset,
+                                                                                   const int64_t extent)
 {
     // Epilogue
     if (td_->pdbetaIsRequire) {
@@ -136,8 +137,10 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Epilog
 }
 
 template <typename T, typename PD_GAMMA_TYPE>
-__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::ProcessMainBlock(
-    const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::ProcessMainBlock(const int64_t ni,
+                                                                                           const int64_t basicBlockIdx,
+                                                                                           const int64_t mfactor,
+                                                                                           const int64_t nfactor)
 {
     // ProcessMainBlock
     int64_t offset = ni * td_->gammaBetaNfactor + basicBlockIdx * td_->gammaBetaMfactor * td_->col;
@@ -189,12 +192,14 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Proces
 }
 
 template <typename T, typename PD_GAMMA_TYPE>
-__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::ProcessFoldBlock(
-    const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::ProcessFoldBlock(const int64_t ni,
+                                                                                           const int64_t basicBlockIdx,
+                                                                                           const int64_t mfactor,
+                                                                                           const int64_t nfactor)
 {
     // ProcessFoldBlock
-    int64_t offset =
-        ni * td_->gammaBetaNfactor + (basicBlockIdx + td_->gammaBetaBasicBlockLoop) * td_->gammaBetaMfactor * td_->col;
+    int64_t offset = ni * td_->gammaBetaNfactor +
+                     (basicBlockIdx + td_->gammaBetaBasicBlockLoop) * td_->gammaBetaMfactor * td_->col;
     LocalTensor<float> dyFold_ = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
         CopyIn(dyFold_, dyInTensorGM[offset], mfactor, nfactor, td_->gammaBetaNfactor, td_->col);
@@ -248,8 +253,10 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Proces
 }
 
 template <typename T, typename PD_GAMMA_TYPE>
-__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::ProcessSummation(
-    const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::ProcessSummation(const int64_t ni,
+                                                                                           const int64_t basicBlockIdx,
+                                                                                           const int64_t mfactor,
+                                                                                           const int64_t nfactor)
 {
     // ProcessSummation
     int64_t cacheID = GetCacheID(basicBlockIdx);
@@ -297,8 +304,8 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Comput
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
@@ -325,8 +332,8 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Comput
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll2 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll2 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;

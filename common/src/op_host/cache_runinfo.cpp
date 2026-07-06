@@ -16,11 +16,9 @@ using namespace gert;
 namespace optiling {
 const int MAX_TILING_DADA_SIZE = 64 * 1024;
 
-CacheTilingContext::CacheTilingContext()
-{}
+CacheTilingContext::CacheTilingContext() {}
 
-CacheTilingContext::~CacheTilingContext()
-{}
+CacheTilingContext::~CacheTilingContext() {}
 
 bool CacheTilingContext::Save(TilingContext& context)
 {

@@ -27,10 +27,7 @@ namespace optiling {
 // ============================================================================
 // IsCapable：SIMT 模板是兜底模板，无条件接受
 // ============================================================================
-bool InplaceIndexFillTilingSimt::IsCapable()
-{
-    return true;
-}
+bool InplaceIndexFillTilingSimt::IsCapable() { return true; }
 
 // ============================================================================
 // CalcSimtUsedCoreNum：计算 SIMT 计算侧需要的核数
@@ -107,9 +104,8 @@ ge::graphStatus InplaceIndexFillTilingSimt::GetWorkspaceSize()
 uint64_t InplaceIndexFillTilingSimt::GetTilingKey() const
 {
     uint64_t templateMode = static_cast<uint64_t>(TPL_MODE_TEMPLATE_SIMT);
-    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
-        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
-        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4) ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32) :
+                                                       static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
     return GET_TPL_TILING_KEY(templateMode, dtypeMode);
 }
 
@@ -136,13 +132,9 @@ void InplaceIndexFillTilingSimt::DumpTilingInfo()
 {
     auto* tilingData = context_->GetTilingData<InplaceIndexFillSimtTilingData>();
     std::ostringstream info;
-    info << "tilingKeySimt: " << tilingData->tilingKeySimt
-         << ", p: " << tilingData->p
-         << ", n: " << tilingData->n
-         << ", q: " << tilingData->q
-         << ", indicesNum: " << tilingData->indicesNum
-         << ", usedCoreNum: " << tilingData->usedCoreNum
-         << ", simtUsedCoreNum: " << tilingData->simtUsedCoreNum;
+    info << "tilingKeySimt: " << tilingData->tilingKeySimt << ", p: " << tilingData->p << ", n: " << tilingData->n
+         << ", q: " << tilingData->q << ", indicesNum: " << tilingData->indicesNum
+         << ", usedCoreNum: " << tilingData->usedCoreNum << ", simtUsedCoreNum: " << tilingData->simtUsedCoreNum;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 

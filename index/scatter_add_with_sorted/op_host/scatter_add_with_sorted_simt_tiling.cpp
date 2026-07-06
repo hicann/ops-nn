@@ -68,8 +68,8 @@ uint64_t ScatterAddWithSortedSimtTiling::GetTilingKey() const
 
     uint64_t isScalar = isUpdateScalar_ ? TPL_SCALAR_TRUE : TPL_SCALAR_FALSE;
     uint64_t isDeterm = isDeterminTemplate_ ? TPL_DETERM_TRUE : TPL_DETERM_FALSE;
-    uint64_t addrType =
-        ((varShape_[1] * indicesNum_ > INT32_MAX) || (varSize_ > INT32_MAX)) ? TPL_ADDR_B64 : TPL_ADDR_B32;
+    uint64_t addrType = ((varShape_[1] * indicesNum_ > INT32_MAX) || (varSize_ > INT32_MAX)) ? TPL_ADDR_B64 :
+                                                                                               TPL_ADDR_B32;
     return GET_TPL_TILING_KEY(TPL_MODE_SIMT, isScalar, isDeterm, addrType);
 }
 
@@ -78,8 +78,8 @@ ge::graphStatus ScatterAddWithSortedSimtTiling::GetWorkspaceSize()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     workspacesSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     if (isDeterminTemplate_) {
-        uint32_t userWorkspacesSize =
-            (usedCoreNum_ * DOUBLE * varShape_[1]) * varTypeSize_ + usedCoreNum_ * DOUBLE * indicesDtypeSize_;
+        uint32_t userWorkspacesSize = (usedCoreNum_ * DOUBLE * varShape_[1]) * varTypeSize_ +
+                                      usedCoreNum_ * DOUBLE * indicesDtypeSize_;
         userWorkspacesSize = Ops::Base::CeilAlign(userWorkspacesSize, static_cast<uint32_t>(indicesDtypeSize_));
         workspacesSize_ += userWorkspacesSize;
     }

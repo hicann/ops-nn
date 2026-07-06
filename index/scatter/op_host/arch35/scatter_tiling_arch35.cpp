@@ -90,624 +90,652 @@ constexpr int64_t DETERM_MIN_COL = 128;
 constexpr int64_t UB_ALIGN_VALUE = 32;
 constexpr uint64_t DETERM_TILINGKEY = 1000;
 
-
-static map<const ge::DataType, const int32_t> g_dtypeLen = {{ge::DT_INT8, 1}, {ge::DT_UINT8, 1}, {ge::DT_FLOAT16, 2},
-                                                            {ge::DT_FLOAT, 4}, {ge::DT_INT32, 4}, {ge::DT_BF16, 2},
-                                                            {ge::DT_FLOAT8_E4M3FN, 1}, {ge::DT_FLOAT8_E5M2, 1},
-                                                            {ge::DT_HIFLOAT8, 1}};
+static map<const ge::DataType, const int32_t> g_dtypeLen = {
+    {ge::DT_INT8, 1}, {ge::DT_UINT8, 1},         {ge::DT_FLOAT16, 2},     {ge::DT_FLOAT, 4},   {ge::DT_INT32, 4},
+    {ge::DT_BF16, 2}, {ge::DT_FLOAT8_E4M3FN, 1}, {ge::DT_FLOAT8_E5M2, 1}, {ge::DT_HIFLOAT8, 1}};
 
 std::map<std::tuple<bool, ge::DataType, ge::DataType>, int32_t> tilingKeyMap;
 
-ge::graphStatus ScatterTiling::GetPlatformInfo() {
-  auto platformPtr = context_->GetPlatformInfo();
-  if (platformPtr == nullptr) {
-    auto compileInfoPtr = static_cast<const ScatterKvCompileInfo*>(context_->GetCompileInfo());
-    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_, "compile info is null"),
+ge::graphStatus ScatterTiling::GetPlatformInfo()
+{
+    auto platformPtr = context_->GetPlatformInfo();
+    if (platformPtr == nullptr) {
+        auto compileInfoPtr = static_cast<const ScatterKvCompileInfo*>(context_->GetCompileInfo());
+        OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_, "compile info is null"),
                     return ge::GRAPH_FAILED);
-    aivCoreNum = static_cast<int32_t>(compileInfoPtr->core_num);
-    ubSize = static_cast<int32_t>(compileInfoPtr->ub_size);
-  } else {
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-    aivCoreNum = static_cast<int32_t>(ascendcPlatform.GetCoreNumAiv());
-
-    uint64_t ubSizePlatform;
-    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
-    ubSize = static_cast<int32_t>(ubSizePlatform);
-  }
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
-  auto inputDesc = context_->GetInputDesc(INPUT_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
-  inputDtype = inputDesc->GetDataType();
-  if (inputDtype != ge::DataType::DT_FLOAT16 && inputDtype != ge::DataType::DT_FLOAT &&
-      inputDtype != ge::DataType::DT_BF16 && inputDtype != ge::DataType::DT_INT8 &&
-      inputDtype != ge::DataType::DT_UINT8 && inputDtype != ge::DataType::DT_INT32 &&
-      inputDtype != ge::DataType::DT_FLOAT8_E4M3FN && inputDtype != ge::DataType::DT_FLOAT8_E5M2 &&
-      inputDtype != ge::DataType::DT_HIFLOAT8) {
-    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-        Ops::Base::ToString(inputDtype).c_str(),
-        "float16, float32, bfloat16, int8, uint8, int32, float8_e4m3fn, float8_e5m2, hifloat8");
-    return ge::GRAPH_FAILED;
-  }
-
-  auto indicesDesc = context_->GetInputDesc(INDICES_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, indicesDesc);
-  indicesDtype = indicesDesc->GetDataType();
-  if (indicesDtype != ge::DataType::DT_INT32 && indicesDtype != ge::DataType::DT_INT64) {
-    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices",
-        Ops::Base::ToString(indicesDtype).c_str(), "int32, int64");
-    return ge::GRAPH_FAILED;
-  }
-
-  auto updatesDesc = context_->GetInputDesc(UPDATES_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, updatesDesc);
-  updatesDtype = updatesDesc->GetDataType();
-  if (updatesDtype != ge::DataType::DT_FLOAT16 && updatesDtype != ge::DataType::DT_FLOAT &&
-      updatesDtype != ge::DataType::DT_BF16 && updatesDtype != ge::DataType::DT_INT8 &&
-      updatesDtype != ge::DataType::DT_UINT8 && updatesDtype != ge::DataType::DT_INT32 &&
-      updatesDtype != ge::DataType::DT_FLOAT8_E4M3FN && updatesDtype != ge::DataType::DT_FLOAT8_E5M2 &&
-      updatesDtype != ge::DataType::DT_HIFLOAT8) {
-    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "updates",
-        Ops::Base::ToString(updatesDtype).c_str(),
-        "float16, float32, bfloat16, int8, uint8, int32, float8_e4m3fn, float8_e5m2, hifloat8");
-    return ge::GRAPH_FAILED;
-  }
-
-  if (updatesDtype != inputDtype) {
-    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and updates",
-        (Ops::Base::ToString(inputDtype) + " and " + Ops::Base::ToString(updatesDtype)).c_str(),
-        "The dtype of x must be the same as updates");
-    return ge::GRAPH_FAILED;
-  }
-
-  dtypeSize = g_dtypeLen[inputDtype];
-
-  auto indices = context_->GetInputShape(INDICES_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, indices);
-  auto indicesShape = Ops::Base::EnsureNotScalar(indices->GetOriginShape());
-  if (indicesShape.GetDimNum() > MAX_INDICES_DIM) {
-    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
-        std::to_string(indicesShape.GetDimNum()).c_str(),
-        "The shape dim of indices must be within the range [0, 2]");
-    return ge::GRAPH_FAILED;
-  }
-  indicesDim = indicesShape.GetDimNum();
-
-  auto attrs = context_->GetAttrs();
-  OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-
-  const char* reducePtr = attrs->GetAttrPointer<char>(REDUCE_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, reducePtr);
-  std::string reduce(reducePtr);
-  if (reduce != "update" && reduce != "none" && reduce != "") {
-    OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduce",
-        reduce.c_str(), "'update', 'none' or empty");
-    return ge::GRAPH_FAILED;
-  }
-
-  const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(AXIS_INDEX);
-  axis = (axisPtr == nullptr) ? 0 : *axisPtr;
-  if (axis == 0) {
-    OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis",
-        "0", "non-zero");
-    return ge::GRAPH_FAILED;
-  }
-  return ge::GRAPH_SUCCESS;
-}
-
-bool ScatterTiling::IsCapable() {
-  return true;
-}
-
-ge::graphStatus ScatterTiling::GetShapes() {
-  // get input_shape
-  auto inputShape = context_->GetInputShape(INPUT_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-  auto indicesShape = context_->GetInputShape(INDICES_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, indicesShape);
-  auto updatesShape = context_->GetInputShape(UPDATES_INDEX);
-  OP_CHECK_NULL_WITH_CONTEXT(context_, updatesShape);
-
-  auto indicesDimSize = indicesShape->GetOriginShape().GetDimNum();
-  if (indicesDimSize == ZERO_DIM_SIZE && updatesShape->GetOriginShape().GetDim(BATCH_DIM) != 1) {
-    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indices and updates",
-        (std::to_string(indicesDimSize) + " and " +
-         std::to_string(updatesShape->GetOriginShape().GetDim(BATCH_DIM))).c_str(),
-        "When the dim of indices is 0, the axis 1 of updates must be 1");
-    return ge::GRAPH_FAILED;
-  }
-  if (indicesDimSize != ZERO_DIM_SIZE && indicesDimSize != ONE_DIM_SIZE && indicesDimSize != TWO_DIM_SIZE) {
-    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
-        std::to_string(indicesDimSize).c_str(),
-        "The shape dim of indices must be within the range [0, 2]");
-    return ge::GRAPH_FAILED;
-  }
-
-  if (context_->GetDeterministic() && indicesDimSize == TWO_DIM_SIZE) {
-    isDeterministic_ = true;
-  }
-
-  inputOriginShape = Ops::Base::EnsureNotScalar(inputShape->GetOriginShape());
-  indicesOriginShape = Ops::Base::EnsureNotScalar(indicesShape->GetOriginShape());
-  updatesOriginShape = Ops::Base::EnsureNotScalar(updatesShape->GetOriginShape());
-
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::CheckNullTensor() {
-  if (inputOriginShape.GetDimNum() != updatesOriginShape.GetDimNum()) {
-    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and updates",
-        (std::to_string(inputOriginShape.GetDimNum()) + " and " +
-         std::to_string(updatesOriginShape.GetDimNum())).c_str(),
-        "The shape dims of x and updates must be the same");
-    return ge::GRAPH_FAILED;
-  }
-
-  if (inputOriginShape.GetDimNum() * indicesOriginShape.GetDimNum() == 0) {
-    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and indices",
-        (std::to_string(inputOriginShape.GetDimNum()) + " and " +
-         std::to_string(indicesOriginShape.GetDimNum())).c_str(),
-        "The shape dims of x and indices must greater than 0");
-    return ge::GRAPH_FAILED;
-  }
-
-  int64_t inputSize = inputOriginShape.GetShapeSize();
-  int64_t indicesSize = indicesOriginShape.GetShapeSize();
-  int64_t updatesSize = updatesOriginShape.GetShapeSize();
-  if (inputSize == 0 || indicesSize == 0 || updatesSize == 0) {
-    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x, indices and updates",
-        (std::to_string(inputSize) + ", " + std::to_string(indicesSize) +
-         " and " + std::to_string(updatesSize)).c_str(),
-        "x, indices and updates do not support empty tensors");
-    return ge::GRAPH_FAILED;
-  }
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::MergeDims() {
-  int32_t oldDims = inputOriginShape.GetDimNum();
-  int32_t tmpAbsAxis = axis < 0 ? oldDims + axis : axis;
-
-  if (tmpAbsAxis < 0 || tmpAbsAxis >= oldDims) {
-      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(tmpAbsAxis).c_str(),
-      "The value of axis must less than the shape dims of x");
-    return ge::GRAPH_FAILED;
-  }
-
-  size_t absAxis = size_t(tmpAbsAxis);
-  inputNewShape.SetDimNum(0);
-  updatesNewShape.SetDimNum(0);
-
-  inputNewShape.AppendDim(inputOriginShape[0]);
-  updatesNewShape.AppendDim(updatesOriginShape[0]);
-
-  size_t inputSecondDims = 1;
-  size_t updatesSecondDims = 1;
-  for (size_t i = 1; i < absAxis; i++) {
-    inputSecondDims *= inputOriginShape[i];
-    updatesSecondDims *= updatesOriginShape[i];
-  }
-  inputNewShape.AppendDim(inputSecondDims);
-  updatesNewShape.AppendDim(updatesSecondDims);
-
-  inputNewShape.AppendDim(inputOriginShape[absAxis]);
-  updatesNewShape.AppendDim(updatesOriginShape[absAxis]);
-
-  size_t inputFourthDims = 1;
-  size_t updatesFourthDims = 1;
-  for (size_t i = absAxis + 1; i < inputOriginShape.GetDimNum(); i++) {
-    inputFourthDims *= inputOriginShape[i];
-    updatesFourthDims *= updatesOriginShape[i];
-  }
-
-  inputNewShape.AppendDim(inputFourthDims);
-  updatesNewShape.AppendDim(updatesFourthDims);
-  axis = SECOND_LAST_DIM;
-
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::CheckShapes() {
-  int64_t indicesOriginDim = indicesOriginShape.GetDimNum();
-  if (indicesOriginDim == TWO_INDICES) {
-    OP_CHECK_IF(indicesOriginShape[1] != 2,
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "indices",
-                        Ops::Base::ToString(indicesOriginShape).c_str(),
-                        "When dim of indices is 2, the shape of 2nd axis must be 2"),
-                    return ge::GRAPH_FAILED);
-  }
-
-  if (updatesNewShape[DIM0] != indicesOriginShape[DIM0]) {
-    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and indices",
-        (std::to_string(updatesNewShape[DIM0]) + " and " +
-         std::to_string(indicesOriginShape[DIM0])).c_str(),
-        "1st axis of updates must be equal to the same axis of indices");
-    return ge::GRAPH_FAILED;
-  }
-
-  if (updatesNewShape[DIM0] > inputNewShape[DIM0]) {
-    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
-        (std::to_string(updatesNewShape[DIM0]) + " and " +
-         std::to_string(inputNewShape[DIM0])).c_str(),
-        "The 1st axis of updates must be less than or equal to that of x");
-    return ge::GRAPH_FAILED;
-  }
-
-  if (updatesNewShape[DIM1] != inputNewShape[DIM1]) {
-    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
-        (std::to_string(updatesNewShape[DIM1]) + " and " +
-         std::to_string(inputNewShape[DIM1])).c_str(),
-        "The 2nd axis of updates must be equal to the same axis of x");
-    return ge::GRAPH_FAILED;
-  }
-
-  if (axis == SECOND_LAST_DIM) {
-    if (updatesNewShape[DIM3] != inputNewShape[DIM3]) {
-      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
-          (std::to_string(updatesNewShape[DIM3]) + " and " +
-           std::to_string(inputNewShape[DIM3])).c_str(),
-          "when axis is -2, the 4th axis of updates must be equal to the same axis of x");
-      return ge::GRAPH_FAILED;
-    }
-  } else if (axis == -1) {
-    if (updatesNewShape[DIM2] != inputNewShape[DIM2]) {
-      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
-          (std::to_string(updatesNewShape[DIM2]) + " and " +
-           std::to_string(inputNewShape[DIM2])).c_str(),
-          "when axis is -1, the 3th axis of updates must be equal to the same axis of x");
-      return ge::GRAPH_FAILED;
-    }
-  } else {
-    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", 
-    std::to_string(axis).c_str(), "The value of axis after dim-merge must be -1 or -2");
-  }
-  return ge::GRAPH_SUCCESS;
-}
-
-static map<const int32_t, const std::vector<int32_t>> g_factors = {{8, {8, 4, 2, 1}},  {4, {4, 2, 1}}, {2, {2, 1}}};
-
-ge::graphStatus ScatterTiling::PromoteDtype() {
-  if (simdTemp > 0) {
-    return ge::GRAPH_SUCCESS;
-  }
-  int32_t factor = PROMOTE_DTYPE_SIZE / dtypeSize;
-  if (axis == SECOND_LAST_DIM && updatesNewShape[DIM3] % factor == 0) {
-    updatesNewShape[DIM3] /= factor;
-    inputNewShape[DIM3] /= factor;
-    dtypeSize = PROMOTE_DTYPE_SIZE;
-  }
-
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::DoSimdTiling() {
-  // [batch_size, outer_size, scatter_dim_size, inner_size]
-  // split batch(b*o)
-  int64_t spiltNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
-  if (simdTemp == SIMD_PERF_TEMP) {
-    // split batch(b*o*s)
-    spiltNum = updatesNewShape[DIM0] * updatesNewShape[DIM1] * updatesNewShape[DIM2];
-  }
-  blockFactor = Ops::Base::CeilDiv(spiltNum, static_cast<int64_t>(aivCoreNum));
-  aivCoreNum = Ops::Base::CeilDiv(spiltNum, blockFactor);
-  tailBlockData = spiltNum - (aivCoreNum - 1) * blockFactor;
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::GetTilingParam() {
-  if (simdTemp > 0) {
-    return DoSimdTiling();
-  }
-  int64_t totalDims = updatesNewShape[DIM0] * updatesNewShape[DIM1] * updatesNewShape[DIM2] * updatesNewShape[DIM3];
-  if (totalDims > MAX_INT32_NUM) {
-    isUint64 = true;
-  }
-  if (totalDims <= MIN_FACTOR) {
-    // use one core
-    blockFactor = totalDims;
-    aivCoreNum = 1;
-    tailCoreNum = 0;
-    oneCoreTemp = true;
-  } else if (totalDims <= aivCoreNum * MIN_FACTOR) {
-    // use part of cores
-    oneCoreTemp = false;
-    blockFactor = MIN_FACTOR;
-    aivCoreNum = (totalDims + MIN_FACTOR - 1) / MIN_FACTOR;
-    if (totalDims % MIN_FACTOR == 0) {
-      tailCoreNum = 0;
+        aivCoreNum = static_cast<int32_t>(compileInfoPtr->core_num);
+        ubSize = static_cast<int32_t>(compileInfoPtr->ub_size);
     } else {
-      tailCoreNum = 1;
-    }
-  } else {
-    // use all cores
-    oneCoreTemp = false;
-    blockFactor = (totalDims + aivCoreNum - 1) / aivCoreNum;
-    tailCoreNum = aivCoreNum * blockFactor - totalDims;
-  }
-  context_->SetLocalMemorySize(ubSize - SIMT_RESERVED_SIZE);
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        aivCoreNum = static_cast<int32_t>(ascendcPlatform.GetCoreNumAiv());
 
-  if (oneCoreTemp) {
-    tilingData.set_simtThreadNum(simtThreadNum);
-    if (totalDims <= simtThreadNum) {
-        tilingData.set_simtUsedCore(1);
-        tilingData.set_simtPerCoreNum(totalDims);
-        tilingData.set_simtTailCoreNum(totalDims);
+        uint64_t ubSizePlatform;
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
+        ubSize = static_cast<int32_t>(ubSizePlatform);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterTiling::GetShapeAttrsInfo()
+{
+    auto inputDesc = context_->GetInputDesc(INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
+    inputDtype = inputDesc->GetDataType();
+    if (inputDtype != ge::DataType::DT_FLOAT16 && inputDtype != ge::DataType::DT_FLOAT &&
+        inputDtype != ge::DataType::DT_BF16 && inputDtype != ge::DataType::DT_INT8 &&
+        inputDtype != ge::DataType::DT_UINT8 && inputDtype != ge::DataType::DT_INT32 &&
+        inputDtype != ge::DataType::DT_FLOAT8_E4M3FN && inputDtype != ge::DataType::DT_FLOAT8_E5M2 &&
+        inputDtype != ge::DataType::DT_HIFLOAT8) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", Ops::Base::ToString(inputDtype).c_str(),
+            "float16, float32, bfloat16, int8, uint8, int32, float8_e4m3fn, float8_e5m2, hifloat8");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto indicesDesc = context_->GetInputDesc(INDICES_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, indicesDesc);
+    indicesDtype = indicesDesc->GetDataType();
+    if (indicesDtype != ge::DataType::DT_INT32 && indicesDtype != ge::DataType::DT_INT64) {
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices", Ops::Base::ToString(indicesDtype).c_str(),
+                                  "int32, int64");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto updatesDesc = context_->GetInputDesc(UPDATES_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, updatesDesc);
+    updatesDtype = updatesDesc->GetDataType();
+    if (updatesDtype != ge::DataType::DT_FLOAT16 && updatesDtype != ge::DataType::DT_FLOAT &&
+        updatesDtype != ge::DataType::DT_BF16 && updatesDtype != ge::DataType::DT_INT8 &&
+        updatesDtype != ge::DataType::DT_UINT8 && updatesDtype != ge::DataType::DT_INT32 &&
+        updatesDtype != ge::DataType::DT_FLOAT8_E4M3FN && updatesDtype != ge::DataType::DT_FLOAT8_E5M2 &&
+        updatesDtype != ge::DataType::DT_HIFLOAT8) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "updates", Ops::Base::ToString(updatesDtype).c_str(),
+            "float16, float32, bfloat16, int8, uint8, int32, float8_e4m3fn, float8_e5m2, hifloat8");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (updatesDtype != inputDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x and updates",
+            (Ops::Base::ToString(inputDtype) + " and " + Ops::Base::ToString(updatesDtype)).c_str(),
+            "The dtype of x must be the same as updates");
+        return ge::GRAPH_FAILED;
+    }
+
+    dtypeSize = g_dtypeLen[inputDtype];
+
+    auto indices = context_->GetInputShape(INDICES_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, indices);
+    auto indicesShape = Ops::Base::EnsureNotScalar(indices->GetOriginShape());
+    if (indicesShape.GetDimNum() > MAX_INDICES_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
+                                                 std::to_string(indicesShape.GetDimNum()).c_str(),
+                                                 "The shape dim of indices must be within the range [0, 2]");
+        return ge::GRAPH_FAILED;
+    }
+    indicesDim = indicesShape.GetDimNum();
+
+    auto attrs = context_->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+
+    const char* reducePtr = attrs->GetAttrPointer<char>(REDUCE_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, reducePtr);
+    std::string reduce(reducePtr);
+    if (reduce != "update" && reduce != "none" && reduce != "") {
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduce", reduce.c_str(), "'update', 'none' or empty");
+        return ge::GRAPH_FAILED;
+    }
+
+    const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(AXIS_INDEX);
+    axis = (axisPtr == nullptr) ? 0 : *axisPtr;
+    if (axis == 0) {
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis", "0", "non-zero");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+bool ScatterTiling::IsCapable() { return true; }
+
+ge::graphStatus ScatterTiling::GetShapes()
+{
+    // get input_shape
+    auto inputShape = context_->GetInputShape(INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
+    auto indicesShape = context_->GetInputShape(INDICES_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, indicesShape);
+    auto updatesShape = context_->GetInputShape(UPDATES_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, updatesShape);
+
+    auto indicesDimSize = indicesShape->GetOriginShape().GetDimNum();
+    if (indicesDimSize == ZERO_DIM_SIZE && updatesShape->GetOriginShape().GetDim(BATCH_DIM) != 1) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indices and updates",
+                                               (std::to_string(indicesDimSize) + " and " +
+                                                std::to_string(updatesShape->GetOriginShape().GetDim(BATCH_DIM)))
+                                                   .c_str(),
+                                               "When the dim of indices is 0, the axis 1 of updates must be 1");
+        return ge::GRAPH_FAILED;
+    }
+    if (indicesDimSize != ZERO_DIM_SIZE && indicesDimSize != ONE_DIM_SIZE && indicesDimSize != TWO_DIM_SIZE) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
+                                                 std::to_string(indicesDimSize).c_str(),
+                                                 "The shape dim of indices must be within the range [0, 2]");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (context_->GetDeterministic() && indicesDimSize == TWO_DIM_SIZE) {
+        isDeterministic_ = true;
+    }
+
+    inputOriginShape = Ops::Base::EnsureNotScalar(inputShape->GetOriginShape());
+    indicesOriginShape = Ops::Base::EnsureNotScalar(indicesShape->GetOriginShape());
+    updatesOriginShape = Ops::Base::EnsureNotScalar(updatesShape->GetOriginShape());
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterTiling::CheckNullTensor()
+{
+    if (inputOriginShape.GetDimNum() != updatesOriginShape.GetDimNum()) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x and updates",
+            (std::to_string(inputOriginShape.GetDimNum()) + " and " + std::to_string(updatesOriginShape.GetDimNum()))
+                .c_str(),
+            "The shape dims of x and updates must be the same");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (inputOriginShape.GetDimNum() * indicesOriginShape.GetDimNum() == 0) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x and indices",
+            (std::to_string(inputOriginShape.GetDimNum()) + " and " + std::to_string(indicesOriginShape.GetDimNum()))
+                .c_str(),
+            "The shape dims of x and indices must greater than 0");
+        return ge::GRAPH_FAILED;
+    }
+
+    int64_t inputSize = inputOriginShape.GetShapeSize();
+    int64_t indicesSize = indicesOriginShape.GetShapeSize();
+    int64_t updatesSize = updatesOriginShape.GetShapeSize();
+    if (inputSize == 0 || indicesSize == 0 || updatesSize == 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context_->GetNodeName(), "x, indices and updates",
+            (std::to_string(inputSize) + ", " + std::to_string(indicesSize) + " and " + std::to_string(updatesSize))
+                .c_str(),
+            "x, indices and updates do not support empty tensors");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterTiling::MergeDims()
+{
+    int32_t oldDims = inputOriginShape.GetDimNum();
+    int32_t tmpAbsAxis = axis < 0 ? oldDims + axis : axis;
+
+    if (tmpAbsAxis < 0 || tmpAbsAxis >= oldDims) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(tmpAbsAxis).c_str(),
+                                              "The value of axis must less than the shape dims of x");
+        return ge::GRAPH_FAILED;
+    }
+
+    size_t absAxis = size_t(tmpAbsAxis);
+    inputNewShape.SetDimNum(0);
+    updatesNewShape.SetDimNum(0);
+
+    inputNewShape.AppendDim(inputOriginShape[0]);
+    updatesNewShape.AppendDim(updatesOriginShape[0]);
+
+    size_t inputSecondDims = 1;
+    size_t updatesSecondDims = 1;
+    for (size_t i = 1; i < absAxis; i++) {
+        inputSecondDims *= inputOriginShape[i];
+        updatesSecondDims *= updatesOriginShape[i];
+    }
+    inputNewShape.AppendDim(inputSecondDims);
+    updatesNewShape.AppendDim(updatesSecondDims);
+
+    inputNewShape.AppendDim(inputOriginShape[absAxis]);
+    updatesNewShape.AppendDim(updatesOriginShape[absAxis]);
+
+    size_t inputFourthDims = 1;
+    size_t updatesFourthDims = 1;
+    for (size_t i = absAxis + 1; i < inputOriginShape.GetDimNum(); i++) {
+        inputFourthDims *= inputOriginShape[i];
+        updatesFourthDims *= updatesOriginShape[i];
+    }
+
+    inputNewShape.AppendDim(inputFourthDims);
+    updatesNewShape.AppendDim(updatesFourthDims);
+    axis = SECOND_LAST_DIM;
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterTiling::CheckShapes()
+{
+    int64_t indicesOriginDim = indicesOriginShape.GetDimNum();
+    if (indicesOriginDim == TWO_INDICES) {
+        OP_CHECK_IF(indicesOriginShape[1] != 2,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "indices",
+                                                          Ops::Base::ToString(indicesOriginShape).c_str(),
+                                                          "When dim of indices is 2, the shape of 2nd axis must be 2"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    if (updatesNewShape[DIM0] != indicesOriginShape[DIM0]) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "updates and indices",
+            (std::to_string(updatesNewShape[DIM0]) + " and " + std::to_string(indicesOriginShape[DIM0])).c_str(),
+            "1st axis of updates must be equal to the same axis of indices");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (updatesNewShape[DIM0] > inputNewShape[DIM0]) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "updates and x",
+            (std::to_string(updatesNewShape[DIM0]) + " and " + std::to_string(inputNewShape[DIM0])).c_str(),
+            "The 1st axis of updates must be less than or equal to that of x");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (updatesNewShape[DIM1] != inputNewShape[DIM1]) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "updates and x",
+            (std::to_string(updatesNewShape[DIM1]) + " and " + std::to_string(inputNewShape[DIM1])).c_str(),
+            "The 2nd axis of updates must be equal to the same axis of x");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (axis == SECOND_LAST_DIM) {
+        if (updatesNewShape[DIM3] != inputNewShape[DIM3]) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "updates and x",
+                (std::to_string(updatesNewShape[DIM3]) + " and " + std::to_string(inputNewShape[DIM3])).c_str(),
+                "when axis is -2, the 4th axis of updates must be equal to the same axis of x");
+            return ge::GRAPH_FAILED;
+        }
+    } else if (axis == -1) {
+        if (updatesNewShape[DIM2] != inputNewShape[DIM2]) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "updates and x",
+                (std::to_string(updatesNewShape[DIM2]) + " and " + std::to_string(inputNewShape[DIM2])).c_str(),
+                "when axis is -1, the 3th axis of updates must be equal to the same axis of x");
+            return ge::GRAPH_FAILED;
+        }
+    } else {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis).c_str(),
+                                              "The value of axis after dim-merge must be -1 or -2");
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static map<const int32_t, const std::vector<int32_t>> g_factors = {{8, {8, 4, 2, 1}}, {4, {4, 2, 1}}, {2, {2, 1}}};
+
+ge::graphStatus ScatterTiling::PromoteDtype()
+{
+    if (simdTemp > 0) {
         return ge::GRAPH_SUCCESS;
     }
-  }
-  return ge::GRAPH_SUCCESS;
+    int32_t factor = PROMOTE_DTYPE_SIZE / dtypeSize;
+    if (axis == SECOND_LAST_DIM && updatesNewShape[DIM3] % factor == 0) {
+        updatesNewShape[DIM3] /= factor;
+        inputNewShape[DIM3] /= factor;
+        dtypeSize = PROMOTE_DTYPE_SIZE;
+    }
+
+    return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterTiling::DoDeterministicTiling() {
-  int64_t updateColSize = updatesNewShape[DIM3];
-  normBlockColNum_ = Ops::Base::CeilDiv(updateColSize, static_cast<int64_t>(aivCoreNum));
-  normBlockColNum_ = std::max(static_cast<int64_t>(DETERM_MIN_COL / dtypeSize), normBlockColNum_);
-  aivCoreNum = Ops::Base::CeilDiv(updateColSize, normBlockColNum_);
-  int64_t tailBlockColNum = updateColSize - normBlockColNum_ * (aivCoreNum - 1);
-
-  int64_t indicesSize = indicesOriginShape.GetShapeSize();
-  int64_t indicesDtypeSize = ge::GetSizeByDataType(indicesDtype);
-  OP_CHECK_IF(indicesDtypeSize <= 0,
-      OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "indices",
-          std::to_string(static_cast<int>(indicesDtype)).c_str(),
-          "The dtype size of indices must be greater than 0"),
-      return ge::GRAPH_FAILED);
-  
-  if (normBlockColNum_ * dtypeSize > (ubSize - INDICES_SIZE)) { // 列长大于UBSize，需分列
-    indicesUbFactor_ = 
-        Ops::Base::CeilAlign(std::min(INDICES_SIZE, indicesSize * indicesDtypeSize), UB_ALIGN_VALUE) / indicesDtypeSize;
-    updatesColUbFactor_ = Ops::Base::FloorAlign((ubSize - indicesUbFactor_ * indicesDtypeSize), UB_ALIGN_VALUE) / dtypeSize;
-    updatesColUbFactor_ =  std::min(updatesColUbFactor_, 
-                                    Ops::Base::CeilAlign(normBlockColNum_ * dtypeSize, UB_ALIGN_VALUE) / dtypeSize);
-  } else {
-    updatesColUbFactor_ = Ops::Base::CeilAlign(normBlockColNum_ * dtypeSize, UB_ALIGN_VALUE) / dtypeSize;
-    indicesUbFactor_= Ops::Base::FloorAlign(ubSize - updatesColUbFactor_ * dtypeSize, UB_ALIGN_VALUE) / indicesDtypeSize;
-    indicesUbFactor_ = std::min(indicesUbFactor_, 
-                                Ops::Base::CeilAlign(indicesSize * indicesDtypeSize, UB_ALIGN_VALUE) / indicesDtypeSize);
-  }
-  indicesLoop_ = Ops::Base::CeilDiv(indicesSize, indicesUbFactor_);
-  indicesTailLoopNum_ = indicesSize - (indicesLoop_ - 1) * indicesUbFactor_;
-  updatesNormBlockColLoop_ = Ops::Base::CeilDiv(normBlockColNum_, updatesColUbFactor_);
-  updatesTailBlockColLoop_ = Ops::Base::CeilDiv(tailBlockColNum, updatesColUbFactor_);
-  updatesNormBlockTailLoopSize_ = normBlockColNum_ - (updatesNormBlockColLoop_ - 1) * updatesColUbFactor_;
-  updatesTailBlockTailLoopSize_ = tailBlockColNum - (updatesTailBlockColLoop_ - 1) * updatesColUbFactor_;
-
-  return ge::GRAPH_SUCCESS;
+ge::graphStatus ScatterTiling::DoSimdTiling()
+{
+    // [batch_size, outer_size, scatter_dim_size, inner_size]
+    // split batch(b*o)
+    int64_t spiltNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
+    if (simdTemp == SIMD_PERF_TEMP) {
+        // split batch(b*o*s)
+        spiltNum = updatesNewShape[DIM0] * updatesNewShape[DIM1] * updatesNewShape[DIM2];
+    }
+    blockFactor = Ops::Base::CeilDiv(spiltNum, static_cast<int64_t>(aivCoreNum));
+    aivCoreNum = Ops::Base::CeilDiv(spiltNum, blockFactor);
+    tailBlockData = spiltNum - (aivCoreNum - 1) * blockFactor;
+    return ge::GRAPH_SUCCESS;
 }
 
-void ScatterTiling::SetTilingData() {
-  tilingData.set_axis(axis);
-  tilingData.set_indicesDim(indicesDim);
-  tilingData.set_updatesDim0(updatesNewShape[DIM0]);
-  tilingData.set_updatesDim1(updatesNewShape[DIM1]);
-  tilingData.set_updatesDim2(updatesNewShape[DIM2]);
-  tilingData.set_updatesDim3(updatesNewShape[DIM3]);
-  tilingData.set_inputDim0(inputNewShape[DIM0]);
-  tilingData.set_inputDim1(inputNewShape[DIM1]);
-  tilingData.set_inputDim2(inputNewShape[DIM2]);
-  tilingData.set_inputDim3(inputNewShape[DIM3]);
-  tilingData.set_aivCoreNum(aivCoreNum);
-  tilingData.set_blockFactor(blockFactor);
-  tilingData.set_tailCoreNum(tailCoreNum);
-  tilingData.set_tailBlockData(tailBlockData);
-  tilingData.set_loopLength(loopLength);
-  tilingData.set_indicesUbSize(indicesUbSize);
-  tilingData.set_dtypeSize(static_cast<int64_t>(dtypeSize));
-  // 32K for simt and 8K for simd
-  tilingData.set_ubSize(ubSize - SIMT_RESERVED_SIZE - SIMD_RESERVED_SIZE);
-  tilingData.set_normBlockColNum(normBlockColNum_);
-  tilingData.set_indicesUbFactor(indicesUbFactor_);
-  tilingData.set_updatesColUbFactor(updatesColUbFactor_);
-  tilingData.set_indicesLoop(indicesLoop_);
-  tilingData.set_indicesTailLoopNum(indicesTailLoopNum_);
-  tilingData.set_updatesNormBlockColLoop(updatesNormBlockColLoop_);
-  tilingData.set_updatesTailBlockColLoop(updatesTailBlockColLoop_);
-  tilingData.set_updatesNormBlockTailLoopSize(updatesNormBlockTailLoopSize_);
-  tilingData.set_updatesTailBlockTailLoopSize(updatesTailBlockTailLoopSize_);
+ge::graphStatus ScatterTiling::GetTilingParam()
+{
+    if (simdTemp > 0) {
+        return DoSimdTiling();
+    }
+    int64_t totalDims = updatesNewShape[DIM0] * updatesNewShape[DIM1] * updatesNewShape[DIM2] * updatesNewShape[DIM3];
+    if (totalDims > MAX_INT32_NUM) {
+        isUint64 = true;
+    }
+    if (totalDims <= MIN_FACTOR) {
+        // use one core
+        blockFactor = totalDims;
+        aivCoreNum = 1;
+        tailCoreNum = 0;
+        oneCoreTemp = true;
+    } else if (totalDims <= aivCoreNum * MIN_FACTOR) {
+        // use part of cores
+        oneCoreTemp = false;
+        blockFactor = MIN_FACTOR;
+        aivCoreNum = (totalDims + MIN_FACTOR - 1) / MIN_FACTOR;
+        if (totalDims % MIN_FACTOR == 0) {
+            tailCoreNum = 0;
+        } else {
+            tailCoreNum = 1;
+        }
+    } else {
+        // use all cores
+        oneCoreTemp = false;
+        blockFactor = (totalDims + aivCoreNum - 1) / aivCoreNum;
+        tailCoreNum = aivCoreNum * blockFactor - totalDims;
+    }
+    context_->SetLocalMemorySize(ubSize - SIMT_RESERVED_SIZE);
+
+    if (oneCoreTemp) {
+        tilingData.set_simtThreadNum(simtThreadNum);
+        if (totalDims <= simtThreadNum) {
+            tilingData.set_simtUsedCore(1);
+            tilingData.set_simtPerCoreNum(totalDims);
+            tilingData.set_simtTailCoreNum(totalDims);
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterTiling::DoOpTiling() {
-  if (GetShapes() != ge::GRAPH_SUCCESS) {
-    return ge::GRAPH_FAILED;
-  }
+ge::graphStatus ScatterTiling::DoDeterministicTiling()
+{
+    int64_t updateColSize = updatesNewShape[DIM3];
+    normBlockColNum_ = Ops::Base::CeilDiv(updateColSize, static_cast<int64_t>(aivCoreNum));
+    normBlockColNum_ = std::max(static_cast<int64_t>(DETERM_MIN_COL / dtypeSize), normBlockColNum_);
+    aivCoreNum = Ops::Base::CeilDiv(updateColSize, normBlockColNum_);
+    int64_t tailBlockColNum = updateColSize - normBlockColNum_ * (aivCoreNum - 1);
 
-  if (CheckNullTensor() != ge::GRAPH_SUCCESS) {
-    return ge::GRAPH_FAILED;
-  }
+    int64_t indicesSize = indicesOriginShape.GetShapeSize();
+    int64_t indicesDtypeSize = ge::GetSizeByDataType(indicesDtype);
+    OP_CHECK_IF(indicesDtypeSize <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "indices",
+                                                      std::to_string(static_cast<int>(indicesDtype)).c_str(),
+                                                      "The dtype size of indices must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
-  if (MergeDims() != ge::GRAPH_SUCCESS) {
-    return ge::GRAPH_FAILED;
-  }
+    if (normBlockColNum_ * dtypeSize > (ubSize - INDICES_SIZE)) { // 列长大于UBSize，需分列
+        indicesUbFactor_ = Ops::Base::CeilAlign(std::min(INDICES_SIZE, indicesSize * indicesDtypeSize),
+                                                UB_ALIGN_VALUE) /
+                           indicesDtypeSize;
+        updatesColUbFactor_ = Ops::Base::FloorAlign((ubSize - indicesUbFactor_ * indicesDtypeSize), UB_ALIGN_VALUE) /
+                              dtypeSize;
+        updatesColUbFactor_ = std::min(updatesColUbFactor_,
+                                       Ops::Base::CeilAlign(normBlockColNum_ * dtypeSize, UB_ALIGN_VALUE) / dtypeSize);
+    } else {
+        updatesColUbFactor_ = Ops::Base::CeilAlign(normBlockColNum_ * dtypeSize, UB_ALIGN_VALUE) / dtypeSize;
+        indicesUbFactor_ = Ops::Base::FloorAlign(ubSize - updatesColUbFactor_ * dtypeSize, UB_ALIGN_VALUE) /
+                           indicesDtypeSize;
+        indicesUbFactor_ = std::min(
+            indicesUbFactor_, Ops::Base::CeilAlign(indicesSize * indicesDtypeSize, UB_ALIGN_VALUE) / indicesDtypeSize);
+    }
+    indicesLoop_ = Ops::Base::CeilDiv(indicesSize, indicesUbFactor_);
+    indicesTailLoopNum_ = indicesSize - (indicesLoop_ - 1) * indicesUbFactor_;
+    updatesNormBlockColLoop_ = Ops::Base::CeilDiv(normBlockColNum_, updatesColUbFactor_);
+    updatesTailBlockColLoop_ = Ops::Base::CeilDiv(tailBlockColNum, updatesColUbFactor_);
+    updatesNormBlockTailLoopSize_ = normBlockColNum_ - (updatesNormBlockColLoop_ - 1) * updatesColUbFactor_;
+    updatesTailBlockTailLoopSize_ = tailBlockColNum - (updatesTailBlockColLoop_ - 1) * updatesColUbFactor_;
 
-  if (CheckShapes() != ge::GRAPH_SUCCESS) {
-    return ge::GRAPH_FAILED;
-  }
+    return ge::GRAPH_SUCCESS;
+}
 
-  if (isDeterministic_) {
-    if (DoDeterministicTiling() != ge::GRAPH_SUCCESS) {
-      return ge::GRAPH_FAILED;
+void ScatterTiling::SetTilingData()
+{
+    tilingData.set_axis(axis);
+    tilingData.set_indicesDim(indicesDim);
+    tilingData.set_updatesDim0(updatesNewShape[DIM0]);
+    tilingData.set_updatesDim1(updatesNewShape[DIM1]);
+    tilingData.set_updatesDim2(updatesNewShape[DIM2]);
+    tilingData.set_updatesDim3(updatesNewShape[DIM3]);
+    tilingData.set_inputDim0(inputNewShape[DIM0]);
+    tilingData.set_inputDim1(inputNewShape[DIM1]);
+    tilingData.set_inputDim2(inputNewShape[DIM2]);
+    tilingData.set_inputDim3(inputNewShape[DIM3]);
+    tilingData.set_aivCoreNum(aivCoreNum);
+    tilingData.set_blockFactor(blockFactor);
+    tilingData.set_tailCoreNum(tailCoreNum);
+    tilingData.set_tailBlockData(tailBlockData);
+    tilingData.set_loopLength(loopLength);
+    tilingData.set_indicesUbSize(indicesUbSize);
+    tilingData.set_dtypeSize(static_cast<int64_t>(dtypeSize));
+    // 32K for simt and 8K for simd
+    tilingData.set_ubSize(ubSize - SIMT_RESERVED_SIZE - SIMD_RESERVED_SIZE);
+    tilingData.set_normBlockColNum(normBlockColNum_);
+    tilingData.set_indicesUbFactor(indicesUbFactor_);
+    tilingData.set_updatesColUbFactor(updatesColUbFactor_);
+    tilingData.set_indicesLoop(indicesLoop_);
+    tilingData.set_indicesTailLoopNum(indicesTailLoopNum_);
+    tilingData.set_updatesNormBlockColLoop(updatesNormBlockColLoop_);
+    tilingData.set_updatesTailBlockColLoop(updatesTailBlockColLoop_);
+    tilingData.set_updatesNormBlockTailLoopSize(updatesNormBlockTailLoopSize_);
+    tilingData.set_updatesTailBlockTailLoopSize(updatesTailBlockTailLoopSize_);
+}
+
+ge::graphStatus ScatterTiling::DoOpTiling()
+{
+    if (GetShapes() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    if (CheckNullTensor() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    if (MergeDims() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    if (CheckShapes() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    if (isDeterministic_) {
+        if (DoDeterministicTiling() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        SetTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
+
+    int64_t srcStride = updatesNewShape[DIM2] * updatesNewShape[DIM3];
+    if (srcStride * dtypeSize > MIN_FACTOR) {
+        indicesUbSize = INDICES_SIZE;
+        int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
+        int64_t maxUpdatesUbSize = Ops::Base::FloorAlign((ubSize - SIMD_RESERVED_SIZE - INDICES_SIZE) / DB_BUFFER,
+                                                         ubBlockSize);
+        loopLength = maxUpdatesUbSize / dtypeSize;
+        simdTemp = SIMD_TEMP;
+        int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
+        if (boNum < aivCoreNum && srcStride > loopLength && updatesNewShape[DIM3] * dtypeSize > SIMD_PERF_SIZE) {
+            simdTemp = SIMD_PERF_TEMP;
+        }
+    }
+
+    if (PromoteDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    if (GetTilingParam() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
     SetTilingData();
     return ge::GRAPH_SUCCESS;
-  }
+}
 
-  int64_t srcStride = updatesNewShape[DIM2] * updatesNewShape[DIM3];
-  if (srcStride * dtypeSize > MIN_FACTOR) {
-    indicesUbSize = INDICES_SIZE;
-    int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
-    int64_t maxUpdatesUbSize = Ops::Base::FloorAlign((ubSize - SIMD_RESERVED_SIZE - INDICES_SIZE) / DB_BUFFER, ubBlockSize);
-    loopLength = maxUpdatesUbSize / dtypeSize;
-    simdTemp = SIMD_TEMP;
-    int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
-    if (boNum < aivCoreNum && srcStride > loopLength && updatesNewShape[DIM3] * dtypeSize > SIMD_PERF_SIZE) {
-      simdTemp = SIMD_PERF_TEMP;
+ge::graphStatus ScatterTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
+
+void ScatterTiling::InitTilingKeyMap()
+{
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_INT8)] = TILING_KEY_INT32_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_INT32_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32,
+                                 ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_INT32_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_INT32_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_UINT8)] = TILING_KEY_INT32_UINT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16)] = TILING_KEY_INT32_FLOAT16;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_BF16)] = TILING_KEY_INT32_BF16;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT)] = TILING_KEY_INT32_FLOAT;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_INT32)] = TILING_KEY_INT32_INT32;
+
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_INT8)] = TILING_KEY_INT64_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_INT64_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64,
+                                 ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_INT64_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_INT64_INT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_UINT8)] = TILING_KEY_INT64_UINT8;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT16)] = TILING_KEY_INT64_FLOAT16;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_BF16)] = TILING_KEY_INT64_BF16;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT)] = TILING_KEY_INT64_FLOAT;
+    tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_INT32)] = TILING_KEY_INT64_INT32;
+
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_INT8)] = TILING_KEY_UINT64_INT32_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32,
+                                 ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_UINT64_INT32_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32,
+                                 ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_UINT64_INT32_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32,
+                                 ge::DataType::DT_HIFLOAT8)] = TILING_KEY_UINT64_INT32_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_UINT8)] = TILING_KEY_UINT64_INT32_UINT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32,
+                                 ge::DataType::DT_FLOAT16)] = TILING_KEY_UINT64_INT32_FLOAT16;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_BF16)] = TILING_KEY_UINT64_INT32_BF16;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT)] = TILING_KEY_UINT64_INT32_FLOAT;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_INT32)] = TILING_KEY_UINT64_INT32_INT32;
+
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_INT8)] = TILING_KEY_UINT64_INT64_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64,
+                                 ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_UINT64_INT64_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64,
+                                 ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_UINT64_INT64_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64,
+                                 ge::DataType::DT_HIFLOAT8)] = TILING_KEY_UINT64_INT64_INT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_UINT8)] = TILING_KEY_UINT64_INT64_UINT8;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64,
+                                 ge::DataType::DT_FLOAT16)] = TILING_KEY_UINT64_INT64_FLOAT16;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_BF16)] = TILING_KEY_UINT64_INT64_BF16;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT)] = TILING_KEY_UINT64_INT64_FLOAT;
+    tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_INT32)] = TILING_KEY_UINT64_INT64_INT32;
+}
+
+uint64_t ScatterTiling::setSimtTilingKey(uint64_t& tilingKey) const
+{
+    if (oneCoreTemp) {
+        uint64_t factorStart = 300;
+        tilingKey = factorStart + tilingKey;
     }
-  }
-
-  if (PromoteDtype() != ge::GRAPH_SUCCESS) {
-    return ge::GRAPH_FAILED;
-  }
-
-  if (GetTilingParam() != ge::GRAPH_SUCCESS) {
-    return ge::GRAPH_FAILED;
-  }
-  SetTilingData();
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus ScatterTiling::DoLibApiTiling() {
-  return ge::GRAPH_SUCCESS;
-}
-
-void ScatterTiling::InitTilingKeyMap() {
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_INT8)] = TILING_KEY_INT32_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_INT32_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_INT32_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_INT32_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_UINT8)] = TILING_KEY_INT32_UINT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16)] = TILING_KEY_INT32_FLOAT16;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_BF16)] = TILING_KEY_INT32_BF16;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT)] = TILING_KEY_INT32_FLOAT;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT32, ge::DataType::DT_INT32)] = TILING_KEY_INT32_INT32;
-
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_INT8)] = TILING_KEY_INT64_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_INT64_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_INT64_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_INT64_INT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_UINT8)] = TILING_KEY_INT64_UINT8;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT16)] = TILING_KEY_INT64_FLOAT16;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_BF16)] = TILING_KEY_INT64_BF16;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT)] = TILING_KEY_INT64_FLOAT;
-  tilingKeyMap[std::make_tuple(false, ge::DataType::DT_INT64, ge::DataType::DT_INT32)] = TILING_KEY_INT64_INT32;
-
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_INT8)] = TILING_KEY_UINT64_INT32_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_UINT64_INT32_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_UINT64_INT32_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_UINT64_INT32_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_UINT8)] = TILING_KEY_UINT64_INT32_UINT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16)] = TILING_KEY_UINT64_INT32_FLOAT16;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_BF16)] = TILING_KEY_UINT64_INT32_BF16;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT)] = TILING_KEY_UINT64_INT32_FLOAT;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT32, ge::DataType::DT_INT32)] = TILING_KEY_UINT64_INT32_INT32;
-
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_INT8)] = TILING_KEY_UINT64_INT64_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E5M2)] = TILING_KEY_UINT64_INT64_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT8_E4M3FN)] = TILING_KEY_UINT64_INT64_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_HIFLOAT8)] = TILING_KEY_UINT64_INT64_INT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_UINT8)] = TILING_KEY_UINT64_INT64_UINT8;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT16)] = TILING_KEY_UINT64_INT64_FLOAT16;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_BF16)] = TILING_KEY_UINT64_INT64_BF16;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_FLOAT)] = TILING_KEY_UINT64_INT64_FLOAT;
-  tilingKeyMap[std::make_tuple(true, ge::DataType::DT_INT64, ge::DataType::DT_INT32)] = TILING_KEY_UINT64_INT64_INT32;
-}
-
-uint64_t ScatterTiling::setSimtTilingKey(uint64_t& tilingKey) const {
-  if (oneCoreTemp) {
-    uint64_t factorStart = 300;
-    tilingKey = factorStart + tilingKey;
-  }
-  return tilingKey;
-}
-
-uint64_t ScatterTiling::GetTilingKey() const {
-  if (isDeterministic_) {
-    return DETERM_TILINGKEY;
-  }
-  if (simdTemp > 0) {
-    uint64_t factorStart = 100;
-    uint64_t tilingKey = simdTemp * factorStart;
     return tilingKey;
-  }
-  uint64_t tilingKey = 0xFF;
-
-  if (isUint64) {
-    if (indicesDtype == ge::DataType::DT_INT32) {
-      if (dtypeSize == PROMOTE_DTYPE_SIZE) {
-        tilingKey = static_cast<uint64_t>(TILING_KEY_UINT64_INT32_INT2);
-        return tilingKey;
-      }
-    } else {
-      if (dtypeSize == PROMOTE_DTYPE_SIZE) {
-        tilingKey = static_cast<uint64_t>(TILING_KEY_UINT64_INT64_INT2);
-        return tilingKey;
-      }
-    }
-  } else {
-    if (indicesDtype == ge::DataType::DT_INT32) {
-      if (dtypeSize == PROMOTE_DTYPE_SIZE) {
-        tilingKey = static_cast<uint64_t>(TILING_KEY_INT32_INT2);
-        tilingKey = setSimtTilingKey(tilingKey);
-        return tilingKey;
-      }
-    } else {
-      if (dtypeSize == PROMOTE_DTYPE_SIZE) {
-        tilingKey = static_cast<uint64_t>(TILING_KEY_INT64_INT2);
-        tilingKey = setSimtTilingKey(tilingKey);
-        return tilingKey;
-      }
-    }
-  }
-
-  auto it = tilingKeyMap.find(std::make_tuple(isUint64, indicesDtype, inputDtype));
-  if (it != tilingKeyMap.end()) {
-    tilingKey = it->second;
-  }
-
-  tilingKey = setSimtTilingKey(tilingKey);
-  return tilingKey;
 }
 
-ge::graphStatus ScatterTiling::GetWorkspaceSize() {
-  workspaceSize_ = SYS_WORKSPACE_SIZE;
-  return ge::GRAPH_SUCCESS;
+uint64_t ScatterTiling::GetTilingKey() const
+{
+    if (isDeterministic_) {
+        return DETERM_TILINGKEY;
+    }
+    if (simdTemp > 0) {
+        uint64_t factorStart = 100;
+        uint64_t tilingKey = simdTemp * factorStart;
+        return tilingKey;
+    }
+    uint64_t tilingKey = 0xFF;
+
+    if (isUint64) {
+        if (indicesDtype == ge::DataType::DT_INT32) {
+            if (dtypeSize == PROMOTE_DTYPE_SIZE) {
+                tilingKey = static_cast<uint64_t>(TILING_KEY_UINT64_INT32_INT2);
+                return tilingKey;
+            }
+        } else {
+            if (dtypeSize == PROMOTE_DTYPE_SIZE) {
+                tilingKey = static_cast<uint64_t>(TILING_KEY_UINT64_INT64_INT2);
+                return tilingKey;
+            }
+        }
+    } else {
+        if (indicesDtype == ge::DataType::DT_INT32) {
+            if (dtypeSize == PROMOTE_DTYPE_SIZE) {
+                tilingKey = static_cast<uint64_t>(TILING_KEY_INT32_INT2);
+                tilingKey = setSimtTilingKey(tilingKey);
+                return tilingKey;
+            }
+        } else {
+            if (dtypeSize == PROMOTE_DTYPE_SIZE) {
+                tilingKey = static_cast<uint64_t>(TILING_KEY_INT64_INT2);
+                tilingKey = setSimtTilingKey(tilingKey);
+                return tilingKey;
+            }
+        }
+    }
+
+    auto it = tilingKeyMap.find(std::make_tuple(isUint64, indicesDtype, inputDtype));
+    if (it != tilingKeyMap.end()) {
+        tilingKey = it->second;
+    }
+
+    tilingKey = setSimtTilingKey(tilingKey);
+    return tilingKey;
 }
 
-ge::graphStatus ScatterTiling::PostTiling() {
-  InitTilingKeyMap();
-  tilingData.set_tilingKey(GetTilingKey());
-  context_->SetTilingKey(GetTilingKey());
-  context_->SetBlockDim(aivCoreNum);
-  size_t* workspaces = context_->GetWorkspaceSizes(1);
-  workspaces[0] = workspaceSize_;
-  tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-  context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
-  return ge::GRAPH_SUCCESS;
+ge::graphStatus ScatterTiling::GetWorkspaceSize()
+{
+    workspaceSize_ = SYS_WORKSPACE_SIZE;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterTiling::PostTiling()
+{
+    InitTilingKeyMap();
+    tilingData.set_tilingKey(GetTilingKey());
+    context_->SetTilingKey(GetTilingKey());
+    context_->SetBlockDim(aivCoreNum);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    workspaces[0] = workspaceSize_;
+    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    return ge::GRAPH_SUCCESS;
 }
 
 void ScatterTiling::DumpTilingInfo()
 {
-  std::ostringstream info;
-  info << "tilingKey: " << tilingData.get_tilingKey();
-  info << ", ubSize: " << tilingData.get_ubSize();
-  info << ", aivCoreNum: " << tilingData.get_aivCoreNum();
-  info << ", tailCoreNum: " << tilingData.get_tailCoreNum();
-  info << ", blockFactor: " << tilingData.get_blockFactor();
-  info << ", axis: " << tilingData.get_axis();
-  info << ", indicesDim: " << tilingData.get_indicesDim();
-  info << ", inputDim0: " << tilingData.get_inputDim0();
-  info << ", inputDim1: " << tilingData.get_inputDim1();
-  info << ", inputDim2: " << tilingData.get_inputDim2();
-  info << ", inputDim3: " << tilingData.get_inputDim3();
-  info << ", updatesDim0: " << tilingData.get_updatesDim0();
-  info << ", updatesDim1: " << tilingData.get_updatesDim1();
-  info << ", updatesDim2: " << tilingData.get_updatesDim2();
-  info << ", updatesDim3: " << tilingData.get_updatesDim3();
-  info << ", tailBlockData: " << tilingData.get_tailBlockData();
-  info << ", loopLength: " << tilingData.get_loopLength();
-  info << ", indicesUbSize: " << tilingData.get_indicesUbSize();
-  info << ", dtypeSize: " << tilingData.get_dtypeSize();
-  info << ", normBlockColNum: " << tilingData.get_normBlockColNum();
-  info << ", indicesUbFactor: " << tilingData.get_indicesUbFactor();
-  info << ", updatesColUbFactor: " << tilingData.get_updatesColUbFactor();
-  info << ", indicesLoop: " << tilingData.get_indicesLoop();
-  info << ", indicesTailLoopNum: " << tilingData.get_indicesTailLoopNum();
-  info << ", updatesNormBlockColLoop: " << tilingData.get_updatesNormBlockColLoop();
-  info << ", updatesTailBlockColLoop: " << tilingData.get_updatesTailBlockColLoop();
-  info << ", updatesNormBlockTailLoopSize: " << tilingData.get_updatesNormBlockTailLoopSize();
-  info << ", updatesTailBlockTailLoopSize: " << tilingData.get_updatesTailBlockTailLoopSize();
-  OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
+    std::ostringstream info;
+    info << "tilingKey: " << tilingData.get_tilingKey();
+    info << ", ubSize: " << tilingData.get_ubSize();
+    info << ", aivCoreNum: " << tilingData.get_aivCoreNum();
+    info << ", tailCoreNum: " << tilingData.get_tailCoreNum();
+    info << ", blockFactor: " << tilingData.get_blockFactor();
+    info << ", axis: " << tilingData.get_axis();
+    info << ", indicesDim: " << tilingData.get_indicesDim();
+    info << ", inputDim0: " << tilingData.get_inputDim0();
+    info << ", inputDim1: " << tilingData.get_inputDim1();
+    info << ", inputDim2: " << tilingData.get_inputDim2();
+    info << ", inputDim3: " << tilingData.get_inputDim3();
+    info << ", updatesDim0: " << tilingData.get_updatesDim0();
+    info << ", updatesDim1: " << tilingData.get_updatesDim1();
+    info << ", updatesDim2: " << tilingData.get_updatesDim2();
+    info << ", updatesDim3: " << tilingData.get_updatesDim3();
+    info << ", tailBlockData: " << tilingData.get_tailBlockData();
+    info << ", loopLength: " << tilingData.get_loopLength();
+    info << ", indicesUbSize: " << tilingData.get_indicesUbSize();
+    info << ", dtypeSize: " << tilingData.get_dtypeSize();
+    info << ", normBlockColNum: " << tilingData.get_normBlockColNum();
+    info << ", indicesUbFactor: " << tilingData.get_indicesUbFactor();
+    info << ", updatesColUbFactor: " << tilingData.get_updatesColUbFactor();
+    info << ", indicesLoop: " << tilingData.get_indicesLoop();
+    info << ", indicesTailLoopNum: " << tilingData.get_indicesTailLoopNum();
+    info << ", updatesNormBlockColLoop: " << tilingData.get_updatesNormBlockColLoop();
+    info << ", updatesTailBlockColLoop: " << tilingData.get_updatesTailBlockColLoop();
+    info << ", updatesNormBlockTailLoopSize: " << tilingData.get_updatesNormBlockTailLoopSize();
+    info << ", updatesTailBlockTailLoopSize: " << tilingData.get_updatesTailBlockTailLoopSize();
+    OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
 REGISTER_OPS_TILING_TEMPLATE(Scatter, ScatterTiling, 10000);

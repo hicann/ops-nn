@@ -22,13 +22,10 @@
 
 namespace optiling {
 
-class ScatterAddWithSortedSimdTiling : public ScatterAddWithSortedBaseTiling 
-{
+class ScatterAddWithSortedSimdTiling : public ScatterAddWithSortedBaseTiling {
 public:
-    explicit ScatterAddWithSortedSimdTiling(gert::TilingContext* context) : ScatterAddWithSortedBaseTiling(context)
-    {}
-    ~ScatterAddWithSortedSimdTiling() override
-    {}
+    explicit ScatterAddWithSortedSimdTiling(gert::TilingContext* context) : ScatterAddWithSortedBaseTiling(context) {}
+    ~ScatterAddWithSortedSimdTiling() override {}
 
 private:
     bool IsCapable() override;
@@ -40,8 +37,8 @@ private:
     void SetTilingData() override;
     void DoBlockTiling();
     void DoUBTiling();
-    void AutoTilingRowCol(
-        int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum);
+    void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum,
+                          int64_t colTotalNum);
     void DeterminTemplateUbTiling();
 
 private:

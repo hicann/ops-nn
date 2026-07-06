@@ -32,33 +32,26 @@ static ge::graphStatus TilingPrepare4BatchNormV3(gert::TilingParseContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0),
-        OP_LOGE(
-            context, "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+                OP_LOGE(context, "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSize = ubSizePlatForm;
-    OP_CHECK_IF(
-        (compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Get ub size failed, ub size: %u", static_cast<uint32_t>(compileInfo->ubSize)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0),
+                OP_LOGE(context, "Get ub size failed, ub size: %u", static_cast<uint32_t>(compileInfo->ubSize)),
+                return ge::GRAPH_FAILED);
     compileInfo->blockSize = Ops::Base::GetUbBlockSize(context);
     OP_CHECK_IF(
         (compileInfo->blockSize <= 0),
-        OP_LOGE(
-            context, "Get block Size failed, block size: %u",
-            static_cast<uint32_t>(compileInfo->blockSize)),
+        OP_LOGE(context, "Get block Size failed, block size: %u", static_cast<uint32_t>(compileInfo->blockSize)),
         return ge::GRAPH_FAILED);
     compileInfo->vectorLength = Ops::Base::GetVRegSize(context);
-    OP_CHECK_IF(
-        (compileInfo->vectorLength <= 0),
-        OP_LOGE(
-            context, "Get vector Length failed, vector Length: %u",
-            static_cast<uint32_t>(compileInfo->vectorLength)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorLength <= 0),
+                OP_LOGE(context, "Get vector Length failed, vector Length: %u",
+                        static_cast<uint32_t>(compileInfo->vectorLength)),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "TilingPrepare4BatchNormV3 exit.");
     return ge::GRAPH_SUCCESS;

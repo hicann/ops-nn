@@ -30,13 +30,13 @@ using AscendC::MicroAPI::RegTensor;
 class SwishBf16AttrComb0 {
 public:
     __aicore__ inline SwishBf16AttrComb0(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const SwishTilingData *tilingDataPtr,
-        TPipe *pipePtr)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const SwishTilingData* tilingDataPtr,
+                                TPipe* pipePtr)
     {
         pipePtr_ = pipePtr;
         tilingDataPtr_ = tilingDataPtr;
-        inputGmX_.SetGlobalBuffer((__gm__ bfloat16_t *)x);
-        outputGmY_.SetGlobalBuffer((__gm__ bfloat16_t *)y);
+        inputGmX_.SetGlobalBuffer((__gm__ bfloat16_t*)x);
+        outputGmY_.SetGlobalBuffer((__gm__ bfloat16_t*)y);
         constexpr int64_t DOUBLE_BUFFER = 2;
         int64_t BUFFER_SIZE_0 = tilingDataPtr_->elemNum * sizeof(bfloat16_t);
         pipePtr_->InitBuffer(queIn0_, DOUBLE_BUFFER, BUFFER_SIZE_0);
@@ -65,7 +65,8 @@ private:
         AscendC::DataCopyPadExtParams<bfloat16_t> dataCopyPadExtParams;
         dataCopyExtParams.blockCount = 1;
         dataCopyExtParams.blockLen = i0Extent * sizeof(bfloat16_t);
-        AscendC::DataCopyPad(bufferIn0_[0],
+        AscendC::DataCopyPad(
+            bufferIn0_[0],
             inputGmX_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer],
             dataCopyExtParams, dataCopyPadExtParams);
         queIn0_.EnQue<bfloat16_t>(bufferIn0_);
@@ -87,19 +88,19 @@ private:
             MaskReg preg0;
             uint32_t size = i0Extent;
             uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) /
-                (AscendC::VECTOR_REG_WIDTH / sizeof(float));
-            __local_mem__ bfloat16_t *bufferIn0Addr = (__local_mem__ bfloat16_t *)bufferIn0_.GetPhyAddr();
-            __local_mem__ bfloat16_t *bufferOut0Addr = (__local_mem__ bfloat16_t *)bufferOut0_.GetPhyAddr();
+                                 (AscendC::VECTOR_REG_WIDTH / sizeof(float));
+            __local_mem__ bfloat16_t* bufferIn0Addr = (__local_mem__ bfloat16_t*)bufferIn0_.GetPhyAddr();
+            __local_mem__ bfloat16_t* bufferOut0Addr = (__local_mem__ bfloat16_t*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0,
-                    bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
+                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg1, vreg0, preg0);
-                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg2, vreg1,
-                    static_cast<float>(-1.0) * tilingDataPtr_->scale, preg0);
+                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                    vreg2, vreg1, static_cast<float>(-1.0) * tilingDataPtr_->scale, preg0);
                 AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2, preg0);
-                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg3,
-                    static_cast<float>(1.0), preg0);
+                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                    vreg4, vreg3, static_cast<float>(1.0), preg0);
                 AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg5, vreg1, vreg4, preg0);
                 AscendC::MicroAPI::Cast<bfloat16_t, float, castTrait1>(vreg6, vreg5, preg0);
                 AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
@@ -123,18 +124,20 @@ private:
     }
 
 private:
-    TPipe *pipePtr_;
-    const SwishTilingData *tilingDataPtr_;
+    TPipe* pipePtr_;
+    const SwishTilingData* tilingDataPtr_;
     GlobalTensor<bfloat16_t> inputGmX_;
     GlobalTensor<bfloat16_t> outputGmY_;
     TQue<AscendC::QuePosition::VECIN, 1> queIn0_;
     TQue<AscendC::QuePosition::VECOUT, 1> queOut0_;
     LocalTensor<bfloat16_t> bufferIn0_;
     LocalTensor<bfloat16_t> bufferOut0_;
-    constexpr static AscendC::MicroAPI::CastTrait castTrait0 = { AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
-    constexpr static AscendC::MicroAPI::CastTrait castTrait1 = { AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
+    constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 };
 } // namespace Swish
 #endif // ASCENDC_SWISH_BF16_ATTR_COMB_0_H_

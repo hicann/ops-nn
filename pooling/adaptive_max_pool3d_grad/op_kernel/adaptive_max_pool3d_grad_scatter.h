@@ -24,22 +24,14 @@ using namespace AscendC;
 using namespace AdaptiveMaxPool3DGradComm;
 
 template <typename TX, typename TGrad, typename TArgmax, typename TY>
-class AdaptiveMaxPool3DGradScatter : 
-    public MaxPool3DGradCommon::MaxPool3DGradScatterUnified<
-        TX, TGrad, TArgmax, TY,
-        AdaptiveMaxPool3DGradTilingData,
-        TilingParams,
-        BlockParams,
-        MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate>
-{
+class AdaptiveMaxPool3DGradScatter : public MaxPool3DGradCommon::MaxPool3DGradScatterUnified<
+                                         TX, TGrad, TArgmax, TY, AdaptiveMaxPool3DGradTilingData, TilingParams,
+                                         BlockParams, MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate> {
 public:
     __aicore__ inline AdaptiveMaxPool3DGradScatter(TPipe* pipe)
         : MaxPool3DGradCommon::MaxPool3DGradScatterUnified<
-            TX, TGrad, TArgmax, TY,
-            AdaptiveMaxPool3DGradTilingData,
-            TilingParams,
-            BlockParams,
-            MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate>(pipe)
+              TX, TGrad, TArgmax, TY, AdaptiveMaxPool3DGradTilingData, TilingParams, BlockParams,
+              MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate>(pipe)
     {}
 };
 } // namespace AdaptiveMaxPool3DGrad

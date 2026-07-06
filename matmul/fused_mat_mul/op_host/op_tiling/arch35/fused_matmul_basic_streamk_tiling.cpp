@@ -22,8 +22,7 @@ namespace optiling {
 namespace fused_matmul {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulStreamKTiling, DAV_3510, BASIC_STREAM_K_INHERITED_FROM_MMV3);
-MM_REGISTER_TILING_TEMPLATE(
-    FusedMatMul, FusedMatMulBatchStreamKTiling, DAV_3510, BATCH_STREAM_K_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchStreamKTiling, DAV_3510, BATCH_STREAM_K_INHERITED_FROM_BMMV3);
 
 bool FusedMatMulStreamKTiling::IsCapable()
 {

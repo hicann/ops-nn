@@ -19,15 +19,15 @@
 #include "aclnnop/aclnn_mish_backward.h"
 
 #define CHECK_RET(cond, expr) \
-    do { \
-        if (!(cond)) { \
-            expr; \
-        } \
+    do {                      \
+        if (!(cond)) {        \
+            expr;             \
+        }                     \
     } while (0)
 
 namespace {
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t size = 1;
     for (auto dim : shape) {
@@ -36,7 +36,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return size;
 }
 
-int Init(int32_t deviceId, aclrtStream *stream)
+int Init(int32_t deviceId, aclrtStream* stream)
 {
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("aclInit failed: %d\n", ret); return ret);
@@ -48,8 +48,8 @@ int Init(int32_t deviceId, aclrtStream *stream)
 }
 
 template <typename T>
-int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **deviceAddr,
-                    aclDataType dataType, aclTensor **tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * static_cast<int64_t>(sizeof(T));
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -62,15 +62,12 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
         strides[static_cast<size_t>(i)] = shape[static_cast<size_t>(i + 1)] * strides[static_cast<size_t>(i + 1)];
     }
 
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, ACL_FORMAT_ND,
-                              shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, ACL_FORMAT_ND, shape.data(),
+                              shape.size(), *deviceAddr);
     return 0;
 }
 
-float StableSoftplus(float x)
-{
-    return std::max(x, 0.0f) + std::log1p(std::exp(-std::fabs(x)));
-}
+float StableSoftplus(float x) { return std::max(x, 0.0f) + std::log1p(std::exp(-std::fabs(x))); }
 
 float MishGradRef(float grad, float x, float tanhx)
 {
@@ -91,13 +88,13 @@ int RunCase(aclrtStream stream)
         refHost[i] = MishGradRef(gradHost[i], xHost[i], tanhx);
     }
 
-    void *gradDevice = nullptr;
-    void *xDevice = nullptr;
-    void *outDevice = nullptr;
-    void *workspaceAddr = nullptr;
-    aclTensor *gradTensor = nullptr;
-    aclTensor *xTensor = nullptr;
-    aclTensor *outTensor = nullptr;
+    void* gradDevice = nullptr;
+    void* xDevice = nullptr;
+    void* outDevice = nullptr;
+    void* workspaceAddr = nullptr;
+    aclTensor* gradTensor = nullptr;
+    aclTensor* xTensor = nullptr;
+    aclTensor* outTensor = nullptr;
 
     ret = CreateAclTensor(gradHost, shape, &gradDevice, ACL_FLOAT, &gradTensor);
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
@@ -106,7 +103,7 @@ int RunCase(aclrtStream stream)
     ret = CreateAclTensor(outHost, shape, &outDevice, ACL_FLOAT, &outTensor);
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     uint64_t workspaceSize = 0;
-    aclOpExecutor *executor = nullptr;
+    aclOpExecutor* executor = nullptr;
     ret = aclnnMishBackwardGetWorkspaceSize(gradTensor, xTensor, outTensor, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("GetWorkspaceSize failed: %d\n", ret); goto cleanup);
 
@@ -120,8 +117,8 @@ int RunCase(aclrtStream stream)
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("aclrtSynchronizeStream failed: %d\n", ret); goto cleanup);
 
-    ret = aclrtMemcpy(outHost.data(), outHost.size() * sizeof(float), outDevice,
-                      outHost.size() * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(outHost.data(), outHost.size() * sizeof(float), outDevice, outHost.size() * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("result memcpy failed: %d\n", ret); goto cleanup);
 
     for (size_t i = 0; i < outHost.size(); ++i) {
@@ -159,7 +156,7 @@ cleanup:
     return 0;
 }
 
-}  // namespace
+} // namespace
 
 int main()
 {

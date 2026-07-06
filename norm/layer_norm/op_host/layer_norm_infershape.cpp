@@ -25,7 +25,8 @@ constexpr size_t output_mean_index = 1;
 constexpr size_t output_var_index = 2;
 constexpr size_t attr_begin_norm_axis_index = 0;
 
-static graphStatus InferShape4LayerNorm(gert::InferShapeContext* context) {
+static graphStatus InferShape4LayerNorm(gert::InferShapeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do InferShape4LayerNorm.");
 
     const gert::Shape* x_shape = context->GetInputShape(input_x_index);
@@ -44,14 +45,13 @@ static graphStatus InferShape4LayerNorm(gert::InferShapeContext* context) {
 
     OP_CHECK_IF(
         !Ops::Nn::IsDimValid(x_shape->GetDimNum(), *begin_norm_axis_ptr),
-        OP_LOGE(
-            context->GetNodeName(), "%s",
-            Ops::Nn::GenInvalidDimMsg("begin_norm_axis", x_shape->GetDimNum(), *begin_norm_axis_ptr).c_str()),
+        OP_LOGE(context->GetNodeName(), "%s",
+                Ops::Nn::GenInvalidDimMsg("begin_norm_axis", x_shape->GetDimNum(), *begin_norm_axis_ptr).c_str()),
         return GRAPH_FAILED);
 
-    int64_t begin_norm_axis_val =
-        *begin_norm_axis_ptr < 0 ? *begin_norm_axis_ptr + static_cast<int64_t>(x_shape->GetDimNum())
-                                 : *begin_norm_axis_ptr;
+    int64_t begin_norm_axis_val = *begin_norm_axis_ptr < 0 ?
+                                      *begin_norm_axis_ptr + static_cast<int64_t>(x_shape->GetDimNum()) :
+                                      *begin_norm_axis_ptr;
 
     *y_shape = *x_shape;
     mean_shape->SetDimNum(x_shape->GetDimNum());
@@ -72,4 +72,4 @@ static graphStatus InferShape4LayerNorm(gert::InferShapeContext* context) {
 }
 
 IMPL_OP_INFERSHAPE(LayerNorm).InferShape(InferShape4LayerNorm);
-}  // namespace ops
+} // namespace ops

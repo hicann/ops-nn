@@ -81,9 +81,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void SoftsignGrad<T, BUFFER_MODE>::Init(
-    GM_ADDR gradients, GM_ADDR features, GM_ADDR output,
-    const SoftsignGradTilingData* tilingData)
+__aicore__ inline void SoftsignGrad<T, BUFFER_MODE>::Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR output,
+                                                          const SoftsignGradTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -94,12 +93,9 @@ __aicore__ inline void SoftsignGrad<T, BUFFER_MODE>::Init(
         blockLength_ = 0;
     }
 
-    gradientsGm.SetGlobalBuffer(
-        (__gm__ T*)gradients + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    featuresGm.SetGlobalBuffer(
-        (__gm__ T*)features + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    outputGm.SetGlobalBuffer(
-        (__gm__ T*)output + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    gradientsGm.SetGlobalBuffer((__gm__ T*)gradients + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    featuresGm.SetGlobalBuffer((__gm__ T*)features + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    outputGm.SetGlobalBuffer((__gm__ T*)output + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
     // 输入输出队列：以原始类型 T 分配
     pipe.InitBuffer(inputQueueGrad, BUFFER_NUM, ubLength_ * sizeof(T));

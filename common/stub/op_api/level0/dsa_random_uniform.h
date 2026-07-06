@@ -13,19 +13,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *DSARandomUniform(const aclIntArray *outShape,
-                                  uint64_t seed,
-                                  uint64_t offset,
-                                  const aclScalar *low,
-                                  const aclScalar *high,
-                                  aclOpExecutor *executor);
+const aclTensor* DSARandomUniform(const aclIntArray* outShape, uint64_t seed, uint64_t offset, const aclScalar* low,
+                                  const aclScalar* high, aclOpExecutor* executor);
 
-const aclTensor *DSARandomUniformTensor(const aclIntArray *outShape,
-                                  const aclTensor *seed,
-                                  const aclTensor *offset,
-                                  const aclScalar *low,
-                                  const aclScalar *high,
-                                  aclOpExecutor *executor);
-}
+const aclTensor* DSARandomUniformTensor(const aclIntArray* outShape, const aclTensor* seed, const aclTensor* offset,
+                                        const aclScalar* low, const aclScalar* high, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_DSA_RANDOM_UNIFORM_H_

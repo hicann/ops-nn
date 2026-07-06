@@ -45,9 +45,8 @@ static graphStatus InferShape4LayerNormV3(gert::InferShapeContext* context)
 
     OP_CHECK_IF(
         !Ops::Nn::IsDimValid(x_shape->GetDimNum(), *begin_norm_axis_ptr),
-        OP_LOGE(
-            context->GetNodeName(), "%s",
-            Ops::Nn::GenInvalidDimMsg("begin_norm_axis", x_shape->GetDimNum(), *begin_norm_axis_ptr).c_str()),
+        OP_LOGE(context->GetNodeName(), "%s",
+                Ops::Nn::GenInvalidDimMsg("begin_norm_axis", x_shape->GetDimNum(), *begin_norm_axis_ptr).c_str()),
         return GRAPH_FAILED);
 
     int64_t begin_norm_axis_val = *begin_norm_axis_ptr < 0 ?

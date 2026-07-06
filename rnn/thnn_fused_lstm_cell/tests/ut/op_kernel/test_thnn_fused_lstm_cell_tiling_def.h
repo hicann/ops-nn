@@ -34,7 +34,7 @@ inline void InitThnnFusedLstmCellTilingDataTest(uint8_t* tiling, ThnnFusedLstmCe
     memcpy(data, tiling, sizeof(ThnnFusedLstmCellTilingDataTest));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                    \
-    ThnnFusedLstmCellTilingDataTest tiling_data;                  \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    ThnnFusedLstmCellTilingDataTest tiling_data; \
     InitThnnFusedLstmCellTilingDataTest(tiling_arg, &tiling_data)
 #endif // FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL

@@ -22,20 +22,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void mse_loss_grad_v2(
-    GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void mse_loss_grad_v2(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y,
+                                                       GM_ADDR workspace, GM_ADDR tiling);
 
-class mse_loss_grad_v2_test : public testing::Test
-{
+class mse_loss_grad_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "mse_loss_grad_v2 SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "mse_loss_grad_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "mse_loss_grad_v2 SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "mse_loss_grad_v2_test TearDown\n" << endl; }
 };
 
 // [32, 64, 96]  float32

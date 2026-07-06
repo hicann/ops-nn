@@ -17,7 +17,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 struct ScatterListTilingData {
     int64_t dim0Count = 0;
     int64_t dim1Count = 0;
@@ -59,9 +58,9 @@ struct ScatterListTilingData {
 #define DTYPE_VAR int8_t
 #define DTYPE_INDICE int32_t
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);

@@ -29,8 +29,7 @@ constexpr int64_t PP_ELEMENT_NUM = 8 * 1024;
 constexpr int64_t ONE_REPEAT_ELE_NUM_FP32 = 64;
 
 template <typename T>
-class LogitND
-{
+class LogitND {
 public:
     TPipe pipe;
     __aicore__ inline LogitND(){};
@@ -73,8 +72,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void LogitND<T>::Init(
-    GM_ADDR input, GM_ADDR output, GM_ADDR workspace, const LogitTilingData* tilingData)
+__aicore__ inline void LogitND<T>::Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace,
+                                        const LogitTilingData* tilingData)
 {
     inputGm.SetGlobalBuffer((__gm__ T*)input);
     outputGm.SetGlobalBuffer((__gm__ T*)output);

@@ -30,18 +30,15 @@
 using namespace std;
 
 class SmoothL1LossGradV2Tiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SmoothL1LossGradV2Tiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SmoothL1LossGradV2Tiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SmoothL1LossGradV2Tiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SmoothL1LossGradV2Tiling TearDown" << std::endl; }
 };
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
-                        map<string, string>& aicoreSpec, map<string, string>& intrinsics, map<string, string>& socVersion)
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -58,9 +55,11 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-static void SmoothL1LossGradV2TilingCase(std::initializer_list<int64_t>& inputShape1, std::initializer_list<int64_t>& inputShape2,
-                                         std::initializer_list<int64_t>& inputShape3, std::initializer_list<int64_t>& outputShape,
-                                         ge::DataType inputDtype, std::string& reduction, float& sigma)
+static void SmoothL1LossGradV2TilingCase(std::initializer_list<int64_t>& inputShape1,
+                                         std::initializer_list<int64_t>& inputShape2,
+                                         std::initializer_list<int64_t>& inputShape3,
+                                         std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype,
+                                         std::string& reduction, float& sigma)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -94,7 +93,7 @@ static void SmoothL1LossGradV2TilingCase(std::initializer_list<int64_t>& inputSh
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-     // tilingFunc simulate
+    // tilingFunc simulate
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(16 * 4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     auto param = gert::TilingData::CreateCap(4096);
@@ -142,5 +141,6 @@ TEST_F(SmoothL1LossGradV2Tiling, kl_div_loss_grad_david_tiling1)
     std::initializer_list<int64_t> outputShape = {2048, 1, 48};
     std::string reduction = "mean";
     float sigma = 1.0f;
-    SmoothL1LossGradV2TilingCase(inputShape1, inputShape2, inputShape3, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction, sigma);
+    SmoothL1LossGradV2TilingCase(inputShape1, inputShape2, inputShape3, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                                 reduction, sigma);
 }

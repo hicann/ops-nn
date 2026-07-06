@@ -32,9 +32,8 @@ static const std::set<ge::DataType> deterministicSupportType = {ge::DT_FLOAT, ge
 
 bool UnsortedSegmentSumDetermSmallInnerDimTiling::IsCapable()
 {
-    OP_LOGI(
-        context_->GetNodeName(), "[UnsortedSegmentSum] DetermSmallInnerDim GetDeterministic state: %u",
-        context_->GetDeterministic());
+    OP_LOGI(context_->GetNodeName(), "[UnsortedSegmentSum] DetermSmallInnerDim GetDeterministic state: %u",
+            context_->GetDeterministic());
     if (context_->GetDeterministic() != 1 || dataShapeSize_ == 0 || innerDim_ != 1 ||
         inputOuterDim_ >= INPUT_OUTER_DIM_THRESHOLD ||
         deterministicSupportType.find(dataType_) == deterministicSupportType.end()) {
@@ -124,9 +123,9 @@ ge::graphStatus UnsortedSegmentSumDetermSmallInnerDimTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_CHECK_IF(
-        (res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
+                return ge::GRAPH_FAILED);
     if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
         return ge::GRAPH_FAILED;
     }

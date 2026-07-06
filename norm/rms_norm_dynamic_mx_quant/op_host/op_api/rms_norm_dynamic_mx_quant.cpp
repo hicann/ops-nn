@@ -31,9 +31,9 @@ namespace l0op {
 OP_TYPE_REGISTER(RmsNormDynamicMxQuant); // 完成算子原型的关联
 
 const std::array<aclTensor*, RMS_NORM_DYNAMIC_MX_QUANT_OUT_NUM> RmsNormDynamicMxQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon,
-    int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
-    aclTensor* mxscaleOut, aclTensor* rstdOut, aclOpExecutor* executor)
+    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon, int64_t scaleAlg,
+    char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut, aclTensor* mxscaleOut, aclTensor* rstdOut,
+    aclOpExecutor* executor)
 {
     // 调用接口，将算子执行任务加到执行器executor中
     L0_DFX(RmsNormDynamicMxQuant, x, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd);

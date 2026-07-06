@@ -46,20 +46,19 @@ struct RotateQuantInfo {
     bool initFlag = false;
     ge::DataType xDtype = ge::DT_BF16;
     ge::DataType yDtype = ge::DT_INT8;
-    const char *opName = "RotateQuant";
+    const char* opName = "RotateQuant";
 };
 
 class RotateQuantTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit RotateQuantTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){
+    explicit RotateQuantTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
+    {
         InitCompileInfo();
     };
     ~RotateQuantTiling() override = default;
 
 protected:
-    bool IsCapable() override {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
@@ -79,8 +78,8 @@ protected:
     bool SetMatmulTiling();
     bool SetRotateQuantTiling();
     uint32_t CalcMaxHandleRowsPerUb(uint32_t ubSize);
-    ge::graphStatus CalcStepLoop(uint32_t maxHandleRowsPerUb, uint32_t loopPerHeadCore,
-                                  uint32_t loopPerHeadCubeCore, uint32_t& stepLoop);
+    ge::graphStatus CalcStepLoop(uint32_t maxHandleRowsPerUb, uint32_t loopPerHeadCore, uint32_t loopPerHeadCubeCore,
+                                 uint32_t& stepLoop);
 
     RotateQuantOpt::RotateQuantTilingData tilingData_;
     RotateQuantInfo inputParams_;
@@ -90,4 +89,4 @@ protected:
 } // namespace RotateQuant
 } // namespace NN
 } // namespace Ops
-#endif  // __OP_HOST_ROTATE_QUANT_TILING_H__
+#endif // __OP_HOST_ROTATE_QUANT_TILING_H__

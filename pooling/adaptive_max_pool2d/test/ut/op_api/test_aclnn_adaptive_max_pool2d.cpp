@@ -21,18 +21,11 @@
 using namespace op;
 using namespace std;
 
-class l2_adaptive_max_pool2d_test : public testing::Test
-{
+class l2_adaptive_max_pool2d_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_adaptive_max_pool2d_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_adaptive_max_pool2d_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_adaptive_max_pool2d_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_adaptive_max_pool2d_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_adaptive_max_pool2d_test, nullptr_self)

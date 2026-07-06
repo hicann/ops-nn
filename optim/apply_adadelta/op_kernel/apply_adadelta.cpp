@@ -30,11 +30,9 @@
 #include "arch35/apply_adadelta.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void apply_adadelta(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_adadelta(GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update, GM_ADDR lr, GM_ADDR rho,
+                                          GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out, GM_ADDR workspace,
+                                          GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAdadeltaTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdadeltaTilingData, tilingData, tiling);

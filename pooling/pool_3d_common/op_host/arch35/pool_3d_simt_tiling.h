@@ -24,8 +24,7 @@
 #include "avg_pool_3d_tiling_common.h"
 #include "max_pool_3d_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(Pool3DSimtTilingData)
 TILING_DATA_FIELD_DEF(int64_t, nDim);
 TILING_DATA_FIELD_DEF(int64_t, cDim);
@@ -64,16 +63,11 @@ REGISTER_TILING_DATA_CLASS(MaxPool3D_911101, Pool3DSimtTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPool3D_911110, Pool3DSimtTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPool3D_911111, Pool3DSimtTilingData);
 
-class Pool3DSimtTiling : public TilingBaseClass
-{
+class Pool3DSimtTiling : public TilingBaseClass {
 public:
-    explicit Pool3DSimtTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit Pool3DSimtTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~Pool3DSimtTiling() override
-    {
-    }
+    ~Pool3DSimtTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -93,35 +87,25 @@ public:
     uint64_t ubSize = 0;
 };
 
-class AvgPool3DSimtTiling : public Pool3DSimtTiling
-{
+class AvgPool3DSimtTiling : public Pool3DSimtTiling {
 public:
-    explicit AvgPool3DSimtTiling(gert::TilingContext* context) : Pool3DSimtTiling(context)
-    {
-    }
-    ~AvgPool3DSimtTiling() override
-    {
-    }
+    explicit AvgPool3DSimtTiling(gert::TilingContext* context) : Pool3DSimtTiling(context) {}
+    ~AvgPool3DSimtTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class MaxPool3DSimtTiling : public Pool3DSimtTiling
-{
+class MaxPool3DSimtTiling : public Pool3DSimtTiling {
 public:
-    explicit MaxPool3DSimtTiling(gert::TilingContext* context) : Pool3DSimtTiling(context)
-    {
-    }
-    ~MaxPool3DSimtTiling() override
-    {
-    }
+    explicit MaxPool3DSimtTiling(gert::TilingContext* context) : Pool3DSimtTiling(context) {}
+    ~MaxPool3DSimtTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}
+} // namespace optiling
 #endif

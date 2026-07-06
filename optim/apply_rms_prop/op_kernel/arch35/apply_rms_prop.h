@@ -59,22 +59,19 @@ class ApplyRmsProp {
     // Number of float elements per 32B UB block (8 elements for fp32).
     // Used for the 1-element scalar Tensor DataCopyPad alignment.
     static constexpr int32_t SCALAR_ALIGN_ELEMS = 8;
-    static constexpr int32_t NUM_SCALARS = 4;  // lr, rho, momentum, epsilon
+    static constexpr int32_t NUM_SCALARS = 4; // lr, rho, momentum, epsilon
 
 public:
     __aicore__ inline ApplyRmsProp() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR ms, GM_ADDR mom,
-        GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-        GM_ADDR grad, GM_ADDR var_out,
-        const ApplyRmsPropTilingData* tiling_data);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum,
+                                GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out,
+                                const ApplyRmsPropTilingData* tiling_data);
 
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void load_scalars_from_gm(
-        GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR momentumAddr, GM_ADDR epsAddr);
+    __aicore__ inline void load_scalars_from_gm(GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR momentumAddr, GM_ADDR epsAddr);
     __aicore__ inline void CopyIn(int64_t progress, int64_t current_num);
     __aicore__ inline void Compute(int64_t current_num);
     __aicore__ inline void CopyOut(int64_t progress, int64_t current_num);
@@ -104,8 +101,8 @@ private:
     // Dedicated 32B-aligned UB scratch for the 1-element scalar Tensor reads.
     // 4 scalars (lr / rho / momentum / epsilon) each need at most 1 UB block.
     // Minor-3 fix: 拆分为 fp32 输出区 + T 类型读入区，避免源/目标 alias 的 Cast。
-    TBuf<QuePosition::VECCALC> scalar_buf;       // fp32 输出区（NUM_SCALARS * 32B）
-    TBuf<QuePosition::VECCALC> scalar_buf_in;    // T 类型读入区（仅 fp16/bf16 使用，NUM_SCALARS * 32B）
+    TBuf<QuePosition::VECCALC> scalar_buf;    // fp32 输出区（NUM_SCALARS * 32B）
+    TBuf<QuePosition::VECCALC> scalar_buf_in; // T 类型读入区（仅 fp16/bf16 使用，NUM_SCALARS * 32B）
 
     GlobalTensor<T> var_gm, ms_gm, mom_gm, grad_gm;
     GlobalTensor<T> var_out_gm;
@@ -128,8 +125,8 @@ private:
 // dtypes uniformly: read into a per-dtype slot, Cast to fp32 in place, then
 // GetValue(0).
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::load_scalars_from_gm(
-    GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR momentumAddr, GM_ADDR epsAddr)
+__aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::load_scalars_from_gm(GM_ADDR lrAddr, GM_ADDR rhoAddr,
+                                                                          GM_ADDR momentumAddr, GM_ADDR epsAddr)
 {
     lr_gm.SetGlobalBuffer((__gm__ T*)lrAddr, 1);
     rho_gm.SetGlobalBuffer((__gm__ T*)rhoAddr, 1);
@@ -138,7 +135,7 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::load_scalars_from_gm(
 
     // Four 32B-aligned slots in scalar_buf (8 fp32 elements per slot).
     LocalTensor<float> scratchF = scalar_buf.Get<float>();
-    LocalTensor<float> slotLr  = scratchF[0 * SCALAR_ALIGN_ELEMS];
+    LocalTensor<float> slotLr = scratchF[0 * SCALAR_ALIGN_ELEMS];
     LocalTensor<float> slotRho = scratchF[1 * SCALAR_ALIGN_ELEMS];
     LocalTensor<float> slotMom = scratchF[2 * SCALAR_ALIGN_ELEMS];
     LocalTensor<float> slotEps = scratchF[3 * SCALAR_ALIGN_ELEMS];
@@ -156,80 +153,81 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::load_scalars_from_gm(
         // fp16 / bf16: 用 scalar_buf_in 作为 T 类型读入区，避免与 fp32 slot 同地址 Cast。
         // 每个 T 槽位偏移 SCALAR_ALIGN_ELEMS*2 个 T 元素（= 32B）。
         LocalTensor<T> scratchH = scalar_buf_in.Get<T>();
-        LocalTensor<T> hLr  = scratchH[0 * SCALAR_ALIGN_ELEMS * 2];
+        LocalTensor<T> hLr = scratchH[0 * SCALAR_ALIGN_ELEMS * 2];
         LocalTensor<T> hRho = scratchH[1 * SCALAR_ALIGN_ELEMS * 2];
         LocalTensor<T> hMom = scratchH[2 * SCALAR_ALIGN_ELEMS * 2];
         LocalTensor<T> hEps = scratchH[3 * SCALAR_ALIGN_ELEMS * 2];
 
-        DataCopyPad(hLr,  lr_gm,       cpScalar, padParams);
-        DataCopyPad(hRho, rho_gm,      cpScalar, padParams);
+        DataCopyPad(hLr, lr_gm, cpScalar, padParams);
+        DataCopyPad(hRho, rho_gm, cpScalar, padParams);
         DataCopyPad(hMom, momentum_gm, cpScalar, padParams);
-        DataCopyPad(hEps, epsilon_gm,  cpScalar, padParams);
+        DataCopyPad(hEps, epsilon_gm, cpScalar, padParams);
 
         PipeBarrier<PIPE_ALL>();
 
         // half/bf16 -> float is exact; CAST_NONE is correct.
         // 源 (scalar_buf_in) 与目标 (scalar_buf) 物理隔离，不存在 alias 风险。
-        Cast(slotLr,  hLr,  RoundMode::CAST_NONE, 1);
+        Cast(slotLr, hLr, RoundMode::CAST_NONE, 1);
         Cast(slotRho, hRho, RoundMode::CAST_NONE, 1);
         Cast(slotMom, hMom, RoundMode::CAST_NONE, 1);
         Cast(slotEps, hEps, RoundMode::CAST_NONE, 1);
         PipeBarrier<PIPE_ALL>();
     } else {
-        DataCopyPad(slotLr,  lr_gm,       cpScalar, padParams);
-        DataCopyPad(slotRho, rho_gm,      cpScalar, padParams);
+        DataCopyPad(slotLr, lr_gm, cpScalar, padParams);
+        DataCopyPad(slotRho, rho_gm, cpScalar, padParams);
         DataCopyPad(slotMom, momentum_gm, cpScalar, padParams);
-        DataCopyPad(slotEps, epsilon_gm,  cpScalar, padParams);
+        DataCopyPad(slotEps, epsilon_gm, cpScalar, padParams);
         PipeBarrier<PIPE_ALL>();
     }
 
-    lr_       = slotLr.GetValue(0);
-    rho_      = slotRho.GetValue(0);
+    lr_ = slotLr.GetValue(0);
+    rho_ = slotRho.GetValue(0);
     momentum_ = slotMom.GetValue(0);
-    eps_      = slotEps.GetValue(0);
+    eps_ = slotEps.GetValue(0);
     one_minus_rho_ = 1.0f - rho_;
 
     // Major-2 fix: epsilon 必须 > 0，否则 sqrt(ms+eps)=0 时 Div 产生 inf/nan。
     // fp16 下 1e-7 会被截断为 0，这里用 IEEE 754 fp32 最小 normal (FLT_MIN) 兜底。
-    constexpr float EPS_FLOOR = 1.1754944e-38f;  // FLT_MIN
+    constexpr float EPS_FLOOR = 1.1754944e-38f; // FLT_MIN
     if (!(eps_ > EPS_FLOOR)) {
         eps_ = EPS_FLOOR;
     }
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Init(
-    GM_ADDR var, GM_ADDR ms, GM_ADDR mom,
-    GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR momentumAddr, GM_ADDR epsilonAddr,
-    GM_ADDR grad, GM_ADDR var_out,
-    const ApplyRmsPropTilingData* tiling_data)
+__aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Init(GM_ADDR var, GM_ADDR ms, GM_ADDR mom, GM_ADDR lrAddr,
+                                                          GM_ADDR rhoAddr, GM_ADDR momentumAddr, GM_ADDR epsilonAddr,
+                                                          GM_ADDR grad, GM_ADDR var_out,
+                                                          const ApplyRmsPropTilingData* tiling_data)
 {
     // Per-core element range
     int64_t remain = tiling_data->totalNum - tiling_data->blockFactor * GetBlockIdx();
     block_length_ = (remain > tiling_data->blockFactor) ? tiling_data->blockFactor : remain;
-    if (block_length_ < 0) block_length_ = 0;
+    if (block_length_ < 0)
+        block_length_ = 0;
     ub_length_ = tiling_data->ubFactor;
-    if (ub_length_ <= 0) ub_length_ = 1;
+    if (ub_length_ <= 0)
+        ub_length_ = 1;
 
     int64_t off = tiling_data->blockFactor * GetBlockIdx();
-    var_gm.SetGlobalBuffer((__gm__ T*)var  + off, block_length_);
-    ms_gm.SetGlobalBuffer((__gm__ T*)ms    + off, block_length_);
-    mom_gm.SetGlobalBuffer((__gm__ T*)mom  + off, block_length_);
+    var_gm.SetGlobalBuffer((__gm__ T*)var + off, block_length_);
+    ms_gm.SetGlobalBuffer((__gm__ T*)ms + off, block_length_);
+    mom_gm.SetGlobalBuffer((__gm__ T*)mom + off, block_length_);
     grad_gm.SetGlobalBuffer((__gm__ T*)grad + off, block_length_);
     var_out_gm.SetGlobalBuffer((__gm__ T*)var_out + off, block_length_);
 
-    pipe.InitBuffer(in_que_var,  BUFFER_NUM, ub_length_ * sizeof(T));
-    pipe.InitBuffer(in_que_ms,   BUFFER_NUM, ub_length_ * sizeof(T));
-    pipe.InitBuffer(in_que_mom,  BUFFER_NUM, ub_length_ * sizeof(T));
+    pipe.InitBuffer(in_que_var, BUFFER_NUM, ub_length_ * sizeof(T));
+    pipe.InitBuffer(in_que_ms, BUFFER_NUM, ub_length_ * sizeof(T));
+    pipe.InitBuffer(in_que_mom, BUFFER_NUM, ub_length_ * sizeof(T));
     pipe.InitBuffer(in_que_grad, BUFFER_NUM, ub_length_ * sizeof(T));
     pipe.InitBuffer(out_que_var, BUFFER_NUM, ub_length_ * sizeof(T));
-    pipe.InitBuffer(out_que_ms,  BUFFER_NUM, ub_length_ * sizeof(T));
+    pipe.InitBuffer(out_que_ms, BUFFER_NUM, ub_length_ * sizeof(T));
     pipe.InitBuffer(out_que_mom, BUFFER_NUM, ub_length_ * sizeof(T));
 
     if constexpr (IS_REDUCED) {
-        pipe.InitBuffer(fp32_var_buf,  ub_length_ * sizeof(float));
-        pipe.InitBuffer(fp32_ms_buf,   ub_length_ * sizeof(float));
-        pipe.InitBuffer(fp32_mom_buf,  ub_length_ * sizeof(float));
+        pipe.InitBuffer(fp32_var_buf, ub_length_ * sizeof(float));
+        pipe.InitBuffer(fp32_ms_buf, ub_length_ * sizeof(float));
+        pipe.InitBuffer(fp32_mom_buf, ub_length_ * sizeof(float));
         pipe.InitBuffer(fp32_grad_buf, ub_length_ * sizeof(float));
         pipe.InitBuffer(tmp_buf1, ub_length_ * sizeof(float));
         pipe.InitBuffer(tmp_buf2, ub_length_ * sizeof(float));
@@ -263,10 +261,10 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::CopyIn(int64_t progress, in
     cp.dstStride = 0;
     DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
     int64_t gm_off = progress * ub_length_;
-    DataCopyPad(v,  var_gm[gm_off],  cp, padParams);
-    DataCopyPad(m,  ms_gm[gm_off],   cp, padParams);
-    DataCopyPad(mo, mom_gm[gm_off],  cp, padParams);
-    DataCopyPad(g,  grad_gm[gm_off], cp, padParams);
+    DataCopyPad(v, var_gm[gm_off], cp, padParams);
+    DataCopyPad(m, ms_gm[gm_off], cp, padParams);
+    DataCopyPad(mo, mom_gm[gm_off], cp, padParams);
+    DataCopyPad(g, grad_gm[gm_off], cp, padParams);
 
     in_que_var.EnQue(v);
     in_que_ms.EnQue(m);
@@ -277,13 +275,13 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::CopyIn(int64_t progress, in
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Compute(int64_t current_num)
 {
-    LocalTensor<T> v  = in_que_var.template DeQue<T>();
-    LocalTensor<T> m  = in_que_ms.template DeQue<T>();
+    LocalTensor<T> v = in_que_var.template DeQue<T>();
+    LocalTensor<T> m = in_que_ms.template DeQue<T>();
     LocalTensor<T> mo = in_que_mom.template DeQue<T>();
-    LocalTensor<T> g  = in_que_grad.template DeQue<T>();
+    LocalTensor<T> g = in_que_grad.template DeQue<T>();
 
-    LocalTensor<T> v_out  = out_que_var.template AllocTensor<T>();
-    LocalTensor<T> m_out  = out_que_ms.template AllocTensor<T>();
+    LocalTensor<T> v_out = out_que_var.template AllocTensor<T>();
+    LocalTensor<T> m_out = out_que_ms.template AllocTensor<T>();
     LocalTensor<T> mo_out = out_que_mom.template AllocTensor<T>();
 
     LocalTensor<float> tmp1 = tmp_buf1.Get<float>();
@@ -293,15 +291,15 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Compute(int64_t current_num
 
     if constexpr (IS_REDUCED) {
         // Reduced precision: Cast T->fp32, compute in fp32, Cast back to T
-        LocalTensor<float> vF  = fp32_var_buf.Get<float>();
-        LocalTensor<float> mF  = fp32_ms_buf.Get<float>();
+        LocalTensor<float> vF = fp32_var_buf.Get<float>();
+        LocalTensor<float> mF = fp32_ms_buf.Get<float>();
         LocalTensor<float> moF = fp32_mom_buf.Get<float>();
-        LocalTensor<float> gF  = fp32_grad_buf.Get<float>();
+        LocalTensor<float> gF = fp32_grad_buf.Get<float>();
 
-        Cast(vF,  v,  RoundMode::CAST_NONE, n);
-        Cast(mF,  m,  RoundMode::CAST_NONE, n);
+        Cast(vF, v, RoundMode::CAST_NONE, n);
+        Cast(mF, m, RoundMode::CAST_NONE, n);
         Cast(moF, mo, RoundMode::CAST_NONE, n);
-        Cast(gF,  g,  RoundMode::CAST_NONE, n);
+        Cast(gF, g, RoundMode::CAST_NONE, n);
 
         // Step1: ms_new = rho * ms + (1-rho) * grad^2
         Mul(tmp1, gF, gF, n);
@@ -324,8 +322,8 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Compute(int64_t current_num
         // Step3: var_new = var - mom_new
         Sub(vF, vF, moF, n);
 
-        Cast(v_out,  vF,  RoundMode::CAST_RINT, n);
-        Cast(m_out,  mF,  RoundMode::CAST_RINT, n);
+        Cast(v_out, vF, RoundMode::CAST_RINT, n);
+        Cast(m_out, mF, RoundMode::CAST_RINT, n);
         Cast(mo_out, moF, RoundMode::CAST_RINT, n);
     } else {
         // fp32 direct path
@@ -361,8 +359,8 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Compute(int64_t current_num
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t current_num)
 {
-    LocalTensor<T> v_out  = out_que_var.template DeQue<T>();
-    LocalTensor<T> m_out  = out_que_ms.template DeQue<T>();
+    LocalTensor<T> v_out = out_que_var.template DeQue<T>();
+    LocalTensor<T> m_out = out_que_ms.template DeQue<T>();
     LocalTensor<T> mo_out = out_que_mom.template DeQue<T>();
 
     // Minor-4 fix: 显式零初始化 DataCopyExtParams 所有字段
@@ -376,7 +374,7 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::CopyOut(int64_t progress, i
     DataCopyPad(var_out_gm[gm_off], v_out, cp);
     // Algorithmic inplace: write new ms / mom back to their input GM
     // (no separate output addresses exist in the new GE IR).
-    DataCopyPad(ms_gm[gm_off],  m_out,  cp);
+    DataCopyPad(ms_gm[gm_off], m_out, cp);
     DataCopyPad(mom_gm[gm_off], mo_out, cp);
 
     out_que_var.FreeTensor(v_out);
@@ -387,7 +385,8 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::CopyOut(int64_t progress, i
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Process()
 {
-    if (block_length_ <= 0) return;
+    if (block_length_ <= 0)
+        return;
     int64_t loop_count = (block_length_ + ub_length_ - 1) / ub_length_;
     for (int64_t i = 0; i < loop_count; i++) {
         int64_t current_num = (i == (loop_count - 1)) ? (block_length_ - ub_length_ * i) : ub_length_;

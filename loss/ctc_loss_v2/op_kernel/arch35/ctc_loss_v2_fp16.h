@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /* !
  * \file ctc_loss_v2_fp16.h
  * \brief ctc_loss_v2_fp16
@@ -23,12 +23,13 @@
 namespace CTCLossV2 {
 using namespace AscendC;
 
-template <typename T, typename DataType, typename ThreadType> class CTCLossV2FP16 : public CTCLossV2Base<T, DataType, ThreadType> {
+template <typename T, typename DataType, typename ThreadType>
+class CTCLossV2FP16 : public CTCLossV2Base<T, DataType, ThreadType> {
 public:
     __aicore__ inline CTCLossV2FP16(){};
     __aicore__ inline void Init(GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths, GM_ADDR target_lengths,
-        GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR workspace,
-        const CTCLossV2TilingData4AscendC *tilingData);
+                                GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR workspace,
+                                const CTCLossV2TilingData4AscendC* tilingData);
 
     __aicore__ inline void Process();
 
@@ -37,18 +38,21 @@ private:
 };
 
 template <typename T, typename DataType, typename ThreadType>
-__aicore__ inline void CTCLossV2FP16<T, DataType, ThreadType>::Init(GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths,
-    GM_ADDR target_lengths, GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR workspace,
-    const CTCLossV2TilingData4AscendC *tilingData)
+__aicore__ inline void CTCLossV2FP16<T, DataType, ThreadType>::Init(GM_ADDR log_probs, GM_ADDR targets,
+                                                                    GM_ADDR input_lengths, GM_ADDR target_lengths,
+                                                                    GM_ADDR neg_log_likelihood, GM_ADDR log_alpha,
+                                                                    GM_ADDR workspace,
+                                                                    const CTCLossV2TilingData4AscendC* tilingData)
 {
     this->BaseInit(log_probs, targets, input_lengths, target_lengths, neg_log_likelihood, log_alpha, workspace,
-        tilingData);
-    tmpFloatData.SetGlobalBuffer((__gm__ float *)(workspace));
+                   tilingData);
+    tmpFloatData.SetGlobalBuffer((__gm__ float*)(workspace));
 }
 
 template <typename DataType, typename ThreadType>
-__simt_callee__ __aicore__ inline DataType ProcessTgBatchOffsetsFp16(__gm__ DataType *targetLengthsGm, int32_t targetsDim,
-    int32_t tgBatchStride, int32_t idx)
+__simt_callee__ __aicore__ inline DataType ProcessTgBatchOffsetsFp16(__gm__ DataType* targetLengthsGm,
+                                                                     int32_t targetsDim, int32_t tgBatchStride,
+                                                                     int32_t idx)
 {
     if (targetsDim == 1) {
         ThreadType sum = 0;
@@ -62,10 +66,11 @@ __simt_callee__ __aicore__ inline DataType ProcessTgBatchOffsetsFp16(__gm__ Data
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAlphaFp16(int32_t batchSize, int32_t laInputStride, 
-    ThreadType laBatchStride, ThreadType lpBatchStride, int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, 
-    int32_t tgBatchStride, int32_t blank, int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, 
-    __gm__ DataType *inputLengthsGm, __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __gm__ float *tmpDataGm)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline void CalcLogAlphaFp16(
+    int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, ThreadType lpBatchStride,
+    int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
+    int32_t tgTargetStride, __gm__ T* logProbsGm, __gm__ DataType* targetsGm, __gm__ DataType* inputLengthsGm,
+    __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm, __gm__ float* tmpDataGm)
 {
     int32_t threadIdy = threadIdx.y;
     int32_t thread_idx = threadIdx.x;
@@ -78,7 +83,8 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
         ThreadType targetLength = targetLengthsGm[b];
         ThreadType lpBatchOffset = b * lpBatchStride;
         ThreadType laBatchOffset = b * laBatchStride;
-        ThreadType tgBatchOffset = ProcessTgBatchOffsetsFp16<DataType, ThreadType>(targetLengthsGm, targetsDim, tgBatchStride, b);
+        ThreadType tgBatchOffset = ProcessTgBatchOffsetsFp16<DataType, ThreadType>(targetLengthsGm, targetsDim,
+                                                                                   tgBatchStride, b);
 
         if (inputLength == 0) {
             if (threadIdx.x == 0) {
@@ -96,9 +102,11 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
                     la = static_cast<float>(logProbsGm[lpBatchOffset + blank]);
                     break;
                 case 1:
-                    la = targetLength == 0 ? neginf :
-                                             static_cast<float>(logProbsGm[lpBatchOffset +
-                        GetTargetPrime<DataType>(targetsGm, tgBatchOffset, tgTargetStride, int32_t(1), blank)]);
+                    la = targetLength == 0 ?
+                             neginf :
+                             static_cast<float>(logProbsGm[lpBatchOffset + GetTargetPrime<DataType>(
+                                                                               targetsGm, tgBatchOffset, tgTargetStride,
+                                                                               int32_t(1), blank)]);
                     break;
                 default:
                     la = neginf;
@@ -114,8 +122,8 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
             bool haveThree;
             if (s < 2 * targetLength + 1 && targetLength > 0) {
                 currentChar = GetTargetPrime<DataType>(targetsGm, tgBatchOffset, tgTargetStride, s, blank);
-                haveThree = ((s > 1) &&
-                    (GetTargetPrime<DataType>(targetsGm, tgBatchOffset, tgTargetStride, s - 2, blank) != currentChar));
+                haveThree = ((s > 1) && (GetTargetPrime<DataType>(targetsGm, tgBatchOffset, tgTargetStride, s - 2,
+                                                                  blank) != currentChar));
             } else {
                 currentChar = blank;
                 haveThree = false;
@@ -146,11 +154,11 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
                     if (lamax == neginf) {
                         lamax = 0;
                     }
-                    tmpDataGm[laBatchOffset + laInputStride * t + s] =
-                        log1pf(expf(la1 - lamax) + expf(la2 - lamax) + expf(la3 - lamax) - 1) +
-                        lamax + static_cast<float>(logProbsGm[lpBatchOffset + t * lpInputStride + currentChar]);
-                    logAlphaGm[laBatchOffset + laInputStride * t + s] =
-                        static_cast<T>(tmpDataGm[laBatchOffset + laInputStride * t + s]);
+                    tmpDataGm[laBatchOffset + laInputStride * t +
+                              s] = log1pf(expf(la1 - lamax) + expf(la2 - lamax) + expf(la3 - lamax) - 1) + lamax +
+                                   static_cast<float>(logProbsGm[lpBatchOffset + t * lpInputStride + currentChar]);
+                    logAlphaGm[laBatchOffset + laInputStride * t + s] = static_cast<T>(
+                        tmpDataGm[laBatchOffset + laInputStride * t + s]);
                 }
             }
         }
@@ -160,8 +168,8 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
         if (thread_idx == 0) {
             float l1 = tmpDataGm[laBatchOffset + laInputStride * (inputLength - 1) + (targetLength * 2)];
             float l2 = targetLength > 0 ?
-                tmpDataGm[laBatchOffset + laInputStride * (inputLength - 1) + (targetLength * 2 - 1)] :
-                neginf;
+                           tmpDataGm[laBatchOffset + laInputStride * (inputLength - 1) + (targetLength * 2 - 1)] :
+                           neginf;
             float m = ((l1 > l2) ? l1 : l2);
             m = ((m == neginf) ? 0 : m);
             float log_likelihood = log1pf(expf(l1 - m) + expf(l2 - m) - 1) + m;
@@ -171,28 +179,36 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__simt_vf__ LAUNCH_BOUND(THREAD_NUM_512)__aicore__
+__simt_vf__ LAUNCH_BOUND(THREAD_NUM_512) __aicore__
     void SimtComputeFp16(int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, ThreadType lpBatchStride,
-    int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
-    int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, __gm__ DataType *inputLengthsGm,
-    __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __gm__ float *tmpDataGm) 
-    {
-        CalcLogAlphaFp16<T, DataType, ThreadType>(batchSize, laInputStride, laBatchStride, lpBatchStride, maxInputLength, lpInputStride, targetsDim, tgBatchStride, 
-                        blank, tgTargetStride, logProbsGm, targetsGm, inputLengthsGm, targetLengthsGm, negLogLikelihoodGm, logAlphaGm, tmpDataGm);
-    }
+                         int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride,
+                         int32_t blank, int32_t tgTargetStride, __gm__ T* logProbsGm, __gm__ DataType* targetsGm,
+                         __gm__ DataType* inputLengthsGm, __gm__ DataType* targetLengthsGm,
+                         __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm, __gm__ float* tmpDataGm)
+{
+    CalcLogAlphaFp16<T, DataType, ThreadType>(batchSize, laInputStride, laBatchStride, lpBatchStride, maxInputLength,
+                                              lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
+                                              logProbsGm, targetsGm, inputLengthsGm, targetLengthsGm,
+                                              negLogLikelihoodGm, logAlphaGm, tmpDataGm);
+}
 
 template <typename T, typename DataType, typename ThreadType>
-__simt_vf__ LAUNCH_BOUND(THREAD_NUM_1024)__aicore__
-    void SimtComputeFp16Int32(int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride, ThreadType lpBatchStride,
-    int32_t maxInputLength, ThreadType lpInputStride, int32_t targetsDim, int32_t tgBatchStride, int32_t blank,
-    int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, __gm__ DataType *inputLengthsGm,
-    __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __gm__ float *tmpDataGm) 
-    {
-        CalcLogAlphaFp16<T, DataType, ThreadType>(batchSize, laInputStride, laBatchStride, lpBatchStride, maxInputLength, lpInputStride, targetsDim, tgBatchStride, 
-                        blank, tgTargetStride, logProbsGm, targetsGm, inputLengthsGm, targetLengthsGm, negLogLikelihoodGm, logAlphaGm, tmpDataGm);
-    }
+__simt_vf__ LAUNCH_BOUND(THREAD_NUM_1024) __aicore__
+    void SimtComputeFp16Int32(int32_t batchSize, int32_t laInputStride, ThreadType laBatchStride,
+                              ThreadType lpBatchStride, int32_t maxInputLength, ThreadType lpInputStride,
+                              int32_t targetsDim, int32_t tgBatchStride, int32_t blank, int32_t tgTargetStride,
+                              __gm__ T* logProbsGm, __gm__ DataType* targetsGm, __gm__ DataType* inputLengthsGm,
+                              __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm,
+                              __gm__ float* tmpDataGm)
+{
+    CalcLogAlphaFp16<T, DataType, ThreadType>(batchSize, laInputStride, laBatchStride, lpBatchStride, maxInputLength,
+                                              lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
+                                              logProbsGm, targetsGm, inputLengthsGm, targetLengthsGm,
+                                              negLogLikelihoodGm, logAlphaGm, tmpDataGm);
+}
 
-template <typename T, typename DataType, typename ThreadType> __aicore__ inline void CTCLossV2FP16<T, DataType, ThreadType>::Process()
+template <typename T, typename DataType, typename ThreadType>
+__aicore__ inline void CTCLossV2FP16<T, DataType, ThreadType>::Process()
 {
     int32_t maxInputLength = this->tdPtr->maxInputLength;
     int32_t maxTargetLength = this->tdPtr->maxTargetLength;
@@ -209,20 +225,24 @@ template <typename T, typename DataType, typename ThreadType> __aicore__ inline 
     int32_t tgBatchStride = this->tdPtr->tgBatchStride;
     int32_t gridY = this->tdPtr->gridY;
     if constexpr (sizeof(ThreadType) == sizeof(int32_t)) {
-        asc_vf_call<SimtComputeFp16Int32<T, DataType, ThreadType>>(dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride,
-            lpBatchStride, maxInputLength, lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
-            (__gm__ T *)(this->logProbsDataGm.GetPhyAddr()), (__gm__ DataType *)(this->targetsDataGm.GetPhyAddr()),
-            (__gm__ DataType *)(this->inputLengthsGm.GetPhyAddr()), (__gm__ DataType *)(this->targetLengthsGm.GetPhyAddr()),
-            (__gm__ T *)(this->negLogLikelihoodDataGm.GetPhyAddr()), (__gm__ T *)(this->logAlphaDataGm.GetPhyAddr()),
-            (__gm__ float *)(tmpFloatData.GetPhyAddr()));
+        asc_vf_call<SimtComputeFp16Int32<T, DataType, ThreadType>>(
+            dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride, lpBatchStride, maxInputLength,
+            lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
+            (__gm__ T*)(this->logProbsDataGm.GetPhyAddr()), (__gm__ DataType*)(this->targetsDataGm.GetPhyAddr()),
+            (__gm__ DataType*)(this->inputLengthsGm.GetPhyAddr()),
+            (__gm__ DataType*)(this->targetLengthsGm.GetPhyAddr()),
+            (__gm__ T*)(this->negLogLikelihoodDataGm.GetPhyAddr()), (__gm__ T*)(this->logAlphaDataGm.GetPhyAddr()),
+            (__gm__ float*)(tmpFloatData.GetPhyAddr()));
     }
     if constexpr (sizeof(ThreadType) == sizeof(int64_t)) {
-        asc_vf_call<SimtComputeFp16<T, DataType, ThreadType>>(dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride,
-            lpBatchStride, maxInputLength, lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
-            (__gm__ T *)(this->logProbsDataGm.GetPhyAddr()), (__gm__ DataType *)(this->targetsDataGm.GetPhyAddr()),
-            (__gm__ DataType *)(this->inputLengthsGm.GetPhyAddr()), (__gm__ DataType *)(this->targetLengthsGm.GetPhyAddr()),
-            (__gm__ T *)(this->negLogLikelihoodDataGm.GetPhyAddr()), (__gm__ T *)(this->logAlphaDataGm.GetPhyAddr()),
-            (__gm__ float *)(tmpFloatData.GetPhyAddr()));
+        asc_vf_call<SimtComputeFp16<T, DataType, ThreadType>>(
+            dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride, lpBatchStride, maxInputLength,
+            lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
+            (__gm__ T*)(this->logProbsDataGm.GetPhyAddr()), (__gm__ DataType*)(this->targetsDataGm.GetPhyAddr()),
+            (__gm__ DataType*)(this->inputLengthsGm.GetPhyAddr()),
+            (__gm__ DataType*)(this->targetLengthsGm.GetPhyAddr()),
+            (__gm__ T*)(this->negLogLikelihoodDataGm.GetPhyAddr()), (__gm__ T*)(this->logAlphaDataGm.GetPhyAddr()),
+            (__gm__ float*)(tmpFloatData.GetPhyAddr()));
     }
 }
 } // namespace CTCLossV2

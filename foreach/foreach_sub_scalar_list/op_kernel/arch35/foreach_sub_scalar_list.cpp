@@ -19,14 +19,14 @@
 #include "foreach_sub_scalar_list_tiling_key.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_sub_scalar_list(
-    GM_ADDR x, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_sub_scalar_list(GM_ADDR x, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
+                                                   GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachSubScalarListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachSubScalarListTilingData, tilingData, tiling);
 
-    const __gm__ ForeachSubScalarListTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachSubScalarListTilingData*>(tiling);
+    const __gm__ ForeachSubScalarListTilingData*
+        tilingGm = reinterpret_cast<const __gm__ ForeachSubScalarListTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachSubScalarListTilingKey::TILING_KEY_FLOAT)) {
         NsForeachSubScalarList::Process<float, float>(x, scalars, y, tilingGm);

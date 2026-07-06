@@ -29,9 +29,11 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SyncBatchNormGatherStatsFused);
 
-const std::array<const aclTensor*, 4> SyncBatchNormGatherStatsFused(
-    const aclTensor* mean, const aclTensor* invstd, const aclTensor* counts, const aclTensor* runningMean,
-    const aclTensor* runningVar, float momentum, float eps, aclOpExecutor* executor)
+const std::array<const aclTensor*, 4> SyncBatchNormGatherStatsFused(const aclTensor* mean, const aclTensor* invstd,
+                                                                    const aclTensor* counts,
+                                                                    const aclTensor* runningMean,
+                                                                    const aclTensor* runningVar, float momentum,
+                                                                    float eps, aclOpExecutor* executor)
 {
     L0_DFX(SyncBatchNormGatherStatsFused, mean, invstd, counts, runningMean, runningVar, momentum, eps);
     auto shape = runningVar->GetViewShape();

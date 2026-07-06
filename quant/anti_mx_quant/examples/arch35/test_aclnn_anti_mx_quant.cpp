@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the text of the License.
  */
 
 #include <iostream>
@@ -113,7 +114,7 @@ int aclnnAntiMxQuantTest(int32_t deviceId, aclrtStream& stream)
     std::vector<uint16_t> yOutHostData = {0, 16640, 17024, 17408};
 
     int64_t axis = -1;
-    int64_t dstType = 27;  // BFLOAT16
+    int64_t dstType = 27; // BFLOAT16
 
     // 创建x aclTensor(FP8_E4M3FN)
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT8_E4M3FN, &x);
@@ -139,8 +140,7 @@ int aclnnAntiMxQuantTest(int32_t deviceId, aclrtStream& stream)
 
     // 调用aclnnAntiMxQuant第一段接口
     ret = aclnnAntiMxQuantGetWorkspaceSize(x, mxscale, axis, dstType, yOut, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAntiMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
-              return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAntiMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -164,8 +164,7 @@ int aclnnAntiMxQuantTest(int32_t deviceId, aclrtStream& stream)
     std::vector<uint16_t> yOutData(size, 0);
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
                       size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);
-              return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("y[%ld] is: %u\n", i, yOutData[i]);
     }

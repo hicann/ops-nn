@@ -33,8 +33,8 @@ constexpr int64_t Y1_OUTTYPE_INDEX = 0;
 constexpr int64_t SCALE1_OUTTYPE_INDEX = 1;
 constexpr int64_t SCALE2_OUTTYPE_INDEX = 2;
 
-static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
+                                                                        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 
 graphStatus InferShapeForDynamicBlockMxQuant(gert::InferShapeContext* context)
 {
@@ -61,8 +61,8 @@ graphStatus InferShapeForDynamicBlockMxQuant(gert::InferShapeContext* context)
 
     OP_CHECK_IF(
         xShape->GetDimNum() < MIN_DIM_NUM || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(xShape->GetDimNum()), "The shape dim of x must be within the range [2, 3]"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xShape->GetDimNum()),
+                                                 "The shape dim of x must be within the range [2, 3]"),
         return ge::GRAPH_FAILED);
     *yShape = *xShape;
 
@@ -82,9 +82,8 @@ graphStatus InferShapeForDynamicBlockMxQuant(gert::InferShapeContext* context)
     scaleShape1->SetDim(dim1, dimSize1);
     scaleShape1->AppendDim(ALIGN_NUM);
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, scale1 shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*scaleShape1).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, scale1 shape is %s.", Shape2String(*xShape).c_str(),
+            Shape2String(*scaleShape1).c_str());
 
     size_t dim2 = static_cast<size_t>(xShape->GetDimNum() - 2);
     int64_t dimSize2 = 0;
@@ -99,9 +98,8 @@ graphStatus InferShapeForDynamicBlockMxQuant(gert::InferShapeContext* context)
     scaleShape2->SetDim(dim2, dimSize2);
     scaleShape2->AppendDim(ALIGN_NUM);
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, scale2 shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*scaleShape2).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, scale2 shape is %s.", Shape2String(*xShape).c_str(),
+            Shape2String(*scaleShape2).c_str());
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForDynamicBlockMxQuant");
     return ge::GRAPH_SUCCESS;
@@ -118,8 +116,8 @@ ge::graphStatus InferDataTypeForDynamicBlockMxQuant(gert::InferDataTypeContext* 
 
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
-            ge::TypeUtils::DataTypeToSerialString(outDtype), "DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2"),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type", ge::TypeUtils::DataTypeToSerialString(outDtype),
+                                  "DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2"),
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(Y1_OUTTYPE_INDEX, outDtype);
     context->SetOutputDataType(SCALE1_OUTTYPE_INDEX, ge::DT_FLOAT8_E8M0);

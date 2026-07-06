@@ -58,23 +58,15 @@ static Status ParseOpToGraphNonZero(const ge::Operator& op, Graph& graph)
 
 REGISTER_CUSTOM_OP("PartitionedCall")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {
-            ge::AscendString("ai.onnx::9::NonZero"), 
-            ge::AscendString("ai.onnx::10::NonZero"),
-         
-            ge::AscendString("ai.onnx::11::NonZero"), 
-            ge::AscendString("ai.onnx::12::NonZero"),
-         
-            ge::AscendString("ai.onnx::13::NonZero"), 
-            ge::AscendString("ai.onnx::14::NonZero"),
-         
-            ge::AscendString("ai.onnx::15::NonZero"), 
-            ge::AscendString("ai.onnx::16::NonZero"),
-         
-            ge::AscendString("ai.onnx::17::NonZero"), 
-            ge::AscendString("ai.onnx::18::NonZero")
-        })
+    .OriginOpType({ge::AscendString("ai.onnx::9::NonZero"), ge::AscendString("ai.onnx::10::NonZero"),
+
+                   ge::AscendString("ai.onnx::11::NonZero"), ge::AscendString("ai.onnx::12::NonZero"),
+
+                   ge::AscendString("ai.onnx::13::NonZero"), ge::AscendString("ai.onnx::14::NonZero"),
+
+                   ge::AscendString("ai.onnx::15::NonZero"), ge::AscendString("ai.onnx::16::NonZero"),
+
+                   ge::AscendString("ai.onnx::17::NonZero"), ge::AscendString("ai.onnx::18::NonZero")})
     .ParseParamsFn(ParseParamsNonZero)
     .ParseOpToGraphFn(ParseOpToGraphNonZero)
     .ImplyType(ImplyType::TVM);

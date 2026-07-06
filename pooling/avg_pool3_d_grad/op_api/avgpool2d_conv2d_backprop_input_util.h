@@ -35,8 +35,9 @@ struct ConvolutionBackwardParamsForAvgPool2d {
     const int8_t cubeMathType;
 };
 
-const aclTensor* CalculateConv2DBackpropInputForAvgPool2d(
-    ConvolutionBackwardInputTensorForAvgPool2d& inputTensor, ConvolutionBackwardParamsForAvgPool2d& params, aclOpExecutor* executor);
+const aclTensor* CalculateConv2DBackpropInputForAvgPool2d(ConvolutionBackwardInputTensorForAvgPool2d& inputTensor,
+                                                          ConvolutionBackwardParamsForAvgPool2d& params,
+                                                          aclOpExecutor* executor);
 } // namespace avgpool2d_conv2d_input_util
 
 #ifdef __cplusplus

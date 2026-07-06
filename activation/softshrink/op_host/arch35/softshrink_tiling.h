@@ -20,6 +20,6 @@ namespace optiling {
 
 struct SoftshrinkCompileInfo {};
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // _SOFTSHRINK_TILING_H_
+#endif // _SOFTSHRINK_TILING_H_

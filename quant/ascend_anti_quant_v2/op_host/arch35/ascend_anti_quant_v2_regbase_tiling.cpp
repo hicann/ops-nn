@@ -538,7 +538,7 @@ void AscendAntiQuantV2Regbase::CalcPerHeadTiling()
     int64_t shape1 = xInputShape_.GetDim(SECOND_SHAPE_DIM);
     int64_t shape2 = xInputShape_.GetDim(THIRD_SHAPE_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(ge::DT_INT8);
-    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return);
+    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return );
 
     if (cacheLine_ == 0 || dtypeSize == 0) {
         return;

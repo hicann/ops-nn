@@ -23,8 +23,8 @@ namespace AvgPool3d {
 template <typename T>
 class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<float>& sumBufLocal, uint32_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32,
+                                   LocalTensor<float>& sumBufLocal, uint32_t dataCount)
     {
         if constexpr (sizeof(T) == sizeof(float)) {
             Adds(castToFP32, xLocal, 0.0f, dataCount);
@@ -42,8 +42,8 @@ class KernelAvgPool3dBigKernel {
 public:
     __aicore__ inline KernelAvgPool3dBigKernel(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe_in);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling,
+                                TPipe* pipe_in);
     __aicore__ inline void Process();
 
 private:
@@ -123,8 +123,9 @@ private:
 };
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe_in)
+__aicore__ inline void KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                                      const AvgPool3DTilingData* __restrict__ tiling,
+                                                                      TPipe* pipe_in)
 {
     pipe = pipe_in;
 
@@ -300,8 +301,8 @@ __aicore__ inline int64_t KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::dhwCopyInput
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline int64_t KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::hwCopyInput(
-    int64_t offset, int64_t blockLen, int64_t blockCount)
+__aicore__ inline int64_t KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::hwCopyInput(int64_t offset, int64_t blockLen,
+                                                                                int64_t blockCount)
 {
     LocalTensor<T> xLocal = inputQue.template AllocTensor<T>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T);
@@ -334,8 +335,8 @@ __aicore__ inline int64_t KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::hwCopyInput(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline int64_t KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::wCopyInput(
-    int64_t offset, int64_t blockLen, int64_t blockCount, int64_t dLen)
+__aicore__ inline int64_t KernelAvgPool3dBigKernel<T, QUEUE_DEPTH>::wCopyInput(int64_t offset, int64_t blockLen,
+                                                                               int64_t blockCount, int64_t dLen)
 {
     LocalTensor<T> xLocal = inputQue.template AllocTensor<T>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T);

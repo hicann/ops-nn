@@ -25,19 +25,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void dynamic_mx_quant_with_dual_axis(
-    GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void dynamic_mx_quant_with_dual_axis(GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2,
+                                                                      GM_ADDR scale2, GM_ADDR workSpace,
+                                                                      GM_ADDR tiling);
 
 class dynamic_mx_quant_with_dual_axis_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dynamic_mx_quant_with_dual_axis_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_mx_quant_with_dual_axis_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dynamic_mx_quant_with_dual_axis_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dynamic_mx_quant_with_dual_axis_test TearDown\n" << endl; }
 };
 
 TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_100)
@@ -63,8 +58,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_100)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(tiling);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
 
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 2;
@@ -100,8 +95,7 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_100)
                                                      GM_ADDR workSpace, GM_ADDR tiling) {
         ::dynamic_mx_quant_with_dual_axis<0, 4, 0>(x, y1, scale1, y2, scale2, workSpace, tiling);
     };
-    ICPU_RUN_KF(
-        dynamic_mx_quant_with_dual_axis_kernel, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
+    ICPU_RUN_KF(dynamic_mx_quant_with_dual_axis_kernel, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(y1);
@@ -137,8 +131,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e5m2)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(tiling);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
 
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 2;
@@ -170,8 +164,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e5m2)
 
     ICPU_SET_TILING_KEY(0);
 
-    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2,
-                          GM_ADDR workSpace, GM_ADDR tiling) {
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
         ::dynamic_mx_quant_with_dual_axis<0, 4, 1>(x, y1, scale1, y2, scale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
@@ -210,8 +204,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e4m3fn)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(tiling);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
 
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 2;
@@ -243,8 +237,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e4m3fn)
 
     ICPU_SET_TILING_KEY(0);
 
-    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2,
-                          GM_ADDR workSpace, GM_ADDR tiling) {
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
         ::dynamic_mx_quant_with_dual_axis<0, 4, 1>(x, y1, scale1, y2, scale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
@@ -283,8 +277,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_defaul
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(tiling);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
 
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 2;
@@ -316,8 +310,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_defaul
 
     ICPU_SET_TILING_KEY(0);
 
-    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2,
-                          GM_ADDR workSpace, GM_ADDR tiling) {
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
         ::dynamic_mx_quant_with_dual_axis<0, 4, 2>(x, y1, scale1, y2, scale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
@@ -356,8 +350,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_custom
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(tiling);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
 
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 2;
@@ -389,8 +383,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_custom
 
     ICPU_SET_TILING_KEY(0);
 
-    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2,
-                          GM_ADDR workSpace, GM_ADDR tiling) {
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
         ::dynamic_mx_quant_with_dual_axis<0, 4, 2>(x, y1, scale1, y2, scale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
@@ -429,8 +423,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_dst7_f
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(tiling);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
 
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 2;
@@ -462,8 +456,8 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_dst7_f
 
     ICPU_SET_TILING_KEY(0);
 
-    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2,
-                          GM_ADDR workSpace, GM_ADDR tiling) {
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
         ::dynamic_mx_quant_with_dual_axis<0, 1, 2>(x, y1, scale1, y2, scale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);

@@ -17,10 +17,10 @@
 #define CONV_INSTR_H
 
 #if (__CCE_AICORE__ > 300)
-    #include "conv_instr_impl.h"
-    #include "conv_instr_hw_mode_impl.h"
-    #include "conv_instr_m_mode_impl.h"
-    #include "conv_instr_opt_group_impl.h"
+#include "conv_instr_impl.h"
+#include "conv_instr_hw_mode_impl.h"
+#include "conv_instr_m_mode_impl.h"
+#include "conv_instr_opt_group_impl.h"
 #endif
 
 #endif // CONV_INSTR_H

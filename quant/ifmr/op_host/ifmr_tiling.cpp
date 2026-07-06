@@ -28,13 +28,13 @@ struct IfmrCompileInfo {
 ge::graphStatus IfmrTiling::CheckIfmrTilingAttrs(void)
 {
     if (attrs_.minPercentile <= K_PERCENTILE_LOW_BOUND || attrs_.minPercentile > K_PERCENTILE_UPPER_BOUND) {
-        OP_LOGE(nodeName_, "The minPercentile must be greater than 0.5 "\
-            "and less than or equal to 1.0");
+        OP_LOGE(nodeName_, "The minPercentile must be greater than 0.5 "
+                           "and less than or equal to 1.0");
         return ge::GRAPH_FAILED;
     }
     if (attrs_.maxPercentile <= K_PERCENTILE_LOW_BOUND || attrs_.maxPercentile > K_PERCENTILE_UPPER_BOUND) {
-        OP_LOGE(nodeName_, "The maxPercentile must be greater than 0.5 "\
-            "and less than or equal to 1.0");
+        OP_LOGE(nodeName_, "The maxPercentile must be greater than 0.5 "
+                           "and less than or equal to 1.0");
         return ge::GRAPH_FAILED;
     }
     if (attrs_.searchRange[0] <= 0) {
@@ -106,8 +106,7 @@ ge::graphStatus IfmrTiling::CheckIfmrTilingInputDtype(void)
     // check input dtype
     auto dataDesc = context_->GetInputDesc(DATA_INPUT_INDEX);
     auto dataDtype = dataDesc->GetDataType();
-    if (dataDtype != ge::DataType::DT_FLOAT && \
-        dataDtype != ge::DataType::DT_FLOAT16) {
+    if (dataDtype != ge::DataType::DT_FLOAT && dataDtype != ge::DataType::DT_FLOAT16) {
         OP_LOGE(nodeName_, "Input data support only DT_FLOAT and DT_FLOAT16!");
         return ge::GRAPH_FAILED;
     }
@@ -193,9 +192,9 @@ ge::graphStatus IfmrTiling::CheckIfmrTilingOutputInfo(void)
     auto scaleDesc = context_->GetOutputDesc(0);
     auto offsetDesc = context_->GetOutputDesc(1);
     OP_TILING_CHECK(scaleDesc == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "scaleDesc cannot be nullptr!"),
-        return ge::GRAPH_FAILED);
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(offsetDesc == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "offsetDesc cannot be nullptr!"),
-        return ge::GRAPH_FAILED);
+                    return ge::GRAPH_FAILED);
     if (scaleDesc->GetDataType() != ge::DataType::DT_FLOAT) {
         OP_LOGE(nodeName_, "Output scale support only DT_FLOAT!");
         return ge::GRAPH_FAILED;
@@ -225,7 +224,7 @@ ge::graphStatus IfmrTiling::CheckIfmrTilingOutputInfo(void)
 void IfmrTiling::SetIfmrTiling(void)
 {
     OP_LOGD(nodeName_, "[IFMR] SetIfmrTiling start running");
-    IfmrTilingData *tilingData = context_->GetTilingData<IfmrTilingData>();
+    IfmrTilingData* tilingData = context_->GetTilingData<IfmrTilingData>();
     (void)memset_s(tilingData, sizeof(IfmrTilingData), 0, sizeof(IfmrTilingData));
     tilingData->minPercentile = attrs_.minPercentile;
     tilingData->maxPercentile = attrs_.maxPercentile;
@@ -238,10 +237,9 @@ void IfmrTiling::SetIfmrTiling(void)
     tilingData->cumsumLength = attrs_.cumsumLength;
     OP_LOGI("IFMR", "nodeName: %s, minPercentile: %lf, maxPercentile: %lf, searchRange: [%lf, %lf],\
         searchStep: %lf, withOffset: %d, quantBits: %d, dataLength: %d, cumsumLength: %d",
-        nodeName_, tilingData->minPercentile, tilingData->maxPercentile, 
-        tilingData->searchRange[0], tilingData->searchRange[1], tilingData->searchStep,
-        tilingData->withOffset, tilingData->quantBits,
-        tilingData->dataLength, tilingData->cumsumLength);
+            nodeName_, tilingData->minPercentile, tilingData->maxPercentile, tilingData->searchRange[0],
+            tilingData->searchRange[1], tilingData->searchStep, tilingData->withOffset, tilingData->quantBits,
+            tilingData->dataLength, tilingData->cumsumLength);
     return;
 }
 void IfmrTiling::PostTiling(void)
@@ -280,7 +278,7 @@ ge::graphStatus IfmrTiling::IfmrTilingFunc(void)
 static ge::graphStatus TilingForIfmr(gert::TilingContext* context)
 {
     OP_TILING_CHECK(context == nullptr, VECTOR_INNER_ERR_REPORT_TILIING("IFMR", "context should not be nullptr."),
-                return ge::GRAPH_FAILED);
+                    return ge::GRAPH_FAILED);
     IfmrTiling tiling(context);
     return tiling.IfmrTilingFunc();
 }

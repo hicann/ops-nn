@@ -175,11 +175,9 @@ struct MaxPoolWithArgmaxV3NhwcSplitInfo {
 
 class MaxPoolWithArgmaxV3NhwcTiling : public MaxPoolWithArgmaxV3BaseTiling {
 public:
-    explicit MaxPoolWithArgmaxV3NhwcTiling(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context)
-    {}
+    explicit MaxPoolWithArgmaxV3NhwcTiling(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context) {}
 
-    ~MaxPoolWithArgmaxV3NhwcTiling() override
-    {}
+    ~MaxPoolWithArgmaxV3NhwcTiling() override {}
 
 private:
     void DoUBTiling();

@@ -42,14 +42,14 @@ namespace ge {
  * Compatible with TensorFlow operator ApplyAdagrad.
  */
 REG_OP(ApplyAdagradD)
-    .INPUT(var,   TensorType::NumberType())
+    .INPUT(var, TensorType::NumberType())
     .INPUT(accum, TensorType::NumberType())
-    .INPUT(lr,    TensorType::NumberType())
-    .INPUT(grad,  TensorType::NumberType())
-    .OUTPUT(var,  TensorType::NumberType())
+    .INPUT(lr, TensorType::NumberType())
+    .INPUT(grad, TensorType::NumberType())
+    .OUTPUT(var, TensorType::NumberType())
     .OUTPUT(accum, TensorType::NumberType())
     .ATTR(update_slots, Bool, true)
-    .ATTR(use_locking,  Bool, false)
+    .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyAdagradD)
 
 } // namespace ge

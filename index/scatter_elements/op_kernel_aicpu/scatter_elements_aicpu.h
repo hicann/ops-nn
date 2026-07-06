@@ -18,21 +18,21 @@
 
 namespace aicpu {
 class ScatterElementsCpuKernel : public CpuKernel {
- public:
-  ScatterElementsCpuKernel() = default;
-  ~ScatterElementsCpuKernel() override = default;
-  uint32_t Compute(CpuKernelContext &ctx) override;
+public:
+    ScatterElementsCpuKernel() = default;
+    ~ScatterElementsCpuKernel() override = default;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 
- private:
-  template <typename TI>
-  uint32_t DispatchByDataType(CpuKernelContext &ctx);
+private:
+    template <typename TI>
+    uint32_t DispatchByDataType(CpuKernelContext& ctx);
 
-  template <typename T>
-  uint32_t UpdateOutput(const CpuKernelContext &ctx, int64_t total_value_num);
+    template <typename T>
+    uint32_t UpdateOutput(const CpuKernelContext& ctx, int64_t total_value_num);
 
-  template <typename T, typename TI>
-  uint32_t DoCompute(const CpuKernelContext &ctx);
+    template <typename T, typename TI>
+    uint32_t DoCompute(const CpuKernelContext& ctx);
 };
-}  // namespace aicpu
+} // namespace aicpu
 
-#endif  // OPS_NN_INDEX_SCATTER_ELEMENTS_OP_KERNEL_AICPU_SCATTER_ELEMENTS_AICPU_H_
+#endif // OPS_NN_INDEX_SCATTER_ELEMENTS_OP_KERNEL_AICPU_SCATTER_ELEMENTS_AICPU_H_

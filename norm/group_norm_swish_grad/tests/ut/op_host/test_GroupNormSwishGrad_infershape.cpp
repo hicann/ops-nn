@@ -14,18 +14,11 @@
 #include "ut_op_common.h"
 #include "log/log.h"
 
-class GroupNormSwishGradProto : public testing::Test
-{
+class GroupNormSwishGradProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupNormSwishGrad Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupNormSwishGrad Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupNormSwishGrad Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupNormSwishGrad Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(GroupNormSwishGradProto, group_norm_swish_grad_infershape_test)
@@ -62,19 +55,19 @@ TEST_F(GroupNormSwishGradProto, group_norm_swish_grad_inferdtype_test)
     if (data_type_func != nullptr) {
         ge::DataType input_ref = ge::DT_FLOAT16;
         ge::DataType output_ref = ge::DT_FLOAT16;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .NodeIoNum(6, 3)
-                .IrInstanceNum({1, 1, 1, 1, 1, 1})
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_ref, &input_ref, &input_ref, &input_ref, &input_ref, &input_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &output_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .NodeIoNum(6, 3)
+                                  .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes(
+                                      {&input_ref, &input_ref, &input_ref, &input_ref, &input_ref, &input_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &output_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

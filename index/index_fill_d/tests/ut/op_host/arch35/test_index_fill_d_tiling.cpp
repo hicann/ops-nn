@@ -31,15 +31,9 @@ using namespace ge;
 
 class IndexFillDTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "IndexFIllDTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "IndexFIllDTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "IndexFIllDTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "IndexFIllDTiling TearDown" << std::endl; }
 };
 
 struct IndexFillDParamsInfo {
@@ -51,19 +45,20 @@ struct IndexFillDParamsInfo {
 };
 
 template <typename T>
-static string ToString(void* buf, size_t size) {
-std::string result;
-const T* data = reinterpret_cast<const T*>(buf);
-size_t len = size / sizeof(T);
-for (size_t i = 0; i < len; i++) {
-    result += std::to_string(data[i]);
-    result += " ";
-}
-return result;
+static string ToString(void* buf, size_t size)
+{
+    std::string result;
+    const T* data = reinterpret_cast<const T*>(buf);
+    size_t len = size / sizeof(T);
+    for (size_t i = 0; i < len; i++) {
+        result += std::to_string(data[i]);
+        result += " ";
+    }
+    return result;
 }
 
 static void ExecuteTestCase(const IndexFillDParamsInfo& opsParamInfos, string expectTilingData,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -94,26 +89,26 @@ static void ExecuteTestCase(const IndexFillDParamsInfo& opsParamInfos, string ex
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
-    auto wsSize = reinterpret_cast<gert::ContinuousVector *>(workspaceSizeHoler.get());
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     ASSERT_NE(param, nullptr);
     gert::StorageShape xShape = opsParamInfos.xShape;
     gert::StorageShape assist1Shape = opsParamInfos.assist1Shape;
     gert::StorageShape assist2Shape = opsParamInfos.assist2Shape;
     gert::StorageShape yShape = opsParamInfos.yShape;
     auto holder = gert::TilingContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&xShape, &assist1Shape, &assist2Shape})
-                    .OutputShapes({&yShape})
-                    .CompileInfo(&compileInfo)
-                    .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-                    .NodeInputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .TilingData(param.get())
-                    .Workspace(wsSize)
-                    .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &assist1Shape, &assist2Shape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext, nullptr);
@@ -135,7 +130,8 @@ static void ExecuteTestCase(const IndexFillDParamsInfo& opsParamInfos, string ex
     EXPECT_EQ(tilingDataResult, expectTilingData);
 }
 
-TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_1) {
+TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_1)
+{
     IndexFillDParamsInfo opsParamInfos;
     opsParamInfos.xDtype = ge::DT_BOOL;
     opsParamInfos.xShape = {{64, 32, 16, 1024}, {64, 32, 16, 1024}};
@@ -147,7 +143,8 @@ TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_1) {
     ExecuteTestCase(opsParamInfos, expectTilingData);
 }
 
-TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_2) {
+TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_2)
+{
     IndexFillDParamsInfo opsParamInfos;
     opsParamInfos.xDtype = ge::DT_FLOAT;
     opsParamInfos.xShape = {{64, 32, 16, 1024}, {64, 32, 16, 1024}};
@@ -159,7 +156,8 @@ TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_2) {
     ExecuteTestCase(opsParamInfos, expectTilingData);
 }
 
-TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_4) {
+TEST_F(IndexFillDTiling, IndexFillD_tiling_ascendc_bit_width_4)
+{
     IndexFillDParamsInfo opsParamInfos;
     opsParamInfos.xDtype = ge::DT_INT32;
     opsParamInfos.xShape = {{64, 32, 16, 1024}, {64, 32, 16, 1024}};

@@ -25,8 +25,8 @@
 #include <cstdint>
 
 struct FastGeluV2TilingData {
-    int64_t totalNum = 0;     // Total number of input elements across all dimensions
-    int64_t blockFactor = 0;  // Number of elements assigned to each AI Core (aligned to ubBlockSize)
-    int64_t ubFactor = 0;     // Number of elements processed per UB iteration (aligned to ubBlockSize)
+    int64_t totalNum = 0;    // Total number of input elements across all dimensions
+    int64_t blockFactor = 0; // Number of elements assigned to each AI Core (aligned to ubBlockSize)
+    int64_t ubFactor = 0;    // Number of elements processed per UB iteration (aligned to ubBlockSize)
 };
 #endif

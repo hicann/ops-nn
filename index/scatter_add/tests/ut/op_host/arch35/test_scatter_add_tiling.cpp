@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file test_scatter_add_tiling.cpp
  * \brief the ut of scatter_add_tiling
  */
@@ -33,41 +33,38 @@ using namespace ge;
 using namespace ut_util;
 
 class ScatterAddTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ScatterAddTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ScatterAddTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ScatterAddTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ScatterAddTiling TearDown" << std::endl; }
 };
 
-static string to_string(const std::stringstream& tiling_data) {
-  auto data = tiling_data.str();
-  string result;
-  int64_t tmp = 0;
-  for (size_t i = 0; i < data.length(); i += sizeof(int64_t)) {
-    memcpy(&tmp, data.c_str() + i, sizeof(tmp));
-    result += std::to_string(tmp);
-    result += " ";
-  }
+static string to_string(const std::stringstream& tiling_data)
+{
+    auto data = tiling_data.str();
+    string result;
+    int64_t tmp = 0;
+    for (size_t i = 0; i < data.length(); i += sizeof(int64_t)) {
+        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
 struct ScatterAddOpsParamInfos {
-  ge::DataType indiceDtype;
-  ge::DataType varDtype;
-  gert::StorageShape indiceShape;
-  gert::StorageShape updateShape;
-  gert::StorageShape varShape;
+    ge::DataType indiceDtype;
+    ge::DataType varDtype;
+    gert::StorageShape indiceShape;
+    gert::StorageShape updateShape;
+    gert::StorageShape varShape;
 };
 
 static void ExecuteTestCase(const ScatterAddOpsParamInfos& scatterAddOpsParamInfos, int32_t deterministic,
-  ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
-  string compileInfoString = R"({
+    string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -75,123 +72,129 @@ static void ExecuteTestCase(const ScatterAddOpsParamInfos& scatterAddOpsParamInf
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                           "CORE_NUM": 64}
                           })";
-  map<string, string> socInfos;
-  map<string, string> aicoreSpec;
-  map<string, string> intrinsics;
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
 
-  GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
+    GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
 
-  // platform info
-  fe::PlatFormInfos platformInfo;
-  platformInfo.Init();
+    // platform info
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
 
-  // compile info
-  optiling::ScatterAddCompileInfo compileInfo;
-  compileInfo.core_num = 64;
-  compileInfo.ub_size = 253952;
+    // compile info
+    optiling::ScatterAddCompileInfo compileInfo;
+    compileInfo.core_num = 64;
+    compileInfo.ub_size = 253952;
 
-  std::string opType("ScatterAdd");
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
-  auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    std::string opType("ScatterAdd");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-  // tilingFunc simulate
-  auto param = gert::TilingData::CreateCap(4096);
-  auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
-  auto wsSize = reinterpret_cast<gert::ContinuousVector *>(workspaceSizeHoler.get());
-  ASSERT_NE(param, nullptr);
-  gert::StorageShape indiceShape = scatterAddOpsParamInfos.indiceShape;
-  gert::StorageShape updateShape = scatterAddOpsParamInfos.updateShape;
-  gert::StorageShape varShape = scatterAddOpsParamInfos.varShape;
-  auto holder = gert::TilingContextFaker()
-                  .NodeIoNum(3, 1)
-                  .IrInstanceNum({1, 1, 1})
-                  .InputShapes({&varShape, &indiceShape, &updateShape})
-                  .OutputShapes({&varShape})
-                  .CompileInfo(&compileInfo)
-                  .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-                  .NodeInputTd(0, scatterAddOpsParamInfos.varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeInputTd(1, scatterAddOpsParamInfos.indiceDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeInputTd(2, scatterAddOpsParamInfos.varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeOutputTd(0, scatterAddOpsParamInfos.varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
-                  .TilingData(param.get())
-                  .Workspace(wsSize)
-                  .Build();
-  gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
-  ASSERT_NE(tilingContext, nullptr);
-  auto infos = tilingContext->GetPlatformInfo();
-  ASSERT_NE(infos, nullptr);
-  infos->SetPlatformRes("SoCInfo", socInfos);
-  infos->SetPlatformRes("AICoreSpec", aicoreSpec);
-  infos->SetCoreNumByCoreType("AICore");
-  infos->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    // tilingFunc simulate
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
+    ASSERT_NE(param, nullptr);
+    gert::StorageShape indiceShape = scatterAddOpsParamInfos.indiceShape;
+    gert::StorageShape updateShape = scatterAddOpsParamInfos.updateShape;
+    gert::StorageShape varShape = scatterAddOpsParamInfos.varShape;
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&varShape, &indiceShape, &updateShape})
+                      .OutputShapes({&varShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, scatterAddOpsParamInfos.varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, scatterAddOpsParamInfos.indiceDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, scatterAddOpsParamInfos.varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, scatterAddOpsParamInfos.varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext, nullptr);
+    auto infos = tilingContext->GetPlatformInfo();
+    ASSERT_NE(infos, nullptr);
+    infos->SetPlatformRes("SoCInfo", socInfos);
+    infos->SetPlatformRes("AICoreSpec", aicoreSpec);
+    infos->SetCoreNumByCoreType("AICore");
+    infos->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-  // workspaces nullptr return failed
-  EXPECT_EQ(tilingFunc(tilingContext), status);
+    // workspaces nullptr return failed
+    EXPECT_EQ(tilingFunc(tilingContext), status);
 }
 
-TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt32_simd_notSupportAtomicAdd) {
-  ScatterAddOpsParamInfos scatterAddOpsParamInfos;
-  scatterAddOpsParamInfos.indiceDtype = ge::DT_INT32;
-  scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
-  scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
-  scatterAddOpsParamInfos.updateShape = {{65, 133, 1, 130}, {65, 133, 1, 130}};
-  scatterAddOpsParamInfos.varShape = {{191, 1, 130}, {191, 1, 130}};
+TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt32_simd_notSupportAtomicAdd)
+{
+    ScatterAddOpsParamInfos scatterAddOpsParamInfos;
+    scatterAddOpsParamInfos.indiceDtype = ge::DT_INT32;
+    scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
+    scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
+    scatterAddOpsParamInfos.updateShape = {{65, 133, 1, 130}, {65, 133, 1, 130}};
+    scatterAddOpsParamInfos.varShape = {{191, 1, 130}, {191, 1, 130}};
 
-  ExecuteTestCase(scatterAddOpsParamInfos, 0);
+    ExecuteTestCase(scatterAddOpsParamInfos, 0);
 }
 
-TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt64_simd_notSupportAtomicAdd) {
-  ScatterAddOpsParamInfos scatterAddOpsParamInfos;
-  scatterAddOpsParamInfos.indiceDtype = ge::DT_INT64;
-  scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
-  scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
-  scatterAddOpsParamInfos.updateShape = {{65, 133, 1, 130}, {65, 133, 1, 130}};
-  scatterAddOpsParamInfos.varShape = {{191, 1, 130}, {191, 1, 130}};
+TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt64_simd_notSupportAtomicAdd)
+{
+    ScatterAddOpsParamInfos scatterAddOpsParamInfos;
+    scatterAddOpsParamInfos.indiceDtype = ge::DT_INT64;
+    scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
+    scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
+    scatterAddOpsParamInfos.updateShape = {{65, 133, 1, 130}, {65, 133, 1, 130}};
+    scatterAddOpsParamInfos.varShape = {{191, 1, 130}, {191, 1, 130}};
 
-  ExecuteTestCase(scatterAddOpsParamInfos, 0);
+    ExecuteTestCase(scatterAddOpsParamInfos, 0);
 }
 
-TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt64_simd_exceed_ubBoundary) {
-  ScatterAddOpsParamInfos scatterAddOpsParamInfos;
-  scatterAddOpsParamInfos.indiceDtype = ge::DT_INT64;
-  scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
-  scatterAddOpsParamInfos.indiceShape = {{6}, {6}};
-  scatterAddOpsParamInfos.updateShape = {{6, 3, 3, 3, 3, 3, 3, 137}, {6, 3, 3, 3, 3, 3, 3, 137}};
-  scatterAddOpsParamInfos.varShape = {{3, 3, 3, 3, 3, 3, 3, 137}, {3, 3, 3, 3, 3, 3, 3, 137}};
+TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt64_simd_exceed_ubBoundary)
+{
+    ScatterAddOpsParamInfos scatterAddOpsParamInfos;
+    scatterAddOpsParamInfos.indiceDtype = ge::DT_INT64;
+    scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
+    scatterAddOpsParamInfos.indiceShape = {{6}, {6}};
+    scatterAddOpsParamInfos.updateShape = {{6, 3, 3, 3, 3, 3, 3, 137}, {6, 3, 3, 3, 3, 3, 3, 137}};
+    scatterAddOpsParamInfos.varShape = {{3, 3, 3, 3, 3, 3, 3, 137}, {3, 3, 3, 3, 3, 3, 3, 137}};
 
-  ExecuteTestCase(scatterAddOpsParamInfos, 0);
+    ExecuteTestCase(scatterAddOpsParamInfos, 0);
 }
 
-TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt32_simt_notSupportAtomicAdd) {
-  ScatterAddOpsParamInfos scatterAddOpsParamInfos;
-  scatterAddOpsParamInfos.indiceDtype = ge::DT_INT32;
-  scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
-  scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
-  scatterAddOpsParamInfos.updateShape = {{}, {}};
-  scatterAddOpsParamInfos.varShape = {{191, 1, 2}, {191, 1, 2}};
+TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt32_simt_notSupportAtomicAdd)
+{
+    ScatterAddOpsParamInfos scatterAddOpsParamInfos;
+    scatterAddOpsParamInfos.indiceDtype = ge::DT_INT32;
+    scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
+    scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
+    scatterAddOpsParamInfos.updateShape = {{}, {}};
+    scatterAddOpsParamInfos.varShape = {{191, 1, 2}, {191, 1, 2}};
 
-  ExecuteTestCase(scatterAddOpsParamInfos, 0);
+    ExecuteTestCase(scatterAddOpsParamInfos, 0);
 }
 
-TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt64_simt_notSupportAtomicAdd) {
-  ScatterAddOpsParamInfos scatterAddOpsParamInfos;
-  scatterAddOpsParamInfos.indiceDtype = ge::DT_INT64;
-  scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
-  scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
-  scatterAddOpsParamInfos.updateShape = {{}, {}};
-  scatterAddOpsParamInfos.varShape = {{191, 1, 2}, {191, 1, 2}};
+TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varUint8_indiceInt64_simt_notSupportAtomicAdd)
+{
+    ScatterAddOpsParamInfos scatterAddOpsParamInfos;
+    scatterAddOpsParamInfos.indiceDtype = ge::DT_INT64;
+    scatterAddOpsParamInfos.varDtype = ge::DT_UINT8;
+    scatterAddOpsParamInfos.indiceShape = {{65, 133}, {65, 133}};
+    scatterAddOpsParamInfos.updateShape = {{}, {}};
+    scatterAddOpsParamInfos.varShape = {{191, 1, 2}, {191, 1, 2}};
 
-  ExecuteTestCase(scatterAddOpsParamInfos, 0);
+    ExecuteTestCase(scatterAddOpsParamInfos, 0);
 }
 
-TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varFp32_indiceInt32_deterministic) {
-  ScatterAddOpsParamInfos scatterAddOpsParamInfos;
-  scatterAddOpsParamInfos.indiceDtype = ge::DT_INT32;
-  scatterAddOpsParamInfos.varDtype = ge::DT_FLOAT;
-  scatterAddOpsParamInfos.indiceShape = {{19, 31}, {19, 31}};
-  scatterAddOpsParamInfos.updateShape = {{19, 31, 2, 9}, {19, 31, 2, 9}};
-  scatterAddOpsParamInfos.varShape = {{129, 2, 9}, {129, 2, 9}};
+TEST_F(ScatterAddTiling, ScatterAdd_tiling_ascendc_varFp32_indiceInt32_deterministic)
+{
+    ScatterAddOpsParamInfos scatterAddOpsParamInfos;
+    scatterAddOpsParamInfos.indiceDtype = ge::DT_INT32;
+    scatterAddOpsParamInfos.varDtype = ge::DT_FLOAT;
+    scatterAddOpsParamInfos.indiceShape = {{19, 31}, {19, 31}};
+    scatterAddOpsParamInfos.updateShape = {{19, 31, 2, 9}, {19, 31, 2, 9}};
+    scatterAddOpsParamInfos.varShape = {{129, 2, 9}, {129, 2, 9}};
 
-  ExecuteTestCase(scatterAddOpsParamInfos, 1);
+    ExecuteTestCase(scatterAddOpsParamInfos, 1);
 }

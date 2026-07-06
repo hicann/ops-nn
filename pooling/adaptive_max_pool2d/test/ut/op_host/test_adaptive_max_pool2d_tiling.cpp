@@ -49,15 +49,9 @@ struct AdaptiveMaxPool2dCompileInfo {
 
 class AdaptiveMaxPool2dTilingTest : public testing::TestWithParam<AdaptiveMaxPool2dTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveMaxPool2dTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveMaxPool2dTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveMaxPool2dTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveMaxPool2dTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -90,10 +84,7 @@ struct TilingTestContext {
     PlatformTestBundle bundle;
     std::shared_ptr<gert::StorageShape> indices_storage;
 
-    gert::TilingContext* GetTilingContext()
-    {
-        return holder.GetContext<gert::TilingContext>();
-    }
+    gert::TilingContext* GetTilingContext() { return holder.GetContext<gert::TilingContext>(); }
 };
 
 // Initialize platform info, compile info, soc/ai_core/intrinsics maps
@@ -114,13 +105,12 @@ static void InitPlatformAndCompileInfo(PlatformTestBundle& bundle)
 
     string op_type("AdaptiveMaxPool2d");
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()),
-                     reinterpret_cast<void*>(&bundle.platform_info)})
-            .Outputs({&bundle.compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&bundle.platform_info)})
+                             .Outputs({&bundle.compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     auto parseCtx = kernel_holder.GetContext<gert::TilingParseContext>();
     parseCtx->GetPlatformInfo()->SetPlatformRes("SoCInfo", bundle.soc_infos);
@@ -133,13 +123,9 @@ static void InitPlatformAndCompileInfo(PlatformTestBundle& bundle)
 }
 
 // Build tiling context faker and set platform res on the resulting context
-static void BuildTilingTestContext(
-    TilingTestContext& ctx,
-    gert::StorageShape* x_shape,
-    gert::StorageShape* y_shape,
-    gert::StorageShape* indices_shape,
-    const std::vector<int64_t>& output_size,
-    ge::DataType data_type)
+static void BuildTilingTestContext(TilingTestContext& ctx, gert::StorageShape* x_shape, gert::StorageShape* y_shape,
+                                   gert::StorageShape* indices_shape, const std::vector<int64_t>& output_size,
+                                   ge::DataType data_type)
 {
     InitPlatformAndCompileInfo(ctx.bundle);
 
@@ -229,13 +215,9 @@ INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool2d, AdaptiveMaxPool2dTilingTest, testing:
 
 // ======================== Tiling Failure Cases ========================
 
-static void RunTilingAndExpect(
-    gert::StorageShape* x_shape,
-    gert::StorageShape* y_shape,
-    gert::StorageShape* indices_shape,
-    const std::vector<int64_t>& output_size,
-    ge::DataType data_type,
-    ge::graphStatus expect_result)
+static void RunTilingAndExpect(gert::StorageShape* x_shape, gert::StorageShape* y_shape,
+                               gert::StorageShape* indices_shape, const std::vector<int64_t>& output_size,
+                               ge::DataType data_type, ge::graphStatus expect_result)
 {
     string op_type("AdaptiveMaxPool2d");
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;

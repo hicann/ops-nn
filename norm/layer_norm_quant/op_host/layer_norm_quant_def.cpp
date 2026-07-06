@@ -17,8 +17,9 @@
 namespace ops {
 
 class LayerNormQuant : public OpDef {
-   public:
-    explicit LayerNormQuant(const char* name) : OpDef(name) {
+public:
+    explicit LayerNormQuant(const char* name) : OpDef(name)
+    {
         this->Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16})
@@ -101,7 +102,7 @@ class LayerNormQuant : public OpDef {
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
         this->AICore().AddConfig("ascend310p", config310P);
-        
+
         OpAICoreConfig config_950;
         config_950.Input("x")
             .ParamType(REQUIRED)
@@ -146,4 +147,4 @@ class LayerNormQuant : public OpDef {
     }
 };
 OP_ADD(LayerNormQuant);
-}  // namespace ops
+} // namespace ops

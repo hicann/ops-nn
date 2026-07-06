@@ -35,8 +35,10 @@ public:
     __aicore__ __forceinline__ void CalcOutputStartAddrOptGroup(const uint64_t doIdxStart);
     __aicore__ __forceinline__ void CalcStartAddrOptGroup(const uint64_t din, const uint64_t dout, const uint32_t kd,
                                                           const uint64_t doIdxStart = 0, const int64_t diIdxStart = 0);
-    __aicore__ __forceinline__ void CalcStartAddrOptGroupCHW(const uint64_t doIdxStart, const int64_t diIdxStart, const uint32_t kd);
-    __aicore__ __forceinline__ void CalcStartAddrOptGroupHWC(const uint64_t doIdxStart, const int64_t diIdxStart, const uint32_t kd);
+    __aicore__ __forceinline__ void CalcStartAddrOptGroupCHW(const uint64_t doIdxStart, const int64_t diIdxStart,
+                                                             const uint32_t kd);
+    __aicore__ __forceinline__ void CalcStartAddrOptGroupHWC(const uint64_t doIdxStart, const int64_t diIdxStart,
+                                                             const uint32_t kd);
     __aicore__ __forceinline__ void ConvKernelImplOptGroup();
     __aicore__ __forceinline__ void DealFixpiepParams(uint64_t groupIter, uint64_t coPerGroup);
     __aicore__ __forceinline__ void SetOptGroupTail();
@@ -66,8 +68,7 @@ private:
 };
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrFmapHW()
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrFmapHW()
 {
     if constexpr (!CONV::isMMode) {
         int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convTilingData->strideH) -
@@ -78,7 +79,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         } else {
             fmStartAddr += convOps->singleCoreHiStartPos * convTilingData->win;
         }
-        
+
         // Conv2D Split W
         convOps->singleCoreHiStartPos = hiStartPosTmp;
         if constexpr (CONV::A_FORMAT == ConvFormat::NCHW || CONV::A_FORMAT == ConvFormat::NHWC) {
@@ -96,17 +97,15 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrOriGroupHWC(const uint64_t doIdxStart, const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrOriGroupHWC(const uint64_t doIdxStart,
+                                                                                             const int64_t diIdxStart)
 {
     // fmap: Batch -> Di -> HiWi -> Group -> Ci_perg
     // weight: Kd -> KhKw -> Ci_perg -> group -> Co_perg
     // output: Batch -> Do -> HoWo -> Group -> Co_perg
-    fmStartAddr += convOps->batchIdxStart * convOps->fmapOneBatchSize +
-                   convOps->groupIdxStart * convOps->ciPerGroup;
+    fmStartAddr += convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->groupIdxStart * convOps->ciPerGroup;
     CalcStartAddrFmapHW();
-    weightStartAddr = convOps->groupIdxStart * convOps->coPerGroup +
-                      convOps->nIdxStart;
+    weightStartAddr = convOps->groupIdxStart * convOps->coPerGroup + convOps->nIdxStart;
     outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
                       convOps->groupIdxStart * convOps->coPerGroup + convOps->nIdxStart;
     if constexpr (CONV::isMMode) {
@@ -124,20 +123,17 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrOriGroupCHW(const uint64_t doIdxStart, const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrOriGroupCHW(const uint64_t doIdxStart,
+                                                                                             const int64_t diIdxStart)
 {
     // fmap: Batch -> Group -> Ci_perg -> Di -> HiWi
     // weight: Group -> Co_perg -> Ci_perg -> Kd -> KhKw
     // output: Batch -> Group -> Co_perg -> Do -> HoWo
-    fmStartAddr += convOps->batchIdxStart * convOps->fmapOneBatchSize +
-                   convOps->groupIdxStart * fmapOneGroupSize;
+    fmStartAddr += convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->groupIdxStart * fmapOneGroupSize;
     CalcStartAddrFmapHW();
-    weightStartAddr = convOps->groupIdxStart * weightOneGroupSize +
-                      convOps->nIdxStart * weightOneCoSize;
+    weightStartAddr = convOps->groupIdxStart * weightOneGroupSize + convOps->nIdxStart * weightOneCoSize;
     outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                      convOps->groupIdxStart * outputOneGroupSize +
-                      convOps->nIdxStart * dhwOut;
+                      convOps->groupIdxStart * outputOneGroupSize + convOps->nIdxStart * dhwOut;
     if constexpr (CONV::isMMode) {
         outputStartAddr += convOps->mIdxStart;
     } else {
@@ -154,9 +150,8 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrOriGroup(const uint64_t din, const uint64_t dout, const uint32_t kd, const uint64_t doIdxStart,
-                          const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrOriGroup(
+    const uint64_t din, const uint64_t dout, const uint32_t kd, const uint64_t doIdxStart, const int64_t diIdxStart)
 {
     hwIn = convTilingData->hin * convTilingData->win;
     hwOut = convTilingData->hout * convTilingData->wout;
@@ -190,8 +185,8 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    DealFixpiepParams(uint64_t groupIter, uint64_t coPerGroup)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::DealFixpiepParams(uint64_t groupIter,
+                                                                                      uint64_t coPerGroup)
 {
     if constexpr (CONV::isQuant || CONV::IS_EXTEND_CONV2D) {
         if (hasScale) {
@@ -217,7 +212,8 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
                             convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                             convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                         }
-                    } else if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    } else if (convOps->convTilingData->quantMode0 ==
+                               static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                         convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                     }
                 } else if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
@@ -231,8 +227,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    ConvKernelImplOriGroup()
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::ConvKernelImplOriGroup()
 {
     for (uint64_t groupIter = 0; groupIter < convOps->singleGroups; ++groupIter) {
         convOps->conv.SetWeight(convOps->filterGm[groupIter * weightOneGroupSize]);
@@ -258,8 +253,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    UpdateRealCoutOptGroup()
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::UpdateRealCoutOptGroup()
 {
     convOps->singleCoreN = convOps->singleCoOpt;
 
@@ -283,14 +277,13 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcOutputStartAddrOptGroup(const uint64_t doIdxStart)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcOutputStartAddrOptGroup(
+    const uint64_t doIdxStart)
 {
     if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC || CONV::C_FORMAT == ConvFormat::NHWC) {
         outputOneGroupSize = convTilingData->coutOpt;
         outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                          convOps->groupIdxStart * convTilingData->coutOpt +
-                          convOps->nIdxStart;
+                          convOps->groupIdxStart * convTilingData->coutOpt + convOps->nIdxStart;
 
         if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC) {
             outputStartAddr += doIdxStart * hwOut * convTilingData->cout;
@@ -307,8 +300,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     } else if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW || CONV::C_FORMAT == ConvFormat::NCHW) {
         outputOneGroupSize = convTilingData->coutOpt * dhwOut;
         outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                          convOps->groupIdxStart * outputOneGroupSize +
-                          convOps->nIdxStart * dhwOut;
+                          convOps->groupIdxStart * outputOneGroupSize + convOps->nIdxStart * dhwOut;
 
         if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW) {
             outputStartAddr += doIdxStart * hwOut;
@@ -326,20 +318,22 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrOptGroupCHW(const uint64_t doIdxStart, const int64_t diIdxStart, const uint32_t kd)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrOptGroupCHW(const uint64_t doIdxStart,
+                                                                                             const int64_t diIdxStart,
+                                                                                             const uint32_t kd)
 {
     // fmap: Batch -> Group(enlarge) -> Ci_opt -> Di -> HiWi
     // weight: Group(enlarge) -> Co_opt -> Ci_opt -> Kd -> KhKw
     // output: Batch -> Group(enlarge) -> Co_opt -> Do -> HoWo
-    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize +
-                  convOps->groupIdxStart * fmapOneGroupSize;
+    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->groupIdxStart * fmapOneGroupSize;
     CalcStartAddrFmapHW();
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z) {
-        weightOneGroupSize = convTilingData->coutOpt * convTilingData->cinOpt * kd * convTilingData->kh * convTilingData->kw;
+        weightOneGroupSize = convTilingData->coutOpt * convTilingData->cinOpt * kd * convTilingData->kh *
+                             convTilingData->kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize + convOps->nIdxStart * convOps->k0;
     } else {
-        weightOneGroupSize = convTilingData->coutOpt * convOps->ciPerGroup * kd * convTilingData->kh * convTilingData->kw;
+        weightOneGroupSize = convTilingData->coutOpt * convOps->ciPerGroup * kd * convTilingData->kh *
+                             convTilingData->kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize;
     }
 
@@ -351,17 +345,18 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrOptGroupHWC(const uint64_t doIdxStart, const int64_t diIdxStart, const uint32_t kd)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrOptGroupHWC(const uint64_t doIdxStart,
+                                                                                             const int64_t diIdxStart,
+                                                                                             const uint32_t kd)
 {
     // fmap: Batch -> Di -> HiWi -> Group(enlarge) -> Ci_opt
     // weight: Kd -> KhKw -> Ci_opt -> Group(enlarge) -> Co_opt
     // output: Batch -> Do -> HoWo -> Group(enlarge) -> Co_opt
-    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize +
-                  convOps->groupIdxStart * convTilingData->cinOpt;
+    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->groupIdxStart * convTilingData->cinOpt;
     CalcStartAddrFmapHW();
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z) {
-        weightOneGroupSize = convTilingData->coutOpt * convTilingData->cinOpt * kd * convTilingData->kh * convTilingData->kw;
+        weightOneGroupSize = convTilingData->coutOpt * convTilingData->cinOpt * kd * convTilingData->kh *
+                             convTilingData->kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize + convOps->nIdxStart * convOps->k0;
     } else {
         weightOneGroupSize = convTilingData->coutOpt;
@@ -376,9 +371,8 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    CalcStartAddrOptGroup(const uint64_t din, const uint64_t dout, const uint32_t kd, const uint64_t doIdxStart,
-                          const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::CalcStartAddrOptGroup(
+    const uint64_t din, const uint64_t dout, const uint32_t kd, const uint64_t doIdxStart, const int64_t diIdxStart)
 {
     hwIn = convTilingData->hin * convTilingData->win;
     hwOut = convTilingData->hout * convTilingData->wout;
@@ -417,8 +411,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    ConvKernelImplOptGroup()
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::ConvKernelImplOptGroup()
 {
     convOps->conv.SetWeightStartPosition(convOps->nIdxStart);
     if (CONV::IS_OPTGROUP_PRELOAD) {
@@ -426,7 +419,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         return;
     }
     for (uint64_t groupOptIter = 0; groupOptIter < convOps->singleGroupOpt; ++groupOptIter) {
-        if (unlikely(convOps->isGroupDimTail && enlargeTail != 0 &&  groupOptIter == convOps->singleGroupOpt - 1)) {
+        if (unlikely(convOps->isGroupDimTail && enlargeTail != 0 && groupOptIter == convOps->singleGroupOpt - 1)) {
             if (unlikely(convOps->singleCoOpt == 0)) {
                 break;
             }
@@ -460,11 +453,10 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    ConvKernelImplOptGroupPreload()
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::ConvKernelImplOptGroupPreload()
 {
     uint64_t groupOptIter = 0;
-    
+
     if (convOps->isGroupDimTail && enlargeTail != 0) {
         if (unlikely(convOps->singleCoOpt == 0 && convOps->singleGroupOpt == 1)) {
             return;
@@ -482,7 +474,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     if (convTilingData->hasBias) {
         convOps->conv.SetBias(convOps->biasGm);
     }
-    
+
     // quant need, current not care
     DealFixpiepParams(groupOptIter, convTilingData->coutOpt);
 
@@ -499,8 +491,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
-    SetOptGroupTail()
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::SetOptGroupTail()
 {
     if (convOps->singleCoOpt != convOps->singleCoreN) {
         if constexpr (CONV::A_FORMAT == ConvFormat::NCDHW || CONV::A_FORMAT == ConvFormat::NDHWC) {
@@ -513,7 +504,8 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
             }
         } else {
             if constexpr (CONV::isMMode) {
-                convOps->conv.SetSingleOutputShape(convOps->singleCoOpt, convOps->singleCoreM, convOps->singleCoreBatch);
+                convOps->conv.SetSingleOutputShape(convOps->singleCoOpt, convOps->singleCoreM,
+                                                   convOps->singleCoreBatch);
             } else {
                 convOps->conv.SetSingleOutputShape(convOps->singleCoOpt, convOps->singleCoreHo, convOps->singleCoreWo,
                                                    convOps->singleCoreBatch);

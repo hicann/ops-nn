@@ -15,8 +15,7 @@
 
 #include "sorted_sparse_segment_mean_grad_tiling_simt_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 
 const static uint64_t LARGE_INNER_LT_INNER_LT_OUTTER_TILING_KEY = 200;
 const static uint64_t LARGE_INNER_LT_INNER_GT_OUTTER_TILING_KEY = 201;
@@ -46,7 +45,8 @@ int64_t SortedSparseSegmentMeanGradSimtTiling::GetUpPow2(int64_t n)
     return res;
 }
 
-void SortedSparseSegmentMeanGradSimtTiling::CalcSegIndexThreadTiling(int32_t& threadNumX, int32_t& threadNumY, int64_t num)
+void SortedSparseSegmentMeanGradSimtTiling::CalcSegIndexThreadTiling(int32_t& threadNumX, int32_t& threadNumY,
+                                                                     int64_t num)
 {
     int64_t multiples = num / inputData.outterSize;
     if (multiples <= 1) {
@@ -107,14 +107,15 @@ void SortedSparseSegmentMeanGradSimtTiling::CalcBlockTiling()
     }
 }
 
-ge::graphStatus SortedSparseSegmentMeanGradSimtTiling::DoOpTiling() 
+ge::graphStatus SortedSparseSegmentMeanGradSimtTiling::DoOpTiling()
 {
     CalcBlockTiling();
     CalcThreadTiling();
     CalcSegIndexThreadTiling(segThreadNumX_, segThreadNumY_, inputData.segmentNum);
     CalcSegIndexThreadTiling(indexThreadNumX_, indexThreadNumY_, static_cast<int64_t>(inputData.outputDim0));
 
-    SortedSparseSegmentMeanGradSimtTilingData *tilingData = context_->GetTilingData<SortedSparseSegmentMeanGradSimtTilingData>();
+    SortedSparseSegmentMeanGradSimtTilingData*
+        tilingData = context_->GetTilingData<SortedSparseSegmentMeanGradSimtTilingData>();
     tilingData->needCoreNum = needCoreNum_;
     tilingData->innerSize = inputData.innerSize;
     tilingData->segmentNum = inputData.segmentNum;
@@ -131,19 +132,16 @@ ge::graphStatus SortedSparseSegmentMeanGradSimtTiling::DoOpTiling()
     tilingData->innerCore = innerCore_;
     tilingData->perCoreInnerSize = perCoreInnerSize_;
     tilingData->resCoreInnerSize = resCoreInnerSize_;
-    
+
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
 // 当前实现为simt模板，后续如新增simd模板需要在IsCapable进行分支判断
-bool SortedSparseSegmentMeanGradSimtTiling::IsCapable()
+bool SortedSparseSegmentMeanGradSimtTiling::IsCapable() { return true; }
+
+uint64_t SortedSparseSegmentMeanGradSimtTiling::GetTilingKey() const
 {
-    return true;
-}
-
-
-uint64_t SortedSparseSegmentMeanGradSimtTiling::GetTilingKey() const {
     if (isSmallInner_) {
         if (inputData.outterSize < MAX_UINT32_NUM) {
             return SMALL_INNER_LT_INNER_LT_OUTTER_TILING_KEY;
@@ -153,7 +151,7 @@ uint64_t SortedSparseSegmentMeanGradSimtTiling::GetTilingKey() const {
     }
     if (inputData.innerSize < MAX_UINT32_NUM && inputData.outterSize < MAX_UINT32_NUM) {
         return LARGE_INNER_LT_INNER_LT_OUTTER_TILING_KEY;
-    } else if (inputData.innerSize < MAX_UINT32_NUM && inputData.outterSize >= MAX_UINT32_NUM ) {
+    } else if (inputData.innerSize < MAX_UINT32_NUM && inputData.outterSize >= MAX_UINT32_NUM) {
         return LARGE_INNER_LT_INNER_GT_OUTTER_TILING_KEY;
     } else if (inputData.innerSize >= MAX_UINT32_NUM && inputData.outterSize < MAX_UINT32_NUM) {
         return LARGE_INNER_GT_INNER_LT_OUTTER_TILING_KEY;
@@ -162,12 +160,11 @@ uint64_t SortedSparseSegmentMeanGradSimtTiling::GetTilingKey() const {
     }
 }
 
-
 ge::graphStatus SortedSparseSegmentMeanGradSimtTiling::GetWorkspaceSize()
 {
-    auto sysWorkspace = WS_SYS_SIZE; 
+    auto sysWorkspace = WS_SYS_SIZE;
     sysWorkspace += ((inputData.segmentNum + 1) * WORKSPACE_INPUT_NUM + inputData.outputDim0 + 1) * sizeof(int64_t);
-    
+
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = sysWorkspace;
@@ -195,7 +192,8 @@ void SortedSparseSegmentMeanGradSimtTiling::PrintTilingData() const
 {
     OP_LOGD("SortedSparseSegmentMeanGradSimt", "[SortedSparseSegmentMeanGradSimt] PrintTilingData start running");
     std::ostringstream info;
-    SortedSparseSegmentMeanGradSimtTilingData *tilingData = context_->GetTilingData<SortedSparseSegmentMeanGradSimtTilingData>();
+    SortedSparseSegmentMeanGradSimtTilingData*
+        tilingData = context_->GetTilingData<SortedSparseSegmentMeanGradSimtTilingData>();
 
     info << "needCoreNum: " << tilingData->needCoreNum << ", ";
     info << "innerSize: " << tilingData->innerSize << ", ";
@@ -218,4 +216,4 @@ void SortedSparseSegmentMeanGradSimtTiling::PrintTilingData() const
 
 REGISTER_OPS_TILING_TEMPLATE(SortedSparseSegmentMeanGrad, SortedSparseSegmentMeanGradSimtTiling, 0);
 
-}  // namespace optiling
+} // namespace optiling

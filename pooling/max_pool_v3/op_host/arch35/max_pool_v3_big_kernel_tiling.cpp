@@ -29,10 +29,7 @@ bool MaxPoolV3BigKernelTiling::IsCapable()
     return false;
 }
 
-uint64_t MaxPoolV3BigKernelTiling::GetTilingKey() const
-{
-    return MAX_POOL_V3_TILING_KEY_BIG_KERNEL_NCHW;
-}
+uint64_t MaxPoolV3BigKernelTiling::GetTilingKey() const { return MAX_POOL_V3_TILING_KEY_BIG_KERNEL_NCHW; }
 
 void MaxPoolV3BigKernelTiling::DoUBTiling()
 {

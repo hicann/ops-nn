@@ -28,18 +28,11 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class RenormDavidTiling : public testing::Test
-{
+class RenormDavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RenormDavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RenormDavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RenormDavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RenormDavidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -93,17 +86,18 @@ TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
         auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
         auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
         // tilingParseFunc simulate
-        auto kernel_holder =
-            gert::KernelRunContextFaker()
-                .KernelIONum(2, 1)
-                .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-                .Outputs({&compile_info})
-                .Build();
+        auto kernel_holder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                          reinterpret_cast<void*>(&platform_info)})
+                                 .Outputs({&compile_info})
+                                 .Build();
 
         ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicore_spec);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
             "AICoreintrinsicDtypeMap", intrinsics);
@@ -118,30 +112,29 @@ TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
         ASSERT_NE(param, nullptr);
         compile_info.vectorCoreNum = 64;
         auto holder = gert::TilingContextFaker()
-                        .SetOpType(op_type)
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1}, {1})
-                        .InputShapes(
-                            {&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeAttrs(
-                            {{"p", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                            {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                            {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                          .SetOpType(op_type)
+                          .NodeIoNum(1, 1)
+                          .IrInstanceNum({1}, {1})
+                          .InputShapes({&x_shape})
+                          .OutputShapes({&y_shape})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                      {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                      {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
 
         gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
         ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
         // workspaces nullptr return failed
@@ -189,17 +182,18 @@ TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
         auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
         auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
         // tilingParseFunc simulate
-        auto kernel_holder =
-            gert::KernelRunContextFaker()
-                .KernelIONum(2, 1)
-                .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-                .Outputs({&compile_info})
-                .Build();
+        auto kernel_holder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                          reinterpret_cast<void*>(&platform_info)})
+                                 .Outputs({&compile_info})
+                                 .Build();
 
         ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicore_spec);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
             "AICoreintrinsicDtypeMap", intrinsics);
@@ -213,30 +207,29 @@ TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
         auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
         ASSERT_NE(param, nullptr);
         auto holder = gert::TilingContextFaker()
-                        .SetOpType(op_type)
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1}, {1})
-                        .InputShapes(
-                            {&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                        .NodeAttrs(
-                            {{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
-                            {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                            {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                          .SetOpType(op_type)
+                          .NodeIoNum(1, 1)
+                          .IrInstanceNum({1}, {1})
+                          .InputShapes({&x_shape})
+                          .OutputShapes({&y_shape})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                          .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
+                                      {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                      {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
 
         gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
         ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
         // workspaces nullptr return failed
@@ -284,17 +277,18 @@ TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
         auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
         auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
         // tilingParseFunc simulate
-        auto kernel_holder =
-            gert::KernelRunContextFaker()
-                .KernelIONum(2, 1)
-                .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-                .Outputs({&compile_info})
-                .Build();
+        auto kernel_holder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                          reinterpret_cast<void*>(&platform_info)})
+                                 .Outputs({&compile_info})
+                                 .Build();
 
         ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicore_spec);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
             "AICoreintrinsicDtypeMap", intrinsics);
@@ -308,30 +302,29 @@ TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
         auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
         ASSERT_NE(param, nullptr);
         auto holder = gert::TilingContextFaker()
-                        .SetOpType(op_type)
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1}, {1})
-                        .InputShapes(
-                            {&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                        .NodeAttrs(
-                            {{"p", Ops::NN::AnyValue::CreateFrom<float>(3.0)},
-                            {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                            {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                          .SetOpType(op_type)
+                          .NodeIoNum(1, 1)
+                          .IrInstanceNum({1}, {1})
+                          .InputShapes({&x_shape})
+                          .OutputShapes({&y_shape})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                          .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(3.0)},
+                                      {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                      {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
 
         gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
         ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
         // workspaces nullptr return failed
@@ -379,17 +372,18 @@ TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
         auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
         auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
         // tilingParseFunc simulate
-        auto kernel_holder =
-            gert::KernelRunContextFaker()
-                .KernelIONum(2, 1)
-                .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-                .Outputs({&compile_info})
-                .Build();
+        auto kernel_holder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                          reinterpret_cast<void*>(&platform_info)})
+                                 .Outputs({&compile_info})
+                                 .Build();
 
         ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicore_spec);
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
         kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
             "AICoreintrinsicDtypeMap", intrinsics);
@@ -403,30 +397,29 @@ TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
         auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
         ASSERT_NE(param, nullptr);
         auto holder = gert::TilingContextFaker()
-                        .SetOpType(op_type)
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1}, {1})
-                        .InputShapes(
-                            {&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                        .NodeAttrs(
-                            {{"p", Ops::NN::AnyValue::CreateFrom<float>(4.0)},
-                            {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                            {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                          .SetOpType(op_type)
+                          .NodeIoNum(1, 1)
+                          .IrInstanceNum({1}, {1})
+                          .InputShapes({&x_shape})
+                          .OutputShapes({&y_shape})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                          .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(4.0)},
+                                      {"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                      {"maxnorm", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
 
         gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
         ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
         holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
         // workspaces nullptr return failed

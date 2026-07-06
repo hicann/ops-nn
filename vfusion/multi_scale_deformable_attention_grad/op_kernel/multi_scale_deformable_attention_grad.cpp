@@ -16,14 +16,11 @@
 
 using namespace AscendC;
 // core func
-extern "C" __global__ __aicore__ void multi_scale_deformable_attention_grad(GM_ADDR value_gm, GM_ADDR spatial_shapes_gm,
-                                                                            GM_ADDR level_start_index_gm, GM_ADDR sampling_loc_gm,
-                                                                            GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm,
-                                                                            GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm,
-                                                                            GM_ADDR grad_attn_weight_gm, GM_ADDR workspace,
-                                                                            GM_ADDR tiling_data)
+extern "C" __global__ __aicore__ void multi_scale_deformable_attention_grad(
+    GM_ADDR value_gm, GM_ADDR spatial_shapes_gm, GM_ADDR level_start_index_gm, GM_ADDR sampling_loc_gm,
+    GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm, GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm,
+    GM_ADDR grad_attn_weight_gm, GM_ADDR workspace, GM_ADDR tiling_data)
 {
-
     TPipe pipe;
     GET_TILING_DATA(tiling_datas, tiling_data);
     MultiScaleDeformableAttentionGrad op;

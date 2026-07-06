@@ -54,8 +54,8 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnCeluGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* alpha, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnCeluGetWorkspaceSize(const aclTensor* self, const aclScalar* alpha, aclTensor* out,
+                                                uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnCelu的第二段接口，用于执行计算。
@@ -77,8 +77,8 @@ ACLNN_API aclnnStatus aclnnCelu(void* workspace, uint64_t workspaceSize, aclOpEx
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnInplaceCeluGetWorkspaceSize(
-    aclTensor* selfRef, const aclScalar* alpha, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnInplaceCeluGetWorkspaceSize(aclTensor* selfRef, const aclScalar* alpha,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnInplaceCelu的第二段接口，用于执行计算。
@@ -88,8 +88,8 @@ ACLNN_API aclnnStatus aclnnInplaceCeluGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnInplaceCelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnInplaceCelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -16,8 +16,7 @@
 #include "log/log.h"
 #include "op_common/op_host/infershape_elewise_util.h"
 using namespace ge;
-namespace ops
-{
+namespace ops {
 
 static ge::graphStatus InferShape4ApplyGradientDescent(gert::InferShapeContext* context)
 {
@@ -26,4 +25,4 @@ static ge::graphStatus InferShape4ApplyGradientDescent(gert::InferShapeContext* 
 
 IMPL_OP_INFERSHAPE(ApplyGradientDescent).InferShape(InferShape4ApplyGradientDescent);
 
-}  // namespace ops
+} // namespace ops

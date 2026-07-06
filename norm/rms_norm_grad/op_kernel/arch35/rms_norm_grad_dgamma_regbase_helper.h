@@ -36,10 +36,7 @@ constexpr int32_t REDUCEBY1ELENUM = 2;
 constexpr int32_t COMPRESSBY8ELENUM = 8;
 constexpr int32_t RESERVESIZE = 32;
 
-__aicore__ inline int64_t CEIL_DIV(int64_t x, int64_t y)
-{
-    return (y > 0) ? (x + y - 1) / y : 0;
-}
+__aicore__ inline int64_t CEIL_DIV(int64_t x, int64_t y) { return (y > 0) ? (x + y - 1) / y : 0; }
 
 __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
 {
@@ -47,9 +44,9 @@ __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
 }
 
 template <typename DY_TYPE, typename X_TYPE, typename RSTD_TYPE, int TILING_KEY>
-__aicore__ inline void CalcMulRes(
-    __local_mem__ DY_TYPE* dyAddr, __local_mem__ X_TYPE* xAddr, __local_mem__ RSTD_TYPE* rstdAddr,
-    __local_mem__ float* dgammaOutAddr, MaskReg& preg, uint32_t offset0, uint32_t k)
+__aicore__ inline void CalcMulRes(__local_mem__ DY_TYPE* dyAddr, __local_mem__ X_TYPE* xAddr,
+                                  __local_mem__ RSTD_TYPE* rstdAddr, __local_mem__ float* dgammaOutAddr, MaskReg& preg,
+                                  uint32_t offset0, uint32_t k)
 {
     RegTensor<float> xFp32, rstdFp32, dyFp32, temp_res, mul_res;
 
@@ -77,8 +74,8 @@ __aicore__ inline void CalcMulRes(
     DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dgammaOutAddr + offset0), mul_res, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy8(
-    __local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset, uint32_t ub_offset)
+__aicore__ inline void reduceSumCompressedBy8(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset,
+                                              uint32_t ub_offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1, temp_reg1_0, temp_reg1_1, temp_reg2_0, temp_reg2_1, temp_reg3_0,
         temp_reg3_1, temp_reg4_0, temp_reg4_1, temp_reg5_0, temp_reg5_1, temp_reg6_0, temp_reg6_1, temp_reg7_0,
@@ -132,8 +129,8 @@ __aicore__ inline void reduceSumCompressedBy8(
     DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy4(
-    __local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset, uint32_t ub_offset)
+__aicore__ inline void reduceSumCompressedBy4(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset,
+                                              uint32_t ub_offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1, temp_reg1_0, temp_reg1_1, temp_reg2_0, temp_reg2_1, temp_reg3_0,
         temp_reg3_1;
@@ -162,8 +159,8 @@ __aicore__ inline void reduceSumCompressedBy4(
     DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy2(
-    __local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset, uint32_t ub_offset)
+__aicore__ inline void reduceSumCompressedBy2(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset,
+                                              uint32_t ub_offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1, temp_reg1_0, temp_reg1_1;
 
@@ -190,8 +187,8 @@ __aicore__ inline void reduceSumCompressedBy1(__local_mem__ float* dyAddr, MaskR
     DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy8WithOutPad(
-    __local_mem__ float* src1Addr, __local_mem__ float* src2Addr, MaskReg& preg, uint32_t ub_offset, uint32_t vlFp32)
+__aicore__ inline void reduceSumCompressedBy8WithOutPad(__local_mem__ float* src1Addr, __local_mem__ float* src2Addr,
+                                                        MaskReg& preg, uint32_t ub_offset, uint32_t vlFp32)
 {
     for (uint16_t i = 0; i < 8; i++) {
         RegTensor<float> temp_reg0_0, temp_reg0_1;
@@ -199,20 +196,20 @@ __aicore__ inline void reduceSumCompressedBy8WithOutPad(
         DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(src1Addr + ub_offset + tempOffset));
         DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(src2Addr + ub_offset + tempOffset));
         AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
-        DataCopy<float, StoreDist::DIST_NORM_B32>(
-            (__local_mem__ float*)(src1Addr + ub_offset + tempOffset), temp_reg0_0, preg);
+        DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(src1Addr + ub_offset + tempOffset),
+                                                  temp_reg0_0, preg);
     }
 }
 
-__aicore__ inline void reduceSumCompressedBy8WithPad(
-    __local_mem__ float* src1Addr, __local_mem__ float* src2Addr, MaskReg& preg, uint32_t ub_offset,
-    uint32_t rowsBoundLine, uint32_t vlFp32, uint32_t tailDataOffset)
+__aicore__ inline void reduceSumCompressedBy8WithPad(__local_mem__ float* src1Addr, __local_mem__ float* src2Addr,
+                                                     MaskReg& preg, uint32_t ub_offset, uint32_t rowsBoundLine,
+                                                     uint32_t vlFp32, uint32_t tailDataOffset)
 {
     for (uint16_t i = 0; i < 8; i++) {
         RegTensor<float> temp_reg0_0, temp_reg0_1;
         uint32_t temp_off_set_0 = ub_offset + i * vlFp32;
-        uint32_t temp_off_set_1 =
-            tailDataOffset + temp_off_set_0 < rowsBoundLine ? tailDataOffset + temp_off_set_0 : rowsBoundLine;
+        uint32_t temp_off_set_1 = tailDataOffset + temp_off_set_0 < rowsBoundLine ? tailDataOffset + temp_off_set_0 :
+                                                                                    rowsBoundLine;
         DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(src1Addr + temp_off_set_0));
         DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(src2Addr + temp_off_set_1));
 
@@ -221,9 +218,8 @@ __aicore__ inline void reduceSumCompressedBy8WithPad(
     }
 }
 
-__aicore__ inline void UpdateCache(
-    const AscendC::LocalTensor<float>& dstTensor, __local_mem__ float* srcAddr, const int64_t cacheID,
-    const int64_t count)
+__aicore__ inline void UpdateCache(const AscendC::LocalTensor<float>& dstTensor, __local_mem__ float* srcAddr,
+                                   const int64_t cacheID, const int64_t count)
 {
     // UpdateCache
     uint16_t innerLoopTimes = cacheID;
@@ -245,9 +241,6 @@ __aicore__ inline void UpdateCache(
     }
 }
 
-__aicore__ inline int64_t GetCacheID(const int64_t idx)
-{
-    return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
-}
+__aicore__ inline int64_t GetCacheID(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 } // namespace RmsNormGrad
 #endif // RMS_NORM_GRAD_REGBASE_DGAMMA_H

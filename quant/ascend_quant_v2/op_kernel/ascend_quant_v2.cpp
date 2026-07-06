@@ -24,8 +24,8 @@
 
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void ascend_quant_v2(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void ascend_quant_v2(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                                      GM_ADDR workspace, GM_ADDR tiling)
 {
     GM_ADDR userWS = GetUserWorkspace(workspace);
     if (workspace == nullptr || userWS == nullptr) {
@@ -53,7 +53,7 @@ extern "C" __global__ __aicore__ void ascend_quant_v2(
             AscendQuantV2::AscendQuantV2PerTensorFP32<DTYPE_X> op;
             op.Init(x, scale, offset, y, &tilingData);
             op.Process();
-        }else if (TILING_KEY_IS(3)) {
+        } else if (TILING_KEY_IS(3)) {
             AscendQuantV2::AscendQuantV2NZFP32<DTYPE_X> op;
             op.Init(x, y, &tilingData);
             op.Process();

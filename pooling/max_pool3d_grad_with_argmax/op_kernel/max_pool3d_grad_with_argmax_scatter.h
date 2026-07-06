@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file max_pool3d_grad_with_argmax_scatter.h
  * \brief
@@ -26,22 +25,14 @@ using namespace AscendC;
 using namespace MaxPool3DGradWithArgmaxComm;
 
 template <typename TX, typename TGrad, typename TArgmax, typename TY>
-class MaxPoolGradWithArgScatter : 
-    public MaxPool3DGradCommon::MaxPool3DGradScatterUnified<
-        TX, TGrad, TArgmax, TY,
-        MaxPool3DGradWithArgmaxTilingData,
-        TilingParams,
-        BlockParams,
-        MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate>
-{
+class MaxPoolGradWithArgScatter : public MaxPool3DGradCommon::MaxPool3DGradScatterUnified<
+                                      TX, TGrad, TArgmax, TY, MaxPool3DGradWithArgmaxTilingData, TilingParams,
+                                      BlockParams, MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate> {
 public:
     __aicore__ inline MaxPoolGradWithArgScatter(TPipe* pipe)
         : MaxPool3DGradCommon::MaxPool3DGradScatterUnified<
-            TX, TGrad, TArgmax, TY,
-            MaxPool3DGradWithArgmaxTilingData,
-            TilingParams,
-            BlockParams,
-            MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate>(pipe)
+              TX, TGrad, TArgmax, TY, MaxPool3DGradWithArgmaxTilingData, TilingParams, BlockParams,
+              MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate>(pipe)
     {}
 };
 } // namespace MaxPool3DGradWithArgmax

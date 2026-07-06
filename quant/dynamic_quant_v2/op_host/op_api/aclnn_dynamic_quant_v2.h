@@ -28,8 +28,8 @@ __attribute__((visibility("default"))) aclnnStatus aclnnDynamicQuantV2GetWorkspa
 /**
  * @brief aclnnDynamicQuantV2的第二段接口，用于执行计算。
  */
-__attribute__((visibility("default"))) aclnnStatus aclnnDynamicQuantV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+__attribute__((visibility("default"))) aclnnStatus aclnnDynamicQuantV2(void* workspace, uint64_t workspaceSize,
+                                                                       aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *GroupQuant(const aclTensor *x, const aclTensor *scale, const aclTensor *groupIndex,
-                            const aclTensor *offsetOptional, int32_t dstType, aclOpExecutor *executor);
-} // l0op
+const aclTensor* GroupQuant(const aclTensor* x, const aclTensor* scale, const aclTensor* groupIndex,
+                            const aclTensor* offsetOptional, int32_t dstType, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_GROUP_QUANT_H_

@@ -29,9 +29,8 @@ using namespace ge;
 
 namespace ops {
 
-static ge::graphStatus SetSparseApplyFtrlOutputShapes(
-    gert::InferShapeContext* context,
-    const gert::Shape* varShape, const gert::Shape* gradShape, size_t varDimNum)
+static ge::graphStatus SetSparseApplyFtrlOutputShapes(gert::InferShapeContext* context, const gert::Shape* varShape,
+                                                      const gert::Shape* gradShape, size_t varDimNum)
 {
     if (gradShape->GetDimNum() != varDimNum) {
         OP_LOGE("SparseApplyFtrl",
@@ -42,9 +41,8 @@ static ge::graphStatus SetSparseApplyFtrlOutputShapes(
     }
     for (size_t i = 1; i < varDimNum; i++) {
         if (gradShape->GetDim(i) != varShape->GetDim(i)) {
-            OP_LOGE("SparseApplyFtrl",
-                    "grad.shape[%zu] (%ld) must equal var.shape[%zu] (%ld)",
-                    i, gradShape->GetDim(i), i, varShape->GetDim(i));
+            OP_LOGE("SparseApplyFtrl", "grad.shape[%zu] (%ld) must equal var.shape[%zu] (%ld)", i, gradShape->GetDim(i),
+                    i, varShape->GetDim(i));
             return GRAPH_FAILED;
         }
     }
@@ -87,8 +85,7 @@ static ge::graphStatus InferShapeSparseApplyFtrl(gert::InferShapeContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
 
     if (indicesShape->GetDimNum() != 1) {
-        OP_LOGE("SparseApplyFtrl", "indices must be 1-D, but got %zu-D",
-                indicesShape->GetDimNum());
+        OP_LOGE("SparseApplyFtrl", "indices must be 1-D, but got %zu-D", indicesShape->GetDimNum());
         return GRAPH_FAILED;
     }
 
@@ -103,8 +100,7 @@ static ge::graphStatus InferShapeSparseApplyFtrl(gert::InferShapeContext* contex
     for (size_t i = 0; i < varDimNum; i++) {
         int64_t varDim = varShape->GetDim(i);
         if (accumShape->GetDim(i) != varDim || linearShape->GetDim(i) != varDim) {
-            OP_LOGE("SparseApplyFtrl",
-                    "var/accum/linear shape mismatch at dim %zu", i);
+            OP_LOGE("SparseApplyFtrl", "var/accum/linear shape mismatch at dim %zu", i);
             return GRAPH_FAILED;
         }
     }
@@ -115,9 +111,8 @@ static ge::graphStatus InferShapeSparseApplyFtrl(gert::InferShapeContext* contex
         return GRAPH_FAILED;
     }
     if (gradShape->GetDim(0) != numIndices) {
-        OP_LOGE("SparseApplyFtrl",
-                "grad.shape[0] (%ld) must equal indices.shape[0] (%ld)",
-                gradShape->GetDim(0), numIndices);
+        OP_LOGE("SparseApplyFtrl", "grad.shape[0] (%ld) must equal indices.shape[0] (%ld)", gradShape->GetDim(0),
+                numIndices);
         return GRAPH_FAILED;
     }
 

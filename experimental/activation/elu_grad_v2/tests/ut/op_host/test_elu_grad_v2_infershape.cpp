@@ -14,28 +14,21 @@
 
 class EluGradV2Infershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EluGradV2Infershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EluGradV2Infershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EluGradV2Infershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EluGradV2Infershape TearDown" << std::endl; }
 };
 
 TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_float32)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "EluGradV2",
-        {
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("EluGradV2",
+                                                      {
+                                                          {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {32, 4, 4, 4},
     };
@@ -61,15 +54,14 @@ TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_float16)
 
 TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_bfloat16)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "EluGradV2",
-        {
-            {{{8, 256}, {8, 256}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{8, 256}, {8, 256}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_BF16, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("EluGradV2",
+                                                      {
+                                                          {{{8, 256}, {8, 256}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                          {{{8, 256}, {8, 256}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {8, 256},
     };
@@ -78,15 +70,14 @@ TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_bfloat16)
 
 TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_2d)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "EluGradV2",
-        {
-            {{{128, 512}, {128, 512}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{128, 512}, {128, 512}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("EluGradV2",
+                                                      {
+                                                          {{{128, 512}, {128, 512}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{128, 512}, {128, 512}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {128, 512},
     };
@@ -95,15 +86,14 @@ TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_2d)
 
 TEST_F(EluGradV2Infershape, elu_grad_v2_infershape_empty_tensor)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "EluGradV2",
-        {
-            {{{0}, {0}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{0}, {0}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("EluGradV2",
+                                                      {
+                                                          {{{0}, {0}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                          {{{0}, {0}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {0},
     };

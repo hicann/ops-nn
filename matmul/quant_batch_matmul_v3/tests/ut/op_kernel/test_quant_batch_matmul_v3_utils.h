@@ -27,16 +27,17 @@
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 #include "arch35/quant_batch_matmul_v3.cpp"
-#define PARAM_LIST_DEF GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset,\
-                       GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR y,\
-                       GM_ADDR workspace, GM_ADDR tiling
+#define PARAM_LIST_DEF                                                                                     \
+    GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR y, \
+        GM_ADDR workspace, GM_ADDR tiling
 
 #define PARAM_LIST x1, x2, scale, offset, bias, perTokenScale, y, workspace, tiling
 
-using QuantBatchMatmulAptFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
+using QuantBatchMatmulAptFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR,
+                                         GM_ADDR);
 
-static std::unordered_map<uint64_t, QuantBatchMatmulAptFunc> s_funcMapApt =
-    {{260UL, quant_batch_matmul_v3<0, 1, 0, 1, 0>}};
+static std::unordered_map<uint64_t, QuantBatchMatmulAptFunc> s_funcMapApt = {
+    {260UL, quant_batch_matmul_v3<0, 1, 0, 1, 0>}};
 #else
 #include "quant_batch_matmul_v3.cpp"
 using QuantBatchMatmulFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
@@ -105,7 +106,7 @@ struct QuantBatchMatmulV3TestParam {
 class QuantBatchMatmulV3TestUtils {
 public:
     static constexpr uint32_t MAX_NUM_BLOCKS = 4;
-    static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+    static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
     {
         auto delimiterLen = delimiter.size();
         std::string::size_type currPos = 0;
@@ -140,11 +141,12 @@ public:
         return exe_path;
     }
 
-    static vector<QuantBatchMatmulV3TestParam> GetParams(const string &socVersion, const string &testSuite)
+    static vector<QuantBatchMatmulV3TestParam> GetParams(const string& socVersion, const string& testSuite)
     {
         std::vector<QuantBatchMatmulV3TestParam> params;
         std::string rootPath(GetExeDirPath() + "../../../../");
-        std::string casePath(rootPath + "matmul/quant_batch_matmul_v3/tests/ut/op_kernel/test_quant_batch_matmul_v3.csv");
+        std::string casePath(rootPath +
+                             "matmul/quant_batch_matmul_v3/tests/ut/op_kernel/test_quant_batch_matmul_v3.csv");
         std::ifstream csvData(casePath, std::ios::in);
         if (!csvData.is_open()) {
             std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -166,7 +168,7 @@ public:
             }
 
             param.prefix = testParam[idx++];
-            idx++;  // skip coreNum
+            idx++; // skip coreNum
             param.x1Dim = stol(testParam[idx++]);
             param.x2Dim = stol(testParam[idx++]);
             param.yDim = stol(testParam[idx++]);
@@ -182,12 +184,12 @@ public:
             param.transA = stol(testParam[idx++]);
             param.transB = stol(testParam[idx++]);
             param.quantMode = stol(testParam[idx++]);
-            idx++;  // skip x1Dtype
-            idx++;  // skip x2Dtype
-            idx++;  // skip scaleDtype
-            idx++;  // skip perTokenScaleDtype
-            idx++;  // skip biasDtype
-            idx++;  // skip yDtype
+            idx++; // skip x1Dtype
+            idx++; // skip x2Dtype
+            idx++; // skip scaleDtype
+            idx++; // skip perTokenScaleDtype
+            idx++; // skip biasDtype
+            idx++; // skip yDtype
             param.fmapNz = testParam[idx++] == "NZ";
             param.weightNz = testParam[idx++] == "NZ";
             param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
@@ -203,8 +205,8 @@ public:
 
         return params;
     }
-    #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
-    static void TestOneParamCase(const QuantBatchMatmulV3TestParam &param)
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+    static void TestOneParamCase(const QuantBatchMatmulV3TestParam& param)
     {
         int64_t batchA = param.batchA > 0 ? param.batchA : 1L;
         int64_t batchB = param.batchB > 0 ? param.batchB : 1L;
@@ -217,15 +219,15 @@ public:
         size_t shape_y = batchC * param.m * param.n * sizeof(uint32_t);
         size_t tiling_data_size = sizeof(QuantBatchMatmulV3TilingData);
         size_t workspace_size = 16 * 1024 * 1024 + 50 * 1024 * 1024;
-        uint8_t *x1 = (uint8_t *)AscendC::GmAlloc(shape_x1);
-        uint8_t *x2 = (uint8_t *)AscendC::GmAlloc(shape_x2);
-        uint8_t *bias = (uint8_t *)AscendC::GmAlloc(shape_bias);
-        uint8_t *offset = nullptr;
-        uint8_t *scale = (uint8_t *)AscendC::GmAlloc(shape_scale);
-        uint8_t *pertokenScale = (uint8_t *)AscendC::GmAlloc(shape_pertoken);
-        uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-        uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspace_size);
-        uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+        uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(shape_x1);
+        uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(shape_x2);
+        uint8_t* bias = (uint8_t*)AscendC::GmAlloc(shape_bias);
+        uint8_t* offset = nullptr;
+        uint8_t* scale = (uint8_t*)AscendC::GmAlloc(shape_scale);
+        uint8_t* pertokenScale = (uint8_t*)AscendC::GmAlloc(shape_pertoken);
+        uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+        uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspace_size);
+        uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
         memset(x1, 1, shape_x1);
         memset(x2, 1, shape_x2);
@@ -238,7 +240,7 @@ public:
         SplitStr2Vec(param.tilingData, " ", tilingDataStr);
         std::vector<int32_t> tilingDataInt;
         tilingDataInt.reserve(tilingDataStr.size());
-        for (auto &tilingValue : tilingDataStr) {
+        for (auto& tilingValue : tilingDataStr) {
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
@@ -251,9 +253,8 @@ public:
             AscendC::SetKernelMode(KernelMode::MIX_MODE);
         }
 
-        auto wrapper = [param](
-                           GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR pertokenScale,
-                           GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+        auto wrapper = [param](GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias,
+                               GM_ADDR pertokenScale, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
             auto key = std::make_tuple(param.trans, param.kernel_template_type, param.pertoken, param.option_attr);
             auto it = funcMap.find(key);
             if (it != funcMap.end()) {
@@ -263,9 +264,8 @@ public:
             }
         };
 
-        ICPU_RUN_KF(
-            wrapper, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, scale, offset, bias, pertokenScale, y, workspace,
-            tiling);
+        ICPU_RUN_KF(wrapper, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, scale, offset, bias, pertokenScale, y,
+                    workspace, tiling);
 
         AscendC::GmFree(x1);
         AscendC::GmFree(x2);
@@ -276,13 +276,13 @@ public:
         AscendC::GmFree(workspace);
         AscendC::GmFree(tiling);
     }
-    #endif
-    #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#endif
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
     // 实践中发现此处如果不传入s_funcMapApt会导致符号合并等编译器行为问题
     // 必须传入s_funcMapApt以实现多数据流
-    static void TestOneParamCase950(const QuantBatchMatmulV3TestParam &param,
-                                        decltype(s_funcMapApt)& funcMapApt) {
-        std::function<void(PARAM_LIST_DEF)> func = [&param, &funcMapApt](PARAM_LIST_DEF){
+    static void TestOneParamCase950(const QuantBatchMatmulV3TestParam& param, decltype(s_funcMapApt)& funcMapApt)
+    {
+        std::function<void(PARAM_LIST_DEF)> func = [&param, &funcMapApt](PARAM_LIST_DEF) {
             auto key = param.tilingKey;
             auto it = funcMapApt.find(key);
             if (it != funcMapApt.end()) {
@@ -307,16 +307,16 @@ public:
         size_t shape_y = batchC * M * N * sizeof(uint32_t);
         size_t tiling_data_size = sizeof(DequantBmm::QuantBatchMatmulV3TilingDataParams);
         size_t workspace_size = 16 * 1024 * 1024 + 50 * 1024 * 1024;
-        uint8_t *x1 = (uint8_t *)AscendC::GmAlloc(shape_x1);
-        uint8_t *x2 = (uint8_t *)AscendC::GmAlloc(shape_x2);
-        uint8_t *scale = (uint8_t *)AscendC::GmAlloc(shape_scale);
-        uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-        uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspace_size);
-        uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
-        uint8_t *bias = nullptr;
-        uint8_t *offset = nullptr;
-        uint8_t *pertokenScale = nullptr;
-        
+        uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(shape_x1);
+        uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(shape_x2);
+        uint8_t* scale = (uint8_t*)AscendC::GmAlloc(shape_scale);
+        uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+        uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspace_size);
+        uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+        uint8_t* bias = nullptr;
+        uint8_t* offset = nullptr;
+        uint8_t* pertokenScale = nullptr;
+
         memset(x1, 1, shape_x1);
         memset(x2, 1, shape_x2);
         memset(scale, 1, shape_scale);
@@ -327,24 +327,28 @@ public:
         QuantBatchMatmulV3TestUtils::SplitStr2Vec(param.tilingData, " ", tilingDataStr);
         std::vector<int32_t> tilingDataInt;
         tilingDataInt.reserve(tilingDataStr.size());
-        for (auto &tilingValue : tilingDataStr) {
+        for (auto& tilingValue : tilingDataStr) {
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
         ASSERT_EQ(tilingDataInt.size() * sizeof(int32_t), tiling_data_size);
         memcpy(tiling, tilingDataInt.data(), tiling_data_size);
 
-        ICPU_RUN_KF(func, std::min(QuantBatchMatmulV3TestUtils::MAX_NUM_BLOCKS, param.numBlocks), x1, x2, scale, offset, bias, pertokenScale, y, workspace, tiling);
-        AscendC::GmFree((void *)x1);
-        AscendC::GmFree((void *)x2);
-        AscendC::GmFree((void *)scale);
-        if (biasFlag) AscendC::GmFree((void *)bias);
-        if (pertokenFlag) AscendC::GmFree((void *)pertokenScale);
-        if (offsetFlag) AscendC::GmFree((void *)offset);
-        AscendC::GmFree((void *)y);
-        AscendC::GmFree((void *)workspace);
-        AscendC::GmFree((void *)tiling);
+        ICPU_RUN_KF(func, std::min(QuantBatchMatmulV3TestUtils::MAX_NUM_BLOCKS, param.numBlocks), x1, x2, scale, offset,
+                    bias, pertokenScale, y, workspace, tiling);
+        AscendC::GmFree((void*)x1);
+        AscendC::GmFree((void*)x2);
+        AscendC::GmFree((void*)scale);
+        if (biasFlag)
+            AscendC::GmFree((void*)bias);
+        if (pertokenFlag)
+            AscendC::GmFree((void*)pertokenScale);
+        if (offsetFlag)
+            AscendC::GmFree((void*)offset);
+        AscendC::GmFree((void*)y);
+        AscendC::GmFree((void*)workspace);
+        AscendC::GmFree((void*)tiling);
     }
-    #endif
+#endif
 };
 
 #endif

@@ -25,30 +25,30 @@ constexpr int64_t DIM_H = 2;
 constexpr int64_t DIM_W = 3;
 OP_TYPE_REGISTER(AvgPoolV2Grad);
 
-const aclTensor* AvgPoolV2Grad(
-    const aclTensor* self, const aclTensor* shapeOrigInput, const aclTensor* grad, const aclIntArray* ksize,
-    const aclIntArray* strides, const std::string &paddingMode, const aclIntArray* pads, const std::string& dataFormat, 
-    const bool globalPooling, bool ceilMode, bool exclusive, int divisorOverride, aclOpExecutor* executor)
+const aclTensor* AvgPoolV2Grad(const aclTensor* self, const aclTensor* shapeOrigInput, const aclTensor* grad,
+                               const aclIntArray* ksize, const aclIntArray* strides, const std::string& paddingMode,
+                               const aclIntArray* pads, const std::string& dataFormat, const bool globalPooling,
+                               bool ceilMode, bool exclusive, int divisorOverride, aclOpExecutor* executor)
 {
-    L0_DFX(AvgPoolV2Grad, shapeOrigInput, grad, ksize, strides, paddingMode, pads, dataFormat, 
-        globalPooling, ceilMode, exclusive, divisorOverride);
+    L0_DFX(AvgPoolV2Grad, shapeOrigInput, grad, ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode,
+           exclusive, divisorOverride);
 
     auto selfShape = self->GetViewShape();
 
     int64_t outH = selfShape.GetDim(DIM_H);
     int64_t outW = selfShape.GetDim(DIM_W);
-    
+
     auto outputShape = grad->GetViewShape();
     outputShape.SetDim(DIM_H, outH);
     outputShape.SetDim(DIM_W, outW);
     auto output = executor->AllocTensor(outputShape, grad->GetDataType(), grad->GetStorageFormat());
     CHECK_RET(output != nullptr, nullptr);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AvgPoolV2Grad, OP_INPUT(shapeOrigInput, grad), OP_OUTPUT(output),
-    OP_ATTR(ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode, exclusive, divisorOverride));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        AvgPoolV2Grad, OP_INPUT(shapeOrigInput, grad), OP_OUTPUT(output),
+        OP_ATTR(ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode, exclusive, divisorOverride));
     OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPoolV2Grad ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPoolV2Grad ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return output;
 }
 } // namespace l0op

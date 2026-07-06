@@ -22,12 +22,13 @@ using namespace AscendC;
 namespace CrossEntropyLossCustom {
 
 template <>
-__aicore__ inline void CrossEntropyLoss<float>::GetLogProbOut(
-    const LocalTensor<float>& inputBuf, uint64_t& offset, const float& logBatchSum, float& batchLogProb,
-    const uint64_t& target, float& smoothingLoss, bool isIgnore)
+__aicore__ inline void CrossEntropyLoss<float>::GetLogProbOut(const LocalTensor<float>& inputBuf, uint64_t& offset,
+                                                              const float& logBatchSum, float& batchLogProb,
+                                                              const uint64_t& target, float& smoothingLoss,
+                                                              bool isIgnore)
 {
-    AscendC::LocalTensor<float> workLocal =
-        this->calcBuf.template GetWithOffset<float>(NUM_1024, this->workLocalOffset);
+    AscendC::LocalTensor<float> workLocal = this->calcBuf.template GetWithOffset<float>(NUM_1024,
+                                                                                        this->workLocalOffset);
     uint64_t weightOffset = 0;
     for (size_t i = 0; i < this->ubLoopNum; ++i) {
         event_t eventMTE3MTE2 = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::MTE3_MTE2));

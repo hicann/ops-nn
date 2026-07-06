@@ -29,17 +29,14 @@ using namespace ge;
 
 class GroupedQuantMaxTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "GroupedQuantMaxTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupedQuantMaxTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "GroupedQuantMaxTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupedQuantMaxTilingTest TearDown" << std::endl; }
 };
 
 // Test that GroupedQuantMax OpImpl is registered correctly
-TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_op_impl_registered) {
+TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_op_impl_registered)
+{
     std::string op_type("GroupedQuantMax");
 
     auto op_impl = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
@@ -64,13 +61,8 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_x_dtype)
 
     fe::PlatFormInfos platform_info;
     std::map<std::string, std::string> soc_infos = {
-        {"SoCInfo_soc_version", "Ascend950"},
-        {"SoCInfo_core_num", "24"},
-        {"SoCInfo_ai_core_num", "24"}
-    };
-    std::map<std::string, std::string> aicore_spec = {
-        {"ub_size", "262144"}
-    };
+        {"SoCInfo_soc_version", "Ascend950"}, {"SoCInfo_core_num", "24"}, {"SoCInfo_ai_core_num", "24"}};
+    std::map<std::string, std::string> aicore_spec = {{"ub_size", "262144"}};
 
     gert::StorageShape x_shape({6, 128}, {6, 128});
     gert::StorageShape scale_shape({3}, {3});
@@ -83,24 +75,22 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_x_dtype)
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(3, 2)
-        .IrInstanceNum({1, 1, 1}, {1, 1})
-        .InputShapes({&x_shape, &scale_shape, &group_list_shape})
-        .OutputShapes({&y_shape, &amax_shape})
-        .NodeAttrs({
-            {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-        })
-        .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tiling_data.get())
-        .Workspace(ws_size)
-        .Build();
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1}, {1, 1})
+                      .InputShapes({&x_shape, &scale_shape, &group_list_shape})
+                      .OutputShapes({&y_shape, &amax_shape})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_TRUE(tiling_context != nullptr);
@@ -127,13 +117,8 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_x_dim_exceed_max)
 
     fe::PlatFormInfos platform_info;
     std::map<std::string, std::string> soc_infos = {
-        {"SoCInfo_soc_version", "Ascend950"},
-        {"SoCInfo_core_num", "24"},
-        {"SoCInfo_ai_core_num", "24"}
-    };
-    std::map<std::string, std::string> aicore_spec = {
-        {"ub_size", "262144"}
-    };
+        {"SoCInfo_soc_version", "Ascend950"}, {"SoCInfo_core_num", "24"}, {"SoCInfo_ai_core_num", "24"}};
+    std::map<std::string, std::string> aicore_spec = {{"ub_size", "262144"}};
 
     gert::StorageShape x_shape({2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2});
     gert::StorageShape scale_shape({3}, {3});
@@ -146,24 +131,22 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_x_dim_exceed_max)
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(3, 2)
-        .IrInstanceNum({1, 1, 1}, {1, 1})
-        .InputShapes({&x_shape, &scale_shape, &group_list_shape})
-        .OutputShapes({&y_shape, &amax_shape})
-        .NodeAttrs({
-            {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-        })
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tiling_data.get())
-        .Workspace(ws_size)
-        .Build();
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1}, {1, 1})
+                      .InputShapes({&x_shape, &scale_shape, &group_list_shape})
+                      .OutputShapes({&y_shape, &amax_shape})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_TRUE(tiling_context != nullptr);
@@ -190,13 +173,8 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_dst_type)
 
     fe::PlatFormInfos platform_info;
     std::map<std::string, std::string> soc_infos = {
-        {"SoCInfo_soc_version", "Ascend950"},
-        {"SoCInfo_core_num", "24"},
-        {"SoCInfo_ai_core_num", "24"}
-    };
-    std::map<std::string, std::string> aicore_spec = {
-        {"ub_size", "262144"}
-    };
+        {"SoCInfo_soc_version", "Ascend950"}, {"SoCInfo_core_num", "24"}, {"SoCInfo_ai_core_num", "24"}};
+    std::map<std::string, std::string> aicore_spec = {{"ub_size", "262144"}};
 
     gert::StorageShape x_shape({6, 128}, {6, 128});
     gert::StorageShape scale_shape({3}, {3});
@@ -209,24 +187,22 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_dst_type)
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(3, 2)
-        .IrInstanceNum({1, 1, 1}, {1, 1})
-        .InputShapes({&x_shape, &scale_shape, &group_list_shape})
-        .OutputShapes({&y_shape, &amax_shape})
-        .NodeAttrs({
-            {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(99)}
-        })
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tiling_data.get())
-        .Workspace(ws_size)
-        .Build();
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1}, {1, 1})
+                      .InputShapes({&x_shape, &scale_shape, &group_list_shape})
+                      .OutputShapes({&y_shape, &amax_shape})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(99)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_TRUE(tiling_context != nullptr);
@@ -253,13 +229,8 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_roundmode_mismatch)
 
     fe::PlatFormInfos platform_info;
     std::map<std::string, std::string> soc_infos = {
-        {"SoCInfo_soc_version", "Ascend950"},
-        {"SoCInfo_core_num", "24"},
-        {"SoCInfo_ai_core_num", "24"}
-    };
-    std::map<std::string, std::string> aicore_spec = {
-        {"ub_size", "262144"}
-    };
+        {"SoCInfo_soc_version", "Ascend950"}, {"SoCInfo_core_num", "24"}, {"SoCInfo_ai_core_num", "24"}};
+    std::map<std::string, std::string> aicore_spec = {{"ub_size", "262144"}};
 
     gert::StorageShape x_shape({6, 128}, {6, 128});
     gert::StorageShape scale_shape({3}, {3});
@@ -272,24 +243,22 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_roundmode_mismatch)
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(3, 2)
-        .IrInstanceNum({1, 1, 1}, {1, 1})
-        .InputShapes({&x_shape, &scale_shape, &group_list_shape})
-        .OutputShapes({&y_shape, &amax_shape})
-        .NodeAttrs({
-            {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("round")},
-            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-        })
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tiling_data.get())
-        .Workspace(ws_size)
-        .Build();
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1}, {1, 1})
+                      .InputShapes({&x_shape, &scale_shape, &group_list_shape})
+                      .OutputShapes({&y_shape, &amax_shape})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("round")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_TRUE(tiling_context != nullptr);
@@ -316,13 +285,8 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_scale_dim)
 
     fe::PlatFormInfos platform_info;
     std::map<std::string, std::string> soc_infos = {
-        {"SoCInfo_soc_version", "Ascend950"},
-        {"SoCInfo_core_num", "24"},
-        {"SoCInfo_ai_core_num", "24"}
-    };
-    std::map<std::string, std::string> aicore_spec = {
-        {"ub_size", "262144"}
-    };
+        {"SoCInfo_soc_version", "Ascend950"}, {"SoCInfo_core_num", "24"}, {"SoCInfo_ai_core_num", "24"}};
+    std::map<std::string, std::string> aicore_spec = {{"ub_size", "262144"}};
 
     gert::StorageShape x_shape({6, 128}, {6, 128});
     gert::StorageShape scale_shape({3, 2}, {3, 2});
@@ -335,24 +299,22 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_scale_dim)
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(3, 2)
-        .IrInstanceNum({1, 1, 1}, {1, 1})
-        .InputShapes({&x_shape, &scale_shape, &group_list_shape})
-        .OutputShapes({&y_shape, &amax_shape})
-        .NodeAttrs({
-            {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-        })
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tiling_data.get())
-        .Workspace(ws_size)
-        .Build();
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1}, {1, 1})
+                      .InputShapes({&x_shape, &scale_shape, &group_list_shape})
+                      .OutputShapes({&y_shape, &amax_shape})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_TRUE(tiling_context != nullptr);
@@ -379,13 +341,8 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_grouplist_dim
 
     fe::PlatFormInfos platform_info;
     std::map<std::string, std::string> soc_infos = {
-        {"SoCInfo_soc_version", "Ascend950"},
-        {"SoCInfo_core_num", "24"},
-        {"SoCInfo_ai_core_num", "24"}
-    };
-    std::map<std::string, std::string> aicore_spec = {
-        {"ub_size", "262144"}
-    };
+        {"SoCInfo_soc_version", "Ascend950"}, {"SoCInfo_core_num", "24"}, {"SoCInfo_ai_core_num", "24"}};
+    std::map<std::string, std::string> aicore_spec = {{"ub_size", "262144"}};
 
     gert::StorageShape x_shape({6, 128}, {6, 128});
     gert::StorageShape scale_shape({3}, {3});
@@ -398,24 +355,22 @@ TEST_F(GroupedQuantMaxTilingTest, grouped_quant_max_tiling_invalid_grouplist_dim
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(3, 2)
-        .IrInstanceNum({1, 1, 1}, {1, 1})
-        .InputShapes({&x_shape, &scale_shape, &group_list_shape})
-        .OutputShapes({&y_shape, &amax_shape})
-        .NodeAttrs({
-            {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}
-        })
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tiling_data.get())
-        .Workspace(ws_size)
-        .Build();
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1}, {1, 1})
+                      .InputShapes({&x_shape, &scale_shape, &group_list_shape})
+                      .OutputShapes({&y_shape, &amax_shape})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_TRUE(tiling_context != nullptr);

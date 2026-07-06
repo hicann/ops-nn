@@ -18,7 +18,6 @@
 #include "../inc/platform.h"
 #include "kernel_tiling/kernel_tiling.h"
 
-
 namespace CrossEntropyLoss {
 using namespace AscendC;
 using AscendC::MicroAPI::AddrReg;
@@ -41,41 +40,36 @@ static constexpr int32_t CONST_64 = 64; // N方向固定成64
 static constexpr int32_t CONST_96 = 96; // loss weight smooth reduce后的结果ub大小，3*8*4=96
 static constexpr float MIN_FP32 = -3.402823466e+38;
 
-constexpr static CastTrait castB32ToB16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
-constexpr static CastTrait castB16ToB32 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+constexpr static CastTrait castB32ToB16 = {AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                           AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+constexpr static CastTrait castB16ToB32 = {AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
+                                           AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
-class CrossEntropyLossBigC
-{
+class CrossEntropyLossBigC {
 public:
     __aicore__ inline CrossEntropyLossBigC(){};
-    __aicore__ inline void Init(
-        GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR zloss,
-        GM_ADDR lseForZloss, GM_ADDR workspace, const CrossEntropyLossRegBaseTilingData* __restrict tilingData,
-        TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb,
+                                GM_ADDR zloss, GM_ADDR lseForZloss, GM_ADDR workspace,
+                                const CrossEntropyLossRegBaseTilingData* __restrict tilingData, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void ComputeSubLast(
-        LocalTensor<T1>& inputUB, LocalTensor<float>& tmpUb, LocalTensor<float>& maxUb, LocalTensor<float>& cacheUb,
-        int32_t onceC);
-    __aicore__ inline void GatherLoss(
-        int32_t j, int32_t kk, int32_t onceC, LocalTensor<float>& yLocal, LocalTensor<T2>& targetUb);
+    __aicore__ inline void ComputeSubLast(LocalTensor<T1>& inputUB, LocalTensor<float>& tmpUb,
+                                          LocalTensor<float>& maxUb, LocalTensor<float>& cacheUb, int32_t onceC);
+    __aicore__ inline void GatherLoss(int32_t j, int32_t kk, int32_t onceC, LocalTensor<float>& yLocal,
+                                      LocalTensor<T2>& targetUb);
     __aicore__ inline void ComputeMul(int32_t nSize, LocalTensor<T2>& targetUb, LocalTensor<float>& lossUb);
     __aicore__ inline void DataCopyTarget(int32_t nOnceCore, int64_t nOffset, LocalTensor<T2>& targetUb);
     __aicore__ inline void DataCopyInputx(int32_t onceC, int64_t offset, LocalTensor<T1>& inputUB);
     __aicore__ inline void DataCopyWeight(int32_t onceC, int64_t offset, LocalTensor<float>& inputUB);
-    __aicore__ inline void ComputeReduceTail(
-        int64_t nOffset, int32_t j, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, LocalTensor<float>& sumUb);
-    __aicore__ inline void ComputeReduceAfter(
-        int64_t nOffset, int32_t j, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, LocalTensor<float>& sumUb);
+    __aicore__ inline void ComputeReduceTail(int64_t nOffset, int32_t j, LocalTensor<float>& maxUb,
+                                             LocalTensor<float>& tmpUb, LocalTensor<float>& sumUb);
+    __aicore__ inline void ComputeReduceAfter(int64_t nOffset, int32_t j, LocalTensor<float>& maxUb,
+                                              LocalTensor<float>& tmpUb, LocalTensor<float>& sumUb);
     __aicore__ inline void DataCopyOut1(int32_t onceC, int64_t offset, LocalTensor<T1>& yLocal);
-    __aicore__ inline void ComputeSubAndLoss(
-        int64_t nOffset, int32_t j, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, LocalTensor<T2>& targetUb);
+    __aicore__ inline void ComputeSubAndLoss(int64_t nOffset, int32_t j, LocalTensor<float>& maxUb,
+                                             LocalTensor<float>& tmpUb, LocalTensor<T2>& targetUb);
     __aicore__ inline void DataCopyOut0(int32_t nOnceCore, int64_t nOffset, LocalTensor<T1>& lossUbB16);
     __aicore__ inline void ComputeReduceN(LocalTensor<float>& lossUb, int32_t nOnce);
     __aicore__ inline void DataCopyWorkspace(int32_t offset);
@@ -83,19 +77,18 @@ private:
     __aicore__ inline void ReductionMean(LocalTensor<float>& cleanUb, LocalTensor<T1>& cleanUbB16);
     __aicore__ inline void ComputeMulAfterSum(LocalTensor<float>& cleanUb, LocalTensor<T1>& cleanUbB16);
     __aicore__ inline void ComputeNLast(LocalTensor<float>& tmpUb);
-    __aicore__ inline void ComputeSubSmooth(
-        LocalTensor<T1>& inputUB, LocalTensor<float>& tmpUb, LocalTensor<float>& weightUb, LocalTensor<float>& outUb,
-        int32_t onceC);
-    __aicore__ inline void ComputeEfSoftmaxTail(
-        int64_t nOffset, int32_t j, LocalTensor<float>& tmpUb, LocalTensor<float>& tmpUb1, LocalTensor<T2>& targetUb);
-    __aicore__ inline void ComputeEfSoftmaxAfter(
-        int64_t nOffset, int32_t j, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, LocalTensor<T2>& targetUb);
-    __aicore__ inline void ComputeMulAdd(
-        LocalTensor<float>& lossUb, LocalTensor<float>& smoothUb, LocalTensor<T1>& lossUbT1, int32_t nOnceCore);
+    __aicore__ inline void ComputeSubSmooth(LocalTensor<T1>& inputUB, LocalTensor<float>& tmpUb,
+                                            LocalTensor<float>& weightUb, LocalTensor<float>& outUb, int32_t onceC);
+    __aicore__ inline void ComputeEfSoftmaxTail(int64_t nOffset, int32_t j, LocalTensor<float>& tmpUb,
+                                                LocalTensor<float>& tmpUb1, LocalTensor<T2>& targetUb);
+    __aicore__ inline void ComputeEfSoftmaxAfter(int64_t nOffset, int32_t j, LocalTensor<float>& maxUb,
+                                                 LocalTensor<float>& tmpUb, LocalTensor<T2>& targetUb);
+    __aicore__ inline void ComputeMulAdd(LocalTensor<float>& lossUb, LocalTensor<float>& smoothUb,
+                                         LocalTensor<T1>& lossUbT1, int32_t nOnceCore);
     __aicore__ inline void ParserTilingData();
     __aicore__ inline void ComputeMax(int64_t nOffset, int32_t j, LocalTensor<float>& maxUb);
-    __aicore__ inline void ComputeSoftAndSmooth(
-        int64_t nOffset, int32_t j, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, LocalTensor<T2>& targetUb);
+    __aicore__ inline void ComputeSoftAndSmooth(int64_t nOffset, int32_t j, LocalTensor<float>& maxUb,
+                                                LocalTensor<float>& tmpUb, LocalTensor<T2>& targetUb);
 
 private:
     GlobalTensor<T1> inputGm_;
@@ -311,8 +304,8 @@ __aicore__ inline void GetRowMax(int32_t onceC, LocalTensor<float>& maxUb, Local
 }
 
 template <typename T1>
-__aicore__ inline void ComputeSubExp(
-    LocalTensor<T1>& x1Local, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, int32_t onceC)
+__aicore__ inline void ComputeSubExp(LocalTensor<T1>& x1Local, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb,
+                                     int32_t onceC)
 {
     auto maxUbAddr = (__ubuf__ float*)maxUb.GetPhyAddr();
     auto inputUbAddr = (__ubuf__ T1*)x1Local.GetPhyAddr();
@@ -336,8 +329,8 @@ __aicore__ inline void ComputeSubExp(
             AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(jj, vfLenB32);
             AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(jj, vfLenB32);
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vreg0, inputUbAddr, srcOffset);
+                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inputUbAddr,
+                                                                                              srcOffset);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, preg);
             } else {
                 AscendC::MicroAPI::DataCopy((RegTensor<T1>&)srcRegfp32, inputUbAddr, srcOffset);
@@ -350,8 +343,8 @@ __aicore__ inline void ComputeSubExp(
 }
 
 template <typename T1>
-__aicore__ inline void ComputeSubExpTail(
-    LocalTensor<T1>& x1Local, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb, int32_t onceC, int32_t alignC)
+__aicore__ inline void ComputeSubExpTail(LocalTensor<T1>& x1Local, LocalTensor<float>& maxUb, LocalTensor<float>& tmpUb,
+                                         int32_t onceC, int32_t alignC)
 {
     auto maxUbAddr = (__ubuf__ float*)maxUb.GetPhyAddr();
     auto inputUbAddr = (__ubuf__ T1*)x1Local.GetPhyAddr();
@@ -376,8 +369,8 @@ __aicore__ inline void ComputeSubExpTail(
             AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(jj, vfLenB32);
             AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(jj, vfLenB32);
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vreg0, inputUbAddr, srcOffset);
+                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inputUbAddr,
+                                                                                              srcOffset);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, copyOutReg);
             } else {
                 AscendC::MicroAPI::DataCopy((RegTensor<T1>&)srcRegfp32, inputUbAddr, srcOffset);
@@ -478,8 +471,8 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
             AddrReg srcOffsetJ = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLenB32);
             AddrReg srcOffsety = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLenB32);
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    srcReg, srcUbAddr, srcOffsetJ);
+                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg, srcUbAddr,
+                                                                                              srcOffsetJ);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, pMask);
             } else {
                 AscendC::MicroAPI::DataCopy((RegTensor<T1>&)srcRegFp32, srcUbAddr, srcOffsetJ);
@@ -600,8 +593,8 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
                 if constexpr (sizeof(T1) == sizeof(half) && reduction == 0 && labelS == 0) {
                     AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLen);
                     AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(lossMulRegB16, lossMulReg1, preg);
-                    AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(
-                        lossOutUbAddrB16, lossMulRegB16, outOffset, preg);
+                    AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(lossOutUbAddrB16, lossMulRegB16,
+                                                                              outOffset, preg);
                 } else {
                     AscendC::MicroAPI::DataCopy(lossOutUbAddr, lossMulReg1, srcOffset, preg);
                     if constexpr (labelS != 0) {
@@ -612,8 +605,8 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
                 if constexpr (sizeof(T1) == sizeof(half) && reduction == 0 && labelS == 0) {
                     AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLen);
                     AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(lossMulRegB16, lossMulReg, preg);
-                    AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(
-                        lossOutUbAddrB16, lossMulRegB16, outOffset, preg);
+                    AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(lossOutUbAddrB16, lossMulRegB16,
+                                                                              outOffset, preg);
                 } else {
                     AscendC::MicroAPI::DataCopy(lossOutUbAddr, lossMulReg, srcOffset, preg);
                     if constexpr (labelS != 0) {
@@ -769,8 +762,8 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
     AscendC::DataCopyPad(lossGm_[nOffset], lossUbB16, copyParams);
 }
 
-__aicore__ inline void ReduceSumOne(
-    MaskReg& preg, MaskReg& preg2, __local_mem__ float* clearAddr, __local_mem__ float* lossUbAddr)
+__aicore__ inline void ReduceSumOne(MaskReg& preg, MaskReg& preg2, __local_mem__ float* clearAddr,
+                                    __local_mem__ float* lossUbAddr)
 {
     RegTensor<float> regClean;
     RegTensor<float> srcRegLoss;
@@ -826,17 +819,16 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
     copyParams3.dstStride = (realCoreNum_ * CONST_32 - 1) * sizeof(float);
     DataCopyPad(workspaceGm_[offset], clearUb, copyParams3);
 }
-__aicore__ inline void DataCopyAdd(
-    RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, MaskReg& regAllFp32, __local_mem__ float* srcAddr,
-    AddrReg& srcOffset)
+__aicore__ inline void DataCopyAdd(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, MaskReg& regAllFp32,
+                                   __local_mem__ float* srcAddr, AddrReg& srcOffset)
 {
     AscendC::MicroAPI::DataCopy(srcReg1, srcAddr, srcOffset);
     AscendC::MicroAPI::Add(srcReg0, srcReg1, srcReg0, regAllFp32);
 }
 
-__aicore__ inline void DataCopyAddSumT(
-    RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT, MaskReg& preg, MaskReg& regAllFp32,
-    MaskReg& preg2, uint16_t repeatTimes1, uint32_t vfLen, __local_mem__ float* srcAddr, __local_mem__ float* dstAddr)
+__aicore__ inline void DataCopyAddSumT(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT,
+                                       MaskReg& preg, MaskReg& regAllFp32, MaskReg& preg2, uint16_t repeatTimes1,
+                                       uint32_t vfLen, __local_mem__ float* srcAddr, __local_mem__ float* dstAddr)
 {
     AscendC::MicroAPI::DataCopy(srcReg1, srcAddr + repeatTimes1 * vfLen);
     AscendC::MicroAPI::Add(srcRegT, srcReg1, srcReg0, preg);
@@ -895,17 +887,15 @@ __aicore__ inline void VfAllSum(int32_t size, LocalTensor<float>& allReduceUb, L
             }
         }
 
-        DataCopyAddSumT(
-            srcReg0, srcReg1, srcRegT, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbLddr, cleanAddr);
+        DataCopyAddSumT(srcReg0, srcReg1, srcRegT, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbLddr,
+                        cleanAddr);
         if constexpr (reduction == 1) {
-            DataCopyAddSumT(
-                srcRegW0, srcRegW1, srcRegTW, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbWddr,
-                cleanAddr + 8);
+            DataCopyAddSumT(srcRegW0, srcRegW1, srcRegTW, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbWddr,
+                            cleanAddr + 8);
         }
         if constexpr (labelS != 0) {
-            DataCopyAddSumT(
-                srcRegS0, srcRegS1, srcRegTS, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbSddr,
-                cleanAddr + 16);
+            DataCopyAddSumT(srcRegS0, srcRegS1, srcRegTS, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbSddr,
+                            cleanAddr + 16);
         }
     }
 }
@@ -1064,8 +1054,8 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
             AddrReg srcOffsetJ = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLenB32);
             AddrReg srcOffsety = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLenB32);
             if constexpr (sizeof(T1) == sizeof(half)) {
-                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    srcReg, srcUbAddr, srcOffsetJ);
+                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg, srcUbAddr,
+                                                                                              srcOffsetJ);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, maskAll);
             } else {
                 AscendC::MicroAPI::DataCopy(srcRegFp32, srcUbAddrB32, srcOffsety);

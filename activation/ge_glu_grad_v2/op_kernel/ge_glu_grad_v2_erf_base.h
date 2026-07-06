@@ -53,8 +53,8 @@ constexpr float COEFFICIENT_13 = 0.26267224157e5;
 template <typename T>
 class GeGluGradV2ErfBase {
 public:
-    __aicore__ inline GeGluGradV2ErfBase(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx, const GeGluGradV2TilingData* tilingDataPtr)
+    __aicore__ inline GeGluGradV2ErfBase(GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx,
+                                         const GeGluGradV2TilingData* tilingDataPtr)
     {
         tailUbLoopNum = tilingDataPtr->tailUbLoopNum;
         groupNum = tilingDataPtr->groupNum;
@@ -90,55 +90,50 @@ protected:
         return T1(b == 0 ? a : CeilDiv(a, b) * b);
     };
 
-    template <
-        typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-        void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+    template <typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+              void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
     __aicore__ inline void ProcessPerf(CLS_NAME* objPtr);
-    template <
-        typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-        void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+    template <typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+              void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
     __aicore__ inline void ProcessLessEqual(CLS_NAME* objPtr);
-    template <
-        typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-        void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+    template <typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+              void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
     __aicore__ inline void ProcessGreater(CLS_NAME* objPtr);
 
     __aicore__ inline void ComputeCDF(LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount);
     __aicore__ inline void ComputePDF(LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount);
-    __aicore__ inline void ComputeGeluGrad(
-        LocalTensor<float>& y, LocalTensor<float>& dy, LocalTensor<float>& x, const int64_t& realProcCount);
-    __aicore__ inline void CopyInDyAndGelu(
-        const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
+    __aicore__ inline void ComputeGeluGrad(LocalTensor<float>& y, LocalTensor<float>& dy, LocalTensor<float>& x,
+                                           const int64_t& realProcCount);
+    __aicore__ inline void CopyInDyAndGelu(const int64_t& gmOffset, const int64_t& dataCount,
+                                           const int64_t& blockCount);
     __aicore__ inline void CopyInX(const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
 
     __aicore__ inline void CopyInXPerf(const int64_t& gmOffset, const int64_t& dataCount);
     template <typename T2>
     __aicore__ inline void TransposeX(LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch);
     template <typename T2>
-    __aicore__ inline void SplitXLeftAndRight(
-        LocalTensor<T2> dst1, LocalTensor<T2> dst2, LocalTensor<T2> src, const int64_t& nBatch);
+    __aicore__ inline void SplitXLeftAndRight(LocalTensor<T2> dst1, LocalTensor<T2> dst2, LocalTensor<T2> src,
+                                              const int64_t& nBatch);
     template <typename T2>
-    __aicore__ inline void CopySplitTensor(
-        LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src, const int64_t& nBatch);
+    __aicore__ inline void CopySplitTensor(LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src,
+                                           const int64_t& nBatch);
     template <typename T2>
-    __aicore__ inline void TransposeXBack(
-        LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1, LocalTensor<T2>& src2,
-        const int64_t& nBatch);
+    __aicore__ inline void TransposeXBack(LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1,
+                                          LocalTensor<T2>& src2, const int64_t& nBatch);
 
     __aicore__ inline void CopyOutRight(const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
     __aicore__ inline void CopyOutLeft(const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
 
     __aicore__ inline void CopyOutDXPerf(const int64_t& gmOffset, const int64_t& dataCount);
     template <typename T2>
-    __aicore__ inline void ConcatDXLeftAndRight(
-        LocalTensor<T2> dst, LocalTensor<T2> src1, LocalTensor<T2> src2, const int64_t& nBatch);
+    __aicore__ inline void ConcatDXLeftAndRight(LocalTensor<T2> dst, LocalTensor<T2> src1, LocalTensor<T2> src2,
+                                                const int64_t& nBatch);
     template <typename T2>
-    __aicore__ inline void TransposeDX(
-        LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1, LocalTensor<T2>& src2,
-        const int64_t& nBatch);
+    __aicore__ inline void TransposeDX(LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1,
+                                       LocalTensor<T2>& src2, const int64_t& nBatch);
     template <typename T2>
-    __aicore__ inline void CopyConcatTensor(
-        LocalTensor<T2>& dst, LocalTensor<T2>& src1, LocalTensor<T2>& src2, const int64_t& nBatch);
+    __aicore__ inline void CopyConcatTensor(LocalTensor<T2>& dst, LocalTensor<T2>& src1, LocalTensor<T2>& src2,
+                                            const int64_t& nBatch);
     template <typename T2>
     __aicore__ inline LocalTensor<T2> GetTempBuf(const int32_t index);
     template <typename T2>
@@ -194,9 +189,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::BaseInit()
 }
 
 template <typename T>
-template <
-    typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-    void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+template <typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+          void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
 __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessLessEqual(CLS_NAME* objPtr)
 {
     int64_t loopNum = loopNumPerCore;
@@ -227,9 +221,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessLessEqual(CLS_NAME* objPtr)
 }
 
 template <typename T>
-template <
-    typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-    void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+template <typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+          void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
 __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessGreater(CLS_NAME* objPtr)
 {
     int64_t loopNum = loopNumPerCore;
@@ -262,9 +255,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessGreater(CLS_NAME* objPtr)
 }
 
 template <typename T>
-template <
-    typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-    void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+template <typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+          void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
 __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessPerf(CLS_NAME* objPtr)
 {
     int64_t loopNum = loopNumPerCore;
@@ -293,8 +285,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessPerf(CLS_NAME* objPtr)
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::ComputeCDF(
-    LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::ComputeCDF(LocalTensor<float>& y, LocalTensor<float>& x,
+                                                         const int64_t& realProcCount)
 {
     LocalTensor<float> t1 = GetTempBuf<float>(2);
     LocalTensor<float> t2 = GetTempBuf<float>(3);
@@ -333,8 +325,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ComputeCDF(
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::ComputePDF(
-    LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::ComputePDF(LocalTensor<float>& y, LocalTensor<float>& x,
+                                                         const int64_t& realProcCount)
 {
     Mul(y, x, x, realProcCount);
     Muls(y, y, NEG_HALF, realProcCount);
@@ -343,8 +335,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ComputePDF(
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::ComputeGeluGrad(
-    LocalTensor<float>& y, LocalTensor<float>& dy, LocalTensor<float>& x, const int64_t& realProcCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::ComputeGeluGrad(LocalTensor<float>& y, LocalTensor<float>& dy,
+                                                              LocalTensor<float>& x, const int64_t& realProcCount)
 {
     LocalTensor<float> t0 = GetTempBuf<float>(1);
     LocalTensor<float> t1 = GetTempBuf<float>(2);
@@ -357,8 +349,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ComputeGeluGrad(
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::CopyInDyAndGelu(
-    const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::CopyInDyAndGelu(const int64_t& gmOffset, const int64_t& dataCount,
+                                                              const int64_t& blockCount)
 {
     int64_t ubOffset_0 = 0;
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY == DT_BF16
@@ -387,8 +379,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInDyAndGelu(
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::CopyInX(
-    const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::CopyInX(const int64_t& gmOffset, const int64_t& dataCount,
+                                                      const int64_t& blockCount)
 {
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
@@ -438,13 +430,11 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInXPerf(const int64_t& gmOffse
     WaitFlag<HardEvent::MTE2_V>(eventID1);
 
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY != DT_FLOAT
-    SplitXLeftAndRight(
-        ubX1.template ReinterpretCast<half>(), ubX2.template ReinterpretCast<half>(),
-        t0.template ReinterpretCast<half>(), nBatch);
+    SplitXLeftAndRight(ubX1.template ReinterpretCast<half>(), ubX2.template ReinterpretCast<half>(),
+                       t0.template ReinterpretCast<half>(), nBatch);
 #else
-    SplitXLeftAndRight(
-        ubX1.template ReinterpretCast<float>(), ubX2.template ReinterpretCast<float>(),
-        t0.template ReinterpretCast<float>(), nBatch);
+    SplitXLeftAndRight(ubX1.template ReinterpretCast<float>(), ubX2.template ReinterpretCast<float>(),
+                       t0.template ReinterpretCast<float>(), nBatch);
 #endif
 
     inQueueX1.EnQue(ubX1);
@@ -453,8 +443,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInXPerf(const int64_t& gmOffse
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::SplitXLeftAndRight(
-    LocalTensor<T2> dst1, LocalTensor<T2> dst2, LocalTensor<T2> src, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::SplitXLeftAndRight(LocalTensor<T2> dst1, LocalTensor<T2> dst2,
+                                                                 LocalTensor<T2> src, const int64_t& nBatch)
 {
     LocalTensor<T2> t0 = src;
     LocalTensor<T2> t1 = t0[maxProcCount];
@@ -468,8 +458,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::SplitXLeftAndRight(
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeX(
-    LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeX(LocalTensor<T2>& dst, LocalTensor<T2>& src,
+                                                         const int64_t& nBatch)
 {
     __ubuf__ T2* srcAddr = (__ubuf__ T2*)src.GetPhyAddr();
     __ubuf__ T2* dstAddr = (__ubuf__ T2*)dst.GetPhyAddr();
@@ -493,8 +483,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeX(
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::CopySplitTensor(
-    LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::CopySplitTensor(LocalTensor<T2>& dst1, LocalTensor<T2>& dst2,
+                                                              LocalTensor<T2>& src, const int64_t& nBatch)
 {
     struct DataCopyParams copyParams(tpsWidth * nBatch, 0, 0, 0);
     copyParams.blockLen = valueM * 16 / tpsWidth;
@@ -510,8 +500,9 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopySplitTensor(
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeXBack(
-    LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1, LocalTensor<T2>& src2, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeXBack(LocalTensor<T2>& dst1, LocalTensor<T2>& dst2,
+                                                             LocalTensor<T2>& src1, LocalTensor<T2>& src2,
+                                                             const int64_t& nBatch)
 {
     __ubuf__ T2* src1Addr = (__ubuf__ T2*)src1.GetPhyAddr();
     __ubuf__ T2* src2Addr = (__ubuf__ T2*)src2.GetPhyAddr();
@@ -554,8 +545,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeXBack(
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutLeft(
-    const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutLeft(const int64_t& gmOffset, const int64_t& dataCount,
+                                                          const int64_t& blockCount)
 {
     LocalTensor<T> outLocalLeft = outQueueDX1.DeQue<T>();
     struct DataCopyParams copyOutParams(blockCount, 0, 0, 0);
@@ -573,8 +564,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutLeft(
 }
 
 template <typename T>
-__aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutRight(
-    const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount)
+__aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutRight(const int64_t& gmOffset, const int64_t& dataCount,
+                                                           const int64_t& blockCount)
 {
     LocalTensor<T> outLocalRight = outQueueDX2.DeQue<T>();
     struct DataCopyParams copyOutParams(blockCount, 0, 0, 0);
@@ -600,13 +591,11 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutDXPerf(const int64_t& gmOff
     int32_t nBatch = CeilDiv(dataCount / (valueM * 2), TPS_REPEAT_SIZE / dtypeSize);
 
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY != DT_FLOAT
-    ConcatDXLeftAndRight(
-        t0.template ReinterpretCast<half>(), ubDX1.template ReinterpretCast<half>(),
-        ubDX2.template ReinterpretCast<half>(), nBatch);
+    ConcatDXLeftAndRight(t0.template ReinterpretCast<half>(), ubDX1.template ReinterpretCast<half>(),
+                         ubDX2.template ReinterpretCast<half>(), nBatch);
 #else
-    ConcatDXLeftAndRight(
-        t0.template ReinterpretCast<float>(), ubDX1.template ReinterpretCast<float>(),
-        ubDX2.template ReinterpretCast<float>(), nBatch);
+    ConcatDXLeftAndRight(t0.template ReinterpretCast<float>(), ubDX1.template ReinterpretCast<float>(),
+                         ubDX2.template ReinterpretCast<float>(), nBatch);
 #endif
 
     event_t eventID2 = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE3));
@@ -627,8 +616,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutDXPerf(const int64_t& gmOff
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::ConcatDXLeftAndRight(
-    LocalTensor<T2> dst, LocalTensor<T2> src1, LocalTensor<T2> src2, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::ConcatDXLeftAndRight(LocalTensor<T2> dst, LocalTensor<T2> src1,
+                                                                   LocalTensor<T2> src2, const int64_t& nBatch)
 {
     LocalTensor<T2> t0 = dst;
     LocalTensor<T2> t1 = t0[maxProcCount];
@@ -641,8 +630,9 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ConcatDXLeftAndRight(
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDX(
-    LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1, LocalTensor<T2>& src2, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDX(LocalTensor<T2>& dst1, LocalTensor<T2>& dst2,
+                                                          LocalTensor<T2>& src1, LocalTensor<T2>& src2,
+                                                          const int64_t& nBatch)
 {
     __ubuf__ T2* src1Addr = (__ubuf__ T2*)src1.GetPhyAddr();
     __ubuf__ T2* src2Addr = (__ubuf__ T2*)src2.GetPhyAddr();
@@ -671,8 +661,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDX(
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::CopyConcatTensor(
-    LocalTensor<T2>& dst, LocalTensor<T2>& src1, LocalTensor<T2>& src2, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::CopyConcatTensor(LocalTensor<T2>& dst, LocalTensor<T2>& src1,
+                                                               LocalTensor<T2>& src2, const int64_t& nBatch)
 {
     struct DataCopyParams copyParams(tpsWidth * nBatch, 0, 0, 0);
     copyParams.blockLen = 16 * valueM / tpsWidth;
@@ -688,8 +678,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyConcatTensor(
 
 template <typename T>
 template <typename T2>
-__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDXBack(
-    LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch)
+__aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDXBack(LocalTensor<T2>& dst, LocalTensor<T2>& src,
+                                                              const int64_t& nBatch)
 {
     __ubuf__ T2* srcAddr = (__ubuf__ T2*)src.GetPhyAddr();
     __ubuf__ T2* dstAddr = (__ubuf__ T2*)dst.GetPhyAddr();

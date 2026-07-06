@@ -12,7 +12,7 @@
 using optiling::IndexTilingData;
 
 static __aicore__ inline void RunIndex(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-    GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+                                       GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace != nullptr) {
         AscendC::SetSysWorkspace(workspace);
@@ -24,14 +24,14 @@ static __aicore__ inline void RunIndex(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR 
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void index(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
-    GM_ADDR indices, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void index(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
+                                            GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     RunIndex(x, indexedSizes, indexedStrides, indices, y, workspace, tiling);
 }
 
 extern "C" __global__ __aicore__ void index_ai_core(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
-    GM_ADDR indices, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+                                                    GM_ADDR indices, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     RunIndex(x, indexedSizes, indexedStrides, indices, y, workspace, tiling);
 }

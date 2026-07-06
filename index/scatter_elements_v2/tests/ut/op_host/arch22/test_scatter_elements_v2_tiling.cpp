@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -34,18 +35,11 @@
 using namespace std;
 using namespace ge;
 
-class ScatterElementsV2Tiling : public testing::Test
-{
+class ScatterElementsV2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ScatterElementsV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ScatterElementsV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ScatterElementsV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ScatterElementsV2Tiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -63,7 +57,7 @@ static string to_string(const std::stringstream& tiling_data)
 }
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -110,20 +104,20 @@ static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::ScatterElementsV2CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     EXPECT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     EXPECT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -139,9 +133,8 @@ static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compile_info)
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, indicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -193,18 +186,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32)
     // compile info
     optiling::ScatterElementsV2CompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -224,9 +217,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("add")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("add")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -277,18 +269,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32_few)
     // compile info
     optiling::ScatterElementsV2CompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -308,9 +300,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float32_few)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("add")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("add")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -361,18 +352,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float16)
     // compile info
     optiling::ScatterElementsV2CompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -392,9 +383,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_float16)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -445,18 +435,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bfloat16)
     // compile info
     optiling::ScatterElementsV2CompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -476,9 +466,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bfloat16)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("add")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("add")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -529,18 +518,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mul_error)
     // compile info
     optiling::ScatterElementsV2CompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -560,9 +549,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mul_error)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mul")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mul")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -609,18 +597,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_min)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::ScatterElementsV2CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -638,9 +626,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_min)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("min")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("min")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -686,18 +673,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_max)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::ScatterElementsV2CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -715,9 +702,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_max)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("max")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("max")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -763,18 +749,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mean)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::ScatterElementsV2CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -792,9 +778,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mean)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -822,14 +807,14 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_none_deterministic_sing
     gert::StorageShape indic_shape = {{4096, 2000}, {4096, 2000}};
     gert::StorageShape src_shape = {{4096, 2000}, {4096, 2000}};
 
-    auto normalResult = ExecuteArch22DeterministicCase(
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, input_shape, indic_shape, src_shape, -1, "none", 0);
+    auto normalResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, input_shape,
+                                                       indic_shape, src_shape, -1, "none", 0);
     EXPECT_EQ(normalResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(normalResult.tilingKey, 210);
     EXPECT_GT(normalResult.blockDim, 1U);
 
-    auto deterministicResult = ExecuteArch22DeterministicCase(
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, input_shape, indic_shape, src_shape, -1, "none", 1);
+    auto deterministicResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, input_shape,
+                                                              indic_shape, src_shape, -1, "none", 1);
     EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(deterministicResult.tilingKey, 210);
     EXPECT_EQ(deterministicResult.blockDim, 1U);
@@ -841,14 +826,14 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_add_deterministic_singl
     gert::StorageShape indic_shape = {{4096, 5933}, {4096, 5933}};
     gert::StorageShape src_shape = {{4096, 5933}, {4096, 5933}};
 
-    auto normalResult = ExecuteArch22DeterministicCase(
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape, indic_shape, src_shape, -1, "add", 0);
+    auto normalResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
+                                                       indic_shape, src_shape, -1, "add", 0);
     EXPECT_EQ(normalResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(normalResult.tilingKey, 120);
     EXPECT_GT(normalResult.blockDim, 1U);
 
-    auto deterministicResult = ExecuteArch22DeterministicCase(
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape, indic_shape, src_shape, -1, "add", 1);
+    auto deterministicResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
+                                                              indic_shape, src_shape, -1, "add", 1);
     EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(deterministicResult.tilingKey, 120);
     EXPECT_EQ(deterministicResult.blockDim, 1U);
@@ -860,14 +845,14 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mul_deterministic_singl
     gert::StorageShape indic_shape = {{4096, 18192}, {4096, 18192}};
     gert::StorageShape src_shape = {{4096, 18192}, {4096, 18192}};
 
-    auto normalResult = ExecuteArch22DeterministicCase(
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape, indic_shape, src_shape, -1, "mul", 0);
+    auto normalResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
+                                                       indic_shape, src_shape, -1, "mul", 0);
     EXPECT_EQ(normalResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(normalResult.tilingKey, 120);
     EXPECT_GT(normalResult.blockDim, 1U);
 
-    auto deterministicResult = ExecuteArch22DeterministicCase(
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape, indic_shape, src_shape, -1, "mul", 1);
+    auto deterministicResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
+                                                              indic_shape, src_shape, -1, "mul", 1);
     EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(deterministicResult.tilingKey, 120);
     EXPECT_EQ(deterministicResult.blockDim, 1U);
@@ -900,18 +885,18 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_other_error)
     // compile info
     optiling::ScatterElementsV2CompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -931,9 +916,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_other_error)
                       .InputShapes({&input_shape, &indic_shape, &src_shape})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("other")}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("other")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)

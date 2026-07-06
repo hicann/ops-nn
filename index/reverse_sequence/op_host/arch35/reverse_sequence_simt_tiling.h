@@ -28,20 +28,14 @@
 #include "util/math_util.h"
 #include "reverse_sequence_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
-class ReverseSequenceSimtTiling : public TilingBaseClass
-{
+class ReverseSequenceSimtTiling : public TilingBaseClass {
 public:
-    explicit ReverseSequenceSimtTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit ReverseSequenceSimtTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~ReverseSequenceSimtTiling()
-    {
-    }
+    ~ReverseSequenceSimtTiling() {}
 
 protected:
     bool IsCapable() override;
@@ -73,5 +67,5 @@ public:
     int64_t xTailCoreTailLoopSize_ = 0;
     int64_t addrRange_ = 0;
 };
-}
+} // namespace optiling
 #endif

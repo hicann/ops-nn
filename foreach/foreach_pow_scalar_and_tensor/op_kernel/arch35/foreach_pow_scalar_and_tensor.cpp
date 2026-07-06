@@ -26,15 +26,15 @@ enum class ForeachPowScalarAndTensorTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_pow_scalar_and_tensor(
-    GM_ADDR scalar, GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_pow_scalar_and_tensor(GM_ADDR scalar, GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                         GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachPowScalarAndTensorTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachPowScalarAndTensorTilingData, tilingData, tiling);
 
     // Access tiling data via GM pointer to avoid stack overflow with large struct
-    const __gm__ ForeachPowScalarAndTensorTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachPowScalarAndTensorTilingData*>(tiling);
+    const __gm__ ForeachPowScalarAndTensorTilingData*
+        tilingGm = reinterpret_cast<const __gm__ ForeachPowScalarAndTensorTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachPowScalarAndTensorTilingKey::TILING_KEY_FP32_FP16)) {
         NsForeachPowScalarAndTensor::Process<half, float>(scalar, x, y, tilingGm);

@@ -27,7 +27,8 @@ constexpr uint64_t POINT_WISE_ALIGN_UNIT = 16;
 
 class Conv3dTilingAlgorithmPointWise : public Conv3dTilingAlgorithm {
 public:
-    explicit Conv3dTilingAlgorithmPointWise(Conv3dTilingBase *tilingIns) : Conv3dTilingAlgorithm(tilingIns) {
+    explicit Conv3dTilingAlgorithmPointWise(Conv3dTilingBase* tilingIns) : Conv3dTilingAlgorithm(tilingIns)
+    {
         this->l1TilingFlag.isWeightBypass = false;
     }
     ~Conv3dTilingAlgorithmPointWise() override = default;

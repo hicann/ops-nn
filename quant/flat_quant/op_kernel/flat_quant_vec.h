@@ -21,19 +21,22 @@ namespace FlatQuantNS {
 template <typename T, uint8_t MM_MODE>
 class FlatQuantVec {
 public:
-    aifunc FlatQuantVec(){}
-    aifunc void Init(GM_ADDR p1mtx_, GM_ADDR out_, GM_ADDR qscale_, GM_ADDR workspace_, const FlatQuantTilingData* tilingData){
+    aifunc FlatQuantVec() {}
+    aifunc void Init(GM_ADDR p1mtx_, GM_ADDR out_, GM_ADDR qscale_, GM_ADDR workspace_,
+                     const FlatQuantTilingData* tilingData)
+    {
         shape.M = tilingData->M;
         shape.N = tilingData->N;
         shape.K = tilingData->K;
         clipRatio = tilingData->clipRatio;
         tiling();
 
-        p1GM.SetGlobalBuffer((__gm__ T *)p1mtx_);
-        outGM.SetGlobalBuffer((__gm__ int4b_t *)out_);
-        qscaleGM.SetGlobalBuffer((__gm__ float *)qscale_);
-        outnzGM.SetGlobalBuffer((__gm__ half *)workspace_);
-        doubleP1GM.SetGlobalBuffer((__gm__ T *)(workspace_ + (shape.K + shape.K % 2) * shape.Mceil * shape.N * sizeof(T)));
+        p1GM.SetGlobalBuffer((__gm__ T*)p1mtx_);
+        outGM.SetGlobalBuffer((__gm__ int4b_t*)out_);
+        qscaleGM.SetGlobalBuffer((__gm__ float*)qscale_);
+        outnzGM.SetGlobalBuffer((__gm__ half*)workspace_);
+        doubleP1GM.SetGlobalBuffer(
+            (__gm__ T*)(workspace_ + (shape.K + shape.K % 2) * shape.Mceil * shape.N * sizeof(T)));
 
         pipe.InitBuffer(bufQueue, UB_SIZE);
         xTensor = bufQueue.Get<T>();
@@ -51,13 +54,14 @@ public:
         eventIdMte3ToS = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_S));
     }
 
-    aifunc void tiling(){
+    aifunc void tiling()
+    {
         int allTimes = GetBlockNum() * 16; // 每个核处理16个批次, 控制同步计数器不会超过16
-        shape.perK = (shape.K + allTimes - 1) / allTimes; // 每个批次处理多少个K
+        shape.perK = (shape.K + allTimes - 1) / allTimes;                      // 每个批次处理多少个K
         shape.perK = (shape.perK + K_PER_VEC - 1) / (K_PER_VEC) * (K_PER_VEC); // 和4对齐
 
         int k_per_core = ((shape.K + GetBlockNum() - 1) / GetBlockNum() + shape.perK - 1) / shape.perK * shape.perK;
-        shape.K1 = k_per_core * (GetBlockIdx() >> 1);  // vector blk idx is 0~40
+        shape.K1 = k_per_core * (GetBlockIdx() >> 1); // vector blk idx is 0~40
         shape.K2 = ((k_per_core + shape.K1) > shape.K) ? shape.K : (k_per_core + shape.K1);
         shape.Mceil = (shape.M + CEIL_SIZE - 1) / CEIL_SIZE * CEIL_SIZE;
         shape.Nceil = (shape.N + CEIL_SIZE - 1) / CEIL_SIZE * CEIL_SIZE;
@@ -66,7 +70,8 @@ public:
         subBlockIdx = GetSubBlockIdx();
     }
 
-    aifunc void Process(){
+    aifunc void Process()
+    {
         if constexpr (MM_MODE == MM_DOUBLE_MODE) {
             ProcessP1();
         }
@@ -96,7 +101,8 @@ public:
         out_empty.release();
     }
 
-    aifunc void ProcessP1(){
+    aifunc void ProcessP1()
+    {
         int64_t startM = GetBlockIdx() * K_PER_VEC;
         if (startM >= shape.Mceil) {
             return;
@@ -118,7 +124,8 @@ public:
         DataCopy(doubleP1GM[startM * shape.Mceil], xTensor, K_PER_VEC * shape.Mceil);
     }
 
-    aifunc void ClearQuant(){
+    aifunc void ClearQuant()
+    {
         // pre-set all buffers to zero
         Duplicate<T>(xTensor, (T)0, DATA_COUNT);
         Duplicate<T>(x2Tensor, (T)0, DATA_COUNT);
@@ -139,7 +146,8 @@ public:
         WaitFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
     }
 
-    aifunc void CopyOutQuant(int64_t scaleK, int64_t scaleCount){
+    aifunc void CopyOutQuant(int64_t scaleK, int64_t scaleCount)
+    {
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         SetAtomicAdd<float>();
@@ -150,7 +158,8 @@ public:
         WaitFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
     }
 
-    aifunc void Quant(int64_t k, int64_t scaleK){
+    aifunc void Quant(int64_t k, int64_t scaleK)
+    {
         if (splitRow < shape.M) {
             SplitQuant(k, scaleK);
             return;
@@ -165,11 +174,12 @@ public:
         }
         int64_t nextK = k + DOUBLE;
         if (nextK < shape.K2) {
-            if (nextK % shape.perK == subBlockIdx){
+            if (nextK % shape.perK == subBlockIdx) {
                 CrossCoreWaitFlag(CUBE_VEC_SYNC_ID);
             }
             in_empty.wait();
-            DataCopy(GetXTensor(nextK >> 1).template ReinterpretCast<half>(), outnzGM[nextK * shape.Mceil * shape.N], shape.Mceil * shape.N);
+            DataCopy(GetXTensor(nextK >> 1).template ReinterpretCast<half>(), outnzGM[nextK * shape.Mceil * shape.N],
+                     shape.Mceil * shape.N);
             in_ready.set();
         }
 
@@ -202,7 +212,8 @@ public:
         out_empty.set();
     }
 
-    aifunc void SplitQuant(int64_t k, int64_t scaleK){
+    aifunc void SplitQuant(int64_t k, int64_t scaleK)
+    {
         float maxValue = 0.0f;
         ComputeMaxValue(k, maxValue);
 
@@ -220,7 +231,8 @@ public:
                     CrossCoreWaitFlag(CUBE_VEC_SYNC_ID);
                 }
                 in_empty.wait();
-                DataCopy(GetXTensor(p + 1).template ReinterpretCast<half>(), outnzGM[nextK * shape.Mceil * shape.N + nextRowIdx * shape.N], nextRowNum * shape.N);
+                DataCopy(GetXTensor(p + 1).template ReinterpretCast<half>(),
+                         outnzGM[nextK * shape.Mceil * shape.N + nextRowIdx * shape.N], nextRowNum * shape.N);
                 in_ready.set();
             }
             out_empty.wait();
@@ -244,12 +256,13 @@ public:
             DataCopyExtParams copyParams{1, (uint32_t)(realCount >> 1), 0, 0, 0};
             DataCopyPad(outGM[k * shape.M * shape.N + rowIdx * shape.N], GetYTensor(y), copyParams);
             out_empty.set();
-            p ++;
-            y ++;
+            p++;
+            y++;
         }
     }
 
-    aifunc void ComputeMaxValue(int64_t k, float &maxValue){
+    aifunc void ComputeMaxValue(int64_t k, float& maxValue)
+    {
         int64_t p = (k - shape.K1) * splitCount;
         for (int64_t rowIdx = 0; rowIdx < shape.Mceil; rowIdx += splitRow) {
             int64_t rowNum = (shape.M - rowIdx < splitRow) ? shape.M - rowIdx : splitRow;
@@ -259,11 +272,13 @@ public:
             if (k == shape.K1 + subBlockIdx && rowIdx == 0) {
                 CrossCoreWaitFlag(CUBE_VEC_SYNC_ID);
                 in_empty.wait();
-                DataCopy(GetXTensor(p).template ReinterpretCast<half>(), outnzGM[k * shape.Mceil * shape.N], rowNumCeil * shape.N);
+                DataCopy(GetXTensor(p).template ReinterpretCast<half>(), outnzGM[k * shape.Mceil * shape.N],
+                         rowNumCeil * shape.N);
                 in_ready.set();
             }
             in_empty.wait();
-            DataCopy(GetXTensor(p + 1).template ReinterpretCast<half>(), outnzGM[k * shape.Mceil * shape.N + nextRowIdx * shape.N], nextRowNum * shape.N);
+            DataCopy(GetXTensor(p + 1).template ReinterpretCast<half>(),
+                     outnzGM[k * shape.Mceil * shape.N + nextRowIdx * shape.N], nextRowNum * shape.N);
             in_ready.set();
 
             // Quant  (abs -> max -> 7/max -> x*(7/max))
@@ -277,17 +292,13 @@ public:
             if (tmpMax != tmpMax || tmpMax > maxValue) {
                 maxValue = tmpMax;
             }
-            p ++;
+            p++;
         }
     }
 
-    __aicore__ inline LocalTensor<T> GetXTensor(int64_t k){
-        return ((k & 1) == 0) ? xTensor : x2Tensor;
-    };
+    __aicore__ inline LocalTensor<T> GetXTensor(int64_t k) { return ((k & 1) == 0) ? xTensor : x2Tensor; };
 
-    __aicore__ inline LocalTensor<int4b_t> GetYTensor(int64_t k){
-        return ((k & 1) == 0) ? yTensor : y2Tensor;
-    };
+    __aicore__ inline LocalTensor<int4b_t> GetYTensor(int64_t k) { return ((k & 1) == 0) ? yTensor : y2Tensor; };
 
 private:
     TPipe pipe;
@@ -323,6 +334,6 @@ private:
     int64_t splitCount = 0;
     float clipRatio = 0.0f;
 };
-}  // namespace FlatQuantNS
+} // namespace FlatQuantNS
 
-#endif  // FLAT_QUANT_VEC_H
+#endif // FLAT_QUANT_VEC_H

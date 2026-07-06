@@ -23,8 +23,7 @@ enum class ForeachMinimumListTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_minimum_list(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_minimum_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachMinimumListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachMinimumListTilingData, tilingData, tiling);

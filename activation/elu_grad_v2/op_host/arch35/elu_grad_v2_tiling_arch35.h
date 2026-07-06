@@ -31,9 +31,9 @@ struct EluGradV2CompileInfo {
 
 class EluGradV2Tiling {
 public:
-    explicit EluGradV2Tiling(gert::TilingContext *context) : tilingContext(context){};
+    explicit EluGradV2Tiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
-    EluGradV2TilingData *tiling = nullptr;
+    EluGradV2TilingData* tiling = nullptr;
 
 protected:
     ge::graphStatus SetTilingData(bool is_result);
@@ -41,6 +41,7 @@ protected:
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CheckShape();
     ge::graphStatus SetAttr();
+
 private:
     uint64_t dType = 0;
     uint64_t schMode = 0;
@@ -48,8 +49,8 @@ private:
     ge::DataType gradsDtype = ge::DT_UNDEFINED;
     ge::DataType activationsDtype = ge::DT_UNDEFINED;
     ge::DataType outputDtype = ge::DT_UNDEFINED;
-    gert::TilingContext *tilingContext;
+    gert::TilingContext* tilingContext;
 };
 } // namespace optiling
- 
+
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_ELU_GRAD_V2_TILING_ARCH35_H

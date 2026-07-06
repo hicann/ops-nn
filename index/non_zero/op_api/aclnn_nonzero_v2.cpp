@@ -81,7 +81,8 @@ inline static bool CheckShape(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
-inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out) {
+inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
@@ -93,8 +94,8 @@ inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* ou
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnNonzeroV2GetWorkspaceSize(
-    const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnNonzeroV2GetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnNonzeroV2, DFX_IN(self), DFX_OUT(out));
     // 固定写法，创建OpExecutor

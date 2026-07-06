@@ -101,19 +101,19 @@ bool LayerNormV3WelfordMultiParamsTiling::IsValidTileLength(int64_t tileLength)
     int64_t welfordUpdateApiTempSize = 0;
     uint32_t maxValue{0}, minValue{0};
     ge::Shape tensorShape({1, tileLength});
-    AscendC::GetWelfordUpdateMaxMinTmpSize(
-        tensorShape, WELFORD_MP_B32_SIZE, GammaBetaTypeSize, false, true, maxValue, minValue);
+    AscendC::GetWelfordUpdateMaxMinTmpSize(tensorShape, WELFORD_MP_B32_SIZE, GammaBetaTypeSize, false, true, maxValue,
+                                           minValue);
     welfordUpdateApiTempSize = minValue;
     AscendC::GetWelfordFinalizeMaxMinTmpSize(tensorShape, WELFORD_MP_B32_SIZE, false, maxValue, minValue);
     welfordFinalizeApiTempSize = minValue;
-    AscendC::GetNormalizeMaxMinTmpSize(
-        tensorShape, WELFORD_MP_B32_SIZE, GammaBetaTypeSize, true, true, false, maxValue, minValue);
+    AscendC::GetNormalizeMaxMinTmpSize(tensorShape, WELFORD_MP_B32_SIZE, GammaBetaTypeSize, true, true, false, maxValue,
+                                       minValue);
     normalizeApiTempSize = minValue;
     apiTempSize = normalizeApiTempSize + welfordUpdateApiTempSize + welfordFinalizeApiTempSize;
     td_.set_apiTempBufferSize(apiTempSize);
 
-    int64_t totalSize =
-        (xSize + ySize) + (meanSize + rstdSize) + (gammaSize + betaSize) + welfordTempSize + apiTempSize;
+    int64_t totalSize = (xSize + ySize) + (meanSize + rstdSize) + (gammaSize + betaSize) + welfordTempSize +
+                        apiTempSize;
     return (totalSize <= static_cast<int64_t>(commonParams.ubSizePlatForm));
 }
 
@@ -123,8 +123,8 @@ ge::graphStatus LayerNormV3WelfordMultiParamsTiling::DoLibApiTiling()
     while (IsValidTileLength(tileLength + WELFORD_MP_CONSTANT_TWO * WELFORD_MP_TILELENGTH_STEP_SIZE)) {
         tileLength += WELFORD_MP_TILELENGTH_STEP_SIZE;
     }
-    OP_CHECK_IF(
-        (tileLength == 0), OP_LOGE(context_->GetNodeName(), "tileLength must greater than 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tileLength == 0), OP_LOGE(context_->GetNodeName(), "tileLength must greater than 0"),
+                return ge::GRAPH_FAILED);
 
     int64_t welfordUpdateTimes = td_.get_N() / tileLength;
     int64_t welfordUpdateTail = td_.get_N() - welfordUpdateTimes * tileLength;

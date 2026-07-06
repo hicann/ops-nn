@@ -21,15 +21,9 @@ using namespace std;
 
 class l2_ascend_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_ascend_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_ascend_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_ascend_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_ascend_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_ascend_quant_test, ascend910B2_normal_1)
@@ -44,9 +38,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_1)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -67,9 +61,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_2)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -90,9 +84,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_3)
     const bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -112,9 +106,8 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_4)
     const bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, nullptr, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, nullptr, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -135,9 +128,9 @@ TEST_F(l2_ascend_quant_test, ascend310P_normal_1)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -158,9 +151,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_input_dtype_dif_1)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -179,9 +172,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_input_dtype_dif_2)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -200,9 +193,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int4)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -221,9 +214,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int32)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -242,9 +235,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int32_error_shape)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -261,9 +254,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int4_scalar_error)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -280,9 +273,9 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int32_scalar_error)
     bool sqrtMode = false;
     const char* roundMode = "round";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -301,9 +294,9 @@ TEST_F(l2_ascend_quant_test, ascend910B_rountMode_error)
     bool sqrtMode = false;
     const char* roundMode = "r";
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -322,9 +315,9 @@ TEST_F(l2_ascend_quant_test, ascend910B_rountMode_is_null_error)
     bool sqrtMode = false;
     const char* roundMode = nullptr;
 
-    auto ut = OP_API_UT(
-        aclnnAscendQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendQuant,
+                        INPUT(tensor_1_desc, tensor_scale, tensor_offset, sqrtMode, roundMode, dstType),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

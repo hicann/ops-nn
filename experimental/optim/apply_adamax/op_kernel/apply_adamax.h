@@ -44,16 +44,14 @@ using namespace AscendC;
 
 template <typename T, int K_ALIGN>
 class ApplyAdamax {
-    static constexpr int32_t BUFFER_NUM = 2;  // double buffer
+    static constexpr int32_t BUFFER_NUM = 2; // double buffer
     static constexpr bool IS_FP16 = !AscendC::IsSameType<T, float>::value;
 
 public:
     __aicore__ inline ApplyAdamax() = default;
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad,
-        GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut,
-        const ApplyAdamaxTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad, GM_ADDR varOut, GM_ADDR mOut,
+                                GM_ADDR vOut, const ApplyAdamaxTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -100,17 +98,16 @@ private:
     float beta2_ = 0.0f;
     float epsilon_ = 0.0f;
     float oneMinusBeta1_ = 0.0f;
-    float lrAdj_ = 0.0f;  // lr / (1 - beta1Power)
+    float lrAdj_ = 0.0f; // lr / (1 - beta1Power)
 
     int64_t blockLength_ = 0;
     int64_t ubLength_ = 0;
 };
 
 template <typename T, int K_ALIGN>
-__aicore__ inline void ApplyAdamax<T, K_ALIGN>::Init(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut,
-    const ApplyAdamaxTilingData* tilingData)
+__aicore__ inline void ApplyAdamax<T, K_ALIGN>::Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad, GM_ADDR varOut,
+                                                     GM_ADDR mOut, GM_ADDR vOut,
+                                                     const ApplyAdamaxTilingData* tilingData)
 {
     int64_t blockIdx = AscendC::GetBlockIdx();
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * blockIdx;
@@ -168,7 +165,7 @@ __aicore__ inline void ApplyAdamax<T, K_ALIGN>::LoadScalars(const ApplyAdamaxTil
 
     // Epsilon floor guard (Tiling layer cannot guarantee > 0 from arbitrary user
     // input; Kernel-level last line of defense to avoid 0/0 -> NaN/Inf).
-    constexpr float EPS_FLOOR = 1.1754944e-38f;  // FLT_MIN
+    constexpr float EPS_FLOOR = 1.1754944e-38f; // FLT_MIN
     if (epsilon_ >= 0.0f && epsilon_ < EPS_FLOOR) {
         epsilon_ = EPS_FLOOR;
     }
@@ -254,18 +251,18 @@ __aicore__ inline void ApplyAdamax<T, K_ALIGN>::Compute(int64_t currentNum)
         // Step 1: m_new = beta1 * m + (1 - beta1) * grad
         Muls(tmpA, castM, beta1_, len);
         Muls(tmpB, castGrad, oneMinusBeta1_, len);
-        Add(castM, tmpA, tmpB, len);  // castM = m_new (fp32)
+        Add(castM, tmpA, tmpB, len); // castM = m_new (fp32)
 
         // Step 2: v_new = max(beta2 * v, |grad|)
         Muls(tmpA, castV, beta2_, len);
         Abs(tmpB, castGrad, len);
-        Max(castV, tmpA, tmpB, len);  // castV = v_new (fp32)
+        Max(castV, tmpA, tmpB, len); // castV = v_new (fp32)
 
         // Step 3: var_new = var - lrAdj * m_new / (v_new + eps)
         Adds(tmpA, castV, epsilon_, len);
         Muls(tmpB, castM, lrAdj_, len);
         Div(tmpB, tmpB, tmpA, len);
-        Sub(castVar, castVar, tmpB, len);  // castVar = var_new (fp32)
+        Sub(castVar, castVar, tmpB, len); // castVar = var_new (fp32)
 
         // Cast back to fp16
         Cast(mOutLocal, castM, RoundMode::CAST_RINT, len);

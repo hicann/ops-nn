@@ -12,10 +12,10 @@
  * \file l1_loss_grad_tiling.h
  * \brief l1_loss_grad_tiling
  */
- 
+
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_L1_LOSS_GRAD_TILING_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_L1_LOSS_GRAD_TILING_H
- 
+
 #include "../../op_kernel/arch35/l1_loss_grad_tiling_key.h"
 #include "op_host/tiling_base.h"
 #include "register/op_impl_registry.h"
@@ -23,7 +23,7 @@
 namespace optiling {
 class L1LossGradTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit L1LossGradTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {};
+    explicit L1LossGradTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){};
 
 protected:
     bool IsCapable() override;
@@ -37,6 +37,7 @@ protected:
     ge::graphStatus DoTiling();
     ge::graphStatus CheckGradsIsScalar();
     ge::graphStatus CaluateReduceElts();
+
 private:
     uint64_t tilingKey_ = 0;
     uint32_t inputGradsIsScalar_ = 0;
@@ -44,5 +45,5 @@ private:
     ge::DataType outputDtype_ = ge::DT_FLOAT16;
 };
 
-}  // namespace optiling
+} // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_L1_LOSS_GRAD_TILING_H

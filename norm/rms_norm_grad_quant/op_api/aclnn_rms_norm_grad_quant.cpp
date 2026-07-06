@@ -35,9 +35,8 @@ namespace RmsNormGradQuantACLNN {
 constexpr int32_t IDX_DX = 0;
 constexpr int32_t IDX_DGAMMA = 1;
 
-static bool CheckNotNull(
-    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
-    const aclTensor* scalesX, const aclTensor* dxOut, const aclTensor* dgammaOut)
+static bool CheckNotNull(const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
+                         const aclTensor* scalesX, const aclTensor* dxOut, const aclTensor* dgammaOut)
 {
     OP_CHECK_NULL(dy, return false);
     OP_CHECK_NULL(x, return false);
@@ -59,23 +58,22 @@ static const aclTensor* GetTensorContiguous(const aclTensor* opt, aclOpExecutor*
     return l0op::Contiguous(opt, executor);
 }
 
-aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
-    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
-    const aclTensor* scalesX, const aclTensor* offsetXOptional,
-    const char* quantMode, bool divMode,
-    aclTensor* dxOut, aclTensor* dgammaOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(const aclTensor* dy, const aclTensor* x, const aclTensor* rstd,
+                                                  const aclTensor* gamma, const aclTensor* scalesX,
+                                                  const aclTensor* offsetXOptional, const char* quantMode, bool divMode,
+                                                  aclTensor* dxOut, aclTensor* dgammaOut, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     OP_LOGD("Enter aclnnRmsNormGradQuantGetWorkspaceSize.");
-    L2_DFX_PHASE_1(
-        aclnnRmsNormGradQuant,
-        DFX_IN(dy, x, rstd, gamma, scalesX, offsetXOptional, quantMode, divMode),
-        DFX_OUT(dxOut, dgammaOut));
+    L2_DFX_PHASE_1(aclnnRmsNormGradQuant, DFX_IN(dy, x, rstd, gamma, scalesX, offsetXOptional, quantMode, divMode),
+                   DFX_OUT(dxOut, dgammaOut));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    CHECK_RET(RmsNormGradQuantACLNN::CheckNotNull(dy, x, rstd, gamma, scalesX, dxOut, dgammaOut), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(RmsNormGradQuantACLNN::CheckNotNull(dy, x, rstd, gamma, scalesX, dxOut, dgammaOut),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // a = 0, r != 0 时下放到算子进行计算，其他情况aclnn直接处理
     auto gammaShape = gamma->GetViewShape();
@@ -108,12 +106,13 @@ aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
     int32_t dstType = static_cast<int32_t>(dxOut->GetDataType());
 
     // 创建输出Tensor
-    aclTensor* dx_output = uniqueExecutor.get()->AllocTensor(dxOut->GetViewShape(), dxOut->GetDataType(), dxOut->GetViewFormat());
-    aclTensor* dgamma_output = uniqueExecutor.get()->AllocTensor(dgammaOut->GetViewShape(), dgammaOut->GetDataType(), dgammaOut->GetViewFormat());
+    aclTensor* dx_output = uniqueExecutor.get()->AllocTensor(dxOut->GetViewShape(), dxOut->GetDataType(),
+                                                             dxOut->GetViewFormat());
+    aclTensor* dgamma_output = uniqueExecutor.get()->AllocTensor(dgammaOut->GetViewShape(), dgammaOut->GetDataType(),
+                                                                 dgammaOut->GetViewFormat());
 
-    auto outs = l0op::RmsNormGradQuant(
-        dyCont, xCont, rstdCont, gammaCont, scalesXCont, offsetXCont,
-        quantMode, divMode, dstType, dx_output, dgamma_output, uniqueExecutor.get());
+    auto outs = l0op::RmsNormGradQuant(dyCont, xCont, rstdCont, gammaCont, scalesXCont, offsetXCont, quantMode, divMode,
+                                       dstType, dx_output, dgamma_output, uniqueExecutor.get());
     aclTensor* dxCompute = std::get<RmsNormGradQuantACLNN::IDX_DX>(outs);
     aclTensor* dgammaCompute = std::get<RmsNormGradQuantACLNN::IDX_DGAMMA>(outs);
     CHECK_RET(dxCompute != nullptr && dgammaCompute != nullptr, ACLNN_ERR_INNER_NULLPTR);

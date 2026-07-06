@@ -128,7 +128,7 @@ static vector<QuantBatchMatmulV3TestParam> GetParams()
 {
     vector<QuantBatchMatmulV3TestParam> params;
     const auto rows = GetCsvRows();
-    for (const auto &row : rows) {
+    for (const auto& row : rows) {
         if (row.caseGroup != "general") {
             continue;
         }
@@ -181,7 +181,7 @@ static vector<QuantBatchMatmulV3SpecialTestParam> GetSpecialParams()
 {
     vector<QuantBatchMatmulV3SpecialTestParam> params;
     const auto rows = GetCsvRows();
-    for (const auto &row : rows) {
+    for (const auto& row : rows) {
         if (row.caseGroup != "special") {
             continue;
         }
@@ -215,8 +215,8 @@ static vector<QuantBatchMatmulV3SpecialTestParam> GetSpecialParams()
     return params;
 }
 
-static TensorDesc BuildTensorDesc(const vector<int64_t> &shape, aclDataType dtype, aclFormat format,
-                                  const vector<int64_t> &stride, const vector<int64_t> &storageShape)
+static TensorDesc BuildTensorDesc(const vector<int64_t>& shape, aclDataType dtype, aclFormat format,
+                                  const vector<int64_t>& stride, const vector<int64_t>& storageShape)
 {
     if (!storageShape.empty()) {
         return TensorDesc(shape, dtype, format, stride, 0, storageShape);
@@ -228,53 +228,53 @@ static TensorDesc BuildTensorDesc(const vector<int64_t> &shape, aclDataType dtyp
 }
 
 class l2_QuantBatchMatmulV3_test : public testing::TestWithParam<QuantBatchMatmulV3TestParam> {
- protected:
-  static void SetUpTestCase() { }
+protected:
+    static void SetUpTestCase() {}
 
-  static void TearDownTestCase() { }
+    static void TearDownTestCase() {}
 };
 
 class l2_QuantBatchMatmulV3_special_test : public testing::TestWithParam<QuantBatchMatmulV3SpecialTestParam> {
- protected:
-  static void SetUpTestCase() { }
+protected:
+    static void SetUpTestCase() {}
 
-  static void TearDownTestCase() { }
+    static void TearDownTestCase() {}
 };
-static void TestOneParamCase(const QuantBatchMatmulV3TestParam &param)
+static void TestOneParamCase(const QuantBatchMatmulV3TestParam& param)
 {
-  TensorDesc x1_desc = TensorDesc(param.x1, ACL_INT8, ACL_FORMAT_ND, param.x1_stride);
-  TensorDesc x2_desc = TensorDesc(param.x2, ACL_INT8, ACL_FORMAT_ND, param.x2_stride);
-  TensorDesc scale_desc = TensorDesc(param.scale, param.scaleType, ACL_FORMAT_ND);
-  TensorDesc offset_desc = TensorDesc(param.offset, ACL_FLOAT, ACL_FORMAT_ND);
-  TensorDesc bias_desc = TensorDesc(param.bias, ACL_INT32, ACL_FORMAT_ND);
-  TensorDesc out_desc = TensorDesc(param.out, param.outType, ACL_FORMAT_ND);
-  bool hasOffset = param.offset.size() == 0 ? false : true;
-  bool hasBias = param.bias.size() == 0 ? false : true;
-  auto mandtoryInput = std::make_tuple(x1_desc, x2_desc, scale_desc);
-  aclnnStatus aclRet = ACLNN_ERR_PARAM_INVALID;
-  uint64_t workspace_size = 0;
-  if (hasOffset && hasBias) {
-    auto ut = OP_API_UT(aclnnQuantMatmulV3,
-                        std::tuple_cat(mandtoryInput, std::make_tuple(offset_desc, bias_desc, false, false)),
-                        OUTPUT(out_desc));
-    aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  } else if (hasOffset) {
-    auto ut = OP_API_UT(aclnnQuantMatmulV3,
-                        std::tuple_cat(mandtoryInput, std::make_tuple(offset_desc, nullptr, false, false)),
-                        OUTPUT(out_desc));
-    aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  } else if (hasBias) {
-    auto ut = OP_API_UT(aclnnQuantMatmulV3,
-                        std::tuple_cat(mandtoryInput, std::make_tuple(nullptr, bias_desc, false, false)),
-                        OUTPUT(out_desc));
-    aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  } else {
-    auto ut = OP_API_UT(aclnnQuantMatmulV3,
-                        std::tuple_cat(mandtoryInput, std::make_tuple(nullptr, nullptr, false, false)),
-                        OUTPUT(out_desc));
-    aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  }
-//   EXPECT_EQ(aclRet, param.expect_ret);
+    TensorDesc x1_desc = TensorDesc(param.x1, ACL_INT8, ACL_FORMAT_ND, param.x1_stride);
+    TensorDesc x2_desc = TensorDesc(param.x2, ACL_INT8, ACL_FORMAT_ND, param.x2_stride);
+    TensorDesc scale_desc = TensorDesc(param.scale, param.scaleType, ACL_FORMAT_ND);
+    TensorDesc offset_desc = TensorDesc(param.offset, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc(param.bias, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc(param.out, param.outType, ACL_FORMAT_ND);
+    bool hasOffset = param.offset.size() == 0 ? false : true;
+    bool hasBias = param.bias.size() == 0 ? false : true;
+    auto mandtoryInput = std::make_tuple(x1_desc, x2_desc, scale_desc);
+    aclnnStatus aclRet = ACLNN_ERR_PARAM_INVALID;
+    uint64_t workspace_size = 0;
+    if (hasOffset && hasBias) {
+        auto ut = OP_API_UT(aclnnQuantMatmulV3,
+                            std::tuple_cat(mandtoryInput, std::make_tuple(offset_desc, bias_desc, false, false)),
+                            OUTPUT(out_desc));
+        aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    } else if (hasOffset) {
+        auto ut = OP_API_UT(aclnnQuantMatmulV3,
+                            std::tuple_cat(mandtoryInput, std::make_tuple(offset_desc, nullptr, false, false)),
+                            OUTPUT(out_desc));
+        aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    } else if (hasBias) {
+        auto ut = OP_API_UT(aclnnQuantMatmulV3,
+                            std::tuple_cat(mandtoryInput, std::make_tuple(nullptr, bias_desc, false, false)),
+                            OUTPUT(out_desc));
+        aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    } else {
+        auto ut = OP_API_UT(aclnnQuantMatmulV3,
+                            std::tuple_cat(mandtoryInput, std::make_tuple(nullptr, nullptr, false, false)),
+                            OUTPUT(out_desc));
+        aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    }
+    //   EXPECT_EQ(aclRet, param.expect_ret);
 }
 
 TEST_P(l2_QuantBatchMatmulV3_test, ascend910B2_generalTest)
@@ -286,7 +286,7 @@ INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulV3, l2_QuantBatchMatmulV3_test, testing
 
 TEST_P(l2_QuantBatchMatmulV3_special_test, ascend_special_csv_test)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
     TensorDesc x1_desc = BuildTensorDesc(param.x1, param.x1Type, param.x1Format, param.x1Stride, param.x1StorageShape);
     TensorDesc x2_desc = BuildTensorDesc(param.x2, param.x2Type, param.x2Format, param.x2Stride, param.x2StorageShape);
     TensorDesc scale_desc = TensorDesc(param.scale, param.scaleType, ACL_FORMAT_ND);
@@ -301,38 +301,54 @@ TEST_P(l2_QuantBatchMatmulV3_special_test, ascend_special_csv_test)
 
     if (param.scaleIsNull) {
         if (hasOffset && hasBias) {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, nullptr, offset_desc, bias_desc,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, nullptr, offset_desc, bias_desc, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else if (hasOffset) {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, nullptr, offset_desc, nullptr,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, nullptr, offset_desc, nullptr, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else if (hasBias) {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, nullptr, nullptr, bias_desc,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, nullptr, nullptr, bias_desc, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, nullptr, nullptr, nullptr,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, nullptr, nullptr, nullptr, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         }
     } else {
         if (hasOffset && hasBias) {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, scale_desc, offset_desc, bias_desc,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, scale_desc, offset_desc, bias_desc, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else if (hasOffset) {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, scale_desc, offset_desc, nullptr,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, scale_desc, offset_desc, nullptr, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else if (hasBias) {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, scale_desc, nullptr, bias_desc,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, scale_desc, nullptr, bias_desc, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else {
-            auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1_desc, x2_desc, scale_desc, nullptr, nullptr,
-                                param.transposeX1, param.transposeX2), OUTPUT(out_desc));
+            auto ut = OP_API_UT(
+                aclnnQuantMatmulV3,
+                INPUT(x1_desc, x2_desc, scale_desc, nullptr, nullptr, param.transposeX1, param.transposeX2),
+                OUTPUT(out_desc));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         }
     }
@@ -345,7 +361,7 @@ TEST_P(l2_QuantBatchMatmulV3_special_test, ascend_special_csv_test)
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulV3Special, l2_QuantBatchMatmulV3_special_test,
                          testing::ValuesIn(GetSpecialParams()));
 
-static void ThreadFunc(const QuantBatchMatmulV3TestParam *params, size_t testcase_num, size_t thread_idx,
+static void ThreadFunc(const QuantBatchMatmulV3TestParam* params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
@@ -353,7 +369,7 @@ static void ThreadFunc(const QuantBatchMatmulV3TestParam *params, size_t testcas
     }
 }
 
-static void TestMultiThread(const QuantBatchMatmulV3TestParam *params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const QuantBatchMatmulV3TestParam* params, size_t testcase_num, size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {
@@ -369,4 +385,3 @@ static void TestMultiThread(const QuantBatchMatmulV3TestParam *params, size_t te
 // {
 //     TestMultiThread(casesParams, sizeof(casesParams) / sizeof(QuantBatchMatmulV3TestParam), 3);
 // }
-

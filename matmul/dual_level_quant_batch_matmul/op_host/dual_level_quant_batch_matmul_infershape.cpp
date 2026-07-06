@@ -28,18 +28,16 @@ bool CheckIsUnknownDimNum(const gert::Shape& shape)
     return shape.GetDimNum() == 1 && shape.GetDim(0) == UNKNOWN_DIM_NUM;
 }
 
-static ge::graphStatus ShapeCheckAndInfer(
-    const gert::Shape* x1Shape, const gert::Shape* x2Shape, gert::Shape* yShape,
-    const bool transposeX1, const bool transposeX2)
+static ge::graphStatus ShapeCheckAndInfer(const gert::Shape* x1Shape, const gert::Shape* x2Shape, gert::Shape* yShape,
+                                          const bool transposeX1, const bool transposeX2)
 {
     size_t numDimA = x1Shape->GetDimNum();
     size_t numDimB = x2Shape->GetDimNum();
-    OP_CHECK_IF(
-        numDimA != SHAPE_SIZE || numDimB != SHAPE_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            NODE_NAME, "x1, x2", (std::to_string(numDimA) + ", " + std::to_string(numDimB)).c_str(),
-            "The shape dim of x1 and x2 must be 2D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(numDimA != SHAPE_SIZE || numDimB != SHAPE_SIZE,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    NODE_NAME, "x1, x2", (std::to_string(numDimA) + ", " + std::to_string(numDimB)).c_str(),
+                    "The shape dim of x1 and x2 must be 2D"),
+                return ge::GRAPH_FAILED);
     size_t mIdx = transposeX1 ? SECOND_DIM : FIRST_DIM;
     size_t kaIdx = transposeX1 ? FIRST_DIM : SECOND_DIM;
     size_t kbIdx = transposeX2 ? SECOND_DIM : FIRST_DIM;
@@ -49,12 +47,11 @@ static ge::graphStatus ShapeCheckAndInfer(
     int64_t x2K = x2Shape->GetDim(kbIdx);
     int64_t x2N = x2Shape->GetDim(nIdx);
 
-    OP_CHECK_IF(
-        x1K != x2K && x1K > 0 && x2K > 0,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            NODE_NAME, "x1, x2", (std::to_string(x1K) + ", " + std::to_string(x2K)).c_str(),
-            "The K dimension of x1 must equal the K dimension of x2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x1K != x2K && x1K > 0 && x2K > 0,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(NODE_NAME, "x1, x2",
+                                                       (std::to_string(x1K) + ", " + std::to_string(x2K)).c_str(),
+                                                       "The K dimension of x1 must equal the K dimension of x2"),
+                return ge::GRAPH_FAILED);
     size_t outDimNum = std::max(numDimA, numDimB);
     yShape->SetDimNum(outDimNum);
     yShape->SetDim(FIRST_DIM, x1M);
@@ -64,8 +61,7 @@ static ge::graphStatus ShapeCheckAndInfer(
 
 static ge::graphStatus InferShapeForDualLevelQuantBatchMatmul(gert::InferShapeContext* context)
 {
-    OP_CHECK_IF(context == nullptr,
-        OP_LOGE(NODE_NAME, "Get context failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, OP_LOGE(NODE_NAME, "Get context failed"), return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InferShapeForDualLevelQuantBatchMatmul begin");
     auto x1Shape = context->GetInputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
@@ -84,14 +80,11 @@ static ge::graphStatus InferShapeForDualLevelQuantBatchMatmul(gert::InferShapeCo
         yShape->SetDim(0, UNKNOWN_DIM_NUM);
         return ge::GRAPH_SUCCESS;
     }
-    OP_LOGD(
-        context->GetNodeName(),
-        "x1_shape: %s, x2_shape: %s, transpose_x1: %d, transpose_x2: %d",
-        Ops::Base::ToString(*x1Shape).c_str(), Ops::Base::ToString(*x2Shape).c_str(), *transposeX1, *transposeX2);
+    OP_LOGD(context->GetNodeName(), "x1_shape: %s, x2_shape: %s, transpose_x1: %d, transpose_x2: %d",
+            Ops::Base::ToString(*x1Shape).c_str(), Ops::Base::ToString(*x2Shape).c_str(), *transposeX1, *transposeX2);
 
-    OP_CHECK_IF(
-        ShapeCheckAndInfer(x1Shape, x2Shape, yShape, *transposeX1, *transposeX2) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "The Shape Check failed "), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ShapeCheckAndInfer(x1Shape, x2Shape, yShape, *transposeX1, *transposeX2) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "The Shape Check failed "), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class DualLevelQuantBatchMatmul : public OpDef
-{
+class DualLevelQuantBatchMatmul : public OpDef {
 public:
     DualLevelQuantBatchMatmul(const char* name) : OpDef(name)
     {

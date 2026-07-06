@@ -24,20 +24,13 @@ using namespace ut_util;
 
 class NonZeroTilingAscendcTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "NonZeroTilingAscendcTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "NonZeroTilingAscendcTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "NonZeroTilingAscendcTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "NonZeroTilingAscendcTest TearDown" << std::endl; }
 };
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -438,8 +431,8 @@ TEST_F(NonZeroTilingAscendcTest, NonZeroTiling_ascendc_007)
 
     // todo check tiling result
     auto tilingDataResult = TilingData2Str(tilingContext->GetRawTilingData());
-    EXPECT_EQ(
-        tilingDataResult, "5 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ");
+    EXPECT_EQ(tilingDataResult,
+              "5 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ");
 }
 
 TEST_F(NonZeroTilingAscendcTest, NonZeroTiling_ascendc_full_load_001)

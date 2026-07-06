@@ -46,25 +46,25 @@ using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
 constexpr uint32_t DEEP_NORM_BLOCK_SIZE = 32;
-constexpr uint32_t DEEP_NORM_VL_FP32 = 256 / sizeof(float);   // fp32 vector length (matches NormCommon::V_LENGTH)
+constexpr uint32_t DEEP_NORM_VL_FP32 = 256 / sizeof(float); // fp32 vector length (matches NormCommon::V_LENGTH)
 constexpr uint32_t DEEP_NORM_BLK_B32 = DEEP_NORM_BLOCK_SIZE / sizeof(float);
 
 template <typename T, int BUFFER_MODE>
 class DeepNorm {
 public:
-    __aicore__ inline DeepNorm() {};
+    __aicore__ inline DeepNorm(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean, GM_ADDR rstd,
-        GM_ADDR y, const DeepNormTilingData* tilingData);
+                                GM_ADDR y, const DeepNormTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void CopyInGammaBeta();
     __aicore__ inline void CopyInXGx(uint64_t rowOffset);
     __aicore__ inline void CalcH(LocalTensor<T>& xLocal, LocalTensor<T>& gxLocal, LocalTensor<float>& hLocal);
-    __aicore__ inline void CalcMeanCenter(
-        LocalTensor<float>& hLocal, LocalTensor<float>& sumLocal, LocalTensor<float>& meanLocal);
+    __aicore__ inline void CalcMeanCenter(LocalTensor<float>& hLocal, LocalTensor<float>& sumLocal,
+                                          LocalTensor<float>& meanLocal);
     __aicore__ inline void CalcY(LocalTensor<float>& hcLocal, LocalTensor<T>& gammaLocal, LocalTensor<T>& betaLocal,
-        LocalTensor<float>& rstdLocal, LocalTensor<T>& yLocal);
+                                 LocalTensor<float>& rstdLocal, LocalTensor<T>& yLocal);
     __aicore__ inline void CopyOutScalar(GlobalTensor<float>& dstGm, LocalTensor<float>& src, uint64_t rowIdx);
     __aicore__ inline void CopyOutY(LocalTensor<T>& yLocal, uint64_t rowIdx);
 
@@ -100,7 +100,7 @@ private:
 
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void DeepNorm<T, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean,
-    GM_ADDR rstd, GM_ADDR y, const DeepNormTilingData* tilingData)
+                                                      GM_ADDR rstd, GM_ADDR y, const DeepNormTilingData* tilingData)
 {
     numCol_ = tilingData->numCol;
     numColAlign_ = tilingData->numColAlign;
@@ -186,8 +186,8 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CopyInXGx(uint64_t rowOffset)
 
 // h = alpha * x + gx (fp32), stored into hLocal over the whole aligned span.
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcH(
-    LocalTensor<T>& xLocal, LocalTensor<T>& gxLocal, LocalTensor<float>& hLocal)
+__aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcH(LocalTensor<T>& xLocal, LocalTensor<T>& gxLocal,
+                                                       LocalTensor<float>& hLocal)
 {
     __local_mem__ T* xUb = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ T* gxUb = (__local_mem__ T*)gxLocal.GetPhyAddr();
@@ -216,8 +216,9 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcH(
 
 // mean = sum * avgFactor (stored to meanLocal[0]); hLocal overwritten in place with (h - mean).
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcMeanCenter(
-    LocalTensor<float>& hLocal, LocalTensor<float>& sumLocal, LocalTensor<float>& meanLocal)
+__aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcMeanCenter(LocalTensor<float>& hLocal,
+                                                                LocalTensor<float>& sumLocal,
+                                                                LocalTensor<float>& meanLocal)
 {
     __local_mem__ float* hUb = (__local_mem__ float*)hLocal.GetPhyAddr();
     __local_mem__ float* sumUb = (__local_mem__ float*)sumLocal.GetPhyAddr();
@@ -252,7 +253,8 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcMeanCenter(
 // y = (h - mean) * rstd * gamma + beta  (hcLocal already holds h - mean).
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcY(LocalTensor<float>& hcLocal, LocalTensor<T>& gammaLocal,
-    LocalTensor<T>& betaLocal, LocalTensor<float>& rstdLocal, LocalTensor<T>& yLocal)
+                                                       LocalTensor<T>& betaLocal, LocalTensor<float>& rstdLocal,
+                                                       LocalTensor<T>& yLocal)
 {
     __local_mem__ float* hcUb = (__local_mem__ float*)hcLocal.GetPhyAddr();
     __local_mem__ T* gammaUb = (__local_mem__ T*)gammaLocal.GetPhyAddr();
@@ -287,8 +289,8 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcY(LocalTensor<float>& hcLoc
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void DeepNorm<T, BUFFER_MODE>::CopyOutScalar(
-    GlobalTensor<float>& dstGm, LocalTensor<float>& src, uint64_t rowIdx)
+__aicore__ inline void DeepNorm<T, BUFFER_MODE>::CopyOutScalar(GlobalTensor<float>& dstGm, LocalTensor<float>& src,
+                                                               uint64_t rowIdx)
 {
     DataCopyExtParams params{1, static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
     DataCopyPad(dstGm[rowIdx], src, params);
@@ -333,9 +335,9 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::Process()
 
         // var = sum((h - mean)^2) / D ; rstd = 1 / sqrt(var + eps)
         LocalTensor<float> rstdLocal = rstdQue_.template AllocTensor<float>();
-        NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(
-            hLocal, rstdLocal, binaryAddBuf_, static_cast<uint16_t>(1), numColAlign_, numCol_, powerSplit_,
-            DEEP_NORM_BLK_B32);
+        NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(hLocal, rstdLocal, binaryAddBuf_,
+                                                                       static_cast<uint16_t>(1), numColAlign_, numCol_,
+                                                                       powerSplit_, DEEP_NORM_BLK_B32);
         NormCommon::ComputeRstdNewtonRaphson<true, true>(rstdLocal, rstdLocal, 1, eps_, avgFactor_, DEEP_NORM_VL_FP32);
 
         // y = (h - mean) * rstd * gamma + beta

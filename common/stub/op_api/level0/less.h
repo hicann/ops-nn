@@ -13,7 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Less(const aclTensor *self, const aclTensor *other, aclOpExecutor *executor);
+const aclTensor* Less(const aclTensor* self, const aclTensor* other, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_LESS_OP_H_

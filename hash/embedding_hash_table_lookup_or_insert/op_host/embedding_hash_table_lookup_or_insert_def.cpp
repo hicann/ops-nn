@@ -16,41 +16,42 @@
 
 namespace ops {
 class EmbeddingHashTableLookupOrInsert : public OpDef {
- public:
-  explicit EmbeddingHashTableLookupOrInsert(const char* name) : OpDef(name) {
-    this->Input("table_handle")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT64})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND});
-    this->Input("keys")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT64})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND});
-    this->Output("values")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND});
-    this->Attr("bucket_size").AttrType(REQUIRED).Int();
-    this->Attr("embedding_dim").AttrType(REQUIRED).Int();
-    this->Attr("filter_mode").AttrType(OPTIONAL).String("no_filter");
-    this->Attr("filter_freq").AttrType(OPTIONAL).Int(0);
-    this->Attr("default_key_or_value").AttrType(OPTIONAL).Bool(false);
-    this->Attr("default_key").AttrType(OPTIONAL).Int(0);
-    this->Attr("default_value").AttrType(OPTIONAL).Float(0.0);
-    this->Attr("filter_key_flag").AttrType(OPTIONAL).Bool(false);
-    this->Attr("filter_key").AttrType(OPTIONAL).Int(-1);
+public:
+    explicit EmbeddingHashTableLookupOrInsert(const char* name) : OpDef(name)
+    {
+        this->Input("table_handle")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("keys")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Output("values")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Attr("bucket_size").AttrType(REQUIRED).Int();
+        this->Attr("embedding_dim").AttrType(REQUIRED).Int();
+        this->Attr("filter_mode").AttrType(OPTIONAL).String("no_filter");
+        this->Attr("filter_freq").AttrType(OPTIONAL).Int(0);
+        this->Attr("default_key_or_value").AttrType(OPTIONAL).Bool(false);
+        this->Attr("default_key").AttrType(OPTIONAL).Int(0);
+        this->Attr("default_value").AttrType(OPTIONAL).Float(0.0);
+        this->Attr("filter_key_flag").AttrType(OPTIONAL).Bool(false);
+        this->Attr("filter_key").AttrType(OPTIONAL).Int(-1);
 
-    OpAICoreConfig aicore_config;
-    aicore_config.DynamicCompileStaticFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false);
-    this->AICore().AddConfig("ascend950", aicore_config);
-  }
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false);
+        this->AICore().AddConfig("ascend950", aicore_config);
+    }
 };
 
 OP_ADD(EmbeddingHashTableLookupOrInsert);
-}  // namespace ops
+} // namespace ops

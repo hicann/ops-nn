@@ -28,11 +28,9 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp2>
-struct is_same<Tp2, Tp2> : public true_type {
-};
+struct is_same<Tp2, Tp2> : public true_type {};
 
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t BLOCK_ALIGN_SIZE = 32; // 32B
@@ -55,11 +53,10 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
 }
 
 template <bool forAtomicAdd = false, typename T>
-__aicore__ inline void SafeDataCopy(
-    const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal, const int64_t& calCount,
-    bool recoverUbTailFormat = false)
+__aicore__ inline void SafeDataCopy(const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal,
+                                    const int64_t& calCount, bool recoverUbTailFormat = false)
 {
-    constexpr int typeSize = sizeof(T);                                
+    constexpr int typeSize = sizeof(T);
     constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize;
     if constexpr (IsDataCopyPadSupport() && sizeof(T) < 8) {
         AscendC::DataCopyParams copyParams{1, static_cast<uint16_t>(calCount * typeSize), 0, 0};
@@ -79,7 +76,7 @@ __aicore__ inline void SafeDataCopy(
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_S));
             AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(eventId);
             AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(eventId);
-            const int rollbackEleCount = calCount - numAlignedBlocks;   
+            const int rollbackEleCount = calCount - numAlignedBlocks;
             const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock;
             const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;
             if constexpr (!forAtomicAdd) {
@@ -102,9 +99,7 @@ __aicore__ inline void SafeDataCopy(
                 event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventId);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventId);
-                DataCopy(
-                    srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
-                    numElemsPerBlock);
+                DataCopy(srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx], numElemsPerBlock);
             }
         }
     }
@@ -138,8 +133,8 @@ public:
         return rstd_value;
     }
 
-    __aicore__ inline void BlockReduceSumFp32Short(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& tmpLocal, uint32_t repeat)
+    __aicore__ inline void BlockReduceSumFp32Short(const LocalTensor<float>& dstLocal,
+                                                   const LocalTensor<float>& tmpLocal, uint32_t repeat)
     {
         uint32_t elemNum = FLOAT_BLOCK_ELEM;
         uint32_t maxRepeat = ONE_REPEAT_BYTE_SIZE / sizeof(float);
@@ -156,9 +151,9 @@ public:
         }
     }
 
-    __aicore__ inline void ReduceSumFp32Short(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
-        uint32_t alignElem, uint32_t repeat, uint32_t processElem)
+    __aicore__ inline void ReduceSumFp32Short(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                              const LocalTensor<float>& tmpLocal, uint32_t alignElem, uint32_t repeat,
+                                              uint32_t processElem)
     {
         uint32_t elemNum = FLOAT_BLOCK_ELEM; // 8
         uint32_t tailCount = processElem % elemNum;
@@ -221,9 +216,9 @@ public:
         BlockReduceSumFp32Short(dstLocal, tmpLocal, repeat);
     }
 
-    __aicore__ inline void Level0MulFp32Short(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal0, const LocalTensor<float>& srcLocal1,
-        uint32_t alignElem, uint32_t repeat, uint32_t processElem)
+    __aicore__ inline void Level0MulFp32Short(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal0,
+                                              const LocalTensor<float>& srcLocal1, uint32_t alignElem, uint32_t repeat,
+                                              uint32_t processElem)
     {
         uint32_t maxElemFp32 = ONE_REPEAT_BYTE_SIZE / sizeof(float); // 64
         uint8_t repStride = alignElem / FLOAT_BLOCK_ELEM;
@@ -281,9 +276,8 @@ public:
         }
     }
 
-    __aicore__ inline void Level0AddFp32Short(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, uint32_t alignElem, uint32_t repeat,
-        uint32_t processElem)
+    __aicore__ inline void Level0AddFp32Short(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                              uint32_t alignElem, uint32_t repeat, uint32_t processElem)
     {
         uint32_t maxElemFp32 = ONE_REPEAT_BYTE_SIZE / sizeof(float); // 64
         uint8_t repStride = alignElem / FLOAT_BLOCK_ELEM;
@@ -344,9 +338,8 @@ public:
         }
     }
 
-    __aicore__ inline void InitGmData(
-        GlobalTensor<float> outputPdGammaGm, GlobalTensor<float> outputPdBetaGm, const uint32_t dDimNum,
-        LocalTensor<float> dbeta, uint32_t elemWithDInUBFp32)
+    __aicore__ inline void InitGmData(GlobalTensor<float> outputPdGammaGm, GlobalTensor<float> outputPdBetaGm,
+                                      const uint32_t dDimNum, LocalTensor<float> dbeta, uint32_t elemWithDInUBFp32)
     {
 #if __CCE_AICORE__ == 220
         if (GetBlockIdx() == 0) {
@@ -395,9 +388,8 @@ __aicore__ inline uint32_t RoundUp(uint32_t x, uint32_t blockElem)
 }
 
 template <typename T, typename U, typename R>
-__aicore__ inline void DataCopyCustom(
-    const U& dstTensor, const R& srcTensor, const uint32_t processElem, const uint64_t offset, bool is_float,
-    const uint16_t blockCount)
+__aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, const uint32_t processElem,
+                                      const uint64_t offset, bool is_float, const uint16_t blockCount)
 {
 #if __CCE_AICORE__ == 220
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(T)), 0, 0};
@@ -417,23 +409,21 @@ __aicore__ inline void DataCopyCustom(
             SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
             for (uint32_t i = 0; i < blockNumel; i++) {
-                T tensorValue =
-                    srcTensor.GetValue(idx * RoundUp(processElem, blockNumel) + processElem - blockNumel + i);
+                T tensorValue = srcTensor.GetValue(idx * RoundUp(processElem, blockNumel) + processElem - blockNumel +
+                                                   i);
                 srcTensor.SetValue(idx * RoundUp(processElem, blockNumel) + i, tensorValue);
             }
             SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-            DataCopy(
-                dstTensor[curOffset + processElem - blockNumel], srcTensor[idx * RoundUp(processElem, blockNumel)],
-                blockNumel);
+            DataCopy(dstTensor[curOffset + processElem - blockNumel], srcTensor[idx * RoundUp(processElem, blockNumel)],
+                     blockNumel);
         }
     }
 #endif
 }
 
-__aicore__ inline void DataCopyAutomicAdd(
-    GlobalTensor<float> dstTensor, const LocalTensor<float> srcTensor, const uint32_t processElem,
-    const uint64_t offset, const uint16_t blockCount)
+__aicore__ inline void DataCopyAutomicAdd(GlobalTensor<float> dstTensor, const LocalTensor<float> srcTensor,
+                                          const uint32_t processElem, const uint64_t offset, const uint16_t blockCount)
 {
 #if __CCE_AICORE__ == 220
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(float)), 0, 0};

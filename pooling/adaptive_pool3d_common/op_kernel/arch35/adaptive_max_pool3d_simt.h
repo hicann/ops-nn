@@ -27,86 +27,89 @@
 #define LAUNCH_BOUND(threads)
 #endif
 
-namespace AdaptivePool3DWithSimt{
-    using namespace AscendC;
+namespace AdaptivePool3DWithSimt {
+using namespace AscendC;
 
-    constexpr uint32_t THREAD_DIM = 1024;
-    constexpr size_t PARAM_NUM = 8;
-    constexpr static uint32_t DIV_DHW_IDX = 0;
- 	constexpr static uint32_t DIV_D_IDX = 2;
- 	constexpr static uint32_t DIV_H_IDX = 4;
- 	constexpr static uint32_t DIV_W_IDX = 6;
+constexpr uint32_t THREAD_DIM = 1024;
+constexpr size_t PARAM_NUM = 8;
+constexpr static uint32_t DIV_DHW_IDX = 0;
+constexpr static uint32_t DIV_D_IDX = 2;
+constexpr static uint32_t DIV_H_IDX = 4;
+constexpr static uint32_t DIV_W_IDX = 6;
 
-    template <typename DIV_T>
-    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T startIndex(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
-    {
-        DIV_T pStart = outIdx * inLen;
-        return Simt::UintDiv<DIV_T>(pStart, magicOutLen, shiftOutLen);
-    }
+template <typename DIV_T>
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T startIndex(DIV_T outIdx,
+                                                                                         DIV_T magicOutLen,
+                                                                                         DIV_T shiftOutLen, DIV_T inLen)
+{
+    DIV_T pStart = outIdx * inLen;
+    return Simt::UintDiv<DIV_T>(pStart, magicOutLen, shiftOutLen);
+}
 
-    template <typename DIV_T>
-    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T endIndex(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
-    {
-        DIV_T pEnd = ((outIdx + 1) * inLen - 1);
-        pEnd = Simt::UintDiv<DIV_T>(pEnd, magicOutLen, shiftOutLen);
-        return pEnd + 1;
-    }
-
-    template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-    __simt_callee__ __aicore__ __attribute__((always_inline)) inline static void executeFunc(FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth,
-                                                                                FORMAT_T height, FORMAT_T width, FORMAT_T outputNc, FORMAT_T outputDep,  FORMAT_T outputHeight, FORMAT_T outputWidth, 
-                                                                               __gm__ VALUE_T* valueData, __gm__ INDICES_T* indicesData,
-                                                                               DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH, DIV_T shiftH, DIV_T magicW, DIV_T shiftW) {
-        for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
-            index += gridDim.x * blockDim.x) {
-            DIV_T ncId = Simt::UintDiv<DIV_T>(index, magicDHW, shiftDHW); 
-            DIV_T indexIdx = index - ncId * outputNc;
-            DIV_T dim0Idx = Simt::UintDiv<DIV_T>(indexIdx, magicW, shiftW); 
-            DIV_T wId = indexIdx - dim0Idx * outputWidth;
-            DIV_T dId = Simt::UintDiv<DIV_T>(dim0Idx, magicH, shiftH); 
-            DIV_T hId = dim0Idx - dId * outputHeight;
-
-            FORMAT_T startInD = startIndex<DIV_T>(dId, magicD, shiftD, depth);
-            FORMAT_T endInD = endIndex<DIV_T>(dId, magicD, shiftD, depth);
-            FORMAT_T startInH = startIndex<DIV_T>(hId, magicH, shiftH, height);
-            FORMAT_T endInH = endIndex<DIV_T>(hId, magicH, shiftH, height);
-            FORMAT_T startInW = startIndex<DIV_T>(wId, magicW, shiftW, width);
-            FORMAT_T endInW = endIndex<DIV_T>(wId, magicW, shiftW, width);
-            VALUE_T maxVal = AscendC::NumericLimits<VALUE_T>::NegativeInfinity();
-            FORMAT_T maxIdx =  startInD * height * width + startInH * width + startInW; 
-            auto ncStartData = bottomData + ncId * ncSize;
-
-            for (FORMAT_T d = startInD; d < endInD; ++d) {
-                for (FORMAT_T h = startInH; h < endInH; ++h) {
-                    for (FORMAT_T w = startInW; w < endInW; ++w) {
-                        FORMAT_T idxOffset = d * height * width + h * width + w;
-                        VALUE_T val = static_cast<VALUE_T>(ncStartData[idxOffset]);
-                        if ((static_cast<VALUE_T>(val) > maxVal) || isnan(static_cast<float>(val))) {
-                            maxIdx = idxOffset;
-                            maxVal = val;
-                        }
-                    }
-                }
-            } 
-            valueData[index] = static_cast<VALUE_T>(maxVal);
-            indicesData[index] = static_cast<INDICES_T>(maxIdx);
-        }
-    }
+template <typename DIV_T>
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T endIndex(DIV_T outIdx, DIV_T magicOutLen,
+                                                                                       DIV_T shiftOutLen, DIV_T inLen)
+{
+    DIV_T pEnd = ((outIdx + 1) * inLen - 1);
+    pEnd = Simt::UintDiv<DIV_T>(pEnd, magicOutLen, shiftOutLen);
+    return pEnd + 1;
+}
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-class AdaptivePool3DSimt
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static void executeFunc(
+    FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth, FORMAT_T height, FORMAT_T width,
+    FORMAT_T outputNc, FORMAT_T outputDep, FORMAT_T outputHeight, FORMAT_T outputWidth, __gm__ VALUE_T* valueData,
+    __gm__ INDICES_T* indicesData, DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH,
+    DIV_T shiftH, DIV_T magicW, DIV_T shiftW)
 {
-public:
-    __aicore__ inline AdaptivePool3DSimt(TPipe *pipe, const AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* __restrict tilingData) 
-        : pipe_(pipe), tilingData_(tilingData)
-    {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index += gridDim.x * blockDim.x) {
+        DIV_T ncId = Simt::UintDiv<DIV_T>(index, magicDHW, shiftDHW);
+        DIV_T indexIdx = index - ncId * outputNc;
+        DIV_T dim0Idx = Simt::UintDiv<DIV_T>(indexIdx, magicW, shiftW);
+        DIV_T wId = indexIdx - dim0Idx * outputWidth;
+        DIV_T dId = Simt::UintDiv<DIV_T>(dim0Idx, magicH, shiftH);
+        DIV_T hId = dim0Idx - dId * outputHeight;
+
+        FORMAT_T startInD = startIndex<DIV_T>(dId, magicD, shiftD, depth);
+        FORMAT_T endInD = endIndex<DIV_T>(dId, magicD, shiftD, depth);
+        FORMAT_T startInH = startIndex<DIV_T>(hId, magicH, shiftH, height);
+        FORMAT_T endInH = endIndex<DIV_T>(hId, magicH, shiftH, height);
+        FORMAT_T startInW = startIndex<DIV_T>(wId, magicW, shiftW, width);
+        FORMAT_T endInW = endIndex<DIV_T>(wId, magicW, shiftW, width);
+        VALUE_T maxVal = AscendC::NumericLimits<VALUE_T>::NegativeInfinity();
+        FORMAT_T maxIdx = startInD * height * width + startInH * width + startInW;
+        auto ncStartData = bottomData + ncId * ncSize;
+
+        for (FORMAT_T d = startInD; d < endInD; ++d) {
+            for (FORMAT_T h = startInH; h < endInH; ++h) {
+                for (FORMAT_T w = startInW; w < endInW; ++w) {
+                    FORMAT_T idxOffset = d * height * width + h * width + w;
+                    VALUE_T val = static_cast<VALUE_T>(ncStartData[idxOffset]);
+                    if ((static_cast<VALUE_T>(val) > maxVal) || isnan(static_cast<float>(val))) {
+                        maxIdx = idxOffset;
+                        maxVal = val;
+                    }
+                }
+            }
+        }
+        valueData[index] = static_cast<VALUE_T>(maxVal);
+        indicesData[index] = static_cast<INDICES_T>(maxIdx);
     }
-    
+}
+
+template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
+class AdaptivePool3DSimt {
+public:
+    __aicore__ inline AdaptivePool3DSimt(
+        TPipe* pipe, const AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* __restrict tilingData)
+        : pipe_(pipe), tilingData_(tilingData)
+    {}
+
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices);
     __aicore__ inline void Process();
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     AscendC::GlobalTensor<VALUE_T> x_;
     AscendC::GlobalTensor<VALUE_T> y_;
     AscendC::GlobalTensor<INDICES_T> indices_;
@@ -115,20 +118,22 @@ private:
 };
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-__aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices)
+__aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::Init(GM_ADDR x, GM_ADDR y,
+                                                                                     GM_ADDR indices)
 {
     x_.SetGlobalBuffer((__gm__ VALUE_T*)(x));
     y_.SetGlobalBuffer((__gm__ VALUE_T*)(y));
     indices_.SetGlobalBuffer((__gm__ INDICES_T*)(indices));
-    if constexpr (!(std::is_same<FORMAT_T, int32_t>::value && std::is_same<DIV_T, uint32_t>::value)){
-       pipe_->InitBuffer(paramBuf_, PARAM_NUM * sizeof(DIV_T));
+    if constexpr (!(std::is_same<FORMAT_T, int32_t>::value && std::is_same<DIV_T, uint32_t>::value)) {
+        pipe_->InitBuffer(paramBuf_, PARAM_NUM * sizeof(DIV_T));
     }
 }
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcdhwUb(FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth,
-                                                                                FORMAT_T height, FORMAT_T width, FORMAT_T outputNc, FORMAT_T outputDep,  FORMAT_T outputHeight, FORMAT_T outputWidth, 
-                                                                               __gm__ VALUE_T* valueData, __gm__ INDICES_T* indicesData, __ubuf__ DIV_T* SimtParam)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcdhwUb(
+    FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth, FORMAT_T height, FORMAT_T width,
+    FORMAT_T outputNc, FORMAT_T outputDep, FORMAT_T outputHeight, FORMAT_T outputWidth, __gm__ VALUE_T* valueData,
+    __gm__ INDICES_T* indicesData, __ubuf__ DIV_T* SimtParam)
 {
     DIV_T magicDHW = SimtParam[DIV_DHW_IDX];
     DIV_T shiftDHW = SimtParam[DIV_DHW_IDX + 1];
@@ -138,18 +143,21 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcd
     DIV_T shiftH = SimtParam[DIV_H_IDX + 1];
     DIV_T magicW = SimtParam[DIV_W_IDX];
     DIV_T shiftW = SimtParam[DIV_W_IDX + 1];
-    executeFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>(count, bottomData, ncSize, depth,height, width, outputNc, outputDep,  outputHeight, outputWidth, valueData, indicesData,
-                                                        magicDHW, shiftDHW, magicD, shiftD, magicH, shiftH, magicW, shiftW); 
+    executeFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>(
+        count, bottomData, ncSize, depth, height, width, outputNc, outputDep, outputHeight, outputWidth, valueData,
+        indicesData, magicDHW, shiftDHW, magicD, shiftD, magicH, shiftH, magicW, shiftW);
 }
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcdhwFunc(FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth,
-                                                                                FORMAT_T height, FORMAT_T width, FORMAT_T outputNc, FORMAT_T outputDep,  FORMAT_T outputHeight, FORMAT_T outputWidth, 
-                                                                               __gm__ VALUE_T* valueData, __gm__ INDICES_T* indicesData,
-                                                                               DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH, DIV_T shiftH, DIV_T magicW, DIV_T shiftW)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcdhwFunc(
+    FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth, FORMAT_T height, FORMAT_T width,
+    FORMAT_T outputNc, FORMAT_T outputDep, FORMAT_T outputHeight, FORMAT_T outputWidth, __gm__ VALUE_T* valueData,
+    __gm__ INDICES_T* indicesData, DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH,
+    DIV_T shiftH, DIV_T magicW, DIV_T shiftW)
 {
-    executeFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>(count, bottomData, ncSize, depth,height, width, outputNc, outputDep,  outputHeight, outputWidth, valueData, indicesData,
-                                                        magicDHW, shiftDHW, magicD, shiftD, magicH, shiftH, magicW, shiftW);
+    executeFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>(
+        count, bottomData, ncSize, depth, height, width, outputNc, outputDep, outputHeight, outputWidth, valueData,
+        indicesData, magicDHW, shiftDHW, magicD, shiftD, magicH, shiftH, magicW, shiftW);
 }
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
@@ -173,12 +181,15 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
     GetUintDivMagicAndShift<DIV_T>(magicD, shiftD, tilingData_->dOutDim);
     GetUintDivMagicAndShift<DIV_T>(magicH, shiftH, tilingData_->hOutDim);
     GetUintDivMagicAndShift<DIV_T>(magicW, shiftW, tilingData_->wOutDim);
-    if constexpr (std::is_same<FORMAT_T, int32_t>::value && std::is_same<DIV_T, uint32_t>::value){
-        asc_vf_call<AdaptiveMaxPool3DNcdhwFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize, static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim), static_cast<FORMAT_T>(tilingData_->wInDim),
-                                                                        static_cast<FORMAT_T>(dhw), static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim), static_cast<FORMAT_T>(tilingData_->wOutDim), outputData, indicesData,
-                                                                        magicDHW, shiftDHW, magicD, shiftD, magicH, shiftH, magicW, shiftW
-                                                                        );
-    }else{
+    if constexpr (std::is_same<FORMAT_T, int32_t>::value && std::is_same<DIV_T, uint32_t>::value) {
+        asc_vf_call<AdaptiveMaxPool3DNcdhwFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(
+            dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize,
+            static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim),
+            static_cast<FORMAT_T>(tilingData_->wInDim), static_cast<FORMAT_T>(dhw),
+            static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim),
+            static_cast<FORMAT_T>(tilingData_->wOutDim), outputData, indicesData, magicDHW, shiftDHW, magicD, shiftD,
+            magicH, shiftH, magicW, shiftW);
+    } else {
         LocalTensor<DIV_T> SimtParam = paramBuf_.Get<DIV_T>();
         SimtParam.SetValue(0, static_cast<DIV_T>(magicDHW));
         SimtParam.SetValue(1, static_cast<DIV_T>(shiftDHW));
@@ -189,13 +200,16 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
         SimtParam.SetValue(DIV_W_IDX, static_cast<DIV_T>(magicW));
         SimtParam.SetValue(DIV_W_IDX + 1, static_cast<DIV_T>(shiftW));
         DataSyncBarrier<MemDsbT::UB>();
-        asc_vf_call<AdaptiveMaxPool3DNcdhwUb<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(dim3(THREAD_DIM),static_cast<FORMAT_T>(totalSize), inputData, ncSize, static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim), static_cast<FORMAT_T>(tilingData_->wInDim),
-                                                                        static_cast<FORMAT_T>(dhw), static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim), static_cast<FORMAT_T>(tilingData_->wOutDim), outputData, indicesData,
-                                                                        (__ubuf__ DIV_T*)SimtParam.GetPhyAddr()
-                                                                        );
-    } 
+        asc_vf_call<AdaptiveMaxPool3DNcdhwUb<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(
+            dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize,
+            static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim),
+            static_cast<FORMAT_T>(tilingData_->wInDim), static_cast<FORMAT_T>(dhw),
+            static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim),
+            static_cast<FORMAT_T>(tilingData_->wOutDim), outputData, indicesData,
+            (__ubuf__ DIV_T*)SimtParam.GetPhyAddr());
+    }
 }
 
-}
+} // namespace AdaptivePool3DWithSimt
 
-#endif //ADAPTIVE_MAX_POOL_3D_SIMT_H
+#endif // ADAPTIVE_MAX_POOL_3D_SIMT_H

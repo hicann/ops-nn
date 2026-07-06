@@ -31,9 +31,8 @@ static ge::graphStatus InferShapeGroupNorm(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t* numGroupsAttr = attrs->GetInt(ATTR_NUM_GROUPS);
     OP_CHECK_NULL_WITH_CONTEXT(context, numGroupsAttr);
-    OP_CHECK_IF(
-        *numGroupsAttr <= 0, OP_LOGE(context->GetNodeName(), "num_groups should be greater than 0"),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(*numGroupsAttr <= 0, OP_LOGE(context->GetNodeName(), "num_groups should be greater than 0"),
+                return GRAPH_FAILED);
 
     gert::Shape* yShape = context->GetOutputShape(Y_INDEX);
     gert::Shape* meanShape = context->GetOutputShape(MEAN_INDEX);

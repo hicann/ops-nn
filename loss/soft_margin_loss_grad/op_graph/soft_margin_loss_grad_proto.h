@@ -21,17 +21,17 @@
 namespace ge {
 
 /**
-*@brief SoftMarginLoss backward gradient.
-*  out = cof * (-target*exp(-self*target)) / (1+exp(-self*target)) * grad_output
-*@par Inputs:
-* @li self: predicted x, float16/float32/bfloat16, ND.
-* @li target: label y, float16/float32/bfloat16, ND.
-* @li grad_output: upstream gradient, float16/float32/bfloat16, ND.
-*@par Attributes:
-* reduction: "none"/"mean"/"sum"; mean → cof=1/N else 1.0.
-*@par Outputs:
-* out: broadcast(self, target, grad_output), same dtype.
-*/
+ *@brief SoftMarginLoss backward gradient.
+ *  out = cof * (-target*exp(-self*target)) / (1+exp(-self*target)) * grad_output
+ *@par Inputs:
+ * @li self: predicted x, float16/float32/bfloat16, ND.
+ * @li target: label y, float16/float32/bfloat16, ND.
+ * @li grad_output: upstream gradient, float16/float32/bfloat16, ND.
+ *@par Attributes:
+ * reduction: "none"/"mean"/"sum"; mean → cof=1/N else 1.0.
+ *@par Outputs:
+ * out: broadcast(self, target, grad_output), same dtype.
+ */
 REG_OP(SoftMarginLossGrad)
     .INPUT(predict, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(label, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))

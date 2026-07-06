@@ -41,10 +41,9 @@ using AscendC::AIC;
 #define LNV4_REGBASE_TWO_PASS_PERF_BF16_FLOAT 520
 #define LNV4_REGBASE_TWO_PASS_PERF_BF16_BF16 522
 
-
 template <typename Tfm, typename Tweight, typename Tmean>
-__aicore__ inline void RegbaseTwoPassImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR tiling)
+__aicore__ inline void RegbaseTwoPassImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                          GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(LayerNormV4TilingDataRegBaseTwoPass, tiling_data_in, tiling);
     const LayerNormV4TilingDataRegBaseTwoPass* __restrict tilingData = &tiling_data_in;
@@ -54,8 +53,8 @@ __aicore__ inline void RegbaseTwoPassImpl(
 }
 
 template <typename Tfm, typename Tweight, typename Tmean>
-__aicore__ inline void RegbaseWelfordImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR tiling)
+__aicore__ inline void RegbaseWelfordImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                          GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV4TilingDataWelford, tiling_data_in, tiling);
@@ -66,8 +65,8 @@ __aicore__ inline void RegbaseWelfordImpl(
 }
 
 template <typename Tfm, typename Tweight, typename Tmean>
-__aicore__ inline void RegbaseTwoPassPerfImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR tiling)
+__aicore__ inline void RegbaseTwoPassPerfImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                              GM_ADDR rstd, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV4TilingDataRegBaseTwoPassPerf, tiling_data_in, tiling);
@@ -77,8 +76,8 @@ __aicore__ inline void RegbaseTwoPassPerfImpl(
     op.Process();
 }
 
-__aicore__ inline void layer_norm_impl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

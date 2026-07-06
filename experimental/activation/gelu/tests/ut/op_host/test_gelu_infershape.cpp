@@ -37,14 +37,13 @@ TEST_F(GeluInfershape, gelu_infershape_test_fp16)
 
 TEST_F(GeluInfershape, gelu_infershape_test_fp32)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "Gelu",
-        {
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("Gelu",
+                                                      {
+                                                          {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {32, 4, 4, 4},
     };
@@ -53,14 +52,13 @@ TEST_F(GeluInfershape, gelu_infershape_test_fp32)
 
 TEST_F(GeluInfershape, gelu_infershape_test_bf16)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "Gelu",
-        {
-            {{{8, 256}, {8, 256}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_BF16, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("Gelu",
+                                                      {
+                                                          {{{8, 256}, {8, 256}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {8, 256},
     };

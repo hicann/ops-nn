@@ -16,8 +16,7 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL = 900000;
 constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL_SMALL_A = 902000;
 constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A = 901000;
@@ -26,20 +25,16 @@ constexpr int64_t MIN_CONTINUOUS_A_LEN = 64;
 constexpr int64_t MAX_CONTINUOUS_A_OUTER = 6;
 constexpr int64_t MAX_CONTINUOUS_A_OUTER_FP16 = 3;
 constexpr int64_t MIN_SMALL_A_B_LEN = 65536;
-constexpr int64_t SMALL_SHAPE_NUM = 6;  // scale, offset, mean, var, outMean, outVar
-constexpr int64_t BIG_SHAPE_NUM = 2;    // x, y
-constexpr int64_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
+constexpr int64_t SMALL_SHAPE_NUM = 6;       // scale, offset, mean, var, outMean, outVar
+constexpr int64_t BIG_SHAPE_NUM = 2;         // x, y
+constexpr int64_t MEAN_VAR_OUTPUT_COUNT = 2; // mean, var
 constexpr int64_t SMALL_LAST_CHANNEL_CACHE_BUFFER_NUM = 4;
-}  // namespace
+} // namespace
 
-namespace optiling
-{
-class BatchNormInferLastChannelTiling : public BatchNormTilingInferBase
-{
+namespace optiling {
+class BatchNormInferLastChannelTiling : public BatchNormTilingInferBase {
 public:
-    explicit BatchNormInferLastChannelTiling(gert::TilingContext* context) : BatchNormTilingInferBase(context)
-    {
-    }
+    explicit BatchNormInferLastChannelTiling(gert::TilingContext* context) : BatchNormTilingInferBase(context) {}
     ~BatchNormInferLastChannelTiling() override = default;
 
 protected:
@@ -67,10 +62,7 @@ private:
     BatchNormInferLastChannelTilingData tilingData;
 };
 
-inline static int64_t AlignUp(int64_t value, int64_t base)
-{
-    return (value + base - 1) / base * base;
-}
+inline static int64_t AlignUp(int64_t value, int64_t base) { return (value + base - 1) / base * base; }
 
 int64_t BatchNormInferLastChannelTiling::GetBaseTilingAOuter() const
 {
@@ -96,8 +88,7 @@ int64_t BatchNormInferLastChannelTiling::GetBaseTilingAOuter() const
     return Ops::Base::CeilDiv(fusedALen_, tileBlockALen);
 }
 
-ge::graphStatus BatchNormInferLastChannelTiling::FillLastChannelTilingForBSplit(
-    int64_t paramBytes, int64_t cacheBytes)
+ge::graphStatus BatchNormInferLastChannelTiling::FillLastChannelTilingForBSplit(int64_t paramBytes, int64_t cacheBytes)
 {
     int64_t perElemBytes = BIG_SHAPE_NUM * DOUBLE_BUFFER * bytesPerElement_;
     int64_t elemFactorMax = (static_cast<int64_t>(aicoreParams_.ubSize) - paramBytes - cacheBytes) / perElemBytes;
@@ -105,7 +96,7 @@ ge::graphStatus BatchNormInferLastChannelTiling::FillLastChannelTilingForBSplit(
     bInner = bInner <= 0 ? 1 : bInner;
     bInner = fusedB0Len_ <= bInner ? fusedB0Len_ : bInner;
     while ((paramBytes + cacheBytes + bInner * fusedALen_ * BIG_SHAPE_NUM * DOUBLE_BUFFER * bytesPerElement_ >
-               static_cast<int64_t>(aicoreParams_.ubSize)) &&
+            static_cast<int64_t>(aicoreParams_.ubSize)) &&
            bInner > 1) {
         bInner--;
     }
@@ -153,8 +144,8 @@ ge::graphStatus BatchNormInferLastChannelTiling::DoOpTiling()
 
     int64_t baseAOuter = GetBaseTilingAOuter();
     int64_t maxContinuousAOuter = xDtype_ == ge::DT_FLOAT ? MAX_CONTINUOUS_A_OUTER : MAX_CONTINUOUS_A_OUTER_FP16;
-    isContinuousLastChannel_ = fusedALen_ > MIN_CONTINUOUS_A_LEN && fusedB0Len_ > MIN_SMALL_A_B_LEN &&
-                               baseAOuter > 1 && baseAOuter <= maxContinuousAOuter;
+    isContinuousLastChannel_ = fusedALen_ > MIN_CONTINUOUS_A_LEN && fusedB0Len_ > MIN_SMALL_A_B_LEN && baseAOuter > 1 &&
+                               baseAOuter <= maxContinuousAOuter;
     if (isContinuousLastChannel_) {
         int64_t paramAlignLen = AlignUp(fusedALen_, vlFp32_);
         int64_t meanVarOutBytes = MEAN_VAR_OUTPUT_COUNT * AlignUp(FLOAT32_BYTES * fusedALen_, blockSize_);
@@ -165,9 +156,9 @@ ge::graphStatus BatchNormInferLastChannelTiling::DoOpTiling()
 
     // 切分A、B基本块， （B,A） -- >(Bouter, Aouter, Binner*Ainner*ATileBase)
     int64_t aInner = 1;
-    int64_t ubBufferSize =
-        (aicoreParams_.ubSize / DOUBLE_BUFFER - SMALL_SHAPE_NUM * FLOAT32_BYTES * aInner * aTileBase_) /
-        bytesPerElement_ / BIG_SHAPE_NUM;
+    int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
+                            SMALL_SHAPE_NUM * FLOAT32_BYTES * aInner * aTileBase_) /
+                           bytesPerElement_ / BIG_SHAPE_NUM;
 
     // 先按照B切分，再切A
     int64_t bFactorMax = ubBufferSize / aTileBase_;
@@ -227,9 +218,8 @@ ge::graphStatus BatchNormInferLastChannelTiling::PostTiling()
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(tilingData.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    tilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        tilingData.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData.GetDataSize());
@@ -238,4 +228,4 @@ ge::graphStatus BatchNormInferLastChannelTiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormInferLastChannelTiling, 90000);
-}  // namespace optiling
+} // namespace optiling

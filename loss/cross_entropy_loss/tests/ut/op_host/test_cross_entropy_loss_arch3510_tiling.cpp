@@ -12,42 +12,35 @@
  * \brief
  */
 
- #include <iostream>
- #include <fstream>
- #include <vector>
- #include <gtest/gtest.h>
- #include "log/log.h"
- #include "kernel_run_context_facker.h"
- #include "exe_graph/runtime/storage_format.h"
- #include "exe_graph/runtime/storage_shape.h"
- #include "test_cube_util.h"
- #include "ut_op_util.h"
- #include "ut_op_common.h"
- #include "platform/platform_infos_def.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <gtest/gtest.h>
+#include "log/log.h"
+#include "kernel_run_context_facker.h"
+#include "exe_graph/runtime/storage_format.h"
+#include "exe_graph/runtime/storage_shape.h"
+#include "test_cube_util.h"
+#include "ut_op_util.h"
+#include "ut_op_common.h"
+#include "platform/platform_infos_def.h"
 
- #include "../../../op_host/cross_entropy_loss_tiling.h"
+#include "../../../op_host/cross_entropy_loss_tiling.h"
 
 using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class CrossEntropyLossRegBaseTiling : public testing::Test
-{
+class CrossEntropyLossRegBaseTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CrossEntropyLossRegBaseTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CrossEntropyLossRegBaseTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CrossEntropyLossRegBaseTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CrossEntropyLossRegBaseTiling TearDown" << std::endl; }
 };
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
         "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64, "socVersion": "Ascend950"}
@@ -72,10 +65,12 @@ static string to_string(const std::stringstream& tiling_data)
     return result;
 }
 
-static void DoCrossEntropyLossTilingCase(
-    std::initializer_list<int64_t>& inputShape, std::initializer_list<int64_t>& targetShape,
-    std::initializer_list<int64_t>& weightShape, std::initializer_list<int64_t>& lossShape, ge::DataType inputDtype,
-    ge::DataType tDtype, std::string reduction, int ignore_index, float label_smoothing)
+static void DoCrossEntropyLossTilingCase(std::initializer_list<int64_t>& inputShape,
+                                         std::initializer_list<int64_t>& targetShape,
+                                         std::initializer_list<int64_t>& weightShape,
+                                         std::initializer_list<int64_t>& lossShape, ge::DataType inputDtype,
+                                         ge::DataType tDtype, std::string reduction, int ignore_index,
+                                         float label_smoothing)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -86,8 +81,7 @@ static void DoCrossEntropyLossTilingCase(
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, soc_version_infos);
 
     // compile info
-    struct CrossEntropyLossCompileInfo {
-    };
+    struct CrossEntropyLossCompileInfo {};
     CrossEntropyLossCompileInfo compileInfo;
 
     std::string opType("CrossEntropyLoss");
@@ -98,20 +92,21 @@ static void DoCrossEntropyLossTilingCase(
     string compileInfoStr = R"({
     "device_id": null})";
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs(
+                                 {const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
+                             .Outputs({&compileInfo})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -138,12 +133,11 @@ static void DoCrossEntropyLossTilingCase(
                       .NodeOutputTd(1, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(ignore_index)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(label_smoothing)},
-                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(ignore_index)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(label_smoothing)},
+                                  {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -178,8 +172,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp32_none)
     string reduction = "none";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp32_mean)
@@ -193,8 +187,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp32_mean)
     string reduction = "mean";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp32_sum)
@@ -208,8 +202,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp32_sum)
     string reduction = "sum";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp16_none)
@@ -223,8 +217,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp16_none)
     string reduction = "none";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp16_mean)
@@ -238,8 +232,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp16_mean)
     string reduction = "mean";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp16_sumn)
@@ -253,8 +247,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_fp16_sumn)
     string reduction = "sum";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_none)
@@ -268,8 +262,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_none)
     string reduction = "none";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_mean)
@@ -283,8 +277,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_mean)
     string reduction = "mean";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_sumn)
@@ -298,8 +292,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_sumn)
     string reduction = "sum";
     int ignore_index = -100;
     float label_smoothing = 0.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_none)
@@ -313,8 +307,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_none)
     string reduction = "none";
     int ignore_index = 1;
     float label_smoothing = 1.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_mean)
@@ -328,8 +322,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_mean)
     string reduction = "mean";
     int ignore_index = 1;
     float label_smoothing = 1.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_sumn)
@@ -343,8 +337,8 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_sumn)
     string reduction = "sum";
     int ignore_index = 1;
     float label_smoothing = 1.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }
 
 TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_none_full_load)
@@ -358,6 +352,6 @@ TEST_F(CrossEntropyLossRegBaseTiling, test_tiling_bfp16_int32_none_full_load)
     string reduction = "none";
     int ignore_index = 1;
     float label_smoothing = 1.0f;
-    DoCrossEntropyLossTilingCase(
-        inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction, ignore_index, label_smoothing);
+    DoCrossEntropyLossTilingCase(inputShape, targetShape, weightShape, lossShape, inputDtype, tDtype, reduction,
+                                 ignore_index, label_smoothing);
 }

@@ -37,4 +37,4 @@ struct ApplyFtrlTilingData {
     int64_t ubFactor = 0;
 };
 
-#endif  // APPLY_FTRL_TILING_DATA_H
+#endif // APPLY_FTRL_TILING_DATA_H

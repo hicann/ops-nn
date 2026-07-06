@@ -35,40 +35,32 @@ bool WeightQuantBatchMatmulV2TilingCustomBackwardCompatible::IsCapable()
         return false);
 
     OP_TILING_CHECK(matmulInfoPtr_->transA, OP_LOGI(opName_, "A16W8 Nz cannot support x transpose"), return false);
-    OP_TILING_CHECK(
-        matmulInfoPtr_->kSize > MAX_SHAPE_DIM || matmulInfoPtr_->nSize > MAX_SHAPE_DIM,
-        OP_LOGI(opName_, "A16W8 Nz only support n < 65536 and k < 65536"), return false);
-    OP_TILING_CHECK(
-        matmulInfoPtr_->antiQuantType != QuantType::PER_CHANNEL &&
-            matmulInfoPtr_->antiQuantType != QuantType::PER_GROUP,
-        OP_LOGI(opName_, "A16W8 Nz only support perchannel and per-group quant mode"), return false);
+    OP_TILING_CHECK(matmulInfoPtr_->kSize > MAX_SHAPE_DIM || matmulInfoPtr_->nSize > MAX_SHAPE_DIM,
+                    OP_LOGI(opName_, "A16W8 Nz only support n < 65536 and k < 65536"), return false);
+    OP_TILING_CHECK(matmulInfoPtr_->antiQuantType != QuantType::PER_CHANNEL &&
+                        matmulInfoPtr_->antiQuantType != QuantType::PER_GROUP,
+                    OP_LOGI(opName_, "A16W8 Nz only support perchannel and per-group quant mode"), return false);
 
     if (matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP) {
         OP_TILING_CHECK(
             matmulInfoPtr_->groupSize != 64 && matmulInfoPtr_->groupSize != 128,
-            OP_LOGI(
-                opName_, "A16W8 Nz only support group_size = 64 or 128 for per-group scene, but is [%lu]",
-                matmulInfoPtr_->groupSize),
+            OP_LOGI(opName_, "A16W8 Nz only support group_size = 64 or 128 for per-group scene, but is [%lu]",
+                    matmulInfoPtr_->groupSize),
             return false);
-        OP_TILING_CHECK(
-            matmulInfoPtr_->kSize % matmulInfoPtr_->groupSize != 0,
-            OP_LOGI(
-                opName_,
-                "A16W8 Nz only support kSize align to group_size for per-group scene, "
-                "but kSize is [%lu], group_size is [%lu]",
-                matmulInfoPtr_->kSize, matmulInfoPtr_->groupSize),
-            return false);
-        OP_TILING_CHECK(
-            matmulInfoPtr_->kSize % 64 != 0 || matmulInfoPtr_->nSize % 64 != 0,
-            OP_LOGI(
-                opName_,
-                "A16W8 Nz only support kSize and nSize align to 64 for per-group scene, "
-                "but kSize is [%lu], nSize is [%lu]",
-                matmulInfoPtr_->kSize, matmulInfoPtr_->nSize),
-            return false);
-        OP_TILING_CHECK(
-            matmulInfoPtr_->transB, OP_LOGI(opName_, "A16W8 Nz cannot support weight transpose for per-group scene"),
-            return false);
+        OP_TILING_CHECK(matmulInfoPtr_->kSize % matmulInfoPtr_->groupSize != 0,
+                        OP_LOGI(opName_,
+                                "A16W8 Nz only support kSize align to group_size for per-group scene, "
+                                "but kSize is [%lu], group_size is [%lu]",
+                                matmulInfoPtr_->kSize, matmulInfoPtr_->groupSize),
+                        return false);
+        OP_TILING_CHECK(matmulInfoPtr_->kSize % 64 != 0 || matmulInfoPtr_->nSize % 64 != 0,
+                        OP_LOGI(opName_,
+                                "A16W8 Nz only support kSize and nSize align to 64 for per-group scene, "
+                                "but kSize is [%lu], nSize is [%lu]",
+                                matmulInfoPtr_->kSize, matmulInfoPtr_->nSize),
+                        return false);
+        OP_TILING_CHECK(matmulInfoPtr_->transB,
+                        OP_LOGI(opName_, "A16W8 Nz cannot support weight transpose for per-group scene"), return false);
     }
 
     OP_LOGI(opName_, "Check custom backward compatible template success");
@@ -92,23 +84,21 @@ uint64_t WeightQuantBatchMatmulV2TilingCustomBackwardCompatible::GetTilingKey() 
     bool hasBias = false;
     bool isBiasFp32 = false;
     bool isWeightNz = matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ;
-    OP_LOGD(
-        opName_,
-        "tiling key params: socVersionType[%lu], subSocVersionType[%lu], antiquantScenario[%lu], algorithm[%lu],"
-        "subAlgorithm[%lu], templateCustom[%lu], apiConstexpr[%lu], transA[%s], transB[%s], antiquantType[%lu],"
-        "quantType[%lu], hasAntiquantOffset[%s], hasBias[%s], isBiasFp32[%s], isWeightNz[%s]",
-        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, templateCustom, apiConstexpr,
-        transA ? "true" : "false", transB ? "true" : "false", antiquantType, quantType,
-        hasAntiquantOffset ? "true" : "false", hasBias ? "true" : "false", isBiasFp32 ? "true" : "false",
-        isWeightNz ? "true" : "false");
-    uint64_t tilingKey = GET_TPL_TILING_KEY(
-        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, templateCustom, apiConstexpr,
-        transA, transB, antiquantType, quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz);
+    OP_LOGD(opName_,
+            "tiling key params: socVersionType[%lu], subSocVersionType[%lu], antiquantScenario[%lu], algorithm[%lu],"
+            "subAlgorithm[%lu], templateCustom[%lu], apiConstexpr[%lu], transA[%s], transB[%s], antiquantType[%lu],"
+            "quantType[%lu], hasAntiquantOffset[%s], hasBias[%s], isBiasFp32[%s], isWeightNz[%s]",
+            socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, templateCustom, apiConstexpr,
+            transA ? "true" : "false", transB ? "true" : "false", antiquantType, quantType,
+            hasAntiquantOffset ? "true" : "false", hasBias ? "true" : "false", isBiasFp32 ? "true" : "false",
+            isWeightNz ? "true" : "false");
+    uint64_t tilingKey = GET_TPL_TILING_KEY(socVersionType, subSocVersionType, antiquantScenario, algorithm,
+                                            subAlgorithm, templateCustom, apiConstexpr, transA, transB, antiquantType,
+                                            quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz);
     return tilingKey;
 }
 
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2TilingCustomBackwardCompatible,
-    static_cast<int32_t>(NpuArch::DAV_3510), CUSTOM_DEPRECATED_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2TilingCustomBackwardCompatible,
+                                   static_cast<int32_t>(NpuArch::DAV_3510), CUSTOM_DEPRECATED_PRIORITY);
 
 } // namespace optiling

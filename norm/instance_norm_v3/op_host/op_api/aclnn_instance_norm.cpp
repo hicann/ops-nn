@@ -40,12 +40,11 @@ constexpr int IDX_3 = 3;
 constexpr int DIM_NUM = 4;
 constexpr int DIM_NUM_GAMMA = 1;
 
-static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                  op::DataType::DT_FLOAT16};
 
-static bool CheckNotNull(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* y, const aclTensor* mean,
-    const aclTensor* variance, const char* dataFormat)
+static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* y,
+                         const aclTensor* mean, const aclTensor* variance, const char* dataFormat)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(gamma, return false);
@@ -61,11 +60,10 @@ static bool CheckParamValid(const char* dataFormat)
 {
     // 检查参数 dataFormat 是否合法
     OP_LOGD("CheckParamValid: dataFormat: %s", dataFormat);
-    OP_LOGD(
-        "CheckParamValid: nhwc: %d, nchw: %d", strncmp(dataFormat, "NHWC", strlen("NHWC")),
-        strncmp(dataFormat, "NCHW", strlen("NCHW")));
-    bool isValidDataFormat =
-        strncmp(dataFormat, "NHWC", strlen("NHWC")) == 0 || strncmp(dataFormat, "NCHW", strlen("NCHW")) == 0;
+    OP_LOGD("CheckParamValid: nhwc: %d, nchw: %d", strncmp(dataFormat, "NHWC", strlen("NHWC")),
+            strncmp(dataFormat, "NCHW", strlen("NCHW")));
+    bool isValidDataFormat = strncmp(dataFormat, "NHWC", strlen("NHWC")) == 0 ||
+                             strncmp(dataFormat, "NCHW", strlen("NCHW")) == 0;
     return isValidDataFormat;
 }
 
@@ -77,9 +75,8 @@ static aclnnStatus CheckPlatform()
     return ACLNN_SUCCESS;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* y, const aclTensor* mean,
-    const aclTensor* variance)
+static bool CheckDtypeValid(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* y,
+                            const aclTensor* mean, const aclTensor* variance)
 {
     // 检查 x 的数据类型是否在 InstanceNorm 算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x, ASCEND310P_DTYPE_SUPPORT_LIST, return false);
@@ -97,8 +94,8 @@ static bool CheckShape(const aclTensor* x)
     return true;
 }
 
-static aclnnStatus CheckInputAndWeightShape(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, bool needTranspose)
+static aclnnStatus CheckInputAndWeightShape(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                                            bool needTranspose)
 {
     int64_t xDimNums = x->GetViewShape().GetDimNum();
     int64_t gammaDimNums = gamma->GetViewShape().GetDimNum();
@@ -115,9 +112,9 @@ static aclnnStatus CheckInputAndWeightShape(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const char* dataFormat, const aclTensor* y,
-    const aclTensor* mean, const aclTensor* variance)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                               const char* dataFormat, const aclTensor* y, const aclTensor* mean,
+                               const aclTensor* variance)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, gamma, beta, y, mean, variance, dataFormat), ACLNN_ERR_PARAM_NULLPTR);
@@ -133,9 +130,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnInstanceNormGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const char* dataFormat, double eps, aclTensor* y,
-    aclTensor* mean, aclTensor* variance, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInstanceNormGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                                              const char* dataFormat, double eps, aclTensor* y, aclTensor* mean,
+                                              aclTensor* variance, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGD("Enter aclnnInstanceNormGetWorkspaceSize");
 
@@ -159,8 +156,8 @@ aclnnStatus aclnnInstanceNormGetWorkspaceSize(
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 支持空tensor
-    bool hasEmptyTensor =
-        x->IsEmpty() || gamma->IsEmpty() || beta->IsEmpty() || y->IsEmpty() || mean->IsEmpty() || variance->IsEmpty();
+    bool hasEmptyTensor = x->IsEmpty() || gamma->IsEmpty() || beta->IsEmpty() || y->IsEmpty() || mean->IsEmpty() ||
+                          variance->IsEmpty();
     if (hasEmptyTensor) {
         // 根据实际支持情况补充
         *workspaceSize = 0;
@@ -193,8 +190,8 @@ aclnnStatus aclnnInstanceNormGetWorkspaceSize(
 
         // 进行 instanceNorm 计算
         const char* realDataFormat = "NCHW";
-        auto instanceNormOut = l0op::InstanceNormV3(
-            xTranspose, gammaContiguous, betaContiguous, realDataFormat, eps, uniqueExecutor.get());
+        auto instanceNormOut = l0op::InstanceNormV3(xTranspose, gammaContiguous, betaContiguous, realDataFormat, eps,
+                                                    uniqueExecutor.get());
         yComputeOut = std::get<IDX_0>(instanceNormOut);
         meanOut = std::get<IDX_1>(instanceNormOut);
         varianceOut = std::get<IDX_2>(instanceNormOut);
@@ -202,15 +199,15 @@ aclnnStatus aclnnInstanceNormGetWorkspaceSize(
         // 将结果 yComputeOut 进行 transpose，转换成正确的 NHWC
         yComputeOut = const_cast<aclTensor*>(l0op::Transpose(yComputeOut, axesNCHW2NHWC, uniqueExecutor.get()));
 
-        int64_t nhwcReduceShapeValue[DIM_NUM] = {
-            meanOut->GetViewShape().GetDim(0), 1, 1, meanOut->GetViewShape().GetDim(1)};
+        int64_t nhwcReduceShapeValue[DIM_NUM] = {meanOut->GetViewShape().GetDim(0), 1, 1,
+                                                 meanOut->GetViewShape().GetDim(1)};
         aclIntArray* nhwcReduceShape = uniqueExecutor.get()->AllocIntArray(nhwcReduceShapeValue, DIM_NUM);
         CHECK_RET(nhwcReduceShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
         meanOut = const_cast<aclTensor*>(l0op::Reshape(meanOut, nhwcReduceShape, uniqueExecutor.get()));
         varianceOut = const_cast<aclTensor*>(l0op::Reshape(varianceOut, nhwcReduceShape, uniqueExecutor.get()));
     } else {
-        auto instanceNormOut =
-            l0op::InstanceNormV3(xContiguous, gammaContiguous, betaContiguous, dataFormat, eps, uniqueExecutor.get());
+        auto instanceNormOut = l0op::InstanceNormV3(xContiguous, gammaContiguous, betaContiguous, dataFormat, eps,
+                                                    uniqueExecutor.get());
         yComputeOut = std::get<IDX_0>(instanceNormOut);
         meanOut = std::get<IDX_1>(instanceNormOut);
         varianceOut = std::get<IDX_2>(instanceNormOut);

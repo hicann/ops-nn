@@ -29,19 +29,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void grouped_dynamic_block_quant(
-    uint8_t* x, uint8_t* groupList, uint8_t* y, uint8_t* scale, uint8_t* workspace, uint8_t* tiling);
+extern "C" __global__ __aicore__ void grouped_dynamic_block_quant(uint8_t* x, uint8_t* groupList, uint8_t* y,
+                                                                  uint8_t* scale, uint8_t* workspace, uint8_t* tiling);
 
 class grouped_dynamic_block_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "grouped_dynamic_block_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "grouped_dynamic_block_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "grouped_dynamic_block_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "grouped_dynamic_block_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(grouped_dynamic_block_quant_test, test_case_half_001)
@@ -62,8 +56,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_001)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1111;
     tilingDatafromBin->totalCoreNum = 64;
@@ -91,12 +85,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_001)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -132,8 +125,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_002)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1121;
     tilingDatafromBin->totalCoreNum = 64;
@@ -161,12 +154,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_002)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -202,8 +194,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_003)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1134;
     tilingDatafromBin->totalCoreNum = 64;
@@ -231,12 +223,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_003)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -272,8 +263,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_004)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1137;
     tilingDatafromBin->totalCoreNum = 64;
@@ -301,12 +292,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_004)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -341,8 +331,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_005)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2111;
     tilingDatafromBin->totalCoreNum = 64;
@@ -372,9 +362,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_005)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -409,8 +398,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_006)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2121;
     tilingDatafromBin->totalCoreNum = 64;
@@ -440,9 +429,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_006)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -477,8 +465,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_007)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2134;
     tilingDatafromBin->totalCoreNum = 64;
@@ -508,9 +496,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_007)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -545,8 +532,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_008)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2137;
     tilingDatafromBin->totalCoreNum = 64;
@@ -576,9 +563,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_008)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -613,8 +599,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_001)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1211;
     tilingDatafromBin->totalCoreNum = 64;
@@ -642,12 +628,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_001)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -683,8 +668,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_002)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1221;
     tilingDatafromBin->totalCoreNum = 64;
@@ -712,12 +697,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_002)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -753,8 +737,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_003)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1234;
     tilingDatafromBin->totalCoreNum = 64;
@@ -782,12 +766,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_003)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -823,8 +806,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_004)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 1237;
     tilingDatafromBin->totalCoreNum = 64;
@@ -852,12 +835,11 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_004)
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
     int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
-    tilingDatafromBin->maxUbRow =
-        maxUbAvailableRows / tilingDatafromBin->rowBlockSize * tilingDatafromBin->rowBlockSize;
+    tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
+                                  tilingDatafromBin->rowBlockSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -893,8 +875,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_005)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2211;
     tilingDatafromBin->totalCoreNum = 64;
@@ -924,9 +906,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_005)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -961,8 +942,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_006)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2221;
     tilingDatafromBin->totalCoreNum = 64;
@@ -992,9 +973,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_006)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -1029,8 +1009,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_007)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2234;
     tilingDatafromBin->totalCoreNum = 64;
@@ -1060,9 +1040,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_007)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 
@@ -1097,8 +1076,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_008)
     std::string path_ = get_current_dir_name();
     string path(path_);
 
-    GroupedDynamicBlockQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(tiling);
+    GroupedDynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicBlockQuantTilingData*>(
+        tiling);
 
     tilingDatafromBin->tilingKey = 2237;
     tilingDatafromBin->totalCoreNum = 64;
@@ -1128,9 +1107,8 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_008)
     tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
                                   ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
 
-    system(
-        "cp -rf "
-        "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
+    system("cp -rf "
+           "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
     system("chmod -R 755 ./grouped_dynamic_block_quant_data/");
     system("cd ./grouped_dynamic_block_quant_data/ && python3 gen_data.py '(128, 128)' '1' 'float16'");
 

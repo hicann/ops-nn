@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* Modulate(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* shift, aclOpExecutor* executor);
+const aclTensor* Modulate(const aclTensor* self, const aclTensor* scale, const aclTensor* shift,
+                          aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_OP_MODULATE_OP_H_

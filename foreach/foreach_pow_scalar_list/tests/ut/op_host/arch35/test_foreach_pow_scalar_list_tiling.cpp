@@ -23,18 +23,11 @@
 #include "test_cube_util.h"
 #include "../../../../op_kernel/arch35/foreach_pow_scalar_list_tiling_data.h"
 
-class ForeachPowScalarListArch35Tiling : public testing::Test
-{
+class ForeachPowScalarListArch35Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachPowScalarListArch35Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachPowScalarListArch35Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachPowScalarListArch35Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachPowScalarListArch35Tiling TearDown" << std::endl; }
 };
 
 struct ForeachPowScalarListCompileInfo {};

@@ -49,8 +49,8 @@ inline static FVector<int64_t> GetShape(const aclTensor* tensor)
     return shape;
 }
 
-inline static bool CheckNotNull(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* out)
+inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam,
+                                const aclTensor* out)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
@@ -59,8 +59,8 @@ inline static bool CheckNotNull(
     return true;
 }
 
-inline static bool CheckDtypeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* bias, const aclTensor* out)
+inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam,
+                                   const aclTensor* bias, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST, return false);
@@ -87,9 +87,8 @@ inline static op::Shape GetBroadcastShape(const aclTensor* tensor)
     return shape;
 }
 
-static bool CheckShapeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* bias, const aclTensor* out,
-    const bool adjX1, const bool adjX2)
+static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam,
+                            const aclTensor* bias, const aclTensor* out, const bool adjX1, const bool adjX2)
 {
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
@@ -105,21 +104,19 @@ static bool CheckShapeValid(
     int64_t nAlign16 = (N + 16 - 1) / 16 * 16;
 
     if ((dimTensor1 != dimTensor2) || (dimTensor1 > maxDim)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The dims of the two inputs should be same and be less than 7, now they are %s, %s",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The dims of the two inputs should be same and be less than 7, now they are %s, %s",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
 
     auto dimTensorquantParam = quantParam->GetViewShape().GetDimNum();
     int64_t quantParamDim0 = quantParam->GetViewShape().GetDim(0);
     if ((dimTensorquantParam != 1) || (quantParamDim0 != 1 && quantParamDim0 != nAlign16)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "quantParam[%ld] != 1 or quantParam dim == 1, but quantParamDim0[%ld] not equal to 1 or n "
-            "align to multiple of 16",
-            dimTensorquantParam, quantParamDim0);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "quantParam[%ld] != 1 or quantParam dim == 1, but quantParamDim0[%ld] not equal to 1 or n "
+                "align to multiple of 16",
+                dimTensorquantParam, quantParamDim0);
         return false;
     }
 
@@ -127,33 +124,29 @@ static bool CheckShapeValid(
         auto dimTensorBias = bias->GetViewShape().GetDimNum();
         int64_t biasDim0 = bias->GetViewShape().GetDim(0);
         if ((dimTensorBias != 1) || (dimTensorBias == 1 && biasDim0 != N)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "dimTensorBias[%ld] != 1 or Bias dim == 1, but biasDim0[%ld] not equal to n",
-                dimTensorBias, biasDim0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "dimTensorBias[%ld] != 1 or Bias dim == 1, but biasDim0[%ld] not equal to n", dimTensorBias,
+                    biasDim0);
             return false;
         }
     }
 
     if (x1KDim != x2KDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
     op::Shape outShape = out->GetViewShape();
-    OP_CHECK(
-        (M == outShape.GetDim(dimTensor1 - 2) && N == out->GetViewShape().GetDim(dimTensor1 - 1)),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The last two dim of out shape %s need equal [%ld, %ld]",
-            op::ToString(outShape).GetString(), M, N),
-        return false);
+    OP_CHECK((M == outShape.GetDim(dimTensor1 - 2) && N == out->GetViewShape().GetDim(dimTensor1 - 1)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The last two dim of out shape %s need equal [%ld, %ld]",
+                     op::ToString(outShape).GetString(), M, N),
+             return false);
 
     return true;
 }
 
-inline static aclnnStatus CheckParams(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* bias, const aclTensor* out,
-    const bool adjX1, const bool adjX2)
+inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam,
+                                      const aclTensor* bias, const aclTensor* out, const bool adjX1, const bool adjX2)
 {
     CHECK_RET(CheckNotNull(x1, x2, quantParam, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(x1, x2, quantParam, bias, out), ACLNN_ERR_PARAM_INVALID);
@@ -165,24 +158,22 @@ static aclnnStatus PreInputProcess(const aclTensor* inputTensor, aclOpExecutor* 
 {
     if (inputTensor != nullptr) {
         inputTensor = l0op::Contiguous(inputTensor, executor);
-        OP_CHECK(
-            inputTensor != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, contiguous return nullptr."),
-            return ACLNN_ERR_INNER_NULLPTR);
+        OP_CHECK(inputTensor != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, contiguous return nullptr."),
+                 return ACLNN_ERR_INNER_NULLPTR);
         inputTensor = l0op::ReFormat(inputTensor, op::Format::FORMAT_ND);
-        OP_CHECK(
-            inputTensor != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "THe input perprocess failed, reformat return nullptr."),
-            return ACLNN_ERR_INNER_NULLPTR);
+        OP_CHECK(inputTensor != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "THe input perprocess failed, reformat return nullptr."),
+                 return ACLNN_ERR_INNER_NULLPTR);
     }
 
     return ACLNN_SUCCESS;
 }
 } // namespace
 
-aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* bias, bool transposeX1,
-    bool transposeX2, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam,
+                                                  const aclTensor* bias, bool transposeX1, bool transposeX2,
+                                                  aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnBatchMatmulQuant, DFX_IN(x1, x2, quantParam, bias, transposeX1, transposeX2), DFX_OUT(out));
 
@@ -225,8 +216,8 @@ aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchMatmulQuant(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnBatchMatmulQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                  const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnBatchMatmulQuant);
 

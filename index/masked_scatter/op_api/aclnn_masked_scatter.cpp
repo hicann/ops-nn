@@ -71,8 +71,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_SELFREF_DTYPE_SUPPOR
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_DOUBLE,
     op::DataType::DT_BOOL,  op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> MASK_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_UINT8, op::DataType::DT_BOOL};
+static const std::initializer_list<op::DataType> MASK_DTYPE_SUPPORT_LIST = {op::DataType::DT_UINT8,
+                                                                            op::DataType::DT_BOOL};
 
 static bool CheckNotNull(const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source)
 {
@@ -97,23 +97,20 @@ static bool CheckDtypeValid(const aclTensor* selfRef, const aclTensor* mask, con
 {
     auto supportList = GetDtypeSupportList();
     if (!CheckType(selfRef->GetDataType(), supportList)) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "self",
-            op::ToString(selfRef->GetDataType()).GetString(),
-            std::string("The dtype of self must be within the range ") +
-                op::ToString(supportList).GetString());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "self", op::ToString(selfRef->GetDataType()).GetString(),
+            std::string("The dtype of self must be within the range ") + op::ToString(supportList).GetString());
         return false;
     }
     if (!CheckType(mask->GetDataType(), MASK_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "mask",
-            op::ToString(mask->GetDataType()).GetString(),
-            std::string("The dtype of mask must be within the range ") +
-                op::ToString(MASK_DTYPE_SUPPORT_LIST).GetString());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "mask", op::ToString(mask->GetDataType()).GetString(),
+                                              std::string("The dtype of mask must be within the range ") +
+                                                  op::ToString(MASK_DTYPE_SUPPORT_LIST).GetString());
         return false;
     }
     if (selfRef->GetDataType() != source->GetDataType()) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "source",
-            op::ToString(source->GetDataType()).GetString(),
-            "The dtype of source must be the same as self");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "source", op::ToString(source->GetDataType()).GetString(),
+                                              "The dtype of source must be the same as self");
         return false;
     }
 
@@ -127,9 +124,10 @@ static bool isMaskCanExpandToSelfRef(const aclTensor* selfRef, const aclTensor* 
     for (size_t i = 0; i < selfRefShapeLen; i++) {
         if (broadcastShape->GetDim(i) != selfRefShape.GetDim(i)) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(kOpName, "self, mask",
-                (op::ToString(selfRef->GetViewShape()).GetString() + std::string(", ") +
-                 op::ToString(mask->GetViewShape()).GetString()).c_str(),
-                "The shape of mask must be broadcastable to the shape of self");
+                                                   (op::ToString(selfRef->GetViewShape()).GetString() +
+                                                    std::string(", ") + op::ToString(mask->GetViewShape()).GetString())
+                                                       .c_str(),
+                                                   "The shape of mask must be broadcastable to the shape of self");
             return false;
         }
     }
@@ -140,20 +138,20 @@ static bool CheckShape(const aclTensor* selfRef, const aclTensor* mask, const ac
 {
     if (selfRef->GetViewShape().GetDimNum() > MAX_DIM_LEN) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "self",
-            std::to_string(selfRef->GetViewShape().GetDimNum()).c_str(),
-            "The shape dim of self must be <= 8D");
+                                                 std::to_string(selfRef->GetViewShape().GetDimNum()).c_str(),
+                                                 "The shape dim of self must be <= 8D");
         return false;
     }
     if (mask->GetViewShape().GetDimNum() > MAX_DIM_LEN) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "mask",
-            std::to_string(mask->GetViewShape().GetDimNum()).c_str(),
-            "The shape dim of mask must be <= 8D");
+                                                 std::to_string(mask->GetViewShape().GetDimNum()).c_str(),
+                                                 "The shape dim of mask must be <= 8D");
         return false;
     }
     if (source->GetViewShape().GetDimNum() > MAX_DIM_LEN) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "source",
-            std::to_string(source->GetViewShape().GetDimNum()).c_str(),
-            "The shape dim of source must be <= 8D");
+                                                 std::to_string(source->GetViewShape().GetDimNum()).c_str(),
+                                                 "The shape dim of source must be <= 8D");
         return false;
     }
 
@@ -161,9 +159,8 @@ static bool CheckShape(const aclTensor* selfRef, const aclTensor* mask, const ac
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(selfRef, mask, broadcastShape, return false);
 
     if (!isMaskCanExpandToSelfRef(selfRef, mask, &broadcastShape)) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "self, mask",
-            "shape mismatch",
-            "The number of dimensions in self tensor must be >= the mask tensor");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "self, mask", "shape mismatch",
+                                              "The number of dimensions in self tensor must be >= the mask tensor");
         return false;
     }
 
@@ -215,9 +212,9 @@ static std::vector<int64_t> GetMaskAligned(const std::vector<int64_t>& maskShape
     return alignVec;
 }
 
-static void CalcBroadcastInfo(
-    const std::vector<int64_t>& selfShape, const std::vector<int64_t>& maskAligned, int64_t maxDim,
-    std::vector<int64_t>& isBroadcast, int64_t& tagLeft0, int64_t& tagLeft1, int64_t& tagRight0, int64_t& tagRight1)
+static void CalcBroadcastInfo(const std::vector<int64_t>& selfShape, const std::vector<int64_t>& maskAligned,
+                              int64_t maxDim, std::vector<int64_t>& isBroadcast, int64_t& tagLeft0, int64_t& tagLeft1,
+                              int64_t& tagRight0, int64_t& tagRight1)
 {
     isBroadcast.assign(maxDim, 0);
     for (int64_t i = 0; i < maxDim; i++) {
@@ -259,10 +256,7 @@ static void CalcBroadcastInfo(
     }
 }
 
-static bool IsLeftOverlap(int64_t tagLeft1, int64_t tagRight0)
-{
-    return tagLeft1 != -1 && tagLeft1 >= tagRight0;
-}
+static bool IsLeftOverlap(int64_t tagLeft1, int64_t tagRight0) { return tagLeft1 != -1 && tagLeft1 >= tagRight0; }
 
 static bool IsBroadcastAll(const std::vector<int64_t>& isBroadcast, int64_t end)
 {
@@ -288,7 +282,8 @@ static void AlignMaskRight(std::vector<int64_t>& maskAligned, const std::vector<
     }
 }
 
-static std::pair<std::vector<int64_t>, std::vector<int64_t>> MaskedScatterShapeFun(const std::vector<int64_t>& selfShape, const std::vector<int64_t>& maskShape,
+static std::pair<std::vector<int64_t>, std::vector<int64_t>> MaskedScatterShapeFun(
+    const std::vector<int64_t>& selfShape, const std::vector<int64_t>& maskShape,
     const std::vector<int64_t>& broadcastShape)
 {
     int64_t maxDim = broadcastShape.size();
@@ -310,7 +305,8 @@ static std::pair<std::vector<int64_t>, std::vector<int64_t>> MaskedScatterShapeF
         return {selfShape, maskShape};
     }
 
-    bool fullyBroadcast = tagLeft0 != -1 && tagRight1 != -1 && tagLeft0 > tagRight1 && IsBroadcastAll(isBroadcast, tagLeft0);
+    bool fullyBroadcast = tagLeft0 != -1 && tagRight1 != -1 && tagLeft0 > tagRight1 &&
+                          IsBroadcastAll(isBroadcast, tagLeft0);
     if (fullyBroadcast) {
         return {selfShape, maskShape};
     }
@@ -381,8 +377,8 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape& 
     return self;
 }
 
-static aclnnStatus ProcessBroadcast(
-    const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, const aclTensor** out, aclOpExecutor* executor)
+static aclnnStatus ProcessBroadcast(const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source,
+                                    const aclTensor** out, aclOpExecutor* executor)
 {
     auto selfShape = ShapeToVector(selfRef->GetViewShape());
     auto maskShape = ShapeToVector(mask->GetViewShape());
@@ -454,7 +450,8 @@ static aclnnStatus ProcessBroadcast(
         const aclTensor* maskCumSumReshape = l0op::Reshape(maskCumSum, maskWithPosition->GetViewShape(), executor);
         CHECK_RET(maskCumSumReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        opResult = l0op::MaskedScatterWithPosition(selfRefProcessed, maskProcessed, maskCumSumReshape, sourceProcessed, executor);
+        opResult = l0op::MaskedScatterWithPosition(selfRefProcessed, maskProcessed, maskCumSumReshape, sourceProcessed,
+                                                   executor);
     } else {
         OP_LOGD("aclnn_masked_scatter the call is MaskedScatter.");
         opResult = l0op::MaskedScatter(selfRefProcessed, maskProcessed, sourceProcessed, executor);
@@ -482,9 +479,9 @@ static inline int64_t GetTensorDimNum(const aclTensor* self)
     return static_cast<int64_t>(self->GetViewShape().GetDimNum());
 }
 
-aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
-    aclTensor* selfRef, const aclTensor* mask, const aclTensor* source, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const aclTensor* mask,
+                                                      const aclTensor* source, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnInplaceMaskedScatter, DFX_IN(selfRef, mask, source), DFX_OUT(selfRef));
 
@@ -520,8 +517,9 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
 
     // input 0维转换维1维
     if (GetTensorDimNum(selfRefContiguous) == 0 && selfRefContiguous->Size() > 0) {
-        selfRefContiguous = uniqueExecutor.get()->CreateView(selfRefContiguous, {1}, selfRefContiguous->GetViewOffset());
-    } 
+        selfRefContiguous = uniqueExecutor.get()->CreateView(selfRefContiguous, {1},
+                                                             selfRefContiguous->GetViewOffset());
+    }
 
     // 当输入source不是空tensor时，将其换成连续的tensor
     const aclTensor* sourceContiguous = nullptr;
@@ -542,7 +540,7 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
     CHECK_RET(maskBool != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* opOut = nullptr;
-    if (!Ops::NN::AclnnUtil::IsRegbase()) {    // 判断芯片架构
+    if (!Ops::NN::AclnnUtil::IsRegbase()) { // 判断芯片架构
         opOut = l0op::MaskedScatter(selfRefContiguous, maskBool, sourceContiguous, uniqueExecutor.get());
     } else {
         auto retStatus = ProcessBroadcast(selfRefContiguous, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());
@@ -559,8 +557,8 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnInplaceMaskedScatter(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnInplaceMaskedScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceMaskedScatter);
     // 固定写法，调用框架能力，完成计算

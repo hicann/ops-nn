@@ -16,18 +16,19 @@ using json = nlohmann::json;
 
 namespace domi {
 
-static Status  ParseParamsAntiQuant(const ge::Operator& op_src, ge::Operator& op_dest) {
+static Status ParseParamsAntiQuant(const ge::Operator& op_src, ge::Operator& op_dest)
+{
     AscendString attrs_string;
     int dst_dtype = ge::DT_FLOAT16;
     constexpr bool sqrt_mode = false;
 
     if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
-      json attrs = json::parse(attrs_string.GetString());
-      for (json& attr : attrs["attribute"]) {
-          if (attr["name"] == "dst_dtype") {
-              dst_dtype = attr["i"];
-          }
-      }
+        json attrs = json::parse(attrs_string.GetString());
+        for (json& attr : attrs["attribute"]) {
+            if (attr["name"] == "dst_dtype") {
+                dst_dtype = attr["i"];
+            }
+        }
     }
 
     op_dest.SetAttr("dst_type", dst_dtype);
@@ -37,10 +38,10 @@ static Status  ParseParamsAntiQuant(const ge::Operator& op_src, ge::Operator& op
     tensor_desc.SetDataType(static_cast<ge::DataType>(dst_dtype));
     auto ret_y = op_dest.UpdateOutputDesc("y", tensor_desc);
     if (ret_y != ge::GRAPH_SUCCESS) {
-      ge::AscendString name = "";
-      (void)tensor_desc.GetName(name);
-      OP_LOGE(name.GetString(), "change output format failed.");
-      return FAILED;
+        ge::AscendString name = "";
+        (void)tensor_desc.GetName(name);
+        OP_LOGE(name.GetString(), "change output format failed.");
+        return FAILED;
     }
 
     return SUCCESS;
@@ -48,17 +49,18 @@ static Status  ParseParamsAntiQuant(const ge::Operator& op_src, ge::Operator& op
 
 // register npu_anti_quant op info to GE
 REGISTER_CUSTOM_OP("AscendAntiQuantV2")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::11::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::12::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::13::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::14::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::15::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::16::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::17::NPUAntiQuant"),
-                 ge::AscendString("ai.onnx::18::NPUAntiQuant"),
-                })
-  .ParseParamsByOperatorFn(ParseParamsAntiQuant)
-  .ImplyType(ImplyType::TVM);
+    .FrameworkType(ONNX)
+    .OriginOpType({
+        ge::AscendString("npu::1::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::11::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::12::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::13::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::14::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::15::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::16::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::17::NPUAntiQuant"),
+        ge::AscendString("ai.onnx::18::NPUAntiQuant"),
+    })
+    .ParseParamsByOperatorFn(ParseParamsAntiQuant)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

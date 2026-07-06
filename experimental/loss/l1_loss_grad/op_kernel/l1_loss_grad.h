@@ -33,8 +33,8 @@ public:
     __aicore__ inline KernelL1LossGrad() = default;
 
     // 使用本地 tiling 数据初始化 Kernel
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y, const L1LossGradTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y,
+                                const L1LossGradTilingData& tilingData);
 
     __aicore__ inline void Process();
 
@@ -67,8 +67,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void KernelL1LossGrad<T>::Init(
-    GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y, const L1LossGradTilingData& tilingData)
+__aicore__ inline void KernelL1LossGrad<T>::Init(GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y,
+                                                 const L1LossGradTilingData& tilingData)
 {
     ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -147,8 +147,8 @@ __aicore__ inline void KernelL1LossGrad<T>::CopyIn(int32_t progress)
     AscendC::DataCopyExtParams copyParams = {
         static_cast<uint16_t>(1), static_cast<uint32_t>(this->processDataNum * sizeof(T)), static_cast<uint32_t>(0),
         static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    AscendC::DataCopyPadExtParams<T> padParams = {
-        true, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
+    AscendC::DataCopyPadExtParams<T> padParams = {true, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                                  static_cast<T>(0)};
     AscendC::DataCopyPad(predictLocal, predictGm[progress * this->tileDataNum], copyParams, padParams);
     AscendC::DataCopyPad(gradsLocal, gradsGm[progress * this->tileDataNum], copyParams, padParams);
     AscendC::DataCopyPad(labelLocal, labelGm[progress * this->tileDataNum], copyParams, padParams);

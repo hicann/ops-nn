@@ -20,8 +20,7 @@
 #include "../inc/kernel_utils.h"
 #include "kernel_operator.h"
 
-namespace CopyPad
-{
+namespace CopyPad {
 
 using namespace AscendC;
 
@@ -33,7 +32,7 @@ const uint32_t SCATTER_THREE_DIMS = 3;
 const uint32_t SCATTER_FOUR_DIMS = 4;
 const uint32_t SCATTER_FIVE_DIMS = 5;
 
-const int64_t DIM0 = 0;  // 第一个非连续轴从这里开始
+const int64_t DIM0 = 0; // 第一个非连续轴从这里开始
 const int64_t DIM1 = 1;
 const int64_t DIM2 = 2;
 const int64_t DIM3 = 3;
@@ -54,11 +53,11 @@ constexpr int32_t SPLIT_BATCHS = 4;
 const uint32_t DEFAULT_MODE_NEG_INF = 0;
 const uint32_t DEFAULT_MODE_ZERO = 1;
 
-constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;      // -inf 0xFC00
-constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000;  // -inf 0xFF800000
-constexpr uint16_t BFLOAT16_NEG_INF = 0xFF80;     // -inf 0xFF80
+constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;     // -inf 0xFC00
+constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000; // -inf 0xFF800000
+constexpr uint16_t BFLOAT16_NEG_INF = 0xFF80;    // -inf 0xFF80
 constexpr int32_t MIN_INT32 = -2147483648;
-constexpr int64_t MIN_INT64 = -9223372036854775807LL-1;
+constexpr int64_t MIN_INT64 = -9223372036854775807LL - 1;
 constexpr uint8_t MIN_UINT8 = 0;
 constexpr int16_t MIN_INT16 = -32768;
 constexpr uint16_t MIN_UINT16 = 0;
@@ -72,14 +71,13 @@ struct CopyPadShapeInfo {
     uint32_t totalSize = 0;
 };
 
-
 template <typename T>
 struct indexTypeGet {
-    using type =
-        typename std::conditional<std::is_same<T, uint32_t>::value, int32_t,
-                                  typename std::conditional<std::is_same<T, uint16_t>::value, int16_t,
-                                                            typename std::conditional<std::is_same<T, uint64_t>::value,
-                                                                                      int64_t, T>::type>::type>::type;
+    using type = typename std::conditional<
+        std::is_same<T, uint32_t>::value, int32_t,
+        typename std::conditional<
+            std::is_same<T, uint16_t>::value, int16_t,
+            typename std::conditional<std::is_same<T, uint64_t>::value, int64_t, T>::type>::type>::type;
 };
 
 template <typename T>
@@ -171,8 +169,7 @@ __aicore__ inline void CustomDuplicate(__local_mem__ T* dstAddr, uint32_t calNum
 
 template <typename T>
 __aicore__ inline void CustomCopy(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
-                                  const CopyPadShapeInfo& params, int16_t loopCols, int16_t tailCols,
-                                  int16_t repeatElm)
+                                  const CopyPadShapeInfo& params, int16_t loopCols, int16_t tailCols, int16_t repeatElm)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
                                               MicroAPI::RegTensor<T>>::type;
@@ -181,9 +178,9 @@ __aicore__ inline void CustomCopy(const __local_mem__ T* dstAddr, const __local_
 
     for (int16_t i = 0; i < params.inSize[DIM3]; i++) {
         auto srcAddr1 = (__local_mem__ T*)srcAddr + i * params.srcStride[DIM3];
-        auto dstAddr1 = (__local_mem__ T*)dstAddr +  i * params.dstStride[DIM3];
+        auto dstAddr1 = (__local_mem__ T*)dstAddr + i * params.dstStride[DIM3];
         for (int16_t d = 0; d < params.inSize[DIM2]; d++) {
-            auto srcAddr2 = srcAddr1 +  d * params.srcStride[DIM2];
+            auto srcAddr2 = srcAddr1 + d * params.srcStride[DIM2];
             auto dstAddr2 = dstAddr1 + d * params.dstStride[DIM2];
             for (int16_t j = 0; j < params.inSize[DIM1]; j++) {
                 auto curSrcAddr = srcAddr2 + j * params.srcStride[DIM1];
@@ -244,8 +241,8 @@ __aicore__ inline void CustomCopyByScatterSingleRow(const __local_mem__ T* dstAd
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterTwoDims(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
                                                   MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
-                                                  uint32_t srcStrideDim2, uint32_t dstStrideDim2,
-                                                  int16_t loopRows, uint32_t repeatElm, uint32_t tailElm)
+                                                  uint32_t srcStrideDim2, uint32_t dstStrideDim2, int16_t loopRows,
+                                                  uint32_t repeatElm, uint32_t tailElm)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
                                               MicroAPI::RegTensor<T>>::type;
@@ -303,8 +300,8 @@ __aicore__ inline void CustomCopyByScatterTwoDims(const __local_mem__ T* dstAddr
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterThreeDims(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
                                                     MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
-                                                    uint32_t srcStrideDim3, uint32_t dstStrideDim3,
-                                                    int16_t loopDeps, uint32_t repeatElm, uint32_t tailElm)
+                                                    uint32_t srcStrideDim3, uint32_t dstStrideDim3, int16_t loopDeps,
+                                                    uint32_t repeatElm, uint32_t tailElm)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
                                               MicroAPI::RegTensor<T>>::type;
@@ -358,8 +355,8 @@ __aicore__ inline void CustomCopyByScatterThreeDims(const __local_mem__ T* dstAd
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterFourDims(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
                                                    MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
-                                                   uint32_t srcStrideDim4, uint32_t dstStrideDim4,
-                                                   int16_t loopDim4, uint32_t repeatElm, uint32_t tailElm)
+                                                   uint32_t srcStrideDim4, uint32_t dstStrideDim4, int16_t loopDim4,
+                                                   uint32_t repeatElm, uint32_t tailElm)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
                                               MicroAPI::RegTensor<T>>::type;
@@ -409,8 +406,8 @@ __aicore__ inline void CustomCopyByScatterFourDims(const __local_mem__ T* dstAdd
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterFiveDims(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
                                                    MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
-                                                   uint32_t srcStrideDim5, uint32_t dstStrideDim5,
-                                                   int16_t loopDim5, uint32_t repeatElm, uint32_t tailElm)
+                                                   uint32_t srcStrideDim5, uint32_t dstStrideDim5, int16_t loopDim5,
+                                                   uint32_t repeatElm, uint32_t tailElm)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
                                               MicroAPI::RegTensor<T>>::type;
@@ -433,7 +430,7 @@ __aicore__ inline void CustomCopyByScatterFiveDims(const __local_mem__ T* dstAdd
     MicroAPI::RegTensor<U> vd0;
     MicroAPI::Arange((MicroAPI::RegTensor<regType>&)gIndex, 0);
     __local_mem__ T* curDstAddr = (__local_mem__ T*)dstAddr;
-    for (int16_t j = 0; j < loopDim5; j++) {  // 用dim2 计算loopDeps
+    for (int16_t j = 0; j < loopDim5; j++) { // 用dim2 计算loopDeps
         MicroAPI::Adds(v1, index, j * dstStrideDim5, preg);
         MicroAPI::Adds(v2, gIndex, j * srcStrideDim5, preg);
         MicroAPI::DataCopyGather(vd1, srcAddr, v2, preg);
@@ -461,13 +458,12 @@ __aicore__ inline void ScatterOneDim(const __local_mem__ T* dstAddr, const __loc
     int16_t realColsElm = params.inSize[DIM0];
     int16_t preColsLoop = static_cast<int16_t>((realColsElm + repeatElm - 1) / repeatElm);
     uint32_t dstOffset = params.expectStart[DIM4] * params.dstStride[DIM4] +
-                     params.expectStart[DIM3] * params.dstStride[DIM3] +
-                     params.expectStart[DIM2] * params.dstStride[DIM2] +
-                     params.expectStart[DIM1] * params.dstStride[DIM1] + params.expectStart[DIM0];
+                         params.expectStart[DIM3] * params.dstStride[DIM3] +
+                         params.expectStart[DIM2] * params.dstStride[DIM2] +
+                         params.expectStart[DIM1] * params.dstStride[DIM1] + params.expectStart[DIM0];
     for (int i = 0; i < params.inSize[DIM4]; i++) {
         __local_mem__ T* curSrcAddr = (__local_mem__ T*)srcAddr + i * params.srcStride[DIM4];
-        __local_mem__ T* curDstAddr =
-            (__local_mem__ T*)dstAddr + i * params.dstStride[DIM4] + dstOffset;
+        __local_mem__ T* curDstAddr = (__local_mem__ T*)dstAddr + i * params.dstStride[DIM4] + dstOffset;
         __VEC_SCOPE__
         {
             CustomCopyByScatterSingleRow<T, U>(curDstAddr, curSrcAddr, params, preColsLoop, realColsElm, repeatElm);
@@ -497,8 +493,8 @@ __aicore__ inline void ScatterTwoDims(const __local_mem__ T* dstAddr, const __lo
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        CustomCopyByScatterTwoDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim2, dstStrideDim2,
-                                         loopRows, repeatElm, tailRepeatElm);
+        CustomCopyByScatterTwoDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim2, dstStrideDim2, loopRows,
+                                         repeatElm, tailRepeatElm);
     }
 }
 
@@ -524,8 +520,8 @@ __aicore__ inline void ScatterThreeDims(const __local_mem__ T* dstAddr, const __
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        CustomCopyByScatterThreeDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim3, dstStrideDim3,
-                                           loopDeps, repeatElm, tailRepeatElm);
+        CustomCopyByScatterThreeDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim3, dstStrideDim3, loopDeps,
+                                           repeatElm, tailRepeatElm);
     }
 }
 
@@ -551,8 +547,8 @@ __aicore__ inline void ScatterFourDims(const __local_mem__ T* dstAddr, const __l
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        CustomCopyByScatterFourDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim4, dstStrideDim4,
-                                          loopDim4, repeatElm, tailRepeatElm);
+        CustomCopyByScatterFourDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim4, dstStrideDim4, loopDim4,
+                                          repeatElm, tailRepeatElm);
     }
 }
 
@@ -578,8 +574,8 @@ __aicore__ inline void ScatterFiveDims(const __local_mem__ T* dstAddr, const __l
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        CustomCopyByScatterFiveDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim5, dstStrideDim5,
-                                          loopDim5, repeatElm, tailRepeatElm);
+        CustomCopyByScatterFiveDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim5, dstStrideDim5, loopDim5,
+                                          repeatElm, tailRepeatElm);
     }
 }
 
@@ -592,23 +588,19 @@ __aicore__ inline void CopySingleDim(const __local_mem__ T* dstAddr, const __loc
     int16_t preColsLoop = static_cast<int16_t>(realColsElm / repeatElm);
     uint32_t tailPreCols = realColsElm - preColsLoop * repeatElm;
     uint32_t dstOffset = params.expectStart[DIM4] * params.dstStride[DIM4] +
-                     params.expectStart[DIM3] * params.dstStride[DIM3] +
-                     params.expectStart[DIM2] * params.dstStride[DIM2] +
-                     params.expectStart[DIM1] * params.dstStride[DIM1] + params.expectStart[DIM0];
+                         params.expectStart[DIM3] * params.dstStride[DIM3] +
+                         params.expectStart[DIM2] * params.dstStride[DIM2] +
+                         params.expectStart[DIM1] * params.dstStride[DIM1] + params.expectStart[DIM0];
     for (int i = 0; i < params.inSize[DIM4]; i++) {
         __local_mem__ T* curSrcAddr = (__local_mem__ T*)srcAddr + i * params.srcStride[DIM4];
-        __local_mem__ T* curDstAddr =
-            (__local_mem__ T*)dstAddr + i * params.dstStride[DIM4] + dstOffset;
-        __VEC_SCOPE__
-        {
-            CustomCopy(curDstAddr, curSrcAddr, params, preColsLoop, tailPreCols, repeatElm);
-        }
+        __local_mem__ T* curDstAddr = (__local_mem__ T*)dstAddr + i * params.dstStride[DIM4] + dstOffset;
+        __VEC_SCOPE__ { CustomCopy(curDstAddr, curSrcAddr, params, preColsLoop, tailPreCols, repeatElm); }
     }
 }
 
 template <typename T, typename U, uint32_t DEFAULT_MODE>
 __aicore__ inline void CopyAndPad(LocalTensor<T>& inLocal, LocalTensor<T>& outLocal, LocalTensor<U>& scatterLocal,
-                                  const CopyPadShapeInfo& params, uint32_t copyMode)  // copy row copy 自己算
+                                  const CopyPadShapeInfo& params, uint32_t copyMode) // copy row copy 自己算
 {
     __local_mem__ T* inLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
     __local_mem__ T* outLocalAddr = (__local_mem__ T*)outLocal.GetPhyAddr();
@@ -654,6 +646,6 @@ __aicore__ inline void CopyAndPad(LocalTensor<T>& inLocal, LocalTensor<T>& outLo
 
 **/
 
-}  // namespace CopyPad
+} // namespace CopyPad
 
-#endif  // COPY_PAD_IMPL_H
+#endif // COPY_PAD_IMPL_H

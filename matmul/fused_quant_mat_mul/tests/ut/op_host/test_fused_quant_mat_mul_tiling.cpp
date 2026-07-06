@@ -37,13 +37,12 @@ using namespace ge;
 using namespace ut_util;
 using namespace optiling;
 
-
-#define GET_TILING_VALUE(obj, fieldName) *(int32_t *)(obj.data_ptr_ + obj.fieldName##_offset_)
+#define GET_TILING_VALUE(obj, fieldName) *(int32_t*)(obj.data_ptr_ + obj.fieldName##_offset_)
 
 class FusedQuantMatMulTilingTestParam {
 public:
-    void Prepare(FusedQuantMatMulCompileInfo &compileInfo) const;
-    void InvokeTilingFunc(FusedQuantMatMulCompileInfo &compileInfo) const;
+    void Prepare(FusedQuantMatMulCompileInfo& compileInfo) const;
+    void InvokeTilingFunc(FusedQuantMatMulCompileInfo& compileInfo) const;
     void Test() const;
     std::string socVersion;
     std::string caseName;
@@ -83,10 +82,11 @@ protected:
 
 namespace fqmm_tiling_ut {
 
-static string TilingData2Str(const void *tilingData, size_t tilingSize) {
+static string TilingData2Str(const void* tilingData, size_t tilingSize)
+{
     string result;
     for (size_t i = 0; i < tilingSize; i += sizeof(int32_t)) {
-        result += std::to_string((reinterpret_cast<const int32_t *>(tilingData)[i / sizeof(int32_t)]));
+        result += std::to_string((reinterpret_cast<const int32_t*>(tilingData)[i / sizeof(int32_t)]));
         result += " ";
     }
 
@@ -97,7 +97,8 @@ map<ge::DataType, int64_t> dtypeC0SizeMap = {
     {ge::DT_FLOAT16, 16}, {ge::DT_FLOAT, 8}, {ge::DT_INT8, 32}, {ge::DT_INT4, 64}, {ge::DT_INT2, 64},
 };
 
-static gert::Shape TransNd2Nz(const gert::Shape &inShape, const ge::DataType &dtype) {
+static gert::Shape TransNd2Nz(const gert::Shape& inShape, const ge::DataType& dtype)
+{
     gert::Shape outShape;
     for (size_t idx = 0; idx < inShape.GetDimNum() - 2; ++idx) {
         outShape.AppendDim(inShape.GetDim(idx));
@@ -113,7 +114,8 @@ static gert::Shape TransNd2Nz(const gert::Shape &inShape, const ge::DataType &dt
     return outShape;
 }
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output) {
+static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
+{
     auto delimiterLen = delimiter.size();
     std::string::size_type currPos = 0;
     std::string::size_type nextPos = input.find(delimiter, currPos);
@@ -128,7 +130,8 @@ static void SplitStr2Vec(const string &input, const string &delimiter, vector<st
     }
 }
 
-static void InitPlatformInfo(const std::string &socVersion, string &compileInfoStr) {
+static void InitPlatformInfo(const std::string& socVersion, string& compileInfoStr)
+{
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -169,7 +172,8 @@ static void InitPlatformInfo(const std::string &socVersion, string &compileInfoS
     }
 }
 
-static std::vector<FusedQuantMatMulTilingTestParam> GetParams() {
+static std::vector<FusedQuantMatMulTilingTestParam> GetParams()
+{
     std::vector<FusedQuantMatMulTilingTestParam> params;
     std::string rootPath(GetExeDirPath() + "../../../../");
     std::string casePath(rootPath + "matmul/fused_quant_mat_mul/tests/ut/op_host/test_fused_quant_mat_mul.csv");
@@ -227,7 +231,7 @@ static std::vector<FusedQuantMatMulTilingTestParam> GetParams() {
         param.scaleDtype = dtypeMap[testParam[idx++]];
         param.biasDtype = dtypeMap[testParam[idx++]];
         param.yDtype = dtypeMap[testParam[idx++]];
-        param.x2Nz =  testParam[idx++] == "NZ";
+        param.x2Nz = testParam[idx++] == "NZ";
         param.fusedTypeOp = testParam[idx++];
         param.tilingResult = (strcasecmp(testParam[idx++].c_str(), "true") == 0) ? ge::GRAPH_SUCCESS : ge::GRAPH_FAILED;
         param.tilingKey = stol(testParam[idx++]);
@@ -237,7 +241,8 @@ static std::vector<FusedQuantMatMulTilingTestParam> GetParams() {
     return params;
 }
 
-static void TestOneParamCase(const FusedQuantMatMulTilingTestParam &param) {
+static void TestOneParamCase(const FusedQuantMatMulTilingTestParam& param)
+{
     std::cout << "run case " << param.caseName << std::endl;
 
     gert::StorageShape x1Shape;
@@ -315,7 +320,7 @@ static void TestOneParamCase(const FusedQuantMatMulTilingTestParam &param) {
 
     auto kernelHold = gert::KernelRunContextFaker()
                           .KernelIONum(2, 1)
-                          .Inputs({const_cast<char *>(compileInfoStr.c_str()), reinterpret_cast<void *>(&platformInfo)})
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
                           .Outputs({&compileInfo})
                           .Build();
 
@@ -324,16 +329,17 @@ static void TestOneParamCase(const FusedQuantMatMulTilingTestParam &param) {
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(11, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, param.biasFlag ? &biasShape : nullptr, nullptr, &x2ScaleShape,
-                                    nullptr, nullptr, nullptr, nullptr, nullptr, param.yDtype == ge::DT_INT8 ? &x3Shape : nullptr})
+                                    nullptr, nullptr, nullptr, nullptr, nullptr,
+                                    param.yDtype == ge::DT_INT8 ? &x3Shape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, param.x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, param.x2Nz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
                       .NodeInputTd(2, param.biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -357,7 +363,7 @@ static void TestOneParamCase(const FusedQuantMatMulTilingTestParam &param) {
                       .SetOpType(opType)
                       .Build();
 
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -384,8 +390,9 @@ static void TestOneParamCase(const FusedQuantMatMulTilingTestParam &param) {
 
 } // namespace fqmm_tiling_ut
 
-TEST_P(TestFusedQuantMatMulTiling, generalTest) {
-    for (const auto &param : fqmm_tiling_ut::GetParams()) {
+TEST_P(TestFusedQuantMatMulTiling, generalTest)
+{
+    for (const auto& param : fqmm_tiling_ut::GetParams()) {
         fqmm_tiling_ut::TestOneParamCase(param);
     }
 }

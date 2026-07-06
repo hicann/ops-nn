@@ -18,11 +18,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* RepeatInterleave(
-    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor);
+const aclTensor* RepeatInterleave(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
+                                  aclOpExecutor* executor);
 
-const aclTensor* RepeatInterleaveV2(
-    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor);
+const aclTensor* RepeatInterleaveV2(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
+                                    aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_REPEAT_INTERLEAVE_OP_H_

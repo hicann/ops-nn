@@ -14,8 +14,8 @@
 #include "modulate_regbase_tiling_key.h"
 
 template <uint8_t tilingStrategy, bool isScale, bool isShift>
-__global__ __aicore__ void modulate(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void modulate(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y, GM_ADDR workspace,
+                                    GM_ADDR tiling)
 {
     AscendC::TPipe tpipe;
     REGISTER_TILING_DEFAULT(ModulateRegbaseTilingData);

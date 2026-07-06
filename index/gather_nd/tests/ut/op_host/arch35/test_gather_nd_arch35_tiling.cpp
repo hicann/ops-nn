@@ -31,15 +31,9 @@
 
 class AscendGatherNdTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AscendGatherNdTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AscendGatherNdTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AscendGatherNdTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AscendGatherNdTest TearDown" << std::endl; }
 };
 
 TEST_F(AscendGatherNdTest, test_tiling_1)
@@ -199,8 +193,8 @@ struct GatherNdParam {
     bool negativeIndexSupport;
 };
 
-static void ExecuteTestCase(
-    const GatherNdParam& opsParamInfos, uint64_t expectTilingKey, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(const GatherNdParam& opsParamInfos, uint64_t expectTilingKey,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -237,10 +231,10 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -252,22 +246,21 @@ static void ExecuteTestCase(
     gert::StorageShape indicesShape = opsParamInfos.indicesShape;
     gert::StorageShape yShape = opsParamInfos.yShape;
 
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(2, 1)
-            .IrInstanceNum({1, 1})
-            .InputShapes({&xShape, &indicesShape})
-            .OutputShapes({&yShape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, opsParamInfos.indicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"negative_index_support", Ops::NN::AnyValue::CreateFrom<bool>(opsParamInfos.negativeIndexSupport)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &indicesShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, opsParamInfos.indicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, opsParamInfos.xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"negative_index_support",
+                                   Ops::NN::AnyValue::CreateFrom<bool>(opsParamInfos.negativeIndexSupport)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -778,21 +771,21 @@ static void runCase(gert::StorageShape x, gert::StorageShape indices, gert::Stor
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GatherNd")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GatherNd")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // // tilingFunc simulate

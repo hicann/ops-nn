@@ -24,11 +24,11 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ForeachAddList);
 
-const aclTensorList *ForeachAddListV2(const aclTensorList *x1, const aclTensorList *x2, const aclTensor *alpha, const aclTensorList *out, aclOpExecutor *executor) {
+const aclTensorList* ForeachAddListV2(const aclTensorList* x1, const aclTensorList* x2, const aclTensor* alpha,
+                                      const aclTensorList* out, aclOpExecutor* executor)
+{
     L0_DFX(ForeachAddListV2, x1, x2, alpha);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachAddList,
-                                      OP_INPUT(x1, x2, alpha),
-                                      OP_OUTPUT(out));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachAddList, OP_INPUT(x1, x2, alpha), OP_OUTPUT(out));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;

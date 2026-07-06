@@ -26,26 +26,27 @@
 namespace Ops {
 namespace NN {
 namespace Conv {
-    ge::graphStatus InferShapeForConvBackprop(
-        gert::InferShapeContext* context, size_t const_tensor_idx, const char* const_tensor_name, size_t dim_num);
-    // Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
-    ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* context);
-    // Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
-    ge::graphStatus InferDataTypeForConv2DBackpropFilter(gert::InferDataTypeContext* context);
-    // Conv2DBackpropInputV2 和 Conv3DBackpropInputV2 共用
-    ge::graphStatus InferDataTypeForConvBackpropInputV2(gert::InferDataTypeContext* context);
-    // Conv2DTransposeV2 和 Conv3DTransposeV2 共用
-    bool CheckOutputAllZero(const gert::Shape* shape);
-    bool CheckOutputAllZeroFrom2D(const gert::InferShapeContext* context, const gert::Shape* shape, int32_t d_index);
-    // Conv2DTransposeV2 和 Conv3DTransposeV2 共用
-    ge::graphStatus InferDataTypeForConvTransposeV2(gert::InferDataTypeContext* context);
-    ge::graphStatus InferShapeForConvBackpropExtend3D(
-        gert::InferShapeContext* context, size_t const_tensor_idx, const char* const_tensor_name);
-    ge::graphStatus SetOutputShapeDim(const gert::InferShapeContext* context, const gert::Tensor* const_tensor, gert::Shape* y_shape);
-    int32_t GetConvBackpropIndex(ge::Format format);
+ge::graphStatus InferShapeForConvBackprop(gert::InferShapeContext* context, size_t const_tensor_idx,
+                                          const char* const_tensor_name, size_t dim_num);
+// Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
+ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* context);
+// Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
+ge::graphStatus InferDataTypeForConv2DBackpropFilter(gert::InferDataTypeContext* context);
+// Conv2DBackpropInputV2 和 Conv3DBackpropInputV2 共用
+ge::graphStatus InferDataTypeForConvBackpropInputV2(gert::InferDataTypeContext* context);
+// Conv2DTransposeV2 和 Conv3DTransposeV2 共用
+bool CheckOutputAllZero(const gert::Shape* shape);
+bool CheckOutputAllZeroFrom2D(const gert::InferShapeContext* context, const gert::Shape* shape, int32_t d_index);
+// Conv2DTransposeV2 和 Conv3DTransposeV2 共用
+ge::graphStatus InferDataTypeForConvTransposeV2(gert::InferDataTypeContext* context);
+ge::graphStatus InferShapeForConvBackpropExtend3D(gert::InferShapeContext* context, size_t const_tensor_idx,
+                                                  const char* const_tensor_name);
+ge::graphStatus SetOutputShapeDim(const gert::InferShapeContext* context, const gert::Tensor* const_tensor,
+                                  gert::Shape* y_shape);
+int32_t GetConvBackpropIndex(ge::Format format);
 
-}  // namespace Conv
-}  // namespace NN
-}  // namespace Ops
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
 
 #endif // OPS_CONV_BACKPROP_INFERSHAPE_H_

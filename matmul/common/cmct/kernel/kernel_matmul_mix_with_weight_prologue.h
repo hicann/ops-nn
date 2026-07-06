@@ -71,24 +71,24 @@ public:
     };
 
     __aicore__ inline KernelMatmulMixWeightPrologue() = default;
-    __aicore__ inline KernelMatmulMixWeightPrologue([[maybe_unused]] const Params &params) {}
+    __aicore__ inline KernelMatmulMixWeightPrologue([[maybe_unused]] const Params& params) {}
 
     template <int32_t CORE_TYPE = g_coreType>
-    __aicore__ inline void operator()(Params const &params);
+    __aicore__ inline void operator()(Params const& params);
 
     template <>
-    __aicore__ inline void operator()<AscendC::AIV>(Params const &params)
+    __aicore__ inline void operator()<AscendC::AIV>(Params const& params)
     {
         BlockScheduler scheduler(params.scheduler);
         uint32_t coreLoops = scheduler.GetCoreLoops();
         BlockPrologue blockPrologue(params.prologue);
-        auto tensorB =
-            MakeTensor((__gm__ typename BlockPrologue::ElementIn *)params.prologue.ptrB, params.prologue.layoutB);
+        auto tensorB = MakeTensor((__gm__ typename BlockPrologue::ElementIn*)params.prologue.ptrB,
+                                  params.prologue.layoutB);
         AscendC::GlobalTensor<AscendC::TensorTrait<typename BlockPrologue::ElementBias, AscendC::TPosition::GM,
                                                    decltype(params.prologue.layoutBias)>>
             tensorBias;
         if (params.prologue.hasBias) {
-            tensorBias = MakeTensor((__gm__ typename BlockPrologue::ElementBias *)params.prologue.ptrBias,
+            tensorBias = MakeTensor((__gm__ typename BlockPrologue::ElementBias*)params.prologue.ptrBias,
                                     params.prologue.layoutBias);
         }
         auto curBlockIdx = AscendC::GetBlockIdx() / AscendC::GetTaskRation();
@@ -97,13 +97,14 @@ public:
             auto actualBlockShape = scheduler.GetActualBlockShape(blockCoord);
             auto coordN = Get<1>(blockCoord);
             auto tileShapeN = Get<1>(actualBlockShape);
-            auto tensorBlockBias =
-                params.prologue.hasBias ? GetTile(tensorBias, MakeCoord(coordN), MakeShape(tileShapeN)) : tensorBias;
+            auto tensorBlockBias = params.prologue.hasBias ?
+                                       GetTile(tensorBias, MakeCoord(coordN), MakeShape(tileShapeN)) :
+                                       tensorBias;
             if constexpr (weightNz) {
                 auto tileShape = MakeShape(MakeShape(_16{}, CeilDiv(tileShapeN, 16UL)),
                                            Get<1>(tensorB.GetTensorTrait().GetLayout().GetShape()));
-                auto tensorBlockB =
-                    GetTile(tensorB, MakeCoord(MakeCoord(_, CeilDiv(coordN, 16UL)), MakeCoord(_, _)), tileShape);
+                auto tensorBlockB = GetTile(tensorB, MakeCoord(MakeCoord(_, CeilDiv(coordN, 16UL)), MakeCoord(_, _)),
+                                            tileShape);
                 blockPrologue(tensorBlockB, tensorBlockBias, actualBlockShape, params.prologue);
             } else {
                 auto tileShape = MakeShape(tileShapeN, Get<1>(tensorB.GetTensorTrait().GetLayout().GetShape()));
@@ -114,17 +115,17 @@ public:
     }
 
     template <>
-    __aicore__ inline void operator()<AscendC::AIC>(Params const &params)
+    __aicore__ inline void operator()<AscendC::AIC>(Params const& params)
     {
         BlockScheduler scheduler(params.scheduler);
         BlockMmad blockMmad(params.mmad);
         uint32_t coreLoops = scheduler.GetCoreLoops();
-        auto tensorA = MakeTensor((__gm__ typename BlockMmad::ElementA *)(params.mmad.ptrA), params.mmad.layoutA);
-        auto tensorScaleA =
-            MakeTensor((__gm__ typename BlockMmad::ElementScale *)(params.mmad.ptrAScale), params.mmad.layoutScale);
-        auto tensorScaleB =
-            MakeTensor((__gm__ typename BlockMmad::ElementScale *)(params.mmad.ptrBScale), params.mmad.layoutScale);
-        auto tensorC = MakeTensor((__gm__ typename BlockMmad::ElementC *)(params.mmad.ptrC), params.mmad.layoutC);
+        auto tensorA = MakeTensor((__gm__ typename BlockMmad::ElementA*)(params.mmad.ptrA), params.mmad.layoutA);
+        auto tensorScaleA = MakeTensor((__gm__ typename BlockMmad::ElementScale*)(params.mmad.ptrAScale),
+                                       params.mmad.layoutScale);
+        auto tensorScaleB = MakeTensor((__gm__ typename BlockMmad::ElementScale*)(params.mmad.ptrBScale),
+                                       params.mmad.layoutScale);
+        auto tensorC = MakeTensor((__gm__ typename BlockMmad::ElementC*)(params.mmad.ptrC), params.mmad.layoutC);
         auto sizeK = Get<1>(tensorA.GetTensorTrait().GetLayout().GetShape());
         auto sizeGn = Get<1>(tensorScaleA.GetTensorTrait().GetLayout().GetShape());
         for (uint32_t loopIdx = AscendC::GetBlockIdx(); loopIdx < coreLoops; loopIdx += AscendC::GetBlockNum()) {
@@ -143,10 +144,9 @@ public:
     }
 
 private:
-    static constexpr bool weightNz =
-        Gemm::is_2d_nz_c0_32<decltype(typename BlockPrologue::LayoutIn{}.GetStride())>::value;
+    static constexpr bool
+        weightNz = Gemm::is_2d_nz_c0_32<decltype(typename BlockPrologue::LayoutIn{}.GetStride())>::value;
 };
-}  // namespace Kernel
-}  // namespace Gemm
-}  // namespace Cmct
-
+} // namespace Kernel
+} // namespace Gemm
+} // namespace Cmct

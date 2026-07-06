@@ -21,13 +21,7 @@
 
 namespace Conv3dApiTiling {
 
-enum class L1TilingMode : std::uint8_t {
-    FULL_LOAD_BL1 = 0,
-    FULL_LOAD_AL1,
-    ALL_FULL_LOAD,
-    NONE_FULL_LOAD,
-    INVALID
-};
+enum class L1TilingMode : std::uint8_t { FULL_LOAD_BL1 = 0, FULL_LOAD_AL1, ALL_FULL_LOAD, NONE_FULL_LOAD, INVALID };
 
 struct L1TilingFlag {
     L1TilingMode abL1Mode = L1TilingMode::INVALID;
@@ -134,11 +128,8 @@ struct L1TilingCalc {
 
 class Conv3dTilingAlgorithm {
 public:
-    explicit Conv3dTilingAlgorithm(Conv3dTilingBase *tilingIns);
-    virtual ~Conv3dTilingAlgorithm()
-    {
-        tilingIns_ = nullptr;
-    }
+    explicit Conv3dTilingAlgorithm(Conv3dTilingBase* tilingIns);
+    virtual ~Conv3dTilingAlgorithm() { tilingIns_ = nullptr; }
     int64_t Process();
 
 protected:
@@ -186,7 +177,7 @@ protected:
     virtual void SetMAL1NBL1ValueAndMode();
     void SetL1TilingRes();
 
-     // L0 tiling
+    // L0 tiling
     int64_t GetL0Tiling();
     virtual void InitPingPong();
     virtual void GetL0TilingRange();

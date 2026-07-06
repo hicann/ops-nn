@@ -44,6 +44,6 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(DequantBias, DequantBiasTilingData)
 
 struct DequantBiasCompileInfo {};
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // DEQUANT_BIAS_TILING_H
+#endif // DEQUANT_BIAS_TILING_H

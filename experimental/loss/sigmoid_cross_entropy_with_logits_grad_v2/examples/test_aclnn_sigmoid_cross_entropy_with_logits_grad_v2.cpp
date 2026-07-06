@@ -47,9 +47,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用 aclrtMalloc 申请 device 侧内存
@@ -67,9 +66,8 @@ int CreateAclTensor(
     }
 
     // 调用 aclCreateTensor 接口创建 aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -123,8 +121,8 @@ int main()
     // 创建可选输入 Tensor
     ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weightTensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(
-        posWeightHostData, posWeightShape, &posWeightDeviceAddr, aclDataType::ACL_FLOAT, &posWeightTensor);
+    ret = CreateAclTensor(posWeightHostData, posWeightShape, &posWeightDeviceAddr, aclDataType::ACL_FLOAT,
+                          &posWeightTensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建输出 Tensor
@@ -139,9 +137,9 @@ int main()
 
     // 调用 aclnnBinaryCrossEntropyWithLogitsBackward 第一段接口
     // 参数顺序：gradOutput(dout), self(predict), target, weight, pos_weight, reduction, out, workspaceSize, executor
-    ret = aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize(
-        doutTensor, predictTensor, targetTensor, weightTensor, posWeightTensor, reduction, outputTensor, &workspaceSize,
-        &executor);
+    ret = aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize(doutTensor, predictTensor, targetTensor,
+                                                                    weightTensor, posWeightTensor, reduction,
+                                                                    outputTensor, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS,
               LOG_PRINT("aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -173,9 +171,8 @@ int main()
     // 5. 获取输出的值
     auto size = GetShapeSize(commonShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outputDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outputDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     // 打印输出前几个值（区分是否被写回）
@@ -192,10 +189,10 @@ int main()
     aclDestroyTensor(predictTensor);
     aclDestroyTensor(targetTensor);
     aclDestroyTensor(doutTensor);
-    if (weightTensor){
+    if (weightTensor) {
         aclDestroyTensor(weightTensor);
     }
-    if (posWeightTensor){
+    if (posWeightTensor) {
         aclDestroyTensor(posWeightTensor);
     }
     aclDestroyTensor(outputTensor);
@@ -204,10 +201,10 @@ int main()
     aclrtFree(predictDeviceAddr);
     aclrtFree(targetDeviceAddr);
     aclrtFree(doutDeviceAddr);
-    if (weightDeviceAddr){
+    if (weightDeviceAddr) {
         aclrtFree(weightDeviceAddr);
     }
-    if (posWeightDeviceAddr){
+    if (posWeightDeviceAddr) {
         aclrtFree(posWeightDeviceAddr);
     }
     aclrtFree(outputDeviceAddr);

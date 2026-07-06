@@ -24,10 +24,12 @@ namespace gemm_v3 {
 class GemmV3BaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
     explicit GemmV3BaseTiling(gert::TilingContext* context)
-        : TilingBaseClass(context), tiling_(context), params_(tiling_.matMulInfo_), hwInfo_(tiling_.hardwareInfo_),
+        : TilingBaseClass(context),
+          tiling_(context),
+          params_(tiling_.matMulInfo_),
+          hwInfo_(tiling_.hardwareInfo_),
           tilingData_(tiling_.ppMatmulDefaultTilingData_)
-    {
-    }
+    {}
     ~GemmV3BaseTiling() override {}
 
 protected:

@@ -28,8 +28,8 @@ static ge::graphStatus InferDataTypeApplyAdagradD(gert::InferDataTypeContext* co
     OP_LOGD(context->GetNodeName(), "Begin InferDataTypeApplyAdagradD");
 
     ge::DataType varDtype = context->GetInputDataType(IDX_0);
-    context->SetOutputDataType(IDX_0, varDtype);  // var output
-    context->SetOutputDataType(IDX_1, varDtype);  // accum output
+    context->SetOutputDataType(IDX_0, varDtype); // var output
+    context->SetOutputDataType(IDX_1, varDtype); // accum output
 
     OP_LOGD(context->GetNodeName(), "End InferDataTypeApplyAdagradD");
     return GRAPH_SUCCESS;

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv_base.cpp
  * \brief
@@ -42,7 +42,7 @@ vector<int64_t> GetInputShapeVec(const gert::TilingContext* context, size_t para
         return inputShapeVec;
     }
     auto storageShape = inputShapePtr->GetStorageShape();
-    
+
     for (uint32_t i = 0; i < storageShape.GetDimNum(); i++) {
         inputShapeVec.push_back(storageShape.GetDim(i));
     }
@@ -76,35 +76,44 @@ vector<int64_t> GetAttrShapeVec(const gert::TilingContext* context, size_t param
     return shapeVec;
 }
 
-ge::graphStatus ShapeAttrSynthesisCheck(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo,
-                                        ConvParamInfo paramInfo, gert::TilingContext* context)
+ge::graphStatus ShapeAttrSynthesisCheck(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo, ConvParamInfo paramInfo,
+                                        gert::TilingContext* context)
 {
     int64_t cmpHo = ConvComputeHo(oriShapeAttrInfo.oriFmapH, oriShapeAttrInfo.oriWeightH, oriShapeAttrInfo.oriPadTop,
-        oriShapeAttrInfo.oriPadBottom, oriShapeAttrInfo.oriDilationH, oriShapeAttrInfo.oriStrideH);
+                                  oriShapeAttrInfo.oriPadBottom, oriShapeAttrInfo.oriDilationH,
+                                  oriShapeAttrInfo.oriStrideH);
     int64_t cmpWo = ConvComputeWo(oriShapeAttrInfo.oriFmapW, oriShapeAttrInfo.oriWeightW, oriShapeAttrInfo.oriPadLeft,
-        oriShapeAttrInfo.oriPadRight, oriShapeAttrInfo.oriDilationW, oriShapeAttrInfo.oriStrideW);
+                                  oriShapeAttrInfo.oriPadRight, oriShapeAttrInfo.oriDilationW,
+                                  oriShapeAttrInfo.oriStrideW);
     if (oriShapeAttrInfo.oriFmapN != oriShapeAttrInfo.oriOutputN) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, y",
-            VectorsToString(std::vector<std::vector<int64_t>>{
-                GetInputShapeVec(context, INPUT_FMAP_INDEX),
-                GetOutputShapeVec(context, OUTPUT_INDEX)}, IntToString<int64_t>).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeType(), "x, y",
+            VectorsToString(std::vector<std::vector<int64_t>>{GetInputShapeVec(context, INPUT_FMAP_INDEX),
+                                                              GetOutputShapeVec(context, OUTPUT_INDEX)},
+                            IntToString<int64_t>)
+                .c_str(),
             FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s",
-                paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_N_IDX], "x",
-                paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_N_IDX], "y").c_str());
+                         paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_N_IDX], "x",
+                         paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_N_IDX], "y")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (cmpHo != oriShapeAttrInfo.oriOutputH) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
-                paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_H_IDX], cmpHo, "Ho").c_str());
+                         paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_H_IDX], cmpHo, "Ho")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (cmpWo != oriShapeAttrInfo.oriOutputW) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
-                paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_W_IDX], cmpWo, "Wo").c_str());
+                         paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_W_IDX], cmpWo, "Wo")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ShapeAttrSynthesisCheckAux(oriShapeAttrInfo, paramInfo, context);
@@ -116,39 +125,48 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo&
     auto fmStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(context->GetInputDesc(0)->GetStorageFormat()));
     if (fmStorageFormat == ge::Format::FORMAT_NCDHW || fmStorageFormat == ge::Format::FORMAT_NDHWC) {
         int64_t cmpDo = ConvComputeDo(oriShapeAttrInfo.oriFmapD, oriShapeAttrInfo.oriWeightD,
-        oriShapeAttrInfo.oriPadHead, oriShapeAttrInfo.oriPadTail,
-        oriShapeAttrInfo.oriDilationD, oriShapeAttrInfo.oriStrideD);
+                                      oriShapeAttrInfo.oriPadHead, oriShapeAttrInfo.oriPadTail,
+                                      oriShapeAttrInfo.oriDilationD, oriShapeAttrInfo.oriStrideD);
         if (cmpDo != oriShapeAttrInfo.oriOutputD) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeType(), "y",
                 VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
                 FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
-                    paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_D_IDX], cmpDo, "Do").c_str());
+                             paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_D_IDX], cmpDo, "Do")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
     if (oriShapeAttrInfo.oriFmapC % oriShapeAttrInfo.oriGroups != 0) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be exactly divisible by attribute groups %ld",
-                paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], oriShapeAttrInfo.oriGroups).c_str());
+                         paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], oriShapeAttrInfo.oriGroups)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo.oriWeightN % oriShapeAttrInfo.oriGroups != 0) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be exactly divisible by attribute groups %ld",
-                paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], oriShapeAttrInfo.oriGroups).c_str());
+                         paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], oriShapeAttrInfo.oriGroups)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo.oriFmapC != oriShapeAttrInfo.oriWeightC * oriShapeAttrInfo.oriGroups) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, filter",
-            VectorsToString(std::vector<std::vector<int64_t>>{
-                GetInputShapeVec(context, INPUT_FMAP_INDEX), GetInputShapeVec(context, INPUT_WEIGHT_INDEX)},
-                IntToString<int64_t>).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeType(), "x, filter",
+            VectorsToString(std::vector<std::vector<int64_t>>{GetInputShapeVec(context, INPUT_FMAP_INDEX),
+                                                              GetInputShapeVec(context, INPUT_WEIGHT_INDEX)},
+                            IntToString<int64_t>)
+                .c_str(),
             FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s multiplied by %s %ld",
-                paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], "x",
-                paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], "filter",
-                "groups", oriShapeAttrInfo.oriGroups).c_str());
+                         paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], "x",
+                         paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], "filter", "groups",
+                         oriShapeAttrInfo.oriGroups)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -172,15 +190,15 @@ void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector
     }
 }
 
-void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag, 
-    ge::Format fMapFormat, bool exendConvFlag, std::vector<std::vector<ge::DataType>>& supportTypes)
+void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag, ge::Format fMapFormat, bool exendConvFlag,
+                           std::vector<std::vector<ge::DataType>>& supportTypes)
 {
     if (exendConvFlag) {
         if (fMapFormat == ge::Format::FORMAT_NCHW &&
             SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW.find(socVersion) != SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW.end()) {
             supportTypes = SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW.at(socVersion);
         } else if (fMapFormat == ge::Format::FORMAT_NHWC &&
-            SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.find(socVersion) != SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.end()) {
+                   SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.find(socVersion) != SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.end()) {
             supportTypes = SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.at(socVersion);
         }
     } else if (quantFlag) {
@@ -223,7 +241,7 @@ void ConvBase::SetBitsFromBool(uint64_t& number, const std::array<bool, UINT64_B
         }
     }
 }
- 
+
 void ConvBase::SetBytesFromUint8(uint64_t& number, const std::array<uint8_t, UINT64_BYTE_COUNT>& bytes) const
 {
     number = static_cast<uint64_t>(0);
@@ -231,15 +249,14 @@ void ConvBase::SetBytesFromUint8(uint64_t& number, const std::array<uint8_t, UIN
         number |= static_cast<uint64_t>(bytes[i]) << (i * BITS_PER_BYTE);
     }
 }
- 
+
 void ConvBase::SetBytesFromUint32(uint64_t& number, uint32_t highPart, uint32_t lowPart) const
 {
     number = (static_cast<uint64_t>(highPart) << UINT32_BIT_COUNT) | lowPart;
 }
 
 void ConvBase::ConvBaseInit(ConvAscendcShapesInfo shapeInfo, ConvAscendcDescInfo descInfo,
-                            ConvAscendcTilingFlag flagInfo, ConvParamInfo paramInfo,
-                            gert::TilingContext* context)
+                            ConvAscendcTilingFlag flagInfo, ConvParamInfo paramInfo, gert::TilingContext* context)
 {
     shapeInfo_ = shapeInfo;
     descInfo_ = descInfo;
@@ -248,28 +265,18 @@ void ConvBase::ConvBaseInit(ConvAscendcShapesInfo shapeInfo, ConvAscendcDescInfo
     context_ = context;
 }
 
-void ConvBase::UpdateFlagInfo(const ConvAscendcTilingFlag& flagInfo)
-{
-    flagInfo_ = flagInfo;
-}
+void ConvBase::UpdateFlagInfo(const ConvAscendcTilingFlag& flagInfo) { flagInfo_ = flagInfo; }
 
-void ConvBase::ConvBaseInitFixpipeInfo(const FixpipeInfo& fixpipeInfo)
-{
-    fixpipeInfo_ = fixpipeInfo;
-}
+void ConvBase::ConvBaseInitFixpipeInfo(const FixpipeInfo& fixpipeInfo) { fixpipeInfo_ = fixpipeInfo; }
 
-void ConvBase::ConvBaseInitOpInfo(const ConvTilingParseInfo* opInfo)
-{
-    opInfo_ = opInfo;
-}
+void ConvBase::ConvBaseInitOpInfo(const ConvTilingParseInfo* opInfo) { opInfo_ = opInfo; }
 
 void ConvBase::ConvBaseInitFeatureFlag(const ConvAscendcFeatureFlag featureFlagInfo)
 {
     featureFlagInfo_ = featureFlagInfo;
 }
 
-void ConvBase::InitGroupInfo(ConvOriGroupInfo convOriGroupInfo,
-                             ConvOptGroupInfo convOptGroupInfo)
+void ConvBase::InitGroupInfo(ConvOriGroupInfo convOriGroupInfo, ConvOptGroupInfo convOptGroupInfo)
 {
     oriGroupInfo_ = convOriGroupInfo;
     optGroupInfo_ = convOptGroupInfo;
@@ -284,24 +291,20 @@ void ConvBase::updatePlatformInfoFromOpInfo()
     platformInfo_.l0cSize = opInfo_->l0cSize;
 }
 
-void ConvBase::SetParams(uint64_t l2Rate)
-{
-    l2Rate_ = l2Rate;
-}
+void ConvBase::SetParams(uint64_t l2Rate) { l2Rate_ = l2Rate; }
 
 ge::graphStatus ConvBase::CheckKernelSplitL1SizeLimitsInHWSplitMode()
 {
     // require hiL1 * wiL1 >= m0
     uint64_t woAL1min = convOpsConstParams_.m0;
     uint64_t wiAL1min = ConvInferWiL1(woAL1min, shapeInfo_.wi, 1, attrInfo_.dilationW, attrInfo_.strideW);
-    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
-                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t hoAL1min = std::min(
+        shapeInfo_.wo < convOpsConstParams_.m0 ? ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, 1, attrInfo_.dilationH, attrInfo_.strideH);
-    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(convOpsConstParams_.k0,
-        convOpsConstParams_.k0, wiAL1min, hiAL1min);
+    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(convOpsConstParams_.k0, convOpsConstParams_.k0,
+                                                                        wiAL1min, hiAL1min);
     if (usdL1SizeUnderMinHWtiling > platformInfo_.l1Size) {
-        OP_LOGE(nodeInfo_.nodeName,
-            "%s AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+        OP_LOGE(nodeInfo_.nodeName, "%s AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
                 nodeInfo_.nodeType.c_str(), usdL1SizeUnderMinHWtiling, platformInfo_.l1Size);
         return ge::GRAPH_FAILED;
     }
@@ -311,30 +314,32 @@ ge::graphStatus ConvBase::CheckKernelSplitL1SizeLimitsInHWSplitMode()
 ge::graphStatus ConvBase::CheckC04L1SizeLimitsInHWSplitMode()
 {
     // c04 require wi fulload L1 if hi > 1
-    uint64_t tempWi = shapeInfo_.hi > 1 ? shapeInfo_.wi : ConvInferWiL1(convOpsConstParams_.m0,
-        shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
-    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
-                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t tempWi = shapeInfo_.hi > 1 ? shapeInfo_.wi :
+                                          ConvInferWiL1(convOpsConstParams_.m0, shapeInfo_.wi, shapeInfo_.kw,
+                                                        attrInfo_.dilationW, attrInfo_.strideW);
+    uint64_t hoAL1min = std::min(
+        shapeInfo_.wo < convOpsConstParams_.m0 ? ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
-    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(C04_CIN_SIZE, ConvAlignB(
-        C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0), tempWi, hiAL1min);
+    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(
+        C04_CIN_SIZE, ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0), tempWi,
+        hiAL1min);
     if (usdL1SizeUnderMinHWtiling > opInfo_->l1Size) {
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: c04 minUsedL1SizeInHWmode: %lu > maxL1Size: %lu, c04 mode cannot be enabled.",
-            context_->GetNodeType(), usdL1SizeUnderMinHWtiling, opInfo_->l1Size);
+                "%s AscendC: c04 minUsedL1SizeInHWmode: %lu > maxL1Size: %lu, c04 mode cannot be enabled.",
+                context_->GetNodeType(), usdL1SizeUnderMinHWtiling, opInfo_->l1Size);
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
- 
+
 ge::graphStatus ConvBase::CheckC04L1SizeLimitsInMsplitMode()
 {
-    uint64_t c04UsdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(C04_CIN_SIZE,
-        ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0));
+    uint64_t c04UsdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(
+        C04_CIN_SIZE, ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0));
     if (c04UsdL1SizeUnderMinMtiling > opInfo_->l1Size) {
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: c04 minUsedL1SizeInMmode: %lu > maxL1Size: %lu, c04 mode cannot be enabled.",
-            context_->GetNodeType(), c04UsdL1SizeUnderMinMtiling, opInfo_->l1Size);
+                "%s AscendC: c04 minUsedL1SizeInMmode: %lu > maxL1Size: %lu, c04 mode cannot be enabled.",
+                context_->GetNodeType(), c04UsdL1SizeUnderMinMtiling, opInfo_->l1Size);
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -342,10 +347,9 @@ ge::graphStatus ConvBase::CheckC04L1SizeLimitsInMsplitMode()
 
 bool ConvBase::IsFp32InputFp32Output()
 {
-    bool ret = descInfo_.fMapDtype == ge::DataType::DT_FLOAT &&
-        descInfo_.weightDtype == ge::DataType::DT_FLOAT &&
-        descInfo_.outDtype == ge::DataType::DT_FLOAT;
- 
+    bool ret = descInfo_.fMapDtype == ge::DataType::DT_FLOAT && descInfo_.weightDtype == ge::DataType::DT_FLOAT &&
+               descInfo_.outDtype == ge::DataType::DT_FLOAT;
+
     if (flagInfo_.hasBias && ret) {
         ret = descInfo_.biasDtype == ge::DataType::DT_FLOAT;
     }
@@ -365,8 +369,8 @@ void ConvBase::GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32
     hf32Mode = static_cast<uint32_t>(*enableHf32Ptr ? 1 : 0);
 }
 
-void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag,
-    std::stringstream& ss, std::vector<std::vector<ge::Format>>& supportFormats)
+void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, std::stringstream& ss,
+                                   std::vector<std::vector<ge::Format>>& supportFormats)
 {
     const std::string& nodeType = context_->GetNodeType();
     bool extendConvFlag = nodeType == "ExtendConv2D";
@@ -377,8 +381,8 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag,
             supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST;
         } else if (quantFlag) {
             supportFormats = is2dFlag ? SUPPORT_QUANT_CONV2D_FORMAT_LIST : SUPPORT_QUANT_CONV3D_FORMAT_LIST;
-        } else if (!quantFlag &&
-            (descInfo_.fMapDtype != ge::DataType::DT_HIFLOAT8 || descInfo_.weightDtype != ge::DataType::DT_HIFLOAT8)) {
+        } else if (!quantFlag && (descInfo_.fMapDtype != ge::DataType::DT_HIFLOAT8 ||
+                                  descInfo_.weightDtype != ge::DataType::DT_HIFLOAT8)) {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST : SUPPORT_CONV3D_FORMAT_LIST;
         } else {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
@@ -395,30 +399,32 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag,
     ss << VectorsToString(supportFormats, GeFormatToString);
 }
 
-bool ConvBase::CheckValidString(const string &inputStr, const gert::TilingContext* context) const
+bool ConvBase::CheckValidString(const string& inputStr, const gert::TilingContext* context) const
 {
     if (inputStr.empty()) {
         return true;
     }
 
     if (inputStr.size() > MAX_STR_LEN) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeType(), "round_mode",
-            inputStr.c_str(),
-            FormatString("The string length %zu of this parameter exceeds the maximum value %zu",
-                inputStr.size(), MAX_STR_LEN).c_str()
-        );
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeType(), "round_mode", inputStr.c_str(),
+            FormatString("The string length %zu of this parameter exceeds the maximum value %zu", inputStr.size(),
+                         MAX_STR_LEN)
+                .c_str());
         return false;
     }
     for (char c : inputStr) {
         if (!std::isalnum(c) && c != '_') {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeType(), "round_mode", inputStr.c_str(), FormatString(
-                "The parameter value contains invalid character '%c'. Only '0-9', 'a-z', 'A-Z' and '_' is supported",
-                c).c_str());
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeType(), "round_mode", inputStr.c_str(),
+                                                  FormatString("The parameter value contains invalid character '%c'. "
+                                                               "Only '0-9', 'a-z', 'A-Z' and '_' is supported",
+                                                               c)
+                                                      .c_str());
             return false;
         }
     }
 
     return true;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

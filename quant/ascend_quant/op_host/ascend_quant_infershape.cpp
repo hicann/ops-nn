@@ -21,10 +21,7 @@ using namespace ge;
 namespace ops {
 constexpr size_t ATTR_INDEX_OF_DST_TYPE = 4;
 
-static ge::graphStatus InferShape4AscendQuant(gert::InferShapeContext* context)
-{
-    return InferShape4Elewise(context);
-}
+static ge::graphStatus InferShape4AscendQuant(gert::InferShapeContext* context) { return InferShape4Elewise(context); }
 
 static ge::graphStatus InferDataTypeForAscendQuant(gert::InferDataTypeContext* context)
 {

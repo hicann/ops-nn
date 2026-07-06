@@ -43,8 +43,7 @@ private:
     __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
     __aicore__ inline void SingleTensorProcess(int64_t dataCount);
     __aicore__ inline void CopyIn(uint16_t index, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void ComputeAndCopyOut(
-        uint16_t index, int64_t dataCount, bool isRemainder);
+    __aicore__ inline void ComputeAndCopyOut(uint16_t index, int64_t dataCount, bool isRemainder);
     __aicore__ inline __gm__ T_in* GetInputTensorAddr(uint16_t index, GM_ADDR tensorPtr);
     __aicore__ inline __gm__ T_out* GetOutputTensorAddr(uint16_t index, GM_ADDR tensorPtr);
 
@@ -71,8 +70,8 @@ private:
 };
 
 template <typename T_in, typename T_out>
-__aicore__ inline void ForeachCastND<T_in, T_out>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachCastND<T_in, T_out>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                        const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     inTensorsPtr = x;
@@ -153,8 +152,8 @@ __aicore__ inline void ForeachCastND<T_in, T_out>::CopyIn(uint16_t index, int64_
 }
 
 template <typename T_in, typename T_out>
-__aicore__ inline void ForeachCastND<T_in, T_out>::ComputeAndCopyOut(
-    uint16_t index, int64_t dataCount, bool isRemainder)
+__aicore__ inline void ForeachCastND<T_in, T_out>::ComputeAndCopyOut(uint16_t index, int64_t dataCount,
+                                                                     bool isRemainder)
 {
     LocalTensor<T_in> dataLocal = dataQueue.DeQue<T_in>();
     LocalTensor<T_out> outLocal = outQueue.AllocTensor<T_out>();

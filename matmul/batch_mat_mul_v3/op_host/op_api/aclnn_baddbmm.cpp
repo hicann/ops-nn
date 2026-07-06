@@ -39,9 +39,8 @@ static const int32_t FIRST_DIM = 0;
 static const int32_t PENULTIMATE_DIM = 2;
 static const int32_t LAST_DIM = 1;
 
-static inline bool CheckInputNotNull(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha)
+static inline bool CheckInputNotNull(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                     const aclScalar* beta, const aclScalar* alpha)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(batch1, return false);
@@ -58,10 +57,10 @@ static inline bool CheckOutputNotNull(const aclTensor* out)
 }
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> dtypeSupportList = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> dtypeSupportList = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                     op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {op::DataType::DT_FLOAT,
+                                                                                op::DataType::DT_FLOAT16};
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
@@ -81,10 +80,9 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     const op::Shape batch2 = batch2Tensor->GetViewShape();
     // batch1DimNum - LAST_DIM means the last element, batch2DimNum - PENULTIMATE_DIM means the penultimate element
     if (batch1[batch1DimNum - LAST_DIM] != batch2[batch2DimNum - PENULTIMATE_DIM]) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "batch1's last dim and batch2's penultimate dim shoule be same, batch1 [%ld], batch2 [%ld].",
-            batch1[batch1DimNum - LAST_DIM], batch2[batch2DimNum - PENULTIMATE_DIM]);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "batch1's last dim and batch2's penultimate dim shoule be same, batch1 [%ld], batch2 [%ld].",
+                batch1[batch1DimNum - LAST_DIM], batch2[batch2DimNum - PENULTIMATE_DIM]);
         return false;
     }
 
@@ -96,24 +94,23 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     // check self is empty or not
     bool selfIsEmpty = selfTensor->IsEmpty();
     // check batch1@batch2 is empty or not
-    bool matIsEmpty =
-        (batch1[FIRST_DIM] == 0 || batch1[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 || batch2[SHAPE_LIMIT - LAST_DIM] == 0) ?
-            true :
-            false;
+    bool matIsEmpty = (batch1[FIRST_DIM] == 0 || batch1[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 ||
+                       batch2[SHAPE_LIMIT - LAST_DIM] == 0) ?
+                          true :
+                          false;
 
     if ((selfIsEmpty && !matIsEmpty) || (!selfIsEmpty && matIsEmpty)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "self and batch1@batch2 should be both empty tensors, or not, self is [%d], batch1@batch2 is [%d].",
-            selfIsEmpty, matIsEmpty);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "self and batch1@batch2 should be both empty tensors, or not, self is [%d], batch1@batch2 is [%d].",
+                selfIsEmpty, matIsEmpty);
         return false;
     }
 
     return true;
 }
 
-static bool CheckBroadCast(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclTensor* out)
+static bool CheckBroadCast(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                           const aclTensor* out)
 {
     op::Shape broadcastShape;
     op::Shape bmmShape = {(batch1->GetViewShape())[0], (batch1->GetViewShape())[1], (batch2->GetViewShape())[2]};
@@ -128,9 +125,8 @@ static bool CheckBroadCast(
     }
 
     if (broadcastShape != out->GetViewShape()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
         return false;
     }
 
@@ -138,10 +134,9 @@ static bool CheckBroadCast(
         (broadcastShape[SHAPE_LIMIT - PENULTIMATE_DIM] != 1 &&
          (batch1->GetViewShape())[SHAPE_LIMIT - PENULTIMATE_DIM] == 1) ||
         (broadcastShape[SHAPE_LIMIT - LAST_DIM] != 1 && (batch2->GetViewShape())[SHAPE_LIMIT - LAST_DIM] == 1)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "batch1@batch2's shape should be same with broadcastShape, broadcastShape [%s], bmmShape [%s]",
-            op::ToString(broadcastShape).GetString(), op::ToString(bmmShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "batch1@batch2's shape should be same with broadcastShape, broadcastShape [%s], bmmShape [%s]",
+                op::ToString(broadcastShape).GetString(), op::ToString(bmmShape).GetString());
         return false;
     }
 
@@ -151,11 +146,10 @@ static bool CheckBroadCast(
 static inline bool CheckFormat(const aclTensor* batch1, const aclTensor* batch2, const aclTensor* out)
 {
     if (batch1->GetViewFormat() != batch2->GetViewFormat() || batch1->GetViewFormat() != out->GetViewFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Format of all input and output should be equal, batch1 [%s], batch2 [%s], out [%s].",
-            op::ToString(batch1->GetViewFormat()).GetString(), op::ToString(batch2->GetViewFormat()).GetString(),
-            op::ToString(out->GetViewFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format of all input and output should be equal, batch1 [%s], batch2 [%s], out [%s].",
+                op::ToString(batch1->GetViewFormat()).GetString(), op::ToString(batch2->GetViewFormat()).GetString(),
+                op::ToString(out->GetViewFormat()).GetString());
         return false;
     }
     return true;
@@ -169,9 +163,9 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-static aclnnStatus CheckInputParams(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, const aclTensor* out, int8_t cubeMathType)
+static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                    const aclScalar* beta, const aclScalar* alpha, const aclTensor* out,
+                                    int8_t cubeMathType)
 {
     // 1. 检查输入、输出参数是否为空指针
     CHECK_RET(CheckInputNotNull(self, batch1, batch2, beta, alpha), ACLNN_ERR_PARAM_NULLPTR);
@@ -192,7 +186,7 @@ static aclnnStatus CheckInputParams(
     CHECK_RET(CheckFormat(batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
 
     // 6. 检查cubeMathType是否支持
- 	CHECK_RET(CheckCubeMathTypeForAddMm(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckCubeMathTypeForAddMm(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -200,8 +194,7 @@ static aclnnStatus CheckInputParams(
 // 对于一个 [B, M, N] 的 batch，batch1 的 B 或 M 为 0；或者 batch2 的 N 为 0
 static inline bool isProcessEmptyTensor(const aclTensor* batch1, const aclTensor* batch2)
 {
-    return (batch1->GetViewShape())[FIRST_DIM] == 0 ||
-           (batch1->GetViewShape())[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 ||
+    return (batch1->GetViewShape())[FIRST_DIM] == 0 || (batch1->GetViewShape())[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 ||
            (batch2->GetViewShape())[SHAPE_LIMIT - LAST_DIM] == 0;
 }
 
@@ -218,15 +211,14 @@ static const aclTensor* bmmProcessEmptyTensor(const aclTensor* self, const aclTe
     return out;
 }
 
-class BaddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl{
+class BaddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
         if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
@@ -241,14 +233,15 @@ public:
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // mulOut = bmmOut * alpha
         const aclTensor* mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
-            l0op::MulsInplace(bmmOut, alpha->ToFloat(), executor) :
-            l0op::Muls(bmmOut, alpha->ToFloat(), executor);
+                                      l0op::MulsInplace(bmmOut, alpha->ToFloat(), executor) :
+                                      l0op::Muls(bmmOut, alpha->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = mulOut;
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 固定写法，将计算结果转换成输出output的数据类型
         convOut = l0op::Cast(convOut, output->GetDataType(), executor);
         CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -261,15 +254,14 @@ public:
     ~BaddbmmBeta0Graph() override = default;
 };
 
-class BaddbmmMatmulGraph : public Ops::NN::MatmulGraphImpl{
+class BaddbmmMatmulGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // check iterBatch with add -> fusedMatmul
         bool isNeedSwapInnerTwoDim = false;
         if (checkFusedmm(bias, matA, matB, alpha, beta, cubeMathType, isNeedSwapInnerTwoDim)) {
@@ -278,14 +270,14 @@ public:
             convOut = bmmOut;
             return ACLNN_SUCCESS;
         }
-        bool enable16In32Out = NeedEnableFp32Output(
-            matA->GetDataType(), matB->GetDataType(), output->GetDataType(), cubeMathType);
+        bool enable16In32Out = NeedEnableFp32Output(matA->GetDataType(), matB->GetDataType(), output->GetDataType(),
+                                                    cubeMathType);
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
         if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
             (enable16In32Out && !needBroadcast && (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201))) {
-            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB,
-                                                                alpha, beta, executor, enable16In32Out);
+            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor,
+                                                                enable16In32Out);
             CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = bmmOut;
             return ACLNN_SUCCESS;
@@ -321,22 +313,25 @@ public:
         if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
             // alpha == 1
             // addOut = mulOutCasted + bmmOutCasted
-            addOut = reinterpret_cast<void*>(l0op::AddInplace) != nullptr && !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape() ?
-                l0op::AddInplace(mulOutCasted, bmmOutCasted, executor) :
-                l0op::Add(mulOutCasted, bmmOutCasted, executor);
+            addOut = reinterpret_cast<void*>(l0op::AddInplace) != nullptr && !isInplace &&
+                             output->GetViewShape() == bmmOutCasted->GetViewShape() ?
+                         l0op::AddInplace(mulOutCasted, bmmOutCasted, executor) :
+                         l0op::Add(mulOutCasted, bmmOutCasted, executor);
         } else {
             // alpha != 1
             // addOut = mulOutCasted + bmmOutCasted * alpha
-            addOut = reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape() ?
-                l0op::AxpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
-                l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
+            addOut = reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && !isInplace &&
+                             output->GetViewShape() == bmmOutCasted->GetViewShape() ?
+                         l0op::AxpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
+                         l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
         }
         CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = addOut;
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 固定写法，将计算结果转换成输出output的数据类型
         convOut = l0op::Cast(convOut, output->GetDataType(), executor);
         CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -350,15 +345,17 @@ public:
 };
 
 // 创建计算图
-std::shared_ptr<MatmulGraphImpl> CreateBaddbmmGraphImpl(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta, const aclScalar* alpha,
-    aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+std::shared_ptr<MatmulGraphImpl> CreateBaddbmmGraphImpl(const aclTensor* self, const aclTensor* batch1,
+                                                        const aclTensor* batch2, const aclScalar* beta,
+                                                        const aclScalar* alpha, aclTensor* out, int8_t cubeMathType,
+                                                        aclOpExecutor* executor)
 {
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
 
     // beta == 0
     if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
-        matmulGraph = std::make_shared<BaddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        matmulGraph = std::make_shared<BaddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
+                                                          executor);
         return matmulGraph;
     }
 
@@ -368,15 +365,16 @@ std::shared_ptr<MatmulGraphImpl> CreateBaddbmmGraphImpl(
 }
 } // namespace
 
-aclnnStatus aclnnBaddbmmGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBaddbmmGetWorkspaceSize(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                         const aclScalar* beta, const aclScalar* alpha, aclTensor* out,
+                                         int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnBaddbmm, DFX_IN(self, batch1, batch2, beta, alpha, cubeMathType), DFX_OUT(out));
     // 参数检查
     auto ret = CheckInputParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    CHECK_RET(Check16In32OutWithBiasValid(batch1->GetDataType(), batch2->GetDataType(), out->GetDataType(), self), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(Check16In32OutWithBiasValid(batch1->GetDataType(), batch2->GetDataType(), out->GetDataType(), self),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -400,7 +398,8 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     }
 
     // 根据不同的输入选择不同的计算图
-    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateBaddbmmGraphImpl(self, batch1, batch2, beta, alpha, out, cubeMathType, uniqueExecutor.get());
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateBaddbmmGraphImpl(self, batch1, batch2, beta, alpha, out,
+                                                                          cubeMathType, uniqueExecutor.get());
     CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行计算图
@@ -421,13 +420,13 @@ aclnnStatus aclnnBaddbmm(void* workspace, uint64_t workspaceSize, aclOpExecutor*
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceBaddbmmGetWorkspaceSize(
-    const aclTensor* selfRef, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceBaddbmmGetWorkspaceSize(const aclTensor* selfRef, const aclTensor* batch1,
+                                                const aclTensor* batch2, const aclScalar* beta, const aclScalar* alpha,
+                                                int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     auto out = const_cast<aclTensor*>(selfRef);
-    return aclnnBaddbmmGetWorkspaceSize(
-        selfRef, batch1, batch2, beta, alpha, out, cubeMathType, workspaceSize, executor);
+    return aclnnBaddbmmGetWorkspaceSize(selfRef, batch1, batch2, beta, alpha, out, cubeMathType, workspaceSize,
+                                        executor);
 }
 
 aclnnStatus aclnnInplaceBaddbmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)

@@ -73,45 +73,43 @@ constexpr CubeFormat format_y = CubeFormat::NZ;
 constexpr CubeFormat format_y = CubeFormat::ND;
 #endif
 
-#define MMV3_IMPL_CLASS_TRANS(tilingData, tilingGM, transA, transB, workspace, templateClass, ...)     \
-    do {                                                                                               \
-        uint64_t tilingdata_offset =                                                                   \
-            (sizeof(MatMulV3TilingData) > TILINGDATA_OFFSET) ?                                         \
-                0 :                                                                                    \
-                MMV3DivFloor(GetCurrentBlockIdx(), MMV3DivCeil(GetBlockNum(), TILINGDATA_SPLIT_NUM)) * \
-                    TILINGDATA_OFFSET;                                                                 \
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3TilingData, tilingData, tilingGM + tilingdata_offset);     \
-        using cType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_Y>;                     \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;               \
-        TPipe pipe;                                                                                    \
-        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;                 \
-        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;                 \
-        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                  \
-        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, workspace, &tilingData, &pipe);                      \
-        op.Process();                                                                                  \
+#define MMV3_IMPL_CLASS_TRANS(tilingData, tilingGM, transA, transB, workspace, templateClass, ...)        \
+    do {                                                                                                  \
+        uint64_t tilingdata_offset = (sizeof(MatMulV3TilingData) > TILINGDATA_OFFSET) ?                   \
+                                         0 :                                                              \
+                                         MMV3DivFloor(GetCurrentBlockIdx(),                               \
+                                                      MMV3DivCeil(GetBlockNum(), TILINGDATA_SPLIT_NUM)) * \
+                                             TILINGDATA_OFFSET;                                           \
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3TilingData, tilingData, tilingGM + tilingdata_offset);        \
+        using cType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_Y>;                        \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                  \
+        TPipe pipe;                                                                                       \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;                    \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;                    \
+        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                     \
+        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, workspace, &tilingData, &pipe);                         \
+        op.Process();                                                                                     \
     } while (0)
-template <
-    int8_t API_LEVEL, int8_t A_TRANS, int8_t B_TRANS, int8_t BATCH_MODEL, int8_t MODEL, int8_t FULL_LOAD,
-    int8_t L0C2OUT_MODEL>
-__global__ __aicore__ void mat_mul_v3(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+template <int8_t API_LEVEL, int8_t A_TRANS, int8_t B_TRANS, int8_t BATCH_MODEL, int8_t MODEL, int8_t FULL_LOAD,
+          int8_t L0C2OUT_MODEL>
+__global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM,
+                                      GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     AscendC::InitSocState();
     constexpr bool aTran = (A_TRANS == 1);
     constexpr bool bTran = (B_TRANS == 1);
 
     using aLayout = std::conditional_t<aTran, layout::ColumnMajor, layout::RowMajor>;
-    using bLayout = std::conditional_t<
-        (format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
-        std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>>;
+    using bLayout = std::conditional_t<(format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
+                                       std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>>;
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && IS_BLAZE
     using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
     using layoutB = AscendC::Std::conditional_t<
         bTran,
-        AscendC::Std::conditional_t<
-            (format_x2 == CubeFormat::NZ), AscendC::Te::ZNLayoutPtn, AscendC::Te::DNExtLayoutPtn>,
-        AscendC::Std::conditional_t<
-            (format_x2 == CubeFormat::NZ), AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn>>;
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::ZNLayoutPtn,
+                                    AscendC::Te::DNExtLayoutPtn>,
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::NZLayoutPtn,
+                                    AscendC::Te::NDExtLayoutPtn>>;
     // C GM layout
     using layoutC = AscendC::Te::NDExtLayoutPtn;
 #endif
@@ -119,30 +117,25 @@ __global__ __aicore__ void mat_mul_v3(
     REGISTER_TILING_DEFAULT(MatMulV3TilingDataCopy);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
 
-    if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-        (MODEL == MAT_MUL_BASIC || MODEL == MAT_MUL_SLICE) && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板基础API
+    if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                  (MODEL == MAT_MUL_BASIC || MODEL == MAT_MUL_SLICE) &&
+                  L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板基础API
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // B全载基础API
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // B全载基础API
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, B_FULL_LOAD_MODE>(
-            aGM, bGM, biasGM, cGM, nullptr, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_A_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // A全载基础API
+        MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                                          B_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM, nullptr, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_A_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // A全载基础API
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, A_FULL_LOAD_MODE>(
-            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+        MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                                          A_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
-    } else if (
-        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非全载TensorAPI
+    } else if (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
+               L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非全载TensorAPI
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
         MatmulV3Advanced::MatMulBasicKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC>(
@@ -151,107 +144,88 @@ __global__ __aicore__ void mat_mul_v3(
         MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #endif
-    } else if (
-        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_SLICE &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非连续Slice场景TensorAPI
+    } else if (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_SLICE &&
+               L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非连续Slice场景TensorAPI
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
         // Layout：左矩阵3D 右矩阵2D 实现
-        MatmulV3Advanced::MatMulBasicKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC, 0, 0, 1>(
-            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+        MatmulV3Advanced::MatMulBasicKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC, 0, 0,
+                                            1>(aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #else
         MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #endif
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_STREAM_K && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
-        MatmulV3Advanced::MatMulStreamKKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, Blaze::Gemm::MatMulL0C2Out::ON_THE_FLY>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+        MatmulV3Advanced::MatMulStreamKKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                              Blaze::Gemm::MatMulL0C2Out::ON_THE_FLY>(aGM, bGM, biasGM, cGM,
+                                                                                      workspaceGM, tilingData);
 #else
-        MatMulStreamKActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ON_THE_FLY>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                               MatMulL0C2Out::ON_THE_FLY>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
 #endif
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
-        L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_STREAM_K && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
-        MatmulV3Advanced::MatMulStreamKKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, Blaze::Gemm::MatMulL0C2Out::ND_FIXPIPE_1_2>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+        MatmulV3Advanced::MatMulStreamKKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                              Blaze::Gemm::MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM,
+                                                                                          workspaceGM, tilingData);
 #else
-        MatMulStreamKActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                               MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
 #endif
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_STREAM_K && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatMulStreamKActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ON_THE_FLY>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
-        L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                               MatMulL0C2Out::ON_THE_FLY>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_STREAM_K && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatMulStreamKActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_K_EQUAL_ZERO &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                               MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_K_EQUAL_ZERO && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         TPipe pipe;
         GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulInputKEqZeroClearOutput(biasGM, cGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp16场景act kernel
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC &&
+                         L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp16场景act kernel
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, B_FULL_LOAD_MODE>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) {
+        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
+                                                     layout::RowMajor, B_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM,
+                                                                                         workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
+                                                     layout::RowMajor>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp32场景切换act kernel
+        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
+                                                     layout::RowMajor>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC &&
+                         L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp32场景切换act kernel
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, B_FULL_LOAD_MODE>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_TO_MUL &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
+                                                     layout::RowMajor, B_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM,
+                                                                                         workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_TO_MUL && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         GET_TILING_DATA_WITH_STRUCT(MatMulToMulBasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulToMulActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_TO_MULTI_MUL &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        MatmulV3Advanced::MatMulToMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
+                                               layout::RowMajor>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_TO_MULTI_MUL && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         GET_TILING_DATA_WITH_STRUCT(MatMulToVectorBasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulToVectorActKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+        MatmulV3Advanced::MatMulToVectorActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
+                                                  layout::RowMajor>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
 #endif
     }
 }

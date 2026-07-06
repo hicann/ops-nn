@@ -29,15 +29,15 @@ namespace l0op {
 
 OP_TYPE_REGISTER(IndexCheck);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT64, op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
+                                                                              op::DataType::DT_INT32};
 
 static bool IsAiCoreSupport(const aclTensorList* indices)
 {
     for (size_t i = 0; i < indices->Size(); i++) {
         if (!CheckType((*indices)[i]->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
             OP_LOGW("Tensor indices not implemented for %s, should be in dtype support list %s.",
-                    op::ToString((*indices)[i]->GetDataType()).GetString(), 
+                    op::ToString((*indices)[i]->GetDataType()).GetString(),
                     op::ToString(AICORE_DTYPE_SUPPORT_LIST).GetString());
             return false;
         }
@@ -45,8 +45,7 @@ static bool IsAiCoreSupport(const aclTensorList* indices)
     return true;
 }
 
-void IndexCheck(
-    const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor)
+void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
@@ -71,14 +70,10 @@ void IndexCheck(
 
     L0_DFX(IndexCheck, bounds, indices);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        IndexCheck, 
-        OP_INPUT(bounds, indices)
-    );
-    
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexCheckAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexCheck, OP_INPUT(bounds, indices));
+
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexCheckAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return );
 }
 
 } // namespace l0op

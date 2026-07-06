@@ -22,8 +22,8 @@ static const size_t ATTR_INDEX_OF_DST_TYPE = 0;
 static const size_t ATTR_INDEX_OF_QUANT_MODE = 2;
 static constexpr uint32_t OUTPUT_NUM_DYNAMIC_QUANT_V2 = 3;
 static const uint32_t PER_CHANNEL_EXCLUDE_AXES_NUM = 2;
-static const std::initializer_list<ge::DataType> DYNAMIC_QUANT_V2_OUT_TYPE_LIST = {
-    DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
+static const std::initializer_list<ge::DataType> DYNAMIC_QUANT_V2_OUT_TYPE_LIST = {DT_INT8, DT_INT4, DT_HIFLOAT8,
+                                                                                   DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
 
 static ge::graphStatus CheckComputeNodeNumMerged(const gert::InferShapeContext* context)
 {
@@ -115,7 +115,8 @@ static ge::graphStatus DynamicQuantV2InferDataType(gert::InferDataTypeContext* c
             OP_CHECK_IF(
                 std::find(DYNAMIC_QUANT_V2_OUT_TYPE_LIST.begin(), DYNAMIC_QUANT_V2_OUT_TYPE_LIST.end(), yDtype) ==
                     DYNAMIC_QUANT_V2_OUT_TYPE_LIST.end(),
-                OP_LOGE(context,
+                OP_LOGE(
+                    context,
                     "attr dst_type only support 2(int8), 29(int4), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
                 return ge::GRAPH_FAILED);
         }

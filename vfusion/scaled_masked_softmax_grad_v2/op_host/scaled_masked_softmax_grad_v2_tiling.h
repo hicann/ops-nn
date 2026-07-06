@@ -47,8 +47,7 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScaledMaskedSoftmaxGradV2, ScaledMaskedSoftmaxGradV2TilingData)
 
-struct ScaledMaskedSoftmaxGradV2CompileInfo {
-};
+struct ScaledMaskedSoftmaxGradV2CompileInfo {};
 
 } // namespace optiling
 

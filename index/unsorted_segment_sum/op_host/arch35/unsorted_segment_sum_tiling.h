@@ -41,13 +41,10 @@ REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum, UnsortedSegmentSumTilingData);
 
 ge::graphStatus Tiling4UnsortedSegmentSumForAscendC(gert::TilingContext* context);
 
-class UnsortedSegmentSumBaseTiling : public TilingBaseClass
-{
+class UnsortedSegmentSumBaseTiling : public TilingBaseClass {
 public:
-    explicit UnsortedSegmentSumBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~UnsortedSegmentSumBaseTiling() override
-    {}
+    explicit UnsortedSegmentSumBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~UnsortedSegmentSumBaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -58,15 +55,14 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    void DumpTilingInfo() override
-    {}
+    void DumpTilingInfo() override {}
     ge::graphStatus CheckInputDtype();
     bool ShapeStartsWith(const gert::Shape shape, const gert::Shape prefix);
     std::tuple<int64_t, int64_t> FlatInput(const gert::Shape shape, const gert::Shape prefix);
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     std::set<uint64_t> FindUniqueCut(uint64_t usedCoreNum);
-    std::tuple<uint64_t, uint64_t> AutoTiling(
-        uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize, bool colTileNumMin = false);
+    std::tuple<uint64_t, uint64_t> AutoTiling(uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize,
+                                              bool colTileNumMin = false);
     ge::graphStatus GetCastType();
 
 public:
@@ -88,7 +84,7 @@ public:
     ge::DataType idType_ = ge::DT_UNDEFINED;
     ge::DataType indicesCastDtype_ = ge::DT_UNDEFINED;
     uint64_t indicesCastDtypeSize_ = 0;
-    uint64_t indicesCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
+    uint64_t indicesCastMode_ = 0; // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
 
     uint64_t usrWorkspaceSize_ = 0;
 };

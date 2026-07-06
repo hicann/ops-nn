@@ -25,15 +25,9 @@
 
 class DataFormatDimMapInferShapeUTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DataFormatDimMapInferShapeUTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DataFormatDimMapInferShapeUTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DataFormatDimMapInferShapeUTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DataFormatDimMapInferShapeUTest TearDown" << std::endl; }
 };
 
 TEST_F(DataFormatDimMapInferShapeUTest, data_format_dim_map_infershape_1d)

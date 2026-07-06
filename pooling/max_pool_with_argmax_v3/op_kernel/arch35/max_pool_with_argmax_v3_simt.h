@@ -30,7 +30,8 @@ namespace SimtProc {
 constexpr static uint32_t THREAD_DIM = 256;
 
 template <typename idx_accscalar_t>
-__simt_callee__ __aicore__ inline static void CycleUpdate(float val, idx_accscalar_t idxOffset, float* maxval, idx_accscalar_t* maxidx)
+__simt_callee__ __aicore__ inline static void CycleUpdate(float val, idx_accscalar_t idxOffset, float* maxval,
+                                                          idx_accscalar_t* maxidx)
 {
     if ((static_cast<float>(val) > *maxval) || isnan(val)) {
         *maxidx = idxOffset;
@@ -70,8 +71,8 @@ private:
 };
 
 template <typename VALUE_T, typename INDICES_T, int Format_T, bool useINT64Index>
-__aicore__ inline void MaxPoolWithArgmaxV3<VALUE_T, INDICES_T, Format_T, useINT64Index>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR argmax)
+__aicore__ inline void MaxPoolWithArgmaxV3<VALUE_T, INDICES_T, Format_T, useINT64Index>::Init(GM_ADDR x, GM_ADDR y,
+                                                                                              GM_ADDR argmax)
 {
     x_.SetGlobalBuffer((__gm__ VALUE_T*)(x));
     y_.SetGlobalBuffer((__gm__ VALUE_T*)(y));
@@ -98,10 +99,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolFor
         idx_accscalar_t nxc = index / outputWidth / outputHeight;
         idx_accscalar_t hstart = ph * strideH - padH;
         idx_accscalar_t wstart = pw * strideW - padW;
-        idx_accscalar_t hend =
-            (hstart + (kernelH - 1) * dilationH + 1) < height ? (hstart + (kernelH - 1) * dilationH + 1) : height;
-        idx_accscalar_t wend =
-            (wstart + (kernelW - 1) * dilationW + 1) < width ? (wstart + (kernelW - 1) * dilationW + 1) : width;
+        idx_accscalar_t hend = (hstart + (kernelH - 1) * dilationH + 1) < height ?
+                                   (hstart + (kernelH - 1) * dilationH + 1) :
+                                   height;
+        idx_accscalar_t wend = (wstart + (kernelW - 1) * dilationW + 1) < width ?
+                                   (wstart + (kernelW - 1) * dilationW + 1) :
+                                   width;
         while (hstart < 0)
             hstart += dilationH;
         while (wstart < 0)
@@ -136,10 +139,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolFor
         idx_accscalar_t n = index / channels / outputWidth / outputHeight;
         idx_accscalar_t hstart = ph * strideH - padH;
         idx_accscalar_t wstart = pw * strideW - padW;
-        idx_accscalar_t hend =
-            (hstart + (kernelH - 1) * dilationH + 1) < height ? (hstart + (kernelH - 1) * dilationH + 1) : height;
-        idx_accscalar_t wend =
-            (wstart + (kernelW - 1) * dilationW + 1) < width ? (wstart + (kernelW - 1) * dilationW + 1) : width;
+        idx_accscalar_t hend = (hstart + (kernelH - 1) * dilationH + 1) < height ?
+                                   (hstart + (kernelH - 1) * dilationH + 1) :
+                                   height;
+        idx_accscalar_t wend = (wstart + (kernelW - 1) * dilationW + 1) < width ?
+                                   (wstart + (kernelW - 1) * dilationW + 1) :
+                                   width;
         while (hstart < 0)
             hstart += dilationH;
         while (wstart < 0)
@@ -187,8 +192,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3<VALUE_T, INDICES_T, Format_T, useINT6
     int64_t count = nbatch * inputChannel * outputHeight * outputWidth;
     if constexpr (Format_T == 0 && !useINT64Index) {
         asc_vf_call<MaxPoolForwardNchw<VALUE_T, INDICES_T, int32_t>>(
-            dim3(SimtProc::THREAD_DIM), count, inputData, inputHeight, inputWidth, outputHeight, outputWidth, kH,
-            kW, dH, dW, padH, padW, dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_);
+            dim3(SimtProc::THREAD_DIM), count, inputData, inputHeight, inputWidth, outputHeight, outputWidth, kH, kW,
+            dH, dW, padH, padW, dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_);
     } else if constexpr (Format_T == 1 && !useINT64Index) {
         asc_vf_call<MaxPoolForwardNhwc<VALUE_T, INDICES_T, int32_t>>(
             dim3(SimtProc::THREAD_DIM), count, inputData, inputChannel, inputHeight, inputWidth, outputHeight,
@@ -196,8 +201,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3<VALUE_T, INDICES_T, Format_T, useINT6
             blockNum_);
     } else if constexpr (Format_T == 0 && useINT64Index) {
         asc_vf_call<MaxPoolForwardNchw<VALUE_T, INDICES_T, int64_t>>(
-            dim3(SimtProc::THREAD_DIM), count, inputData, inputHeight, inputWidth, outputHeight, outputWidth, kH,
-            kW, dH, dW, padH, padW, dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_);
+            dim3(SimtProc::THREAD_DIM), count, inputData, inputHeight, inputWidth, outputHeight, outputWidth, kH, kW,
+            dH, dW, padH, padW, dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_);
     } else if constexpr (Format_T == 1 && useINT64Index) {
         asc_vf_call<MaxPoolForwardNhwc<VALUE_T, INDICES_T, int64_t>>(
             dim3(SimtProc::THREAD_DIM), count, inputData, inputChannel, inputHeight, inputWidth, outputHeight,

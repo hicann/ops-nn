@@ -19,8 +19,7 @@
 #include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 
-namespace optiling
-{
+namespace optiling {
 
 struct QuantUpdateScatterCompileInfo {
     int64_t coreNum;
@@ -61,10 +60,9 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(QuantUpdateScatter, QuantUpdateScatterTilingData)
 
-class QuantUpdateScatterRegbaseTiling
-{
+class QuantUpdateScatterRegbaseTiling {
 public:
-    explicit QuantUpdateScatterRegbaseTiling(gert::TilingContext* context) : context_(context) {};
+    explicit QuantUpdateScatterRegbaseTiling(gert::TilingContext* context) : context_(context){};
     ge::graphStatus DoTiling();
 
 private:
@@ -120,7 +118,7 @@ private:
     int64_t updateDtypeSize_{0};
     int64_t quantScalesDtypeSize_{0};
     int64_t quantZeroPointsDtypeSize_{0};
-    
+
     int64_t actualCoreNum_{0};
     int64_t indicesShapeRank_{0};
     int64_t ubSize_{0};
@@ -162,8 +160,7 @@ private:
     ge::graphStatus MergeDims();
     ge::graphStatus VerifyTilingParams() const;
     void PrintDebugInfo();
-
 };
 
-}  // namespace optiling
-#endif  // CANN_QUANT_UPDATE_SCATTER_REGBASE_TILING_H_
+} // namespace optiling
+#endif // CANN_QUANT_UPDATE_SCATTER_REGBASE_TILING_H_

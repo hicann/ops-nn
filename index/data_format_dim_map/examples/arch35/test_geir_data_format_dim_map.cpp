@@ -39,13 +39,14 @@
 
 namespace ge {
 REG_OP(Data).INPUT(x, TensorType::ALL()).OUTPUT(y, TensorType::ALL()).ATTR(index, Int, 0).OP_END_FACTORY_REG(Data)
-}  // namespace ge
+} // namespace ge
 
 using namespace ge;
 using std::string;
 using std::vector;
 
-string GetTime() {
+string GetTime()
+{
     time_t timep;
     time(&timep);
     char tmp[64];
@@ -53,7 +54,8 @@ string GetTime() {
     return tmp;
 }
 
-uint32_t GetDataTypeSize(DataType dt) {
+uint32_t GetDataTypeSize(DataType dt)
+{
     if (dt == ge::DT_FLOAT16 || dt == ge::DT_BF16 || dt == ge::DT_INT16 || dt == ge::DT_UINT16) {
         return 2;
     }
@@ -67,8 +69,9 @@ uint32_t GetDataTypeSize(DataType dt) {
 }
 
 template <typename T>
-int32_t GenTensorData(const vector<int64_t> &shapes, Tensor &input_tensor, TensorDesc &input_tensor_desc,
-                      const vector<T> &values) {
+int32_t GenTensorData(const vector<int64_t>& shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc,
+                      const vector<T>& values)
+{
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
     for (auto dim : shapes) {
@@ -77,19 +80,20 @@ int32_t GenTensorData(const vector<int64_t> &shapes, Tensor &input_tensor, Tenso
     if (size != values.size()) {
         return FAILED;
     }
-    auto *data = new (std::nothrow) T[size];
+    auto* data = new (std::nothrow) T[size];
     if (data == nullptr) {
         return FAILED;
     }
     for (size_t i = 0; i < size; ++i) {
         data[i] = values[i];
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t *>(data), size * sizeof(T));
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(data), size * sizeof(T));
     return SUCCESS;
 }
 
-int32_t WriteDataToFile(const string &bin_file, uint64_t data_size, uint8_t *input_data) {
-    FILE *fp = fopen(bin_file.c_str(), "w");
+int32_t WriteDataToFile(const string& bin_file, uint64_t data_size, uint8_t* input_data)
+{
+    FILE* fp = fopen(bin_file.c_str(), "w");
     if (fp == nullptr) {
         return FAILED;
     }
@@ -98,7 +102,8 @@ int32_t WriteDataToFile(const string &bin_file, uint64_t data_size, uint8_t *inp
     return SUCCESS;
 }
 
-void SaveInputOutput(vector<ge::Tensor> &input, vector<ge::Tensor> &output) {
+void SaveInputOutput(vector<ge::Tensor>& input, vector<ge::Tensor>& output)
+{
     for (size_t i = 0; i < input.size(); ++i) {
         string input_file = "./tc_ge_irrun_test_data_format_dim_map_input_" + std::to_string(i) + ".bin";
         auto input_size = input[i].GetTensorDesc().GetShape().GetShapeSize() *
@@ -110,9 +115,9 @@ void SaveInputOutput(vector<ge::Tensor> &input, vector<ge::Tensor> &output) {
         auto output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         auto output_dtype = output[i].GetTensorDesc().GetDataType();
         auto output_size = output_shape * GetDataTypeSize(output_dtype);
-        auto *output_data = output[i].GetData();
+        auto* output_data = output[i].GetData();
         WriteDataToFile(output_file, output_size, output_data);
-        auto *typed = reinterpret_cast<int32_t *>(output_data);
+        auto* typed = reinterpret_cast<int32_t*>(output_data);
         for (int64_t j = 0; j < output_shape; ++j) {
             printf("result[%ld] is: %d\n", j, typed[j]);
         }
@@ -121,7 +126,7 @@ void SaveInputOutput(vector<ge::Tensor> &input, vector<ge::Tensor> &output) {
 
 #define ADD_INPUT(input_index, input_name, input_dtype, input_shape, input_data)                                  \
     do {                                                                                                          \
-        auto placeholder = op::Data("placeholder" + std::to_string(input_index)).set_attr_index((input_index) - 1); \
+        auto placeholder = op::Data("placeholder" + std::to_string(input_index)).set_attr_index((input_index)-1); \
         TensorDesc desc(ge::Shape(input_shape), FORMAT_ND, input_dtype);                                          \
         desc.SetPlacement(ge::kPlacementHost);                                                                    \
         desc.SetFormat(FORMAT_ND);                                                                                \
@@ -139,8 +144,9 @@ void SaveInputOutput(vector<ge::Tensor> &input, vector<ge::Tensor> &output) {
         inputs.push_back(placeholder);                                                                            \
     } while (0)
 
-int CreateOppInGraph(std::vector<ge::Tensor> &input, std::vector<Operator> &inputs,
-                     std::vector<Operator> &outputs, Graph &graph) {
+int CreateOppInGraph(std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
+                     Graph& graph)
+{
     Status ret = SUCCESS;
     auto data_format_dim_map = op::DataFormatDimMap("data_format_dim_map");
 
@@ -155,7 +161,8 @@ int CreateOppInGraph(std::vector<ge::Tensor> &input, std::vector<Operator> &inpu
     return SUCCESS;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     (void)argc;
     (void)argv;
     Graph graph("tc_ge_irrun_test_data_format_dim_map");

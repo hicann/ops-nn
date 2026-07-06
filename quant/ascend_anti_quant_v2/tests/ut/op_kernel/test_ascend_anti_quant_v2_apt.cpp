@@ -25,19 +25,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void ascend_anti_quant_v2(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ascend_anti_quant_v2(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                                           GM_ADDR workspace, GM_ADDR tiling);
 
 class ascend_anti_quant_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ascend_anti_quant_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ascend_anti_quant_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ascend_anti_quant_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ascend_anti_quant_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(ascend_anti_quant_v2_test, test_case_100)
@@ -77,12 +71,11 @@ TEST_F(ascend_anti_quant_v2_test, test_case_100)
 
     ICPU_SET_TILING_KEY(13);
 
-    auto ascend_anti_quant_v2_kernel = [](GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, 
-                                            GM_ADDR workSpace, GM_ADDR tiling) {
+    auto ascend_anti_quant_v2_kernel = [](GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workSpace,
+                                          GM_ADDR tiling) {
         ::ascend_anti_quant_v2<1, 1, 1>(x, scale, offset, y, workSpace, tiling);
     };
-    ICPU_RUN_KF(
-        ascend_anti_quant_v2_kernel, blockDim, x, scale, offset, y, workSpace, tiling);
+    ICPU_RUN_KF(ascend_anti_quant_v2_kernel, blockDim, x, scale, offset, y, workSpace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(scale);

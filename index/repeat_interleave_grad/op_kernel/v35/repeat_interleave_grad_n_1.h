@@ -23,8 +23,7 @@ namespace RepeatInterleaveGrad {
 using namespace AscendC;
 
 template <typename DataT, typename PromoteDataT, typename IndexT>
-class RepeatInterleaveGradDimNOneDavid
-{
+class RepeatInterleaveGradDimNOneDavid {
 private:
     const RepeatInterleaveGradDavidTilingData* tiling_;
     TPipe& pipe_;
@@ -70,12 +69,10 @@ public:
     constexpr static float INIT_FLOAT_VALUE = 0.0;
 
 public:
-    __aicore__ inline RepeatInterleaveGradDimNOneDavid(TPipe& pipe) : pipe_(pipe)
-    {}
+    __aicore__ inline RepeatInterleaveGradDimNOneDavid(TPipe& pipe) : pipe_(pipe) {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
-        const RepeatInterleaveGradDavidTilingData* __restrict tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
+                                const RepeatInterleaveGradDavidTilingData* __restrict tiling)
     {
         tiling_ = tiling;
         int32_t computeBufferNum = 0;
@@ -144,7 +141,7 @@ private:
         Duplicate<PromoteDataT>(computeRes_, INIT_FLOAT_VALUE, dimA);
         CopyOut(yGm_[outputDataOffset], computeRes_, dimA);
         SetFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-        WaitFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));    
+        WaitFlag<HardEvent::MTE3_V>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     }
 
     __aicore__ inline void ProcessRepeatBlock(int32_t repeatFactor, LocalTensor<IndexT>& repeatTensor)
@@ -241,8 +238,8 @@ private:
         } // 完成一个repeatFactor个repeat值的处理
     }
 
-    __aicore__ inline void BinaryRedeuceSum(
-        int64_t inputDataOffset, int64_t outputDataOffset, int32_t dim0, int32_t dim1)
+    __aicore__ inline void BinaryRedeuceSum(int64_t inputDataOffset, int64_t outputDataOffset, int32_t dim0,
+                                            int32_t dim1)
     {
         int32_t rMainFactor = tiling_->rFactor;
         int32_t rTailFactor = dim0 - rMainFactor * (rCount_ - 1);
@@ -309,8 +306,8 @@ private:
         __RIGUtil::SetEvent<HardEvent::MTE3_V>(HardEvent::MTE3_V);
     }
 
-    __aicore__ inline void SingleRedeuceSum(
-        int64_t inputDataOffset, int64_t outputDataOffset, int32_t dimR, int32_t dimA)
+    __aicore__ inline void SingleRedeuceSum(int64_t inputDataOffset, int64_t outputDataOffset, int32_t dimR,
+                                            int32_t dimA)
     {
         LocalTensor<DataT> tensor;
         bufPool_.template AllocTensor<true, DataT>(tensor);
@@ -384,9 +381,9 @@ private:
     }
 
     template <bool isRight>
-    __aicore__ inline void CopyInData(
-        int64_t index, LocalTensor<DataT>& ubTensor, LocalTensor<PromoteDataT>& computeTensor, int64_t inputDataOffset,
-        int32_t dim0, int32_t dim1, int32_t dst0, int32_t dst1)
+    __aicore__ inline void CopyInData(int64_t index, LocalTensor<DataT>& ubTensor,
+                                      LocalTensor<PromoteDataT>& computeTensor, int64_t inputDataOffset, int32_t dim0,
+                                      int32_t dim1, int32_t dst0, int32_t dst1)
     {
         if constexpr (isRight) {
             index = index + bisectionPos_;
@@ -415,8 +412,8 @@ private:
     __aicore__ inline void UpdateCacheAux(const int64_t cacheID, const int64_t stride, const int64_t count)
     {
         // count A轴的大小 * VL
-        uint16_t outerLoopTimes = ops::CeilDiv(
-            static_cast<int64_t>(count * sizeof(PromoteDataT)), static_cast<int64_t>(platform::GetVRegSize()));
+        uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(PromoteDataT)),
+                                               static_cast<int64_t>(platform::GetVRegSize()));
         uint16_t innerLoopTimes = cacheID;
         uint32_t outerLoopStride = ELEMENT_ONE_REPEAT_COMPUTE;
         uint32_t innerLoopStride = stride; // cacahe的每一个idex的块的大小， A轴的大小

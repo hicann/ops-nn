@@ -48,7 +48,7 @@ static ge::graphStatus InferShapeForFusedSgd(gert::InferShapeContext* context)
             flag = false;
         }
         if (flag) {
-            for(uint32_t i = 0; i < momentumBufferListDims; i++) {
+            for (uint32_t i = 0; i < momentumBufferListDims; i++) {
                 int64_t dimValue = momentumBufferListInput->GetDim(i);
                 if (dimValue == 0) {
                     flag = false;
@@ -117,16 +117,14 @@ static graphStatus InferDataTypeForFusedSgd(gert::InferDataTypeContext* context)
 
     for (uint32_t i = 0; i < inputNum; i++) {
         context->SetOutputDataType(paramsOutInstanceInfo->GetInstanceStart() + i,
-            context->GetDynamicInputDataType(INPUT_PARAMS_INDEX, i));
+                                   context->GetDynamicInputDataType(INPUT_PARAMS_INDEX, i));
         context->SetOutputDataType(gradsOutInstanceInfo->GetInstanceStart() + i,
-            context->GetDynamicInputDataType(INPUT_GRADS_INDEX, i));
+                                   context->GetDynamicInputDataType(INPUT_GRADS_INDEX, i));
         context->SetOutputDataType(momentumOutInstanceInfo->GetInstanceStart() + i,
-            context->GetDynamicInputDataType(INPUT_MOMENTUM_BUFFER_INDEX, i));
+                                   context->GetDynamicInputDataType(INPUT_MOMENTUM_BUFFER_INDEX, i));
     }
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(FusedSgd)
-    .InferShape(InferShapeForFusedSgd)
-    .InferDataType(InferDataTypeForFusedSgd);
+IMPL_OP_INFERSHAPE(FusedSgd).InferShape(InferShapeForFusedSgd).InferDataType(InferDataTypeForFusedSgd);
 } // namespace ops

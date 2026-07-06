@@ -24,29 +24,20 @@ extern "C" {
 #endif
 
 /**
-* @brief aclnnThnnFusedLstmCell的第一段接口，根据具体的计算流程，计算workspace大小。
-* @domain aclnn_ops_train
-*/
-ACLNN_API aclnnStatus aclnnThnnFusedLstmCellGetWorkspaceSize(
-    const aclTensor    *inputGates, 
-    const aclTensor    *hiddenGates, 
-    const aclTensor    *cx, 
-    const aclTensor    *inputBiasOptional, 
-    const aclTensor    *hiddenBiasOptional, 
-    aclTensor          *hyOut, 
-    aclTensor          *cyOut, 
-    aclTensor          *storageOut,
-    uint64_t           *workspaceSize, 
-    aclOpExecutor      **executor);
+ * @brief aclnnThnnFusedLstmCell的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @domain aclnn_ops_train
+ */
+ACLNN_API aclnnStatus aclnnThnnFusedLstmCellGetWorkspaceSize(const aclTensor* inputGates, const aclTensor* hiddenGates,
+                                                             const aclTensor* cx, const aclTensor* inputBiasOptional,
+                                                             const aclTensor* hiddenBiasOptional, aclTensor* hyOut,
+                                                             aclTensor* cyOut, aclTensor* storageOut,
+                                                             uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
-* @brief aclnnThnnFusedLstmCell的第二段接口，用于执行计算。
-*/
-ACLNN_API aclnnStatus aclnnThnnFusedLstmCell(
-    void               *workspace, 
-    uint64_t            workspaceSize, 
-    aclOpExecutor      *executor, 
-    const aclrtStream   stream);
+ * @brief aclnnThnnFusedLstmCell的第二段接口，用于执行计算。
+ */
+ACLNN_API aclnnStatus aclnnThnnFusedLstmCell(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                             const aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -30,7 +30,8 @@ static constexpr uint64_t DEFAULT_HANDLE_ROWS = 20UL;
 static constexpr uint32_t NUMBER_THREE = 3;
 static constexpr uint32_t DOUBLE = 2;
 static constexpr uint32_t BIG_INNERDIM_THRESHOLD = 30;
-static constexpr uint32_t HALF_UB_ALIGN = 16;;
+static constexpr uint32_t HALF_UB_ALIGN = 16;
+;
 
 static const std::set<ge::DataType> determinsiticSupportType = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
 
@@ -38,7 +39,8 @@ bool UnsortedSegmentSumDeterministicBigInnerDimTiling::IsCapable()
 {
     OP_LOGI(context_->GetNodeName(), "[UnsortedSegmentSum] GetDeterministic state: %u", context_->GetDeterministic());
     if (context_->GetDeterministic() == 1 && dataShapeSize_ != 0 &&
-        determinsiticSupportType.find(dataType_) != determinsiticSupportType.end() && innerDim_ > BIG_INNERDIM_THRESHOLD) {
+        determinsiticSupportType.find(dataType_) != determinsiticSupportType.end() &&
+        innerDim_ > BIG_INNERDIM_THRESHOLD) {
         return true;
     }
     return false;

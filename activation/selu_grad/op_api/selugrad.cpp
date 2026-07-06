@@ -23,16 +23,19 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SeluGrad);
 
-static const aclTensor *SeluGradAiCore(const aclTensor *gradOutput, const aclTensor *reslut, aclTensor *gradInput, aclOpExecutor *executor) {
-  L0_DFX(SeluGradAiCore, gradOutput, reslut, gradInput);
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SeluGrad, OP_INPUT(gradOutput, reslut), OP_OUTPUT(gradInput));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "SeluGrad ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return gradInput;
+static const aclTensor* SeluGradAiCore(const aclTensor* gradOutput, const aclTensor* reslut, aclTensor* gradInput,
+                                       aclOpExecutor* executor)
+{
+    L0_DFX(SeluGradAiCore, gradOutput, reslut, gradInput);
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SeluGrad, OP_INPUT(gradOutput, reslut), OP_OUTPUT(gradInput));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "SeluGrad ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return gradInput;
 }
 
-const aclTensor *SeluGrad(const aclTensor *gradOutput, const aclTensor *reslut, aclOpExecutor *executor) {
-  auto gradInput = executor->AllocTensor(gradOutput->GetViewShape(), gradOutput->GetDataType());
-  return SeluGradAiCore(gradOutput, reslut, gradInput, executor);
+const aclTensor* SeluGrad(const aclTensor* gradOutput, const aclTensor* reslut, aclOpExecutor* executor)
+{
+    auto gradInput = executor->AllocTensor(gradOutput->GetViewShape(), gradOutput->GetDataType());
+    return SeluGradAiCore(gradOutput, reslut, gradInput, executor);
 }
-}  // namespace l0op
+} // namespace l0op

@@ -17,13 +17,10 @@
 namespace ops {
 class MaxPoolV2 : public OpDef {
 public:
-    const std::vector<ge::DataType> maxPoolV2XDataType = {
-        ge::DT_FLOAT16};
-    const std::vector<ge::DataType> maxPoolV2KsizeDataType = {
-        ge::DT_INT32};
-    const std::vector<ge::Format> maxPoolV2XFormat = {
-        ge::FORMAT_ND};
-    explicit MaxPoolV2(const char *name) : OpDef(name)
+    const std::vector<ge::DataType> maxPoolV2XDataType = {ge::DT_FLOAT16};
+    const std::vector<ge::DataType> maxPoolV2KsizeDataType = {ge::DT_INT32};
+    const std::vector<ge::Format> maxPoolV2XFormat = {ge::FORMAT_ND};
+    explicit MaxPoolV2(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)

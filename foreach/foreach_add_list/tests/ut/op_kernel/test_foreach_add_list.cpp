@@ -23,25 +23,20 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "foreach_add_list_tensorlist.h"
 
-extern "C" __global__ __aicore__ void foreach_add_list(GM_ADDR inputs_1, GM_ADDR inputs_2,
-                                                    GM_ADDR alpha, GM_ADDR outputs, GM_ADDR workspace,
-                                                    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_add_list(GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR alpha,
+                                                       GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling);
 
 class foreach_add_list_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_add_list_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "foreach_add_list_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_add_list_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_add_list_test TearDown\n" << std::endl; }
 };
 
-TEST_F(foreach_add_list_test, test_case_float_1) {
+TEST_F(foreach_add_list_test, test_case_float_1)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
     system("chmod -R 755 ./add_list_data/");
     system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -75,11 +70,11 @@ TEST_F(foreach_add_list_test, test_case_float_1) {
     system("cd ./add_list_data/ && python3 compare_data.py 'float32'");
 }
 
-TEST_F(foreach_add_list_test, test_case_float16_2) {
+TEST_F(foreach_add_list_test, test_case_float16_2)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
     system("chmod -R 755 ./add_list_data/");
     system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -113,11 +108,11 @@ TEST_F(foreach_add_list_test, test_case_float16_2) {
     system("cd ./add_list_data/ && python3 compare_data.py 'float16'");
 }
 
-TEST_F(foreach_add_list_test, test_case_int32_3) {
+TEST_F(foreach_add_list_test, test_case_int32_3)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
     system("chmod -R 755 ./add_list_data/");
     system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'int32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -151,11 +146,11 @@ TEST_F(foreach_add_list_test, test_case_int32_3) {
     system("cd ./add_list_data/ && python3 compare_data.py 'int32'");
 }
 
-TEST_F(foreach_add_list_test, test_case_bfloat16_t_4) {
+TEST_F(foreach_add_list_test, test_case_bfloat16_t_4)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
     system("chmod -R 755 ./add_list_data/");
     system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -189,11 +184,11 @@ TEST_F(foreach_add_list_test, test_case_bfloat16_t_4) {
     system("cd ./add_list_data/ && python3 compare_data.py 'bfloat16_t'");
 }
 
-TEST_F(foreach_add_list_test, test_case_float_5_for_not_aligned) {
+TEST_F(foreach_add_list_test, test_case_float_5_for_not_aligned)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{7}, {9}, {17}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
     system("chmod -R 755 ./add_list_data/");
     system("cd ./add_list_data/ && python3 gen_data.py '{{7}, {9}, {17}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

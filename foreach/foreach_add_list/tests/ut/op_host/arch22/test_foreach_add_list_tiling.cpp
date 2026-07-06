@@ -23,16 +23,13 @@
 
 class ForeachAddListTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "ForeachAddListTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachAddListTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "ForeachAddListTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachAddListTiling TearDown" << std::endl; }
 };
 
-static string to_string(const std::stringstream& tiling_data) {
+static string to_string(const std::stringstream& tiling_data)
+{
     auto data = tiling_data.str();
     string result;
     int32_t tmp = 0;
@@ -45,7 +42,8 @@ static string to_string(const std::stringstream& tiling_data) {
     return result;
 }
 
-TEST_F(ForeachAddListTiling, test_tiling_float16_1) {
+TEST_F(ForeachAddListTiling, test_tiling_float16_1)
+{
     std::string op_type("ForeachAddList");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -80,12 +78,12 @@ TEST_F(ForeachAddListTiling, test_tiling_float16_1) {
     optiling::ForeachCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -104,7 +102,7 @@ TEST_F(ForeachAddListTiling, test_tiling_float16_1) {
     gert::StorageShape inputs_x = {{3, 6, 5}, {3, 6, 5}};
     gert::StorageShape inputs_y = {{3, 6, 5}, {3, 6, 5}};
     gert::StorageShape outputs = {{3, 6, 5}, {3, 6, 5}};
-    gert::StorageShape scalar = {{1},{1}};
+    gert::StorageShape scalar = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -134,7 +132,8 @@ TEST_F(ForeachAddListTiling, test_tiling_float16_1) {
     ASSERT_EQ(tiling_key, 1);
 }
 
-TEST_F(ForeachAddListTiling, test_tiling_float32_2) {
+TEST_F(ForeachAddListTiling, test_tiling_float32_2)
+{
     std::string op_type("ForeachAddList");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -169,12 +168,12 @@ TEST_F(ForeachAddListTiling, test_tiling_float32_2) {
     optiling::ForeachCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -193,7 +192,7 @@ TEST_F(ForeachAddListTiling, test_tiling_float32_2) {
     gert::StorageShape inputs_x = {{3, 6, 5}, {3, 6, 5}};
     gert::StorageShape inputs_y = {{3, 6, 5}, {3, 6, 5}};
     gert::StorageShape outputs = {{3, 6, 5}, {3, 6, 5}};
-    gert::StorageShape scalar = {{1},{1}};
+    gert::StorageShape scalar = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -223,7 +222,8 @@ TEST_F(ForeachAddListTiling, test_tiling_float32_2) {
     ASSERT_EQ(tiling_key, 2);
 }
 
-TEST_F(ForeachAddListTiling, test_tiling_int32_3) {
+TEST_F(ForeachAddListTiling, test_tiling_int32_3)
+{
     std::string op_type("ForeachAddList");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -258,12 +258,12 @@ TEST_F(ForeachAddListTiling, test_tiling_int32_3) {
     optiling::ForeachCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -282,7 +282,7 @@ TEST_F(ForeachAddListTiling, test_tiling_int32_3) {
     gert::StorageShape inputs_x = {{3, 6, 5}, {3, 6, 5}};
     gert::StorageShape inputs_y = {{3, 6, 5}, {3, 6, 5}};
     gert::StorageShape outputs = {{3, 6, 5}, {3, 6, 5}};
-    gert::StorageShape scalar = {{1},{1}};
+    gert::StorageShape scalar = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})

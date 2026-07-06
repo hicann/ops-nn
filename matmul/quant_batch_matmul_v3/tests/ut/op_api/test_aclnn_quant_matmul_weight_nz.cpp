@@ -187,13 +187,13 @@ static vector<QuantBatchMatmulWeightNzParam> GetParams()
 }
 
 class l2_QuantBatchMatmulWeightNz_test : public testing::TestWithParam<QuantBatchMatmulWeightNzParam> {
- protected:
-  static void SetUpTestCase() { }
-  static void TearDownTestCase() { }
+protected:
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 };
 
-static TensorDesc CreateTensorDesc(const vector<int64_t> &shape, aclDataType type, aclFormat format,
-                                   const vector<int64_t> &stride = {}, const vector<int64_t> &storage = {})
+static TensorDesc CreateTensorDesc(const vector<int64_t>& shape, aclDataType type, aclFormat format,
+                                   const vector<int64_t>& stride = {}, const vector<int64_t>& storage = {})
 {
     if (!storage.empty()) {
         return TensorDesc(shape, type, format, stride, 0, storage);
@@ -204,10 +204,12 @@ static TensorDesc CreateTensorDesc(const vector<int64_t> &shape, aclDataType typ
     return TensorDesc(shape, type, format);
 }
 
-static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam &param)
+static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam& param)
 {
-    TensorDesc x1Desc = CreateTensorDesc(param.x1Shape, param.x1Type, param.x1Format, param.x1Stride, param.x1StorageShape);
-    TensorDesc x2Desc = CreateTensorDesc(param.x2Shape, param.x2Type, param.x2Format, param.x2Stride, param.x2StorageShape);
+    TensorDesc x1Desc = CreateTensorDesc(param.x1Shape, param.x1Type, param.x1Format, param.x1Stride,
+                                         param.x1StorageShape);
+    TensorDesc x2Desc = CreateTensorDesc(param.x2Shape, param.x2Type, param.x2Format, param.x2Stride,
+                                         param.x2StorageShape);
     TensorDesc x1ScaleDesc = CreateTensorDesc(param.x1ScaleShape, param.x1ScaleType, param.x1ScaleFormat);
     TensorDesc x2ScaleDesc = CreateTensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat);
     TensorDesc yScaleDesc = CreateTensorDesc(param.yScaleShape, param.yScaleType, param.yScaleFormat);
@@ -224,64 +226,63 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam &param)
                           (static_cast<uint32_t>(param.yScaleNull) << 4U) |
                           (static_cast<uint32_t>(param.x1OffsetNull) << 3U) |
                           (static_cast<uint32_t>(param.groupScaleNull) << 2U) |
-                          (static_cast<uint32_t>(param.yOffsetNull) << 1U) |
-                          static_cast<uint32_t>(param.biasNull);
+                          (static_cast<uint32_t>(param.yOffsetNull) << 1U) | static_cast<uint32_t>(param.biasNull);
 
     switch (mask) {
         case 29U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 30U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, biasDesc,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                      biasDesc, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 31U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 79U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, yScaleDesc, nullptr, nullptr, nullptr, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, yScaleDesc, nullptr, nullptr, nullptr,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 87U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, x1OffsetDesc, nullptr, nullptr, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, x1OffsetDesc, nullptr, nullptr,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 93U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 95U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                                      param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         case 223U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                INPUT(x1Desc, nullptr, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                      param.transposeX1, param.transposeX2, param.groupSize),
-                OUTPUT(outDesc));
+                                INPUT(x1Desc, nullptr, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
         default:
@@ -292,7 +293,7 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam &param)
 
 TEST_P(l2_QuantBatchMatmulWeightNz_test, QuantBatchMatmulWeightNzFromCsv)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
     std::unique_ptr<op::NpuArchManager> archManager;
     if (param.arch == "DAV_3510") {
         archManager = std::make_unique<op::NpuArchManager>(NpuArch::DAV_3510);

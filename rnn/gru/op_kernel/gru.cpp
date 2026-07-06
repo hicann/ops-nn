@@ -21,22 +21,25 @@
 #include <stdio.h>
 
 template <uint32_t mmSplit>
-__global__ __aicore__ void gru(GM_ADDR x, GM_ADDR wi, GM_ADDR wh, GM_ADDR bi, GM_ADDR bh,
-                                GM_ADDR batch_sizes, GM_ADDR init_h, GM_ADDR y, GM_ADDR output_h,
-                                GM_ADDR r, GM_ADDR z, GM_ADDR n, GM_ADDR n_h, GM_ADDR workspace, GM_ADDR gruTiling) {
+__global__ __aicore__ void gru(GM_ADDR x, GM_ADDR wi, GM_ADDR wh, GM_ADDR bi, GM_ADDR bh, GM_ADDR batch_sizes,
+                               GM_ADDR init_h, GM_ADDR y, GM_ADDR output_h, GM_ADDR r, GM_ADDR z, GM_ADDR n,
+                               GM_ADDR n_h, GM_ADDR workspace, GM_ADDR gruTiling)
+{
     REGISTER_TILING_DEFAULT(GruTilingData);
     GET_TILING_DATA_WITH_STRUCT(GruTilingData, tilingData, gruTiling);
     const TCubeTiling* __restrict inputMMTiling = &(tilingData.inputMMParam);
     const TCubeTiling* __restrict hiddenMMTiling = &(tilingData.hiddenMMParam);
     if constexpr (mmSplit == static_cast<uint32_t>(GRU_TPL_MM_FP16_SPLIT)) {
         GruFP32<half> gruOp;
-        REGIST_MATMUL_OBJ(&gruOp.pipe, GetSysWorkSpacePtr(), gruOp.inputMM, inputMMTiling, gruOp.hiddenMM, hiddenMMTiling);
+        REGIST_MATMUL_OBJ(&gruOp.pipe, GetSysWorkSpacePtr(), gruOp.inputMM, inputMMTiling, gruOp.hiddenMM,
+                          hiddenMMTiling);
 
         gruOp.Init(x, wi, wh, bi, bh, batch_sizes, init_h, y, output_h, r, z, n, n_h, &tilingData, workspace);
         gruOp.Process();
     } else if constexpr (mmSplit == static_cast<uint32_t>(GRU_TPL_MM_FP32_SPLIT)) {
         GruFP32<float> gruOp;
-        REGIST_MATMUL_OBJ(&gruOp.pipe, GetSysWorkSpacePtr(), gruOp.inputMM, inputMMTiling, gruOp.hiddenMM, hiddenMMTiling);
+        REGIST_MATMUL_OBJ(&gruOp.pipe, GetSysWorkSpacePtr(), gruOp.inputMM, inputMMTiling, gruOp.hiddenMM,
+                          hiddenMMTiling);
 
         gruOp.Init(x, wi, wh, bi, bh, batch_sizes, init_h, y, output_h, r, z, n, n_h, &tilingData, workspace);
         gruOp.Process();

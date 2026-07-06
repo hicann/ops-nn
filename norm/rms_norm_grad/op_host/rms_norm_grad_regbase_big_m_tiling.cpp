@@ -71,15 +71,13 @@ ge::graphStatus RmsNormGradBigMTiling::DoOpTiling()
 
 ge::graphStatus RmsNormGradBigMTiling::DgammaDoTiling()
 {
-    OP_TILING_CHECK(
-        DgammaDoTilingStg0() != ge::GRAPH_SUCCESS,
-        OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 0 failed."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(DgammaDoTilingStg0() != ge::GRAPH_SUCCESS,
+                    OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 0 failed."),
+                    return ge::GRAPH_PARAM_INVALID);
 
-    OP_TILING_CHECK(
-        DgammaDoTilingStg1() != ge::GRAPH_SUCCESS,
-        OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 1 failed."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(DgammaDoTilingStg1() != ge::GRAPH_SUCCESS,
+                    OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 1 failed."),
+                    return ge::GRAPH_PARAM_INVALID);
 
     OP_LOGD(context_->GetNodeName(), "Big M template dgamma tiling success.");
 
@@ -109,8 +107,8 @@ ge::graphStatus RmsNormGradBigMTiling::DgammaDoTilingStg0()
     int64_t cacheBufferCountMainBlock = 1;
     int64_t resultCacheIDMainBlock = 0;
     if (basicBlockLoopMainBlock != 0) {
-        cacheBufferCountMainBlock =
-            ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
+        cacheBufferCountMainBlock = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
         resultCacheIDMainBlock = GetCacheID(basicBlockLoopMainBlock - 1);
     }
 
@@ -123,8 +121,8 @@ ge::graphStatus RmsNormGradBigMTiling::DgammaDoTilingStg0()
     int64_t cacheBufferCountTailBlock = 1;
     int64_t resultCacheIDTailBlock = 0;
     if (basicBlockLoopTailBlock != 0) {
-        cacheBufferCountTailBlock =
-            ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
+        cacheBufferCountTailBlock = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
         resultCacheIDTailBlock = GetCacheID(basicBlockLoopTailBlock - 1);
     }
 
@@ -136,14 +134,12 @@ ge::graphStatus RmsNormGradBigMTiling::DgammaDoTilingStg0()
     int64_t nFactorMax = (ubSize_ - mFactorBlockAligned * sizeof(float) * CONST_THREE) /
                          (mFactorBlockAligned * (CONST_SIX * dyDtypeSize + sizeof(float)) +
                           sizeof(float) * (CONST_THREE + cacheBufferCountMainBlock));
-    OP_TILING_CHECK(
-        nFactorMax < blockSize_ / gammaDefaultNfactor,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "Big M template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
-            "nFactorMax: %ld.",
-            rows_, cols_, ubSize_, nFactorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(nFactorMax < blockSize_ / gammaDefaultNfactor,
+                    OP_LOGI(context_->GetNodeName(),
+                            "Big M template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
+                            "nFactorMax: %ld.",
+                            rows_, cols_, ubSize_, nFactorMax),
+                    return ge::GRAPH_PARAM_INVALID);
 
     int64_t dyBlockLen = blockSize_ / dyDtypeSize;
     int64_t nFactorBlockAligned = Ops::Base::FloorAlign(nFactorMax, dyBlockLen);
@@ -190,9 +186,8 @@ ge::graphStatus RmsNormGradBigMTiling::DgammaDoTilingStg1()
 
     OP_TILING_CHECK(
         aInnerMax < blockLen,
-        OP_LOGI(
-            context_->GetNodeName(), "Big M template is not capable for dgamma compute,  aInnerMax in stage1 is %ld .",
-            aInnerMax),
+        OP_LOGI(context_->GetNodeName(),
+                "Big M template is not capable for dgamma compute,  aInnerMax in stage1 is %ld .", aInnerMax),
         return ge::GRAPH_PARAM_INVALID);
 
     int64_t aInnerMaxAligned = Ops::Base::FloorAlign(aInnerMax, blockLen);
@@ -210,10 +205,7 @@ ge::graphStatus RmsNormGradBigMTiling::DgammaDoTilingStg1()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t RmsNormGradBigMTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t RmsNormGradBigMTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus RmsNormGradBigMTiling::GetWorkspaceSize()
 {

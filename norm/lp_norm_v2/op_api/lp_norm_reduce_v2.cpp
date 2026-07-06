@@ -22,21 +22,17 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LpNormReduceV2);
 
-const aclTensor *LpNormReduceV2(const aclTensor *x,
-                                float p,
-                                const aclIntArray *dims,
-                                bool keepDim,
-                                float epsilon,
-                                aclOpExecutor *executor) {
-  L0_DFX(LpNormReduceV2, x, p, dims, keepDim, epsilon);
-  auto out = executor->AllocTensor(x->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-  INFER_SHAPE(LpNormReduceV2, OP_INPUT(x), OP_OUTPUT(out), OP_ATTR(p, dims, keepDim, epsilon));
+const aclTensor* LpNormReduceV2(const aclTensor* x, float p, const aclIntArray* dims, bool keepDim, float epsilon,
+                                aclOpExecutor* executor)
+{
+    L0_DFX(LpNormReduceV2, x, p, dims, keepDim, epsilon);
+    auto out = executor->AllocTensor(x->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    INFER_SHAPE(LpNormReduceV2, OP_INPUT(x), OP_OUTPUT(out), OP_ATTR(p, dims, keepDim, epsilon));
 
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpNormReduceV2,
-                                         OP_INPUT(x),
-                                         OP_OUTPUT(out),
-                                         OP_ATTR(p, dims, keepDim, epsilon));
-  OP_CHECK(ret ==  ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormReduceV2 ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
-  return out;
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpNormReduceV2, OP_INPUT(x), OP_OUTPUT(out),
+                                           OP_ATTR(p, dims, keepDim, epsilon));
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormReduceV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return out;
 }
-}
+} // namespace l0op

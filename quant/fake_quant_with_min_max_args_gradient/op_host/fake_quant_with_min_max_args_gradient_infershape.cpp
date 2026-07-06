@@ -33,12 +33,10 @@ static graphStatus InferShapeForFakeQuantWithMinMaxArgsGradient(gert::InferShape
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
     OP_CHECK_IF(gradShape->GetDimNum() != xShape->GetDimNum(),
-                OP_LOGE(context, "gradients and x must have identical shape."),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
     for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
         OP_CHECK_IF(gradShape->GetDim(i) != xShape->GetDim(i),
-                    OP_LOGE(context, "gradients and x must have identical shape."),
-                    return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
     }
 
     // y has same shape as x.

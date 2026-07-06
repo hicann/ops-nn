@@ -35,17 +35,11 @@ static constexpr uint32_t THREAD_NUM = 1024;
  * 根据索引将 v 中的行更新到输出 y 中。
  */
 template <typename T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void OpInplaceUpdateSimt(
-    int32_t needCoreNum,
-    int32_t n,
-    int32_t k,
-    int64_t innerSize,
-    int32_t perCoreN,
-    __gm__ T* x_gm,
-    __gm__ int32_t* indices_gm,
-    __gm__ T* v_gm,
-    __gm__ T* y_gm)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpInplaceUpdateSimt(int32_t needCoreNum, int32_t n,
+                                                                                     int32_t k, int64_t innerSize,
+                                                                                     int32_t perCoreN, __gm__ T* x_gm,
+                                                                                     __gm__ int32_t* indices_gm,
+                                                                                     __gm__ T* v_gm, __gm__ T* y_gm)
 {
     int32_t coreId = blockIdx.x;
     int32_t startRow = coreId * perCoreN;
@@ -59,11 +53,9 @@ inline void OpInplaceUpdateSimt(
 
     // Phase 1: 拷贝 x → y（Per-Core Continuous）
     int64_t startElem = static_cast<int64_t>(startRow) * innerSize;
-    int64_t endElem   = static_cast<int64_t>(endRow)   * innerSize;
-    for (int64_t idx = startElem + static_cast<int64_t>(threadIdx.x);
-         idx < endElem;
-         idx += static_cast<int64_t>(THREAD_NUM))
-    {
+    int64_t endElem = static_cast<int64_t>(endRow) * innerSize;
+    for (int64_t idx = startElem + static_cast<int64_t>(threadIdx.x); idx < endElem;
+         idx += static_cast<int64_t>(THREAD_NUM)) {
         y_gm[idx] = x_gm[idx];
     }
 
@@ -71,12 +63,10 @@ inline void OpInplaceUpdateSimt(
     for (int32_t kIdx = 0; kIdx < k; kIdx++) {
         int32_t dstRow = indices_gm[kIdx];
         if (dstRow >= startRow && dstRow < endRow) {
-            int64_t vBase = static_cast<int64_t>(kIdx)   * innerSize;
+            int64_t vBase = static_cast<int64_t>(kIdx) * innerSize;
             int64_t yBase = static_cast<int64_t>(dstRow) * innerSize;
-            for (int64_t offset = static_cast<int64_t>(threadIdx.x);
-                 offset < innerSize;
-                 offset += static_cast<int64_t>(THREAD_NUM))
-            {
+            for (int64_t offset = static_cast<int64_t>(threadIdx.x); offset < innerSize;
+                 offset += static_cast<int64_t>(THREAD_NUM)) {
                 y_gm[yBase + offset] = v_gm[vBase + offset];
             }
         }
@@ -88,27 +78,16 @@ inline void OpInplaceUpdateSimt(
  * 从 tiling 数据中提取参数，启动 SIMT VF。
  */
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x,
-    GM_ADDR indices,
-    GM_ADDR v,
-    GM_ADDR y,
-    GM_ADDR workspace,
-    const InplaceUpdateTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR v, GM_ADDR y, GM_ADDR workspace,
+                               const InplaceUpdateTilingData* tilingData)
 {
-    __gm__ T*        x_gm       = (__gm__ T*)x;
-    __gm__ int32_t*  indices_gm = (__gm__ int32_t*)indices;
-    __gm__ T*        v_gm       = (__gm__ T*)v;
-    __gm__ T*        y_gm       = (__gm__ T*)y;
+    __gm__ T* x_gm = (__gm__ T*)x;
+    __gm__ int32_t* indices_gm = (__gm__ int32_t*)indices;
+    __gm__ T* v_gm = (__gm__ T*)v;
+    __gm__ T* y_gm = (__gm__ T*)y;
 
-    asc_vf_call<OpInplaceUpdateSimt<T>>(
-        dim3(THREAD_NUM),
-        tilingData->needCoreNum,
-        tilingData->n,
-        tilingData->k,
-        tilingData->innerSize,
-        tilingData->perCoreN,
-        x_gm, indices_gm, v_gm, y_gm);
+    asc_vf_call<OpInplaceUpdateSimt<T>>(dim3(THREAD_NUM), tilingData->needCoreNum, tilingData->n, tilingData->k,
+                                        tilingData->innerSize, tilingData->perCoreN, x_gm, indices_gm, v_gm, y_gm);
 }
 
 } // namespace NsInplaceUpdate

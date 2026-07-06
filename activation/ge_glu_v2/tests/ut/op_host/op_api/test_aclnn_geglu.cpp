@@ -24,26 +24,19 @@
 using namespace op;
 using namespace std;
 
-class l2_geglu_test : public testing::Test
-{
+class l2_geglu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_geglu_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_geglu_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_geglu_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_geglu_test TearDown" << endl; }
 };
 
 TEST_F(l2_geglu_test, geglu_self_nullptr)
 {
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut = OP_API_UT(
-        aclnnGeGlu, INPUT((aclTensor*)nullptr, dim, approximate), OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT((aclTensor*)nullptr, dim, approximate),
+                        OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -54,8 +47,8 @@ TEST_F(l2_geglu_test, geglu_out_nullptr)
     int64_t dim = -1;
     int64_t approximate = 1;
     auto self_tensor_desc = TensorDesc({4, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
-    auto ut = OP_API_UT(
-        aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -67,8 +60,8 @@ TEST_F(l2_geglu_test, geglu_out_gelu_nullptr)
     int64_t approximate = 1;
     auto self_tensor_desc = TensorDesc({4, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
     auto out_tensor_desc = TensorDesc({4, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, (aclTensor*)nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -82,8 +75,8 @@ TEST_F(l2_geglu_test, geglu_self_wrong_dtype)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -97,8 +90,8 @@ TEST_F(l2_geglu_test, geglu_out_wrong_dtype)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -112,8 +105,8 @@ TEST_F(l2_geglu_test, geglu_out_gelu_wrong_dtype)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -127,8 +120,8 @@ TEST_F(l2_geglu_test, geglu_out_different_dtype)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -142,8 +135,8 @@ TEST_F(l2_geglu_test, geglu_out_gelu_different_dtype)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -157,8 +150,8 @@ TEST_F(l2_geglu_test, geglu_self_bigDim)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -172,8 +165,8 @@ TEST_F(l2_geglu_test, geglu_out_bigDim)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -187,8 +180,8 @@ TEST_F(l2_geglu_test, geglu_out_gelu_bigDim)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -202,8 +195,8 @@ TEST_F(l2_geglu_test, geglu_wrong_dim)
 
     int64_t dim = 10;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -217,8 +210,8 @@ TEST_F(l2_geglu_test, geglu_wrong_out_shape)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -232,8 +225,8 @@ TEST_F(l2_geglu_test, geglu_wrong_out_gelu_shape)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -247,8 +240,8 @@ TEST_F(l2_geglu_test, geglu_wrong_slice_dim)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -262,8 +255,8 @@ TEST_F(l2_geglu_test, geglu_wrong_approximate)
 
     int64_t dim = -1;
     int64_t approximate = 10;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -277,8 +270,8 @@ TEST_F(l2_geglu_test, geglu_precision)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     // uint64_t workspace_size = 0;
     // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -293,8 +286,8 @@ TEST_F(l2_geglu_test, geglu_empty_tensor_1)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -309,8 +302,8 @@ TEST_F(l2_geglu_test, geglu_empty_tensor_2)
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -321,13 +314,13 @@ TEST_F(l2_geglu_test, ascend910B2_geglu_non_contiguous)
 {
     auto self_tensor_desc = TensorDesc({2, 8}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {8, 2}).ValueRange(-20, 20);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).Precision(0.001, 0.001);
-    auto out_gelu_tensor_desc =
-        TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).Precision(0.001, 0.001);
+    auto out_gelu_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {4, 2})
+                                    .Precision(0.001, 0.001);
 
     int64_t dim = -1;
     int64_t approximate = 1;
-    auto ut =
-        OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate), OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -341,9 +334,8 @@ TEST_F(l2_geglu_test, gegluv_self_nullptr)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT((aclTensor*)nullptr, dim, approximate, activateLeft),
-            OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT((aclTensor*)nullptr, dim, approximate, activateLeft),
+                            OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -357,9 +349,8 @@ TEST_F(l2_geglu_test, gegluv_out_nullptr)
     auto self_tensor_desc = TensorDesc({4, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr));
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -374,9 +365,8 @@ TEST_F(l2_geglu_test, gegluv_out_gelu_nullptr)
     auto out_tensor_desc = TensorDesc({4, 2}, ACL_FLOAT, ACL_FORMAT_ND);
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, (aclTensor*)nullptr));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, (aclTensor*)nullptr));
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -393,9 +383,8 @@ TEST_F(l2_geglu_test, gegluv_self_wrong_dtype)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -412,9 +401,8 @@ TEST_F(l2_geglu_test, gegluv_out_wrong_dtype)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -431,9 +419,8 @@ TEST_F(l2_geglu_test, gegluv_out_gelu_wrong_dtype)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -450,9 +437,8 @@ TEST_F(l2_geglu_test, gegluv_out_different_dtype)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -469,9 +455,8 @@ TEST_F(l2_geglu_test, gegluv_out_gelu_different_dtype)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -488,9 +473,8 @@ TEST_F(l2_geglu_test, gegluv_self_bigDim)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -507,9 +491,8 @@ TEST_F(l2_geglu_test, gegluv_out_bigDim)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -526,9 +509,8 @@ TEST_F(l2_geglu_test, gegluv_out_gelu_bigDim)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -545,9 +527,8 @@ TEST_F(l2_geglu_test, gegluv_wrong_dim)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -564,9 +545,8 @@ TEST_F(l2_geglu_test, gegluv_wrong_out_shape)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -583,9 +563,8 @@ TEST_F(l2_geglu_test, gegluv_wrong_out_gelu_shape)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -602,9 +581,8 @@ TEST_F(l2_geglu_test, gegluv_wrong_approximate)
     int64_t approximate = 10;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -621,9 +599,8 @@ TEST_F(l2_geglu_test, gegluv_precision)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         // uint64_t workspace_size = 0;
         // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         // EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -641,9 +618,8 @@ TEST_F(l2_geglu_test, gegluv_empty_tensor_1)
     int64_t approximate = 1;
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -662,9 +638,8 @@ TEST_F(l2_geglu_test, gegluv_empty_tensor_2)
 
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
-            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         EXPECT_EQ(aclRet, ACL_SUCCESS);

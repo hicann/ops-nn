@@ -22,14 +22,14 @@
 
 namespace optiling {
 struct ConcatOffsetCompileParams {
-  int64_t core_num;
-  int64_t ubSize{0};
-  bool isAscendc{false};
+    int64_t core_num;
+    int64_t ubSize{0};
+    bool isAscendc{false};
 };
 
 struct ConcatOffsetTilingParams {
-  int64_t input_num;
+    int64_t input_num;
 };
-}  // namespace optiling
+} // namespace optiling
 
 #endif // _CONCAT_OFFSET_H_

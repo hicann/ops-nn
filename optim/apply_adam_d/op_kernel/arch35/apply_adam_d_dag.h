@@ -33,8 +33,8 @@ using MicroAPI::RegTensor;
 constexpr static uint16_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
 
 template <typename U = float>
-__aicore__ inline void CalcLr(MicroAPI::RegTensor<U> &regLrT, MicroAPI::MaskReg &pregUp,
-                              U beta1PowerUp, U beta2PowerUp, U lrUp)
+__aicore__ inline void CalcLr(MicroAPI::RegTensor<U>& regLrT, MicroAPI::MaskReg& pregUp, U beta1PowerUp, U beta2PowerUp,
+                              U lrUp)
 {
     MicroAPI::RegTensor<U> regBeta1Power;
     MicroAPI::RegTensor<U> regBeta2Power;
@@ -57,9 +57,10 @@ __aicore__ inline void CalcLr(MicroAPI::RegTensor<U> &regLrT, MicroAPI::MaskReg 
 }
 
 template <typename U = float>
-__aicore__ inline void CalcVarTWithLr(MicroAPI::RegTensor<U> &regVarT, MicroAPI::RegTensor<U> &regVar,
-                                      MicroAPI::RegTensor<U> &regLrT, MicroAPI::RegTensor<U> &regMt,
-                                      MicroAPI::RegTensor<U> &regVt, MicroAPI::MaskReg &pregUp, U epsilonUp) {
+__aicore__ inline void CalcVarTWithLr(MicroAPI::RegTensor<U>& regVarT, MicroAPI::RegTensor<U>& regVar,
+                                      MicroAPI::RegTensor<U>& regLrT, MicroAPI::RegTensor<U>& regMt,
+                                      MicroAPI::RegTensor<U>& regVt, MicroAPI::MaskReg& pregUp, U epsilonUp)
+{
     MicroAPI::RegTensor<U> regMulLeft;
     MicroAPI::RegTensor<U> regSqrtVt;
     MicroAPI::RegTensor<U> regAddSqrtV;
@@ -73,8 +74,9 @@ __aicore__ inline void CalcVarTWithLr(MicroAPI::RegTensor<U> &regVarT, MicroAPI:
 }
 
 template <typename U = float>
-__aicore__ inline void CalcMtLookAhead(MicroAPI::RegTensor<U> &regMtAhead, MicroAPI::RegTensor<U> &regMt,
-                                       MicroAPI::RegTensor<U> &regGrad, MicroAPI::MaskReg &pregUp, U beta1Up) {
+__aicore__ inline void CalcMtLookAhead(MicroAPI::RegTensor<U>& regMtAhead, MicroAPI::RegTensor<U>& regMt,
+                                       MicroAPI::RegTensor<U>& regGrad, MicroAPI::MaskReg& pregUp, U beta1Up)
+{
     MicroAPI::RegTensor<U> regBeta1;
     MicroAPI::RegTensor<U> regMulMtBeta1;
     MicroAPI::RegTensor<U> regNegBeta1;
@@ -93,7 +95,9 @@ __aicore__ inline void CalcMtLookAhead(MicroAPI::RegTensor<U> &regMtAhead, Micro
 
 template <typename T, typename U = float>
 struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
-    __aicore__ inline CalcMt(Ops::Base::LocalTensor<U>& mT, Ops::Base::LocalTensor<U>& m, Ops::Base::LocalTensor<U>& grad, T &beta1, int32_t count) {
+    __aicore__ inline CalcMt(Ops::Base::LocalTensor<U>& mT, Ops::Base::LocalTensor<U>& m,
+                             Ops::Base::LocalTensor<U>& grad, T& beta1, int32_t count)
+    {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -105,11 +109,12 @@ struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
             beta1Up = beta1;
         }
 
-        __ubuf__ U * mAddr = (__ubuf__ U *)m.GetPhyAddr();
-        __ubuf__ U * gradAddr = (__ubuf__ U *)grad.GetPhyAddr();
-        __ubuf__ U * mTAddr = (__ubuf__ U *)mT.GetPhyAddr();
+        __ubuf__ U* mAddr = (__ubuf__ U*)m.GetPhyAddr();
+        __ubuf__ U* gradAddr = (__ubuf__ U*)grad.GetPhyAddr();
+        __ubuf__ U* mTAddr = (__ubuf__ U*)mT.GetPhyAddr();
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             MicroAPI::MaskReg pregUp;
             MicroAPI::RegTensor<U> regM;
             MicroAPI::RegTensor<U> regBeta1;
@@ -130,7 +135,8 @@ struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
                 MicroAPI::Mul(regMulM, regBeta1, regSubMGrad, pregUp);
                 MicroAPI::Add(regMt, regM, regMulM, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mTAddr, regMt, (int32_t)oneRepeat, pregUp);
+                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mTAddr, regMt, (int32_t)oneRepeat,
+                                                                               pregUp);
             }
         }
 #endif
@@ -139,7 +145,9 @@ struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
 
 template <typename T, typename U = float>
 struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
-    __aicore__ inline CalcVt(Ops::Base::LocalTensor<U>& vT, Ops::Base::LocalTensor<U>& v, Ops::Base::LocalTensor<U>& grad, T &beta2, int32_t count) {
+    __aicore__ inline CalcVt(Ops::Base::LocalTensor<U>& vT, Ops::Base::LocalTensor<U>& v,
+                             Ops::Base::LocalTensor<U>& grad, T& beta2, int32_t count)
+    {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -151,11 +159,12 @@ struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
             beta2Up = beta2;
         }
 
-        __ubuf__ U * vAddr = (__ubuf__ U *)v.GetPhyAddr();
-        __ubuf__ U * gradAddr = (__ubuf__ U *)grad.GetPhyAddr();
-        __ubuf__ U * vTAddr = (__ubuf__ U *)vT.GetPhyAddr();
+        __ubuf__ U* vAddr = (__ubuf__ U*)v.GetPhyAddr();
+        __ubuf__ U* gradAddr = (__ubuf__ U*)grad.GetPhyAddr();
+        __ubuf__ U* vTAddr = (__ubuf__ U*)vT.GetPhyAddr();
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             MicroAPI::MaskReg pregUp;
             MicroAPI::RegTensor<U> regV;
             MicroAPI::RegTensor<U> regBeta2;
@@ -178,7 +187,8 @@ struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
                 MicroAPI::Mul(regMulV, regBeta2, regSubVGrad, pregUp);
                 MicroAPI::Add(regVt, regV, regMulV, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vTAddr, regVt, (int32_t)oneRepeat, pregUp);
+                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vTAddr, regVt, (int32_t)oneRepeat,
+                                                                               pregUp);
             }
         }
 #endif
@@ -187,8 +197,10 @@ struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
 
 template <typename T, typename U = float>
 struct CalcVarT : public Ops::Base::Vec::Elemwise7OP<U, U, U, U, T, T, T, T> {
-    __aicore__ inline CalcVarT(Ops::Base::LocalTensor<U>& varT, Ops::Base::LocalTensor<U>& var, Ops::Base::LocalTensor<U>& mT, Ops::Base::LocalTensor<U>& vT,
-                               T &beta1Power, T &beta2Power, T &lr, T &epsilon, int32_t count) {
+    __aicore__ inline CalcVarT(Ops::Base::LocalTensor<U>& varT, Ops::Base::LocalTensor<U>& var,
+                               Ops::Base::LocalTensor<U>& mT, Ops::Base::LocalTensor<U>& vT, T& beta1Power,
+                               T& beta2Power, T& lr, T& epsilon, int32_t count)
+    {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -211,12 +223,13 @@ struct CalcVarT : public Ops::Base::Vec::Elemwise7OP<U, U, U, U, T, T, T, T> {
             epsilonUp = epsilon;
         }
 
-        __ubuf__ U * varAddr = (__ubuf__ U *)var.GetPhyAddr();
-        __ubuf__ U * varTAddr = (__ubuf__ U *)varT.GetPhyAddr();
-        __ubuf__ U * mTAddr = (__ubuf__ U *)mT.GetPhyAddr();
-        __ubuf__ U * vTAddr = (__ubuf__ U *)vT.GetPhyAddr();
+        __ubuf__ U* varAddr = (__ubuf__ U*)var.GetPhyAddr();
+        __ubuf__ U* varTAddr = (__ubuf__ U*)varT.GetPhyAddr();
+        __ubuf__ U* mTAddr = (__ubuf__ U*)mT.GetPhyAddr();
+        __ubuf__ U* vTAddr = (__ubuf__ U*)vT.GetPhyAddr();
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             MicroAPI::MaskReg pregUp;
             MicroAPI::RegTensor<U> regVar;
             MicroAPI::RegTensor<U> regMt;
@@ -235,7 +248,8 @@ struct CalcVarT : public Ops::Base::Vec::Elemwise7OP<U, U, U, U, T, T, T, T> {
                 CalcLr<U>(regLrT, pregUp, beta1PowerUp, beta2PowerUp, lrUp);
                 CalcVarTWithLr<U>(regVarT, regVar, regLrT, regMt, regVt, pregUp, epsilonUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat, pregUp);
+                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
+                                                                               pregUp);
             }
         }
 #endif
@@ -245,8 +259,10 @@ struct CalcVarT : public Ops::Base::Vec::Elemwise7OP<U, U, U, U, T, T, T, T> {
 template <typename T, typename U = float>
 struct CalcVarTNesterov : public Ops::Base::Vec::Elemwise9OP<U, U, U, U, U, T, T, T, T, T> {
     __aicore__ inline CalcVarTNesterov(Ops::Base::LocalTensor<U>& varT, Ops::Base::LocalTensor<U>& var,
-                                       Ops::Base::LocalTensor<U>& mT, Ops::Base::LocalTensor<U>& vT, Ops::Base::LocalTensor<U>& grad,
-                                       T &beta1Power, T &beta2Power, T &lr, T &beta1, T &epsilon, int32_t count) {
+                                       Ops::Base::LocalTensor<U>& mT, Ops::Base::LocalTensor<U>& vT,
+                                       Ops::Base::LocalTensor<U>& grad, T& beta1Power, T& beta2Power, T& lr, T& beta1,
+                                       T& epsilon, int32_t count)
+    {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -272,13 +288,14 @@ struct CalcVarTNesterov : public Ops::Base::Vec::Elemwise9OP<U, U, U, U, U, T, T
             epsilonUp = epsilon;
         }
 
-        __ubuf__ U * varTAddr = (__ubuf__ U *)varT.GetPhyAddr();
-        __ubuf__ U * varAddr = (__ubuf__ U *)var.GetPhyAddr();
-        __ubuf__ U * mTAddr = (__ubuf__ U *)mT.GetPhyAddr();
-        __ubuf__ U * vTAddr = (__ubuf__ U *)vT.GetPhyAddr();
-        __ubuf__ U * gradAddr = (__ubuf__ U *)grad.GetPhyAddr();
+        __ubuf__ U* varTAddr = (__ubuf__ U*)varT.GetPhyAddr();
+        __ubuf__ U* varAddr = (__ubuf__ U*)var.GetPhyAddr();
+        __ubuf__ U* mTAddr = (__ubuf__ U*)mT.GetPhyAddr();
+        __ubuf__ U* vTAddr = (__ubuf__ U*)vT.GetPhyAddr();
+        __ubuf__ U* gradAddr = (__ubuf__ U*)grad.GetPhyAddr();
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             MicroAPI::MaskReg pregUp;
             MicroAPI::RegTensor<U> regVar;
             MicroAPI::RegTensor<U> regMt;
@@ -300,16 +317,16 @@ struct CalcVarTNesterov : public Ops::Base::Vec::Elemwise9OP<U, U, U, U, U, T, T
                 CalcMtLookAhead<U>(regMtAhead, regMt, regGrad, pregUp, beta1Up);
                 CalcVarTWithLr<U>(regVarT, regVar, regLrT, regMtAhead, regVt, pregUp, epsilonUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat, pregUp);
+                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
+                                                                               pregUp);
             }
         }
 #endif
     }
 };
 
-}
-}
-
+} // namespace Vec
+} // namespace AscendC
 
 const int CAST_MODE_NONE = 0;
 const int CAST_MODE_RINT = 1;
@@ -329,17 +346,19 @@ struct ApplyAdamDDagFusion {
     using OpCopyInGrad = Ops::Base::Bind<Ops::Base::Vec::Cast<U, T, CAST_MODE_NONE>, OpCopyInGradOri>;
 
     // calc m_t
-    using OpMt = Ops::Base::Bind<AscendC::Vec::CalcMt<T, U>, OpCopyInM, OpCopyInGrad, Ops::Base::Placeholder::In6<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
+    using OpMt = Ops::Base::Bind<AscendC::Vec::CalcMt<T, U>, OpCopyInM, OpCopyInGrad,
+                                 Ops::Base::Placeholder::In6<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
 
     // calc v_t
-    using OpVt = Ops::Base::Bind<AscendC::Vec::CalcVt<T, U>, OpCopyInV, OpCopyInGrad, Ops::Base::Placeholder::In7<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
+    using OpVt = Ops::Base::Bind<AscendC::Vec::CalcVt<T, U>, OpCopyInV, OpCopyInGrad,
+                                 Ops::Base::Placeholder::In7<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
 
     // calc var_t
-    using OpVarT = Ops::Base::Bind<AscendC::Vec::CalcVarT<T, U>, OpCopyInVar, OpMt, OpVt,\
-                        Ops::Base::Placeholder::In3<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In4<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In5<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In8<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
+    using OpVarT = Ops::Base::Bind<AscendC::Vec::CalcVarT<T, U>, OpCopyInVar, OpMt, OpVt,
+                                   Ops::Base::Placeholder::In3<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In4<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In5<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In8<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
 
     // cast back
     using OpVarTCast = Ops::Base::Bind<Ops::Base::Vec::Cast<T, U, CAST_MODE_RINT>, OpVarT>;
@@ -372,18 +391,20 @@ struct ApplyAdamDDagFusionNesterov {
     using OpCopyInGradNes = Ops::Base::Bind<Ops::Base::Vec::Cast<U, T, CAST_MODE_NONE>, OpCopyInGradOriNes>;
 
     // calc m_t
-    using OpMt = Ops::Base::Bind<AscendC::Vec::CalcMt<T, U>, OpCopyInMNes, OpCopyInGradNes, Ops::Base::Placeholder::In6<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
+    using OpMt = Ops::Base::Bind<AscendC::Vec::CalcMt<T, U>, OpCopyInMNes, OpCopyInGradNes,
+                                 Ops::Base::Placeholder::In6<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
 
     // calc v_t
-    using OpVt = Ops::Base::Bind<AscendC::Vec::CalcVt<T, U>, OpCopyInVNes, OpCopyInGradNes, Ops::Base::Placeholder::In7<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
+    using OpVt = Ops::Base::Bind<AscendC::Vec::CalcVt<T, U>, OpCopyInVNes, OpCopyInGradNes,
+                                 Ops::Base::Placeholder::In7<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
 
     // calc var_t
-    using OpVarT = Ops::Base::Bind<AscendC::Vec::CalcVarTNesterov<T, U>, OpCopyInVarNes, OpMt, OpVt, OpCopyInGradNes,\
-                        Ops::Base::Placeholder::In3<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In4<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In5<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In6<T, Ops::Base::Placeholder::ScalarAttr<true>>,\
-                        Ops::Base::Placeholder::In8<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
+    using OpVarT = Ops::Base::Bind<AscendC::Vec::CalcVarTNesterov<T, U>, OpCopyInVarNes, OpMt, OpVt, OpCopyInGradNes,
+                                   Ops::Base::Placeholder::In3<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In4<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In5<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In6<T, Ops::Base::Placeholder::ScalarAttr<true>>,
+                                   Ops::Base::Placeholder::In8<T, Ops::Base::Placeholder::ScalarAttr<true>>>;
 
     // cast back
     using OpVarTCastNes = Ops::Base::Bind<Ops::Base::Vec::Cast<T, U, CAST_MODE_RINT>, OpVarT>;
@@ -391,7 +412,8 @@ struct ApplyAdamDDagFusionNesterov {
     using OpVtCastNes = Ops::Base::Bind<Ops::Base::Vec::Cast<T, U, CAST_MODE_RINT>, OpVt>;
 
     // copy out
-    using OpCopyOutVarTNes = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out0<T>, OpVarTCastNes>;
+    using OpCopyOutVarTNes = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out0<T>,
+                                             OpVarTCastNes>;
     using OpCopyOutMtNes = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out1<T>, OpMtCastNes>;
     using OpCopyOutVtNes = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out2<T>, OpVtCastNes>;
 
@@ -401,4 +423,4 @@ struct ApplyAdamDDagFusionNesterov {
     using OpDag = Ops::Base::DAGSch<OutputsNes, void, MemCfgNes>;
 };
 
-#endif  // CANN_CUSTOM_OPS_APPLY_ADAM_D_DAG_H
+#endif // CANN_CUSTOM_OPS_APPLY_ADAM_D_DAG_H

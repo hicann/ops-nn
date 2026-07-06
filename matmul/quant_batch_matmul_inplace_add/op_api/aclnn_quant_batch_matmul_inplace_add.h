@@ -35,15 +35,17 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
-                                                                      const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
-                                                                      aclTensor* yRef, bool transposeX1, 
-                                                                      bool transposeX2, int64_t groupSize,
-                                                                      uint64_t *workspaceSize, aclOpExecutor **executor);
+                                                                      const aclTensor* x1ScaleOptional,
+                                                                      const aclTensor* x2Scale, aclTensor* yRef,
+                                                                      bool transposeX1, bool transposeX2,
+                                                                      int64_t groupSize, uint64_t* workspaceSize,
+                                                                      aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantBatchMatmulInplaceAdd的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnQuantMatmulInplaceAddGetWorkspaceSize获取。
+ * @param [in] workspace_size: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnQuantMatmulInplaceAddGetWorkspaceSize获取。
  * @param [in] exector: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码

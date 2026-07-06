@@ -61,7 +61,7 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_122, LayerNormV4TilingDataSingleRead)
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataTranspose)
 TILING_DATA_FIELD_DEF(uint64_t, col);                    // 输入tensor的行
 TILING_DATA_FIELD_DEF(uint64_t, row);                    // 输入tensor的列，即reduce的轴
-TILING_DATA_FIELD_DEF(uint64_t, numBlocks);               // 实际使用的core数量
+TILING_DATA_FIELD_DEF(uint64_t, numBlocks);              // 实际使用的core数量
 TILING_DATA_FIELD_DEF(uint64_t, blockFormer);            // 整核处理的row大小
 TILING_DATA_FIELD_DEF(uint64_t, blockTail);              // 尾核处理的row大小
 TILING_DATA_FIELD_DEF(uint64_t, ubFormer);               // ub整循环处理的row大小
@@ -111,7 +111,7 @@ BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataWelford)
 TILING_DATA_FIELD_DEF(int64_t, M);                  // 输入tensor的行
 TILING_DATA_FIELD_DEF(int64_t, N);                  // 输入tensor的列，即reduce的轴
 TILING_DATA_FIELD_DEF(int64_t, rAlign);             // r对齐的大小
-TILING_DATA_FIELD_DEF(int64_t, numBlocks);           // 实际使用的core数量
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);          // 实际使用的core数量
 TILING_DATA_FIELD_DEF(int64_t, mainBlockCount);     // 整核的数量
 TILING_DATA_FIELD_DEF(int64_t, mainBlockFactor);    // 整核处理的row大小
 TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);    // 尾核处理的row大小
@@ -220,8 +220,7 @@ struct ParamsLayerNomrV4 {
     bool isV3 = false;
 };
 
-enum class LayerNormV4TilingKey : int64_t
-{
+enum class LayerNormV4TilingKey : int64_t {
     // FLOAT32/FLOAT16/BFLOAT16 -- 0/1/2
     // Single Read
     LAYER_NORM_SINGLE_READ_FLOAT32_FLOAT32 = 100,
@@ -253,13 +252,7 @@ enum class LayerNormV4TilingKey : int64_t
     LAYER_NORM_COMMON_BFLOAT16_BFLOAT16 = 700,
 };
 
-enum class LNTemplateKey : int
-{
-    SINGEL_READ = 1,
-    TRANSPOSE = 2,
-    SINGEL_READ_REGBASE = 3,
-    WELFORD = 4
-};
+enum class LNTemplateKey : int { SINGEL_READ = 1, TRANSPOSE = 2, SINGEL_READ_REGBASE = 3, WELFORD = 4 };
 
 struct LayerNormV4CompileInfo {
     uint64_t coreNum = 0;
@@ -272,8 +265,7 @@ struct LayerNormV4CompileInfo {
 
 class LayerNormV4TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit LayerNormV4TilingBase(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext)
-    {}
+    explicit LayerNormV4TilingBase(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {}
     ~LayerNormV4TilingBase() override = default;
     ParamsLayerNomrV4 commonParams;
 
@@ -290,8 +282,7 @@ protected:
 
 class LayerNormV4SingleReadTiling : public LayerNormV4TilingBase {
 public:
-    explicit LayerNormV4SingleReadTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
-    {}
+    explicit LayerNormV4SingleReadTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext) {}
     ~LayerNormV4SingleReadTiling() override = default;
     LayerNormV4TilingDataSingleRead td_;
 
@@ -304,8 +295,7 @@ protected:
 
 class LayerNormV4MergeNTiling : public LayerNormV4TilingBase {
 public:
-    explicit LayerNormV4MergeNTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
-    {}
+    explicit LayerNormV4MergeNTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext) {}
     ~LayerNormV4MergeNTiling() override = default;
     LayerNormV4MergeNTilingData td_;
 
@@ -319,8 +309,7 @@ protected:
 
 class LayerNormV4CommonTiling : public LayerNormV4TilingBase {
 public:
-    explicit LayerNormV4CommonTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
-    {}
+    explicit LayerNormV4CommonTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext) {}
     ~LayerNormV4CommonTiling() override = default;
     LayerNormV4CommonTilingData td_;
 
@@ -334,8 +323,7 @@ protected:
 
 class LayerNormV4TransposeTiling : public LayerNormV4TilingBase {
 public:
-    explicit LayerNormV4TransposeTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
-    {}
+    explicit LayerNormV4TransposeTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext) {}
     ~LayerNormV4TransposeTiling() override = default;
     LayerNormV4TilingDataTranspose td_;
 
@@ -375,8 +363,8 @@ public:
 
 protected:
     bool CanFitInBuffer(int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse);
-    bool CanFitInBuffer(
-        int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse, int64_t xElemSize);
+    bool CanFitInBuffer(int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse,
+                        int64_t xElemSize);
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus DoOpTiling() override;
@@ -389,8 +377,7 @@ protected:
 
 class LayerNormV4WelfordTiling : public LayerNormV4TilingBase {
 public:
-    explicit LayerNormV4WelfordTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
-    {}
+    explicit LayerNormV4WelfordTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext) {}
     ~LayerNormV4WelfordTiling() override = default;
     LayerNormV4TilingDataWelford td_;
 
@@ -407,8 +394,9 @@ protected:
 
 class LayerNormV4RegBaseTwoPassPerfTiling : public LayerNormV4TilingBase {
 public:
-    explicit LayerNormV4RegBaseTwoPassPerfTiling(gert::TilingContext* tilingContext) :
-        LayerNormV4TilingBase(tilingContext) {}
+    explicit LayerNormV4RegBaseTwoPassPerfTiling(gert::TilingContext* tilingContext)
+        : LayerNormV4TilingBase(tilingContext)
+    {}
     ~LayerNormV4RegBaseTwoPassPerfTiling() override = default;
     LayerNormV4TilingDataRegBaseTwoPassPerf td_;
 
@@ -427,9 +415,9 @@ protected:
 
 int64_t GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype);
 ge::graphStatus TilingPrepare4CompileInfo(gert::TilingParseContext* context, LayerNormV4CompileInfo* compileInfo);
-ge::graphStatus GetCommonPlatformInfo(
-    gert::TilingContext* context, const LayerNormV4CompileInfo* compileInfo, ParamsLayerNomrV4& commonParams);
-ge::graphStatus GetCommonShapeAttrsInfo(
-    gert::TilingContext* context, uint64_t colSize, uint64_t rowSize, ParamsLayerNomrV4& commonParams);
+ge::graphStatus GetCommonPlatformInfo(gert::TilingContext* context, const LayerNormV4CompileInfo* compileInfo,
+                                      ParamsLayerNomrV4& commonParams);
+ge::graphStatus GetCommonShapeAttrsInfo(gert::TilingContext* context, uint64_t colSize, uint64_t rowSize,
+                                        ParamsLayerNomrV4& commonParams);
 } // namespace optiling
 #endif // LAYER_NORM_V4_TILING_H

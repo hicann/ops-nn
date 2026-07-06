@@ -40,17 +40,14 @@ constexpr int64_t DEFAULT_BACKWARD_N_FACTOR = 1024;
 constexpr int64_t DEFAULT_BACKWARD_N_FACTOR = 1024 * 6;
 #endif
 
-bool LayerNormGradV3RecomputeTiling::IsCapable()
-{
-    return true;
-}
+bool LayerNormGradV3RecomputeTiling::IsCapable() { return true; }
 
 ge::graphStatus LayerNormGradV3RecomputeTiling::GammaBetaKernelTiling()
 {
     // 沿M轴做reduce（输入形状为(M, N)）
     int64_t rowSize = static_cast<int64_t>(commonParams.rowSize);
     int64_t colSize = static_cast<int64_t>(commonParams.colSize);
-    
+
     // 动态调整 mFactor：小M场景使用实际大小，避免 UB 空间浪费
     int64_t mFactor = std::min(DEFAULT_GAMMA_BETA_M_FACTOR, rowSize);
 
@@ -79,8 +76,8 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::GammaBetaKernelTiling()
                     OP_LOGI(context_->GetNodeName(),
                             "Recompute template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
                             "mFactor: %ld, cacheBufferCount: %ld, nFactorMax: %ld.",
-                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm,
-                            mFactor, cacheBufferCount, nFactorMax),
+                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm, mFactor,
+                            cacheBufferCount, nFactorMax),
                     return ge::GRAPH_PARAM_INVALID);
 
     int64_t nFactor = ops::FloorAlign(nFactorMax, nFactorBase);
@@ -112,97 +109,99 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::BackwardKernelTiling()
     int64_t backwardNfactor = DEFAULT_BACKWARD_N_FACTOR;
     if (static_cast<int64_t>(commonParams.colSize) < backwardNfactor) {
         backwardNfactor = ops::CeilAlign(static_cast<int64_t>(commonParams.colSize),
-            static_cast<int64_t>(commonParams.vlFp32));
+                                         static_cast<int64_t>(commonParams.vlFp32));
     }
-    int64_t backwardNfactorBlockAligned = ops::CeilAlign(
-        static_cast<int64_t>(backwardNfactor * sizeof(float)), static_cast<int64_t>(commonParams.blockSize)) / sizeof(float);
-    int64_t backwardMainBlockFactor =
-        ops::CeilDiv(static_cast<int64_t>(commonParams.rowSize), static_cast<int64_t>(commonParams.coreNum));
+    int64_t backwardNfactorBlockAligned = ops::CeilAlign(static_cast<int64_t>(backwardNfactor * sizeof(float)),
+                                                         static_cast<int64_t>(commonParams.blockSize)) /
+                                          sizeof(float);
+    int64_t backwardMainBlockFactor = ops::CeilDiv(static_cast<int64_t>(commonParams.rowSize),
+                                                   static_cast<int64_t>(commonParams.coreNum));
     int64_t backwardBlockDim = ops::CeilDiv(static_cast<int64_t>(commonParams.rowSize), backwardMainBlockFactor);
-    int64_t backwardMainBlockCount =
-        ops::FloorDiv(static_cast<int64_t>(commonParams.rowSize), static_cast<int64_t>(backwardMainBlockFactor));
+    int64_t backwardMainBlockCount = ops::FloorDiv(static_cast<int64_t>(commonParams.rowSize),
+                                                   static_cast<int64_t>(backwardMainBlockFactor));
     int64_t backwardTailBlockCount = backwardBlockDim - backwardMainBlockCount;
     int64_t backwardTailBlockFactor = commonParams.rowSize - backwardMainBlockCount * backwardMainBlockFactor;
 
-    int64_t backwardNLoopMain = ops::FloorDiv(
-        static_cast<int64_t>(commonParams.colSize), static_cast<int64_t>(backwardNfactor)); 
-    int64_t backwardNTotalLoopMain = ops::CeilDiv(
-        static_cast<int64_t>(commonParams.colSize), static_cast<int64_t>(backwardNfactor));
+    int64_t backwardNLoopMain = ops::FloorDiv(static_cast<int64_t>(commonParams.colSize),
+                                              static_cast<int64_t>(backwardNfactor));
+    int64_t backwardNTotalLoopMain = ops::CeilDiv(static_cast<int64_t>(commonParams.colSize),
+                                                  static_cast<int64_t>(backwardNfactor));
     int64_t backwardNLoopTail = commonParams.colSize - backwardNLoopMain * backwardNfactor;
-    int64_t backwardBasicBlockLoop = FindNearestPower2(backwardNTotalLoopMain); 
+    int64_t backwardBasicBlockLoop = FindNearestPower2(backwardNTotalLoopMain);
     int64_t backwardMainFoldCount = backwardNLoopMain - backwardBasicBlockLoop;
 
     int64_t backwardCacheBufferCountMain = 1;
     int64_t backwardResultCacheIDMain = 0;
     if (backwardBasicBlockLoop != 0) {
         backwardCacheBufferCountMain = ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(
-            static_cast<uint64_t>(backwardBasicBlockLoop))); 
+                                                           static_cast<uint64_t>(backwardBasicBlockLoop)));
         backwardResultCacheIDMain = GetCacheID(backwardBasicBlockLoop - 1);
     }
 
-    int64_t backwardCeilVLCount = ops::CeilDiv(
-        static_cast<int64_t>(backwardNfactorBlockAligned), static_cast<int64_t>(commonParams.vlFp32));
+    int64_t backwardCeilVLCount = ops::CeilDiv(static_cast<int64_t>(backwardNfactorBlockAligned),
+                                               static_cast<int64_t>(commonParams.vlFp32));
     int64_t backwardFoldPoint = FindNearestPower2(backwardCeilVLCount);
-    int64_t backwardFoldSize = ops::CeilAlign(
-        static_cast<int64_t>(backwardFoldPoint), static_cast<int64_t>(commonParams.blockSize / sizeof(float)));
-    
+    int64_t backwardFoldSize = ops::CeilAlign(static_cast<int64_t>(backwardFoldPoint),
+                                              static_cast<int64_t>(commonParams.blockSize / sizeof(float)));
+
     int64_t backwardMFactorMax = (commonParams.ubSizePlatForm / sizeof(float) - CONST_TWO * backwardNfactor) /
-        ((CONST_TWO * CONST_THREE + CONST_ONE) * backwardNfactor + CONST_FOUR + CONST_ONE +
-        CONST_TWO * backwardCacheBufferCountMain + backwardFoldSize);
+                                 ((CONST_TWO * CONST_THREE + CONST_ONE) * backwardNfactor + CONST_FOUR + CONST_ONE +
+                                  CONST_TWO * backwardCacheBufferCountMain + backwardFoldSize);
 
-     OP_TILING_CHECK(backwardMFactorMax <= 0,
-                    OP_LOGI(context_->GetNodeName(),
-                            "Recompute template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
-                            "backwardMfactorMax: %ld.",
-                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm, backwardMFactorMax),
-                    return ge::GRAPH_PARAM_INVALID);
-    backwardMfactor = static_cast<int64_t>(commonParams.rowSize) < backwardMFactorMax
-                    ? static_cast<int64_t>(commonParams.rowSize)
-                    : backwardMFactorMax;
+    OP_TILING_CHECK(
+        backwardMFactorMax <= 0,
+        OP_LOGI(context_->GetNodeName(),
+                "Recompute template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
+                "backwardMfactorMax: %ld.",
+                commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm, backwardMFactorMax),
+        return ge::GRAPH_PARAM_INVALID);
+    backwardMfactor = static_cast<int64_t>(commonParams.rowSize) < backwardMFactorMax ?
+                          static_cast<int64_t>(commonParams.rowSize) :
+                          backwardMFactorMax;
 
-    int64_t backwardMLoopMain = ops::FloorDiv(
-        static_cast<int64_t>(backwardMainBlockFactor), static_cast<int64_t>(backwardMfactor));
+    int64_t backwardMLoopMain = ops::FloorDiv(static_cast<int64_t>(backwardMainBlockFactor),
+                                              static_cast<int64_t>(backwardMfactor));
     int64_t backwardMLoopTail = backwardMainBlockFactor - backwardMLoopMain * backwardMfactor;
-    
-    // 尾块处理
-    int64_t backwardMLoopTailTail = ops::FloorDiv(
-        static_cast<int64_t>(backwardTailBlockFactor), static_cast<int64_t>(backwardMfactor));
-    int64_t backwardMTailTail = backwardTailBlockFactor - backwardMLoopTailTail * backwardMfactor;
-    
-    int64_t backwardMfactorBlockAligned = ops::CeilAlign(
-        static_cast<int64_t>(backwardMfactor), static_cast<int64_t>(
-        static_cast<int64_t>(commonParams.blockSize) / static_cast<int64_t>(sizeof(float))));
 
-    td_.set_backwardMfactor(static_cast<int32_t>(backwardMfactor)); 
-    td_.set_backwardNfactor(static_cast<int32_t>(backwardNfactor)); 
+    // 尾块处理
+    int64_t backwardMLoopTailTail = ops::FloorDiv(static_cast<int64_t>(backwardTailBlockFactor),
+                                                  static_cast<int64_t>(backwardMfactor));
+    int64_t backwardMTailTail = backwardTailBlockFactor - backwardMLoopTailTail * backwardMfactor;
+
+    int64_t backwardMfactorBlockAligned = ops::CeilAlign(
+        static_cast<int64_t>(backwardMfactor),
+        static_cast<int64_t>(static_cast<int64_t>(commonParams.blockSize) / static_cast<int64_t>(sizeof(float))));
+
+    td_.set_backwardMfactor(static_cast<int32_t>(backwardMfactor));
+    td_.set_backwardNfactor(static_cast<int32_t>(backwardNfactor));
     td_.set_backwardMainBlockFactor(backwardMainBlockFactor);
     td_.set_backwardBlockDim(static_cast<int32_t>(backwardBlockDim));
 
-    td_.set_backwardMainBlockCount(backwardMainBlockCount); 
-    td_.set_backwardTailBlockCount(backwardTailBlockCount); 
-    td_.set_backwardTailBlockFactor(backwardTailBlockFactor); 
+    td_.set_backwardMainBlockCount(backwardMainBlockCount);
+    td_.set_backwardTailBlockCount(backwardTailBlockCount);
+    td_.set_backwardTailBlockFactor(backwardTailBlockFactor);
 
-    td_.set_backwardMLoopMain(backwardMLoopMain); 
-    td_.set_backwardMLoopTail(backwardMLoopTail); 
+    td_.set_backwardMLoopMain(backwardMLoopMain);
+    td_.set_backwardMLoopTail(backwardMLoopTail);
 
-    td_.set_backwardMLoopTailTail(backwardMLoopTailTail); 
-    td_.set_backwardMTailTail(backwardMTailTail); 
+    td_.set_backwardMLoopTailTail(backwardMLoopTailTail);
+    td_.set_backwardMTailTail(backwardMTailTail);
 
-    td_.set_backwardNLoopMain(backwardNLoopMain); 
-    td_.set_backwardNTotalLoopMain(backwardNTotalLoopMain); 
-    td_.set_backwardNLoopTail(backwardNLoopTail);  
-    td_.set_backwardBasicBlockLoop(backwardBasicBlockLoop); 
-    td_.set_backwardMainFoldCount(backwardMainFoldCount); 
+    td_.set_backwardNLoopMain(backwardNLoopMain);
+    td_.set_backwardNTotalLoopMain(backwardNTotalLoopMain);
+    td_.set_backwardNLoopTail(backwardNLoopTail);
+    td_.set_backwardBasicBlockLoop(backwardBasicBlockLoop);
+    td_.set_backwardMainFoldCount(backwardMainFoldCount);
 
-    td_.set_backwardNfactorBlockAligned(backwardNfactorBlockAligned); 
-    td_.set_backwardMfactorBlockAligned(backwardMfactorBlockAligned); 
+    td_.set_backwardNfactorBlockAligned(backwardNfactorBlockAligned);
+    td_.set_backwardMfactorBlockAligned(backwardMfactorBlockAligned);
 
-    td_.set_backwardCacheBufferCountMain(static_cast<int32_t>(backwardCacheBufferCountMain));  
-    td_.set_backwardResultCacheIDMain(static_cast<int32_t>(backwardResultCacheIDMain)); 
+    td_.set_backwardCacheBufferCountMain(static_cast<int32_t>(backwardCacheBufferCountMain));
+    td_.set_backwardResultCacheIDMain(static_cast<int32_t>(backwardResultCacheIDMain));
 
     td_.set_backwardCeilVLCount(backwardCeilVLCount);
-    td_.set_backwardFoldPoint(backwardFoldPoint);  
-    td_.set_backwardFoldSize(backwardFoldSize);  
+    td_.set_backwardFoldPoint(backwardFoldPoint);
+    td_.set_backwardFoldSize(backwardFoldSize);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -224,7 +223,7 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::DoOpTiling()
 ge::graphStatus LayerNormGradV3RecomputeTiling::GetWorkspaceSize()
 {
     constexpr int64_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     if (workspaces == nullptr) {
         return ge::GRAPH_FAILED;
     }

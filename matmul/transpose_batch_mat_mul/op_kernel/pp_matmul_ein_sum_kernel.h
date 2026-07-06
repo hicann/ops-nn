@@ -30,8 +30,10 @@
 
 namespace PpMatMulNS {
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-template <uint32_t SwizzleDirect, bool TA, bool TB, typename InDtype = half, typename OutDtype = half, DataFormat FormatB = DataFormat::ND>
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+template <uint32_t SwizzleDirect, bool TA, bool TB, typename InDtype = half, typename OutDtype = half,
+          DataFormat FormatB = DataFormat::ND>
 class PpMatmulEinSum {
     using LocalTensor = AscendC::LocalTensor<InDtype>;
     template <DataFormat srcFormat = DataFormat::ND, DataFormat dstFormat = DataFormat::ND>
@@ -39,14 +41,15 @@ class PpMatmulEinSum {
     using LoadCbufToCa = l1_to_l0_a<ArchType::ASCEND_V220, InDtype, TA, DataFormat::ZN, DataFormat::ZZ>;
     using LoadCbufToCb = l1_to_l0_b<ArchType::ASCEND_V220, InDtype, TB, DataFormat::ZN, DataFormat::NZ>;
     using CopyCcToGm = l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, OutDtype, float>;
+
 public:
     __aicore__ explicit PpMatmulEinSum(){};
 
     __aicore__ FORCE_INLINE void Init(GM_ADDR a, GM_ADDR b, GM_ADDR c, const PpMatmulTilingData* tilingData)
     {
-        gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype *>(a));
-        gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype *>(b));
-        gm_c.SetGlobalBuffer(reinterpret_cast<__gm__ OutDtype *>(c));
+        gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype*>(a));
+        gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype*>(b));
+        gm_c.SetGlobalBuffer(reinterpret_cast<__gm__ OutDtype*>(c));
         batch_size = tilingData->batch;
         m = tilingData->m;
         k = tilingData->k;
@@ -63,7 +66,8 @@ public:
 
         OnChipBuffer<ArchType::ASCEND_V220> buf;
         l1_base_a = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(0);
-        l1_base_b = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(RoundUp<CONST_256>(m0 * k0 * sizeof(InDtype)));
+        l1_base_b = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(
+            RoundUp<CONST_256>(m0 * k0 * sizeof(InDtype)));
         l0a_base = buf.template GetBuffer<BufferType::ASCEND_L0A, InDtype>(0);
         l0b_base = buf.template GetBuffer<BufferType::ASCEND_L0B, InDtype>(0);
         num_core = AscendC::GetBlockNum();
@@ -71,7 +75,7 @@ public:
         ping_flag = 1;
     }
 
-    __aicore__ FORCE_INLINE void GetBlockIdx(uint64_t index, MatCoord &tidx)
+    __aicore__ FORCE_INLINE void GetBlockIdx(uint64_t index, MatCoord& tidx)
     {
         uint64_t in_batch_idx = index % (tdim.m * tdim.n);
         if constexpr (SwizzleDirect == 0) { // Zn
@@ -131,85 +135,85 @@ public:
         }
     }
 
-    __aicore__ FORCE_INLINE void CopyTileA(
- 	    AscendC::LocalTensor<InDtype>& dstTensor, const AscendC::GlobalTensor<InDtype>& srcTensor,
- 	    const uint64_t m_actual, const uint64_t m_round, const uint64_t k_actual, const uint64_t k_round)
+    __aicore__ FORCE_INLINE void CopyTileA(AscendC::LocalTensor<InDtype>& dstTensor,
+                                           const AscendC::GlobalTensor<InDtype>& srcTensor, const uint64_t m_actual,
+                                           const uint64_t m_round, const uint64_t k_actual, const uint64_t k_round)
     {
         if ((m == 1) || (m_actual == 1 && !TA)) {
-            CopyGmToCbuf<DataFormat::ND, DataFormat::ND>(dstTensor,       // dst
-                         srcTensor, // src
-                         1,              // nTileActual
-                         CONST_16,       // nTileCeil
-                         1,              // nVal
-                         k_actual,       // kTileActual
-                         k_round,        // kTileCeil
-                         k);             // dVal
+            CopyGmToCbuf<DataFormat::ND, DataFormat::ND>(dstTensor, // dst
+                                                         srcTensor, // src
+                                                         1,         // nTileActual
+                                                         CONST_16,  // nTileCeil
+                                                         1,         // nVal
+                                                         k_actual,  // kTileActual
+                                                         k_round,   // kTileCeil
+                                                         k);        // dVal
         } else {
             if (TA) {
-                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,        // dst
-                                  srcTensor,  // src
-                                  k_actual,        // nTileActual
-                                  k_round,         // nTileCeil
-                                  k,               // nVal
-                                  m_actual,        // dTileActual
-                                  m_round,         // dTileCeil
-                                  m * batch_size); // dVal
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,       // dst
+                                                             srcTensor,       // src
+                                                             k_actual,        // nTileActual
+                                                             k_round,         // nTileCeil
+                                                             k,               // nVal
+                                                             m_actual,        // dTileActual
+                                                             m_round,         // dTileCeil
+                                                             m * batch_size); // dVal
             } else {
-                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,        // dst
-                                  srcTensor,  // src
-                                  m_actual,        // nTileActual
-                                  m_round,         // nTileCeil
-                                  m,               // nVal
-                                  k_actual,        // dTileActual
-                                  k_round,         // dTileCeil
-                                  k * batch_size); // dVal
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,       // dst
+                                                             srcTensor,       // src
+                                                             m_actual,        // nTileActual
+                                                             m_round,         // nTileCeil
+                                                             m,               // nVal
+                                                             k_actual,        // dTileActual
+                                                             k_round,         // dTileCeil
+                                                             k * batch_size); // dVal
             }
         }
     }
 
-    __aicore__ FORCE_INLINE void CopyTileB(
- 	    AscendC::LocalTensor<InDtype>& dstTensor, const AscendC::GlobalTensor<InDtype>& srcTensor,
- 	    const uint64_t k_actual, const uint64_t k_round, const uint64_t n_actual, const uint64_t n_round)
+    __aicore__ FORCE_INLINE void CopyTileB(AscendC::LocalTensor<InDtype>& dstTensor,
+                                           const AscendC::GlobalTensor<InDtype>& srcTensor, const uint64_t k_actual,
+                                           const uint64_t k_round, const uint64_t n_actual, const uint64_t n_round)
     {
         if constexpr (FormatB != DataFormat::NZ) {
             if (TB) {
-                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,       // dst
-                                srcTensor, // src
-                                n_actual,       // nTileActual
-                                n_round,        // nTileCeil
-                                n,              // nVal
-                                k_actual,       // dTileActual
-                                k_round,        // dTileCeil
-                                k);             // dVal
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor, // dst
+                                                             srcTensor, // src
+                                                             n_actual,  // nTileActual
+                                                             n_round,   // nTileCeil
+                                                             n,         // nVal
+                                                             k_actual,  // dTileActual
+                                                             k_round,   // dTileCeil
+                                                             k);        // dVal
             } else {
-                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor,       // dst
-                                srcTensor, // src
-                                k_actual,       // nTileActual
-                                k_round,        // nTileCeil
-                                k,              // nVal
-                                n_actual,       // dTileActual
-                                n_round,        // dTileCeil
-                                n);             // dVal
+                CopyGmToCbuf<DataFormat::ND, DataFormat::NZ>(dstTensor, // dst
+                                                             srcTensor, // src
+                                                             k_actual,  // nTileActual
+                                                             k_round,   // nTileCeil
+                                                             k,         // nVal
+                                                             n_actual,  // dTileActual
+                                                             n_round,   // dTileCeil
+                                                             n);        // dVal
             }
         } else {
             if (TB) {
-                CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(dstTensor,       // dst
-                                srcTensor, // src
-                                n_actual,       // nTileActual
-                                n_round,        // nTileCeil
-                                RoundUp16(n),              // nVal
-                                k_actual,       // dTileActual
-                                k_round,        // dTileCeil
-                                RoundUp16(k));             // dVal
+                CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(dstTensor,     // dst
+                                                             srcTensor,     // src
+                                                             n_actual,      // nTileActual
+                                                             n_round,       // nTileCeil
+                                                             RoundUp16(n),  // nVal
+                                                             k_actual,      // dTileActual
+                                                             k_round,       // dTileCeil
+                                                             RoundUp16(k)); // dVal
             } else {
-                CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(dstTensor,       // dst
-                                srcTensor, // src
-                                k_actual,       // nTileActual
-                                k_round,        // nTileCeil
-                                RoundUp16(k),              // nVal
-                                n_actual,       // dTileActual
-                                n_round,        // dTileCeil
-                                RoundUp16(n));             // dVal
+                CopyGmToCbuf<DataFormat::NZ, DataFormat::NZ>(dstTensor,     // dst
+                                                             srcTensor,     // src
+                                                             k_actual,      // nTileActual
+                                                             k_round,       // nTileCeil
+                                                             RoundUp16(k),  // nVal
+                                                             n_actual,      // dTileActual
+                                                             n_round,       // dTileCeil
+                                                             RoundUp16(n)); // dVal
             }
         }
     }
@@ -257,7 +261,7 @@ public:
                 // *** load matrix A to L1
                 CopyTileA(l1_buf_a, gm_a[offset_a], m_actual, m_round, k_actual, k_round);
                 SET_FLAG(MTE2, MTE1, event_id);
-                
+
                 WaitFlag<HardEvent::MTE1_MTE2>(event_id + CONST_2);
                 // *** load matrix B to L1
                 CopyTileB(l1_buf_b, gm_b[offset_b], k_actual, k_round, n_actual, n_round);
@@ -315,12 +319,14 @@ public:
 
                     WAIT_FLAG(MTE1, MTE2, event_id_next);
                     // *** load matrix A to L1
-                    CopyTileA(l1_buf_a_next, gm_a[offset_a_next], m_actual_next, m_round_next, k_actual_next, k_round_next);
+                    CopyTileA(l1_buf_a_next, gm_a[offset_a_next], m_actual_next, m_round_next, k_actual_next,
+                              k_round_next);
                     SET_FLAG(MTE2, MTE1, event_id_next);
 
                     WaitFlag<HardEvent::MTE1_MTE2>(event_id_next + CONST_2);
                     // *** load matrix B to L1
-                    CopyTileB(l1_buf_b_next, gm_b[offset_b_next], k_actual_next, k_round_next, n_actual_next, n_round_next);
+                    CopyTileB(l1_buf_b_next, gm_b[offset_b_next], k_actual_next, k_round_next, n_actual_next,
+                              n_round_next);
                     SET_FLAG(MTE2, MTE1, event_id_next + CONST_2);
                 }
 
@@ -341,14 +347,14 @@ public:
                     WAIT_FLAG(M, MTE1, mte1_mad_event_id);
                     if ((m == 1) || (m_actual == 1 && !TA)) {
                         l1_to_l0_a<ArchType::ASCEND_V220, InDtype, false, DataFormat::VECTOR, DataFormat::VECTOR>(
-                            l0a_buf,                                         // dst
-                            l1_buf_a[fidx.k * k_part_len],                   // src
-                            0,                                               // mTileCeil
-                            CeilDiv<CONST_512 / sizeof(InDtype)>(k0_round),  // kPartCeil
-                            0,                                               // mSrcStride
-                            1,                                               // kSrcStride
-                            0,                                               // mDstStride
-                            0);                                              // kDstStride
+                            l0a_buf,                                        // dst
+                            l1_buf_a[fidx.k * k_part_len],                  // src
+                            0,                                              // mTileCeil
+                            CeilDiv<CONST_512 / sizeof(InDtype)>(k0_round), // kPartCeil
+                            0,                                              // mSrcStride
+                            1,                                              // kSrcStride
+                            0,                                              // mDstStride
+                            0);                                             // kDstStride
                     } else {
                         if (TA) {
                             LoadCbufToCa(l0a_buf,                                  // l0Tensor
@@ -399,16 +405,17 @@ public:
                                          n_round / CONST_16);                      // kDstStride
                         } else {
                             AscendC::Load3DSetFMatrixCal(1, RoundUp<K_ROUND_CONST>(k_round), padList);
-                            uint64_t extConfig = ((uint64_t)RoundUp<K_ROUND_CONST>(k0_round) << 16) | (uint64_t)RoundUp16(n_round);
-                            AscendC::LoadData(l0b_buf, l1_buf_b[fidx.k * k_part_len * CONST_8], AscendC::LoadData3DParamsV2Pro(
-                                    RoundUp16(n_round), // channelSize
-                                    false,              // enTranspose(Default)
-                                    false,              // enSmallK(Default)
-                                    false,              // filterSizeW(Default)
-                                    false,              // filterSizeH(Default)
-                                    false,              // fMatrixCtrl(Default)
-                                    extConfig,          // extConfig
-                                    0X10101010101));    // filterConfig(Default)
+                            uint64_t extConfig = ((uint64_t)RoundUp<K_ROUND_CONST>(k0_round) << 16) |
+                                                 (uint64_t)RoundUp16(n_round);
+                            AscendC::LoadData(l0b_buf, l1_buf_b[fidx.k * k_part_len * CONST_8],
+                                              AscendC::LoadData3DParamsV2Pro(RoundUp16(n_round), // channelSize
+                                                                             false,              // enTranspose(Default)
+                                                                             false,              // enSmallK(Default)
+                                                                             false,              // filterSizeW(Default)
+                                                                             false,              // filterSizeH(Default)
+                                                                             false,              // fMatrixCtrl(Default)
+                                                                             extConfig,          // extConfig
+                                                                             0X10101010101)); // filterConfig(Default)
                         }
                     }
                     if (fidx.k == fdim.k - 1) {
@@ -503,5 +510,5 @@ private:
 };
 
 #endif
-}
+} // namespace PpMatMulNS
 #endif

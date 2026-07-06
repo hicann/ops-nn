@@ -22,7 +22,7 @@
 namespace IndexPutWithSort {
 using namespace AscendC;
 
-constexpr uint64_t INDEX_UB_NUMS = 2048; // one time process index nums
+constexpr uint64_t INDEX_UB_NUMS = 2048;   // one time process index nums
 constexpr uint64_t VALUES_UB_NUMS = 20480; // gather block size
 constexpr uint64_t BUFFER_NUM = 2;
 constexpr uint64_t GROUP_NUM = 10; // add group
@@ -31,45 +31,52 @@ constexpr uint64_t TBUF_BLOCK_SIZE = 12288; // scatter block size
 constexpr uint64_t SYNC_SIZE = 8;
 constexpr uint64_t ALIGNED_NUM = 16;
 
-__aicore__ inline void PIPE_V_S() {
+__aicore__ inline void PIPE_V_S()
+{
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIDVToS);
     WaitFlag<HardEvent::V_S>(eventIDVToS);
 }
 
-__aicore__ inline void PIPE_MTE2_S() {
+__aicore__ inline void PIPE_MTE2_S()
+{
     event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
 }
 
-__aicore__ inline void PIPE_MTE3_S() {
+__aicore__ inline void PIPE_MTE3_S()
+{
     event_t eventIDMTE3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
     SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
     WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
 }
 
-__aicore__ inline void PIPE_S_MTE3() {
+__aicore__ inline void PIPE_S_MTE3()
+{
     event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
     WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
 }
 
-template<typename T>
-__aicore__ inline void CopyGm2Ub(LocalTensor<T> dstTensor, GlobalTensor<T> srcTensor, const uint32_t count) {
+template <typename T>
+__aicore__ inline void CopyGm2Ub(LocalTensor<T> dstTensor, GlobalTensor<T> srcTensor, const uint32_t count)
+{
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
     DataCopyPad(dstTensor, srcTensor, copyParams, padParams);
 }
 
-template<typename T>
-__aicore__ inline void CopyUb2Gm(GlobalTensor<T> dstTensor, LocalTensor<T> srcTensor, const uint32_t count) {
+template <typename T>
+__aicore__ inline void CopyUb2Gm(GlobalTensor<T> dstTensor, LocalTensor<T> srcTensor, const uint32_t count)
+{
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     DataCopyPad(dstTensor, srcTensor, copyParams);
 }
 
-template<typename T>
-__aicore__ inline void AddUb2Gm(GlobalTensor<T> dstTensor, LocalTensor<T> srcTensor, const uint32_t count) {
+template <typename T>
+__aicore__ inline void AddUb2Gm(GlobalTensor<T> dstTensor, LocalTensor<T> srcTensor, const uint32_t count)
+{
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     SetAtomicAdd<T>();
     DataCopyPad(dstTensor, srcTensor, copyParams);
@@ -83,11 +90,12 @@ __aicore__ inline void AddUb2Gm(GlobalTensor<T> dstTensor, LocalTensor<T> srcTen
     @param taskBlocks 整份任务份数
     @param taskLeft 剩余任务个数
 */
-template<typename T>
-__aicore__ inline void TaskDivision(const T taskNums, const T blockSize, T& taskBlocks, T& taskLeft) {
+template <typename T>
+__aicore__ inline void TaskDivision(const T taskNums, const T blockSize, T& taskBlocks, T& taskLeft)
+{
     taskBlocks = taskNums / blockSize;
     taskLeft = taskNums - taskBlocks * blockSize;
 }
-}
+} // namespace IndexPutWithSort
 
 #endif // INDEX_PUT_WITH_SORTED_BASH_H

@@ -15,18 +15,11 @@
 #include "infer_shape_context_faker.h"
 #include "infershape_case_executor.h"
 
-class SparseApplyFtrlInfershape : public testing::Test
-{
+class SparseApplyFtrlInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SparseApplyFtrlInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseApplyFtrlInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SparseApplyFtrlInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SparseApplyFtrlInfershape TearDown" << std::endl; }
 };
 
 // Test case: var=(100,16), accum=(100,16), linear=(100,16), grad=(10,16), indices=(10,)
@@ -36,20 +29,20 @@ TEST_F(SparseApplyFtrlInfershape, sparse_apply_ftrl_infershape_test1)
     gert::InfershapeContextPara infershapeContextPara(
         "SparseApplyFtrl",
         {
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 0: var
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 1: accum
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 2: linear
-            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},     // input 3: grad
-            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},             // input 4: indices
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 5: lr
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 6: l1
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 7: l2
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 8: lr_power
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
         },
         {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // output 0: var
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // output 1: accum
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // output 2: linear
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
         });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {100, 16},

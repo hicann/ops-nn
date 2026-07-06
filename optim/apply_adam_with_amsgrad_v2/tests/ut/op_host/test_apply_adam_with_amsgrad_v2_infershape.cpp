@@ -36,15 +36,9 @@
 
 class ApplyAdamWithAmsgradV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamWithAmsgradV2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamWithAmsgradV2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamWithAmsgradV2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamWithAmsgradV2 TearDown" << std::endl; }
 };
 
 // case_0: 2D shape, four-output (var/m/v/vhat) shape == var.shape inference.
@@ -63,9 +57,8 @@ TEST_F(ApplyAdamWithAmsgradV2, ApplyAdamWithAmsgradV2_infershape_case_0)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
-                           &scalarShape, &scalarShape, &scalarShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &scalarShape, &gradShape})
                       .OutputShapes({&varShape, &mShape, &vShape, &vhatShape})
                       .Build();
 
@@ -88,9 +81,8 @@ TEST_F(ApplyAdamWithAmsgradV2, ApplyAdamWithAmsgradV2_infershape_case_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
-                           &scalarShape, &scalarShape, &scalarShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &scalarShape, &gradShape})
                       .OutputShapes({&varShape, &mShape, &vShape, &vhatShape})
                       .Build();
 
@@ -113,9 +105,8 @@ TEST_F(ApplyAdamWithAmsgradV2, ApplyAdamWithAmsgradV2_infershape_case_2)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
-                           &scalarShape, &scalarShape, &scalarShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &scalarShape, &gradShape})
                       .OutputShapes({&varShape, &mShape, &vShape, &vhatShape})
                       .Build();
 
@@ -139,9 +130,8 @@ TEST_F(ApplyAdamWithAmsgradV2, ApplyAdamWithAmsgradV2_infershape_case_3_empty)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
-                           &scalarShape, &scalarShape, &scalarShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &scalarShape, &gradShape})
                       .OutputShapes({&varShape, &mShape, &vShape, &vhatShape})
                       .Build();
 
@@ -165,9 +155,8 @@ TEST_F(ApplyAdamWithAmsgradV2, ApplyAdamWithAmsgradV2_infershape_case_4_8d)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
-                           &scalarShape, &scalarShape, &scalarShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &vhatShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &scalarShape, &gradShape})
                       .OutputShapes({&varShape, &mShape, &vShape, &vhatShape})
                       .Build();
 

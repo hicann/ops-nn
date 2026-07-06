@@ -19,8 +19,7 @@
 #include "max_pool3d_with_argmax_v2_tiling_base.h"
 #include "../op_kernel/arch35/max_pool3d_with_argmax_v2_tiling_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 
 struct MaxPool3DWithArgmaxV2NcTransposeBaseInfo {
     int64_t inputBytes = 0;
@@ -42,13 +41,13 @@ struct MaxPool3DWithArgmaxV2NcTransposeBaseInfo {
     int64_t wInput = 0;
     int64_t dStride = 0;
     int64_t hStride = 0;
-    int64_t wStride = 0;   
+    int64_t wStride = 0;
     int64_t dOutput = 0;
     int64_t hOutput = 0;
     int64_t wOutput = 0;
 
     int64_t isPad = 0;
-    int64_t highAxisTotal = 0;  
+    int64_t highAxisTotal = 0;
 };
 
 struct MaxPool3DWithArgmaxV2NcTransposeSplitInfo {
@@ -68,12 +67,12 @@ struct MaxPool3DWithArgmaxV2NcTransposeSplitInfo {
     int64_t dInputInner = 0;
     int64_t hInputInner = 0;
     int64_t wInputInner = 0;
-    
+
     int64_t totalBaseBlockNum = 0;
     int64_t normalCoreProcessNum = 0;
     int64_t tailCoreProcessNum = 0;
     int64_t usedCoreNum = 0;
-    
+
     int64_t inputBufferSize = 0;
     int64_t transBufferSize = 0;
     int64_t maxValueBufferSize = 0;
@@ -83,17 +82,13 @@ struct MaxPool3DWithArgmaxV2NcTransposeSplitInfo {
     int64_t castBufferSize = 0;
 };
 
-class MaxPool3DWithArgmaxV2NcTransposeTiling : public MaxPool3DWithArgmaxV2BaseTiling
-{
+class MaxPool3DWithArgmaxV2NcTransposeTiling : public MaxPool3DWithArgmaxV2BaseTiling {
 public:
     explicit MaxPool3DWithArgmaxV2NcTransposeTiling(gert::TilingContext* context)
         : MaxPool3DWithArgmaxV2BaseTiling(context)
-    {
-    }
+    {}
 
-    ~MaxPool3DWithArgmaxV2NcTransposeTiling() override
-    {
-    }
+    ~MaxPool3DWithArgmaxV2NcTransposeTiling() override {}
 
 private:
     void InitializationVars();
@@ -121,12 +116,12 @@ private:
     ge::graphStatus ParsePadDilationAttrs(const gert::RuntimeAttrs* runtimeAttrs);
     ge::graphStatus ParseCeilModeAndDtype(const gert::RuntimeAttrs* runtimeAttrs);
 
-    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData* tilingData_ =
-        context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData>();
+    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData* tilingData_ = context_->GetTilingData<
+        MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData>();
     MaxPool3DWithArgmaxV2NcTransposeBaseInfo baseData_;
     MaxPool3DWithArgmaxV2NcTransposeSplitInfo splitData_;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

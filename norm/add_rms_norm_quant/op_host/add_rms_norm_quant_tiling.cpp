@@ -58,8 +58,8 @@ constexpr uint32_t RESOUT_INDEX = 3;
 
 AddRMSNormQuantTilingData addRMSNormQuantTilingData;
 
-static void InitPlatformParams(
-    gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo, uint32_t& numCore)
+static void InitPlatformParams(gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo,
+                               uint32_t& numCore)
 {
     if (nullptr == ptrCompileInfo) {
         auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
@@ -73,8 +73,8 @@ bool CheckOptionalParamsExisting(const gert::StorageShape* checkShape)
 {
     OP_CHECK_IF(nullptr == checkShape, OP_LOGD("CheckOptionalParamsExisting", "Get nullptr checkShape"), return false);
     int64_t checkShapeSize = checkShape->GetOriginShape().GetShapeSize();
-    OP_CHECK_IF(
-        (checkShapeSize <= 0), OP_LOGD("CheckOptionalParamsExisting", "Get empty checkShapeSize"), return false);
+    OP_CHECK_IF((checkShapeSize <= 0), OP_LOGD("CheckOptionalParamsExisting", "Get empty checkShapeSize"),
+                return false);
     return true;
 }
 
@@ -166,9 +166,8 @@ ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, ui
     return ge::GRAPH_SUCCESS;
 }
 
-static void CalcModeAndUbFactor(
-    gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo, uint32_t blockFactor,
-    uint32_t numCol)
+static void CalcModeAndUbFactor(gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo,
+                                uint32_t blockFactor, uint32_t numCol)
 {
     platform_ascendc::SocVersion socVersion;
     uint64_t ubSize = 0;
@@ -191,20 +190,20 @@ static void CalcModeAndUbFactor(
     uint64_t singleUbFactor = UB_FACTOR_SINGLE_N_B16;
     uint64_t normalUbFactor = UB_FACTOR_B16;
 
-    uint32_t colTileNum =
-        Ops::Base::CeilDiv(numCol, ((xDataType == ge::DT_FLOAT) ? UB_FACTOR_B32_CUTD : UB_FACTOR_B16_CUTD));
+    uint32_t colTileNum = Ops::Base::CeilDiv(numCol,
+                                             ((xDataType == ge::DT_FLOAT) ? UB_FACTOR_B32_CUTD : UB_FACTOR_B16_CUTD));
     uint64_t splitDUbFactor = Ops::Base::CeilDiv(numCol, colTileNum * BLOCK_ALIGN_NUM) * BLOCK_ALIGN_NUM;
 
     if (optionalUbNum_0 > INT_ZERO) {
         uint64_t staticBlockNum4Normal = 20;
         uint64_t staticUsedUb4Normal = 256;
-        uint64_t tmp =
-            (actualMaxUbSize - staticUsedUb4Normal) / (staticBlockNum4Normal + static_cast<uint64_t>(optionalUbNum_0));
+        uint64_t tmp = (actualMaxUbSize - staticUsedUb4Normal) /
+                       (staticBlockNum4Normal + static_cast<uint64_t>(optionalUbNum_0));
         normalUbFactor = (tmp / BLOCK_ALIGN_NUM_32) * BLOCK_ALIGN_NUM_32;
         uint64_t staticBlockNum4SplitD = 22;
         uint64_t staticUsedUb4SplitD = 2560;
-        tmp =
-            (actualMaxUbSize - staticUsedUb4SplitD) / (staticBlockNum4SplitD + static_cast<uint64_t>(optionalUbNum_0));
+        tmp = (actualMaxUbSize - staticUsedUb4SplitD) /
+              (staticBlockNum4SplitD + static_cast<uint64_t>(optionalUbNum_0));
         splitDUbFactor = (tmp / BLOCK_ALIGN_NUM_32) * BLOCK_ALIGN_NUM_32;
     }
 
@@ -240,9 +239,8 @@ static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* con
 
     uint32_t numCol;
     uint32_t numRow;
-    OP_CHECK_IF(
-        GetOpDescInfo(context, numCol, numRow) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Get Opdesc Info failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetOpDescInfo(context, numCol, numRow) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Get Opdesc Info failed."), return ge::GRAPH_FAILED);
 
     uint32_t blockFactor = 1;
     uint32_t tileNum = Ops::Base::CeilDiv(numRow, numCore * blockFactor);
@@ -259,8 +257,8 @@ static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* con
     addRMSNormQuantTilingData.set_blockFactor(blockFactor);
     addRMSNormQuantTilingData.set_rowFactor(rowFactor);
 
-    addRMSNormQuantTilingData.SaveToBuffer(
-        context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    addRMSNormQuantTilingData.SaveToBuffer(context->GetRawTilingData()->GetData(),
+                                           context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(addRMSNormQuantTilingData.GetDataSize());
 
     size_t sysWorkspaceSize = 16UL * 1024UL * 1024UL;
@@ -270,9 +268,8 @@ static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* con
 
     OP_LOGD("Tiling4AddRmsNormQuantNotRegbase", "Block Dim: %u", useCoreNum);
     OP_LOGD("Tiling4AddRmsNormQuantNotRegbase", "usr Workspace: %zu", usrSize);
-    OP_LOGD(
-        "Tiling4AddRmsNormQuantNotRegbase", "numRow: %d, numCol: %d, blockFactor: %d, rowFactor: %d", numRow, numCol,
-        blockFactor, rowFactor);
+    OP_LOGD("Tiling4AddRmsNormQuantNotRegbase", "numRow: %d, numCol: %d, blockFactor: %d, rowFactor: %d", numRow,
+            numCol, blockFactor, rowFactor);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -292,9 +289,8 @@ ge::graphStatus Tiling4AddRmsNormQuantV2(gert::TilingContext* context)
         AddRmsNormQuantRegbaseTiling regbaseTiling(context);
         return regbaseTiling.DoTiling();
     }
-    OP_CHECK_IF(
-        Tiling4AddRmsNormQuantNotRegbase(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Tiling4AddRmsNormQuantNotRegbase failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(Tiling4AddRmsNormQuantNotRegbase(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Tiling4AddRmsNormQuantNotRegbase failed."), return ge::GRAPH_FAILED);
     CalcTilingKeyWithOptionalInput(context);
     return ge::GRAPH_SUCCESS;
 }
@@ -304,12 +300,12 @@ ge::graphStatus TilingPrepare4AddRmsNormQuant(gert::TilingParseContext* context)
     OP_CHECK_IF(nullptr == context, OP_LOGE("AddRmsNormQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "Enter TilingPrepare4AddRmsNormQuant.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(
-        platformInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "PlatformInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "PlatformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<AddRmsNormQuantCompileInfo>();
-    OP_CHECK_IF(
-        compileInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "CompileInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "CompileInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->curSocVersion = ascendcPlatform.GetSocVersion();
@@ -341,9 +337,9 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
 
     int32_t y1Dtype = static_cast<int32_t>(context->GetOutputDesc(Y1_INDEX)->GetDataType());
 
-    OP_CHECK_IF(
-        context->GetOptionalInputShape(SCALES2_INDEX) != nullptr, OP_LOGW(context, "Optional input scale2 exist"),
-        scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
+    OP_CHECK_IF(context->GetOptionalInputShape(SCALES2_INDEX) != nullptr,
+                OP_LOGW(context, "Optional input scale2 exist"),
+                scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
     OP_CHECK_IF(
         context->GetOptionalInputShape(ZERO_POINTS1_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints1 exist"),
@@ -352,9 +348,8 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
         context->GetOptionalInputShape(ZERO_POINTS2_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints2 exist"),
         zeroPoints2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS2_INDEX)->GetDataType()));
-    OP_CHECK_IF(
-        context->GetOptionalInputShape(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
-        betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
+    OP_CHECK_IF(context->GetOptionalInputShape(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
+                betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
 
     std::string simpleKeyTemp = "";
     strcat_s(simplifiedKey, DEST_MAX, "diy,");
@@ -379,11 +374,10 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
         .append("/");
     OP_LOGW(context, "SimpleKeyTemp: %s", simpleKeyTemp.c_str());
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
-    OP_CHECK_IF(
-        (err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY, OP_LOGE(context, "Len of simplifiedKey exceeds max length."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
+                OP_LOGE(context, "Len of simplifiedKey exceeds max length."), return ge::GRAPH_FAILED);
     OP_LOGW(context, "Finish AddRmsNormQuant genSimplifiedKey.");
     return ge::GRAPH_SUCCESS;
 }

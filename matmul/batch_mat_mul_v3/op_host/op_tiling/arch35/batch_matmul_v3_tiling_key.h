@@ -27,4 +27,3 @@ public:
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling
-

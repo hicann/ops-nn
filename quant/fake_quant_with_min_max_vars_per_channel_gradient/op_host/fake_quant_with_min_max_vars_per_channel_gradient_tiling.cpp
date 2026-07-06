@@ -18,7 +18,7 @@
 namespace optiling {
 constexpr uint64_t TILING_KEY_FP32 = 1001;
 constexpr uint32_t VL_FP32 = 64;
-constexpr uint32_t RESERVED_UB = 8 * 1024;     // 8 KB scratchpad
+constexpr uint32_t RESERVED_UB = 8 * 1024; // 8 KB scratchpad
 // 9 FP32 buffers all sized by dTileLen: nudgedMin/Max + bpMinAcc/Max + bpMinComp/MaxComp + g + x + bpx = 9 * 4 bytes.
 constexpr uint32_t BYTES_PER_DTILE_ELEM = 36;
 constexpr size_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
@@ -30,7 +30,7 @@ constexpr size_t INPUT_IDX_X = 1;
 
 class FakeQuantWithMinMaxVarsPerChannelGradientTiling {
 public:
-    explicit FakeQuantWithMinMaxVarsPerChannelGradientTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit FakeQuantWithMinMaxVarsPerChannelGradientTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -59,21 +59,17 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::Init()
 {
     OP_LOGD(tilingContext->GetNodeName(), "Tiling init begin.");
 
-    auto compileInfo =
-        tilingContext->GetCompileInfo<FakeQuantWithMinMaxVarsPerChannelGradientCompileInfo>();
-    OP_CHECK_IF((compileInfo == nullptr), OP_LOGE(tilingContext, "compileInfo is nullptr"),
-                return ge::GRAPH_FAILED);
+    auto compileInfo = tilingContext->GetCompileInfo<FakeQuantWithMinMaxVarsPerChannelGradientCompileInfo>();
+    OP_CHECK_IF((compileInfo == nullptr), OP_LOGE(tilingContext, "compileInfo is nullptr"), return ge::GRAPH_FAILED);
     coreNumPlatform_ = static_cast<uint32_t>(compileInfo->totalCoreNum);
     ubSizePlatForm_ = compileInfo->ubSizePlatForm;
     if (coreNumPlatform_ == 0 || ubSizePlatForm_ == 0) {
-        OP_LOGE(tilingContext, "platform info invalid: coreNum=%u, ubSize=%lu",
-                coreNumPlatform_, ubSizePlatForm_);
+        OP_LOGE(tilingContext, "platform info invalid: coreNum=%u, ubSize=%lu", coreNumPlatform_, ubSizePlatForm_);
         return ge::GRAPH_FAILED;
     }
 
     auto xShapePtr = tilingContext->GetInputShape(INPUT_IDX_X);
-    OP_CHECK_IF((xShapePtr == nullptr), OP_LOGE(tilingContext, "x shape is nullptr"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xShapePtr == nullptr), OP_LOGE(tilingContext, "x shape is nullptr"), return ge::GRAPH_FAILED);
     auto xShape = xShapePtr->GetStorageShape();
     size_t dimNum = xShape.GetDimNum();
     if (dimNum == 0) {
@@ -100,8 +96,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::Init()
 
     // Attrs
     auto attrs = tilingContext->GetAttrs();
-    OP_CHECK_IF((attrs == nullptr), OP_LOGE(tilingContext, "attrs is nullptr"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((attrs == nullptr), OP_LOGE(tilingContext, "attrs is nullptr"), return ge::GRAPH_FAILED);
     int32_t numBits = 8;
     bool narrowRange = false;
     const int32_t* numBitsPtr = attrs->GetAttrPointer<int32_t>(ATTR_IDX_NUM_BITS);
@@ -162,7 +157,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::Init()
         }
         chunksPerCore_ = numDChunks_ / usedCoreNum_;
         tailChunks_ = numDChunks_ % usedCoreNum_;
-        rowsPerCore_ = totalRows_;  // every core processes the single row
+        rowsPerCore_ = totalRows_; // every core processes the single row
         tailRows_ = 0;
     }
     if (usedCoreNum_ == 0) {
@@ -177,8 +172,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::Init()
     size_t userWorkspaceBytes = 0;
     if (splitMode_ == SPLIT_MODE_ROWS) {
         uint32_t wsStride = ((channelNum_ + VL_FP32 - 1) / VL_FP32) * VL_FP32;
-        userWorkspaceBytes =
-            static_cast<size_t>(2) * usedCoreNum_ * wsStride * sizeof(float);
+        userWorkspaceBytes = static_cast<size_t>(2) * usedCoreNum_ * wsStride * sizeof(float);
     }
     size_t* currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
     currentWorkSpace[0] = SYS_WORKSPACE_SIZE + userWorkspaceBytes;
@@ -188,8 +182,8 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::Init()
             "Tiling init done. totalRows=%u channelNum=%u usedCore=%u splitMode=%u "
             "rowsPerCore=%u tailRows=%u dTileLen=%u numDChunks=%u chunksPerCore=%u tailChunks=%u "
             "qmin=%d qmax=%d",
-            totalRows_, channelNum_, usedCoreNum_, splitMode_, rowsPerCore_, tailRows_,
-            dTileLen_, numDChunks_, chunksPerCore_, tailChunks_, quantMin_, quantMax_);
+            totalRows_, channelNum_, usedCoreNum_, splitMode_, rowsPerCore_, tailRows_, dTileLen_, numDChunks_,
+            chunksPerCore_, tailChunks_, quantMin_, quantMax_);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -245,12 +239,10 @@ static ge::graphStatus TilingFakeQuantWithMinMaxVarsPerChannelGradient(gert::Til
     return tilingObject.RunKernelTiling();
 }
 
-static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxVarsPerChannelGradient(
-    gert::TilingParseContext* context)
+static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxVarsPerChannelGradient(gert::TilingParseContext* context)
 {
     OP_LOGD(context, "TilingPrepareForFakeQuantWithMinMaxVarsPerChannelGradient start.");
-    auto compileInfo =
-        context->GetCompiledInfo<FakeQuantWithMinMaxVarsPerChannelGradientCompileInfo>();
+    auto compileInfo = context->GetCompiledInfo<FakeQuantWithMinMaxVarsPerChannelGradientCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -259,10 +251,9 @@ static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxVarsPerChannelGradient
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
-    OP_CHECK_IF((compileInfo->ubSizePlatForm == 0),
-                OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF((compileInfo->totalCoreNum <= 0),
-                OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm == 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     OP_LOGD(context, "TilingPrepareForFakeQuantWithMinMaxVarsPerChannelGradient end. core=%d ub=%lu",
             compileInfo->totalCoreNum, compileInfo->ubSizePlatForm);
     return ge::GRAPH_SUCCESS;

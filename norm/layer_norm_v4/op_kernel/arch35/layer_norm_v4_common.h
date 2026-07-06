@@ -49,9 +49,9 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 };
 
 template <typename M>
-__aicore__ inline void CastBatchMeanRstdToDtype(
-    __local_mem__ float* batchMeanInAddr, __local_mem__ float* batchRstdInAddr,
-    __local_mem__ M* batchMeanOutAddr, __local_mem__ M* batchRstdOutAddr, uint64_t currentANum)
+__aicore__ inline void CastBatchMeanRstdToDtype(__local_mem__ float* batchMeanInAddr,
+                                                __local_mem__ float* batchRstdInAddr, __local_mem__ M* batchMeanOutAddr,
+                                                __local_mem__ M* batchRstdOutAddr, uint64_t currentANum)
 {
     constexpr uint32_t VL_F32 = AscendC::VECTOR_REG_WIDTH / sizeof(float);
     constexpr uint32_t VL_MEAN = AscendC::VECTOR_REG_WIDTH / sizeof(M);
@@ -66,20 +66,20 @@ __aicore__ inline void CastBatchMeanRstdToDtype(
         AscendC::MicroAPI::MaskReg pregLoop;
         for (uint16_t i = 0; i < castLoops; i++) {
             pregLoop = AscendC::MicroAPI::UpdateMask<float>(castCount);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                input_mean, batchMeanInAddr + VL_F32 * i);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                input_rstd, batchRstdInAddr + VL_F32 * i);
+            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(input_mean,
+                                                                                       batchMeanInAddr + VL_F32 * i);
+            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(input_rstd,
+                                                                                       batchRstdInAddr + VL_F32 * i);
             Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
             Cast<M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
-            DataCopy<M, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                batchMeanOutAddr + i * VL_MEAN, output_mean, pregLoop);
-            DataCopy<M, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                batchRstdOutAddr + i * VL_MEAN, output_rstd, pregLoop);
+            DataCopy<M, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(batchMeanOutAddr + i * VL_MEAN, output_mean,
+                                                                     pregLoop);
+            DataCopy<M, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(batchRstdOutAddr + i * VL_MEAN, output_rstd,
+                                                                     pregLoop);
         }
     }
 }
 
 } // namespace LayerNormV4
 
-#endif  // LAYER_NORM_V4_COMMON_H
+#endif // LAYER_NORM_V4_COMMON_H

@@ -40,8 +40,7 @@ struct SigmoidCrossEntropyWithLogitsGradV2CompileInfo {
 
 class SigmoidCrossEntropyWithLogitsGradV2Tiling : public TilingBaseClass {
 public:
-    explicit SigmoidCrossEntropyWithLogitsGradV2Tiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit SigmoidCrossEntropyWithLogitsGradV2Tiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

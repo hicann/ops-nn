@@ -47,15 +47,9 @@ public:
         return *this;
     }
 
-    KernelRunContextHolder(KernelRunContextHolder&& holder)
-    {
-        KernelRunContextHolder::operator=(std::move(holder));
-    }
+    KernelRunContextHolder(KernelRunContextHolder&& holder) { KernelRunContextHolder::operator=(std::move(holder)); }
 
-    void SetContext(void* context)
-    {
-        context_ = context;
-    }
+    void SetContext(void* context) { context_ = context; }
 
     template <typename T>
     T* GetContext()

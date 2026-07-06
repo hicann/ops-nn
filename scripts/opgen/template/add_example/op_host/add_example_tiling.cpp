@@ -25,13 +25,9 @@ namespace optiling {
 struct AddExampleCompileInfo {};
 
 // tiling 分发入口
-static ge::graphStatus AddExampleTilingFunc(gert::TilingContext* context)
-{
-}
+static ge::graphStatus AddExampleTilingFunc(gert::TilingContext* context) {}
 
-static ge::graphStatus TilingParseForAddExample([[maybe_unused]] gert::TilingParseContext* context)
-{   
-}
+static ge::graphStatus TilingParseForAddExample([[maybe_unused]] gert::TilingParseContext* context) {}
 
 // tiling注册入口.
 IMPL_OP_OPTILING(AddExample).Tiling(AddExampleTilingFunc).TilingParse<AddExampleCompileInfo>(TilingParseForAddExample);

@@ -40,10 +40,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
@@ -93,8 +93,8 @@ static int32_t ParseUseLocking(gert::TilingContext* context)
     return (*useLockingPtr) ? 1 : 0;
 }
 
-static int64_t ComputeSplit(ApplyRmsPropTilingData* tiling, ge::DataType dataType,
-                            uint64_t ubSize, int64_t coreNum, int64_t ubBlockSize, uint64_t& bufferMode)
+static int64_t ComputeSplit(ApplyRmsPropTilingData* tiling, ge::DataType dataType, uint64_t ubSize, int64_t coreNum,
+                            int64_t ubBlockSize, uint64_t& bufferMode)
 {
     if (ubBlockSize <= 0) {
         // Minor-1 fix: 防御性兜底，避免 CeilAlign 除零
@@ -104,9 +104,8 @@ static int64_t ComputeSplit(ApplyRmsPropTilingData* tiling, ge::DataType dataTyp
     int64_t usedCoreNum = CeilDiv(tiling->totalNum, tiling->blockFactor);
     bufferMode = (tiling->totalNum > MIN_SPLIT_THRESHOLD) ? 1 : 0;
     int64_t slots = GetTensorSlots(dataType, bufferMode);
-    constexpr int64_t elemBytes = 4;  // Internal computation in fp32
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
+    constexpr int64_t elemBytes = 4; // Internal computation in fp32
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
     return usedCoreNum;
 }
 
@@ -125,20 +124,17 @@ static bool ShapeEqual(const gert::Shape& a, const gert::Shape& b)
 }
 
 // C3 constraint check: lr/rho/momentum/epsilon are 1-element Tensors.
-static bool IsScalarShape(const gert::Shape& s)
-{
-    return s.GetShapeSize() == 1;
-}
+static bool IsScalarShape(const gert::Shape& s) { return s.GetShapeSize() == 1; }
 
 // Input indices (canndev REG_OP(ApplyRMSProp) order)
-constexpr size_t kIdxVar      = 0;
-constexpr size_t kIdxMs       = 1;
-constexpr size_t kIdxMom      = 2;
-constexpr size_t kIdxLr       = 3;
-constexpr size_t kIdxRho      = 4;
+constexpr size_t kIdxVar = 0;
+constexpr size_t kIdxMs = 1;
+constexpr size_t kIdxMom = 2;
+constexpr size_t kIdxLr = 3;
+constexpr size_t kIdxRho = 4;
 constexpr size_t kIdxMomentum = 5;
-constexpr size_t kIdxEpsilon  = 6;
-constexpr size_t kIdxGrad     = 7;
+constexpr size_t kIdxEpsilon = 6;
+constexpr size_t kIdxGrad = 7;
 
 // C1: shape(var) == shape(ms) == shape(mom) == shape(grad).
 static ge::graphStatus CheckShapeC1(gert::TilingContext* context, const gert::StorageShape* varShape)
@@ -150,18 +146,12 @@ static ge::graphStatus CheckShapeC1(gert::TilingContext* context, const gert::St
     auto gradShape = context->GetInputShape(kIdxGrad);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
 
-    OP_CHECK_IF(
-        !ShapeEqual(varShape->GetStorageShape(), msShape->GetStorageShape()),
-        OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(ms)"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !ShapeEqual(varShape->GetStorageShape(), momShape->GetStorageShape()),
-        OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(mom)"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !ShapeEqual(varShape->GetStorageShape(), gradShape->GetStorageShape()),
-        OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(grad)"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape->GetStorageShape(), msShape->GetStorageShape()),
+                OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(ms)"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape->GetStorageShape(), momShape->GetStorageShape()),
+                OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(mom)"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape->GetStorageShape(), gradShape->GetStorageShape()),
+                OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(grad)"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -176,42 +166,31 @@ static ge::graphStatus CheckScalarsC3(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, momentumShape);
     auto epsShape = context->GetInputShape(kIdxEpsilon);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsShape);
-    OP_CHECK_IF(
-        !IsScalarShape(lrShape->GetStorageShape()),
-        OP_LOGE(context, "C3: lr must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !IsScalarShape(rhoShape->GetStorageShape()),
-        OP_LOGE(context, "C3: rho must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !IsScalarShape(momentumShape->GetStorageShape()),
-        OP_LOGE(context, "C3: momentum must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !IsScalarShape(epsShape->GetStorageShape()),
-        OP_LOGE(context, "C3: epsilon must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(lrShape->GetStorageShape()), OP_LOGE(context, "C3: lr must be a 1-element Tensor"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(rhoShape->GetStorageShape()), OP_LOGE(context, "C3: rho must be a 1-element Tensor"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(momentumShape->GetStorageShape()),
+                OP_LOGE(context, "C3: momentum must be a 1-element Tensor"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(epsShape->GetStorageShape()), OP_LOGE(context, "C3: epsilon must be a 1-element Tensor"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context,
-                                           int64_t& totalNum, ge::DataType& dataType)
+static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t& totalNum, ge::DataType& dataType)
 {
     auto varShape = context->GetInputShape(kIdxVar);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
 
     constexpr size_t kMaxRank = 8;
     const size_t varRank = varShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        varRank == 0 || varRank > kMaxRank,
-        OP_LOGE(context, "var rank must be in [1, 8], got %zu", varRank),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varRank == 0 || varRank > kMaxRank, OP_LOGE(context, "var rank must be in [1, 8], got %zu", varRank),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckShapeC1(context, varShape) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "CheckShapeC1 failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckScalarsC3(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "CheckScalarsC3 failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShapeC1(context, varShape) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckShapeC1 failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckScalarsC3(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckScalarsC3 failed"),
+                return ge::GRAPH_FAILED);
 
     totalNum = varShape->GetStorageShape().GetShapeSize();
     auto varDesc = context->GetInputDesc(kIdxVar);
@@ -224,10 +203,9 @@ static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context,
     for (size_t i = 0; i < sizeof(kCheckIndices) / sizeof(kCheckIndices[0]); ++i) {
         auto desc = context->GetInputDesc(kCheckIndices[i]);
         OP_CHECK_NULL_WITH_CONTEXT(context, desc);
-        OP_CHECK_IF(
-            desc->GetDataType() != dataType,
-            OP_LOGE(context, "ApplyRMSProp: dtype mismatch, %s != var dtype", kCheckNames[i]),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(desc->GetDataType() != dataType,
+                    OP_LOGE(context, "ApplyRMSProp: dtype mismatch, %s != var dtype", kCheckNames[i]),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -248,24 +226,20 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, uint32_t 
     // Major-1 fix: 空 tensor 路径仍须初始化 TilingData，避免 Kernel 读取未定义 totalNum/blockFactor
     ApplyRmsPropTilingData* tiling = context->GetTilingData<ApplyRmsPropTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK,
-        OP_LOGE(context, "ApplyRMSProp: HandleEmptyTensor memset tiling failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK,
+                OP_LOGE(context, "ApplyRMSProp: HandleEmptyTensor memset tiling failed"), return ge::GRAPH_FAILED);
     context->SetBlockDim(1);
     uint32_t bufMode = 0;
     ASCENDC_TPL_SEL_PARAM(context, dTypeX, bufMode);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InitTilingData(gert::TilingContext* context,
-                                      int64_t totalNum, ApplyRmsPropTilingData*& tiling)
+static ge::graphStatus InitTilingData(gert::TilingContext* context, int64_t totalNum, ApplyRmsPropTilingData*& tiling)
 {
     tiling = context->GetTilingData<ApplyRmsPropTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK, OP_LOGE(context, "set tiling data error"),
+                return ge::GRAPH_FAILED);
     tiling->totalNum = totalNum;
     return ge::GRAPH_SUCCESS;
 }
@@ -273,21 +247,18 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context,
 static ge::graphStatus ApplyRMSPropTilingFunc(gert::TilingContext* context)
 {
     OP_LOGI(context->GetNodeName(), "Enter ApplyRMSPropTilingFunc");
-    uint64_t ubSize = 0;  // Minor-4 fix: 显式初始化
+    uint64_t ubSize = 0; // Minor-4 fix: 显式初始化
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalNum = 0;
     ge::DataType dataType = ge::DT_FLOAT;
-    OP_CHECK_IF(
-        GetShapeAndDataType(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAndDataType error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAndDataType(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAndDataType error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        SetWorkspace(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetWorkspace error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetWorkspace error"),
+                return ge::GRAPH_FAILED);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     if (totalNum == 0) {
@@ -295,9 +266,8 @@ static ge::graphStatus ApplyRMSPropTilingFunc(gert::TilingContext* context)
     }
 
     ApplyRmsPropTilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        InitTilingData(context, totalNum, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, totalNum, tiling) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
 
     uint64_t bufferMode = 0;
     int64_t usedCoreNum = ComputeSplit(tiling, dataType, ubSize, coreNum, GetUbBlockSize(context), bufferMode);

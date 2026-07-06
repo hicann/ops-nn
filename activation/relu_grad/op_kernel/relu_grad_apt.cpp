@@ -22,12 +22,12 @@ using namespace AscendC;
 using namespace ReluGradOp;
 using namespace Ops::Base;
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void relu_grad(
-    GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                                     GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    constexpr bool isCastDtype =
-        (std::is_same<DTYPE_GRADIENTS, int8_t>::value || std::is_same<DTYPE_GRADIENTS, uint8_t>::value);
+    constexpr bool isCastDtype = (std::is_same<DTYPE_GRADIENTS, int8_t>::value ||
+                                  std::is_same<DTYPE_GRADIENTS, uint8_t>::value);
 
     if constexpr (isCastDtype) {
         using OpDag = ReluGradCastDag<DTYPE_GRADIENTS>::OpDag;

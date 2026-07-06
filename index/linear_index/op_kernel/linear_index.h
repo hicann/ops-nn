@@ -25,23 +25,19 @@ struct integralConstant {
 using true_type = integralConstant<bool, true>;
 using false_type = integralConstant<bool, false>;
 template <typename, typename>
-struct isSame : public false_type {
-};
+struct isSame : public false_type {};
 template <typename Tp>
-struct isSame<Tp, Tp> : public true_type {
-};
+struct isSame<Tp, Tp> : public true_type {};
 
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr int INT32_OFFSET = 31;
 
 template <typename T, const uint32_t MODE>
-class KernelLinearIndex
-{
+class KernelLinearIndex {
 public:
-    __aicore__ inline KernelLinearIndex()
-    {}
-    __aicore__ inline void Init(
-        const LinearIndexTilingData* __restrict tiling_data, TPipe* tmpPipe, GM_ADDR indices, GM_ADDR output)
+    __aicore__ inline KernelLinearIndex() {}
+    __aicore__ inline void Init(const LinearIndexTilingData* __restrict tiling_data, TPipe* tmpPipe, GM_ADDR indices,
+                                GM_ADDR output)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
 
@@ -109,10 +105,9 @@ public:
             SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
             WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
             if constexpr (IS_CAST_INT) {
-                DataCopyPadGm2UBImpl(
-                    (__ubuf__ uint32_t*)indicesLocal.GetPhyAddr(),
-                    (__gm__ uint32_t*)indicesGm[indicesOffset].GetPhyAddr(), indicesExtParams,
-                    padParams); // datacopypad int64
+                DataCopyPadGm2UBImpl((__ubuf__ uint32_t*)indicesLocal.GetPhyAddr(),
+                                     (__gm__ uint32_t*)indicesGm[indicesOffset].GetPhyAddr(), indicesExtParams,
+                                     padParams); // datacopypad int64
             } else {
                 DataCopyPad(indices32Local, indicesGm[indicesOffset], indicesExtParams, tPadParams);
             }

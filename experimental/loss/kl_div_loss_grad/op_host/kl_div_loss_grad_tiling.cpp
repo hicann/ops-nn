@@ -52,8 +52,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(
-    gert::TilingContext* context, int64_t& inputNum, int64_t& gradNum, int64_t& batchSize)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& inputNum, int64_t& gradNum,
+                                    int64_t& batchSize)
 {
     // 获取输入grad的shape信息
     auto inputGrad = context->GetInputShape(0);
@@ -84,9 +84,9 @@ static ge::graphStatus GetAndValidateDtype(gert::TilingContext* context, ge::Dat
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     inputType = inputDesc->GetDataType();
 
-    OP_CHECK_IF(
-        supportedDtype.count(inputType) == 0,
-        OP_LOGE(context, "KlDivLossGrad: invalid dtype, only support float, fp16 and bf16"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtype.count(inputType) == 0,
+                OP_LOGE(context, "KlDivLossGrad: invalid dtype, only support float, fp16 and bf16"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -129,10 +129,11 @@ ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeTilingParams(
-    gert::TilingContext* context, uint64_t ubSize, int64_t coreNum, int64_t inputNum, int64_t gradNum,
-    ge::DataType inputType, Reduction reduction, int64_t batchSize, int64_t& bigCoreDataNum, int64_t& smallCoreDataNum,
-    int64_t& tileDataNum, int64_t& bigCoreNum, float& coff, int64_t& usedCoreNum)
+static ge::graphStatus ComputeTilingParams(gert::TilingContext* context, uint64_t ubSize, int64_t coreNum,
+                                           int64_t inputNum, int64_t gradNum, ge::DataType inputType,
+                                           Reduction reduction, int64_t batchSize, int64_t& bigCoreDataNum,
+                                           int64_t& smallCoreDataNum, int64_t& tileDataNum, int64_t& bigCoreNum,
+                                           float& coff, int64_t& usedCoreNum)
 {
     int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context);
     int64_t inputTypeLength = (inputType == ge::DT_FLOAT) ? 4 : 2;
@@ -175,17 +176,16 @@ static ge::graphStatus ComputeTilingParams(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetTilingInfo(
-    gert::TilingContext* context, int64_t bigCoreDataNum, int64_t smallCoreDataNum, int64_t tileDataNum,
-    int64_t bigCoreNum, float coff, int64_t usedCoreNum, bool logTarget, bool isScalarGrad)
+static ge::graphStatus SetTilingInfo(gert::TilingContext* context, int64_t bigCoreDataNum, int64_t smallCoreDataNum,
+                                     int64_t tileDataNum, int64_t bigCoreNum, float coff, int64_t usedCoreNum,
+                                     bool logTarget, bool isScalarGrad)
 {
     KlDivLossGradTilingData* tiling = context->GetTilingData<KlDivLossGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
 
     // 初始化tiling数据为0
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(KlDivLossGradTilingData), 0, sizeof(KlDivLossGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(KlDivLossGradTilingData), 0, sizeof(KlDivLossGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->bigCoreDataNum = bigCoreDataNum;
     tiling->smallCoreDataNum = smallCoreDataNum;
@@ -203,9 +203,9 @@ static ge::graphStatus SetTilingInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus KlDivLossGradTilingComputeAndSet(
-    gert::TilingContext* context, uint64_t ubSize, int64_t coreNum, int64_t inputNum, int64_t gradNum,
-    ge::DataType inputType, Reduction reduction, int64_t batchSize, bool logTarget)
+static ge::graphStatus KlDivLossGradTilingComputeAndSet(gert::TilingContext* context, uint64_t ubSize, int64_t coreNum,
+                                                        int64_t inputNum, int64_t gradNum, ge::DataType inputType,
+                                                        Reduction reduction, int64_t batchSize, bool logTarget)
 {
     // 计算Tiling切分信息
     int64_t bigCoreDataNum;
@@ -214,18 +214,15 @@ static ge::graphStatus KlDivLossGradTilingComputeAndSet(
     int64_t bigCoreNum;
     float coff;
     int64_t usedCoreNum;
-    OP_CHECK_IF(
-        ComputeTilingParams(
-            context, ubSize, coreNum, inputNum, gradNum, inputType, reduction, batchSize, bigCoreDataNum,
-            smallCoreDataNum, tileDataNum, bigCoreNum, coff, usedCoreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ComputeTilingParams error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeTilingParams(context, ubSize, coreNum, inputNum, gradNum, inputType, reduction, batchSize,
+                                    bigCoreDataNum, smallCoreDataNum, tileDataNum, bigCoreNum, coff,
+                                    usedCoreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeTilingParams error"), return ge::GRAPH_FAILED);
 
     // 设置tiling信息
-    OP_CHECK_IF(
-        SetTilingInfo(
-            context, bigCoreDataNum, smallCoreDataNum, tileDataNum, bigCoreNum, coff, usedCoreNum, logTarget,
-            (gradNum == 1)) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetTilingInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingInfo(context, bigCoreDataNum, smallCoreDataNum, tileDataNum, bigCoreNum, coff, usedCoreNum,
+                              logTarget, (gradNum == 1)) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "SetTilingInfo error"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -235,39 +232,34 @@ static ge::graphStatus KlDivLossGradTilingFunc(gert::TilingContext* context)
     // 1、获取平台运行时信息
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2、获取shape信息
     int64_t inputNum;
     int64_t gradNum;
     int64_t batchSize;
-    OP_CHECK_IF(
-        GetShapeInfo(context, inputNum, gradNum, batchSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeInfo(context, inputNum, gradNum, batchSize) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
 
     // 3、获取并校验数据类型
     ge::DataType inputType;
-    OP_CHECK_IF(
-        GetAndValidateDtype(context, inputType) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetAndValidateDtype error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAndValidateDtype(context, inputType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetAndValidateDtype error"), return ge::GRAPH_FAILED);
 
     // 4、解析属性
     Reduction reduction;
     bool logTarget;
-    OP_CHECK_IF(
-        ParseAttrs(context, reduction, logTarget) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ParseAttrs error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ParseAttrs(context, reduction, logTarget) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ParseAttrs error"),
+                return ge::GRAPH_FAILED);
 
     // 5、获取WorkspaceSize信息
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 6、计算Tiling切分信息并设置
-    return KlDivLossGradTilingComputeAndSet(
-        context, ubSize, coreNum, inputNum, gradNum, inputType, reduction, batchSize, logTarget);
+    return KlDivLossGradTilingComputeAndSet(context, ubSize, coreNum, inputNum, gradNum, inputType, reduction,
+                                            batchSize, logTarget);
 }
 
 static ge::graphStatus TilingParseForKlDivLossGrad([[maybe_unused]] gert::TilingParseContext* context)

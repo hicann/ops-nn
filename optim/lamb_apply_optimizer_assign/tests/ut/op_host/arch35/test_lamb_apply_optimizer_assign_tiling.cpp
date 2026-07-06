@@ -47,7 +47,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     gert::StorageShape out0_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out1_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out2_shape = {{16, 8, 375}, {16, 8, 375}};
-    string compile_info_string = R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
+    string compile_info_string =
+        R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos, aicore_spec, intrinsics, soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
     fe::PlatFormInfos platform_info;
@@ -59,16 +60,17 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     string parse_str = R"({})";
     auto kernel_holder = gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -78,7 +80,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
                       .SetOpType(op_type)
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape, &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
+                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape,
+                                    &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
                       .OutputShapes({&out0_shape, &out1_shape, &out2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -125,7 +128,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     gert::StorageShape out0_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out1_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out2_shape = {{16, 8, 375}, {16, 8, 375}};
-    string compile_info_string = R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
+    string compile_info_string =
+        R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos, aicore_spec, intrinsics, soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
     fe::PlatFormInfos platform_info;
@@ -137,16 +141,17 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     string parse_str = R"({})";
     auto kernel_holder = gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -156,7 +161,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
                       .SetOpType(op_type)
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape, &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
+                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape,
+                                    &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
                       .OutputShapes({&out0_shape, &out1_shape, &out2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -203,7 +209,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     gert::StorageShape out0_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out1_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out2_shape = {{16, 8, 375}, {16, 8, 375}};
-    string compile_info_string = R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
+    string compile_info_string =
+        R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos, aicore_spec, intrinsics, soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
     fe::PlatFormInfos platform_info;
@@ -215,16 +222,17 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     string parse_str = R"({})";
     auto kernel_holder = gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -234,7 +242,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
                       .SetOpType(op_type)
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape, &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
+                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape,
+                                    &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
                       .OutputShapes({&out0_shape, &out1_shape, &out2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -281,7 +290,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     gert::StorageShape out0_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out1_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape out2_shape = {{16, 8, 375}, {16, 8, 375}};
-    string compile_info_string = R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
+    string compile_info_string =
+        R"({"hardware_info": {"UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos, aicore_spec, intrinsics, soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
     fe::PlatFormInfos platform_info;
@@ -293,16 +303,17 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     string parse_str = R"({})";
     auto kernel_holder = gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(parse_str.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -312,7 +323,8 @@ TEST_F(LambApplyOptimizerAssignTilingTest, lamb_apply_optimizer_assign_tiling_te
                       .SetOpType(op_type)
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape, &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
+                      .InputShapes({&in0_shape, &in1_shape, &in2_shape, &in3_shape, &in4_shape, &in5_shape, &in6_shape,
+                                    &in7_shape, &in8_shape, &in9_shape, &in10_shape, &in11_shape})
                       .OutputShapes({&out0_shape, &out1_shape, &out2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))

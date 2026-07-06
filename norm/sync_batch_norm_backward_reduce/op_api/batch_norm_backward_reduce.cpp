@@ -18,9 +18,10 @@
 namespace l0op {
 OP_TYPE_REGISTER(SyncBatchNormBackwardReduce);
 
-const std::tuple<aclTensor*, aclTensor*> SyncBatchNormBackwardReduce(
-    const aclTensor* sumDy, const aclTensor* sumDyXmuPad, const aclTensor* mean, const aclTensor* invstd,
-    aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> SyncBatchNormBackwardReduce(const aclTensor* sumDy,
+                                                                     const aclTensor* sumDyXmuPad,
+                                                                     const aclTensor* mean, const aclTensor* invstd,
+                                                                     aclOpExecutor* executor)
 {
     L0_DFX(SyncBatchNormBackwardReduce, sumDy, sumDyXmuPad, mean, invstd);
 
@@ -32,8 +33,8 @@ const std::tuple<aclTensor*, aclTensor*> SyncBatchNormBackwardReduce(
     // BatchNormBackwardReduce是算子的OpType
     // sumDy, sumDyXmuPad, mean, invstd是算子的输入
     // sumDyXmuOut, gradWeightOut是算子的输出
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        SyncBatchNormBackwardReduce, OP_INPUT(sumDy, sumDyXmuPad, mean, invstd), OP_OUTPUT(sumDyXmuOut, gradWeightOut));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SyncBatchNormBackwardReduce, OP_INPUT(sumDy, sumDyXmuPad, mean, invstd),
+                                           OP_OUTPUT(sumDyXmuOut, gradWeightOut));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SyncBatchNormBackwardReduceAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

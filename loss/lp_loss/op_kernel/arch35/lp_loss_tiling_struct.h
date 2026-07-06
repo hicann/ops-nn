@@ -19,8 +19,7 @@
 #include "atvoss/reduce/reduce_tiling_data.h"
 
 namespace optiling {
-struct  LpLossTilingData
-{
+struct LpLossTilingData {
     Ops::Base::EleBaseTilingData baseTiling;
     Ops::Base::ReduceOpTilingData reduceTiling;
 };

@@ -27,14 +27,8 @@ using namespace std;
 
 class gelu_grad_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "gelu_grad_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "gelu_grad_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "gelu_grad_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "gelu_grad_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(gelu_grad_v2_test, test_case_0)
@@ -73,7 +67,7 @@ TEST_F(gelu_grad_v2_test, test_case_0)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(GeluGradV2Kernel, blockDim, dy, x, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(GeluGradV2Kernel, blockDim, dy, x, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);

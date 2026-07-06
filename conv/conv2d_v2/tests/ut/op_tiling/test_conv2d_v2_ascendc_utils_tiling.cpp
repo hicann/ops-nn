@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_conv2d_v2_tiling_utils.h.cpp
  * \brief
  */
@@ -29,11 +29,13 @@ uint64_t InferOut(ConvShape convShape)
     if (convShape.strideV == 0) {
         return 0;
     }
-    return (convShape.inputV + convShape.padone + convShape.padtwo - convShape.dilationV * (convShape.kernelV - 1) - 1) / convShape.strideV + 1;
+    return (convShape.inputV + convShape.padone + convShape.padtwo - convShape.dilationV * (convShape.kernelV - 1) -
+            1) /
+               convShape.strideV +
+           1;
 }
 
-int64_t InferHiL1(uint64_t inputHoL1, int64_t hi, uint64_t singlekH,
-                  uint64_t dilationH, uint64_t strideH)
+int64_t InferHiL1(uint64_t inputHoL1, int64_t hi, uint64_t singlekH, uint64_t dilationH, uint64_t strideH)
 {
     int64_t khDilated = (singlekH - 1) * dilationH + 1;
     int64_t tmpHiL1 = (inputHoL1 - 1) * strideH + khDilated;
@@ -53,12 +55,10 @@ int64_t InferWiL1(uint64_t inputWoL1, int64_t wi, uint64_t singlekW, uint64_t di
     return tmpWiL1;
 }
 
-uint64_t ConvCeilDiv(uint64_t a, uint64_t b)
-{
-    return (a + b - 1) / b;
-}
+uint64_t ConvCeilDiv(uint64_t a, uint64_t b) { return (a + b - 1) / b; }
 
-uint64_t ConvGcd(uint64_t a, uint64_t b) {
+uint64_t ConvGcd(uint64_t a, uint64_t b)
+{
     while (b != 0) {
         uint64_t temp = a % b;
         a = b;
@@ -69,10 +69,10 @@ uint64_t ConvGcd(uint64_t a, uint64_t b) {
 
 uint64_t ConvAlignB(uint64_t a, uint64_t b)
 {
-   if (b == 0) {
-      return 0;
-   }
-   return ((a + b - 1) / b) * b;
+    if (b == 0) {
+        return 0;
+    }
+    return ((a + b - 1) / b) * b;
 }
 
-} // conv_tiling_utils
+} // namespace conv_tiling_utils

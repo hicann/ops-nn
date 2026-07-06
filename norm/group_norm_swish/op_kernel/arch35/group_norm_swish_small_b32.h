@@ -25,9 +25,8 @@ template <typename T1, typename T2>
 class GroupNormSwishSmallB32 : public GroupNormSwishBase<T1, T2> {
 public:
     __aicore__ inline GroupNormSwishSmallB32(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-        const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
@@ -35,19 +34,18 @@ private:
     __aicore__ inline void Compute(const int64_t groupNum);
     __aicore__ inline void ComputeOneLoop(const int64_t groupNum);
     __aicore__ inline void ComputeMeanAndRstd(const int64_t groupId, const LocalTensor<float>& xUb);
-    __aicore__ inline void ComputeOneLoopInner(
-        const int64_t groupId, const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal,
-        const LocalTensor<float>& xUb);
+    __aicore__ inline void ComputeOneLoopInner(const int64_t groupId, const LocalTensor<float>& gammaLocal,
+                                               const LocalTensor<float>& betaLocal, const LocalTensor<float>& xUb);
     __aicore__ inline void ComputeMulLoop(const int64_t groupNum);
-    __aicore__ inline void ComputeMulLoopInner(
-        const int64_t groupId, const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal);
+    __aicore__ inline void ComputeMulLoopInner(const int64_t groupId, const LocalTensor<float>& gammaLocal,
+                                               const LocalTensor<float>& betaLocal);
     __aicore__ inline void CalcGroupNormSwish(const float scale, const float bias);
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y,
+                                                            GM_ADDR mean, GM_ADDR rstd,
+                                                            const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
 {
     GroupNormSwishBase<T1, T2>::InitGlobal(x, gamma, beta, y, mean, rstd, tilingData, pipeIn);
     GroupNormSwishBase<T1, T2>::InitLocalB32(this->tiling->shapeCAlign, this->tiling->groupPerCoreAlign, oneBlockNum);
@@ -102,8 +100,8 @@ __aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeOneLoop(const int6
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeMeanAndRstd(
-    const int64_t groupId, const LocalTensor<float>& xUb)
+__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeMeanAndRstd(const int64_t groupId,
+                                                                          const LocalTensor<float>& xUb)
 {
     this->ReduceSumCustom(this->meanUb, xUb, this->x2Ub32, this->tiling->numPerGroup);
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -120,9 +118,10 @@ __aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeMeanAndRstd(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeOneLoopInner(
-    const int64_t groupId, const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal,
-    const LocalTensor<float>& xUb)
+__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeOneLoopInner(const int64_t groupId,
+                                                                           const LocalTensor<float>& gammaLocal,
+                                                                           const LocalTensor<float>& betaLocal,
+                                                                           const LocalTensor<float>& xUb)
 {
     int64_t groupIdGlobal = (this->blockIdx * this->tiling->groupPerCore + groupId) % this->tiling->numGroups;
     int64_t channelIdGlobal = groupIdGlobal * this->tiling->shapeD;
@@ -182,8 +181,9 @@ __aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeMulLoop(const int6
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeMulLoopInner(
-    const int64_t groupId, const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal)
+__aicore__ inline void GroupNormSwishSmallB32<T1, T2>::ComputeMulLoopInner(const int64_t groupId,
+                                                                           const LocalTensor<float>& gammaLocal,
+                                                                           const LocalTensor<float>& betaLocal)
 {
     int64_t groupIdGlobal = (this->blockIdx * this->tiling->groupPerCore + groupId) % this->tiling->numGroups;
     int64_t channelIdGlobal = groupIdGlobal * this->tiling->shapeD;

@@ -25,21 +25,19 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3>
 class DynamicQuantUpdateScatterEachCore : DynamicQuantUpdateScatterBase<T1, T2, T3> {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterEachCore()
-    {}
+    __aicore__ inline DynamicQuantUpdateScatterEachCore() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
+                                const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         int64_t eachCoreBsNumElements = tilingPtr->srcBsStride * tilingPtr->eachCoreBsNum;
         this->InitBase(var, varScale, indices, smoothScales, tilingPtr);
-        int64_t varScaleOutAlignElemens =
-            (this->varScaleOutElemens * sizeof(float) + THIRTY_TWO) / THIRTY_TWO * THIRTY_TWO / sizeof(float);
+        int64_t varScaleOutAlignElemens = (this->varScaleOutElemens * sizeof(float) + THIRTY_TWO) / THIRTY_TWO *
+                                          THIRTY_TWO / sizeof(float);
         this->InitUpdateGM(updates, this->blockIdx * eachCoreBsNumElements, this->coreBsNumElements);
         this->InitUpdatesInQueue(this->coreBsNumElements * sizeof(T3));
-        this->InitSmoothScalesInQueue(
-            tilingPtr->varOrigLastDimSize * sizeof(T3), tilingPtr->varOrigLastDimSize * sizeof(float));
+        this->InitSmoothScalesInQueue(tilingPtr->varOrigLastDimSize * sizeof(T3),
+                                      tilingPtr->varOrigLastDimSize * sizeof(float));
         this->InitVarOutQueue(this->coreBsNumElements * sizeof(T1));
         this->InitvarScaleOutQueue(varScaleOutAlignElemens * sizeof(float));
         this->InitTempF32(this->varScaleOutElemens * tilingPtr->varOrigLastDimSize * sizeof(float));

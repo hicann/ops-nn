@@ -24,7 +24,8 @@ using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(TransposeBatchMatMul, TransposeBatchMatMulAswTiling, DAV_3510, BASE);
 
 template <typename T>
-T GetAlignNumWithDataType(T size, ge::DataType dtype) {
+T GetAlignNumWithDataType(T size, ge::DataType dtype)
+{
     return size / static_cast<T>(ge::GetSizeByDataType(dtype));
 }
 
@@ -34,8 +35,8 @@ void TransposeBatchMatMulAswTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t
                                  GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
                                  BASIC_BLOCK_SIZE_16;
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
-    uint64_t maxBaseK =
-        GetAlignNumWithDataType(compileInfo_.l0ASize / DB_SIZE, args_.aType) / std::max(tempBaseM, tempBaseN);
+    uint64_t maxBaseK = GetAlignNumWithDataType(compileInfo_.l0ASize / DB_SIZE, args_.aType) /
+                        std::max(tempBaseM, tempBaseN);
     if (maxBaseK >= baseKAlignNum) {
         runInfo_.baseM = tempBaseM;
         runInfo_.baseN = tempBaseN;
@@ -47,9 +48,9 @@ void TransposeBatchMatMulAswTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t
 void TransposeBatchMatMulAswTiling::BaseLoadBalance()
 {
     uint64_t baseMAlignNum = args_.isATrans ? GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
-                                BASIC_BLOCK_SIZE_16;
+                                              BASIC_BLOCK_SIZE_16;
     uint64_t baseNAlignNum = !args_.isBTrans ? GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
-                                BASIC_BLOCK_SIZE_16;
+                                               BASIC_BLOCK_SIZE_16;
     uint64_t mMaxTile = ops::CeilDiv(args_.mValue, baseMAlignNum);
     uint64_t nMaxTile = ops::CeilDiv(args_.nValue, baseNAlignNum);
     uint64_t tempBaseM = runInfo_.baseM;
@@ -70,8 +71,7 @@ void TransposeBatchMatMulAswTiling::BaseLoadBalance()
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
         }
 
-        while (tempBaseN >= tempBaseM * NUM_TWO && nCore < coreNumMN / NUM_TWO &&
-            tempBaseN != baseNAlignNum) {
+        while (tempBaseN >= tempBaseM * NUM_TWO && nCore < coreNumMN / NUM_TWO && tempBaseN != baseNAlignNum) {
             nCore *= NUM_TWO;
             mCore = coreNumMN / nCore;
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
@@ -80,8 +80,7 @@ void TransposeBatchMatMulAswTiling::BaseLoadBalance()
             nCore = ops::CeilDiv(args_.nValue, static_cast<uint64_t>(tempBaseN));
         }
 
-        while (tempBaseM >= tempBaseN * NUM_TWO && mCore < coreNumMN / NUM_TWO &&
-            tempBaseM != baseMAlignNum) {
+        while (tempBaseM >= tempBaseN * NUM_TWO && mCore < coreNumMN / NUM_TWO && tempBaseM != baseMAlignNum) {
             mCore *= NUM_TWO;
             nCore = coreNumMN / mCore;
             tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
@@ -131,18 +130,17 @@ void TransposeBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
     }
 }
 
-
 uint64_t TransposeBatchMatMulAswTiling::GetTilingKey() const
 {
-    uint64_t tilingKey =
-        TBMMTilingKey().SetPermX1(permX1_).SetPermX2(permX2_).SetBatchSplitMode(batchSplitMode_).GetTilingKey();
+    uint64_t tilingKey = TBMMTilingKey()
+                             .SetPermX1(permX1_)
+                             .SetPermX2(permX2_)
+                             .SetBatchSplitMode(batchSplitMode_)
+                             .GetTilingKey();
     return tilingKey;
 }
 
-uint64_t TransposeBatchMatMulAswTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t TransposeBatchMatMulAswTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingData(TilingResult& tiling) const
 {

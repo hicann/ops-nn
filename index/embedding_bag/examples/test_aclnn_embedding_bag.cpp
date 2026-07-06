@@ -1,13 +1,13 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
- 
+ */
+
 /*!
  * \file test_aclnn_embedding_bag.cpp
  * \brief
@@ -51,9 +51,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -70,9 +69,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -135,9 +133,8 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     //创建perSampleWeights aclTensor
-    ret = CreateAclTensor(
-        perSampleWeightsHostData, perSampleWeightsShape, &perSampleWeightsDeviceAddr, aclDataType::ACL_FLOAT,
-        &perSampleWeights);
+    ret = CreateAclTensor(perSampleWeightsHostData, perSampleWeightsShape, &perSampleWeightsDeviceAddr,
+                          aclDataType::ACL_FLOAT, &perSampleWeights);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     //创建output aclTensor
@@ -145,8 +142,8 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     //创建offset2bag aclTensor
-    ret = CreateAclTensor(
-        offset2bagHostData, offset2bagShape, &offset2bagDeviceAddr, aclDataType::ACL_INT64, &offset2bag);
+    ret = CreateAclTensor(offset2bagHostData, offset2bagShape, &offset2bagDeviceAddr, aclDataType::ACL_INT64,
+                          &offset2bag);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     //创建bagSize aclTensor
@@ -154,8 +151,8 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     //创建maxIndices aclTensor
-    ret = CreateAclTensor(
-        maxIndicesHostData, maxIndicesShape, &maxIndicesDeviceAddr, aclDataType::ACL_INT64, &maxIndices);
+    ret = CreateAclTensor(maxIndicesHostData, maxIndicesShape, &maxIndicesDeviceAddr, aclDataType::ACL_INT64,
+                          &maxIndices);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     //非tensor参数
@@ -169,9 +166,9 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnEmbeddingBag第一段接口
-    ret = aclnnEmbeddingBagGetWorkspaceSize(
-        weight, indices, offsets, scaleGradByFreq, mode, sparse, perSampleWeights, includeLastOffset, paddingIdx,
-        output, offset2bag, bagSize, maxIndices, &workspaceSize, &executor);
+    ret = aclnnEmbeddingBagGetWorkspaceSize(weight, indices, offsets, scaleGradByFreq, mode, sparse, perSampleWeights,
+                                            includeLastOffset, paddingIdx, output, offset2bag, bagSize, maxIndices,
+                                            &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnEmbeddingBagGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -190,9 +187,8 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto outputSize = GetShapeSize(outputShape);
     std::vector<float> outputResultData(outputSize, 0);
-    ret = aclrtMemcpy(
-        outputResultData.data(), outputResultData.size() * sizeof(outputResultData[0]), outputDeviceAddr,
-        outputSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(outputResultData.data(), outputResultData.size() * sizeof(outputResultData[0]), outputDeviceAddr,
+                      outputSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < outputSize; i++) {
         LOG_PRINT("outputResult[%ld] is: %f\n", i, outputResultData[i]);
@@ -200,9 +196,8 @@ int main()
 
     auto offset2bagSize = GetShapeSize(offset2bagShape);
     std::vector<int64_t> offset2bagResultData(offset2bagSize, 0);
-    ret = aclrtMemcpy(
-        offset2bagResultData.data(), offset2bagResultData.size() * sizeof(offset2bagResultData[0]),
-        offset2bagDeviceAddr, offset2bagSize * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(offset2bagResultData.data(), offset2bagResultData.size() * sizeof(offset2bagResultData[0]),
+                      offset2bagDeviceAddr, offset2bagSize * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < offset2bagSize; i++) {
         LOG_PRINT("offset2bagResult[%ld] is: %ld\n", i, offset2bagResultData[i]);
@@ -210,9 +205,8 @@ int main()
 
     auto bagSizeSize = GetShapeSize(bagSizeShape);
     std::vector<int64_t> bagSizeResultData(bagSizeSize, 0);
-    ret = aclrtMemcpy(
-        bagSizeResultData.data(), bagSizeResultData.size() * sizeof(bagSizeResultData[0]), bagSizeDeviceAddr,
-        bagSizeSize * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(bagSizeResultData.data(), bagSizeResultData.size() * sizeof(bagSizeResultData[0]),
+                      bagSizeDeviceAddr, bagSizeSize * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < bagSizeSize; i++) {
         LOG_PRINT("bagSizeResult[%ld] is: %ld\n", i, bagSizeResultData[i]);
@@ -220,9 +214,8 @@ int main()
 
     auto maxIndicesSize = GetShapeSize(maxIndicesShape);
     std::vector<int64_t> maxIndicesResultData(maxIndicesSize, 0);
-    ret = aclrtMemcpy(
-        maxIndicesResultData.data(), maxIndicesResultData.size() * sizeof(maxIndicesResultData[0]),
-        maxIndicesDeviceAddr, maxIndicesSize * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(maxIndicesResultData.data(), maxIndicesResultData.size() * sizeof(maxIndicesResultData[0]),
+                      maxIndicesDeviceAddr, maxIndicesSize * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < maxIndicesSize; i++) {
         LOG_PRINT("maxIndicesResult[%ld] is: %ld\n", i, maxIndicesResultData[i]);

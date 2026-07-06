@@ -29,20 +29,19 @@ constexpr float FACTOR_FP8_E5M2 = 1.0f / 57344.0f;
 constexpr float FACTOR_FP8_E4M3FN = 1.0f / 448.0f;
 constexpr float FACTOR_HIFLOAT8 = 1.0f / 32768.0f;
 
-constexpr CastTrait castTraitB16ToB32 = {
-    RegLayout::ZERO, SatMode::UNKNOWN, MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-constexpr CastTrait castTraitB32ToB16 = {
-    RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-constexpr CastTrait castTraitF32ToI16 = {
-    RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-constexpr CastTrait castTraitI16ToF16 = {
-    RegLayout::ZERO, SatMode::UNKNOWN, MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
-constexpr CastTrait castTraitF16ToI8 = {
-    RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
-constexpr CastTrait castTraitF32Tofp8 = {
-    RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-constexpr CastTrait castTraitF32Toh8 = {
-    RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+constexpr CastTrait castTraitB16ToB32 = {RegLayout::ZERO, SatMode::UNKNOWN, MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr CastTrait castTraitB32ToB16 = {RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                         RoundMode::CAST_RINT};
+constexpr CastTrait castTraitF32ToI16 = {RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                         RoundMode::CAST_RINT};
+constexpr CastTrait castTraitI16ToF16 = {RegLayout::ZERO, SatMode::UNKNOWN, MaskMergeMode::ZEROING,
+                                         RoundMode::CAST_ROUND};
+constexpr CastTrait castTraitF16ToI8 = {RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                        RoundMode::CAST_TRUNC};
+constexpr CastTrait castTraitF32Tofp8 = {RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                         RoundMode::CAST_RINT};
+constexpr CastTrait castTraitF32Toh8 = {RegLayout::ZERO, SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                        RoundMode::CAST_ROUND};
 
 constexpr LayerNormConfig hasGammaBetaConfig = {false, false, false};
 constexpr LayerNormConfig hasGammaNoBetaConfig = {true, false, false};
@@ -79,16 +78,17 @@ __simd_callee__ inline void CopyToTensor(__ubuf__ T* dstAddr, RegTensor<float>& 
 }
 
 template <typename T, typename OUT_DTYPE, uint8_t OP_CODE, bool hasSmooth>
-__simd_callee__ inline void SingleComputeAdaption(RegTensor<float>& tmpMax, __ubuf__ float* normAddr, 
-    __ubuf__ T* scaleAddr, __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr, __ubuf__ OUT_DTYPE* outAddr,
-    uint32_t dataCount, uint16_t colLoopTimes, MaskReg& pregFull)
+__simd_callee__ inline void SingleComputeAdaption(RegTensor<float>& tmpMax, __ubuf__ float* normAddr,
+                                                  __ubuf__ T* scaleAddr, __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr,
+                                                  __ubuf__ OUT_DTYPE* outAddr, uint32_t dataCount,
+                                                  uint16_t colLoopTimes, MaskReg& pregFull)
 {
     RegTensor<float> x;
     RegTensor<float> scale;
     RegTensor<float> shift;
 
     MaskReg pregLoop;
-    for (uint16_t j = 0; j < colLoopTimes;j ++) {
+    for (uint16_t j = 0; j < colLoopTimes; j++) {
         pregLoop = UpdateMask<float>(dataCount);
         DataCopy(x, normAddr + j * V_LENGTH);
         LoadTensor(scale, scaleAddr + j * V_LENGTH, pregLoop);
@@ -110,8 +110,10 @@ __simd_callee__ inline void SingleComputeAdaption(RegTensor<float>& tmpMax, __ub
 
 template <typename T, typename OUT_DTYPE, uint8_t OP_CODE, bool hasSmooth>
 __simd_callee__ inline void DoubleComputeAdaption(RegTensor<float>& tmpMax1, RegTensor<float>& tmpMax2,
-    __ubuf__ float* normAddr, __ubuf__ T* scaleAddr, __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr, 
-    __ubuf__ OUT_DTYPE* outAddr, uint32_t dataCount, uint16_t colLoopTimes, uint32_t halfLength, MaskReg& pregFull)
+                                                  __ubuf__ float* normAddr, __ubuf__ T* scaleAddr,
+                                                  __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr,
+                                                  __ubuf__ OUT_DTYPE* outAddr, uint32_t dataCount,
+                                                  uint16_t colLoopTimes, uint32_t halfLength, MaskReg& pregFull)
 {
     RegTensor<float> x1;
     RegTensor<float> x2;
@@ -121,7 +123,7 @@ __simd_callee__ inline void DoubleComputeAdaption(RegTensor<float>& tmpMax1, Reg
     RegTensor<float> shift2;
 
     MaskReg pregLoop;
-    for (uint16_t j = 0; j < colLoopTimes;j ++) {
+    for (uint16_t j = 0; j < colLoopTimes; j++) {
         pregLoop = UpdateMask<float>(dataCount);
         DataCopy(x1, normAddr + j * V_LENGTH);
         DataCopy(x2, normAddr + halfLength + j * V_LENGTH);
@@ -166,7 +168,8 @@ __aicore__ inline float GetQuantFactor()
 
 template <typename T, typename OUT_DTYPE, uint8_t OP_CODE, bool hasSmooth>
 __aicore__ inline void WelfordAdaptionVF(uint32_t dataCount, __ubuf__ float* normAddr, __ubuf__ T* scaleAddr,
-    __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr, __ubuf__ float* maxTmpAddr, __ubuf__ OUT_DTYPE* outAddr)
+                                         __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr, __ubuf__ float* maxTmpAddr,
+                                         __ubuf__ OUT_DTYPE* outAddr)
 {
     uint16_t colLoopTimes = static_cast<uint16_t>(CeilA2B(dataCount, V_LENGTH));
     __VEC_SCOPE__
@@ -177,7 +180,8 @@ __aicore__ inline void WelfordAdaptionVF(uint32_t dataCount, __ubuf__ float* nor
         if constexpr (OP_CODE == QUANT_OP_CODE) {
             DataCopy<float, LoadDist::DIST_BRC_B32>(tmpMax, maxTmpAddr);
         }
-        SingleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(tmpMax, normAddr, scaleAddr, shiftAddr, smoothAddr, outAddr, dataCount, colLoopTimes, pregFull);
+        SingleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(tmpMax, normAddr, scaleAddr, shiftAddr, smoothAddr,
+                                                                outAddr, dataCount, colLoopTimes, pregFull);
         if constexpr (OP_CODE == QUANT_OP_CODE) {
             ReduceMax(tmpMax, tmpMax, pregFull);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(maxTmpAddr, tmpMax, pregMerge);
@@ -187,8 +191,8 @@ __aicore__ inline void WelfordAdaptionVF(uint32_t dataCount, __ubuf__ float* nor
 
 template <typename T, typename OUT_DTYPE, uint8_t OP_CODE, bool hasSmooth>
 __aicore__ inline void AdaptionVF(uint16_t rowNum, uint32_t hiddenDim, uint32_t hiddenDimCeil, float quantFactor,
-    __ubuf__ float* normAddr, __ubuf__ T* scaleAddr, __ubuf__ T* shiftAddr, __ubuf__ T* smoothAddr,
-    __ubuf__ OUT_DTYPE* outAddr, __ubuf__ float* quantScaleAddr)
+                                  __ubuf__ float* normAddr, __ubuf__ T* scaleAddr, __ubuf__ T* shiftAddr,
+                                  __ubuf__ T* smoothAddr, __ubuf__ OUT_DTYPE* outAddr, __ubuf__ float* quantScaleAddr)
 {
     uint16_t rowLoopTimes = rowNum >> 1;
     uint16_t tailLoopTimes = rowNum & 1;
@@ -209,15 +213,17 @@ __aicore__ inline void AdaptionVF(uint16_t rowNum, uint32_t hiddenDim, uint32_t 
                 Duplicate(tmpMax1, 0.0f, pregFull);
                 Duplicate(tmpMax2, 0.0f, pregFull);
             }
-            DoubleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(tmpMax1, tmpMax2, normAddr, scaleAddr, 
-                shiftAddr, smoothAddr, outAddr, hiddenDim, colLoopTimes, halfLength, pregFull);
+            DoubleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(tmpMax1, tmpMax2, normAddr, scaleAddr, shiftAddr,
+                                                                    smoothAddr, outAddr, hiddenDim, colLoopTimes,
+                                                                    halfLength, pregFull);
             if constexpr (OP_CODE == QUANT_OP_CODE) {
                 ReduceMax(quantScale1, tmpMax1, pregFull);
                 ReduceMax(quantScale2, tmpMax2, pregFull);
                 Muls(quantScale1, quantScale1, quantFactor, pregMerge);
                 Muls(quantScale2, quantScale2, quantFactor, pregMerge);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i, quantScale1, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i + rowLoopTimes, quantScale2, pregMerge);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i + rowLoopTimes, quantScale2,
+                                                                   pregMerge);
             }
             normAddr += hiddenDimCeil;
             scaleAddr += hiddenDimCeil;
@@ -229,12 +235,14 @@ __aicore__ inline void AdaptionVF(uint16_t rowNum, uint32_t hiddenDim, uint32_t 
             if constexpr (OP_CODE == QUANT_OP_CODE) {
                 Duplicate(tmpMax1, 0.0f, pregFull);
             }
-            SingleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(tmpMax1, normAddr + halfLength, scaleAddr + halfLength, 
-                shiftAddr + halfLength, smoothAddr, outAddr + halfLength, hiddenDim, colLoopTimes, pregFull);
+            SingleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(
+                tmpMax1, normAddr + halfLength, scaleAddr + halfLength, shiftAddr + halfLength, smoothAddr,
+                outAddr + halfLength, hiddenDim, colLoopTimes, pregFull);
             if constexpr (OP_CODE == QUANT_OP_CODE) {
                 ReduceMax(quantScale1, tmpMax1, pregFull);
                 Muls(quantScale1, quantScale1, quantFactor, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + rowLoopTimes + rowLoopTimes, quantScale1, pregMerge);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + rowLoopTimes + rowLoopTimes,
+                                                                   quantScale1, pregMerge);
             }
         }
     }

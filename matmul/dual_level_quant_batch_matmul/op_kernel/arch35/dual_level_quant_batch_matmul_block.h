@@ -116,8 +116,8 @@ __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::Init(
 
     params_.mCoreNum = DualLevelQuantBatchMatmul::Arch35::Min(WINDOW_LEN, params_.mCnt);
     params_.mainRow = params_.mCnt / params_.mCoreNum - 1; // 主轮滑窗行数
-    params_.mTailCoreNum =
-        params_.mCnt - params_.mCoreNum * params_.mainRow; // m轴尾块分核大小，mCnt % params_.mCoreNum
+    params_.mTailCoreNum = params_.mCnt -
+                           params_.mCoreNum * params_.mainRow; // m轴尾块分核大小，mCnt % params_.mCoreNum
     params_.totalTailTile = tiling_->mTailTile * tiling_->nTailTile;
 
     // 尾块重切基本块大小
@@ -240,4 +240,3 @@ __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::CalcGMOffset()
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

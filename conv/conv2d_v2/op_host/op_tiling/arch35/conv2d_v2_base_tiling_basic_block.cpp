@@ -28,8 +28,9 @@ void Conv2dBaseTiling::BasicBlockL0Init()
 {
     uint64_t biasSize = 0;
     uint64_t orgCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-        oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup :
+                                                                                     optGroupInfo_.coutOpt) :
+                         shapeInfo_.co;
 
     if (flagInfo_.hasBias) {
         biasSize = dtypeSizeTab.at(descInfo_.biasDtype) * orgCo;
@@ -38,20 +39,19 @@ void Conv2dBaseTiling::BasicBlockL0Init()
     uint64_t availableL1Size = opInfo_->l1Size - biasSize - scaleSize;
 
     uint64_t hoAL1 = ConvCeilDiv(conv2dBasicBlockInfo_.mTile, shapeInfo_.wo) + CONST_VALUE_2;
-    uint64_t hiAL1 = ConvInferHiL1(hoAL1, shapeInfo_.hi, shapeInfo_.kh,
-                attrInfo_.dilationH, attrInfo_.strideH);
+    uint64_t hiAL1 = ConvInferHiL1(hoAL1, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
 
     conv2dBasicBlockInfo_.mIn = hiAL1 * shapeInfo_.wi;
     conv2dBasicBlockInfo_.nKernelHKernelW = conv2dBasicBlockInfo_.nTile * shapeInfo_.kh * shapeInfo_.kw;
 
     // CONST_VALUE_2 means divide L1 space equally for weight and fmap
     conv2dBasicBlockInfo_.cinL1 = availableL1Size / dtypeSizeTab.at(descInfo_.fMapDtype) / CONST_VALUE_2 /
-                (conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch + shapeInfo_.kh * shapeInfo_.kw *
-                conv2dBasicBlockInfo_.nTile) / convOpsConstParams_.k0 * convOpsConstParams_.k0;
-    conv2dBasicBlockInfo_.cinL1 = conv2dBasicBlockInfo_.cinL1 < convOpsConstParams_.k0 ?
-        convOpsConstParams_.k0 : conv2dBasicBlockInfo_.cinL1;
-    conv2dBasicBlockInfo_.mCut = ConvCeilDiv(shapeInfo_.wo * shapeInfo_.ho,
-                conv2dBasicBlockInfo_.mTile);
+                                  (conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch +
+                                   shapeInfo_.kh * shapeInfo_.kw * conv2dBasicBlockInfo_.nTile) /
+                                  convOpsConstParams_.k0 * convOpsConstParams_.k0;
+    conv2dBasicBlockInfo_.cinL1 = conv2dBasicBlockInfo_.cinL1 < convOpsConstParams_.k0 ? convOpsConstParams_.k0 :
+                                                                                         conv2dBasicBlockInfo_.cinL1;
+    conv2dBasicBlockInfo_.mCut = ConvCeilDiv(shapeInfo_.wo * shapeInfo_.ho, conv2dBasicBlockInfo_.mTile);
     conv2dBasicBlockInfo_.nCut = ConvCeilDiv(orgCo, conv2dBasicBlockInfo_.nTile);
 
     conv2dBasicBlockInfo_.batch = shapeInfo_.batch;
@@ -83,12 +83,12 @@ void Conv2dBaseTiling::BasicBlockGroupDecision()
     uint32_t minCost = numeric_limits<uint32_t>::max();
     pair<uint32_t, uint32_t> optDecision;
 
-    uint32_t fwCut = shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, conv2dBasicBlockInfo_.mTile)
-                        * ConvCeilDiv(shapeInfo_.co, conv2dBasicBlockInfo_.nTile);
-    uint32_t groupCut = flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-                        attrInfo_.groups : optGroupInfo_.groupOpt;
+    uint32_t fwCut = shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, conv2dBasicBlockInfo_.mTile) *
+                     ConvCeilDiv(shapeInfo_.co, conv2dBasicBlockInfo_.nTile);
+    uint32_t groupCut = flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? attrInfo_.groups :
+                                                                                   optGroupInfo_.groupOpt;
 
-    for (const auto &candidate: candidates) {
+    for (const auto& candidate : candidates) {
         uint32_t fwDim = candidate.first;
         uint32_t groupDim = candidate.second;
         uint32_t cost = ConvCeilDiv(groupCut, groupDim) * ConvCeilDiv(fwCut, fwDim);
@@ -105,11 +105,12 @@ void Conv2dBaseTiling::BasicBlockGroupDecision()
 void Conv2dBaseTiling::BasicBlockBoundMode()
 {
     uint64_t inAI = CONST_VALUE_2 * shapeInfo_.batch * shapeInfo_.wo * shapeInfo_.ho * shapeInfo_.co * shapeInfo_.kh *
-            shapeInfo_.kw / (shapeInfo_.batch * shapeInfo_.wi * shapeInfo_.hi * conv2dBasicBlockInfo_.nCut +
-            shapeInfo_.kh * shapeInfo_.kw * shapeInfo_.co * conv2dBasicBlockInfo_.mCut) /
-            dtypeSizeTab.at(descInfo_.fMapDtype);
-    uint64_t outAI =
-        CONST_VALUE_2 * shapeInfo_.ci * shapeInfo_.kh * shapeInfo_.kw / dtypeSizeTab.at(descInfo_.outDtype);
+                    shapeInfo_.kw /
+                    (shapeInfo_.batch * shapeInfo_.wi * shapeInfo_.hi * conv2dBasicBlockInfo_.nCut +
+                     shapeInfo_.kh * shapeInfo_.kw * shapeInfo_.co * conv2dBasicBlockInfo_.mCut) /
+                    dtypeSizeTab.at(descInfo_.fMapDtype);
+    uint64_t outAI = CONST_VALUE_2 * shapeInfo_.ci * shapeInfo_.kh * shapeInfo_.kw /
+                     dtypeSizeTab.at(descInfo_.outDtype);
     uint64_t realAI = min(inAI, outAI);
 
     uint64_t sweetPointAI = SWEET_POINT_AI_FP16;
@@ -129,23 +130,28 @@ unordered_set<pair<uint32_t, uint32_t>, pair_hash> Conv2dBaseTiling::BasicBlockF
     const uint32_t cores = conv2dBasicBlockInfo_.fwDim;
     uint64_t fCut = shapeInfo_.batch * conv2dBasicBlockInfo_.mCut;
     if (conv2dApiTiling_.enableInnerBatch) {
-        fCut = ConvCeilDiv(ConvCeilDiv(shapeInfo_.batch *  ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) *
-            convOpsConstParams_.m0, conv2dBasicBlockInfo_.mTile), conv2dApiTiling_.innerBatch);
+        fCut = ConvCeilDiv(
+            ConvCeilDiv(shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) *
+                            convOpsConstParams_.m0,
+                        conv2dBasicBlockInfo_.mTile),
+            conv2dApiTiling_.innerBatch);
     }
     const uint32_t nCut = conv2dBasicBlockInfo_.nCut;
     uint32_t n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX);
 
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
-    const uint32_t calCut1 =
-        static_cast<uint32_t>(sqrt(static_cast<float>(cores * conv2dBasicBlockInfo_.nKernelHKernelW) /
-        static_cast<float>(conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch)));
-    const uint32_t calCut2 = static_cast<uint32_t>(sqrt(static_cast<double>(static_cast<uint64_t>(cores) * fCut *
-        conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch) / static_cast<double>(conv2dBasicBlockInfo_.nCut) /
-        static_cast<double>(conv2dBasicBlockInfo_.nKernelHKernelW)));
-    unordered_set<pair<uint32_t, uint32_t>, pair_hash> candidates =
-        GenerateCandidates(cores, fCut, nCut, calCut1, calCut2);
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup :
+                                                                                     optGroupInfo_.coutOpt) :
+                         shapeInfo_.co;
+    const uint32_t calCut1 = static_cast<uint32_t>(
+        sqrt(static_cast<float>(cores * conv2dBasicBlockInfo_.nKernelHKernelW) /
+             static_cast<float>(conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch)));
+    const uint32_t calCut2 = static_cast<uint32_t>(sqrt(
+        static_cast<double>(static_cast<uint64_t>(cores) * fCut * conv2dBasicBlockInfo_.mIn *
+                            conv2dApiTiling_.innerBatch) /
+        static_cast<double>(conv2dBasicBlockInfo_.nCut) / static_cast<double>(conv2dBasicBlockInfo_.nKernelHKernelW)));
+    unordered_set<pair<uint32_t, uint32_t>, pair_hash> candidates = GenerateCandidates(cores, fCut, nCut, calCut1,
+                                                                                       calCut2);
 
     uint32_t maxFDim = min(static_cast<uint32_t>(cores), static_cast<uint32_t>(curCo)) / nCut;
     for (auto i = maxFDim; i > 0; i--) {
@@ -172,9 +178,9 @@ void Conv2dBaseTiling::BasicBlockFWDimDecision()
     uint64_t n0 = static_cast<uint64_t>(CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX));
 
     tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t> oriInfo = {
-        conv2dBasicBlockInfo_.mTile, conv2dBasicBlockInfo_.nTile,
-        conv2dBasicBlockInfo_.mCut, conv2dBasicBlockInfo_.nCut, conv2dBasicBlockInfo_.mIn};
-    for (const auto &candidate: candidates) {
+        conv2dBasicBlockInfo_.mTile, conv2dBasicBlockInfo_.nTile, conv2dBasicBlockInfo_.mCut,
+        conv2dBasicBlockInfo_.nCut, conv2dBasicBlockInfo_.mIn};
+    for (const auto& candidate : candidates) {
         conv2dBasicBlockInfo_.fDim = candidate.first;
         conv2dBasicBlockInfo_.nDim = candidate.second;
         conv2dBasicBlockInfo_.mTile = get<0>(oriInfo);
@@ -185,25 +191,32 @@ void Conv2dBaseTiling::BasicBlockFWDimDecision()
         conv2dBasicBlockInfo_.l1LoadScore = static_cast<float>(-1.0);
         conv2dBasicBlockInfo_.biasFullLoad = false;
         conv2dBasicBlockInfo_.fixpFullLoad = false;
-        if (conv2dBasicBlockInfo_.mCut * shapeInfo_.batch >= opInfo_->aicoreNum && conv2dBasicBlockInfo_.nTile <=
-            COUT_LIMIT_128 && attrInfo_.groups == CONST_VALUE_1 && shapeInfo_.kh == CONST_VALUE_1 &&
-            shapeInfo_.kw == CONST_VALUE_1 && conv2dBasicBlockInfo_.nDim > CONST_VALUE_1) {
+        if (conv2dBasicBlockInfo_.mCut * shapeInfo_.batch >= opInfo_->aicoreNum &&
+            conv2dBasicBlockInfo_.nTile <= COUT_LIMIT_128 && attrInfo_.groups == CONST_VALUE_1 &&
+            shapeInfo_.kh == CONST_VALUE_1 && shapeInfo_.kw == CONST_VALUE_1 &&
+            conv2dBasicBlockInfo_.nDim > CONST_VALUE_1) {
             continue;
         }
         uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-            (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-            oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
+                             (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup :
+                                                                                         optGroupInfo_.coutOpt) :
+                             shapeInfo_.co;
         uint64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, n0), candidate.second), n0);
         int64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, conv2dBasicBlockInfo_.batchDim);
         conv2dApiTiling_.SetSingleOutputShape(static_cast<int64_t>(singleCoreCo), 0, singleCoreBatch);
         if (!conv2dApiTiling_.GetCoreBindingDecisionFactor(conv2dBasicBlockInfo_)) {
             continue;
         }
-        uint64_t basicBlockNum1 = !conv2dApiTiling_.enableInnerBatch ? ConvCeilDiv(shapeInfo_.batch *
-            conv2dBasicBlockInfo_.mCut, conv2dBasicBlockInfo_.fDim) :
-            ConvCeilDiv(ConvCeilDiv(ConvCeilDiv(shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho *
-            shapeInfo_.wo, convOpsConstParams_.m0) * convOpsConstParams_.m0, conv2dBasicBlockInfo_.mTile),
-            conv2dApiTiling_.innerBatch), conv2dBasicBlockInfo_.fDim);
+        uint64_t basicBlockNum1 = !conv2dApiTiling_.enableInnerBatch ?
+                                      ConvCeilDiv(shapeInfo_.batch * conv2dBasicBlockInfo_.mCut,
+                                                  conv2dBasicBlockInfo_.fDim) :
+                                      ConvCeilDiv(ConvCeilDiv(ConvCeilDiv(shapeInfo_.batch *
+                                                                              ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo,
+                                                                                          convOpsConstParams_.m0) *
+                                                                              convOpsConstParams_.m0,
+                                                                          conv2dBasicBlockInfo_.mTile),
+                                                              conv2dApiTiling_.innerBatch),
+                                                  conv2dBasicBlockInfo_.fDim);
         uint64_t basicBlockNum2 = ConvCeilDiv(conv2dBasicBlockInfo_.nCut, conv2dBasicBlockInfo_.nDim);
 
         uint32_t fwDimDiff = abs(static_cast<int32_t>(conv2dBasicBlockInfo_.fDim - conv2dBasicBlockInfo_.nDim));
@@ -211,14 +224,14 @@ void Conv2dBaseTiling::BasicBlockFWDimDecision()
             continue;
         }
         ordered_candidates.emplace_back(candidate.first, candidate.second);
-        scores.emplace_back(basicBlockNum1 * basicBlockNum2, conv2dBasicBlockInfo_.coreUtilization,
-                            fwDimDiff, conv2dBasicBlockInfo_.l1LoadScore);
+        scores.emplace_back(basicBlockNum1 * basicBlockNum2, conv2dBasicBlockInfo_.coreUtilization, fwDimDiff,
+                            conv2dBasicBlockInfo_.l1LoadScore);
         strategies.emplace_back(conv2dBasicBlockInfo_.iterateMNOrder, conv2dBasicBlockInfo_.kAl1FullLoad,
                                 conv2dBasicBlockInfo_.kBl1FullLoad, conv2dBasicBlockInfo_.mAl1FullLoad,
                                 conv2dBasicBlockInfo_.nBl1FullLoad, conv2dBasicBlockInfo_.biasFullLoad,
                                 conv2dBasicBlockInfo_.fixpFullLoad, conv2dBasicBlockInfo_.l1LoadScore);
         tileInfo.emplace_back(conv2dBasicBlockInfo_.mTile, conv2dBasicBlockInfo_.nTile, conv2dBasicBlockInfo_.mCut,
-                            conv2dBasicBlockInfo_.nCut, conv2dBasicBlockInfo_.mIn);
+                              conv2dBasicBlockInfo_.nCut, conv2dBasicBlockInfo_.mIn);
     }
     int32_t index = BasicBlockSortFWDimScores(scores);
     SetConv2dBasicBlockInfo(ordered_candidates, strategies, tileInfo, index);
@@ -233,7 +246,7 @@ void Conv2dBaseTiling::BasicBlockBatchMDimDecision()
     const uint32_t mCut = conv2dBasicBlockInfo_.mCut;
     const uint32_t batchCut = ConvCeilDiv(shapeInfo_.batch, conv2dApiTiling_.innerBatch);
 
-    for (const auto &candidate: candidates) {
+    for (const auto& candidate : candidates) {
         uint32_t mDim = candidate.first;
         uint32_t batchDim = candidate.second;
         uint32_t cost1 = ConvCeilDiv(batchCut, batchDim) * ConvCeilDiv(mCut, mDim);
@@ -249,9 +262,10 @@ void Conv2dBaseTiling::BasicBlockBatchMDimDecision()
     conv2dBasicBlockInfo_.batchDim = optDecision.second;
 }
 
-void Conv2dBaseTiling::SetConv2dBasicBlockInfo(const vector<pair<uint32_t, uint32_t>> &ordered_candidates,
-    const vector<tuple<IterateMNOrder, bool, bool, bool, bool, bool, bool, float>> &strategies,
-    const vector<tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t>> &tileInfo, const int32_t &index)
+void Conv2dBaseTiling::SetConv2dBasicBlockInfo(
+    const vector<pair<uint32_t, uint32_t>>& ordered_candidates,
+    const vector<tuple<IterateMNOrder, bool, bool, bool, bool, bool, bool, float>>& strategies,
+    const vector<tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t>>& tileInfo, const int32_t& index)
 {
     conv2dBasicBlockInfo_.fDim = ordered_candidates[index].first;
     conv2dBasicBlockInfo_.nDim = ordered_candidates[index].second;
@@ -272,7 +286,8 @@ void Conv2dBaseTiling::SetConv2dBasicBlockInfo(const vector<pair<uint32_t, uint3
 }
 
 void Conv2dBaseTiling::GenerateSingleCandidateCase(const uint32_t cores, const float candidateCut, const uint64_t cut1,
-    const uint32_t cut2, unordered_set<pair<uint32_t, uint32_t>, pair_hash> &candidates) const
+                                                   const uint32_t cut2,
+                                                   unordered_set<pair<uint32_t, uint32_t>, pair_hash>& candidates) const
 {
     vector<uint32_t> factors;
     ConvCalcCommFactor(cores, cores, factors);
@@ -289,8 +304,9 @@ void Conv2dBaseTiling::GenerateSingleCandidateCase(const uint32_t cores, const f
     }
 }
 
-void Conv2dBaseTiling::GenerateSingleCandidateCaseCommon(const uint32_t cores, const uint32_t dim,
-    const uint32_t cut2, unordered_set<pair<uint32_t, uint32_t>, pair_hash> &candidates) const
+void Conv2dBaseTiling::GenerateSingleCandidateCaseCommon(
+    const uint32_t cores, const uint32_t dim, const uint32_t cut2,
+    unordered_set<pair<uint32_t, uint32_t>, pair_hash>& candidates) const
 {
     if (dim == 0) {
         OP_LOGD(context_->GetNodeName(), "%s AscendC: numBlocks is equal to 0", context_->GetNodeType());
@@ -308,7 +324,10 @@ void Conv2dBaseTiling::GenerateSingleCandidateCaseCommon(const uint32_t cores, c
 }
 
 unordered_set<pair<uint32_t, uint32_t>, pair_hash> Conv2dBaseTiling::GenerateCandidates(const uint32_t cores,
-    const uint64_t cut1, const uint32_t cut2, const uint32_t calCut1, const uint32_t calCut2) const
+                                                                                        const uint64_t cut1,
+                                                                                        const uint32_t cut2,
+                                                                                        const uint32_t calCut1,
+                                                                                        const uint32_t calCut2) const
 {
     unordered_set<pair<uint32_t, uint32_t>, pair_hash> candidates;
 
@@ -347,25 +366,27 @@ int32_t Conv2dBaseTiling::BasicBlockSortFWDimScores(vector<tuple<uint64_t, float
 
     int32_t index = -1;
     if (conv2dBasicBlockInfo_.boundType == BoundType::CUBE_BOUND) {
-        auto comp = [&scores](int32_t i, int32_t j)
-            {return get<0>(scores[i]) > get<0>(scores[j]) ||
-                    (get<0>(scores[i]) == get<0>(scores[j]) && get<1>(scores[i]) < get<1>(scores[j])) ||
-                    (get<0>(scores[i]) == get<0>(scores[j]) &&
+        auto comp = [&scores](int32_t i, int32_t j) {
+            return get<0>(scores[i]) > get<0>(scores[j]) ||
+                   (get<0>(scores[i]) == get<0>(scores[j]) && get<1>(scores[i]) < get<1>(scores[j])) ||
+                   (get<0>(scores[i]) == get<0>(scores[j]) &&
                     std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
-                    get<CONST_VALUE_2>(scores[i]) > get<CONST_VALUE_2>(scores[j]));};
+                    get<CONST_VALUE_2>(scores[i]) > get<CONST_VALUE_2>(scores[j]));
+        };
         index = *max_element(range.begin(), range.end(), comp);
     } else {
-        auto comp = [&scores](int32_t i, int32_t j)
-            {return get<1>(scores[i]) < get<1>(scores[j]) ||
-                    (std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
+        auto comp = [&scores](int32_t i, int32_t j) {
+            return get<1>(scores[i]) < get<1>(scores[j]) ||
+                   (std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
                     get<CONST_VALUE_3>(scores[i]) < get<CONST_VALUE_3>(scores[j])) ||
-                    (std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
+                   (std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
                     std::abs(get<CONST_VALUE_3>(scores[i]) - get<CONST_VALUE_3>(scores[j])) < epsilon &&
                     get<CONST_VALUE_2>(scores[i]) > get<CONST_VALUE_2>(scores[j])) ||
-                    (std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
+                   (std::abs(get<1>(scores[i]) - get<1>(scores[j])) < epsilon &&
                     std::abs(get<CONST_VALUE_3>(scores[i]) - get<CONST_VALUE_3>(scores[j])) < epsilon &&
                     get<CONST_VALUE_2>(scores[i]) == get<CONST_VALUE_2>(scores[j]) &&
-                    get<0>(scores[i]) > get<0>(scores[j]));};
+                    get<0>(scores[i]) > get<0>(scores[j]));
+        };
         index = *max_element(range.begin(), range.end(), comp);
     }
     return index;
@@ -375,12 +396,12 @@ unordered_set<pair<uint32_t, uint32_t>, pair_hash> Conv2dBaseTiling::BasicBlockB
 {
     const uint32_t cores = conv2dBasicBlockInfo_.fDim;
     const uint64_t mCut = static_cast<uint64_t>(conv2dBasicBlockInfo_.mCut);
-    const uint32_t batchCut =  ConvCeilDiv(shapeInfo_.batch, conv2dApiTiling_.innerBatch);
+    const uint32_t batchCut = ConvCeilDiv(shapeInfo_.batch, conv2dApiTiling_.innerBatch);
 
-    const uint32_t calCut1 = static_cast<uint32_t>(sqrt(static_cast<double>(cores * batchCut) /
-                                                        static_cast<double>(mCut)));
-    const uint32_t calCut2 = static_cast<uint32_t>(sqrt(static_cast<double>(static_cast<uint64_t>(cores) * mCut) /
-                                                        static_cast<double>(batchCut)));
+    const uint32_t calCut1 = static_cast<uint32_t>(
+        sqrt(static_cast<double>(cores * batchCut) / static_cast<double>(mCut)));
+    const uint32_t calCut2 = static_cast<uint32_t>(
+        sqrt(static_cast<double>(static_cast<uint64_t>(cores) * mCut) / static_cast<double>(batchCut)));
 
     return GenerateCandidates(cores, mCut, batchCut, calCut1, calCut2);
 }
@@ -389,14 +410,14 @@ unordered_set<pair<uint32_t, uint32_t>, pair_hash> Conv2dBaseTiling::BasicBlockG
 {
     const uint32_t cores = opInfo_->aicoreNum;
     const uint64_t fwCut = shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, conv2dBasicBlockInfo_.mTile) *
-        ConvCeilDiv(shapeInfo_.co, conv2dBasicBlockInfo_.nTile);
-    const uint32_t groupCut = flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-        attrInfo_.groups : optGroupInfo_.groupOpt;
+                           ConvCeilDiv(shapeInfo_.co, conv2dBasicBlockInfo_.nTile);
+    const uint32_t groupCut = flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? attrInfo_.groups :
+                                                                                         optGroupInfo_.groupOpt;
 
-    const uint32_t calCut1 = static_cast<uint32_t>(sqrt(static_cast<double>(cores * groupCut) /
-                                                        static_cast<double>(fwCut)));
-    const uint32_t calCut2 = static_cast<uint32_t>(sqrt(static_cast<double>(static_cast<uint64_t>(cores) * fwCut) /
-                                                        static_cast<double>(groupCut)));
+    const uint32_t calCut1 = static_cast<uint32_t>(
+        sqrt(static_cast<double>(cores * groupCut) / static_cast<double>(fwCut)));
+    const uint32_t calCut2 = static_cast<uint32_t>(
+        sqrt(static_cast<double>(static_cast<uint64_t>(cores) * fwCut) / static_cast<double>(groupCut)));
     return GenerateCandidates(cores, fwCut, groupCut, calCut1, calCut2);
 }
 
@@ -411,15 +432,13 @@ void Conv2dBaseTiling::GetInitBasicBlockMN(uint64_t& basicBlockM, uint64_t& basi
             basicBlockM = BASICBLOCK_INIT_VALUE_1024;
             basicBlockN = BASICBLOCK_INIT_VALUE_64;
         }
-    } else if (shapeInfo_.co > BASICBLOCK_BOUNDARY_VALUE_64
-        && shapeInfo_.co <= BASICBLOCK_BOUNDARY_VALUE_128) {
+    } else if (shapeInfo_.co > BASICBLOCK_BOUNDARY_VALUE_64 && shapeInfo_.co <= BASICBLOCK_BOUNDARY_VALUE_128) {
         basicBlockM = BASICBLOCK_INIT_VALUE_512;
         basicBlockN = BASICBLOCK_INIT_VALUE_128;
     } else if (howo <= BASICBLOCK_BOUNDARY_VALUE_64) {
         basicBlockM = BASICBLOCK_INIT_VALUE_64;
         basicBlockN = BASICBLOCK_INIT_VALUE_1024;
-    } else if (howo > BASICBLOCK_BOUNDARY_VALUE_64
-        && howo <= BASICBLOCK_BOUNDARY_VALUE_128) {
+    } else if (howo > BASICBLOCK_BOUNDARY_VALUE_64 && howo <= BASICBLOCK_BOUNDARY_VALUE_128) {
         basicBlockM = BASICBLOCK_INIT_VALUE_128;
         basicBlockN = BASICBLOCK_INIT_VALUE_512;
     } else {
@@ -428,27 +447,33 @@ void Conv2dBaseTiling::GetInitBasicBlockMN(uint64_t& basicBlockM, uint64_t& basi
     }
 }
 
-void Conv2dBaseTiling::EnableInnerBatchBasicBlock(int64_t availableL1Size) {
+void Conv2dBaseTiling::EnableInnerBatchBasicBlock(int64_t availableL1Size)
+{
     if (flagInfo_.enableC04Flag || flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ||
         featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG) {
         return;
     }
     uint64_t basicBlockM = L0C_SIZE / CONST_VALUE_2 / CONST_VALUE_2 / conv2dBasicBlockInfo_.nTile /
-        convOpsConstParams_.m0 * convOpsConstParams_.m0;
+                           convOpsConstParams_.m0 * convOpsConstParams_.m0;
     basicBlockM = basicBlockM > BASICBLOCK_INIT_VALUE_1024 ? BASICBLOCK_INIT_VALUE_1024 : basicBlockM;
-    uint64_t innerBatchTemp = (availableL1Size / dtypeSizeTab.at(descInfo_.fMapDtype) / CONST_VALUE_2 /
-        CONST_VALUE_2 / convOpsConstParams_.k0) / (shapeInfo_.wi * shapeInfo_.hi);
+    uint64_t innerBatchTemp = (availableL1Size / dtypeSizeTab.at(descInfo_.fMapDtype) / CONST_VALUE_2 / CONST_VALUE_2 /
+                               convOpsConstParams_.k0) /
+                              (shapeInfo_.wi * shapeInfo_.hi);
     uint32_t innerBatch = max(static_cast<uint64_t>(1), min(shapeInfo_.batch, innerBatchTemp));
-    uint64_t mTileInnerBatch  = min(innerBatch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) *
-        convOpsConstParams_.m0, static_cast<uint64_t>(basicBlockM));
-    innerBatch = mTileInnerBatch / (ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) *
-        convOpsConstParams_.m0);
+    uint64_t mTileInnerBatch = min(
+        innerBatch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) * convOpsConstParams_.m0,
+        static_cast<uint64_t>(basicBlockM));
+    innerBatch = mTileInnerBatch /
+                 (ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) * convOpsConstParams_.m0);
     if (innerBatch <= CONST_VALUE_1) {
         return;
     }
     uint64_t nCut = ConvCeilDiv(shapeInfo_.co, conv2dBasicBlockInfo_.nTile);
-    uint64_t fCut = ConvCeilDiv(ConvCeilDiv(shapeInfo_.batch *  ConvCeilDiv(shapeInfo_.ho *
-        shapeInfo_.wo, convOpsConstParams_.m0) * convOpsConstParams_.m0, conv2dBasicBlockInfo_.mTile), innerBatch);
+    uint64_t fCut = ConvCeilDiv(
+        ConvCeilDiv(shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0) *
+                        convOpsConstParams_.m0,
+                    conv2dBasicBlockInfo_.mTile),
+        innerBatch);
     if (fCut * nCut <= opInfo_->aicoreNum && ConvCeilDiv(shapeInfo_.batch, opInfo_->aicoreNum) == CONST_VALUE_1) {
         return;
     }
@@ -458,11 +483,10 @@ void Conv2dBaseTiling::EnableInnerBatchBasicBlock(int64_t availableL1Size) {
 }
 
 bool Conv2dBaseTiling::CmpFirstAdjustMnTile(int64_t availableL1Size, int64_t& mTile, int64_t& nTile,
-    uint64_t basicBlockM, uint64_t basicBlockN)
+                                            uint64_t basicBlockM, uint64_t basicBlockN)
 {
     int64_t fMapDtypeSize = dtypeSizeTab.at(descInfo_.fMapDtype);
-    int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize / convOpsConstParams_.k0 /
-                        static_cast<int64_t>(CONST_VALUE_2);
+    int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize / convOpsConstParams_.k0 / static_cast<int64_t>(CONST_VALUE_2);
     if (maxHiWiL1 <= 0) {
         return false;
     }
@@ -472,16 +496,18 @@ bool Conv2dBaseTiling::CmpFirstAdjustMnTile(int64_t availableL1Size, int64_t& mT
     }
     int64_t hoMax = 0;
     hoMax = (maxhiL1 - static_cast<int64_t>(attrInfo_.dilationH) * (static_cast<int64_t>(shapeInfo_.kh) - 1) - 1) /
-        static_cast<int64_t>(attrInfo_.strideH) + 1 - CONST_VALUE_2;
+                static_cast<int64_t>(attrInfo_.strideH) +
+            1 - CONST_VALUE_2;
     if (hoMax <= 0) {
-          return false;
+        return false;
     }
     int64_t maxHoWoL1 = hoMax * static_cast<int64_t>(shapeInfo_.wo);
     int64_t cmpM = shapeInfo_.ho * shapeInfo_.wo;
     int64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
-    int64_t cmpN = availableL1Size / weightDtypeSize / CONST_VALUE_2 / convOpsConstParams_.k0 /
-                    shapeInfo_.kh / shapeInfo_.kw;
-    if (static_cast<int64_t>(ConvAlignB(cmpM, convOpsConstParams_.m0)) <= min(static_cast<int64_t>(basicBlockM), maxHoWoL1)) {
+    int64_t cmpN = availableL1Size / weightDtypeSize / CONST_VALUE_2 / convOpsConstParams_.k0 / shapeInfo_.kh /
+                   shapeInfo_.kw;
+    if (static_cast<int64_t>(ConvAlignB(cmpM, convOpsConstParams_.m0)) <=
+        min(static_cast<int64_t>(basicBlockM), maxHoWoL1)) {
         mTile = ConvAlignB(cmpM, convOpsConstParams_.m0);
     } else {
         mTile = min(min(cmpM, maxHoWoL1), static_cast<int64_t>(basicBlockM));
@@ -500,5 +526,5 @@ bool Conv2dBaseTiling::CmpFirstAdjustMnTile(int64_t availableL1Size, int64_t& mT
     }
     return true;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

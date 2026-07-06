@@ -32,8 +32,8 @@ constexpr int64_t DST_TYPE_HIFLOAT8 = 34;
 constexpr int64_t DST_TYPE_FLOAT8_E5M2 = 35;
 constexpr int64_t DST_TYPE_FLOAT8_E4M3FN = 36;
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
 // dstType 对应的输出 dtype 映射
 static op::DataType GetOutputDtype(int64_t dstType)
@@ -73,7 +73,8 @@ static bool IsShapeEquals(const aclTensor* tensor1, const aclTensor* tensor2)
 }
 
 // 1. 空指针检查
-static aclnnStatus CheckNullParams(const aclTensor* x, const aclTensor* scale, const aclTensor* y, const aclTensor* amax)
+static aclnnStatus CheckNullParams(const aclTensor* x, const aclTensor* scale, const aclTensor* y,
+                                   const aclTensor* amax)
 {
     OP_CHECK_NULL(x, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(scale, return ACLNN_ERR_PARAM_NULLPTR);
@@ -101,8 +102,7 @@ static aclnnStatus CheckInputParams(const aclTensor* x, const aclTensor* scale)
 
     // scale 数据类型检查：必须为 FLOAT
     if (scale->GetDataType() != DataType::DT_FLOAT) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dtype must be FLOAT, got %d",
-                static_cast<int>(scale->GetDataType()));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dtype must be FLOAT, got %d", static_cast<int>(scale->GetDataType()));
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -152,15 +152,13 @@ static aclnnStatus CheckRoundMode(int64_t dstType, const char* roundMode)
         // FLOAT8_E5M2 和 FLOAT8_E4M3FN 只支持 "rint"
         if (strcmp(roundMode, "rint") != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "roundMode must be 'rint' for dstType FLOAT8_E5M2(35) or FLOAT8_E4M3FN(36), got %s",
-                    roundMode);
+                    "roundMode must be 'rint' for dstType FLOAT8_E5M2(35) or FLOAT8_E4M3FN(36), got %s", roundMode);
             return ACLNN_ERR_PARAM_INVALID;
         }
     } else if (dstType == DST_TYPE_HIFLOAT8) {
         // HIFLOAT8 只支持 "round" 或 "hybrid"
         if (strcmp(roundMode, "round") != 0 && strcmp(roundMode, "hybrid") != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "roundMode must be 'round' or 'hybrid' for dstType HIFLOAT8(34), got %s",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "roundMode must be 'round' or 'hybrid' for dstType HIFLOAT8(34), got %s",
                     roundMode);
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -202,9 +200,8 @@ static aclnnStatus CheckOutputParams(const aclTensor* x, const aclTensor* y, con
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* scale, int64_t dstType, const char* roundMode, const aclTensor* y,
-    const aclTensor* amax)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* scale, int64_t dstType, const char* roundMode,
+                               const aclTensor* y, const aclTensor* amax)
 {
     auto ret = CheckNullParams(x, scale, y, amax);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -224,9 +221,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnQuantMaxGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnQuantMaxGetWorkspaceSize(const aclTensor* x, const aclTensor* scale, char* roundMode, int64_t dstType,
+                                          const aclTensor* y, const aclTensor* amax, uint64_t* workspaceSize,
+                                          aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnQuantMax, DFX_IN(x, scale), DFX_OUT(y, amax));
 
@@ -255,8 +252,8 @@ aclnnStatus aclnnQuantMaxGetWorkspaceSize(
     CHECK_RET(amaxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // roundMode 已在 CheckParams 中校验，直接使用
-    const aclTensor* opResult = l0op::QuantMax(
-        xContiguous, scaleContiguous, roundMode, dstType, yContiguous, amaxContiguous, uniqueExecutor.get());
+    const aclTensor* opResult = l0op::QuantMax(xContiguous, scaleContiguous, roundMode, dstType, yContiguous,
+                                               amaxContiguous, uniqueExecutor.get());
     CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 如果出参y是非连续Tensor，需要把计算完的连续Tensor转非连续

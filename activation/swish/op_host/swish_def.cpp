@@ -17,18 +17,18 @@
 namespace ops {
 class Swish : public OpDef {
 public:
-    explicit Swish(const char *name) : OpDef(name)
+    explicit Swish(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("scale").AttrType(OPTIONAL).Float(1.0);
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

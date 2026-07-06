@@ -27,8 +27,8 @@ class MaskedScatterExceed : public MaskedScatterBase {
 public:
     __aicore__ inline MaskedScatterExceed(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, const MaskedScatterV1TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y,
+                                const MaskedScatterV1TilingData* tilingData)
     {
         BaseMemberDataInit(tilingData);
         xGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_X*>(x) + xBlockOffset, xBlockLength);
@@ -148,7 +148,8 @@ private:
             }
             CommonCopyIn<DTYPE_X>(updatesLocal, srcGm, srcOffset + tempSrcOffset, 1, tempUpdatesComputeNum);
             PipeBarrier<PIPE_ALL>();
-            CommonCopyOut<DTYPE_X>(yGm, maskPos * updatesLineNum + tempSrcOffset, updatesLocal, 1, tempUpdatesComputeNum);
+            CommonCopyOut<DTYPE_X>(yGm, maskPos * updatesLineNum + tempSrcOffset, updatesLocal, 1,
+                                   tempUpdatesComputeNum);
             PipeBarrier<PIPE_ALL>();
             tempSrcOffset += tempUpdatesComputeNum;
         }

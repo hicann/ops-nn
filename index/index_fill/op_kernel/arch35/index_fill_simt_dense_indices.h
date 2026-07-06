@@ -24,17 +24,23 @@ namespace IndexFill {
 using namespace AscendC;
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr, __local_mem__ int32_t* uniqueIndicesAddr, __gm__ int8_t* mask, COM_T processNum, COM_T n, int64_t length);
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
+                                                                        __local_mem__ int32_t* uniqueIndicesAddr,
+                                                                        __gm__ int8_t* mask, COM_T processNum, COM_T n,
+                                                                        int64_t length);
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtDenseIndicesCompute(__gm__ T* y, __gm__ int8_t* mask, T value, COM_T total_num, COM_T n,
-     COM_T shift_n, COM_T magic_n, COM_T shift_q, COM_T magic_q);
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtDenseIndicesCompute(
+    __gm__ T* y, __gm__ int8_t* mask, T value, COM_T total_num, COM_T n, COM_T shift_n, COM_T magic_n, COM_T shift_q,
+    COM_T magic_q);
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
 class IndexFillSimtDenseIndicesImpl {
 public:
-    __aicore__ inline IndexFillSimtDenseIndicesImpl(const IndexFillSimtDenseIndicesTilingData* __restrict tilingData, TPipe *pipe): pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum()) {
-    }
+    __aicore__ inline IndexFillSimtDenseIndicesImpl(const IndexFillSimtDenseIndicesTilingData* __restrict tilingData,
+                                                    TPipe* pipe)
+        : pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum())
+    {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace);
     __aicore__ inline void Process(__gm__ T* y);
@@ -48,7 +54,7 @@ private:
     __aicore__ inline void FillMaskWithUniqueIndices(int64_t indicesNum);
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> dataQueue_;
     TQue<QuePosition::VECIN, DB_BUFFER> indicesQueue_;
     TBuf<QuePosition::VECCALC> indicesBuff_;
@@ -68,24 +74,23 @@ private:
 };
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::CopyInIndices(int64_t offset, int64_t dataLen)
+__aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::CopyInIndices(int64_t offset,
+                                                                                          int64_t dataLen)
 {
-    DataCopyExtParams inParams = {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(dataLen * sizeof(INDEX_TYPE)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
-    DataCopyPadExtParams<INDEX_TYPE> padParams = { false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<INDEX_TYPE>(0) };
+    DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(INDEX_TYPE)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<INDEX_TYPE> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                                  static_cast<INDEX_TYPE>(0)};
     LocalTensor<INDEX_TYPE> indicesLocal = indicesQueue_.AllocTensor<INDEX_TYPE>();
     DataCopyPad(indicesLocal, indices_[offset], inParams, padParams);
     indicesQueue_.EnQue(indicesLocal);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
-    __local_mem__ int32_t* uniqueIndicesAddr, __gm__ int8_t* mask, COM_T processNum, COM_T n, int64_t length)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
+                                                                        __local_mem__ int32_t* uniqueIndicesAddr,
+                                                                        __gm__ int8_t* mask, COM_T processNum, COM_T n,
+                                                                        int64_t length)
 {
     COM_T threadIdx = static_cast<COM_T>(Simt::GetThreadIdx());
     COM_T threadNum = static_cast<COM_T>(Simt::GetThreadNum());
@@ -115,13 +120,14 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Fill
 
     COM_T n = static_cast<COM_T>(tilingData_->n);
     __local_mem__ INDEX_TYPE* actualSortOut = ((__local_mem__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
-    AscendC::Simt::VF_CALL<SetMaskSimt<T, INDEX_TYPE, COM_T>>(AscendC::Simt::Dim3{THREAD_NUM}, actualSortOut,
-        (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr(), (__gm__ int8_t*)maskGm_.GetPhyAddr(), uniqueNum, n, length);
+    AscendC::Simt::VF_CALL<SetMaskSimt<T, INDEX_TYPE, COM_T>>(
+        AscendC::Simt::Dim3{THREAD_NUM}, actualSortOut, (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
+        (__gm__ int8_t*)maskGm_.GetPhyAddr(), uniqueNum, n, length);
 
     indicesQueue_.FreeTensor(indicesLocal);
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::BuildIndicesMask()
 {
     int64_t indicesUbFactor = tilingData_->indicesUbFactor;
@@ -174,7 +180,8 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Buil
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
+__aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices,
+                                                                                 GM_ADDR value, GM_ADDR workspace)
 {
     valueGm_.SetGlobalBuffer((__gm__ T*)(value));
     fillValue = valueGm_.GetValue(0);
@@ -191,7 +198,8 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Init
     if (blockIdx_ < tilingData_->frontCoreNum) {
         offset_ = blockIdx_ * tilingData_->loopsPerFrontCore * tilingData_->blockSize;
     } else {
-        offset_ = (tilingData_->frontCoreNum * tilingData_->loopsPerFrontCore * tilingData_->blockSize) + ((blockIdx_ - tilingData_->frontCoreNum) * tilingData_->loopsPerTailCore * tilingData_->blockSize);
+        offset_ = (tilingData_->frontCoreNum * tilingData_->loopsPerFrontCore * tilingData_->blockSize) +
+                  ((blockIdx_ - tilingData_->frontCoreNum) * tilingData_->loopsPerTailCore * tilingData_->blockSize);
     }
 
     pipe_->InitBuffer(dataQueue_, DB_BUFFER, tilingData_->blockSize * sizeof(T));
@@ -202,32 +210,22 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Init
 template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::CopyIn(int64_t offset, int64_t dataLen)
 {
-  DataCopyPadExtParams<T> padParams = { false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0) };
-  DataCopyExtParams inParams = {
-    static_cast<uint16_t>(1),
-    static_cast<uint32_t>(dataLen * sizeof(T)),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0)
-  };
-  LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
-  DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
-  dataQueue_.EnQue(xLocal);
+    DataCopyPadExtParams<T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
+    DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
+    DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
+    dataQueue_.EnQue(xLocal);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::CopyOut(int64_t offset, int64_t dataLen)
 {
-  LocalTensor<T> yLocal = dataQueue_.DeQue<T>();
-  DataCopyExtParams outParams = {
-    static_cast<uint16_t>(1),
-    static_cast<uint32_t>(dataLen * sizeof(T)),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0)
-  };
-  DataCopyPad(yGm_[offset], yLocal, outParams);
-  dataQueue_.FreeTensor(yLocal);
+    LocalTensor<T> yLocal = dataQueue_.DeQue<T>();
+    DataCopyExtParams outParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                   static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPad(yGm_[offset], yLocal, outParams);
+    dataQueue_.FreeTensor(yLocal);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
@@ -238,7 +236,8 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Copy
     }
 
     int64_t offset = 0;
-    int64_t loopSize = blockIdx_ < tilingData_->frontCoreNum ? tilingData_->loopsPerFrontCore : tilingData_->loopsPerTailCore;
+    int64_t loopSize = blockIdx_ < tilingData_->frontCoreNum ? tilingData_->loopsPerFrontCore :
+                                                               tilingData_->loopsPerTailCore;
     for (int64_t idx = 0; idx < loopSize - 1; idx++) {
         offset = idx * tilingData_->blockSize;
         CopyIn(offset, tilingData_->blockSize);
@@ -283,13 +282,15 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Proc
     GetUintDivMagicAndShift(magic_q, shift_q, q);
 
     // 执行index_fill核心逻辑
-    AscendC::Simt::VF_CALL<IndexFillSimtDenseIndicesCompute<T, INDEX_TYPE, COM_T>>(AscendC::Simt::Dim3{THREAD_NUM}, y,
-        (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue, process_num, n, shift_n, magic_n, shift_q, magic_q);
+    AscendC::Simt::VF_CALL<IndexFillSimtDenseIndicesCompute<T, INDEX_TYPE, COM_T>>(
+        AscendC::Simt::Dim3{THREAD_NUM}, y, (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue, process_num, n, shift_n,
+        magic_n, shift_q, magic_q);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtDenseIndicesCompute(__gm__ T* y, __gm__ int8_t* maskAddr, T value, COM_T total_num, COM_T n,
-    COM_T shift_n, COM_T magic_n, COM_T shift_q, COM_T magic_q)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtDenseIndicesCompute(
+    __gm__ T* y, __gm__ int8_t* maskAddr, T value, COM_T total_num, COM_T n, COM_T shift_n, COM_T magic_n,
+    COM_T shift_q, COM_T magic_q)
 {
     COM_T threadNum = static_cast<COM_T>(Simt::GetBlockNum() * Simt::GetThreadNum());
     COM_T threadIdx = static_cast<COM_T>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());

@@ -25,24 +25,24 @@
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(MatmulV2CompressDequantTilingData)
-    TILING_DATA_FIELD_DEF(uint32_t, batchSize);
-    TILING_DATA_FIELD_DEF(uint32_t, m);
-    TILING_DATA_FIELD_DEF(uint32_t, k);
-    TILING_DATA_FIELD_DEF(uint32_t, n);
-    TILING_DATA_FIELD_DEF(uint32_t, m0);
-    TILING_DATA_FIELD_DEF(uint32_t, k0);
-    TILING_DATA_FIELD_DEF(uint32_t, n0);
-    TILING_DATA_FIELD_DEF(uint32_t, mLoop);
-    TILING_DATA_FIELD_DEF(uint32_t, kLoop);
-    TILING_DATA_FIELD_DEF(uint32_t, nLoop);
-    TILING_DATA_FIELD_DEF(uint32_t, coreLoop);
-    TILING_DATA_FIELD_DEF(uint32_t, swizzlCount);
-    TILING_DATA_FIELD_DEF(uint32_t, tilingK);
-    TILING_DATA_FIELD_DEF(uint32_t, tilingN);
-    TILING_DATA_FIELD_DEF(uint32_t, compressOverlapN);
-    TILING_DATA_FIELD_DEF(uint32_t, tilingKey);
-    TILING_DATA_FIELD_DEF(uint32_t, blockDimVal);
-    TILING_DATA_FIELD_DEF(uint32_t, splitK);
+TILING_DATA_FIELD_DEF(uint32_t, batchSize);
+TILING_DATA_FIELD_DEF(uint32_t, m);
+TILING_DATA_FIELD_DEF(uint32_t, k);
+TILING_DATA_FIELD_DEF(uint32_t, n);
+TILING_DATA_FIELD_DEF(uint32_t, m0);
+TILING_DATA_FIELD_DEF(uint32_t, k0);
+TILING_DATA_FIELD_DEF(uint32_t, n0);
+TILING_DATA_FIELD_DEF(uint32_t, mLoop);
+TILING_DATA_FIELD_DEF(uint32_t, kLoop);
+TILING_DATA_FIELD_DEF(uint32_t, nLoop);
+TILING_DATA_FIELD_DEF(uint32_t, coreLoop);
+TILING_DATA_FIELD_DEF(uint32_t, swizzlCount);
+TILING_DATA_FIELD_DEF(uint32_t, tilingK);
+TILING_DATA_FIELD_DEF(uint32_t, tilingN);
+TILING_DATA_FIELD_DEF(uint32_t, compressOverlapN);
+TILING_DATA_FIELD_DEF(uint32_t, tilingKey);
+TILING_DATA_FIELD_DEF(uint32_t, blockDimVal);
+TILING_DATA_FIELD_DEF(uint32_t, splitK);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MatMulV2CompressDequant, MatmulV2CompressDequantTilingData)
@@ -67,8 +67,8 @@ struct MatmulV2CompressDequantCompileInfo {
     bool isRegbase = false;
 };
 
-ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext *context);
+ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext* context);
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_MATMUL_V2_COMPRESS_DEQUANT_H
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_MATMUL_V2_COMPRESS_DEQUANT_H

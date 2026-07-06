@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file block_scheduler_qbmm.h
  * \brief
  */
@@ -23,7 +23,8 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <class ProblemShape_, class L1TileShape_, class L0TileShape_, uint64_t FullLoadMode_, bool TransA_, bool TransB_, class AType_>
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, uint64_t FullLoadMode_, bool TransA_,
+          bool TransB_, class AType_>
 class BlockSchedulerQuantBatchMatmulV3 {
 public:
     int64_t m_{0};
@@ -48,8 +49,8 @@ public:
     int64_t endBlockIdx_{0};
     int64_t roundIdx_{0};
     int64_t round_{0};
-    int64_t mTailTile_{1}; // init value must be 1
-    int64_t nTailTile_{1}; // init value must be 1
+    int64_t mTailTile_{1};     // init value must be 1
+    int64_t nTailTile_{1};     // init value must be 1
     int64_t totalTailTile_{1}; // init value must be 1
     int64_t mSplitAddrOffset_{0};
     int64_t nSplitAddrOffset_{0};
@@ -77,7 +78,7 @@ public:
     const int64_t WINDOW_LEN = 4;
 
 public:
-    __aicore__ inline BlockSchedulerQuantBatchMatmulV3(const ProblemShape &shape, const Params &params)
+    __aicore__ inline BlockSchedulerQuantBatchMatmulV3(const ProblemShape& shape, const Params& params)
     {
         m_ = shape.m;
         n_ = shape.n;
@@ -131,15 +132,9 @@ public:
         endBlockIdx_ = newEndBlockIdx;
     }
 
-    __aicore__ inline int64_t GetTotalCnt()
-    {
-        return totalCnt_;
-    }
+    __aicore__ inline int64_t GetTotalCnt() { return totalCnt_; }
 
-    __aicore__ inline int64_t GetEndBlockIdx()
-    {
-        return endBlockIdx_;
-    }
+    __aicore__ inline int64_t GetEndBlockIdx() { return endBlockIdx_; }
 
     /**
      * @brief Round the input value up to the smallest power of two.
@@ -163,8 +158,8 @@ public:
         inputValue++;
     }
 
-    __aicore__ inline void CalSingleCoreShapeByCoord(
-        int64_t& singleCoreM, int64_t& singleCoreN, const BlockCoord& blockCoord)
+    __aicore__ inline void CalSingleCoreShapeByCoord(int64_t& singleCoreM, int64_t& singleCoreN,
+                                                     const BlockCoord& blockCoord)
     {
         if constexpr (!TransA_) {
             if (Get<MNK_M>(blockCoord) >= mBaseNormCnt_) {
@@ -206,10 +201,9 @@ public:
         if constexpr (AscendC::IsSameType<AType, fp4x2_e2m1_t>::value) {
             singleCoreNSplit = (singleCoreNSplit + 1) & ~1;
         }
-        if constexpr (
-            (aQuantMode == QuantBatchMatmul::QuantMode::PERGROUP_MODE ||
-             aQuantMode == QuantBatchMatmul::QuantMode::PERBLOCK_MODE) &&
-            TransA_) {
+        if constexpr ((aQuantMode == QuantBatchMatmul::QuantMode::PERGROUP_MODE ||
+                       aQuantMode == QuantBatchMatmul::QuantMode::PERBLOCK_MODE) &&
+                      TransA_) {
             singleCoreMSplit = PER_BLOCK_SIZE << (singleCoreMSplit > PER_BLOCK_SIZE);
         } else if constexpr (aQuantMode == QuantBatchMatmul::QuantMode::PERBLOCK_MODE) {
             CeilPowerOfTwo(singleCoreMSplit);
@@ -269,7 +263,7 @@ public:
         }
     }
 
-    __aicore__ inline bool GetTileIdx(BlockCoord &blockCoord)
+    __aicore__ inline bool GetTileIdx(BlockCoord& blockCoord)
     {
         if (roundIdx_ >= round_) {
             return false;
@@ -319,21 +313,23 @@ public:
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_, class AType_>
 struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<>,
                               TransA_, TransB_, AType_> {
-    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, 0, TransA_, TransB_, AType_>;
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, 0, TransA_, TransB_,
+                                                         AType_>;
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_, class AType_>
-struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<A_FULL_LOAD_MODE>,
-                              TransA_, TransB_, AType_> {
-    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE, TransA_, TransB_, AType_>;
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_,
+                              Cmct::Gemm::QuantBatchMatmulV3Scheduler<A_FULL_LOAD_MODE>, TransA_, TransB_, AType_> {
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE,
+                                                         TransA_, TransB_, AType_>;
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_, class AType_>
-struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<B_FULL_LOAD_MODE>,
-                              TransA_, TransB_, AType_> {
-    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, B_FULL_LOAD_MODE, TransA_, TransB_, AType_>;
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_,
+                              Cmct::Gemm::QuantBatchMatmulV3Scheduler<B_FULL_LOAD_MODE>, TransA_, TransB_, AType_> {
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, B_FULL_LOAD_MODE,
+                                                         TransA_, TransB_, AType_>;
 };
-}  // namespace Block
-}  // namespace Gemm
-}  // namespace Cmct
-
+} // namespace Block
+} // namespace Gemm
+} // namespace Cmct

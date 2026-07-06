@@ -55,10 +55,8 @@ REGISTER_TILING_DATA_CLASS(RepeatInterleave_202, RepeatInterleaveTilingKernelDat
 
 class RepeatInterleaveTilingKernelNorm : public RepeatInterleaveBaseTiling {
 public:
-    explicit RepeatInterleaveTilingKernelNorm(gert::TilingContext* context) : RepeatInterleaveBaseTiling(context)
-    {}
-    ~RepeatInterleaveTilingKernelNorm() override
-    {}
+    explicit RepeatInterleaveTilingKernelNorm(gert::TilingContext* context) : RepeatInterleaveBaseTiling(context) {}
+    ~RepeatInterleaveTilingKernelNorm() override {}
 
 protected:
     int64_t eachCoreBatchCount_{0};

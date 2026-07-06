@@ -36,17 +36,17 @@ void AdaptiveAvgPool3dGradTilingBigKernel::InitializationVars()
     baseData.vRegSize = Ops::Base::GetVRegSize(context_);
 
     baseData.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
-    baseData.inputBytes = inputData.inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE; 
+    baseData.inputBytes = inputData.inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE;
 
-    baseData.availableUb = ubSize_ - UB_RESVERVED_SIZE - UB_TEMP_BUFF_SIZE; 
-    baseData.totalCoreNum = coreNum_; 
-    baseData.coreUsedForBestPerformance = baseData.totalCoreNum; 
+    baseData.availableUb = ubSize_ - UB_RESVERVED_SIZE - UB_TEMP_BUFF_SIZE;
+    baseData.totalCoreNum = coreNum_;
+    baseData.coreUsedForBestPerformance = baseData.totalCoreNum;
 
     int64_t oneBlockNum = baseData.ubBlockSize / baseData.inputBytes;
 
-    baseData.maxDataNumInOneBlock = oneBlockNum; 
+    baseData.maxDataNumInOneBlock = oneBlockNum;
 
-    baseData.proDataNumInOneBeatT2 = baseData.vRegSize / baseData.ubBlockSize * oneBlockNum;  
+    baseData.proDataNumInOneBeatT2 = baseData.vRegSize / baseData.ubBlockSize * oneBlockNum;
     baseData.inputNCSize = gradOutputN * gradOutputC;
 }
 
@@ -54,15 +54,16 @@ void AdaptiveAvgPool3dGradTilingBigKernel::DoBufferCalculate()
 {
     int64_t dInputInner = Ops::Base::CeilDiv(splitData.dOutputInner * gradInputD, gradOutputD) + 1;
     int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner * gradInputH, gradOutputH) + 1;
-    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner * gradInputW, gradOutputW) + 1; 
+    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner * gradInputW, gradOutputW) + 1;
 
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.maxDataNumInOneBlock);
 
     int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInner;
     int64_t outputPlaneSizeDHW = splitData.dOutputInner * splitData.hOutputInner * wOutputInnerAligned;
 
-    splitData.gradInputBufferSize = Ops::Base::CeilAlign(splitData.highAxisInner * inputPlaneSizeDHW * baseData.inputBytes, ALIGN_NUM);
-    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE; 
+    splitData.gradInputBufferSize = Ops::Base::CeilAlign(
+        splitData.highAxisInner * inputPlaneSizeDHW * baseData.inputBytes, ALIGN_NUM);
+    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE;
 
     int64_t tmpTotalBufferSize = splitData.gradInputBufferSize + splitData.outputBufferSize;
     splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
@@ -71,14 +72,14 @@ void AdaptiveAvgPool3dGradTilingBigKernel::DoBufferCalculate()
 bool AdaptiveAvgPool3dGradTilingBigKernel::IsCapable()
 {
     InitializationVars();
-    if(inputData.inputFormat != ge::Format::FORMAT_NCDHW)
-    {
+    if (inputData.inputFormat != ge::Format::FORMAT_NCDHW) {
         return false;
     }
     kernelD = Ops::Base::CeilDiv(gradOutputD, gradInputD);
     kernelH = Ops::Base::CeilDiv(gradOutputH, gradInputH);
     kernelW = Ops::Base::CeilDiv(gradOutputW, gradInputW);
-    if ((kernelD * kernelH * kernelW < ADAPTIVE_BIG_KERNEL_SIZE) || (kernelW <= (baseData.vRegSize / baseData.inputBytes / DOUBLE_BUFFER))) {
+    if ((kernelD * kernelH * kernelW < ADAPTIVE_BIG_KERNEL_SIZE) ||
+        (kernelW <= (baseData.vRegSize / baseData.inputBytes / DOUBLE_BUFFER))) {
         return false;
     }
 
@@ -92,12 +93,13 @@ bool AdaptiveAvgPool3dGradTilingBigKernel::IsCapable()
 
 bool AdaptiveAvgPool3dGradTilingBigKernel::IsMeetTargetCoreNum()
 {
-    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner); 
+    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
     int64_t tmpHOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
     int64_t tmpDOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
     int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
 
-    return tmpDOutputOuter * tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData.coreUsedForBestPerformance;
+    return tmpDOutputOuter * tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >=
+           baseData.coreUsedForBestPerformance;
 }
 
 bool AdaptiveAvgPool3dGradTilingBigKernel::IsMeetUBSize()
@@ -146,7 +148,7 @@ void AdaptiveAvgPool3dGradTilingBigKernel::DynamicAdjustmentAlignDWH()
         splitData.dOutputInner -= kernelD;
         splitData.dOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
         return;
-    } 
+    }
     if (splitData.hOutputInner > kernelH) {
         splitData.hOutputInner -= kernelH;
         splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
@@ -167,11 +169,12 @@ void AdaptiveAvgPool3dGradTilingBigKernel::SplitAlignDHW()
     splitData.wOutputInner = gradOutputW;
     splitData.dOutputInner = gradOutputD;
 
-    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner); 
+    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
     splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
     splitData.dOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
 
-    while (splitData.dOutputInner > kernelD || splitData.hOutputInner > kernelH || splitData.wOutputInner > baseData.proDataNumInOneBeatT2) {
+    while (splitData.dOutputInner > kernelD || splitData.hOutputInner > kernelH ||
+           splitData.wOutputInner > baseData.proDataNumInOneBeatT2) {
         if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
             DynamicAdjustmentAlignDWH();
         } else {
@@ -189,7 +192,7 @@ void AdaptiveAvgPool3dGradTilingBigKernel::DynamicAdjustmentDWH()
         splitData.dOutputOuter++;
         splitData.dOutputInner = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputOuter);
         return;
-    } 
+    }
     if (splitData.hOutputInner != 1) {
         splitData.hOutputOuter++;
         splitData.hOutputInner = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputOuter);
@@ -207,11 +210,12 @@ void AdaptiveAvgPool3dGradTilingBigKernel::SplitUnalignDHW()
     splitData.wOutputInner = gradOutputW;
     splitData.dOutputInner = gradOutputD;
 
-    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner); 
+    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
     splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
     splitData.dOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
 
-    while (splitData.hOutputInner != 1 || splitData.dOutputInner != 1 || splitData.wOutputInner > baseData.proDataNumInOneBeatT2) {
+    while (splitData.hOutputInner != 1 || splitData.dOutputInner != 1 ||
+           splitData.wOutputInner > baseData.proDataNumInOneBeatT2) {
         if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
             DynamicAdjustmentDWH();
         } else {
@@ -236,9 +240,9 @@ void AdaptiveAvgPool3dGradTilingBigKernel::DoUBTiling()
     SearchBestTiling();
     DoBufferCalculate();
 
-    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner); 
-    int64_t tempWOutputTail = gradOutputW % splitData.wOutputInner; 
-    splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail; 
+    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
+    int64_t tempWOutputTail = gradOutputW % splitData.wOutputInner;
+    splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail;
 
     splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
     int64_t tempHOutputTail = gradOutputH % splitData.hOutputInner;
@@ -255,17 +259,18 @@ void AdaptiveAvgPool3dGradTilingBigKernel::DoUBTiling()
 
 void AdaptiveAvgPool3dGradTilingBigKernel::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter * splitData.dOutputOuter; 
-    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum); 
-    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum); 
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1); 
+    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter *
+                                  splitData.dOutputOuter;
+    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
+    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::SetTilingData()
 {
-    AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35* tilingData =
-        context_->GetTilingData<AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35>();
+    AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35* tilingData = context_->GetTilingData<
+        AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
 
     tilingData->dInput = gradInputD;
@@ -314,8 +319,7 @@ uint64_t AdaptiveAvgPool3dGradTilingBigKernel::GetTilingKey() const
 {
     int64_t outDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
     int64_t inDataCount = inputData.nGrad * inputData.cGrad * inputData.dGrad * inputData.hGrad * inputData.wGrad;
-    bool needInt64 = (outDataCount > static_cast<int64_t>(MAX_INT32) ||
-                      inDataCount > static_cast<int64_t>(MAX_INT32) ||
+    bool needInt64 = (outDataCount > static_cast<int64_t>(MAX_INT32) || inDataCount > static_cast<int64_t>(MAX_INT32) ||
                       inputData.dGrad * inputData.dX > static_cast<int64_t>(MAX_INT32) ||
                       inputData.hGrad * inputData.hX > static_cast<int64_t>(MAX_INT32) ||
                       inputData.wGrad * inputData.wX > static_cast<int64_t>(MAX_INT32));
@@ -331,10 +335,7 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3dGrad, AdaptiveAvgPool3dGradTilingBigKernel, 10);
 } // namespace optiling

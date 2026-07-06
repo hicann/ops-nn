@@ -20,9 +20,7 @@ namespace NsDequantBias {
 using namespace AscendC;
 
 // Round up elemCount to nearest multiple of 16
-__aicore__ inline int64_t Align16(int64_t elemCount) {
-    return (elemCount + 15) / 16 * 16;
-}
+__aicore__ inline int64_t Align16(int64_t elemCount) { return (elemCount + 15) / 16 * 16; }
 constexpr int32_t BUFFER_NUM = 1;
 constexpr uint8_t MULTI_COPY_DIM = 2;
 constexpr int32_t BLOCK_SIZE = 32;
@@ -31,25 +29,25 @@ constexpr AscendC::MicroAPI::CastTrait CT_I32_TO_F32 = {
     AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
     AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait CT_BF16_TO_F32 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr AscendC::MicroAPI::CastTrait CT_BF16_TO_F32 = {AscendC::MicroAPI::RegLayout::ZERO,
+                                                         AscendC::MicroAPI::SatMode::UNKNOWN,
+                                                         AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 constexpr AscendC::MicroAPI::CastTrait CT_F32_TO_BF16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    RoundMode::CAST_RINT};
 
 constexpr AscendC::MicroAPI::CastTrait CT_F32_TO_F16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    RoundMode::CAST_RINT};
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 class DequantBiasKernel {
 public:
     __aicore__ inline DequantBiasKernel() {}
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activateScale,
-                                GM_ADDR bias, GM_ADDR y, GM_ADDR tilingAddr);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activateScale, GM_ADDR bias, GM_ADDR y,
+                                GM_ADDR tilingAddr);
     __aicore__ inline void Process();
 
 private:
@@ -61,16 +59,14 @@ private:
     __aicore__ inline void Compute(int64_t nRows, int64_t curLen);
 
     template <typename dtypeCopyIn>
-    __aicore__ inline void CopyInNddmaReplicateRows(
-        TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
-        GlobalTensor<dtypeCopyIn>& inGm,
-        int64_t paramOffset, int64_t paramLen);
+    __aicore__ inline void CopyInNddmaReplicateRows(TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
+                                                    GlobalTensor<dtypeCopyIn>& inGm, int64_t paramOffset,
+                                                    int64_t paramLen);
 
     template <typename dtypeCopyIn>
-    __aicore__ inline void CopyInNddmaReplicateCols(
-        TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
-        GlobalTensor<dtypeCopyIn>& inGm,
-        int64_t paramOffset, int64_t paramLen);
+    __aicore__ inline void CopyInNddmaReplicateCols(TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
+                                                    GlobalTensor<dtypeCopyIn>& inGm, int64_t paramOffset,
+                                                    int64_t paramLen);
 
     TPipe pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX_;
@@ -91,16 +87,18 @@ private:
     int64_t gmRowOff_ = 0;
 };
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::Init(
-    GM_ADDR x, GM_ADDR weightScale, GM_ADDR activateScale,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR tilingAddr)
+    GM_ADDR x, GM_ADDR weightScale, GM_ADDR activateScale, GM_ADDR bias, GM_ADDR y, GM_ADDR tilingAddr)
 {
     GET_TILING_DATA_WITH_STRUCT(DequantBiasArch35TilingData, td, tilingAddr);
     tiling_ = td;
     blockIdx_ = GetBlockIdx();
-    if (blockIdx_ >= tiling_.numCore) { curRows_ = 0; return; }
+    if (blockIdx_ >= tiling_.numCore) {
+        curRows_ = 0;
+        return;
+    }
 
     int64_t bf = tiling_.blockFactor;
     int64_t btf = tiling_.blockTailFactor;
@@ -118,7 +116,10 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
         biasGm_.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_B*>(bias));
     }
 
-    if (tiling_.baseLen <= 0 || tiling_.baseN <= 0) { curRows_ = 0; return; }
+    if (tiling_.baseLen <= 0 || tiling_.baseN <= 0) {
+        curRows_ = 0;
+        return;
+    }
 
     int64_t alignLen = Align16(tiling_.baseLen);
     int64_t tb = tiling_.baseN * alignLen;
@@ -133,8 +134,8 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
     pipe_.InitBuffer(outQueueY_, BUFFER_NUM, tb * sizeof(DTYPE_Y));
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInX(
     int64_t nRows, int64_t rowOff, int64_t colOff, int64_t curLen)
 {
@@ -151,21 +152,21 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
     inQueueX_.EnQue(xLocal);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInWS(
     int64_t colOff, int64_t curLen)
 {
     CopyInNddmaReplicateRows<DTYPE_WS>(inQueueWS_, wsGm_, colOff, curLen);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 template <typename dtypeCopyIn>
-__aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInNddmaReplicateRows(
-    TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
-    GlobalTensor<dtypeCopyIn>& inGm,
-    int64_t paramOffset, int64_t paramLen)
+__aicore__ inline void
+DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInNddmaReplicateRows(
+    TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue, GlobalTensor<dtypeCopyIn>& inGm, int64_t paramOffset,
+    int64_t paramLen)
 {
     auto paramLocal = inQueue.template AllocTensor<dtypeCopyIn>();
     static constexpr AscendC::MultiCopyConfig copyConfig = {false, 0, 0, false};
@@ -184,13 +185,13 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
     inQueue.EnQue(paramLocal);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 template <typename dtypeCopyIn>
-__aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInNddmaReplicateCols(
-    TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
-    GlobalTensor<dtypeCopyIn>& inGm,
-    int64_t paramOffset, int64_t paramLen)
+__aicore__ inline void
+DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInNddmaReplicateCols(
+    TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue, GlobalTensor<dtypeCopyIn>& inGm, int64_t paramOffset,
+    int64_t paramLen)
 {
     auto paramLocal = inQueue.template AllocTensor<dtypeCopyIn>();
     static constexpr AscendC::MultiCopyConfig copyConfig = {false, 0, 0, false};
@@ -208,24 +209,24 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
     inQueue.EnQue(paramLocal);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInAS(
     int64_t rowOff, int64_t nRows)
 {
     CopyInNddmaReplicateCols<float>(inQueueAS_, asGm_, rowOff, Align16(tiling_.baseLen));
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInBias(
     int64_t colOff, int64_t curLen)
 {
     CopyInNddmaReplicateRows<DTYPE_B>(inQueueBias_, biasGm_, colOff, curLen);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyOutY(
     int64_t nRows, int64_t rowOff, int64_t colOff, int64_t curLen)
 {
@@ -241,8 +242,8 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
     outQueueY_.FreeTensor(yLocal);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::Compute(
     int64_t nRows, int64_t curLen)
 {
@@ -289,73 +290,73 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             mask = AscendC::MicroAPI::UpdateMask<float>(totalCount);
 
-            AscendC::MicroAPI::DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                vregX, xAddr + i * VL);
+            AscendC::MicroAPI::DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregX, xAddr + i * VL);
 
             if constexpr (HAS_BIAS && std::is_same_v<DTYPE_B, int32_t>) {
-                AscendC::MicroAPI::DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregBiasI32, biasAddr + i * VL);
-                AscendC::MicroAPI::Add<int32_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vregX, vregX, vregBiasI32, mask);
+                AscendC::MicroAPI::DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregBiasI32,
+                                                                                             biasAddr + i * VL);
+                AscendC::MicroAPI::Add<int32_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregX, vregX, vregBiasI32,
+                                                                                           mask);
             }
 
             AscendC::MicroAPI::Cast<float, int32_t, CT_I32_TO_F32>(vregXF32, vregX, mask);
 
             if constexpr (std::is_same_v<DTYPE_WS, float>) {
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregWSF32, wsAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregWSF32, wsAddr + i * VL);
             } else {
-                AscendC::MicroAPI::DataCopy<DTYPE_WS, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregWS, wsAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<DTYPE_WS, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregWS,
+                                                                                                    wsAddr + i * VL);
                 AscendC::MicroAPI::Cast<float, DTYPE_WS, CT_BF16_TO_F32>(vregWSF32, vregWS, mask);
             }
-            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                vregCalc, vregXF32, vregWSF32, mask);
+            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregCalc, vregXF32, vregWSF32,
+                                                                                     mask);
 
             if constexpr (HAS_ACTIVATE) {
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregAS, asAddr + i * VL);
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vregCalc, vregCalc, vregAS, mask);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregAS, asAddr + i * VL);
+                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregCalc, vregCalc, vregAS,
+                                                                                         mask);
             }
 
             if constexpr (HAS_BIAS && !std::is_same_v<DTYPE_B, int32_t>) {
                 if constexpr (std::is_same_v<DTYPE_B, float>) {
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                        vregBiasF32, biasAddr + i * VL);
+                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregBiasF32,
+                                                                                               biasAddr + i * VL);
                 } else {
                     AscendC::MicroAPI::DataCopy<DTYPE_B, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregBias, biasAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, DTYPE_B, CT_BF16_TO_F32>(vregBiasF32, vregBias, mask);
                 }
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vregCalc, vregCalc, vregBiasF32, mask);
+                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregCalc, vregCalc,
+                                                                                         vregBiasF32, mask);
             }
 
             if constexpr (std::is_same_v<DTYPE_Y, bfloat16_t>) {
                 AscendC::MicroAPI::Cast<bfloat16_t, float, CT_F32_TO_BF16>(vregY, vregCalc, mask);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                    outAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * VL,
+                                                                                                     vregY, mask);
             } else {
                 AscendC::MicroAPI::Cast<half, float, CT_F32_TO_F16>(vregY, vregCalc, mask);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                    outAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * VL, vregY,
+                                                                                               mask);
             }
         }
     }
 
     inQueueX_.FreeTensor(xLocal);
     inQueueWS_.FreeTensor(wsLocal);
-    if constexpr (HAS_ACTIVATE) inQueueAS_.FreeTensor(asLocal);
-    if constexpr (HAS_BIAS) inQueueBias_.FreeTensor(biasLocal);
+    if constexpr (HAS_ACTIVATE)
+        inQueueAS_.FreeTensor(asLocal);
+    if constexpr (HAS_BIAS)
+        inQueueBias_.FreeTensor(biasLocal);
     outQueueY_.EnQue(outLocal);
 }
 
-template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y,
-          uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE>
+template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
+          uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::Process()
 {
-    if (curRows_ <= 0) return;
+    if (curRows_ <= 0)
+        return;
 
     for (int64_t batch = 0; batch < curRows_; batch += tiling_.baseN) {
         int64_t cb = (batch + tiling_.baseN <= curRows_) ? tiling_.baseN : (curRows_ - batch);
@@ -363,12 +364,15 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
         for (int64_t ti = 0; ti < tiling_.tileNum; ti++) {
             int64_t co = ti * tiling_.baseLen;
             int64_t cl = (ti == tiling_.tileNum - 1) ? tiling_.baseLenTail : tiling_.baseLen;
-            if (cl <= 0) continue;
+            if (cl <= 0)
+                continue;
 
             CopyInX(cb, batch, co, cl);
             CopyInWS(co, cl);
-            if constexpr (HAS_ACTIVATE) CopyInAS(gr, cb);
-            if constexpr (HAS_BIAS) CopyInBias(co, cl);
+            if constexpr (HAS_ACTIVATE)
+                CopyInAS(gr, cb);
+            if constexpr (HAS_BIAS)
+                CopyInBias(co, cl);
             Compute(cb, cl);
             CopyOutY(cb, batch, co, cl);
         }

@@ -53,33 +53,30 @@ static gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 
 // 8 输入(var/accum/linear/grad + lr/l1/l2/lr_power) + 1 输出(var)。
 // 允许自定义每个张量与 scalar 的 shape（用于 shape 不一致 / 0-D / 1-D scalar 场景）。
-static InfershapeContextPara MakePara(
-    const std::vector<int64_t>& varShape,
-    const std::vector<int64_t>& accumShape,
-    const std::vector<int64_t>& linearShape,
-    const std::vector<int64_t>& gradShape,
-    const std::vector<int64_t>& scalarShape = {1},
-    ge::DataType dtype = ge::DT_FLOAT16)
+static InfershapeContextPara MakePara(const std::vector<int64_t>& varShape, const std::vector<int64_t>& accumShape,
+                                      const std::vector<int64_t>& linearShape, const std::vector<int64_t>& gradShape,
+                                      const std::vector<int64_t>& scalarShape = {1},
+                                      ge::DataType dtype = ge::DT_FLOAT16)
 {
     std::vector<InfershapeContextPara::TensorDescription> inputs;
-    inputs.emplace_back(MakeShape(varShape),    dtype, ge::FORMAT_ND);  // var
-    inputs.emplace_back(MakeShape(accumShape),  dtype, ge::FORMAT_ND);  // accum
-    inputs.emplace_back(MakeShape(linearShape), dtype, ge::FORMAT_ND);  // linear
-    inputs.emplace_back(MakeShape(gradShape),   dtype, ge::FORMAT_ND);  // grad
-    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND);  // lr
-    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND);  // l1
-    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND);  // l2
-    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND);  // lr_power
+    inputs.emplace_back(MakeShape(varShape), dtype, ge::FORMAT_ND);    // var
+    inputs.emplace_back(MakeShape(accumShape), dtype, ge::FORMAT_ND);  // accum
+    inputs.emplace_back(MakeShape(linearShape), dtype, ge::FORMAT_ND); // linear
+    inputs.emplace_back(MakeShape(gradShape), dtype, ge::FORMAT_ND);   // grad
+    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND); // lr
+    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND); // l1
+    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND); // l2
+    inputs.emplace_back(MakeShape(scalarShape), dtype, ge::FORMAT_ND); // lr_power
 
     std::vector<InfershapeContextPara::TensorDescription> outputs;
-    outputs.emplace_back(MakeShape({}), dtype, ge::FORMAT_ND);          // var_out
+    outputs.emplace_back(MakeShape({}), dtype, ge::FORMAT_ND); // var_out
 
     return InfershapeContextPara(OP_NAME, inputs, outputs);
 }
 
-static InfershapeContextPara MakeUniformPara(
-    const std::vector<int64_t>& shape, const std::vector<int64_t>& scalarShape = {1},
-    ge::DataType dtype = ge::DT_FLOAT16)
+static InfershapeContextPara MakeUniformPara(const std::vector<int64_t>& shape,
+                                             const std::vector<int64_t>& scalarShape = {1},
+                                             ge::DataType dtype = ge::DT_FLOAT16)
 {
     return MakePara(shape, shape, shape, shape, scalarShape, dtype);
 }
@@ -166,10 +163,10 @@ TEST_F(ApplyFtrlInfershapeTest, S008_Err_GradShapeMismatch)
 // S009: shape 不一致 — rank（DimNum）差异（元素数相同但 DimNum 不同）→ GRAPH_FAILED。
 TEST_F(ApplyFtrlInfershapeTest, S009_Err_ShapeMismatch_RankDiff)
 {
-    auto para = MakePara({2, 3}, {6}, {2, 3}, {2, 3});  // accum rank1 vs var rank2
+    auto para = MakePara({2, 3}, {6}, {2, 3}, {2, 3}); // accum rank1 vs var rank2
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 
-    auto para2 = MakePara({4, 4}, {4, 4}, {4, 4}, {16});  // grad rank1
+    auto para2 = MakePara({4, 4}, {4, 4}, {4, 4}, {16}); // grad rank1
     ExecuteTestCase(para2, ge::GRAPH_FAILED);
 }
 
@@ -185,7 +182,7 @@ TEST_F(ApplyFtrlInfershapeTest, S010_Rank8_MaxValid)
 //   四张量 shape 一致 → 输出 = var.shape（rank-9）。文档化 op_host 行为，非缺陷。
 TEST_F(ApplyFtrlInfershapeTest, S011_RankOver8_NotEnforcedByOpHost)
 {
-    auto para = MakeUniformPara({2, 3, 1, 1, 1, 1, 1, 1, 1});  // rank-9
+    auto para = MakeUniformPara({2, 3, 1, 1, 1, 1, 1, 1, 1}); // rank-9
     std::vector<std::vector<int64_t>> expect = {{2, 3, 1, 1, 1, 1, 1, 1, 1}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
@@ -215,4 +212,4 @@ TEST_F(ApplyFtrlInfershapeTest, S014_Rank0_Tensors)
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-}  // namespace ApplyFtrlUT
+} // namespace ApplyFtrlUT

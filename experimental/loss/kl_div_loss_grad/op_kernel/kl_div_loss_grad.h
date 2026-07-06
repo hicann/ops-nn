@@ -27,9 +27,9 @@ class KernelKlDivLossGrad {
 
 public:
     __aicore__ inline KernelKlDivLossGrad() {}
-    __aicore__ inline void Init(
-        GM_ADDR grad, GM_ADDR input, GM_ADDR target, GM_ADDR y, uint32_t bigCoreDataNum, uint32_t smallCoreDataNum,
-        uint32_t tileDataNum, uint32_t bigCoreNum, float coeff, AscendC::TPipe* pipe)
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR input, GM_ADDR target, GM_ADDR y, uint32_t bigCoreDataNum,
+                                uint32_t smallCoreDataNum, uint32_t tileDataNum, uint32_t bigCoreNum, float coeff,
+                                AscendC::TPipe* pipe)
     {
         uint32_t globalBufferIndex = bigCoreDataNum * AscendC::GetBlockIdx();
         if (AscendC::GetBlockIdx() < bigCoreNum) {
@@ -150,9 +150,8 @@ class ComputeImpl {
 public:
     static constexpr bool broadcast = false;
 
-    __aicore__ inline void compute(
-        const AscendC::LocalTensor<T>& grad, const AscendC::LocalTensor<T>& target, const AscendC::LocalTensor<T>& y,
-        uint32_t processDataNum) const
+    __aicore__ inline void compute(const AscendC::LocalTensor<T>& grad, const AscendC::LocalTensor<T>& target,
+                                   const AscendC::LocalTensor<T>& y, uint32_t processDataNum) const
     {
         AscendC::Mul(y, grad, target, processDataNum);
         AscendC::Muls(y, y, negCoeff, processDataNum);
@@ -166,9 +165,8 @@ class ComputeImplLog {
 public:
     static constexpr bool broadcast = false;
 
-    __aicore__ inline void compute(
-        const AscendC::LocalTensor<T>& grad, const AscendC::LocalTensor<T>& target, const AscendC::LocalTensor<T>& y,
-        uint32_t processDataNum) const
+    __aicore__ inline void compute(const AscendC::LocalTensor<T>& grad, const AscendC::LocalTensor<T>& target,
+                                   const AscendC::LocalTensor<T>& y, uint32_t processDataNum) const
     {
         AscendC::Exp(y, target, processDataNum);
         AscendC::Mul(target, y, grad, processDataNum);
@@ -183,8 +181,8 @@ class ComputeImplBroadCast {
 public:
     static constexpr bool broadcast = true;
 
-    __aicore__ inline void compute(
-        const AscendC::LocalTensor<T>& target, const AscendC::LocalTensor<T>& y, uint32_t processDataNum) const
+    __aicore__ inline void compute(const AscendC::LocalTensor<T>& target, const AscendC::LocalTensor<T>& y,
+                                   uint32_t processDataNum) const
     {
         AscendC::Muls(y, target, grad, processDataNum);
         AscendC::Muls(y, y, negCoeff, processDataNum);
@@ -199,8 +197,8 @@ class ComputeImplBroadCastLog {
 public:
     static constexpr bool broadcast = true;
 
-    __aicore__ inline void compute(
-        const AscendC::LocalTensor<T>& target, const AscendC::LocalTensor<T>& y, uint32_t processDataNum) const
+    __aicore__ inline void compute(const AscendC::LocalTensor<T>& target, const AscendC::LocalTensor<T>& y,
+                                   uint32_t processDataNum) const
     {
         AscendC::Exp(y, target, processDataNum);
         AscendC::Muls(target, y, grad, processDataNum);

@@ -25,10 +25,9 @@ struct ApplyAdagradDCompileInfo {
     uint64_t ubSize = 0;
 };
 
-class ApplyAdagradDTiling
-{
+class ApplyAdagradDTiling {
 public:
-    explicit ApplyAdagradDTiling(gert::TilingContext *context) : tilingContext_(context) {};
+    explicit ApplyAdagradDTiling(gert::TilingContext* context) : tilingContext_(context){};
 
     ge::graphStatus RunTiling();
 
@@ -42,8 +41,8 @@ protected:
 
 private:
     ge::DataType varDtype_ = ge::DT_FLOAT;
-    ApplyAdagradDTilingDataStruct *tiling_ = nullptr;
-    gert::TilingContext *tilingContext_;
+    ApplyAdagradDTilingDataStruct* tiling_ = nullptr;
+    gert::TilingContext* tilingContext_;
     uint64_t schMode = 0;
     uint64_t updateSlots = 0;
     uint64_t dType = 0;

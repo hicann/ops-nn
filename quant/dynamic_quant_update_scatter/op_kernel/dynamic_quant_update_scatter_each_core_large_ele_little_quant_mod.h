@@ -25,12 +25,10 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3>
 class DynamicQuantUpdateScatterEachCoreLargeEleLittleQuantMod : DynamicQuantUpdateScatterBase<T1, T2, T3> {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterEachCoreLargeEleLittleQuantMod()
-    {}
+    __aicore__ inline DynamicQuantUpdateScatterEachCoreLargeEleLittleQuantMod() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
+                                const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         this->InitBase(var, varScale, indices, smoothScales, tilingPtr);
         int64_t echoCoreQuantRpetNum = 0;
@@ -45,12 +43,12 @@ public:
         }
         innerLoopFullRpt = tilingPtr->innerLoopFullRpt;
 
-        int64_t varScaleOutAlignElemens =
-            (echoCoreQuantRpetNum * sizeof(float) + THIRTY_TWO) / THIRTY_TWO * THIRTY_TWO / sizeof(float);
+        int64_t varScaleOutAlignElemens = (echoCoreQuantRpetNum * sizeof(float) + THIRTY_TWO) / THIRTY_TWO *
+                                          THIRTY_TWO / sizeof(float);
         this->InitUpdateGM(updates, 0, tilingPtr->updatesElements);
 
-        this->InitSmoothScalesInQueue(
-            tilingPtr->varOrigLastDimSize * sizeof(T3), tilingPtr->varOrigLastDimSize * sizeof(float));
+        this->InitSmoothScalesInQueue(tilingPtr->varOrigLastDimSize * sizeof(T3),
+                                      tilingPtr->varOrigLastDimSize * sizeof(float));
         this->InitUpdatesInQueue(tilingPtr->innerLoopEle * sizeof(T3));
         this->InitVarOutQueue(tilingPtr->innerLoopEle * sizeof(T1));
         this->InitvarScaleOutQueue(varScaleOutAlignElemens * sizeof(float));
@@ -92,11 +90,11 @@ private:
                     this->CopyUpdatesIn(srcBaseOffset, tilingPtr->innerLoopEle);
                     Compute(tilingPtr, tilingPtr->innerLoopEle);
 
-                    dstBaseOffset = this->GetDetOffsetNeg2LargeEle(
-                        fullIdx * innerLoopFullRpt, dim0Index, dim1Index, indicesLocal, tilingPtr);
+                    dstBaseOffset = this->GetDetOffsetNeg2LargeEle(fullIdx * innerLoopFullRpt, dim0Index, dim1Index,
+                                                                   indicesLocal, tilingPtr);
                     this->CopyVarOut(dstBaseOffset, tilingPtr->innerLoopEle);
-                    this->CopyOutScales(
-                        dstBaseOffset / tilingPtr->sizeSrcPerHead, tilingPtr->quantReptNum * innerLoopFullRpt);
+                    this->CopyOutScales(dstBaseOffset / tilingPtr->sizeSrcPerHead,
+                                        tilingPtr->quantReptNum * innerLoopFullRpt);
                 }
 
                 if (tailNum != 0) {
@@ -106,8 +104,8 @@ private:
                     this->CopyUpdatesIn(srcBaseOffset, tailElements);
                     Compute(tilingPtr, tailElements);
 
-                    dstBaseOffset = this->GetDetOffsetNeg2LargeEle(
-                        loopNum * innerLoopFullRpt, dim0Index, dim1Index, indicesLocal, tilingPtr);
+                    dstBaseOffset = this->GetDetOffsetNeg2LargeEle(loopNum * innerLoopFullRpt, dim0Index, dim1Index,
+                                                                   indicesLocal, tilingPtr);
                     this->CopyVarOut(dstBaseOffset, tailElements);
                     this->CopyOutScales(dstBaseOffset / tilingPtr->sizeSrcPerHead, tilingPtr->quantReptNum * tailNum);
                 }
@@ -121,9 +119,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeQuantMod(
-        LocalTensor<float>& Updates, LocalTensor<float>& smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr, int64_t elements)
+    __aicore__ inline void ComputeQuantMod(LocalTensor<float>& Updates, LocalTensor<float>& smoothScales,
+                                           const DynamicQuantUpdateScatterTilingData* tilingPtr, int64_t elements)
     {
         LocalTensor<T1> varOutLocal = this->varOutQueue.template AllocTensor<T1>();
         LocalTensor<float> varScaleOutLocal = this->varScaleOutQueue.template AllocTensor<float>();

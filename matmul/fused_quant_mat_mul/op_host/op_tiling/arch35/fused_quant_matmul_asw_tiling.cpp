@@ -38,7 +38,8 @@ const std::unordered_map<std::string, FQMMFusedOpType> FUSED_OP_TYPE_STR_TO_ENUM
     {"swiglu", FQMMFusedOpType::SWIGLU},
 };
 
-bool FusedQuantMatMulASWTiling::AnalyzeAttrs() {
+bool FusedQuantMatMulASWTiling::AnalyzeAttrs()
+{
     auto attrs = context_->GetAttrs();
     OP_TILING_CHECK(attrs == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetAttrs return nullptr."),
                     return false);
@@ -80,14 +81,16 @@ bool FusedQuantMatMulASWTiling::AnalyzeAttrs() {
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::CheckDtype() const {
+bool FusedQuantMatMulASWTiling::CheckDtype() const
+{
     FusedQuantMatMulChecker fqmmChecker(context_, inputParams_);
     OP_TILING_CHECK(!fqmmChecker.CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype fail"),
                     return false);
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::AnalyzeX2TableAttr(const gert::StorageShape *x2TableShape) const {
+bool FusedQuantMatMulASWTiling::AnalyzeX2TableAttr(const gert::StorageShape* x2TableShape) const
+{
     if (x2TableShape != nullptr) {
         OP_TILING_CHECK(!compileInfo_.supportMmadS8S4,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "x2Table only support soc with MmadS8S4."),
@@ -97,24 +100,26 @@ bool FusedQuantMatMulASWTiling::AnalyzeX2TableAttr(const gert::StorageShape *x2T
         OP_TILING_CHECK(x2TableShapeLen != 2,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "x2 table shape should be 2 dim"), return false);
         // the x2Table is transposed
-        inputParams_.x2TableNSize =
-            static_cast<uint64_t>(x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_SECOND_DIM_INDEX));
-        inputParams_.x2TableKSize =
-            static_cast<uint64_t>(x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_FIRST_DIM_INDEX));
+        inputParams_.x2TableNSize = static_cast<uint64_t>(
+            x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_SECOND_DIM_INDEX));
+        inputParams_.x2TableKSize = static_cast<uint64_t>(
+            x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_FIRST_DIM_INDEX));
     }
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                           const std::vector<const gert::StorageShape *> &optionalInputShape,
-                                           const std::vector<int64_t> &dimValueOfMKN) const {
+bool FusedQuantMatMulASWTiling::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                           const std::vector<const gert::StorageShape*>& optionalInputShape,
+                                           const std::vector<int64_t>& dimValueOfMKN) const
+{
     FusedQuantMatMulChecker fqmmChecker(context_, inputParams_);
     OP_TILING_CHECK(!fqmmChecker.CheckShape(mandtoryShape, optionalInputShape, dimValueOfMKN),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckShape fail"), return false);
     return true;
 }
 
-ge::graphStatus FusedQuantMatMulASWTiling::CheckContext() {
+ge::graphStatus FusedQuantMatMulASWTiling::CheckContext()
+{
     auto x1Shape = context_->GetInputShape(GetX1Idx());
     auto x1Desc = context_->GetInputDesc(GetX1Idx());
     auto x2Shape = context_->GetInputShape(GetX2Idx());
@@ -134,15 +139,16 @@ ge::graphStatus FusedQuantMatMulASWTiling::CheckContext() {
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
-    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "context tiling data capacity %zu < actual tiling data size %zu.",
-                                          context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool FusedQuantMatMulASWTiling::AnalyzeDtype() {
+bool FusedQuantMatMulASWTiling::AnalyzeDtype()
+{
     inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
     inputParams_.bDtype = x2Desc->GetDataType();
@@ -155,12 +161,11 @@ bool FusedQuantMatMulASWTiling::AnalyzeDtype() {
     inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
 
     auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
-    inputParams_.perTokenScaleDtype =
-        pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() : inputParams_.perTokenScaleDtype;
+    inputParams_.perTokenScaleDtype = pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() :
+                                                                     inputParams_.perTokenScaleDtype;
 
     auto x2ScaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
-    inputParams_.scaleDtype =
-        x2ScaleDesc != nullptr ? x2ScaleDesc->GetDataType() : inputParams_.scaleDtype;
+    inputParams_.scaleDtype = x2ScaleDesc != nullptr ? x2ScaleDesc->GetDataType() : inputParams_.scaleDtype;
 
     // isLut and x2TableDesc only support soc version with MmadS8S4
     auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
@@ -180,7 +185,8 @@ bool FusedQuantMatMulASWTiling::AnalyzeDtype() {
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::CheckUnsupportedOptionInputs() {
+bool FusedQuantMatMulASWTiling::CheckUnsupportedOptionInputs()
+{
     // 当前算子不支持x1Scale
     auto pertokenShape = GetPertokenShape(GetPertokenIdx());
     OP_TILING_CHECK(pertokenShape,
@@ -214,7 +220,8 @@ bool FusedQuantMatMulASWTiling::CheckUnsupportedOptionInputs() {
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::AnalyzeInputs() {
+bool FusedQuantMatMulASWTiling::AnalyzeInputs()
+{
     // 必选输入 x1, x2
     auto x1Shape = GetX1Shape(GetX1Idx());
     auto x2Shape = GetX2Shape(GetX2Idx());
@@ -242,7 +249,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs() {
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
 
     const std::vector<int64_t> dimValueOfMKN = {x1Inner, x1Outer, x2Inner, x2Outer};
-    const std::vector<gert::Shape *> mandtoryShape = {&x1Shape, &x2Shape};
+    const std::vector<gert::Shape*> mandtoryShape = {&x1Shape, &x2Shape};
 
     // 可选输入
     OP_TILING_CHECK(
@@ -261,7 +268,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs() {
 
     // 当前算子不支持pertoken场景
     inputParams_.isPertoken = false;
-    const gert::StorageShape *pertokenShape = nullptr;
+    const gert::StorageShape* pertokenShape = nullptr;
 
     // 当前算子不支持scale为空
     auto scaleShape = context_->GetOptionalInputShape(GetScaleIdx());
@@ -270,7 +277,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs() {
                     return false);
 
     // 当前不支持x2Table场景, 仅做预埋
-    const gert::StorageShape *x2TableShape = nullptr;
+    const gert::StorageShape* x2TableShape = nullptr;
     OP_TILING_CHECK(!AnalyzeX2TableAttr(x2TableShape),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The X2Table of FusedQuantMatMul is illegal."),
                     return false);
@@ -295,7 +302,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs() {
                                           "The current FusedQuantMatMul only support PerChannel or PerTensor."),
                     return false);
 
-    const std::vector<const gert::StorageShape *> optionalInputShape = {biasShape, scaleShape};
+    const std::vector<const gert::StorageShape*> optionalInputShape = {biasShape, scaleShape};
     if (!isTilingOut_ && !CheckShape(mandtoryShape, optionalInputShape, dimValueOfMKN)) {
         return false;
     }
@@ -320,7 +327,8 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs() {
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const {
+bool FusedQuantMatMulASWTiling::CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const
+{
     OP_TILING_CHECK(x1ShapeLen < MIN_DIM_NUM_ND || x2ShapeLen < MIN_DIM_NUM_ND,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "x1 len and x2 len should be greater than 1, but x1 len: %zu, x2 len: %zu",
@@ -340,7 +348,8 @@ bool FusedQuantMatMulASWTiling::IsCapable()
     return true;
 }
 
-uint64_t FusedQuantMatMulASWTiling::GetTilingKey() const {
+uint64_t FusedQuantMatMulASWTiling::GetTilingKey() const
+{
     auto biasMode = GetBiasMode();
     auto kernelType = GetKernelType();
     OP_LOGD(inputParams_.opName,

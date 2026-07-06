@@ -24,25 +24,17 @@
 using namespace std;
 using namespace op;
 
-class l2_addmm_test : public testing::Test
-{
+class l2_addmm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "addmm_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "addmm_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "addmm_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "addmm_test TearDown" << endl; }
 
-    void test_run(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        vector<int64_t> mat1Dims, aclDataType mat1Dtype, aclFormat mat1Format, vector<int64_t> mat1Range,
-        vector<int64_t> mat2Dims, aclDataType mat2Dtype, aclFormat mat2Format, vector<int64_t> mat2Range,
-        ScalarDesc beta, ScalarDesc alpha, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
-        int8_t cubeMathType)
+    void test_run(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
+                  vector<int64_t> mat1Dims, aclDataType mat1Dtype, aclFormat mat1Format, vector<int64_t> mat1Range,
+                  vector<int64_t> mat2Dims, aclDataType mat2Dtype, aclFormat mat2Format, vector<int64_t> mat2Range,
+                  ScalarDesc beta, ScalarDesc alpha, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
+                  int8_t cubeMathType)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto mat1 = TensorDesc(mat1Dims, mat1Dtype, mat1Format).ValueRange(mat1Range[0], mat1Range[1]);
@@ -56,12 +48,12 @@ protected:
         // ut.TestPrecision();
     }
 
-    void test_run_invalid(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        vector<int64_t> mat1Dims, aclDataType mat1Dtype, aclFormat mat1Format, vector<int64_t> mat1Range,
-        vector<int64_t> mat2Dims, aclDataType mat2Dtype, aclFormat mat2Format, vector<int64_t> mat2Range,
-        ScalarDesc beta, ScalarDesc alpha, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
-        int8_t cubeMathType)
+    void test_run_invalid(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat,
+                          vector<int64_t> selfRange, vector<int64_t> mat1Dims, aclDataType mat1Dtype,
+                          aclFormat mat1Format, vector<int64_t> mat1Range, vector<int64_t> mat2Dims,
+                          aclDataType mat2Dtype, aclFormat mat2Format, vector<int64_t> mat2Range, ScalarDesc beta,
+                          ScalarDesc alpha, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
+                          int8_t cubeMathType)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto mat1 = TensorDesc(mat1Dims, mat1Dtype, mat1Format).ValueRange(mat1Range[0], mat1Range[1]);
@@ -750,14 +742,12 @@ TEST_F(l2_addmm_test, case_output_shape)
     auto alpha = ScalarDesc(2.0f);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
     // self: 2 x 3, mat1: 2 x 5, mat2: 5 x 3, out: 2 x 3
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 
     // self: 2 x 3, mat1: 2 x 5, mat2: 5 x 3, out: 2 x 4
-    test_run_invalid(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 4}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run_invalid({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3},
+                     ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 4}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 }
 
 // 空tensor混合场景
@@ -767,37 +757,29 @@ TEST_F(l2_addmm_test, case_empty_tensor_3)
     auto alpha = ScalarDesc(2.0f);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
     // self: 2 x 2, mat1: 2 x 0, mat2: 0 x 2, out: 2 x 2
-    test_run(
-        {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({2, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 
     // self: 1 / 1 x 1, mat1: 2 x 0, mat2: 0 x 2, out: 2 x 2
-    test_run(
-        {1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
-    test_run(
-        {1, 1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({1, 1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 
     // self: 0, mat1: 2 x 0, mat2: 0 x 2, out: 2 x 2  拦截报错
-    test_run_invalid(
-        {0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run_invalid({0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2},
+                     ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, beta, alpha, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 
     // self: 2 x 0, mat1: 2 x 0, mat2: 0 x 0, out: 0 x 0
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
     // self: 0 / 1 / 1 x 1, mat1: 2 x 0, mat2: 0 x 0, out: 0 x 0
-    test_run(
-        {0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
-    test_run(
-        {1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
-    test_run(
-        {1, 1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
+    test_run({1, 1}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 }
 
 // 接口整改异常用例 - 950

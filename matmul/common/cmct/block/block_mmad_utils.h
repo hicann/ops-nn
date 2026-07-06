@@ -185,8 +185,8 @@ template <class L1TileShape>
 __aicore__ inline constexpr auto GetL1Kb()
 {
     static_assert(AscendC::Std::tuple_size_v<L1TileShape> >= 3, "L1TileShape must have at least 3 elements"); // 3: mnk
-    if constexpr (AscendC::Std::tuple_size_v<L1TileShape> > 3) { // 3: MNKaKb Kb index
-        return GetIntegralConstant<3, L1TileShape>();            // 3: MNKaKb Kb index
+    if constexpr (AscendC::Std::tuple_size_v < L1TileShape >> 3) { // 3: MNKaKb Kb index
+        return GetIntegralConstant<3, L1TileShape>();              // 3: MNKaKb Kb index
     } else {
         return GetIntegralConstant<MNK_K, L1TileShape>();
     }
@@ -214,20 +214,19 @@ __aicore__ inline constexpr bool IsTileShapeValid()
     constexpr auto l0K = GetIntegralConstant<MNK_K, L0TileShape>();
 
     // Check L1 buffer L0 buffer
-    if constexpr (
-        (l1M * l1Ka * sizeof(typename AType::T) + l1N * l1Kb * sizeof(typename BType::T)) * l1BufferNum > L1_SIZE) {
+    if constexpr ((l1M * l1Ka * sizeof(typename AType::T) + l1N * l1Kb * sizeof(typename BType::T)) * l1BufferNum >
+                  L1_SIZE) {
         return false;
     }
-    if constexpr (
-        l0M * l0K * sizeof(typename AType::T) > L0A_SIZE || l0N * l0K * sizeof(typename BType::T) > L0B_SIZE ||
-        l0M * l0N * sizeof(typename AscendC::GetMmDstType<typename AType::T>::Type) > L0C_SIZE) {
+    if constexpr (l0M * l0K * sizeof(typename AType::T) > L0A_SIZE ||
+                  l0N * l0K * sizeof(typename BType::T) > L0B_SIZE ||
+                  l0M * l0N * sizeof(typename AscendC::GetMmDstType<typename AType::T>::Type) > L0C_SIZE) {
         return false;
     }
     // Check align
-    if constexpr (
-        !(l1M % MATMUL_MNK_ALIGN == 0 && l1N % MATMUL_MNK_ALIGN == 0 && l1Ka % MATMUL_MNK_ALIGN == 0 &&
-          l1Kb % MATMUL_MNK_ALIGN == 0) ||
-        !(l0M % MATMUL_MNK_ALIGN == 0 && l0N % MATMUL_MNK_ALIGN == 0 && l0K % MATMUL_MNK_ALIGN == 0)) {
+    if constexpr (!(l1M % MATMUL_MNK_ALIGN == 0 && l1N % MATMUL_MNK_ALIGN == 0 && l1Ka % MATMUL_MNK_ALIGN == 0 &&
+                    l1Kb % MATMUL_MNK_ALIGN == 0) ||
+                  !(l0M % MATMUL_MNK_ALIGN == 0 && l0N % MATMUL_MNK_ALIGN == 0 && l0K % MATMUL_MNK_ALIGN == 0)) {
         return false;
     }
     // Check L1 L0 shape
@@ -249,4 +248,3 @@ struct GetL0CAndBtType {
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

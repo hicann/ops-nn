@@ -36,8 +36,8 @@ extern "C" {
 namespace {
 constexpr size_t DIM_TWO = 2;
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                       op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_BF16_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -45,10 +45,9 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_BF16_LIST = {
 static const std::initializer_list<op::DataType> COUNTER_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
 
-static bool CheckNotNull(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    [[maybe_unused]]const aclTensor*  weight, const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter,
-    aclTensor* gradInput)
+static bool CheckNotNull(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                         const aclTensor* invstd, [[maybe_unused]] const aclTensor* weight, const aclTensor* sumDy,
+                         const aclTensor* sumDyXmu, const aclTensor* counter, aclTensor* gradInput)
 {
     OP_CHECK_NULL(gradOut, return false);
     OP_CHECK_NULL(input, return false);
@@ -61,10 +60,9 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter,
-    const aclTensor* gradInput)
+static bool CheckDtypeValid(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                            const aclTensor* invstd, const aclTensor* weight, const aclTensor* sumDy,
+                            const aclTensor* sumDyXmu, const aclTensor* counter, const aclTensor* gradInput)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOut, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
@@ -80,9 +78,8 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool Check910BDtypeValid(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight)
+static bool Check910BDtypeValid(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                const aclTensor* invstd, const aclTensor* weight)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOut, DTYPE_SUPPORT_BF16_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_BF16_LIST, return false);
@@ -94,8 +91,8 @@ static bool Check910BDtypeValid(
     return true;
 }
 
-static bool Check910BOtherDtypeValid(
-    const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter, const aclTensor* gradInput)
+static bool Check910BOtherDtypeValid(const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter,
+                                     const aclTensor* gradInput)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(sumDy, DTYPE_SUPPORT_BF16_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(sumDyXmu, DTYPE_SUPPORT_BF16_LIST, return false);
@@ -122,10 +119,9 @@ static bool CheckFormat(const aclTensor* gradOut, const aclTensor* input, const 
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter,
-    const aclTensor* gradInput)
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
+                       const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu,
+                       const aclTensor* counter, const aclTensor* gradInput)
 {
     OP_CHECK_MIN_DIM(input, BN_MIN_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(input, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -160,13 +156,13 @@ static const aclTensor* Broadcast(const aclTensor* input, const aclTensor* value
     }
     op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(broadcastShape);
     auto broadcastDstTensor = executor->AllocTensor(broadcastShape, value->GetDataType());
-    auto shape =
-        executor->ConvertToTensor(broadcastDims.data(), broadcastDims.size(), static_cast<op::DataType>(ACL_INT64));
+    auto shape = executor->ConvertToTensor(broadcastDims.data(), broadcastDims.size(),
+                                           static_cast<op::DataType>(ACL_INT64));
     return l0op::BroadcastTo(value, broadcastDstTensor, shape, executor);
 }
 
-static const aclTensor* Reshape(
-    const aclTensor* input, const aclTensor* value, size_t /* dimC */, size_t dimNum, aclOpExecutor* executor)
+static const aclTensor* Reshape(const aclTensor* input, const aclTensor* value, size_t /* dimC */, size_t dimNum,
+                                aclOpExecutor* executor)
 {
     // 将参数当做C维，默认C维在第二维，在前面补一个N维度
     const int64_t appendDim[] = {0};
@@ -192,9 +188,9 @@ static const aclTensor* Reshape(
     return Broadcast(input, valueUnSqueeze, executor);
 }
 
-static op::DataType GetPromoteType(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu)
+static op::DataType GetPromoteType(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                   const aclTensor* invstd, const aclTensor* weight, const aclTensor* sumDy,
+                                   const aclTensor* sumDyXmu)
 {
     if (gradOut->GetDataType() == DataType::DT_FLOAT16 && input->GetDataType() == DataType::DT_FLOAT16 &&
         mean->GetDataType() == DataType::DT_FLOAT16 && invstd->GetDataType() == DataType::DT_FLOAT16 &&
@@ -205,38 +201,33 @@ static op::DataType GetPromoteType(
     return DataType::DT_FLOAT;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu, aclTensor* counter,
-    aclTensor* gradInput)
+static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                               const aclTensor* invstd, const aclTensor* weight, const aclTensor* sumDy,
+                               const aclTensor* sumDyXmu, aclTensor* counter, aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
-    CHECK_COND(
-        CheckNotNull(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter, gradInput),
-        ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
+    CHECK_COND(CheckNotNull(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter, gradInput),
+               ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
-        CHECK_COND(
-            Check910BDtypeValid(gradOut, input, mean, invstd, weight), ACLNN_ERR_PARAM_INVALID,
-            "CheckDtypeValid failed!");
-        CHECK_COND(
-            Check910BOtherDtypeValid(sumDy, sumDyXmu, counter, gradInput), ACLNN_ERR_PARAM_INVALID,
-            "CheckDtypeValid failed!");
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_COND(Check910BDtypeValid(gradOut, input, mean, invstd, weight), ACLNN_ERR_PARAM_INVALID,
+                   "CheckDtypeValid failed!");
+        CHECK_COND(Check910BOtherDtypeValid(sumDy, sumDyXmu, counter, gradInput), ACLNN_ERR_PARAM_INVALID,
+                   "CheckDtypeValid failed!");
     } else {
-        CHECK_COND(
-            CheckDtypeValid(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter, gradInput),
-            ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
+        CHECK_COND(CheckDtypeValid(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter, gradInput),
+                   ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
     }
 
     // 3. 检查数据格式是否支持
     CHECK_COND(CheckFormat(gradOut, input, gradInput), ACLNN_ERR_PARAM_INVALID, "CheckFormat failed!");
 
     // 4. 检查Shape是否支持
-    CHECK_COND(
-        CheckShape(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter, gradInput), ACLNN_ERR_PARAM_INVALID,
-        "CheckShape failed!");
+    CHECK_COND(CheckShape(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter, gradInput),
+               ACLNN_ERR_PARAM_INVALID, "CheckShape failed!");
 
     return ACLNN_SUCCESS;
 }
@@ -252,9 +243,8 @@ static op::DataType GetDivPromoteType(const aclTensor* self, const aclTensor* ot
                promoteType;
 }
 
-static aclnnStatus MeanByCounter(
-    const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter, const aclTensor** meanDy,
-    const aclTensor** meanDyXmu, aclOpExecutor* executor)
+static aclnnStatus MeanByCounter(const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter,
+                                 const aclTensor** meanDy, const aclTensor** meanDyXmu, aclOpExecutor* executor)
 {
     // 调用l0算子ReduceSumOp进行求和
     op::Shape shape = counter->GetViewShape();
@@ -293,16 +283,17 @@ static aclnnStatus MeanByCounter(
 }
 }; // namespace
 
-aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu, aclTensor* counter,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
+                                                        const aclTensor* mean, const aclTensor* invstd,
+                                                        const aclTensor* weight, const aclTensor* sumDy,
+                                                        const aclTensor* sumDyXmu, aclTensor* counter,
+                                                        aclTensor* gradInput, uint64_t* workspaceSize,
+                                                        aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnBatchNormElemtBackward, DFX_IN(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter),
-        DFX_OUT(gradInput));
+    L2_DFX_PHASE_1(aclnnBatchNormElemtBackward, DFX_IN(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter),
+                   DFX_OUT(gradInput));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -353,9 +344,8 @@ aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(
     CHECK_RET(counterContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 对入参执行cast
-    auto promoteType = GetPromoteType(
-        gradOutContiguous, inputContiguous, meanContiguous, invstdContiguous, weightContiguous, sumDyContiguous,
-        sumDyXmuContiguous);
+    auto promoteType = GetPromoteType(gradOutContiguous, inputContiguous, meanContiguous, invstdContiguous,
+                                      weightContiguous, sumDyContiguous, sumDyXmuContiguous);
     auto gradOutCast = l0op::Cast(gradOutContiguous, promoteType, uniqueExecutor.get());
     CHECK_RET(gradOutCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -380,8 +370,8 @@ aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(
     // 对sumDy和sumDyXmu求均值
     const aclTensor* meanDy;
     const aclTensor* meanDyXmu;
-    auto meanResult =
-        MeanByCounter(sumDyCast, sumDyXmuCast, counterContiguous, &meanDy, &meanDyXmu, uniqueExecutor.get());
+    auto meanResult = MeanByCounter(sumDyCast, sumDyXmuCast, counterContiguous, &meanDy, &meanDyXmu,
+                                    uniqueExecutor.get());
     CHECK_RET(meanResult == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
 
     // 对参数执行升维和广播
@@ -406,9 +396,8 @@ aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(
     auto meanDyXmuCast = l0op::Cast(meanDyXmuReshape, promoteType, uniqueExecutor.get());
     CHECK_RET(meanDyXmuCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto output = l0op::SyncBatchNormBackwardElemt(
-        gradOutCast, inputCast, meanReshape, invstdReshape, weightReshape, meanDyCast, meanDyXmuCast,
-        uniqueExecutor.get());
+    auto output = l0op::SyncBatchNormBackwardElemt(gradOutCast, inputCast, meanReshape, invstdReshape, weightReshape,
+                                                   meanDyCast, meanDyXmuCast, uniqueExecutor.get());
 
     CHECK_RET(output != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -424,8 +413,8 @@ aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormElemtBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnBatchNormElemtBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnBatchNormElemtBackward);
     // 固定写法，调用框架能力，完成计算

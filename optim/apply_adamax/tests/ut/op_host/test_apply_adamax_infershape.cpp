@@ -37,15 +37,9 @@
 
 class ApplyAdaMax : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdaMax SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdaMax SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdaMax TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdaMax TearDown" << std::endl; }
 };
 
 // case_0: 2D shape, single-output var shape inference.
@@ -67,9 +61,8 @@ TEST_F(ApplyAdaMax, ApplyAdaMax_infershape_case_0)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape,
-                           &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape, &beta1Shape, &beta2Shape,
+                                    &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -95,9 +88,8 @@ TEST_F(ApplyAdaMax, ApplyAdaMax_infershape_case_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape,
-                           &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape, &beta1Shape, &beta2Shape,
+                                    &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -123,9 +115,8 @@ TEST_F(ApplyAdaMax, ApplyAdaMax_infershape_case_2)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape,
-                           &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape, &beta1Shape, &beta2Shape,
+                                    &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -152,9 +143,8 @@ TEST_F(ApplyAdaMax, ApplyAdaMax_infershape_case_3_empty)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape,
-                           &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape, &beta1Shape, &beta2Shape,
+                                    &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -181,9 +171,8 @@ TEST_F(ApplyAdaMax, ApplyAdaMax_infershape_case_4_8d)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape,
-                           &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &lrShape, &beta1Shape, &beta2Shape,
+                                    &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 

@@ -24,8 +24,7 @@
 #include "op_host/tiling_util.h"
 #include "pool_3d_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 struct MaxPool3DCommon {
     int64_t nDim;
     int64_t cDim;
@@ -40,8 +39,8 @@ struct MaxPool3DCompileInfo {
     uint64_t ubSize;
 };
 
-ge::graphStatus GetMaxPool3DPlatformInfo(gert::TilingContext *context_, uint64_t& ubSize, uint64_t& coreNum);
-ge::graphStatus GetMaxPool3DShapeAttrsInfo(gert::TilingContext *context_, Pool3DInputInfo& inputData);
+ge::graphStatus GetMaxPool3DPlatformInfo(gert::TilingContext* context_, uint64_t& ubSize, uint64_t& coreNum);
+ge::graphStatus GetMaxPool3DShapeAttrsInfo(gert::TilingContext* context_, Pool3DInputInfo& inputData);
 
 BEGIN_TILING_DATA_DEF(MaxPool3DTilingData)
 TILING_DATA_FIELD_DEF(int64_t, dInDim);
@@ -70,7 +69,6 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPool3D, MaxPool3DTilingData);
 
-
-}  // namespace optiling
+} // namespace optiling
 
 #endif

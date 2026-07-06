@@ -43,8 +43,8 @@ TEST_F(l2_instance_norm_test, case_invalid_dtype_abnormal)
         auto meanDesc = TensorDesc({2, 8, 1, 1}, invalidList[i], ACL_FORMAT_ND);
         auto varDesc = TensorDesc({2, 8, 1, 1}, invalidList[i], ACL_FORMAT_ND);
 
-        auto ut = OP_API_UT(
-            aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+        auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                            OUTPUT(yDesc, meanDesc, varDesc));
 
         uint64_t workspaceSize = 0;
         aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -64,9 +64,8 @@ TEST_F(l2_instance_norm_test, case_x_nullptr_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT((aclTensor*)nullptr, gammaDesc, betaDesc, dataFormat, eps),
-        OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT((aclTensor*)nullptr, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -85,9 +84,8 @@ TEST_F(l2_instance_norm_test, case_gamma_nullptr_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, (aclTensor*)nullptr, betaDesc, dataFormat, eps),
-        OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, (aclTensor*)nullptr, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -106,9 +104,8 @@ TEST_F(l2_instance_norm_test, case_beta_nullptr_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, (aclTensor*)nullptr, dataFormat, eps),
-        OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, (aclTensor*)nullptr, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -127,9 +124,8 @@ TEST_F(l2_instance_norm_test, case_y_nullptr_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
-        OUTPUT((aclTensor*)nullptr, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT((aclTensor*)nullptr, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -148,9 +144,8 @@ TEST_F(l2_instance_norm_test, case_mean_nullptr_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
-        OUTPUT(yDesc, (aclTensor*)nullptr, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, (aclTensor*)nullptr, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -169,9 +164,8 @@ TEST_F(l2_instance_norm_test, case_var_nullptr_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
-        OUTPUT(yDesc, meanDesc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, (aclTensor*)nullptr));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -189,9 +183,8 @@ TEST_F(l2_instance_norm_test, case_dataformat_nullptr_abnormal)
 
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, (const char*)nullptr, eps),
-        OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, (const char*)nullptr, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -210,8 +203,8 @@ TEST_F(l2_instance_norm_test, case_diff_dtype_x_gamma_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -230,8 +223,8 @@ TEST_F(l2_instance_norm_test, case_diff_dtype_x_beta_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -250,8 +243,8 @@ TEST_F(l2_instance_norm_test, case_diff_dtype_x_y_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -270,8 +263,8 @@ TEST_F(l2_instance_norm_test, case_diff_dtype_x_mean_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -290,8 +283,8 @@ TEST_F(l2_instance_norm_test, case_diff_dtype_x_var_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -310,8 +303,8 @@ TEST_F(l2_instance_norm_test, case_x_not_4d_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -330,8 +323,8 @@ TEST_F(l2_instance_norm_test, case_x_5d_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -350,8 +343,8 @@ TEST_F(l2_instance_norm_test, case_gamma_not_1d_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -370,8 +363,8 @@ TEST_F(l2_instance_norm_test, case_beta_not_1d_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -390,8 +383,8 @@ TEST_F(l2_instance_norm_test, case_gamma_shape_ne_c_nchw_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -410,8 +403,8 @@ TEST_F(l2_instance_norm_test, case_gamma_shape_ne_c_nhwc_abnormal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -430,8 +423,8 @@ TEST_F(l2_instance_norm_test, case_beta_shape_ne_c_nchw_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -450,8 +443,8 @@ TEST_F(l2_instance_norm_test, case_beta_shape_ne_c_nhwc_abnormal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -470,8 +463,8 @@ TEST_F(l2_instance_norm_test, case_dataformat_invalid_abnormal)
     const char* dataFormat = "INVALID";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -490,8 +483,8 @@ TEST_F(l2_instance_norm_test, case_dataformat_empty_abnormal)
     const char* dataFormat = "";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -512,8 +505,8 @@ TEST_F(l2_instance_norm_test, case_nchw_float_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -534,8 +527,8 @@ TEST_F(l2_instance_norm_test, case_nchw_float16_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -556,8 +549,8 @@ TEST_F(l2_instance_norm_test, case_nhwc_float_normal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -578,8 +571,8 @@ TEST_F(l2_instance_norm_test, case_nhwc_float16_normal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -600,8 +593,8 @@ TEST_F(l2_instance_norm_test, case_nchw_float_small_shape_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -622,8 +615,8 @@ TEST_F(l2_instance_norm_test, case_nchw_float_eps_zero_normal)
     const char* dataFormat = "NCHW";
     double eps = 0.0;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -644,8 +637,8 @@ TEST_F(l2_instance_norm_test, case_nchw_float_large_shape_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -666,8 +659,8 @@ TEST_F(l2_instance_norm_test, case_empty_x_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -688,8 +681,8 @@ TEST_F(l2_instance_norm_test, case_empty_y_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -710,8 +703,8 @@ TEST_F(l2_instance_norm_test, case_empty_gamma_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -732,8 +725,8 @@ TEST_F(l2_instance_norm_test, case_empty_mean_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -754,8 +747,8 @@ TEST_F(l2_instance_norm_test, case_empty_variance_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -776,8 +769,8 @@ TEST_F(l2_instance_norm_test, case_empty_x_nhwc_normal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -798,8 +791,8 @@ TEST_F(l2_instance_norm_test, case_non_contiguous_x_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -820,8 +813,8 @@ TEST_F(l2_instance_norm_test, case_non_contiguous_x_nhwc_normal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -842,8 +835,8 @@ TEST_F(l2_instance_norm_test, case_platform_not_310p_abnormal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -864,8 +857,8 @@ TEST_F(l2_instance_norm_test, case_nchw_float16_small_shape_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -886,8 +879,8 @@ TEST_F(l2_instance_norm_test, case_nhwc_float16_small_shape_normal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -908,8 +901,8 @@ TEST_F(l2_instance_norm_test, case_empty_beta_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -930,8 +923,8 @@ TEST_F(l2_instance_norm_test, case_nhwc_float_eps_zero_normal)
     const char* dataFormat = "NHWC";
     double eps = 0.0;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -952,8 +945,8 @@ TEST_F(l2_instance_norm_test, case_empty_x_float16_nchw_normal)
     const char* dataFormat = "NCHW";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -974,8 +967,8 @@ TEST_F(l2_instance_norm_test, case_empty_x_float16_nhwc_normal)
     const char* dataFormat = "NHWC";
     double eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps), OUTPUT(yDesc, meanDesc, varDesc));
+    auto ut = OP_API_UT(aclnnInstanceNorm, INPUT(xDesc, gammaDesc, betaDesc, dataFormat, eps),
+                        OUTPUT(yDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

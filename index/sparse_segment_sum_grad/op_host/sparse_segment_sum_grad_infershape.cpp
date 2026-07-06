@@ -31,16 +31,14 @@ static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* c
     const gert::Shape* indicesShape = context->GetInputShape(IDX_1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     if (indicesShape->GetDimNum() != 1) {
-        OP_LOGE(context->GetNodeName(), "indices must be 1-D, but got %zu-D",
-                indicesShape->GetDimNum());
+        OP_LOGE(context->GetNodeName(), "indices must be 1-D, but got %zu-D", indicesShape->GetDimNum());
         return GRAPH_FAILED;
     }
 
     const gert::Shape* segmentIdsShape = context->GetInputShape(IDX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsShape);
     if (segmentIdsShape->GetDimNum() != 1) {
-        OP_LOGE(context->GetNodeName(), "segment_ids must be 1-D, but got %zu-D",
-                segmentIdsShape->GetDimNum());
+        OP_LOGE(context->GetNodeName(), "segment_ids must be 1-D, but got %zu-D", segmentIdsShape->GetDimNum());
         return GRAPH_FAILED;
     }
 

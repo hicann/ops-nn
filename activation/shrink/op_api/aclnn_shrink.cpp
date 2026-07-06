@@ -29,13 +29,16 @@ extern "C" {
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out) {
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+{
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
     return true;
 }
 
-static inline bool CheckNotNull(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias, const aclTensor* out) {
+static inline bool CheckNotNull(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias,
+                                const aclTensor* out)
+{
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(lambd, return false);
     OP_CHECK_NULL(bias, return false);
@@ -44,13 +47,16 @@ static inline bool CheckNotNull(const aclTensor* self, const aclScalar* lambd, c
     return true;
 }
 
-static inline bool CheckShape(const aclTensor* self,const aclTensor* out){
+static inline bool CheckShape(const aclTensor* self, const aclTensor* out)
+{
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     return true;
 }
-static inline bool CheckLambdValue(const aclScalar* lambd){
-    if(lambd->ToFloat() < 0.0f){
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "lambd should be greater or equal to 0, but found to be [%f].", lambd->ToFloat());
+static inline bool CheckLambdValue(const aclScalar* lambd)
+{
+    if (lambd->ToFloat() < 0.0f) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "lambd should be greater or equal to 0, but found to be [%f].",
+                lambd->ToFloat());
         return false;
     }
     return true;
@@ -59,20 +65,19 @@ static inline bool CheckLambdValue(const aclScalar* lambd){
 inline static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     if (op::IsPrivateFormat(self->GetStorageFormat())) {
-        OP_LOGW(
-            "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW、NCL. Actual: self:[%s], output:[%s] ",
-            op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString());
+        OP_LOGW("Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW、NCL. Actual: self:[%s], output:[%s] ",
+                op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString());
     }
-    OP_CHECK(
-        self->GetViewFormat() == out->GetViewFormat(),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, self [%s], output [%s].",
-            op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString()),
-        return false);
+    OP_CHECK(self->GetViewFormat() == out->GetViewFormat(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, self [%s], output [%s].",
+                     op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString()),
+             return false);
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias, const aclTensor* out){
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias,
+                               const aclTensor* out)
+{
     CHECK_RET(CheckNotNull(self, lambd, bias, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
@@ -82,14 +87,16 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, co
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecShrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor){
+static aclnnStatus ExecShrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias,
+                                              aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     auto ret = CheckParams(self, lambd, bias, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    if(self->IsEmpty()){
+    if (self->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
@@ -111,12 +118,15 @@ static aclnnStatus ExecShrinkGetWorkspaceSize(const aclTensor* self, const aclSc
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnShrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor){
+aclnnStatus aclnnShrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias,
+                                        aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnShrink, DFX_IN(self, lambd, bias), DFX_OUT(out));
-    return ExecShrinkGetWorkspaceSize(self, lambd, bias,out,workspaceSize, executor);
+    return ExecShrinkGetWorkspaceSize(self, lambd, bias, out, workspaceSize, executor);
 }
-aclnnStatus aclnnShrink(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream){
+aclnnStatus aclnnShrink(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnShrink);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
@@ -124,4 +134,3 @@ aclnnStatus aclnnShrink(void* workspace, uint64_t workspaceSize, aclOpExecutor* 
 #ifdef __cplusplus
 } // namespace op;
 #endif
-

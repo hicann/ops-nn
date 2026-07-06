@@ -41,10 +41,9 @@
 using namespace NsApplyAddSign;
 
 template <typename D_T_X>
-__global__ __aicore__ void apply_add_sign(
-    GM_ADDR var, GM_ADDR m, GM_ADDR lr, GM_ADDR alpha,
-    GM_ADDR sign_decay, GM_ADDR beta, GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_add_sign(GM_ADDR var, GM_ADDR m, GM_ADDR lr, GM_ADDR alpha, GM_ADDR sign_decay,
+                                          GM_ADDR beta, GM_ADDR grad, GM_ADDR var_out, GM_ADDR workspace,
+                                          GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAddSignTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAddSignTilingData, tilingData, tiling);

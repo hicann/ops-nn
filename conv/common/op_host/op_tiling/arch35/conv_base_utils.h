@@ -19,28 +19,13 @@
 namespace optiling {
 namespace conv_ops_tiling {
 
-enum class QuantMode : std::uint8_t {
-    NO_QUANT = 0,
-    SCALAR_QUANT,
-    VECTOR_QUANT,
-    UNDEFINED
-};
+enum class QuantMode : std::uint8_t { NO_QUANT = 0, SCALAR_QUANT, VECTOR_QUANT, UNDEFINED };
 
-enum class ReluMode : std::uint8_t {
-    NORELU = 0,
-    NORMALRELU = 1,
-    SCALARRELU = 2,
-    VECTORRELU = 3,
-    UNDEFINED
-};
+enum class ReluMode : std::uint8_t { NORELU = 0, NORMALRELU = 1, SCALARRELU = 2, VECTORRELU = 3, UNDEFINED };
 
-enum class  ClipMode : std::uint8_t {
-    NOCLIPRELU = 0,
-    SCALARCLIPRELU = 1,
-    UNDEFINED
-};
+enum class ClipMode : std::uint8_t { NOCLIPRELU = 0, SCALARCLIPRELU = 1, UNDEFINED };
 
-struct ConvTilingParseInfo: CubeTilingCommonParseInfo {
+struct ConvTilingParseInfo : CubeTilingCommonParseInfo {
     uint32_t aicoreNum = 0;
     uint64_t l2Size = 0;
     uint64_t l1Size = 0;
@@ -55,8 +40,9 @@ struct ConvTilingParseInfo: CubeTilingCommonParseInfo {
     NpuArch npuArch = NpuArch::DAV_RESV;
     uint32_t aivNum = 0;
     uint64_t fbSize = 0;
-    ConvTilingParseInfo& operator=(const ConvTilingParseInfo* other) {
-        if (this != other) {  // 防止自赋值
+    ConvTilingParseInfo& operator=(const ConvTilingParseInfo* other)
+    {
+        if (this != other) { // 防止自赋值
             // 复制所有的成员变量
             aicoreNum = other->aicoreNum;
             aivNum = other->aivNum;
@@ -119,15 +105,12 @@ struct ConvAscendcOriginShapeAttrInfo {
 };
 
 const std::map<std::string, int8_t> STR_TO_ROUNDMODE = {
-    {"rint", ROUND_MODE_RINT}, {"round", ROUND_MODE_ROUND},
-    {"hybrid", ROUND_MODE_HYBRID}
-};
+    {"rint", ROUND_MODE_RINT}, {"round", ROUND_MODE_ROUND}, {"hybrid", ROUND_MODE_HYBRID}};
 
 // fmap, weight, output
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
-};
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MDC = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
@@ -137,36 +120,29 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MDC = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}
-};
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_QUANT_CONV2D_FORMAT_LIST = {
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}
-};
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW},
     {ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_NDHWC},
-    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDHWC}
-};
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDHWC}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_QUANT_CONV3D_FORMAT_LIST = {
-    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW}
-};
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_DEFAULT_FORMAT_LIST = {
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}
-};
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_DEFAULT_FORMAT_LIST = {
-    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW}
-};
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW}};
 
 // ExtendConv2D fmap, weight, output supprot format list
 const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
-};
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}};
 
 // ExtendConv2D fmap, weight, output supprot format list
 const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC = {
@@ -177,8 +153,7 @@ const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC 
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}
-};
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}};
 
 struct ConvParamInfo {
     // Fmap, Weight, Output, FmapOri(for attr) param info
@@ -190,8 +165,8 @@ struct ConvParamInfo {
     static constexpr size_t OUT_PARAM_IDX = 2;
     std::string nodeType = "";
 };
-}
-struct Conv2DTilingParseInfo: CubeTilingCommonParseInfo {
+} // namespace conv_ops_tiling
+struct Conv2DTilingParseInfo : CubeTilingCommonParseInfo {
     std::string opType = "";
     // hardware info (required by binary mode)
     uint32_t aicoreNum = 0;
@@ -241,5 +216,5 @@ struct Conv2DTilingParseInfo: CubeTilingCommonParseInfo {
     // quantconv2d FeatureFlag
     bool isLoad3dFlag = false;
 };
-}
+} // namespace optiling
 #endif

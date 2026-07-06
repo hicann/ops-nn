@@ -37,14 +37,10 @@ namespace ge {
  * The last dimension of "x" must be divisible by 8.
  */
 REG_OP(ReluV2)
-    .INPUT(
-        x, TensorType(
-               {DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT8, DT_INT32, DT_INT16, DT_INT64, DT_UINT8, DT_UINT16, DT_QINT8,
-                DT_BF16}))
-    .OUTPUT(
-        y, TensorType(
-               {DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT8, DT_INT32, DT_INT16, DT_INT64, DT_UINT8, DT_UINT16, DT_QINT8,
-                DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT8, DT_INT32, DT_INT16, DT_INT64, DT_UINT8, DT_UINT16,
+                          DT_QINT8, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT8, DT_INT32, DT_INT16, DT_INT64, DT_UINT8, DT_UINT16,
+                           DT_QINT8, DT_BF16}))
     .OUTPUT(mask, TensorType({DT_UINT8, DT_UINT1}))
     .OP_END_FACTORY_REG(ReluV2)
 } // namespace ge

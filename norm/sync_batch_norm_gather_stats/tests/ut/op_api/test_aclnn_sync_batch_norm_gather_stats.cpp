@@ -21,15 +21,9 @@ using namespace std;
 
 class l2_sync_batch_norm_gather_stats_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_sync_batch_norm_gather_stats_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_sync_batch_norm_gather_stats_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_sync_batch_norm_gather_stats_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_sync_batch_norm_gather_stats_test TearDown" << endl; }
 };
 
 TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Dim_Check_0)
@@ -45,9 +39,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Dim_Check_0)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -65,9 +59,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Dim_Check_1)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -85,9 +79,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Dim_Check_2)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -105,9 +99,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Dim_Check_3)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -125,9 +119,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Type_0)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -145,9 +139,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Type_1)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -165,9 +159,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Type_2)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
@@ -185,9 +179,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Type_3)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -205,9 +199,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_Type_4)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -225,9 +219,9 @@ TEST_F(l2_sync_batch_norm_gather_stats_test, batch_norm_stats_ret_OK)
     auto batchInvstd = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3});
 
     uint64_t workspace_size = 0;
-    auto ut = OP_API_UT(
-        aclnnSyncBatchNormGatherStats, INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        OUTPUT(batchMean, batchInvstd));
+    auto ut = OP_API_UT(aclnnSyncBatchNormGatherStats,
+                        INPUT(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                        OUTPUT(batchMean, batchInvstd));
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }

@@ -26,17 +26,14 @@ using namespace ge;
 using namespace std;
 using namespace ut_util;
 class InplaceScatterAddTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "InplaceScatterAddTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "InplaceScatterAddTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "InplaceScatterAddTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "InplaceScatterAddTiling TearDown" << std::endl; }
 };
 
-TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_000) {
+TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_000)
+{
     std::string opType("InplaceScatterAdd");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -61,22 +58,22 @@ TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_000) {
     platformInfo.Init();
     // compile info
     struct InplaceScatterAddCompileInfo {
-      int32_t totalCoreNum = 30;
-      uint64_t ubSizePlatForm = 0;
+        int32_t totalCoreNum = 30;
+        uint64_t ubSizePlatForm = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -86,26 +83,30 @@ TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_000) {
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{65535, 4096}, {65535, 4096}};
     gert::StorageShape srcShape = {{63806, 4096}, {63806, 4096}};
-    gert::StorageShape indicShape = {{63806,}, {63806,}};
+    gert::StorageShape indicShape = {{
+                                         63806,
+                                     },
+                                     {
+                                         63806,
+                                     }};
     gert::StorageShape outputShape = {{65535, 4096}, {65535, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .SetOpType("InplaceScatterAdd")
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&inputShape, &indicShape, &srcShape})
-          .OutputShapes({&outputShape})
-          .CompileInfo(&compileInfo)
-          .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(wsSize)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("InplaceScatterAdd")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&inputShape, &indicShape, &srcShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -118,7 +119,8 @@ TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_000) {
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_001) {
+TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_001)
+{
     std::string opType("InplaceScatterAdd");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -143,22 +145,22 @@ TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_001) {
     platformInfo.Init();
     // compile info
     struct InplaceScatterAddCompileInfo {
-      int32_t totalCoreNum = 30;
-      uint64_t ubSizePlatForm = 0;
+        int32_t totalCoreNum = 30;
+        uint64_t ubSizePlatForm = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -168,26 +170,30 @@ TEST_F(InplaceScatterAddTiling, test_inplace_scatter_add_tiling_001) {
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape inputShape = {{65535, 4096}, {65535, 4096}};
     gert::StorageShape srcShape = {{63806, 4096}, {63806, 4096}};
-    gert::StorageShape indicShape = {{63806,}, {63806,}};
+    gert::StorageShape indicShape = {{
+                                         63806,
+                                     },
+                                     {
+                                         63806,
+                                     }};
     gert::StorageShape outputShape = {{65535, 4096}, {65535, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .SetOpType("InplaceScatterAdd")
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&inputShape, &indicShape, &srcShape})
-          .OutputShapes({&outputShape})
-          .CompileInfo(&compileInfo)
-          .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-          .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(wsSize)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("InplaceScatterAdd")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&inputShape, &indicShape, &srcShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);

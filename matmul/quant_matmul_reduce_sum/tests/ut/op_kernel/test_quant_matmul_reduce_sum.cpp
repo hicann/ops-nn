@@ -30,19 +30,15 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void quant_matmul_reduce_sum(GM_ADDR x, GM_ADDR w, GM_ADDR dims, GM_ADDR bias,
-                                        GM_ADDR pertokenScale, GM_ADDR scale, GM_ADDR yScale,
-                                        GM_ADDR x1Offset, GM_ADDR x2Offset, GM_ADDR yOffset, GM_ADDR x2Table,
-                                        GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+                                                              GM_ADDR pertokenScale, GM_ADDR scale, GM_ADDR yScale,
+                                                              GM_ADDR x1Offset, GM_ADDR x2Offset, GM_ADDR yOffset,
+                                                              GM_ADDR x2Table, GM_ADDR y, GM_ADDR workspace,
+                                                              GM_ADDR tiling);
 
 class quant_matmul_reduce_sum_test : public testing::Test {
-    protected:
-
-    static void SetUpTestCase() {
-        cout << "quant_matmul_reduce_sum_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "quant_matmul_reduce_sum_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "quant_matmul_reduce_sum_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "quant_matmul_reduce_sum_test TearDown\n" << endl; }
 };
 
 TEST_F(quant_matmul_reduce_sum_test, general_test_01)
@@ -59,9 +55,9 @@ TEST_F(quant_matmul_reduce_sum_test, general_test_01)
     size_t shapeX1 = b * m * k * sizeof(int8_t);
     size_t shapeX2 = b * k * n * sizeof(int8_t);
     size_t shapeDims = 1 * sizeof(int64_t);
-    size_t shapeX2Scale = n * sizeof(uint16_t);  // bf16
+    size_t shapeX2Scale = n * sizeof(uint16_t); // bf16
     size_t shapeX1Scale = b * m * sizeof(float);
-    size_t shapeY = m * n * sizeof(uint16_t);  // bf16
+    size_t shapeY = m * n * sizeof(uint16_t); // bf16
 
     uint8_t* x1Gm = (uint8_t*)AscendC::GmAlloc(shapeX1);
     uint8_t* x2Gm = (uint8_t*)AscendC::GmAlloc(shapeX2);
@@ -146,8 +142,7 @@ TEST_F(quant_matmul_reduce_sum_test, general_test_01)
 
     uint32_t numBlocks = 1;
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(quant_matmul_reduce_sum, numBlocks,
-                x1Gm, x2Gm, dimsGM, nullptr, x1ScaleGm, x2ScaleGm,  // null:bias
+    ICPU_RUN_KF(quant_matmul_reduce_sum, numBlocks, x1Gm, x2Gm, dimsGM, nullptr, x1ScaleGm, x2ScaleGm, // null:bias
                 nullptr, nullptr, nullptr, nullptr, nullptr, // null: yScale, x1Offset, x2Offset, yOffset, x2Table
                 yGM, workspace, tiling);
 

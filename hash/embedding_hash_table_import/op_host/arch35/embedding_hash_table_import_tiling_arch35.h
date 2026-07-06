@@ -23,10 +23,10 @@
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(EmbeddingHashTableImportTilingData)
-TILING_DATA_FIELD_DEF(int64_t, bitWidth);                    // 数据类型的长度
-TILING_DATA_FIELD_DEF(int64_t, tablesCount);                 // tables的个数
-TILING_DATA_FIELD_DEF(int64_t, blockNum);                    // 使用核数
-TILING_DATA_FIELD_DEF(int64_t, coreNum);                     // 总核数
+TILING_DATA_FIELD_DEF(int64_t, bitWidth);    // 数据类型的长度
+TILING_DATA_FIELD_DEF(int64_t, tablesCount); // tables的个数
+TILING_DATA_FIELD_DEF(int64_t, blockNum);    // 使用核数
+TILING_DATA_FIELD_DEF(int64_t, coreNum);     // 总核数
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(EmbeddingHashTableImport, EmbeddingHashTableImportTilingData)
@@ -38,13 +38,11 @@ struct EmbeddingHashTableImportCompileInfo {
 
 class EmbeddingHashTableImportTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit EmbeddingHashTableImportTiling(gert::TilingContext *context) : Ops::NN::Optiling::TilingBaseClass(context) {}
+    explicit EmbeddingHashTableImportTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
+    {}
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 顺序执行1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
@@ -78,7 +76,7 @@ private:
     int64_t coreNum_ = 0;
     int64_t ubSize_ = 0;
     int64_t valuesNum_ = 0;
-    const char *opName = "EmbeddingHashTableImport";
+    const char* opName = "EmbeddingHashTableImport";
     EmbeddingHashTableImportTilingData m_tilingData_;
 };
 

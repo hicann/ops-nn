@@ -28,15 +28,14 @@ constexpr uint32_t GM_NUM_OFFSET = 128;
 
 using namespace AscendC;
 template <typename T1, typename T2, typename T3>
-class SparseSegmentMeanSimdKernel
-{
+class SparseSegmentMeanSimdKernel {
 public:
     __aicore__ inline SparseSegmentMeanSimdKernel(void){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR indices, GM_ADDR segmentIds, GM_ADDR y, GM_ADDR workspace, AscendC::TPipe& pipeIn,
-        const SparseSegmentMeanSimdTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segmentIds, GM_ADDR y, GM_ADDR workspace,
+                                AscendC::TPipe& pipeIn, const SparseSegmentMeanSimdTilingData* tilingData);
     __aicore__ inline void Process();
-    __aicore__ inline void CopyInX(LocalTensor<T1>& xLocal, int32_t burstLen, int64_t localOffset, int64_t gmOffset, bool isLegal);
+    __aicore__ inline void CopyInX(LocalTensor<T1>& xLocal, int32_t burstLen, int64_t localOffset, int64_t gmOffset,
+                                   bool isLegal);
     __aicore__ inline void ComputeSum(uint32_t rSize, uint32_t aSize, uint32_t xLocalOffsetStart);
     __aicore__ inline void ProcessSingleSegment(int64_t& segmentOffset);
     __aicore__ inline void CopyOutY(int64_t segmentId, int64_t innersizeSingleLoopPro, int64_t innerOffset);
@@ -81,9 +80,10 @@ public:
 };
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::Init(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segmentIds, GM_ADDR y, GM_ADDR workspace, AscendC::TPipe& pipeIn,
-    const SparseSegmentMeanSimdTilingData* tilingData)
+__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segmentIds,
+                                                                     GM_ADDR y, GM_ADDR workspace,
+                                                                     AscendC::TPipe& pipeIn,
+                                                                     const SparseSegmentMeanSimdTilingData* tilingData)
 {
     tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
@@ -110,18 +110,25 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::Init(
     segmentIdsGm_.SetGlobalBuffer((__gm__ T3*)segmentIds + indicesGmOffset_);
     yGm_.SetGlobalBuffer((__gm__ T1*)y);
 
-    // workspace 组成： sumResultWorkspace_ [innerSize * indicesOuter * 2]   numResultWorkspace_ [indicesOuter * 2 int64 个点  点与点之间偏移128B 跟前面偏移128B]    
+    // workspace 组成： sumResultWorkspace_ [innerSize * indicesOuter * 2]   numResultWorkspace_ [indicesOuter * 2 int64
+    // 个点  点与点之间偏移128B 跟前面偏移128B]
     //    segmentIdWorkspace_  同numResultWorkspace_
-    sumResultWorkspace_.SetGlobalBuffer((__gm__ float*)workspace + indicesAxisIndex_ * DOUBLE * tilingData_->innerSize); // 局部
-    numResultWorkspace_.SetGlobalBuffer((__gm__ int64_t*)workspace + tilingData_->indicesOuter * DOUBLE * tilingData_->innerSize / DOUBLE + GM_NUM_OFFSET / sizeof(int64_t)); // 局部
-    segmentIdWorkspace_.SetGlobalBuffer((__gm__ int64_t*)workspace + tilingData_->indicesOuter * DOUBLE * tilingData_->innerSize / DOUBLE + GM_NUM_OFFSET / sizeof(int64_t) + DOUBLE * tilingData_->indicesOuter * (GM_NUM_OFFSET / sizeof(int64_t))); // 局部
+    sumResultWorkspace_.SetGlobalBuffer((__gm__ float*)workspace +
+                                        indicesAxisIndex_ * DOUBLE * tilingData_->innerSize); // 局部
+    numResultWorkspace_.SetGlobalBuffer((__gm__ int64_t*)workspace +
+                                        tilingData_->indicesOuter * DOUBLE * tilingData_->innerSize / DOUBLE +
+                                        GM_NUM_OFFSET / sizeof(int64_t)); // 局部
+    segmentIdWorkspace_.SetGlobalBuffer((__gm__ int64_t*)workspace +
+                                        tilingData_->indicesOuter * DOUBLE * tilingData_->innerSize / DOUBLE +
+                                        GM_NUM_OFFSET / sizeof(int64_t) +
+                                        DOUBLE * tilingData_->indicesOuter * (GM_NUM_OFFSET / sizeof(int64_t))); // 局部
 
     pipeIn.InitBuffer(xQue_, 1, tilingData_->xBufferSize); // 需要满足double  block对齐
     pipeIn.InitBuffer(yQue_, 1, tilingData_->yBufferSize);
     pipeIn.InitBuffer(sumTBuf_, tilingData_->yBufferSize);
     pipeIn.InitBuffer(sharedTBuf_, tilingData_->sharedTmpBufferSize);
 
-    pipeIn.InitBuffer(outBuf_,  tilingData_->workspaceBufferSize);
+    pipeIn.InitBuffer(outBuf_, tilingData_->workspaceBufferSize);
     pipeIn.InitBuffer(outBuf2_, tilingData_->workspaceBufferSize);
 }
 
@@ -139,8 +146,9 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::Process()
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyInX(
-    LocalTensor<T1>& xLocal, int32_t burstLen, int64_t localOffset, int64_t gmOffset, bool isLegal)
+__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyInX(LocalTensor<T1>& xLocal, int32_t burstLen,
+                                                                        int64_t localOffset, int64_t gmOffset,
+                                                                        bool isLegal)
 {
     if (isLegal) {
         DataCopyPadExtParams<T1> dataCopyPadExtParams;
@@ -160,10 +168,9 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyInX(
     }
 }
 
-
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ComputeSum(
-    uint32_t rSize, uint32_t aSize, uint32_t xLocalOffsetStart)
+__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ComputeSum(uint32_t rSize, uint32_t aSize,
+                                                                           uint32_t xLocalOffsetStart)
 {
     LocalTensor<T1> xLocal = xQue_.DeQue<T1>();
     LocalTensor<float> sumLocal = sumTBuf_.Get<float>();
@@ -173,11 +180,11 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ComputeSum(
 
     if constexpr (std::negation<std::is_same<T1, float>>::value) {
         uint32_t count = rSize * aSize;
-        AscendC::Cast(
-            xLocal.template ReinterpretCast<float>(), xLocal[xLocalOffsetStart], AscendC::RoundMode::CAST_NONE, count);
+        AscendC::Cast(xLocal.template ReinterpretCast<float>(), xLocal[xLocalOffsetStart],
+                      AscendC::RoundMode::CAST_NONE, count);
     }
-    AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, isReuse>(
-        sumLocal, xLocal.template ReinterpretCast<float>(), sharedTmpLocal, shape, true);
+    AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, isReuse>(sumLocal, xLocal.template ReinterpretCast<float>(),
+                                                                     sharedTmpLocal, shape, true);
     xQue_.FreeTensor(xLocal);
 }
 
@@ -219,7 +226,9 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ProcessSingleSeg
 
     int64_t innersizeSingleLoopPro = blockNumsPerIndices * blockNumT1_;
     innersizeSingleLoopPro = innersizeSingleLoopPro > curCoreInnerNum_ ? curCoreInnerNum_ : innersizeSingleLoopPro;
-    innersizeSingleLoopPro = tilingData_->yBufferSize / sizeof(float) < innersizeSingleLoopPro ? tilingData_->yBufferSize / sizeof(float) : innersizeSingleLoopPro;
+    innersizeSingleLoopPro = tilingData_->yBufferSize / sizeof(float) < innersizeSingleLoopPro ?
+                                 tilingData_->yBufferSize / sizeof(float) :
+                                 innersizeSingleLoopPro;
     int64_t innerRepeatTimes = (curCoreInnerNum_ + innersizeSingleLoopPro - 1) / innersizeSingleLoopPro;
     int64_t innersizeSingleLoopProTail = curCoreInnerNum_ - (innerRepeatTimes - 1) * innersizeSingleLoopPro;
     int64_t innersizeSingleLoopProAligned = (innersizeSingleLoopPro + blockNumT1_ - 1) / blockNumT1_ * blockNumT1_;
@@ -261,8 +270,8 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ProcessSingleSeg
             float scalar = float(1) / float(curSegmentIdsNum);
             AscendC::Muls(yLocal, yLocal, scalar, curLoopInnerNum);
             if constexpr (std::negation<std::is_same<T1, float>>::value) {
-                AscendC::Cast(
-                    yLocal.template ReinterpretCast<T1>(), yLocal, AscendC::RoundMode::CAST_RINT, curLoopInnerNum);
+                AscendC::Cast(yLocal.template ReinterpretCast<T1>(), yLocal, AscendC::RoundMode::CAST_RINT,
+                              curLoopInnerNum);
             }
             yQue_.EnQue(yLocal);
             CopyOutY(segmentId, curLoopInnerNum, innerOffset);
@@ -270,7 +279,7 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ProcessSingleSeg
             yQue_.EnQue(yLocal);
             int64_t writePostion = isFirst ? 0 : 1;
             CopyOutWorkspace(writePostion, curLoopInnerNum, innerOffset); // 既是头又是尾的情况只写头
-            if (innerAxisIndex_ == 0) {  // 只有第一列的核需要写num 和segmentid
+            if (innerAxisIndex_ == 0) { // 只有第一列的核需要写num 和segmentid
                 constexpr int64_t numOffset = GM_NUM_OFFSET / sizeof(int64_t);
                 int64_t resultWorkspaceOffset = DOUBLE * indicesAxisIndex_ * numOffset;
                 if (isFirst && isLast) { // 既是头又是尾的情况需要写头，尾填-1
@@ -298,16 +307,18 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ProcessSingleSeg
 
                     LocalTensor<int64_t> numResultLocal = outBuf_.Get<int64_t>();
                     numResultLocal.SetValue(0, curSegmentIdsNum);
-                   
+
                     LocalTensor<int64_t> segmentIdLocal = outBuf2_.Get<int64_t>();
                     segmentIdLocal.SetValue(0, segmentId);
-                   
+
                     event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
                     SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
                     WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
 
-                    CopyOutNumResultWorkspace(resultWorkspaceOffset + writePostion * numOffset, numResultLocal, sizeof(int64_t));
-                    CopyOutSegmentIdWorkspace(resultWorkspaceOffset + writePostion * numOffset, segmentIdLocal, sizeof(int64_t));
+                    CopyOutNumResultWorkspace(resultWorkspaceOffset + writePostion * numOffset, numResultLocal,
+                                              sizeof(int64_t));
+                    CopyOutSegmentIdWorkspace(resultWorkspaceOffset + writePostion * numOffset, segmentIdLocal,
+                                              sizeof(int64_t));
                 }
             }
         }
@@ -315,21 +326,23 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::ProcessSingleSeg
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutY(
-    int64_t segmentId, int64_t innersizeSingleLoopPro, int64_t innerOffset)
+__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutY(int64_t segmentId,
+                                                                         int64_t innersizeSingleLoopPro,
+                                                                         int64_t innerOffset)
 {
     LocalTensor<T1> yLocal = yQue_.DeQue<T1>();
-    DataCopyExtParams copyOutParamT1 = {
-        static_cast<uint16_t>(1), static_cast<uint32_t>(innersizeSingleLoopPro * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParamT1 = {static_cast<uint16_t>(1),
+                                        static_cast<uint32_t>(innersizeSingleLoopPro * sizeof(T1)),
+                                        static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(yGm_[segmentId * tilingData_->innerSize + innerOffset], yLocal, copyOutParamT1);
     yQue_.FreeTensor(yLocal);
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutWorkspace(
-    int32_t writePostion, int64_t innersizeSingleLoopPro, int64_t innerOffset)
+__aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutWorkspace(int32_t writePostion,
+                                                                                 int64_t innersizeSingleLoopPro,
+                                                                                 int64_t innerOffset)
 {
     // writePostion  头是0  尾是1
     LocalTensor<float> yLocal = yQue_.DeQue<float>();
@@ -341,14 +354,12 @@ __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutWorkspace
     yQue_.FreeTensor(yLocal);
 }
 
-
 template <typename T1, typename T2, typename T3>
 __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutSegmentIdWorkspace(
     int64_t offset, LocalTensor<int64_t>& segmentIdLocal, uint32_t blockLen)
 {
-    DataCopyExtParams copyOutParam = {
-        static_cast<uint16_t>(1), blockLen, static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParam = {static_cast<uint16_t>(1), blockLen, static_cast<uint32_t>(0),
+                                      static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(segmentIdWorkspace_[offset], segmentIdLocal, copyOutParam);
 }
@@ -357,9 +368,8 @@ template <typename T1, typename T2, typename T3>
 __aicore__ inline void SparseSegmentMeanSimdKernel<T1, T2, T3>::CopyOutNumResultWorkspace(
     int64_t offset, LocalTensor<int64_t>& numResultLocal, uint32_t blockLen)
 {
-    DataCopyExtParams copyOutParam = {
-        static_cast<uint16_t>(1), blockLen,  static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParam = {static_cast<uint16_t>(1), blockLen, static_cast<uint32_t>(0),
+                                      static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(numResultWorkspace_[offset], numResultLocal, copyOutParam);
 }

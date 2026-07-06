@@ -52,24 +52,23 @@ TEST_F(EluV2Tiling, elu_v2_tiling_float32_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct EluV2TilingCompileInfo {
-    };
+    struct EluV2TilingCompileInfo {};
     EluV2TilingCompileInfo compileInfo;
 
     std::string opType("EluV2");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(1, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -85,11 +84,9 @@ TEST_F(EluV2Tiling, elu_v2_tiling_float32_success)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({
-                          {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                          {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                          {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}
-                      })
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -118,24 +115,23 @@ TEST_F(EluV2Tiling, elu_v2_tiling_float16_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct EluV2TilingCompileInfo {
-    };
+    struct EluV2TilingCompileInfo {};
     EluV2TilingCompileInfo compileInfo;
 
     std::string opType("EluV2");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(1, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -151,11 +147,9 @@ TEST_F(EluV2Tiling, elu_v2_tiling_float16_success)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({
-                          {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                          {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                          {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}
-                      })
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -184,24 +178,23 @@ TEST_F(EluV2Tiling, elu_v2_tiling_bfloat16_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct EluV2TilingCompileInfo {
-    };
+    struct EluV2TilingCompileInfo {};
     EluV2TilingCompileInfo compileInfo;
 
     std::string opType("EluV2");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(1, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -217,11 +210,9 @@ TEST_F(EluV2Tiling, elu_v2_tiling_bfloat16_success)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({
-                          {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                          {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                          {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}
-                      })
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();

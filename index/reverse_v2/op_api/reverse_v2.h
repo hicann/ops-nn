@@ -17,7 +17,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ReverseV2(const aclTensor *self, const aclIntArray *dims, aclOpExecutor *executor);
-} // l0op
+const aclTensor* ReverseV2(const aclTensor* self, const aclIntArray* dims, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_REVERSE_V2_H_

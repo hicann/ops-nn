@@ -24,19 +24,11 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 
-
-class SoftplusV2Infershape : public testing::Test
-{
+class SoftplusV2Infershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SoftplusV2Infershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SoftplusV2Infershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SoftplusV2Infershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SoftplusV2Infershape TearDown" << std::endl; }
 };
 
 TEST_F(SoftplusV2Infershape, infershape_1d)
@@ -61,4 +53,3 @@ TEST_F(SoftplusV2Infershape, infershape_1d)
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expected_output_shape));
 }
-

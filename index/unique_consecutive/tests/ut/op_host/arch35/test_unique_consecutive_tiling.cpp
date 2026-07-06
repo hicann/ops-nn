@@ -27,14 +27,10 @@ using namespace std;
 using namespace ge;
 
 class UniqueConsecutiveTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "UniqueConsecutiveTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "UniqueConsecutiveTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "UniqueConsecutiveTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "UniqueConsecutiveTiling TearDown" << std::endl; }
 };
 
 TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_001)
@@ -75,12 +71,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("UniqueConsecutive")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("UniqueConsecutive")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -110,14 +106,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_001)
                       .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"return_idx", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1000)},
-                                {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}
-                            })
+                                  {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1000)},
+                                  {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -173,12 +167,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_002)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("UniqueConsecutive")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("UniqueConsecutive")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -208,14 +202,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_002)
                       .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"return_idx", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1000)},
-                                {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}
-                            })
+                                  {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1000)},
+                                  {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -271,12 +263,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_003)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("UniqueConsecutive")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("UniqueConsecutive")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -306,14 +298,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_003)
                       .NodeOutputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"return_idx", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1000)},
-                                {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(9)}
-                            })
+                                  {"return_counts", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1000)},
+                                  {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(9)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

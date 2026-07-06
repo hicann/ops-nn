@@ -18,17 +18,17 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnSigmoidGetWorkspaceSize(
-    const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnSigmoidGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnSigmoid(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSigmoid(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream);
 
-ACLNN_API aclnnStatus aclnnInplaceSigmoidGetWorkspaceSize(
-    aclTensor *selfRef, uint64_t *workspaceSize, aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnInplaceSigmoidGetWorkspaceSize(aclTensor* selfRef, uint64_t* workspaceSize,
+                                                          aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnInplaceSigmoid(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnInplaceSigmoid(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                          const aclrtStream stream);
 
 #ifdef __cplusplus
 }

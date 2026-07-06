@@ -24,8 +24,7 @@ using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2;
 
 template <typename T>
-class ForeachZeroInplaceND
-{
+class ForeachZeroInplaceND {
 public:
     __aicore__ inline ForeachZeroInplaceND(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
@@ -65,8 +64,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachZeroInplaceND<T>::Init(
-    GM_ADDR x, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachZeroInplaceND<T>::Init(GM_ADDR x, GM_ADDR workspace,
+                                                     const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     inTensorsPtr = x;

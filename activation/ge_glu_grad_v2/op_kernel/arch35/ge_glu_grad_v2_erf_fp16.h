@@ -20,28 +20,27 @@
 namespace GeGluGradV2Erf {
 using namespace AscendC;
 
-class GeGluGradV2ErfFP16 : public GeGluGradV2ErfBase<half>
-{
+class GeGluGradV2ErfFP16 : public GeGluGradV2ErfBase<half> {
 public:
-    __aicore__ inline GeGluGradV2ErfFP16(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx, const GeGluGradV2TilingData* tilingDataPtr, TPipe* tPipe)
+    __aicore__ inline GeGluGradV2ErfFP16(GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx,
+                                         const GeGluGradV2TilingData* tilingDataPtr, TPipe* tPipe)
         : GeGluGradV2ErfBase<half>(dy, x, gelu, dx, tilingDataPtr, tPipe){};
     __aicore__ inline void Init();
 
     __aicore__ inline void Process(bool perfMode = false)
     {
         if (perfMode) {
-            ProcessPerf<
-                GeGluGradV2ErfFP16, &GeGluGradV2ErfFP16::ComputeLeftHalf, &GeGluGradV2ErfFP16::ComputeRightHalf>(this);
+            ProcessPerf<GeGluGradV2ErfFP16, &GeGluGradV2ErfFP16::ComputeLeftHalf,
+                        &GeGluGradV2ErfFP16::ComputeRightHalf>(this);
             return;
         }
 
         if (valueM <= maxProcCount) {
-            ProcessLessEqual<
-                GeGluGradV2ErfFP16, &GeGluGradV2ErfFP16::ComputeLeftHalf, &GeGluGradV2ErfFP16::ComputeRightHalf>(this);
+            ProcessLessEqual<GeGluGradV2ErfFP16, &GeGluGradV2ErfFP16::ComputeLeftHalf,
+                             &GeGluGradV2ErfFP16::ComputeRightHalf>(this);
         } else {
-            ProcessGreater<
-                GeGluGradV2ErfFP16, &GeGluGradV2ErfFP16::ComputeLeftHalf, &GeGluGradV2ErfFP16::ComputeRightHalf>(this);
+            ProcessGreater<GeGluGradV2ErfFP16, &GeGluGradV2ErfFP16::ComputeLeftHalf,
+                           &GeGluGradV2ErfFP16::ComputeRightHalf>(this);
         }
     };
 

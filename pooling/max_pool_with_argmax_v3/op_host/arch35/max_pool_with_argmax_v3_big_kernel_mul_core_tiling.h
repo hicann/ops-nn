@@ -58,8 +58,7 @@ public:
     explicit MaxPoolWithArgmaxV3BigKernelMulCoreTiling(gert::TilingContext* context)
         : MaxPoolWithArgmaxV3BaseTiling(context)
     {}
-    ~MaxPoolWithArgmaxV3BigKernelMulCoreTiling() override
-    {}
+    ~MaxPoolWithArgmaxV3BigKernelMulCoreTiling() override {}
 
 private:
     void DoUBTiling();

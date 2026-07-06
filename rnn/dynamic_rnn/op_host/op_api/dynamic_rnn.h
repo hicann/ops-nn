@@ -13,21 +13,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*> DynamicRNN(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, 
-    const aclTensor *initHOptional,
-    const aclTensor *initCOptional,
-    const aclTensor *seqLengthOptional,
-    const char *direction,
-    bool train,
-    aclTensor *yOutDirec,
-    aclTensor *iOutDirec,
-    aclTensor *jOutDirec,
-    aclTensor *fOutDirec,
-    aclTensor *oOutDirec,
-    aclTensor *hOutDirec,
-    aclTensor *cOutDirec,
-    aclTensor *tanhCOutDirec,
-    aclOpExecutor* executor);
+const std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                 const aclTensor*, const aclTensor*, const aclTensor*>
+DynamicRNN(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclTensor* initHOptional,
+           const aclTensor* initCOptional, const aclTensor* seqLengthOptional, const char* direction, bool train,
+           aclTensor* yOutDirec, aclTensor* iOutDirec, aclTensor* jOutDirec, aclTensor* fOutDirec, aclTensor* oOutDirec,
+           aclTensor* hOutDirec, aclTensor* cOutDirec, aclTensor* tanhCOutDirec, aclOpExecutor* executor);
 }
 #endif

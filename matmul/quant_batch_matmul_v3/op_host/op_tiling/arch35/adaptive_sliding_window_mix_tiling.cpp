@@ -38,8 +38,8 @@ AdaptiveSlidingWindowMixTiling::AdaptiveSlidingWindowMixTiling(gert::TilingConte
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3TilingDataParams);
 }
 
-AdaptiveSlidingWindowMixTiling::AdaptiveSlidingWindowMixTiling(
-    gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3TilingDataParams* out)
+AdaptiveSlidingWindowMixTiling::AdaptiveSlidingWindowMixTiling(gert::TilingContext* context,
+                                                               DequantBmm::QuantBatchMatmulV3TilingDataParams* out)
     : AdaptiveSlidingWindowTiling(context, out)
 {
     Reset();
@@ -51,8 +51,8 @@ AdaptiveSlidingWindowMixTiling::AdaptiveSlidingWindowMixTiling(
 bool AdaptiveSlidingWindowMixTiling::IsCapable()
 {
     // Mandatory input descs have been validated by GetShapeAttrsInfo before IsCapable.
-    isSupportS4S4_ =
-        inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4 && !compileInfo_.supportMmadS8S4;
+    isSupportS4S4_ = inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4 &&
+                     !compileInfo_.supportMmadS8S4;
     const auto originADtype = inputParams_.aDtype;
     const auto originBDtype = inputParams_.bDtype;
     if (isSupportS4S4_) {
@@ -63,8 +63,8 @@ bool AdaptiveSlidingWindowMixTiling::IsCapable()
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
     bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
-    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ ||
-                    isFp8OrHif8TTBiasMix || isSupportS4S4_) &&
+    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isFp8OrHif8TTBiasMix ||
+                    isSupportS4S4_) &&
                    inputParams_.cDtype != ge::DT_INT32;
     if (!capable && isSupportS4S4_) {
         inputParams_.aDtype = originADtype;
@@ -76,9 +76,8 @@ bool AdaptiveSlidingWindowMixTiling::IsCapable()
 bool AdaptiveSlidingWindowMixTiling::CheckCoreNum() const
 {
     if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {
-        OP_LOGE(
-            inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
-            compileInfo_.aicNum, compileInfo_.aivNum);
+        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
+                compileInfo_.aicNum, compileInfo_.aivNum);
         return false;
     }
     return true;
@@ -118,19 +117,23 @@ void AdaptiveSlidingWindowMixTiling::UpdateAFullLoadStatus()
         return;
     }
     uint64_t realBaseMSize = adaptiveWin_.mBaseTailSplitCnt == 1UL ? adaptiveWin_.baseM : adaptiveWin_.mTailMain;
-    uint64_t singleCoreASizeWithFullLoad =
-        realBaseMSize *
-        (inputParams_.transA ?
-             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.aDtype) :
-             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
+    uint64_t singleCoreASizeWithFullLoad = realBaseMSize *
+                                           (inputParams_.transA ?
+                                                GetSizeWithDataType(
+                                                    ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK),
+                                                    inputParams_.aDtype) :
+                                                ops::CeilAlign(
+                                                    GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype),
+                                                    qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
     // Empirical A full-load cap: keep A under 256KB so L1 still has room for B-side data and auxiliary buffers.
     constexpr uint64_t A_L1_LOAD_THRESHOLD = 256 * 1024UL;
     bool blockCntCmp = (adaptiveWin_.mBlockCnt <= adaptiveWin_.nBlockCnt);
-    isAFullLoad_ =
-        singleCoreASizeWithFullLoad <= A_L1_LOAD_THRESHOLD && blockCntCmp &&
-        (((adaptiveWin_.mBlockCnt == 1UL || adaptiveWin_.mBlockCnt == 2UL || adaptiveWin_.mBlockCnt == 4UL) &&
-          aicoreParams_.aicNum >= adaptiveWin_.mBlockCnt && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0) ||
-         adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt <= aicoreParams_.aicNum);
+    isAFullLoad_ = singleCoreASizeWithFullLoad <= A_L1_LOAD_THRESHOLD && blockCntCmp &&
+                   (((adaptiveWin_.mBlockCnt == 1UL || adaptiveWin_.mBlockCnt == 2UL ||
+                      adaptiveWin_.mBlockCnt == 4UL) &&
+                     aicoreParams_.aicNum >= adaptiveWin_.mBlockCnt &&
+                     aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0) ||
+                    adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt <= aicoreParams_.aicNum);
     if (isAFullLoad_ && adaptiveWin_.baseM != realBaseMSize) {
         adaptiveWin_.baseM = realBaseMSize;
         adaptiveWin_.mBaseTailSplitCnt = 1UL;
@@ -171,15 +174,16 @@ bool AdaptiveSlidingWindowMixTiling::CalL1Tiling()
     basicTiling_.singleCoreK = inputParams_.kSize;
 
     basicTiling_.iterateOrder = 0U;
-    basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
-            qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
-            1U;
+    basicTiling_.dbL0c = ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C *
+                               qmmv3_tiling_const::DOUBLE_BUFFER_NUM <=
+                           aicoreParams_.l0cSize) &&
+                          CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
+                             qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
+                             1U;
 
     L1TilingMode mode = isAFullLoad_ ? L1TilingMode::A_L1_FULL_LOAD : L1TilingMode::DEFAULT;
-    L1TilingDataCalculator l1Calculator(
-        inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN, basicTiling_.baseK);
+    L1TilingDataCalculator l1Calculator(inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN,
+                                        basicTiling_.baseK);
     if (!l1Calculator.Compute(mode)) {
         return false;
     }
@@ -191,6 +195,6 @@ bool AdaptiveSlidingWindowMixTiling::CalL1Tiling()
     return true;
 }
 
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    QuantBatchMatmulV3, AdaptiveSlidingWindowMixTiling, supportedNpuArch, TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowMixTiling, supportedNpuArch,
+                                   TILING_PRIORITY);
 } // namespace optiling

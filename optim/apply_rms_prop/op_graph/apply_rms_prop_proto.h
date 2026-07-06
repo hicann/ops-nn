@@ -29,32 +29,32 @@
 namespace ge {
 
 /**
-* @brief Updates "var" according to the RMSProp algorithm.
-*
-*   ms_new  = rho * ms + (1 - rho) * grad^2
-*   mom_new = momentum * mom + lr * grad / sqrt(ms_new + epsilon)
-*   var_new = var - mom_new
-*
-* @par Inputs:
-*  8 Tensor inputs (ms / mom shared with output via in-place semantics):
-*   @li var:       A Tensor of type float / float16 / bfloat16. Weight to update.
-*   @li ms:        A Tensor with the same shape/dtype as "var". Mean-square accumulator (in-place updated).
-*   @li mom:       A Tensor with the same shape/dtype as "var". Momentum accumulator (in-place updated).
-*   @li lr:        Scalar Tensor ([1]) learning rate.
-*   @li rho:       Scalar Tensor ([1]) decay rate in [0, 1).
-*   @li momentum:  Scalar Tensor ([1]) momentum coefficient.
-*   @li epsilon:   Scalar Tensor ([1]) numerical-stability constant, must be > 0.
-*   @li grad:      A Tensor, same shape/dtype as "var".
-*
-* @par Outputs:
-*   @li var: Updated var (in-place; ms / mom are also in-place updated through input GM addresses).
-*
-* @par Attributes:
-*   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.
-*
-* @par Third-party framework compatibility
-* Compatible with the TensorFlow operator ApplyRMSProp.
-*/
+ * @brief Updates "var" according to the RMSProp algorithm.
+ *
+ *   ms_new  = rho * ms + (1 - rho) * grad^2
+ *   mom_new = momentum * mom + lr * grad / sqrt(ms_new + epsilon)
+ *   var_new = var - mom_new
+ *
+ * @par Inputs:
+ *  8 Tensor inputs (ms / mom shared with output via in-place semantics):
+ *   @li var:       A Tensor of type float / float16 / bfloat16. Weight to update.
+ *   @li ms:        A Tensor with the same shape/dtype as "var". Mean-square accumulator (in-place updated).
+ *   @li mom:       A Tensor with the same shape/dtype as "var". Momentum accumulator (in-place updated).
+ *   @li lr:        Scalar Tensor ([1]) learning rate.
+ *   @li rho:       Scalar Tensor ([1]) decay rate in [0, 1).
+ *   @li momentum:  Scalar Tensor ([1]) momentum coefficient.
+ *   @li epsilon:   Scalar Tensor ([1]) numerical-stability constant, must be > 0.
+ *   @li grad:      A Tensor, same shape/dtype as "var".
+ *
+ * @par Outputs:
+ *   @li var: Updated var (in-place; ms / mom are also in-place updated through input GM addresses).
+ *
+ * @par Attributes:
+ *   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.
+ *
+ * @par Third-party framework compatibility
+ * Compatible with the TensorFlow operator ApplyRMSProp.
+ */
 REG_OP(ApplyRMSProp)
     .INPUT(var, TensorType::NumberType())
     .INPUT(ms, TensorType::NumberType())

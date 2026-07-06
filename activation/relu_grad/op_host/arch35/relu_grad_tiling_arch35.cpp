@@ -27,19 +27,12 @@ using namespace Ops::Base;
 using namespace ge;
 using namespace ReluGradOp;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr uint64_t RELU_GRAD_COMMON_TILING_PRIORITY = 0;
 
-ge::graphStatus ReluGradTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReluGradTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
-bool ReluGradTiling::IsCapable()
-{
-    return true;
-}
+bool ReluGradTiling::IsCapable() { return true; }
 
 ge::graphStatus ReluGradTiling::DoOpTiling()
 {
@@ -76,42 +69,25 @@ ge::graphStatus ReluGradTiling::DoOpTiling()
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), RELU_GRAD_TPL_INT32);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT32, DT_INT64");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(inputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT32, DT_INT64");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        status != ge::GRAPH_SUCCESS, OP_LOGE(context_, "BroadcastBaseTiling do tiling failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(status != ge::GRAPH_SUCCESS, OP_LOGE(context_, "BroadcastBaseTiling do tiling failed."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ReluGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReluGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t ReluGradTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t ReluGradTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus ReluGradTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReluGradTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ReluGradTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReluGradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ReluGradTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReluGradTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus TilingForReluGrad(gert::TilingContext* context)
 {
@@ -127,11 +103,11 @@ static ge::graphStatus TilingForReluGrad(gert::TilingContext* context)
     return tiling.DoTiling();
 }
 
-static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext* context)
 {
     auto compileInfoPtr = context->GetCompiledInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -141,4 +117,4 @@ static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *conte
 
 IMPL_OP_OPTILING(ReluGrad).Tiling(TilingForReluGrad).TilingParse<BroadcastCompileInfo>(TilingPrepareForBroadcast);
 REGISTER_OPS_TILING_TEMPLATE(ReluGrad, ReluGradTiling, RELU_GRAD_COMMON_TILING_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

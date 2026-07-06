@@ -20,37 +20,37 @@
 
 namespace ge {
 /**
-* @brief Updates "var" "m" "v" and "max_grad_norm" according to the AdamWV2 algorithm.
-*
-* @attention Constraints:
-*  The input tensors must have the same shape, except for the step. The shape of step must be (1,).
-*  When the data types of the input tensors var,m,v,grad,max_grad_norm are the same, the data type can be
-*  float16,bfloat16 or float32.
-*  The data types of the input tensors var,m and v must be the same.For example,if var tensor is float16,
-*  the data types of m and v must also be float16.
-*  The data tytpes of the input tensors grad and max_grad_norm must be the same.For example,if grad tensor is float16,
-*  the data types of max_grad_norm must also be float16.
-*  When data type of the input tensor var,m and v are different with input tensor grad and max_grad_norm,
-*  the data types of var,m and v can only be float32,and the data type of grad and max_grad_norm tensor
-*  can only be float16 or bfloat16.
-*
-* @par Inputs:
-* @li var: A Tensor, dtype is float16 bfloat16 or float32, default is ND.
-* @li m: A Tensor of the same type as "var", default is ND.
-* @li v: A Tensor of the same type as "var", default is ND.
-* @li grad: A Tensor, dtype is float16 bfloat16 or float32, for the gradient, default is ND.
-* @li step: A Tensor, dtype is float32 or int64.
-* @li max_grad_norm: An optional Tensor of the same type as "grad", default is ND.
-*
-* @par Attributes:
-* @li lr: A optional float, default is 0.1
-* @li beta1: A optional float, default is 0.1
-* @li beta2: A optional float,default is 0.1
-* @li weight_decay: A optional float, default is 0.1
-* @li eps: A optional float, default is 0.1
-* @li amsgrad: A optional bool, default is false.
-* @li maximize: A optional bool, default is false.\n
-*/
+ * @brief Updates "var" "m" "v" and "max_grad_norm" according to the AdamWV2 algorithm.
+ *
+ * @attention Constraints:
+ *  The input tensors must have the same shape, except for the step. The shape of step must be (1,).
+ *  When the data types of the input tensors var,m,v,grad,max_grad_norm are the same, the data type can be
+ *  float16,bfloat16 or float32.
+ *  The data types of the input tensors var,m and v must be the same.For example,if var tensor is float16,
+ *  the data types of m and v must also be float16.
+ *  The data tytpes of the input tensors grad and max_grad_norm must be the same.For example,if grad tensor is float16,
+ *  the data types of max_grad_norm must also be float16.
+ *  When data type of the input tensor var,m and v are different with input tensor grad and max_grad_norm,
+ *  the data types of var,m and v can only be float32,and the data type of grad and max_grad_norm tensor
+ *  can only be float16 or bfloat16.
+ *
+ * @par Inputs:
+ * @li var: A Tensor, dtype is float16 bfloat16 or float32, default is ND.
+ * @li m: A Tensor of the same type as "var", default is ND.
+ * @li v: A Tensor of the same type as "var", default is ND.
+ * @li grad: A Tensor, dtype is float16 bfloat16 or float32, for the gradient, default is ND.
+ * @li step: A Tensor, dtype is float32 or int64.
+ * @li max_grad_norm: An optional Tensor of the same type as "grad", default is ND.
+ *
+ * @par Attributes:
+ * @li lr: A optional float, default is 0.1
+ * @li beta1: A optional float, default is 0.1
+ * @li beta2: A optional float,default is 0.1
+ * @li weight_decay: A optional float, default is 0.1
+ * @li eps: A optional float, default is 0.1
+ * @li amsgrad: A optional bool, default is false.
+ * @li maximize: A optional bool, default is false.\n
+ */
 REG_OP(ApplyAdamWV2)
     .INPUT(var, TensorType::FLOAT())
     .INPUT(m, TensorType::FLOAT())

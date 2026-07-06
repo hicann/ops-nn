@@ -72,8 +72,8 @@ __aicore__ inline void CopyOut(const GlobalTensor<T>& dstTensor, const LocalTens
     DataCopyPad(dstTensor, srcTensor, params);
 }
 
-__aicore__ inline void WelfordInitialize(
-    const LocalTensor<float>& mean, const LocalTensor<float>& variance, const int64_t elemCnt)
+__aicore__ inline void WelfordInitialize(const LocalTensor<float>& mean, const LocalTensor<float>& variance,
+                                         const int64_t elemCnt)
 {
     constexpr static uint32_t VL_B32 = platform::GetVRegSize() / sizeof(float);
     uint16_t loopTimes = (elemCnt + VL_B32 - 1) / VL_B32;
@@ -94,10 +94,10 @@ __aicore__ inline void WelfordInitialize(
 }
 
 template <typename T>
-__aicore__ inline void ProcessWelfordUpdate(
-    TQue<QuePosition::VECIN, 1>& inQueueX, const GlobalTensor<T>& xGm, const int64_t offset,
-    const int64_t elemCnt, const int64_t tileLength, int64_t& welfordCount,
-    const LocalTensor<float>& mean, const LocalTensor<float>& variance, const LocalTensor<uint8_t>& shared)
+__aicore__ inline void ProcessWelfordUpdate(TQue<QuePosition::VECIN, 1>& inQueueX, const GlobalTensor<T>& xGm,
+                                            const int64_t offset, const int64_t elemCnt, const int64_t tileLength,
+                                            int64_t& welfordCount, const LocalTensor<float>& mean,
+                                            const LocalTensor<float>& variance, const LocalTensor<uint8_t>& shared)
 {
     welfordCount++;
     LocalTensor<T> xTensor = inQueueX.template AllocTensor<T>();
@@ -116,8 +116,8 @@ __aicore__ inline void ProcessWelfordUpdate(
 }
 
 template <typename M>
-__aicore__ inline void CastBatchMeanLastout(
-    LocalTensor<float>& meanTensor, LocalTensor<float>& lastoutTensor, uint64_t currentANum)
+__aicore__ inline void CastBatchMeanLastout(LocalTensor<float>& meanTensor, LocalTensor<float>& lastoutTensor,
+                                            uint64_t currentANum)
 {
     constexpr static uint32_t VL_F32 = VECTOR_REG_WIDTH / sizeof(float);
     constexpr static uint32_t VL_MEAN = VECTOR_REG_WIDTH / sizeof(M);
@@ -139,8 +139,7 @@ __aicore__ inline void CastBatchMeanLastout(
         for (uint16_t i = 0; i < castLoops; i++) {
             pregLoop = MicroAPI::UpdateMask<float>(castCount);
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(
-                input_lastout, batchLastoutInAddr + VL_F32 * i);
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_lastout, batchLastoutInAddr + VL_F32 * i);
             Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
             Cast<M, float, castTraitB322B16>(output_lastout, input_lastout, pregLoop);
             MicroAPI::DataCopy<M, MicroAPI::StoreDist::DIST_PACK_B32>(
@@ -152,11 +151,10 @@ __aicore__ inline void CastBatchMeanLastout(
 }
 
 template <typename M>
-__aicore__ inline void RefreshCache(
-    int64_t& cacheCount, int64_t& paramAddr,
-    LocalTensor<float>& meanTensor, LocalTensor<float>& lastoutTensor,
-    TQue<QuePosition::VECOUT, 1>& outQueueMean, TQue<QuePosition::VECOUT, 1>& outQueueLastout,
-    const GlobalTensor<M>& meanGm, const GlobalTensor<M>& lastoutGm)
+__aicore__ inline void RefreshCache(int64_t& cacheCount, int64_t& paramAddr, LocalTensor<float>& meanTensor,
+                                    LocalTensor<float>& lastoutTensor, TQue<QuePosition::VECOUT, 1>& outQueueMean,
+                                    TQue<QuePosition::VECOUT, 1>& outQueueLastout, const GlobalTensor<M>& meanGm,
+                                    const GlobalTensor<M>& lastoutGm)
 {
     constexpr static uint32_t VL_F32 = VECTOR_REG_WIDTH / sizeof(float);
     constexpr static uint32_t VL_MEAN = VECTOR_REG_WIDTH / sizeof(M);
@@ -187,12 +185,10 @@ __aicore__ inline void RefreshCache(
             copyInParamsTail.blockLen = tailSize * sizeof(M);
             copyInParamsTail.srcStride = 0;
             copyInParamsTail.dstStride = 0;
-            DataCopyPad(
-                meanGm[paramAddr + castDmaLoops * VL_F32],
-                meanTensor[castDmaLoops * VL_MEAN].template ReinterpretCast<M>(), copyInParamsTail);
-            DataCopyPad(
-                lastoutGm[paramAddr + castDmaLoops * VL_F32],
-                lastoutTensor[castDmaLoops * VL_MEAN].template ReinterpretCast<M>(), copyInParamsTail);
+            DataCopyPad(meanGm[paramAddr + castDmaLoops * VL_F32],
+                        meanTensor[castDmaLoops * VL_MEAN].template ReinterpretCast<M>(), copyInParamsTail);
+            DataCopyPad(lastoutGm[paramAddr + castDmaLoops * VL_F32],
+                        lastoutTensor[castDmaLoops * VL_MEAN].template ReinterpretCast<M>(), copyInParamsTail);
         }
         outQueueMean.FreeTensor(meanTensor);
         outQueueLastout.FreeTensor(lastoutTensor);

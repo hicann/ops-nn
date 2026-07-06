@@ -142,20 +142,19 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& total
 
     const gert::Shape& varShape = inputVar->GetStorageShape();
     // MED-3 defensive check: the four element-wise tensors must share one shape.
-    OP_CHECK_IF(
-        !ShapeEqual(varShape, inputAccum->GetStorageShape()) || !ShapeEqual(varShape, inputLinear->GetStorageShape()) ||
-            !ShapeEqual(varShape, inputGrad->GetStorageShape()),
-        OP_LOGE(context, "ApplyFtrl: var/accum/linear/grad shapes must be identical"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape, inputAccum->GetStorageShape()) ||
+                    !ShapeEqual(varShape, inputLinear->GetStorageShape()) ||
+                    !ShapeEqual(varShape, inputGrad->GetStorageShape()),
+                OP_LOGE(context, "ApplyFtrl: var/accum/linear/grad shapes must be identical"), return ge::GRAPH_FAILED);
 
     totalElements = EnsureNotScalar(varShape).GetShapeSize();
 
     auto inputDesc = context->GetInputDesc(kIdxVar);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
-    OP_CHECK_IF(
-        dataType != ge::DT_BF16 && dataType != ge::DT_FLOAT16 && dataType != ge::DT_FLOAT,
-        OP_LOGE(context, "ApplyFtrl: only bf16/fp16/fp32 supported, got %d", static_cast<int>(dataType)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataType != ge::DT_BF16 && dataType != ge::DT_FLOAT16 && dataType != ge::DT_FLOAT,
+                OP_LOGE(context, "ApplyFtrl: only bf16/fp16/fp32 supported, got %d", static_cast<int>(dataType)),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -171,14 +170,13 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context, ApplyFtrlTil
 {
     tiling = context->GetTilingData<ApplyFtrlTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyFtrlTilingData), 0, sizeof(ApplyFtrlTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ApplyFtrlTilingData), 0, sizeof(ApplyFtrlTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetApplyFtrlTilingKey(
-    gert::TilingContext* context, int64_t totalElements, int64_t ubBlockSize, ge::DataType dataType)
+static ge::graphStatus SetApplyFtrlTilingKey(gert::TilingContext* context, int64_t totalElements, int64_t ubBlockSize,
+                                             ge::DataType dataType)
 {
     if (ubBlockSize == 0) {
         OP_LOGE(context, "ubBlockSize is 0");
@@ -196,8 +194,8 @@ static ge::graphStatus SetApplyFtrlTilingKey(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetEmptyTensorTiling(
-    gert::TilingContext* context, ApplyFtrlTilingData* tiling, ge::DataType dataType)
+static ge::graphStatus SetEmptyTensorTiling(gert::TilingContext* context, ApplyFtrlTilingData* tiling,
+                                            ge::DataType dataType)
 {
     // Empty tensor: single idle core; pick the simplest binary (PAD_TAIL=0,HAS_L1=1).
     tiling->blockFactor = 0;
@@ -216,15 +214,14 @@ static int64_t CalcBlockFactor(int64_t totalElements, int64_t coreNum, int64_t u
     return (blockFactor < minBlockFactor) ? minBlockFactor : blockFactor;
 }
 
-static ge::graphStatus CalcUbFactor(
-    gert::TilingContext* context, uint64_t ubSize, int64_t blockFactor, int64_t& ubFactor)
+static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSize, int64_t blockFactor,
+                                    int64_t& ubFactor)
 {
     // UB split: reserve the 8KB Select tmp first (MED-1), then budget by fp32 slots,
     // and align DOWN to 64 elements (256B, MED-2).
     int64_t usableUb = static_cast<int64_t>(ubSize) - SELECT_TMP_BYTES;
-    OP_CHECK_IF(
-        usableUb <= 0, OP_LOGE(context, "UB too small after reserving Select tmp: %ld", usableUb),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(usableUb <= 0, OP_LOGE(context, "UB too small after reserving Select tmp: %ld", usableUb),
+                return ge::GRAPH_FAILED);
     int64_t ubCapacityElem = FloorAlign(FloorDiv(usableUb / TYPE_SIZE_FP32, UB_FP32_SLOTS), kCmpAlignElem);
 
     ubFactor = (TILE_ELEM_NUM_TARGET < ubCapacityElem) ? TILE_ELEM_NUM_TARGET : ubCapacityElem;
@@ -245,23 +242,19 @@ static ge::graphStatus ApplyFtrlTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT16;
-    OP_CHECK_IF(
-        GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeInfo error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ApplyFtrlTilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InitTilingData error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InitTilingData error"),
+                return ge::GRAPH_FAILED);
     tiling->totalElements = totalElements;
     if (totalElements == 0) {
         return SetEmptyTensorTiling(context, tiling, dataType);
@@ -276,9 +269,8 @@ static ge::graphStatus ApplyFtrlTilingFunc(gert::TilingContext* context)
 
     int64_t blockFactor = CalcBlockFactor(totalElements, coreNum, ubBlockSize);
     int64_t ubFactor = 0;
-    OP_CHECK_IF(
-        CalcUbFactor(context, ubSize, blockFactor, ubFactor) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "CalcUbFactor error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcUbFactor(context, ubSize, blockFactor, ubFactor) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CalcUbFactor error"), return ge::GRAPH_FAILED);
 
     tiling->blockFactor = blockFactor;
     tiling->ubFactor = ubFactor;

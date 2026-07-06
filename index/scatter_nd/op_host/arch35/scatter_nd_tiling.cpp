@@ -22,8 +22,8 @@ static constexpr size_t SC_IN_INDICES_IDX = 0;
 static constexpr size_t SC_IN_X_IDX = 1;
 static constexpr size_t SC_OUT_Y_IDX = 0;
 
-static bool CheckScatterNdTensorShape(
-    const gert::TilingContext* context, const CalcShapeInfo& calcShapeInfo, const int64_t indicesLastDim)
+static bool CheckScatterNdTensorShape(const gert::TilingContext* context, const CalcShapeInfo& calcShapeInfo,
+                                      const int64_t indicesLastDim)
 {
     const int64_t indicesDims = calcShapeInfo.indicesShape.GetDimNum();
     const int64_t updatesDims = calcShapeInfo.varShape.GetDimNum();
@@ -31,46 +31,42 @@ static bool CheckScatterNdTensorShape(
 
     OP_CHECK_IF(
         indicesDims <= 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context->GetNodeName(), "indices", std::to_string(indicesDims).c_str(),
-            "The shape dim of indices must be within the range (2,8)"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(indicesDims).c_str(),
+                                                 "The shape dim of indices must be within the range (2,8)"),
         return false);
 
-    OP_CHECK_IF(
-        outputDims - indicesLastDim != updatesDims - indicesDims + 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context->GetNodeName(), "update and output",
-            (std::to_string(outputDims) + ", " + std::to_string(updatesDims)).c_str(),
-            ("The shape dim of output after the " + std::to_string(indicesLastDim) + "th axis must be " +
-             "equal to the shape dim of update after the " + std::to_string(indicesDims - 1) + "th axis")
-                .c_str()),
-        return false);
+    OP_CHECK_IF(outputDims - indicesLastDim != updatesDims - indicesDims + 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "update and output",
+                    (std::to_string(outputDims) + ", " + std::to_string(updatesDims)).c_str(),
+                    ("The shape dim of output after the " + std::to_string(indicesLastDim) + "th axis must be " +
+                     "equal to the shape dim of update after the " + std::to_string(indicesDims - 1) + "th axis")
+                        .c_str()),
+                return false);
 
     for (int64_t i = 0; i < indicesDims - 1; i++) {
-        OP_CHECK_IF(
-            calcShapeInfo.indicesShape.GetDim(i) != calcShapeInfo.varShape.GetDim(i),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context->GetNodeName(), "indices and updates",
-                (std::to_string(calcShapeInfo.indicesShape.GetDim(i)) + " and " +
-                 std::to_string(calcShapeInfo.varShape.GetDim(i)))
-                    .c_str(),
-                ("The first " + std::to_string(indicesDims - 1) + " axes of indices must equal to that of update")
-                    .c_str()),
-            return false);
+        OP_CHECK_IF(calcShapeInfo.indicesShape.GetDim(i) != calcShapeInfo.varShape.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "indices and updates",
+                                                           (std::to_string(calcShapeInfo.indicesShape.GetDim(i)) +
+                                                            " and " + std::to_string(calcShapeInfo.varShape.GetDim(i)))
+                                                               .c_str(),
+                                                           ("The first " + std::to_string(indicesDims - 1) +
+                                                            " axes of indices must equal to that of update")
+                                                               .c_str()),
+                    return false);
     }
 
     for (int64_t i = 0; i < updatesDims - indicesDims + 1; i++) {
-        OP_CHECK_IF(
-            calcShapeInfo.varShape.GetDim(indicesDims - 1 + i) != calcShapeInfo.outShape[indicesLastDim + i],
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context->GetNodeName(), "output and updates",
-                (std::to_string(calcShapeInfo.outShape[indicesLastDim + i]) + " and " +
-                 std::to_string(calcShapeInfo.varShape.GetDim(indicesDims - 1 + i)))
-                    .c_str(),
-                ("axis " + std::to_string(indicesLastDim + i) + " of output must be equal to the axis " +
-                 std::to_string(indicesDims - 1 + i) + " of update")
-                    .c_str()),
-            return false);
+        OP_CHECK_IF(calcShapeInfo.varShape.GetDim(indicesDims - 1 + i) != calcShapeInfo.outShape[indicesLastDim + i],
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "output and updates",
+                        (std::to_string(calcShapeInfo.outShape[indicesLastDim + i]) + " and " +
+                         std::to_string(calcShapeInfo.varShape.GetDim(indicesDims - 1 + i)))
+                            .c_str(),
+                        ("axis " + std::to_string(indicesLastDim + i) + " of output must be equal to the axis " +
+                         std::to_string(indicesDims - 1 + i) + " of update")
+                            .c_str()),
+                    return false);
     }
     return true;
 }

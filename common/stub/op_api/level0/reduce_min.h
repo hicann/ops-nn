@@ -13,7 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ReduceMin(const aclTensor *self, const aclIntArray *dims, bool keepDim, aclOpExecutor *executor);
+const aclTensor* ReduceMin(const aclTensor* self, const aclIntArray* dims, bool keepDim, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_REDUCE_MIN_OP_H_

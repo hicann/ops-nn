@@ -43,8 +43,8 @@ struct ErfFast : public Vec::ElemwiseUnaryOP<T, T, 0, 0, true> {
 
 template <class T>
 struct GeluGradV2ErfPost : public Vec::ElemwiseTernaryOP<T, T, T, T> {
-    __aicore__ inline GeluGradV2ErfPost(
-        LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1, LocalTensor<T>& src2, uint32_t count)
+    __aicore__ inline GeluGradV2ErfPost(LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1,
+                                        LocalTensor<T>& src2, uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);
@@ -100,8 +100,8 @@ struct GeluGradV2ErfPost : public Vec::ElemwiseTernaryOP<T, T, T, T> {
 
 template <class T>
 struct GeluGradV2TanhCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
-    __aicore__ inline GeluGradV2TanhCustom(
-        LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1, uint32_t count)
+    __aicore__ inline GeluGradV2TanhCustom(LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1,
+                                           uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);

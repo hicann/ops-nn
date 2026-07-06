@@ -44,32 +44,27 @@ protected:
 
     static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_HIFP8 = []() {
         if constexpr (RoundMode == TPL_ROUND_MODE_HYBRID) {
-            return AscendC::Reg::CastTrait{
-                AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-                RoundMode::CAST_HYBRID};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         } else {
-            return AscendC::Reg::CastTrait{
-                AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-                RoundMode::CAST_ROUND};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         }
     }();
 
     static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_FP8E5M2 = []() {
-        return AscendC::Reg::CastTrait{
-            AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-            RoundMode::CAST_RINT};
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
     static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_FP8E4M3 = []() {
-        return AscendC::Reg::CastTrait{
-            AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-            RoundMode::CAST_RINT};
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
     static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_BF16 = []() {
-        return AscendC::Reg::CastTrait{
-            AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-            RoundMode::CAST_RINT};
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 };
 

@@ -23,13 +23,10 @@
 
 namespace optiling {
 
-class SegmentSumSimtTiling : public SegmentSumBaseTiling
-{
+class SegmentSumSimtTiling : public SegmentSumBaseTiling {
 public:
-    explicit SegmentSumSimtTiling(gert::TilingContext* context) : SegmentSumBaseTiling(context)
-    {}
-    ~SegmentSumSimtTiling() override
-    {}
+    explicit SegmentSumSimtTiling(gert::TilingContext* context) : SegmentSumBaseTiling(context) {}
+    ~SegmentSumSimtTiling() override {}
 
 private:
     bool IsCapable() override;

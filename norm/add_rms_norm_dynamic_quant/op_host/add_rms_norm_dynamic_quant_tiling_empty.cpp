@@ -41,17 +41,17 @@ static constexpr uint32_t EMPTY_TENSOR_KEY = 500;
 
 const std::string OP_NAME = "AddRmsNormDynamicQuant";
 
-ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::CheckDtypeVaild(
-    ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
+ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::CheckDtypeVaild(ge::DataType& srcDtype,
+                                                                   std::vector<ge::DataType>& supportDtypeList,
+                                                                   string srcName)
 {
     for (const auto& supportedDtype : supportDtypeList) {
         if (supportedDtype == srcDtype) {
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(
-        nodeName_.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-        Ops::Base::ToString(srcDtype).c_str());
+    OP_LOGE(nodeName_.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
+            Ops::Base::ToString(srcDtype).c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -64,8 +64,8 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckShapeNull()
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
 
-    OP_CHECK_IF(
-        (nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), , return false);
+    OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), ,
+                return false);
     return true;
 }
 
@@ -82,9 +82,8 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckOptionalInput()
         hasSmoothScale2_ = true;
     }
 
-    OP_CHECK_IF(
-        !hasSmoothScale1_ && hasSmoothScale2_,
-        OP_LOGE(nodeName_.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
+    OP_CHECK_IF(!hasSmoothScale1_ && hasSmoothScale2_,
+                OP_LOGE(nodeName_.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
     return true;
 }
 
@@ -167,21 +166,23 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputDtype()
         smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
     }
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            nodeName_.c_str(), "x1, x2 and gamma",
-            (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x1Dtype) + " and " +
-             Ops::Base::ToString(smoothScale2Dtype)).c_str(),
-            "The dtypes of x1, x2 and gamma should be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1, x2 and gamma",
+                                               (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x1Dtype) +
+                                                " and " + Ops::Base::ToString(smoothScale2Dtype))
+                                                   .c_str(),
+                                               "The dtypes of x1, x2 and gamma should be the same");
         return false;
     }
     if (hasSmoothScale1_ && (x1Dtype != smoothScale1Dtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1 and smoothScale1",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName_.c_str(), "x1 and smoothScale1",
             (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale1Dtype)).c_str(),
             "The dtypes of x1 and smoothScale1 should be the same when smoothScale1 is existed");
         return false;
     }
     if (hasSmoothScale2_ && (x1Dtype != smoothScale2Dtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1 and smoothScale2",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName_.c_str(), "x1 and smoothScale2",
             (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale2Dtype)).c_str(),
             "The dtypes of x1 and smoothScale2 should be the same when smoothScale2 is existed");
         return false;
@@ -206,7 +207,7 @@ ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::SetInputParams()
     for (size_t i = 0; i < x1DimNum - gammaDimNum; i++) {
         numM *= x1InputShape.GetDim(i);
     }
-    
+
     numM_ = numM;
     numN_ = numN;
     return ge::GRAPH_SUCCESS;
@@ -215,19 +216,17 @@ ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::SetInputParams()
 ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::GetShapeAttrsInfo()
 {
     OP_LOGD(nodeName_.c_str(), "Enter AddRmsNormDynamicQuantEmptyTiling GetShapeAttrsInfo.");
-    OP_CHECK_IF(
-        !CheckShapeNull(), OP_LOGE(nodeName_.c_str(), "The not optional input is null."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckOptionalInput(), OP_LOGE(nodeName_.c_str(), "The optional input is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShapeDim(), OP_LOGE(nodeName_.c_str(), "The input shape dim is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShapeValue(), OP_LOGE(nodeName_.c_str(), "The input shape relationship is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName_.c_str(), "The not optional input is null."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOptionalInput(), OP_LOGE(nodeName_.c_str(), "The optional input is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName_.c_str(), "The input shape dim is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName_.c_str(), "The input shape relationship is invalid."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName_.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName_.c_str(), "Set input shape failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName_.c_str(), "Set input shape failed."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -245,15 +244,9 @@ ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AddRmsNormDynamicQuantEmptyTiling::IsCapable()
-{
-    return true;
-}
+bool AddRmsNormDynamicQuantEmptyTiling::IsCapable() { return true; }
 
-ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::GetWorkspaceSize()
 {
@@ -299,13 +292,13 @@ ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::CalcTilingData()
     } else {
         uint64_t maxRowsNum_ = ubSize_ / (BUFFER_NUM * FLOATBYTESIZE);
         mPerUB_ = std::pow(TWO, NearestLowerPowerOfTwo(maxRowsNum_));
-        coreUbBlockCount_ = (mPerCore_ + mPerUB_ -1) / mPerUB_ - 1;
+        coreUbBlockCount_ = (mPerCore_ + mPerUB_ - 1) / mPerUB_ - 1;
         mTailUb_ = mPerCore_ - mPerUB_ * coreUbBlockCount_;
         if (mPerUB_ > mLastCore_) {
             lastCoreBlockCount_ = 0;
             mlastCoreTailUb_ = mLastCore_;
         } else {
-            lastCoreBlockCount_ = (mLastCore_ + mPerUB_ -1) / mPerUB_ - 1;
+            lastCoreBlockCount_ = (mLastCore_ + mPerUB_ - 1) / mPerUB_ - 1;
             mlastCoreTailUb_ = mLastCore_ - mPerUB_ * lastCoreBlockCount_;
         }
     }
@@ -333,10 +326,7 @@ void AddRmsNormDynamicQuantEmptyTiling::CalcUsedCoreNum()
     }
 }
 
-void AddRmsNormDynamicQuantEmptyTiling::LogTilingResult()
-{
-    OP_LOGI(OP_NAME, "numN: %ld, numM: %ld", numN_, numM_);
-}
+void AddRmsNormDynamicQuantEmptyTiling::LogTilingResult() { OP_LOGI(OP_NAME, "numN: %ld, numM: %ld", numN_, numM_); }
 
 ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::DoOpTiling()
 {

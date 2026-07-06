@@ -45,14 +45,8 @@ using namespace std;
 
 class rms_norm_grad_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << " rms_norm_grad_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << " rms_norm_grad_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << " rms_norm_grad_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << " rms_norm_grad_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_full_load)
@@ -82,8 +76,7 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_full_load)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
+    RmsNormGradQuantRegbaseTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
 
     tilingData->tailCoreNumDG = 0;
     tilingData->colsPerCoreDG = cols;
@@ -113,14 +106,13 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_full_load)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_FULL_LOAD,
-            COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
-            dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_FULL_LOAD, COMPUTE_MODE_WITHOUT_OFFSET_X,
+                              COMPUTE_MODE_DIV_MODE>(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
+                                                     tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -161,8 +153,8 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_big_m)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(rows * cols * sizeof(float));
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseBigMTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseBigMTilingData*>(tiling);
+    RmsNormGradQuantRegbaseBigMTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseBigMTilingData*>(
+        tiling);
 
     tilingData->dgammaUsedCoreNum = 1;
     tilingData->dgammaMPerBlock = rows;
@@ -200,14 +192,13 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_big_m)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_BIG_M,
-            COMPUTE_MODE_WITH_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
-            dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_BIG_M, COMPUTE_MODE_WITH_OFFSET_X,
+                              COMPUTE_MODE_DIV_MODE>(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
+                                                     tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -248,8 +239,8 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_empty)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseEmptyTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseEmptyTilingData*>(tiling);
+    RmsNormGradQuantRegbaseEmptyTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseEmptyTilingData*>(
+        tiling);
 
     tilingData->usedCoreNumDG = 1;
     tilingData->colsPerCoreDG = cols;
@@ -265,14 +256,13 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_empty)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_EMPTY,
-            COMPUTE_MODE_WITH_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
-            dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_EMPTY, COMPUTE_MODE_WITH_OFFSET_X,
+                              COMPUTE_MODE_DIV_MODE>(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
+                                                     tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -313,8 +303,7 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_with_large_rows)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
+    RmsNormGradQuantRegbaseTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
 
     // rows=8, rowsPerUB=4 => mainBlockCountDG = rows/rowsPerUB = 2
     tilingData->tailCoreNumDG = 0;
@@ -345,14 +334,13 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_with_large_rows)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
         ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_WITH_LARGE_ROWS,
-            COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_NOT_DIV_MODE>(
+                              COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_NOT_DIV_MODE>(
             dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -393,8 +381,7 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_full_load_with_pad)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
+    RmsNormGradQuantRegbaseTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
 
     // rows=20, rowsPerUBDG=20, mainBlockCount=16(power of 2), tailBlockCountwithPad=4(pad to 16)
     tilingData->tailCoreNumDG = 0;
@@ -425,14 +412,13 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_full_load_with_pad)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_FULL_LOAD,
-            COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
-            dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_FULL_LOAD, COMPUTE_MODE_WITHOUT_OFFSET_X,
+                              COMPUTE_MODE_DIV_MODE>(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
+                                                     tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -473,8 +459,7 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_with_large_rows_unalign)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
+    RmsNormGradQuantRegbaseTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
 
     // rows=12, rowsPerUBDG=4 => 3 blocks, not power of 2 => UnAlign path
     tilingData->tailCoreNumDG = 0;
@@ -505,14 +490,13 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_with_large_rows_unalign)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
         ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_WITH_LARGE_ROWS,
-            COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
+                              COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
             dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -553,8 +537,8 @@ TEST_F(rms_norm_grad_quant_test, test_big_m_with_fold)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(rows * cols * sizeof(float));
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseBigMTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseBigMTilingData*>(tiling);
+    RmsNormGradQuantRegbaseBigMTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseBigMTilingData*>(
+        tiling);
 
     tilingData->dgammaUsedCoreNum = 1;
     tilingData->dgammaMPerBlock = rows;
@@ -592,14 +576,13 @@ TEST_F(rms_norm_grad_quant_test, test_big_m_with_fold)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_BIG_M,
-            COMPUTE_MODE_WITH_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
-            dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_grad_quant<COMPUTE_MODE_DX_FULL_LOAD, COMPUTE_MODE_DGAMMA_BIG_M, COMPUTE_MODE_WITH_OFFSET_X,
+                              COMPUTE_MODE_DIV_MODE>(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
+                                                     tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -640,8 +623,7 @@ TEST_F(rms_norm_grad_quant_test, test_split_d_dgamma_full_load)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormGradQuantRegbaseTilingData* tilingData =
-        reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
+    RmsNormGradQuantRegbaseTilingData* tilingData = reinterpret_cast<RmsNormGradQuantRegbaseTilingData*>(tiling);
 
     // dgamma params: cols=8192, single colset per core
     tilingData->tailCoreNumDG = 0;
@@ -673,14 +655,13 @@ TEST_F(rms_norm_grad_quant_test, test_split_d_dgamma_full_load)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
 
-    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x,
-                      GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_grad_quant<COMPUTE_MODE_DX_SPLIT_D, COMPUTE_MODE_DGAMMA_FULL_LOAD,
-            COMPUTE_MODE_WITHOUT_OFFSET_X, COMPUTE_MODE_DIV_MODE>(
-            dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, tiling);
+    auto wrapper = [](GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x,
+                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_grad_quant<COMPUTE_MODE_DX_SPLIT_D, COMPUTE_MODE_DGAMMA_FULL_LOAD, COMPUTE_MODE_WITHOUT_OFFSET_X,
+                              COMPUTE_MODE_DIV_MODE>(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
+                                                     tiling);
     };
-    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace,
-        (uint8_t*)tilingData);
+    ICPU_RUN_KF(wrapper, blockDim, dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);

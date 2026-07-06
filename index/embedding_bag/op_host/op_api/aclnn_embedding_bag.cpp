@@ -43,14 +43,13 @@ static const int64_t MAX_INDICES_DIM = 3;
 static const std::initializer_list<op::DataType> WEIGHT_DTYPE_SUPPORT_LIST_910B = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> WEIGHT_DTYPE_SUPPORT_LIST_910 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> WEIGHT_DTYPE_SUPPORT_LIST_910 = {op::DataType::DT_FLOAT,
+                                                                                  op::DataType::DT_FLOAT16};
 
 static inline const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2002 ||
-        curArch == NpuArch::DAV_1001) {
+    if (curArch == NpuArch::DAV_2002 || curArch == NpuArch::DAV_1001) {
         return WEIGHT_DTYPE_SUPPORT_LIST_910;
     } else {
         return WEIGHT_DTYPE_SUPPORT_LIST_910B;
@@ -58,13 +57,12 @@ static inline const std::initializer_list<DataType>& GetDtypeSupportList()
 }
 
 static const std::initializer_list<op::DataType> INT_DTYPE_LIST = {op::DataType::DT_INT64, op::DataType::DT_INT32};
-static const std::initializer_list<op::DataType> INT_DTYPE_LIST_ALL = {
-    op::DataType::DT_INT64, op::DataType::DT_INT32, op::DataType::DT_INT16, op::DataType::DT_INT8,
-    op::DataType::DT_UINT8};
+static const std::initializer_list<op::DataType> INT_DTYPE_LIST_ALL = {op::DataType::DT_INT64, op::DataType::DT_INT32,
+                                                                       op::DataType::DT_INT16, op::DataType::DT_INT8,
+                                                                       op::DataType::DT_UINT8};
 
-static inline bool CheckNotNull(
-    const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, aclTensor* output,
-    aclTensor* offset2bag, aclTensor* bagSize, aclTensor* maxIndices)
+static inline bool CheckNotNull(const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets,
+                                aclTensor* output, aclTensor* offset2bag, aclTensor* bagSize, aclTensor* maxIndices)
 {
     OP_CHECK_NULL(weight, return false);
     OP_CHECK_NULL(indices, return false);
@@ -76,9 +74,9 @@ static inline bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, const aclTensor* perSampleWeights,
-    const aclTensor* output, const aclTensor* offset2bag, const aclTensor* bagSize, const aclTensor* maxIndices)
+static bool CheckDtypeValid(const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets,
+                            const aclTensor* perSampleWeights, const aclTensor* output, const aclTensor* offset2bag,
+                            const aclTensor* bagSize, const aclTensor* maxIndices)
 {
     // 检查weight的数据类型是否在算子的支持列表内
     if (weight != nullptr) {
@@ -98,27 +96,25 @@ static bool CheckDtypeValid(
 
     // 检查indices和offsets的数据类型是否有一个达到了INT32/INT64
     if (!CheckType(indices->GetDataType(), INT_DTYPE_LIST) && !CheckType(offsets->GetDataType(), INT_DTYPE_LIST)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "indices or offsets must has one dtype in [int32, int64], "
-            "but get indices dtype %s, offsets dtype %s.",
-            op::ToString(indices->GetDataType()).GetString(), op::ToString(offsets->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "indices or offsets must has one dtype in [int32, int64], "
+                "but get indices dtype %s, offsets dtype %s.",
+                op::ToString(indices->GetDataType()).GetString(), op::ToString(offsets->GetDataType()).GetString());
         return false;
     }
 
     // 检查perSampleWeights的数据类型是否与weight相同
     if (perSampleWeights != nullptr && weight->GetDataType() != perSampleWeights->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "perSampleWeights dtype %s should be in same with weight dtype %s.",
-            op::ToString(perSampleWeights->GetDataType()).GetString(), op::ToString(weight->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "perSampleWeights dtype %s should be in same with weight dtype %s.",
+                op::ToString(perSampleWeights->GetDataType()).GetString(),
+                op::ToString(weight->GetDataType()).GetString());
         return false;
     }
 
     // 检查weight和output的数据类型一致
     if (weight->GetDataType() != output->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "output dtype %s should be in same with weight dtype %s.",
-            op::ToString(output->GetDataType()).GetString(), op::ToString(weight->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output dtype %s should be in same with weight dtype %s.",
+                op::ToString(output->GetDataType()).GetString(), op::ToString(weight->GetDataType()).GetString());
         return false;
     }
 
@@ -139,9 +135,9 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckDims(
-    const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, const aclTensor* perSampleWeights,
-    const std::string& modeStr, const aclTensor* output, const aclTensor* offset2bag, const aclTensor* bagSize, const aclTensor* maxIndices)
+static bool CheckDims(const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets,
+                      const aclTensor* perSampleWeights, const std::string& modeStr, const aclTensor* output,
+                      const aclTensor* offset2bag, const aclTensor* bagSize, const aclTensor* maxIndices)
 {
     if (weight != nullptr) {
         OP_CHECK_MAX_DIM(weight, MAX_SUPPORT_DIM, return false);
@@ -161,7 +157,7 @@ static bool CheckDims(
     }
 
     if (perSampleWeights != nullptr) {
-        if (Ops::NN::AclnnUtil::IsRegbase()){
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             OP_CHECK_MAX_DIM(perSampleWeights, MAX_SUPPORT_DIM, return false);
             OP_CHECK_MIN_DIM(perSampleWeights, MIN_SUPPORT_DIM, return false);
         } else {
@@ -184,7 +180,7 @@ static bool CheckDims(
     }
 
     if (maxIndices != nullptr) {
-        if (Ops::NN::AclnnUtil::IsRegbase()){
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             OP_CHECK_MAX_DIM(maxIndices, MAX_SUPPORT_DIM, return false);
         } else {
             if (modeStr == "max") {
@@ -198,8 +194,7 @@ static bool CheckDims(
     return true;
 }
 
-static op::Shape GetOutPutShape(
-    const aclTensor* weight, const aclTensor* offsets, bool includeLastOffset)
+static op::Shape GetOutPutShape(const aclTensor* weight, const aclTensor* offsets, bool includeLastOffset)
 {
     op::Shape outputShape;
     int64_t offsetSize = offsets->GetViewShape().GetShapeSize();
@@ -211,24 +206,22 @@ static op::Shape GetOutPutShape(
     return outputShape;
 }
 
-static bool CheckShape(
-    const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, const aclTensor* perSampleWeights,
-    const std::string& modeStr, bool includeLastOffset, const aclTensor* output, const aclTensor* offset2bag,
-    const aclTensor* bagSize, const aclTensor* maxIndices)
-{   
+static bool CheckShape(const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets,
+                       const aclTensor* perSampleWeights, const std::string& modeStr, bool includeLastOffset,
+                       const aclTensor* output, const aclTensor* offset2bag, const aclTensor* bagSize,
+                       const aclTensor* maxIndices)
+{
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         if (modeStr != "sum" && perSampleWeights != nullptr) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "per_sample_weights only supported with mode='sum'");
             return false;
         }
     }
-    
+
     if (perSampleWeights != nullptr &&
         indices->GetViewShape().GetShapeSize() != perSampleWeights->GetViewShape().GetShapeSize()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected indices->GetViewShape().GetShapeSize() == perSampleWeights"
-            "->GetViewShape().GetShapeSize() to be true, but got false");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected indices->GetViewShape().GetShapeSize() == perSampleWeights"
+                                         "->GetViewShape().GetShapeSize() to be true, but got false");
         return false;
     }
 
@@ -237,46 +230,43 @@ static bool CheckShape(
 
     if (offset2bag->GetViewShape().GetShapeSize() != 0 &&
         offset2bag->GetViewShape().GetShapeSize() != indices->GetViewShape().GetShapeSize()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "offset2bag shape size should be %ld,but got %ld.",
-            indices->GetViewShape().GetShapeSize(), offset2bag->GetViewShape().GetShapeSize());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "offset2bag shape size should be %ld,but got %ld.",
+                indices->GetViewShape().GetShapeSize(), offset2bag->GetViewShape().GetShapeSize());
         return false;
-    }   
+    }
 
-    if (Ops::NN::AclnnUtil::IsRegbase()){
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
-                offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
+                    offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
             return false;
-        }  
+        }
     } else {
         if (includeLastOffset) {
             if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0) - 1) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
-                    offsets->GetViewShape().GetShapeSize() - 1, bagSize->GetViewShape().GetShapeSize());
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
+                        offsets->GetViewShape().GetShapeSize() - 1, bagSize->GetViewShape().GetShapeSize());
                 return false;
             }
         } else {
             if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0)) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld, but got %ld.",
-                    offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld, but got %ld.",
+                        offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
                 return false;
             }
         }
     }
-    
+
     if (modeStr == "max") {
         auto maxIndicesShape = GetOutPutShape(weight, offsets, includeLastOffset);
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(maxIndices, maxIndicesShape, return false);
     } else {
         if (!Ops::NN::AclnnUtil::IsRegbase()) {
-            int64_t expectedSize = includeLastOffset ? offsets->GetViewShape().GetDim(0) - 1 : offsets->GetViewShape().GetDim(0);
+            int64_t expectedSize = includeLastOffset ? offsets->GetViewShape().GetDim(0) - 1 :
+                                                       offsets->GetViewShape().GetDim(0);
             if (maxIndices->GetViewShape().GetShapeSize() != expectedSize) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "maxIndices shape size should be %ld, but got %ld.",expectedSize,
-                maxIndices->GetViewShape().GetShapeSize());
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "maxIndices shape size should be %ld, but got %ld.", expectedSize,
+                        maxIndices->GetViewShape().GetShapeSize());
                 return false;
             }
         }
@@ -284,30 +274,25 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, const std::string& modeStr,
-    const aclTensor* perSampleWeights, bool includeLastOffset, aclTensor* output, aclTensor* offset2bag,
-    aclTensor* bagSize, aclTensor* maxIndices)
+static aclnnStatus CheckParams(const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets,
+                               const std::string& modeStr, const aclTensor* perSampleWeights, bool includeLastOffset,
+                               aclTensor* output, aclTensor* offset2bag, aclTensor* bagSize, aclTensor* maxIndices)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(weight, indices, offsets, output, offset2bag, bagSize, maxIndices), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(
-        CheckDtypeValid(weight, indices, offsets, perSampleWeights, output, offset2bag, bagSize, maxIndices),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(weight, indices, offsets, perSampleWeights, output, offset2bag, bagSize, maxIndices),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的dim 是否满足
-    CHECK_RET(
-        CheckDims(weight, indices, offsets, perSampleWeights, modeStr, output, offset2bag, bagSize, maxIndices),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDims(weight, indices, offsets, perSampleWeights, modeStr, output, offset2bag, bagSize, maxIndices),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输入形状是否满足
-    CHECK_RET(
-        CheckShape(
-            weight, indices, offsets, perSampleWeights, modeStr, includeLastOffset, output, offset2bag, bagSize,
-            maxIndices),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(weight, indices, offsets, perSampleWeights, modeStr, includeLastOffset, output, offset2bag,
+                         bagSize, maxIndices),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -323,27 +308,27 @@ static std::string getModeStr(const int64_t mode)
     return modeStr;
 }
 
-aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
-    const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets, bool scaleGradByFreq, int64_t mode,
-    bool sparse, const aclTensor* perSampleWeights, bool includeLastOffset, int64_t paddingIdx, aclTensor* output,
-    aclTensor* offset2bag, aclTensor* bagSize, aclTensor* maxIndices, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(const aclTensor* weight, const aclTensor* indices,
+                                              const aclTensor* offsets, bool scaleGradByFreq, int64_t mode, bool sparse,
+                                              const aclTensor* perSampleWeights, bool includeLastOffset,
+                                              int64_t paddingIdx, aclTensor* output, aclTensor* offset2bag,
+                                              aclTensor* bagSize, aclTensor* maxIndices, uint64_t* workspaceSize,
+                                              aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnEmbeddingBag,
-        DFX_IN(
-            weight, indices, offsets, scaleGradByFreq, mode, sparse, perSampleWeights, includeLastOffset, paddingIdx),
-        DFX_OUT(output, offset2bag, bagSize, maxIndices));
+    L2_DFX_PHASE_1(aclnnEmbeddingBag,
+                   DFX_IN(weight, indices, offsets, scaleGradByFreq, mode, sparse, perSampleWeights, includeLastOffset,
+                          paddingIdx),
+                   DFX_OUT(output, offset2bag, bagSize, maxIndices));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        weight, indices, offsets, getModeStr(mode), perSampleWeights, includeLastOffset, output, offset2bag, bagSize,
-        maxIndices);
+    auto ret = CheckParams(weight, indices, offsets, getModeStr(mode), perSampleWeights, includeLastOffset, output,
+                           offset2bag, bagSize, maxIndices);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (weight->IsEmpty() || indices->IsEmpty() || offsets->IsEmpty()) {
@@ -356,9 +341,8 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
     auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
     auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
     auto offsetsContiguous = l0op::Contiguous(offsets, uniqueExecutor.get());
-    CHECK_RET(
-        weightContiguous != nullptr && indicesContiguous != nullptr && offsetsContiguous != nullptr,
-        ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(weightContiguous != nullptr && indicesContiguous != nullptr && offsetsContiguous != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
 
     // 将输入per_sample_weights转换成连续的tensor
     auto perSampleWeightsContiguous = perSampleWeights;
@@ -382,7 +366,7 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
         } else {
             offsetsCast = l0op::Cast(offsetsContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
         }
-    }else {
+    } else {
         indicesCast = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
         offsetsCast = l0op::Cast(offsetsContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
     }
@@ -390,13 +374,12 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
 
     static const std::string modeStr[] = {"sum", "mean"};
     static const std::string modeMax = "max";
-    auto result = l0op::EmbeddingBag(
-        weightContiguous, indicesCast, offsetsCast, scaleGradByFreq, (mode != 0 && mode != 1) ? modeMax : modeStr[mode],
-        sparse, perSampleWeightsContiguous, includeLastOffset, paddingIdx, uniqueExecutor.get());
-    CHECK_RET(
-        std::get<0>(result) != nullptr && std::get<1>(result) != nullptr && std::get<BAG_SIZE_DIM>(result) != nullptr &&
-            std::get<MAX_INDICES_DIM>(result) != nullptr,
-        ACLNN_ERR_INNER_NULLPTR);
+    auto result = l0op::EmbeddingBag(weightContiguous, indicesCast, offsetsCast, scaleGradByFreq,
+                                     (mode != 0 && mode != 1) ? modeMax : modeStr[mode], sparse,
+                                     perSampleWeightsContiguous, includeLastOffset, paddingIdx, uniqueExecutor.get());
+    CHECK_RET(std::get<0>(result) != nullptr && std::get<1>(result) != nullptr &&
+                  std::get<BAG_SIZE_DIM>(result) != nullptr && std::get<MAX_INDICES_DIM>(result) != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyOutputResult = l0op::ViewCopy(std::get<0>(result), output, uniqueExecutor.get());
 
@@ -411,16 +394,14 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
     CHECK_RET(bagSizeL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyBagSizeL0CastResult = l0op::ViewCopy(bagSizeL0Cast, bagSize, uniqueExecutor.get());
     auto maxIndicesShapeSize = std::get<3>(result)->GetViewShape().GetShapeSize();
-    CHECK_RET(
-        viewCopyOutputResult != nullptr && viewCopyBagSizeL0CastResult != nullptr,
-        ACLNN_ERR_INNER_NULLPTR);
-    if (maxIndicesShapeSize != 0){
+    CHECK_RET(viewCopyOutputResult != nullptr && viewCopyBagSizeL0CastResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (maxIndicesShapeSize != 0) {
         auto maxIndicesL0Cast = l0op::Cast(std::get<3>(result), maxIndices->GetDataType(), uniqueExecutor.get());
         CHECK_RET(maxIndicesL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyMaxIndicesL0CastResult = l0op::ViewCopy(maxIndicesL0Cast, maxIndices, uniqueExecutor.get());
         CHECK_RET(viewCopyMaxIndicesL0CastResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    
+
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor

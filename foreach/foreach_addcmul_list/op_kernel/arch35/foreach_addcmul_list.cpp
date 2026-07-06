@@ -17,9 +17,8 @@
 using namespace ForeachAddcmulList;
 
 template <typename T, typename ScalarT>
-__aicore__ inline void ForeachAddcmulListImpl(
-    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachAddcmulListImpl(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars,
+                                              GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
@@ -28,20 +27,19 @@ __aicore__ inline void ForeachAddcmulListImpl(
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_addcmul_list(
-    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcmul_list(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2,
+                                                           GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachAddcmulListImpl<half, half>(
-            inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+        ForeachAddcmulListImpl<half, half>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
         ForeachAddcmulListImpl<float, float>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_INT)) {
         ForeachAddcmulListImpl<int, int>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachAddcmulListImpl<bfloat16_t, bfloat16_t>(
-            inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+        ForeachAddcmulListImpl<bfloat16_t, bfloat16_t>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling,
+                                                       &pipeOp);
     }
 }

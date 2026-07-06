@@ -62,12 +62,10 @@ inline static const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 
 ge::graphStatus AscendQuantRegbase::DoAscendQuantTiling()
 {
-    OP_CHECK_IF(
-        (GetPlatform() != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "DoAscendQuantTiling GetPlatform Failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (GetOpParam() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "DoAscendQuantTiling GetOpParam Failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((GetPlatform() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "DoAscendQuantTiling GetPlatform Failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((GetOpParam() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "DoAscendQuantTiling GetOpParam Failed."), return ge::GRAPH_FAILED);
 
     CalcTiling();
     CalcTilingKey();
@@ -87,15 +85,13 @@ ge::graphStatus AscendQuantRegbase::GetPlatform()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
 
     uint32_t coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (static_cast<int32_t>(coreNum) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((static_cast<int32_t>(coreNum) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        (static_cast<int64_t>(ubSize) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((static_cast<int64_t>(ubSize) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
 
     coreNum_ = static_cast<int64_t>(coreNum);
     ubSize_ = ubSize;
@@ -108,22 +104,19 @@ ge::graphStatus AscendQuantRegbase::CheckDtype()
     auto xInputDesc = context_->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     xDtype_ = xInputDesc->GetDataType();
-    OP_CHECK_IF(
-        xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_), "DT_FLOAT16, DT_FLOAT"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_),
+                                          "DT_FLOAT16, DT_FLOAT"),
+                return ge::GRAPH_FAILED);
 
     auto yOutputDesc = context_->GetOutputDesc(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputDesc);
     yDtype_ = yOutputDesc->GetDataType();
-    OP_CHECK_IF(
-        yDtype_ != ge::DT_INT8 && yDtype_ != ge::DT_INT4 && yDtype_ != ge::DT_HIFLOAT8 &&
-            yDtype_ != ge::DT_FLOAT8_E5M2 && yDtype_ != ge::DT_FLOAT8_E4M3FN,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_),
-            "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDtype_ != ge::DT_INT8 && yDtype_ != ge::DT_INT4 && yDtype_ != ge::DT_HIFLOAT8 &&
+                    yDtype_ != ge::DT_FLOAT8_E5M2 && yDtype_ != ge::DT_FLOAT8_E4M3FN,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_),
+                                          "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -190,15 +183,16 @@ ge::graphStatus AscendQuantRegbase::CheckAttrs()
     // check dstType and output dtype, must be same
     if (dstType_ != ge::DT_INT8 && dstType_ != ge::DT_INT4 && dstType_ != ge::DT_HIFLOAT8 &&
         dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT8_E4M3FN) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "dst_type", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)),
-            "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dst_type",
+                                  ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)),
+                                  "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN");
         return ge::GRAPH_FAILED;
     }
     if (dstType_ != yDtype_) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(), "dst_type, y",
-            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype_),
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)) + ", " +
+                ge::TypeUtils::DataTypeToSerialString(yDtype_),
             "The dtype of dst_type must be the same as the dtype of y");
         return ge::GRAPH_FAILED;
     }
@@ -206,10 +200,9 @@ ge::graphStatus AscendQuantRegbase::CheckAttrs()
     // check round mode
     std::string roundModeStr = roundMode;
     roundMode_ = GetRoundMode(roundModeStr);
-    OP_CHECK_IF(
-        (roundMode_ == RoundMode::MODE_UNDEFINED),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, errorMsg_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((roundMode_ == RoundMode::MODE_UNDEFINED),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, errorMsg_),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -219,19 +212,18 @@ ge::graphStatus AscendQuantRegbase::CheckShape(const gert::Shape& xShape, const 
     size_t xDimNum = xShape.GetDimNum();
     if (xDimNum > MAX_SHAPE_DIM_NUM || xDimNum < MIN_SHAPE_DIM_NUM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xDimNum),
-                                                  "The shape dim of x must be within the range [1,8]");
+                                                 "The shape dim of x must be within the range [1,8]");
         return ge::GRAPH_FAILED;
     }
     if (dstType_ == ge::DT_INT4 && (xShape.GetDim(xDimNum - 1) % INT4_NUMS_IN_INT8_SPACE)) {
-         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-             Ops::Base::ToString(xShape),
-             "When dstDype is DT_INT4, the tail axis of x must be an even number");
-         return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xShape),
+                                              "When dstDype is DT_INT4, the tail axis of x must be an even number");
+        return ge::GRAPH_FAILED;
     }
     if (xShape != yShape) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, y",
-                                                Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
-                                                "The shapes of x and y must be the same");
+                                               Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
+                                               "The shapes of x and y must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -264,22 +256,18 @@ ge::graphStatus AscendQuantRegbase::GetOpParam()
 
     size_t xSizeNum = xInputShape.GetShapeSize();
     if (xSizeNum == 0ULL) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", "0",
-                                            "x does not support empty tensor");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", "0", "x does not support empty tensor");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        (CheckDtype() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "check input/output dtype failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckDtype() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "check input/output dtype failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckAttrs() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "op attrs is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckAttrs() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "op attrs is invalid."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckShape(xInputShape, yOutputShape) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "input/output shape is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckShape(xInputShape, yOutputShape) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "input/output shape is invalid."), return ge::GRAPH_FAILED);
 
     MergeInputShape(xInputShape);
 
@@ -351,17 +339,15 @@ void AscendQuantRegbase::WriteTilingData()
     context_->SetBlockDim(coreNum_);
     context_->SetTilingKey(tilingKey_);
 
-    OP_LOGD(
-        context_->GetNodeName(), "scale:%f, offset:%f, roundMode:%d, dstType:%d", scale_, offset_,
-        static_cast<int16_t>(roundMode_), dstType_);
+    OP_LOGD(context_->GetNodeName(), "scale:%f, offset:%f, roundMode:%d, dstType:%d", scale_, offset_,
+            static_cast<int16_t>(roundMode_), dstType_);
     AscendQuantTilingData* tilingData_ = context_->GetTilingData<AscendQuantTilingData>();
     tilingData_->roundMode = static_cast<int64_t>(roundMode_);
     tilingData_->scale = scale_;
     tilingData_->offset = offset_;
 
-    OP_LOGD(
-        context_->GetNodeName(), "actCoreNum:%ld, blockFactor:%ld, blockTailFactor:%ld, baseLen:%ld", actCoreNum_,
-        blockFactor_, blockTailFactor_, baseLen_);
+    OP_LOGD(context_->GetNodeName(), "actCoreNum:%ld, blockFactor:%ld, blockTailFactor:%ld, baseLen:%ld", actCoreNum_,
+            blockFactor_, blockTailFactor_, baseLen_);
     tilingData_->numCore = actCoreNum_;
     tilingData_->blockFactor = blockFactor_;
     tilingData_->blockTailFactor = blockTailFactor_;

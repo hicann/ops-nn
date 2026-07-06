@@ -54,9 +54,9 @@ TILING_DATA_FIELD_DEF(uint64_t, tailCastNum);              // 19
 TILING_DATA_FIELD_DEF(uint64_t, coreBatchParts);           // 20
 TILING_DATA_FIELD_DEF(uint64_t, coreBatchPartsTailRepeat); // 21
 TILING_DATA_FIELD_DEF(uint64_t, repeatTime4Stage2);        // 22
-TILING_DATA_FIELD_DEF(uint64_t, dx_is_require);             // 23
-TILING_DATA_FIELD_DEF(uint64_t, dgamma_is_require);         // 24
-TILING_DATA_FIELD_DEF(uint64_t, dbeta_is_require);          // 25
+TILING_DATA_FIELD_DEF(uint64_t, dx_is_require);            // 23
+TILING_DATA_FIELD_DEF(uint64_t, dgamma_is_require);        // 24
+TILING_DATA_FIELD_DEF(uint64_t, dbeta_is_require);         // 25
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GroupNormGrad, GroupNormGradTilingData)

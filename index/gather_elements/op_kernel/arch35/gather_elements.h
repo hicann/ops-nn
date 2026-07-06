@@ -25,17 +25,18 @@ using namespace AscendC;
 template <typename X_T, typename INDEX_T, typename COM_T, int32_t DIM_NUM, int32_t AXIS>
 class GatherElementsKernel {
 public:
-    __aicore__ inline GatherElementsKernel(TPipe &pipe) : pipe_(pipe) {};
+    __aicore__ inline GatherElementsKernel(TPipe& pipe) : pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR index, GM_ADDR y, const GatherElementsTilingData* tilingData);
     __aicore__ inline void ProcessOptim(__gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
-        __gm__ const GatherElementsTilingData* tilingData);
+                                        __gm__ const GatherElementsTilingData* tilingData);
     __aicore__ inline void Process();
+
 private:
     AscendC::GlobalTensor<X_T> xGm_;
     AscendC::GlobalTensor<INDEX_T> indexGm_;
     AscendC::GlobalTensor<X_T> yGm_;
-    TPipe &pipe_;
-    const GatherElementsTilingData *tilingData_;
+    TPipe& pipe_;
+    const GatherElementsTilingData* tilingData_;
     TBuf<TPosition::VECCALC> magicAndShiftBuf_;
 
     COM_T shift_[M_SHIFT_OFFSET];
@@ -49,23 +50,21 @@ private:
 };
 
 template <typename X_T, typename INDEX_T, typename COM_T, int32_t DIM_NUM, int32_t AXIS>
-__aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>::Init(GM_ADDR x, GM_ADDR index,
-    GM_ADDR y, const GatherElementsTilingData* tilingData)
+__aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>::Init(
+    GM_ADDR x, GM_ADDR index, GM_ADDR y, const GatherElementsTilingData* tilingData)
 {
     tilingData_ = tilingData;
-    xGm_.SetGlobalBuffer((__gm__ X_T *)x);
-    indexGm_.SetGlobalBuffer((__gm__ INDEX_T *)index);
-    yGm_.SetGlobalBuffer((__gm__ X_T *)y);
+    xGm_.SetGlobalBuffer((__gm__ X_T*)x);
+    indexGm_.SetGlobalBuffer((__gm__ INDEX_T*)index);
+    yGm_.SetGlobalBuffer((__gm__ X_T*)y);
     pipe_.InitBuffer(magicAndShiftBuf_, SIMT_BUF_SIZE);
 }
 
-__aicore__ inline uint32_t ConvertDimIdx(uint32_t dimSize, uint32_t curDim)
-{
-    return curDim + (MAX_DIM_LEN - dimSize);
-}
+__aicore__ inline uint32_t ConvertDimIdx(uint32_t dimSize, uint32_t curDim) { return curDim + (MAX_DIM_LEN - dimSize); }
 
 template <typename X_T, typename INDEX_T, typename U>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim1Compute(__gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim1Compute(
+    __gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
     __gm__ const GatherElementsTilingData* tiling)
 {
     GET_TILING_DATA_PTR_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
@@ -74,14 +73,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim1Compu
     }
     U coreOffset = static_cast<U>(blockIdx.x * tilingData->perCoreNum);
     U batchNum = static_cast<U>((blockIdx.x == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
-        tilingData->perCoreNum) + coreOffset;
+                                                                           tilingData->perCoreNum) +
+                 coreOffset;
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         yAddr[i] = xAddr[indexAddr[i]];
     }
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compute(__gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compute(
+    __gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
     __gm__ const GatherElementsTilingData* tiling)
 {
     GET_TILING_DATA_PTR_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
@@ -90,7 +91,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compu
     }
     U coreOffset = static_cast<U>(blockIdx.x * tilingData->perCoreNum);
     U batchNum = static_cast<U>((blockIdx.x == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
-        tilingData->perCoreNum) + coreOffset;
+                                                                           tilingData->perCoreNum) +
+                 coreOffset;
     U magic = tilingData->magic[MS_IDX6];
     U shift = tilingData->shift[MS_IDX6];
     U indexStride = tilingData->indexStrideArr[MS_IDX6];
@@ -109,8 +111,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compu
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim3Compute(__gm__ INDEX_T* indexGm,
-    __gm__ X_T* yGm, __gm__ X_T* xGm, U m, U shift, U m1, U shift1, U indexStride, U xStridex,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim3Compute(
+    __gm__ INDEX_T* indexGm, __gm__ X_T* yGm, __gm__ X_T* xGm, U m, U shift, U m1, U shift1, U indexStride, U xStridex,
     U indexStride1, U xStridex1, U batchNum, U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
@@ -132,8 +134,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim3Compu
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim4Compute(__gm__ INDEX_T* indexGm,
-    __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
-    U batchNum, U coreOffset)
+                                                                                   __gm__ X_T* yGm, __gm__ X_T* xGm,
+                                                                                   __local_mem__ U* mAndShiftAddr,
+                                                                                   __local_mem__ U* strideAddr,
+                                                                                   U batchNum, U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -149,28 +153,30 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim4Compu
 
         if constexpr (AXIS == 0) {
             yGm[i] = xGm[indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim3Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim3Index];
         } else if constexpr (AXIS == 1) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim3Index];
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim3Index];
         } else if constexpr (AXIS == DIM2) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim3Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim3Index];
         } else {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
         }
     }
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim5Compute(__gm__ INDEX_T* indexGm,
-    __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
-    U batchNum, U coreOffset)
+                                                                                   __gm__ X_T* yGm, __gm__ X_T* xGm,
+                                                                                   __local_mem__ U* mAndShiftAddr,
+                                                                                   __local_mem__ U* strideAddr,
+                                                                                   U batchNum, U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -187,34 +193,41 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim5Compu
         U dim3Index = Simt::UintDiv(newIdx2, mAndShiftAddr[MS_IDX6], mAndShiftAddr[M_SHIFT_OFFSET + MS_IDX6]);
         U dim4Index = newIdx2 - dim3Index * strideAddr[MS_IDX6];
 
-       if constexpr (AXIS == 0) {
+        if constexpr (AXIS == 0) {
             yGm[i] = xGm[indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
         } else if constexpr (AXIS == 1) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
         } else if constexpr (AXIS == DIM2) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
         } else if constexpr (AXIS == DIM3) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim4Index];
         } else {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
         }
     }
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim6Compute(__gm__ INDEX_T* indexGm,
-    __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
-    U batchNum, U coreOffset)
+                                                                                  __gm__ X_T* yGm, __gm__ X_T* xGm,
+                                                                                  __local_mem__ U* mAndShiftAddr,
+                                                                                  __local_mem__ U* strideAddr,
+                                                                                  U batchNum, U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -235,42 +248,50 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim6Comput
         U dim5Index = newIdx2 - dim4Index * strideAddr[MS_IDX6];
         if constexpr (AXIS == 0) {
             yGm[i] = xGm[indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
         } else if constexpr (AXIS == 1) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
         } else if constexpr (AXIS == DIM2) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
         } else if constexpr (AXIS == DIM3) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
         } else if constexpr (AXIS == DIM4) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim5Index];
         } else {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
         }
     }
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim7Compute(__gm__ INDEX_T* indexGm,
-    __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
-    U batchNum, U coreOffset)
+                                                                                  __gm__ X_T* yGm, __gm__ X_T* xGm,
+                                                                                  __local_mem__ U* mAndShiftAddr,
+                                                                                  __local_mem__ U* strideAddr,
+                                                                                  U batchNum, U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -295,47 +316,63 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim7Comput
 
         if constexpr (AXIS == 0) {
             yGm[i] = xGm[indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
         } else if constexpr (AXIS == 1) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
         } else if constexpr (AXIS == DIM2) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
         } else if constexpr (AXIS == DIM3) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
         } else if constexpr (AXIS == DIM4) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
         } else if constexpr (AXIS == DIM5) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim6Index];
         } else if constexpr (AXIS == DIM6) {
             yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
+                         dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
+                         dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                         dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
+                         dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                         dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
         }
     }
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim8Compute(__gm__ INDEX_T* indexGm,
-    __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
-    U batchNum, U coreOffset)
+                                                                                  __gm__ X_T* yGm, __gm__ X_T* xGm,
+                                                                                  __local_mem__ U* mAndShiftAddr,
+                                                                                  __local_mem__ U* strideAddr,
+                                                                                  U batchNum, U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -362,67 +399,67 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim8Comput
         U dim7Index = newIdx2 - dim6Index * strideAddr[MS_IDX6];
 
         if constexpr (AXIS == 0) {
-            yGm[i] = xGm[indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else if constexpr (AXIS == 1) {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else if constexpr (AXIS == DIM2) {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else if constexpr (AXIS == DIM3) {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else if constexpr (AXIS == DIM4) {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else if constexpr (AXIS == DIM5) {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else if constexpr (AXIS == DIM6) {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 indexVal * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + dim7Index];
         } else {
-            yGm[i] = xGm[dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] +
-                dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] + dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] +
-                dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] + dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] +
-                dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
-                dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
+            yGm[i] = xGm
+                [dim0Index * strideAddr[M_SHIFT_OFFSET + MS_IDX0] + dim1Index * strideAddr[M_SHIFT_OFFSET + MS_IDX1] +
+                 dim2Index * strideAddr[M_SHIFT_OFFSET + MS_IDX2] + dim3Index * strideAddr[M_SHIFT_OFFSET + MS_IDX3] +
+                 dim4Index * strideAddr[M_SHIFT_OFFSET + MS_IDX4] + dim5Index * strideAddr[M_SHIFT_OFFSET + MS_IDX5] +
+                 dim6Index * strideAddr[M_SHIFT_OFFSET + MS_IDX6] + indexVal];
         }
     }
 }
 
 template <typename X_T, typename INDEX_T, typename COM_T, int32_t DIM_NUM, int32_t AXIS>
-__aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>::ProcessOptim(__gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
+__aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>::ProcessOptim(
+    __gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
     __gm__ const GatherElementsTilingData* tilingData)
 {
     if constexpr (DIM_NUM == DIM1) {
-        asc_vf_call<GatherDim1Compute<X_T, INDEX_T, COM_T>>(dim3(THREAD_DIM_2048),
-            xAddr, indexAddr, yAddr, tilingData);
+        asc_vf_call<GatherDim1Compute<X_T, INDEX_T, COM_T>>(dim3(THREAD_DIM_2048), xAddr, indexAddr, yAddr, tilingData);
     } else if constexpr (DIM_NUM == DIM2) {
-        asc_vf_call<GatherDim2Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_2048),
-            xAddr, indexAddr, yAddr, tilingData);
+        asc_vf_call<GatherDim2Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_2048), xAddr, indexAddr, yAddr,
+                                                                  tilingData);
     }
 }
 
@@ -433,7 +470,8 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
         return;
     }
     LocalTensor<COM_T> mAndShiftLocal = magicAndShiftBuf_.Get<COM_T>(OFFSET7_B64_NUM);
-    LocalTensor<COM_T> strideLocal = magicAndShiftBuf_.GetWithOffset<COM_T>(OFFSET8_B64_NUM, OFFSET7_B64_NUM * UINT64_SIZE_BYTE);
+    LocalTensor<COM_T> strideLocal = magicAndShiftBuf_.GetWithOffset<COM_T>(OFFSET8_B64_NUM,
+                                                                            OFFSET7_B64_NUM * UINT64_SIZE_BYTE);
 
     for (int64_t i = MAX_DIM_LEN - DIM_NUM; i < M_SHIFT_OFFSET; i++) {
         GetUintDivMagicAndShift(m_[i], shift_[i], static_cast<COM_T>(tilingData_->indexStrideArr[i]));
@@ -448,7 +486,8 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
 
     COM_T coreOffset = static_cast<COM_T>(GetBlockIdx() * tilingData_->perCoreNum);
     COM_T batchNum = static_cast<COM_T>((GetBlockIdx() == tilingData_->usedCore - 1) ? tilingData_->tailCoreNum :
-        tilingData_->perCoreNum) + coreOffset;
+                                                                                       tilingData_->perCoreNum) +
+                     coreOffset;
     __gm__ INDEX_T* indexAddr = (__gm__ INDEX_T*)(indexGm_.GetPhyAddr());
     __gm__ X_T* yAddr = (__gm__ X_T*)(yGm_.GetPhyAddr());
     __gm__ X_T* xAddr = (__gm__ X_T*)(xGm_.GetPhyAddr());
@@ -456,27 +495,27 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     __local_mem__ COM_T* strideAddr = (__local_mem__ COM_T*)(strideLocal.GetPhyAddr());
 
     if constexpr (DIM_NUM == DIM3) {
-        asc_vf_call<GatherDim3Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_2048),
-            indexAddr, yAddr, xAddr, m_[MS_IDX5], shift_[MS_IDX5], m_[MS_IDX6], shift_[MS_IDX6],
+        asc_vf_call<GatherDim3Compute<X_T, INDEX_T, COM_T, AXIS>>(
+            dim3(THREAD_DIM_2048), indexAddr, yAddr, xAddr, m_[MS_IDX5], shift_[MS_IDX5], m_[MS_IDX6], shift_[MS_IDX6],
             static_cast<COM_T>(tilingData_->indexStrideArr[MS_IDX5]),
             static_cast<COM_T>(tilingData_->xStrideArr[MS_IDX5]),
             static_cast<COM_T>(tilingData_->indexStrideArr[MS_IDX6]),
             static_cast<COM_T>(tilingData_->xStrideArr[MS_IDX6]), batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM4) {
-        asc_vf_call<GatherDim4Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_1024),
-            indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
+        asc_vf_call<GatherDim4Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_1024), indexAddr, yAddr, xAddr,
+                                                                  mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM5) {
-        asc_vf_call<GatherDim5Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_1024),
-            indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
+        asc_vf_call<GatherDim5Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_1024), indexAddr, yAddr, xAddr,
+                                                                  mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM6) {
-        asc_vf_call<GatherDim6Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512),
-            indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
+        asc_vf_call<GatherDim6Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512), indexAddr, yAddr, xAddr,
+                                                                  mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM7) {
-        asc_vf_call<GatherDim7Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512),
-            indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
+        asc_vf_call<GatherDim7Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512), indexAddr, yAddr, xAddr,
+                                                                  mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else {
-        asc_vf_call<GatherDim8Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512),
-            indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
+        asc_vf_call<GatherDim8Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512), indexAddr, yAddr, xAddr,
+                                                                  mAndShiftAddr, strideAddr, batchNum, coreOffset);
     }
 }
 } // namespace GatherElements

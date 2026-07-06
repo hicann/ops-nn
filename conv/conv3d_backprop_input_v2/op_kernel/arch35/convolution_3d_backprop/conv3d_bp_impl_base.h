@@ -23,11 +23,11 @@
 #include "kernel_common.h"
 #include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 
-using AscendC::TQue;
-using AscendC::TPipe;
-using AscendC::MmadParams;
 using AscendC::LoadData2DParams;
 using AscendC::LoadData3DParamsV2;
+using AscendC::MmadParams;
+using AscendC::TPipe;
+using AscendC::TQue;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
 using AscendC::LoadData2DParamsV2;
 #endif
@@ -66,7 +66,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
         DEFINE_STUCT_FIELD(TPipe, pipe_);
-        DEFINE_STUCT_FIELD(const conv_bp_v2_kernel::TConv3DInputV2Tiling *, tiling_);
+        DEFINE_STUCT_FIELD(const conv_bp_v2_kernel::TConv3DInputV2Tiling*, tiling_);
         DEFINE_STUCT_FIELD(uint64_t, mIter_);
         DEFINE_STUCT_FIELD(uint32_t, nIter_);
         DEFINE_STUCT_FIELD(uint64_t, kIter_);
@@ -220,6 +220,6 @@ public:
     };
 };
 
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 
 #endif

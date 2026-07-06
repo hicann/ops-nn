@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_sub_scalar_proto.h"
 
-class ForeachSubScalarTest : public testing::Test
-{
+class ForeachSubScalarTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSubScalar SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSubScalar SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSubScalar TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSubScalar TearDown" << std::endl; }
 };
 
 TEST_F(ForeachSubScalarTest, infer_shape_known_success)

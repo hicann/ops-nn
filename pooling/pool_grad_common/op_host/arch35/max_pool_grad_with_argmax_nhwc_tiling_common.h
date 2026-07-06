@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool_grad_with_argmax_nhwc_tiling_common.h
@@ -19,8 +19,7 @@
 #include "../../op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 #include "max_pool_grad_with_argmax_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t T3_INT64 = 10;
 struct MaxPoolGradWithArgmaxNHWCBaseInfo {
     int64_t vRegSize{0};
@@ -72,13 +71,9 @@ struct MaxPoolGradWithArgmaxNHWCSplitInfo {
     int64_t totalBufferSize{0};
 };
 
-class MaxPoolGradWithArgmaxNHWCTilingCommon
-{
+class MaxPoolGradWithArgmaxNHWCTilingCommon {
 public:
-    MaxPoolGradWithArgmaxNHWCTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input)
-        :inputData(input)
-    {
-    }
+    MaxPoolGradWithArgmaxNHWCTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input) : inputData(input) {}
     void InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData);
     ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key);
     ge::graphStatus PostTiling(gert::TilingContext* context_);
@@ -108,6 +103,6 @@ private:
     MaxPoolGradWithArgmaxInputInfoCommon* inputData;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

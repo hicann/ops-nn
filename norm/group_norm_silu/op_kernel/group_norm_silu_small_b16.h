@@ -21,18 +21,16 @@ namespace GroupNormSilu {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class GroupNormSiluSmallB16 : public GroupNormSiluBase<T1>
-{
+class GroupNormSiluSmallB16 : public GroupNormSiluBase<T1> {
 public:
     __aicore__ inline GroupNormSiluSmallB16(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CopyInX(
-        const int64_t& outIdx, const int64_t& dIdx, const int64_t& innerIdx, const int64_t& copyNum);
+    __aicore__ inline void CopyInX(const int64_t& outIdx, const int64_t& dIdx, const int64_t& innerIdx,
+                                   const int64_t& copyNum);
     __aicore__ inline void CopyInGammaAndBeta();
     __aicore__ inline void CastGammaAndBeta();
     __aicore__ inline void ComputeSumX(const int64_t& num);
@@ -40,18 +38,16 @@ private:
     __aicore__ inline void ComputeSilu(const int64_t& loopNum);
     __aicore__ inline void ComputeAlign(const int64_t& loopNum);
     __aicore__ inline void ComputeWithCopyOnce(const int64_t& loopNum);
-    __aicore__ inline void ComputeOutputAlign(
-        LocalTensor<float>& gammaUb32, LocalTensor<float>& betaUb32, const int64_t& cIdx, const float& rstd,
-        const float& mean);
-    __aicore__ inline void ComputeOutputTail(
-        LocalTensor<float>& gammaUb32, LocalTensor<float>& betaUb32, const int64_t& cIdx, const float& rstd,
-        const float& mean);
+    __aicore__ inline void ComputeOutputAlign(LocalTensor<float>& gammaUb32, LocalTensor<float>& betaUb32,
+                                              const int64_t& cIdx, const float& rstd, const float& mean);
+    __aicore__ inline void ComputeOutputTail(LocalTensor<float>& gammaUb32, LocalTensor<float>& betaUb32,
+                                             const int64_t& cIdx, const float& rstd, const float& mean);
     __aicore__ inline void AccumulateXandX2OneLoop(const int64_t& outIdx);
     __aicore__ inline void AccumulateXandX2MultipleLoop(const int64_t& outIdx);
     __aicore__ inline void NormaLizeX(const int64_t& xIdx, const float& scale, const float& bias);
     __aicore__ inline void CalcSiluAlign(const int64_t& calcNum);
-    __aicore__ inline void CopyOutY(
-        const int64_t& outIdx, const int64_t& dIdx, const int64_t& innerIdx, const int64_t& copyNum);
+    __aicore__ inline void CopyOutY(const int64_t& outIdx, const int64_t& dIdx, const int64_t& innerIdx,
+                                    const int64_t& copyNum);
     __aicore__ inline void CopyOutMeanAndRstd(const int64_t& copyNum);
     __aicore__ inline void ProcessPerCore(const int64_t& loopNum);
     constexpr static int32_t bufferNum = 2;
@@ -97,9 +93,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-    const GroupNormSiluTilingData* tilingData)
+__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu,
+                                                           GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                           const GroupNormSiluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     tiling = tilingData;
@@ -335,8 +331,8 @@ __aicore__ inline void GroupNormSiluSmallB16<T1, T2>::AccumulateXandX2MultipleLo
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::CopyInX(
-    const int64_t& outIdx, const int64_t& dIdx, const int64_t& innerIdx, const int64_t& copyNum)
+__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::CopyInX(const int64_t& outIdx, const int64_t& dIdx,
+                                                              const int64_t& innerIdx, const int64_t& copyNum)
 {
     LocalTensor<T1> xUb = inQueueX.AllocTensor<T1>();
     DataCopy(xUb, xGm[gmXOffset + outIdx * tiling->elemNum + dIdx * tiling->hwNum + innerIdx * processSize], copyNum);
@@ -359,8 +355,8 @@ __aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeSumX(const int64_t&
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::NormaLizeX(
-    const int64_t& xIdx, const float& scale, const float& bias)
+__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::NormaLizeX(const int64_t& xIdx, const float& scale,
+                                                                 const float& bias)
 {
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();
     LocalTensor<float> x2Ub32 = x2Buf32.Get<float>();
@@ -390,9 +386,10 @@ __aicore__ inline void GroupNormSiluSmallB16<T1, T2>::CalcSiluAlign(const int64_
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeOutputAlign(
-    LocalTensor<float>& gammaUb32, LocalTensor<float>& betaUb32, const int64_t& cIdx, const float& rstd,
-    const float& mean)
+__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeOutputAlign(LocalTensor<float>& gammaUb32,
+                                                                         LocalTensor<float>& betaUb32,
+                                                                         const int64_t& cIdx, const float& rstd,
+                                                                         const float& mean)
 {
     LocalTensor<T1> xUb = inQueueX.DeQue<T1>();
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();
@@ -416,9 +413,10 @@ __aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeOutputAlign(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeOutputTail(
-    LocalTensor<float>& gammaUb32, LocalTensor<float>& betaUb32, const int64_t& cIdx, const float& rstd,
-    const float& mean)
+__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeOutputTail(LocalTensor<float>& gammaUb32,
+                                                                        LocalTensor<float>& betaUb32,
+                                                                        const int64_t& cIdx, const float& rstd,
+                                                                        const float& mean)
 {
     LocalTensor<T1> xUb = inQueueX.DeQue<T1>();
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();
@@ -442,12 +440,12 @@ __aicore__ inline void GroupNormSiluSmallB16<T1, T2>::ComputeOutputTail(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::CopyOutY(
-    const int64_t& outIdx, const int64_t& dIdx, const int64_t& innerIdx, const int64_t& copyNum)
+__aicore__ inline void GroupNormSiluSmallB16<T1, T2>::CopyOutY(const int64_t& outIdx, const int64_t& dIdx,
+                                                               const int64_t& innerIdx, const int64_t& copyNum)
 {
     LocalTensor<T1> outSilu = outQueueSilu.DeQue<T1>();
-    DataCopy(
-        siluGm[gmXOffset + outIdx * tiling->elemNum + dIdx * tiling->hwNum + innerIdx * processSize], outSilu, copyNum);
+    DataCopy(siluGm[gmXOffset + outIdx * tiling->elemNum + dIdx * tiling->hwNum + innerIdx * processSize], outSilu,
+             copyNum);
     outQueueSilu.FreeTensor(outSilu);
 }
 

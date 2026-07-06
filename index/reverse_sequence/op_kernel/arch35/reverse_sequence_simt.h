@@ -41,20 +41,18 @@ struct ReverseSequenceQuickDivParam {
 };
 
 template <typename T, typename SeqType, typename CompType>
-class ReverseSequenceSimt
-{
+class ReverseSequenceSimt {
 public:
-    __aicore__ inline ReverseSequenceSimt(TPipe *pipe, const ReverseSequenceSimtTilingData4RegBase *tilingData)
-                        : pipe_(pipe), tilingData_(tilingData){};
+    __aicore__ inline ReverseSequenceSimt(TPipe* pipe, const ReverseSequenceSimtTilingData4RegBase* tilingData)
+        : pipe_(pipe), tilingData_(tilingData){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR seqLengths, GM_ADDR y);
     __aicore__ inline void Process();
     __aicore__ inline void ReverseCompute(CompType curOffset, CompType xUBSize);
     __aicore__ inline void CopyOut(CompType offset, int64_t blockLen);
 
 private:
-    
-    TPipe *pipe_;
-    const ReverseSequenceSimtTilingData4RegBase *tilingData_;
+    TPipe* pipe_;
+    const ReverseSequenceSimtTilingData4RegBase* tilingData_;
     // 输出ub
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQue_;
     GlobalTensor<T> xGm_;
@@ -75,7 +73,7 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::Init(GM_ADDR x
     xGm_.SetGlobalBuffer((__gm__ T*)x);
     seqGm_.SetGlobalBuffer((__gm__ SeqType*)seqLengths);
     yGm_.SetGlobalBuffer((__gm__ T*)y);
-    
+
     pipe_->InitBuffer(outQue_, BUFFER_NUM, tilingData_->xUbFactor * sizeof(T));
 
     blockIdx_ = GetBlockIdx();
@@ -91,7 +89,8 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::Init(GM_ADDR x
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseSimtCompute(
     __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType curOffset, CompType xUbSize,
-    CompType batchDim, CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0, CompType shift1, CompType shift2, CompType shift3)
+    CompType batchDim, CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3,
+    CompType shift0, CompType shift1, CompType shift2, CompType shift3)
 {
     for (CompType i = threadIdx.x; i < xUbSize; i += blockDim.x) {
         CompType xOffset = curOffset + i;
@@ -100,17 +99,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseSimtCompute(
         CompType batchDimIdx = batchPreAxis - batchIdx * batchDim; // xOffSet / batchSize % batchDim
 
         CompType reverseNum = static_cast<CompType>(seqGm[batchDimIdx]);
-        CompType seqPreAxis = Simt::UintDiv(xOffset, m2, shift2); // xOffSet / seqSize
+        CompType seqPreAxis = Simt::UintDiv(xOffset, m2, shift2);     // xOffSet / seqSize
         CompType reverseSizeMod = xOffset - seqPreAxis * reverseSize; // xOffSet % seqSize
-        CompType seqIdx = Simt::UintDiv(seqPreAxis, m3, shift3);  // xOffSet / seqSize / seqDim
-        CompType seqDimIdx = seqPreAxis - seqIdx * seqDim; // xOffSet / seqSize % seqDim
-        
+        CompType seqIdx = Simt::UintDiv(seqPreAxis, m3, shift3);      // xOffSet / seqSize / seqDim
+        CompType seqDimIdx = seqPreAxis - seqIdx * seqDim;            // xOffSet / seqSize % seqDim
+
         if (reverseNum > seqDim) {
             reverseNum = seqDim;
         }
 
         if (seqDimIdx < reverseNum) {
-            CompType reverseOffset = (reverseNum - seqDimIdx - 1) * reverseSize + seqIdx * seqDim * reverseSize + reverseSizeMod; // seqDim:2,batchDim:3 (a,b,c,d) -> c余*d + ab*c*d + d余
+            CompType reverseOffset = (reverseNum - seqDimIdx - 1) * reverseSize + seqIdx * seqDim * reverseSize +
+                                     reverseSizeMod; // seqDim:2,batchDim:3 (a,b,c,d) -> c余*d + ab*c*d + d余
             outLocal[i] = xGm[reverseOffset];
         }
 
@@ -133,9 +133,10 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::ReverseCompute
 
     asc_vf_call<ReverseSimtCompute<T, SeqType, CompType>>(
         dim3(USED_THREAD), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim, 
-        tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
-    
+        (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim,
+        tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1,
+        params.shift2, params.shift3);
+
     outQue_.EnQue(outLocal);
 }
 
@@ -151,14 +152,14 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::CopyOut(CompTy
     DataCopyPad(yGm_[offset], yLocal, copyExtParams);
     outQue_.FreeTensor(yLocal);
 }
- 	 
+
 template <typename T, typename SeqType, typename CompType>
 __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::Process()
 {
     if (blockIdx_ > blockNum_) {
         return;
     }
-    
+
     CompType curCoreOffset = blockIdx_ * tilingData_->perCoreHandleNums;
     CompType curOffset = curCoreOffset;
     if (blockIdx_ < tilingData_->usedCoreNums) {
@@ -184,5 +185,5 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::Process()
     }
 }
 
-}
+} // namespace ReverseSequence
 #endif

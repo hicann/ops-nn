@@ -51,8 +51,9 @@ bool CheckUbLimit(uint64_t ubSize, int32_t numCol, int32_t dtSize)
         return false;
     }
     int32_t blockNum = static_cast<int32_t>(BLOCK_SIZE) / dtSize;
-    int64_t numColAligned =
-        static_cast<int64_t>(CEIL_DIV(static_cast<uint32_t>(numCol), static_cast<uint32_t>(blockNum))) * blockNum;
+    int64_t numColAligned = static_cast<int64_t>(
+                                CEIL_DIV(static_cast<uint32_t>(numCol), static_cast<uint32_t>(blockNum))) *
+                            blockNum;
 
     // 1 inQue, 1 outQue, 3 Tbuf
     uint64_t ubRequired = (1U + 1U) * static_cast<uint64_t>(numColAligned) * static_cast<uint64_t>(dtSize) +
@@ -60,9 +61,8 @@ bool CheckUbLimit(uint64_t ubSize, int32_t numCol, int32_t dtSize)
                           3U * static_cast<uint64_t>(numColAligned) * static_cast<uint64_t>(sizeof(float));
 
     OP_LOGI("CheckUbLimit", "maxUB: %lu, ubRequired: %lu", ubSize, ubRequired);
-    OP_CHECK_IF(
-        ubRequired > ubSize, OP_LOGW("DuaQuantizeAddLayerNorm", "Reduce axis is too large, Tiling is not support."),
-        return false);
+    OP_CHECK_IF(ubRequired > ubSize,
+                OP_LOGW("DuaQuantizeAddLayerNorm", "Reduce axis is too large, Tiling is not support."), return false);
     return true;
 }
 
@@ -73,8 +73,7 @@ static inline void GetSocInfos(gert::TilingContext* context, uint64_t& ubSize, u
     maxCoreNum = ascendcPlatform.GetCoreNumAiv();
 }
 
-static bool GetAndSetAttrs(
-    gert::TilingContext* context, DuaQuantizeAddLayerNormTilingData* tiling, uint64_t& tilingKey)
+static bool GetAndSetAttrs(gert::TilingContext* context, DuaQuantizeAddLayerNormTilingData* tiling, uint64_t& tilingKey)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_IF(nullptr == attrs, OP_LOGE(context, "GetAttrs failed. "), return false);
@@ -121,9 +120,8 @@ static inline void SetOptInputs(gert::TilingContext* context, DuaQuantizeAddLaye
     }
 }
 
-static inline void SetTilingData(
-    DuaQuantizeAddLayerNormTilingData* tiling, int64_t numRow, int32_t numLastDim, int64_t numCore,
-    int64_t nlFirstDimPerCore)
+static inline void SetTilingData(DuaQuantizeAddLayerNormTilingData* tiling, int64_t numRow, int32_t numLastDim,
+                                 int64_t numCore, int64_t nlFirstDimPerCore)
 {
     tiling->set_numCore(numCore);
     tiling->set_numRow(numRow);
@@ -147,9 +145,8 @@ static inline void SetTilingData(
     tiling->set_colMoveCnt(1);
     tiling->set_colTail(1);
 
-    OP_LOGD(
-        "DuaQuantizeAddLayerNorm", "numCore:%ld, numLastDim:%d, numRow:%d, nlFirstDimPerCore:%ld, aveNum:%f", numCore,
-        numLastDim, numRow, nlFirstDimPerCore, aveNum);
+    OP_LOGD("DuaQuantizeAddLayerNorm", "numCore:%ld, numLastDim:%d, numRow:%d, nlFirstDimPerCore:%ld, aveNum:%f",
+            numCore, numLastDim, numRow, nlFirstDimPerCore, aveNum);
 }
 
 static ge::graphStatus Tiling4DuaQuantizeAddLayerNorm(gert::TilingContext* context)
@@ -162,26 +159,22 @@ static ge::graphStatus Tiling4DuaQuantizeAddLayerNorm(gert::TilingContext* conte
 
     uint64_t tilingKey = TILING_BASE;
     bool res = GetAndSetAttrs(context, &tiling, tilingKey);
-    OP_CHECK_IF(
-        !res, OP_LOGE("DuaQuantizeAddLayerNorm", "GetAndSetAttrs Failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!res, OP_LOGE("DuaQuantizeAddLayerNorm", "GetAndSetAttrs Failed"), return ge::GRAPH_FAILED);
 
     int64_t numRow = 1;
     int32_t numLastDim = 1;
     GetRowCols(context, numRow, numLastDim);
 
-    OP_CHECK_IF(
-        numRow > static_cast<int64_t>(UINT32_MAX),
-        OP_LOGE("DuaQuantizeAddLayerNorm", "numRow(%ld) exceeds uint32_t limit, not supported.", numRow),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(numRow > static_cast<int64_t>(UINT32_MAX),
+                OP_LOGE("DuaQuantizeAddLayerNorm", "numRow(%ld) exceeds uint32_t limit, not supported.", numRow),
+                return ge::GRAPH_FAILED);
 
     int64_t nlFirstDimPerCore = CEIL_DIV(numRow, static_cast<int64_t>(maxCoreNum));
     int64_t numCore = CEIL_DIV(numRow, nlFirstDimPerCore);
 
     int32_t dataTypeSize = GetSizeByDataType(context->GetInputDesc(0)->GetDataType());
-    OP_CHECK_IF(
-        !(CheckUbLimit(ubSize, numLastDim, dataTypeSize)), OP_LOGE("DuaQuantizeAddLayerNorm", "CheckUbLimit Failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(CheckUbLimit(ubSize, numLastDim, dataTypeSize)),
+                OP_LOGE("DuaQuantizeAddLayerNorm", "CheckUbLimit Failed"), return ge::GRAPH_FAILED);
 
     SetTilingData(&tiling, numRow, numLastDim, numCore, nlFirstDimPerCore);
     SetOptInputs(context, &tiling);
@@ -205,8 +198,7 @@ static ge::graphStatus TilingPrepare4DuaQuantizeAddLayerNorm(gert::TilingParseCo
     return ge::GRAPH_SUCCESS;
 }
 
-struct DuaQuantizeAddLayerNormCompileInfo {
-};
+struct DuaQuantizeAddLayerNormCompileInfo {};
 
 IMPL_OP_OPTILING(DuaQuantizeAddLayerNorm)
     .Tiling(Tiling4DuaQuantizeAddLayerNorm)

@@ -19,7 +19,7 @@ extern "C" {
 /**
  * @brief aclnnLayerNormQuant的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
- * 
+ *
  * 算子功能：LayerNorm + 量化计算的融合算子，将输入做层归一化计算后进行量化。
  * 计算公式：
  *     y = LayerNorm(x, gamma, beta)
@@ -50,13 +50,14 @@ extern "C" {
  * 公式中的输入`scaleOut`，数据类型支持FLOAT，shape需要和x剔除最后一维一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
-* @param [out] executor: 返回op执行器，包含算子计算流程。
-* @return aclnnStatus: 返回状态码。
+ * @param [out] executor: 返回op执行器，包含算子计算流程。
+ * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gammma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, double epsilon, aclTensor* res, aclTensor* scaleOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gammma,
+                                                          const aclTensor* beta, const aclTensor* scale,
+                                                          const aclTensor* zeroPointsOptional, int quantMode,
+                                                          double epsilon, aclTensor* res, aclTensor* scaleOut,
+                                                          uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnLayerNormQuant的第二段接口，用于执行计算。
@@ -69,8 +70,8 @@ ACLNN_API aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnLayerNormQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnLayerNormQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                          aclrtStream stream);
 
 #ifdef __cplusplus
 }

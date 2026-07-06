@@ -24,8 +24,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ForeachRoundOffNumber);
 
-const aclTensorList* ForeachRoundOffNumberV2(
-    const aclTensorList* x, const aclTensor* roundMode, const aclTensorList* out, aclOpExecutor* executor)
+const aclTensorList* ForeachRoundOffNumberV2(const aclTensorList* x, const aclTensor* roundMode,
+                                             const aclTensorList* out, aclOpExecutor* executor)
 {
     L0_DFX(ForeachRoundOffNumberV2, x, roundMode);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachRoundOffNumber, OP_INPUT(x, roundMode), OP_OUTPUT(out));

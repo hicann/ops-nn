@@ -42,15 +42,9 @@ static constexpr int64_t INT32_COMPARE_FLOAT = 1;
 }; // namespace
 
 namespace optiling {
-bool QuantizedBatchNormWelfordTiling::IsCapable()
-{
-    return true;
-}
+bool QuantizedBatchNormWelfordTiling::IsCapable() { return true; }
 
-uint64_t QuantizedBatchNormWelfordTiling::GetTilingKey() const
-{
-    return welfordTilingkey;
-}
+uint64_t QuantizedBatchNormWelfordTiling::GetTilingKey() const { return welfordTilingkey; }
 
 void QuantizedBatchNormWelfordTiling::DoUbTiling(int64_t& aUbFactor, int64_t& r0UbFactor)
 {
@@ -110,8 +104,9 @@ ge::graphStatus QuantizedBatchNormWelfordTiling::DoOpTiling()
         td_.set_procNR0(procNR0);
         td_.set_nR0Loop(nR0Loop);
         td_.set_lastLoopNR0(lastLoopNR0);
-        uint64_t r0AlignTilingKeyBias =
-            (commonParams.patternR0 == commonParams.patternR0Align) ? R0_ALIGN_TILING_KEY_BIAS : 0;
+        uint64_t r0AlignTilingKeyBias = (commonParams.patternR0 == commonParams.patternR0Align) ?
+                                            R0_ALIGN_TILING_KEY_BIAS :
+                                            0;
         if ((nR0Loop == 1) || (lastLoopNR0 == procNR0)) {
             welfordTilingkey = QBN_WELFORD_R1_SPLIT_ALIGN_TILING_KEY + r0AlignTilingKeyBias;
         } else {
@@ -129,15 +124,13 @@ ge::graphStatus QuantizedBatchNormWelfordTiling::PostTiling()
     td_.set_patternR0Align(commonParams.patternR0Align);
     td_.set_epsilon(commonParams.epsilon);
     context_->SetBlockDim(usedCoreNum);
-    
+
     // Save tiling data for quantized batch norm
     auto quantRawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        td_.GetDataSize() > quantRawTilingData->GetCapacity(),
-        OP_LOGE(
-            commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu", td_.GetDataSize(),
-            quantRawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(td_.GetDataSize() > quantRawTilingData->GetCapacity(),
+                OP_LOGE(commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu",
+                        td_.GetDataSize(), quantRawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     td_.SaveToBuffer(quantRawTilingData->GetData(), quantRawTilingData->GetCapacity());
     quantRawTilingData->SetDataSize(td_.GetDataSize());
 

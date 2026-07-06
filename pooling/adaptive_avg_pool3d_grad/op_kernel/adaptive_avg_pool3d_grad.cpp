@@ -27,8 +27,8 @@ using namespace AscendC;
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 using namespace AdaptiveAvgPool3dGradOp;
 template <uint64_t TEMPLATE_MODE = TPL_SMALL_KERNEL, uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_CHANNEL_LAST = 0>
-__global__ __aicore__ void adaptive_avg_pool3d_grad(
-    GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void adaptive_avg_pool3d_grad(GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;
@@ -71,8 +71,8 @@ __global__ __aicore__ void adaptive_avg_pool3d_grad(
     }
 }
 #else
-extern "C" __global__ __aicore__ void adaptive_avg_pool3d_grad(
-    GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void adaptive_avg_pool3d_grad(GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad,
+                                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
     if (TILING_KEY_IS(0)) {

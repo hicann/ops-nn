@@ -24,8 +24,7 @@
 #include "max_pool_3d_tiling_common.h"
 #include "pool_3d_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(Pool3DOneKsizeTilingData)
 TILING_DATA_FIELD_DEF(int64_t, inUbSize);
 TILING_DATA_FIELD_DEF(int64_t, dataFormat);
@@ -57,17 +56,12 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(AvgPool3D_100001, Pool3DOneKsizeTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPool3D_100001, Pool3DOneKsizeTilingData);
 
-class Pool3DOneKsizeTiling : public TilingBaseClass
-{
+class Pool3DOneKsizeTiling : public TilingBaseClass {
 public:
-    explicit Pool3DOneKsizeTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit Pool3DOneKsizeTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~Pool3DOneKsizeTiling() override
-    {
-    }
-    
+    ~Pool3DOneKsizeTiling() override {}
+
 protected:
     void DoUBTiling();
     void DoUBTilingSingle();
@@ -106,36 +100,26 @@ protected:
     bool isZero_{false};
 };
 
-class AvgPool3DOneKsizeTiling : public Pool3DOneKsizeTiling
-{
+class AvgPool3DOneKsizeTiling : public Pool3DOneKsizeTiling {
 public:
-    explicit AvgPool3DOneKsizeTiling(gert::TilingContext* context) : Pool3DOneKsizeTiling(context)
-    {
-    }
-    ~AvgPool3DOneKsizeTiling() override
-    {
-    }
+    explicit AvgPool3DOneKsizeTiling(gert::TilingContext* context) : Pool3DOneKsizeTiling(context) {}
+    ~AvgPool3DOneKsizeTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class MaxPool3DOneKsizeTiling : public Pool3DOneKsizeTiling
-{
+class MaxPool3DOneKsizeTiling : public Pool3DOneKsizeTiling {
 public:
-    explicit MaxPool3DOneKsizeTiling(gert::TilingContext* context) : Pool3DOneKsizeTiling(context)
-    {
-    }
-    ~MaxPool3DOneKsizeTiling() override
-    {
-    }
+    explicit MaxPool3DOneKsizeTiling(gert::TilingContext* context) : Pool3DOneKsizeTiling(context) {}
+    ~MaxPool3DOneKsizeTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

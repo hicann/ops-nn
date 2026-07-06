@@ -21,8 +21,7 @@
 
 namespace optiling {
 
-class MmTilingInput
-{
+class MmTilingInput {
 public:
     matmul_tiling::TPosition aPosition;
     matmul_tiling::TPosition bPosition;
@@ -38,8 +37,7 @@ public:
     matmul_tiling::DataType cDtype = matmul_tiling::DataType::DT_FLOAT16;
 };
 
-class WeightQuantBatchMatmulV2WeightNz : public TilingBaseClass
-{
+class WeightQuantBatchMatmulV2WeightNz : public TilingBaseClass {
 public:
     explicit WeightQuantBatchMatmulV2WeightNz(gert::TilingContext* context) : TilingBaseClass(context)
     {
@@ -64,14 +62,7 @@ public:
 
 protected:
     bool IsCapable() override;
-    enum class FullLoadMode
-    {
-        NONE_AB_K = 0,
-        FULL_AKL1,
-        FULL_BKL1,
-        FULL_K,
-        FULL_K_REORDER_MN
-    };
+    enum class FullLoadMode { NONE_AB_K = 0, FULL_AKL1, FULL_BKL1, FULL_K, FULL_K_REORDER_MN };
 
     ge::Format aFormat;
     ge::Format bFormat;
@@ -84,10 +75,7 @@ protected:
     ge::graphStatus DoOpTiling() override;
     // 4、计算高阶API的TilingData
 
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;
     // 6、计算Workspace 大小
@@ -99,20 +87,20 @@ protected:
     ge::graphStatus CheckContext() const;
     bool AnalyzeDtype();
     bool AnalyzeBiasDtype(const gert::CompileTimeTensorDesc* biasDesc);
-    bool AnalyzeAntiQuantDtype(
-        ge::DataType antiQuantScaleDtype, const gert::CompileTimeTensorDesc* antiQuantOffsetDesc) const;
+    bool AnalyzeAntiQuantDtype(ge::DataType antiQuantScaleDtype,
+                               const gert::CompileTimeTensorDesc* antiQuantOffsetDesc) const;
     bool AnalyzeAttrs();
     bool AnalyzeInputs();
-    bool AnalyzeInputShape(
-        const gert::StorageShape* xShape, const gert::StorageShape* weightShape, const gert::StorageShape* outShape);
-    bool AnalyzeAntiQuantShape(
-        const gert::StorageShape* antiQuantScaleShape, const gert::StorageShape* antiQuantOffsetShape);
+    bool AnalyzeInputShape(const gert::StorageShape* xShape, const gert::StorageShape* weightShape,
+                           const gert::StorageShape* outShape);
+    bool AnalyzeAntiQuantShape(const gert::StorageShape* antiQuantScaleShape,
+                               const gert::StorageShape* antiQuantOffsetShape);
     bool AnalyzeBiasShape(const gert::StorageShape* outShape);
     bool SetAntiQuantType(const gert::StorageShape* antiQuantScaleShape);
     void Convert2AscendCTiling(const CacheTilingData& tbeTiling, AscendC::tiling::TCubeTiling& matmulTiling);
     void SetAscendCTiling(AscendC::tiling::TCubeTiling& matmulTiling);
-    MatrixTraverse GetIteratorOrder(
-        const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN, int32_t singleCoreK) const;
+    MatrixTraverse GetIteratorOrder(const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN,
+                                    int32_t singleCoreK) const;
     void GetBaseMKNByTrans(matmul_tiling::MatmulApiTiling& mmTiling) const;
     bool GetLoopOrder();
 

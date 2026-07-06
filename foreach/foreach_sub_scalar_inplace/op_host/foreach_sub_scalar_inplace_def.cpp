@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file foreach_sub_scalar_inplace_def.cpp
  * \brief
@@ -18,8 +17,7 @@
 namespace ops {
 // Inplace: x serves as both input and output, so only inputs are declared (no Output).
 // Only the Ascend 950 (arch35 / regbase) platform is delivered here.
-class ForeachSubScalarInplace : public OpDef
-{
+class ForeachSubScalarInplace : public OpDef {
 public:
     explicit ForeachSubScalarInplace(const char* name) : OpDef(name)
     {
@@ -37,9 +35,7 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig regbaseCfg;
-        regbaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
 
         this->AICore().AddConfig("ascend950", regbaseCfg);
     }

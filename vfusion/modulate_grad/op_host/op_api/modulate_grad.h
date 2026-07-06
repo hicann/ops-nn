@@ -13,9 +13,12 @@
 #include "opdev/op_executor.h"
 #include <tuple>
 
-namespace l0op{
-    std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ModulateGrad(const aclTensor *grad_output,const aclTensor *input,const aclTensor *scale,
-                                    const aclTensor *shift, aclOpExecutor *executor);
-} 
+namespace l0op {
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ModulateGrad(const aclTensor* grad_output,
+                                                                              const aclTensor* input,
+                                                                              const aclTensor* scale,
+                                                                              const aclTensor* shift,
+                                                                              aclOpExecutor* executor);
+}
 
-#endif  // OP_API_INC_LEVEL0_OP_MODULATEGRAD_OP_H_
+#endif // OP_API_INC_LEVEL0_OP_MODULATEGRAD_OP_H_

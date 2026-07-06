@@ -36,18 +36,16 @@ struct LocalAddressYParam {
     __local_mem__ yType* yPhyAddr;
 };
 
-static constexpr MicroAPI::CastTrait C32_TO_FP32_TRAIT = {
-    MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait C32_TO_FP32_TRAIT = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN,
+                                                          MicroAPI::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_RINT};
 
-static constexpr MicroAPI::CastTrait FP32_TO_F16 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait FP32_TO_F16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                    MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 
 template <typename yType, bool hasBias>
-__aicore__ inline void AntiQuantYB32(
-    LocalAddressYParam<yType>& localAddressParam, uint64_t nRealL0Size, uint64_t nRealVRegSize, uint16_t ubLoopN,
-    uint16_t ubLoopM)
+__aicore__ inline void AntiQuantYB32(LocalAddressYParam<yType>& localAddressParam, uint64_t nRealL0Size,
+                                     uint64_t nRealVRegSize, uint16_t ubLoopN, uint16_t ubLoopM)
 {
     __VEC_SCOPE__
     {
@@ -72,10 +70,10 @@ __aicore__ inline void AntiQuantYB32(
             for (uint16_t mId = 0; mId < ubLoopM; mId++) {
                 uint64_t yOffset = nId * nRealVRegSize + mId * nRealL0Size;
                 uint64_t ubYOffset = (nId * nRealVRegSize >> 1) + mId * nRealL0Size;
-                MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_NORM>(
-                    yOriginVreg, localAddressParam.yOriginPhyAddr + yOffset);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(
-                    antiQuantKScaleVreg, localAddressParam.kScalePhyAddr + mId);
+                MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_NORM>(yOriginVreg,
+                                                                           localAddressParam.yOriginPhyAddr + yOffset);
+                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(antiQuantKScaleVreg,
+                                                                            localAddressParam.kScalePhyAddr + mId);
 
                 MicroAPI::Cast<float, int32_t, C32_TO_FP32_TRAIT>(yVreg, yOriginVreg, maskAll);
                 MicroAPI::Mul(yVreg, yVreg, antiQuantCScaleVreg, maskAll);
@@ -93,4 +91,3 @@ __aicore__ inline void AntiQuantYB32(
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

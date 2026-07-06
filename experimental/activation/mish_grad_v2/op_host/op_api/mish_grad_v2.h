@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *MishGradV2(const aclTensor *grad, const aclTensor *x, const aclTensor *tanhx, aclOpExecutor *executor);
+const aclTensor* MishGradV2(const aclTensor* grad, const aclTensor* x, const aclTensor* tanhx, aclOpExecutor* executor);
 }
 
 #endif

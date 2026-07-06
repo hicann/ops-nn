@@ -17,8 +17,7 @@
 #include "infershape_elewise_util.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 static graphStatus InferDataType4SameAsInput(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferDataType4SameAsInput enter");
@@ -29,4 +28,4 @@ static graphStatus InferDataType4SameAsInput(gert::InferDataTypeContext* context
 }
 
 IMPL_OP_INFERSHAPE(InplaceIndexAdd).InferShape(Ops::Base::InferShape4Elewise).InferDataType(InferDataType4SameAsInput);
-}  // namespace ops
+} // namespace ops

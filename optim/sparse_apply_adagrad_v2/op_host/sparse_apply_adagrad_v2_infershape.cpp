@@ -60,32 +60,27 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
     // 校验约束（与 SE 文档 §5.4/5.5、MDE §3.4 一致）:
 
     // 0. var/accum 应至少为 2 维（shape (N, C)），rank < 2 语义非法
-    OP_CHECK_IF(
-        varDimNum < 2,
-        OP_LOGE(context, "var dim num %zu < 2, expected at least 2D shape (N, C)", varDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDimNum < 2, OP_LOGE(context, "var dim num %zu < 2, expected at least 2D shape (N, C)", varDimNum),
+                return ge::GRAPH_FAILED);
 
     // 1. accum.shape == var.shape
-    OP_CHECK_IF(
-        accumDimNum != varDimNum,
-        OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumDimNum, varDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(accumDimNum != varDimNum,
+                OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumDimNum, varDimNum),
+                return ge::GRAPH_FAILED);
     for (size_t i = 0; i < varDimNum; i++) {
-        OP_CHECK_IF(
-            accumShape->GetDim(i) != varShape->GetDim(i),
-            OP_LOGE(context, "accum shape[%zu]=%ld != var shape[%zu]=%ld",
-                i, accumShape->GetDim(i), i, varShape->GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(accumShape->GetDim(i) != varShape->GetDim(i),
+                    OP_LOGE(context, "accum shape[%zu]=%ld != var shape[%zu]=%ld", i, accumShape->GetDim(i), i,
+                            varShape->GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
 
     // 2. lr 应为标量（shape 为空或 [1]）
     const gert::Shape* lrShape = context->GetInputShape(IDX_LR);
     OP_CHECK_NULL_WITH_CONTEXT(context, lrShape);
     auto lrDimNum = lrShape->GetDimNum();
-    OP_CHECK_IF(
-        lrDimNum != 0 && !(lrDimNum == 1 && lrShape->GetDim(0) == 1),
-        OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(lrDimNum != 0 && !(lrDimNum == 1 && lrShape->GetDim(0) == 1),
+                OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrDimNum),
+                return ge::GRAPH_FAILED);
 
     // 3. epsilon 应为标量（shape 为空或 [1]）
     const gert::Shape* epsilonShape = context->GetInputShape(IDX_EPSILON);
@@ -100,30 +95,24 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
     const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesDimNum = indicesShape->GetDimNum();
-    OP_CHECK_IF(
-        indicesDimNum != 1,
-        OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDimNum != 1, OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesDimNum),
+                return ge::GRAPH_FAILED);
     int64_t N = indicesShape->GetDim(0);
 
     // 5. grad.shape[0] == N, grad.shape[1:] == var.shape[1:]
     const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
     auto gradDimNum = gradShape->GetDimNum();
-    OP_CHECK_IF(
-        gradDimNum != varDimNum,
-        OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradDimNum, varDimNum),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        gradShape->GetDim(0) != N,
-        OP_LOGE(context, "grad first dim %ld != indices length %ld", gradShape->GetDim(0), N),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradDimNum != varDimNum, OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradDimNum, varDimNum),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradShape->GetDim(0) != N,
+                OP_LOGE(context, "grad first dim %ld != indices length %ld", gradShape->GetDim(0), N),
+                return ge::GRAPH_FAILED);
     for (size_t i = 1; i < varDimNum; i++) {
-        OP_CHECK_IF(
-            gradShape->GetDim(i) != varShape->GetDim(i),
-            OP_LOGE(context, "grad shape[%zu]=%ld != var shape[%zu]=%ld",
-                i, gradShape->GetDim(i), i, varShape->GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(gradShape->GetDim(i) != varShape->GetDim(i),
+                    OP_LOGE(context, "grad shape[%zu]=%ld != var shape[%zu]=%ld", i, gradShape->GetDim(i), i,
+                            varShape->GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeSparseApplyAdagradV2");
@@ -140,29 +129,28 @@ static ge::graphStatus InferDataTypeSparseApplyAdagradV2(gert::InferDataTypeCont
     auto epsilonDtype = context->GetInputDataType(IDX_EPSILON);
     auto gradDtype = context->GetInputDataType(IDX_GRAD);
 
-    OP_CHECK_IF(
-        varDtype != accumDtype,
-        OP_LOGE(context, "var dtype %d != accum dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(accumDtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDtype != accumDtype,
+                OP_LOGE(context, "var dtype %d != accum dtype %d", static_cast<int32_t>(varDtype),
+                        static_cast<int32_t>(accumDtype)),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         varDtype != lrDtype,
         OP_LOGE(context, "var dtype %d != lr dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(lrDtype)),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varDtype != epsilonDtype,
-        OP_LOGE(context, "var dtype %d != epsilon dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(epsilonDtype)),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varDtype != gradDtype,
-        OP_LOGE(context, "var dtype %d != grad dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(gradDtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDtype != epsilonDtype,
+                OP_LOGE(context, "var dtype %d != epsilon dtype %d", static_cast<int32_t>(varDtype),
+                        static_cast<int32_t>(epsilonDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDtype != gradDtype,
+                OP_LOGE(context, "var dtype %d != grad dtype %d", static_cast<int32_t>(varDtype),
+                        static_cast<int32_t>(gradDtype)),
+                return ge::GRAPH_FAILED);
 
     // indices.dtype == int32
     auto indicesDtype = context->GetInputDataType(IDX_INDICES);
-    OP_CHECK_IF(
-        indicesDtype != ge::DT_INT32,
-        OP_LOGE(context, "indices dtype %d must be int32", static_cast<int32_t>(indicesDtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDtype != ge::DT_INT32,
+                OP_LOGE(context, "indices dtype %d must be int32", static_cast<int32_t>(indicesDtype)),
+                return ge::GRAPH_FAILED);
 
     // 输出 var dtype = 输入 var dtype（原地更新）
     context->SetOutputDataType(IDX_VAR, varDtype);

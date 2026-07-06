@@ -24,15 +24,9 @@ using namespace std;
 
 class l2_add_rms_norm_dynamic_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_rms_norm_dynamic_mx_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_rms_norm_dynamic_mx_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "add_rms_norm_dynamic_mx_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "add_rms_norm_dynamic_mx_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_001)
@@ -62,12 +56,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_001)
     int64_t dst_type = 36;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -96,12 +88,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_002)
     int64_t dst_type = 35;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, nullptr, epsilon, scale_alg, round_mode, dst_type,
-            output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, nullptr, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -135,12 +125,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_003)
     int64_t dst_type = 36;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -174,12 +162,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_004)
     int64_t dst_type = 40;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -213,12 +199,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_005)
     int64_t dst_type = 41;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -252,12 +236,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_006)
     int64_t dst_type = 40;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -291,12 +273,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_007)
     int64_t dst_type = 36;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -330,12 +310,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_008)
     int64_t dst_type = 36;
     bool output_rstd = false;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -369,12 +347,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_009)
     int64_t dst_type = 36;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -403,12 +379,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_010)
     int64_t dst_type = 36;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, nullptr, epsilon, scale_alg, round_mode, dst_type,
-            output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, nullptr, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -442,12 +416,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_011)
     int64_t dst_type = 35;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -481,12 +453,10 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_012)
     int64_t dst_type = 36;
     bool output_rstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormDynamicMxQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg, round_mode,
-            dst_type, output_rstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuant,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

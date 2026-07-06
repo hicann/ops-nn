@@ -24,8 +24,8 @@ using namespace AscendC;
 using namespace SwishGradOp;
 
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void swish_grad(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void swish_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, GM_ADDR workspace,
+                                      GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(SwishGradTilingData);

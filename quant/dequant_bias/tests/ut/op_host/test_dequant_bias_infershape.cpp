@@ -8,28 +8,25 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <gtest/gtest.h>  // NOLINT
+#include <gtest/gtest.h> // NOLINT
 #include <iostream>
-#include "infershape_test_util.h"  // NOLINT
+#include "infershape_test_util.h" // NOLINT
 #include "ut_op_common.h"
 #include "log/log.h"
 #include "../../../op_graph/dequant_bias_proto.h"
 
 class DequantBias : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "DequantBias SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "DequantBias SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "DequantBias TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "DequantBias TearDown" << std::endl; }
 };
 
-TEST_F(DequantBias, DequantBias_infershape_case_0) {
-  ge::op::DequantBias op;
-  op.UpdateInputDesc("x", create_desc({4,256}, ge::DT_FLOAT16));
+TEST_F(DequantBias, DequantBias_infershape_case_0)
+{
+    ge::op::DequantBias op;
+    op.UpdateInputDesc("x", create_desc({4, 256}, ge::DT_FLOAT16));
 
-  EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
-  EXPECT_EQ(InferDataTypeTest(op), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferDataTypeTest(op), ge::GRAPH_SUCCESS);
 }

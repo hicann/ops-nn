@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SigmoidGrad(const aclTensor *output, const aclTensor *gradOutput, aclOpExecutor *executor);
+const aclTensor* SigmoidGrad(const aclTensor* output, const aclTensor* gradOutput, aclOpExecutor* executor);
 
 }
 

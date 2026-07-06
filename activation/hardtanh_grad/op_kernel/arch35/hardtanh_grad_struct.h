@@ -18,25 +18,20 @@
 #ifndef _HARDTANH_GRAD_STRUCT_H_
 #define _HARDTANH_GRAD_STRUCT_H_
 
-namespace HardtanhGradOp
-{
+namespace HardtanhGradOp {
 #define HardtanhGrad_TPL 1
 
 #define HardtanhGrad_TPL_SCH_MODE_0 0
 #define HardtanhGrad_TPL_SCH_MODE_1 1
 
-ASCENDC_TPL_ARGS_DECL(
-    HardtanhGrad,
-    ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, HardtanhGrad_TPL_SCH_MODE_0, HardtanhGrad_TPL_SCH_MODE_1),
-    ASCENDC_TPL_DTYPE_DECL(dType, HardtanhGrad_TPL)
-);
+ASCENDC_TPL_ARGS_DECL(HardtanhGrad,
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, HardtanhGrad_TPL_SCH_MODE_0,
+                                            HardtanhGrad_TPL_SCH_MODE_1),
+                      ASCENDC_TPL_DTYPE_DECL(dType, HardtanhGrad_TPL));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, HardtanhGrad_TPL_SCH_MODE_0, HardtanhGrad_TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_SEL(dType, HardtanhGrad_TPL)
-    )
-);
-}  // namespace HardtanhGradOp
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, HardtanhGrad_TPL_SCH_MODE_0,
+                                                          HardtanhGrad_TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, HardtanhGrad_TPL)));
+} // namespace HardtanhGradOp
 
-#endif  // _HARDTANH_GRAD_STRUCT_H_
+#endif // _HARDTANH_GRAD_STRUCT_H_

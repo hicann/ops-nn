@@ -34,18 +34,16 @@ const std::array<aclTensor*, SYNC_BATCH_NORM_OUTPUT_NUM> SyncBatchNormGatherStat
 {
     L0_DFX(SyncBatchNormGatherStats, totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps);
 
-    auto batchMean = executor->AllocTensor(
-        mean->GetStorageShape(), mean->GetOriginalShape(), mean->GetDataType(), mean->GetStorageFormat(),
-        mean->GetOriginalFormat());
-    auto batchInvstd = executor->AllocTensor(
-        variance->GetStorageShape(), variance->GetOriginalShape(), variance->GetDataType(),
-        variance->GetStorageFormat(), variance->GetOriginalFormat());
-    auto meanFinal = executor->AllocTensor(
-        mean->GetStorageShape(), mean->GetOriginalShape(), mean->GetDataType(), mean->GetStorageFormat(),
-        mean->GetOriginalFormat());
-    auto batchInvstdFinal = executor->AllocTensor(
-        variance->GetStorageShape(), variance->GetOriginalShape(), variance->GetDataType(),
-        variance->GetStorageFormat(), variance->GetOriginalFormat());
+    auto batchMean = executor->AllocTensor(mean->GetStorageShape(), mean->GetOriginalShape(), mean->GetDataType(),
+                                           mean->GetStorageFormat(), mean->GetOriginalFormat());
+    auto batchInvstd = executor->AllocTensor(variance->GetStorageShape(), variance->GetOriginalShape(),
+                                             variance->GetDataType(), variance->GetStorageFormat(),
+                                             variance->GetOriginalFormat());
+    auto meanFinal = executor->AllocTensor(mean->GetStorageShape(), mean->GetOriginalShape(), mean->GetDataType(),
+                                           mean->GetStorageFormat(), mean->GetOriginalFormat());
+    auto batchInvstdFinal = executor->AllocTensor(variance->GetStorageShape(), variance->GetOriginalShape(),
+                                                  variance->GetDataType(), variance->GetStorageFormat(),
+                                                  variance->GetOriginalFormat());
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         SyncBatchNormGatherStats, OP_INPUT(totalSum, totalSquareSum, sampleCount, mean, variance),

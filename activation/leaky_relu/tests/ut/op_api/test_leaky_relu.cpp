@@ -20,15 +20,9 @@ using namespace std;
 
 class l2_leaky_relu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "leaky_relu_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "leaky_relu_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "leaky_relu_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "leaky_relu_test TearDown" << endl; }
 };
 
 TEST_F(l2_leaky_relu_test, case_null_tensor)
@@ -437,8 +431,8 @@ TEST_F(l2_leaky_relu_test, case_1d_large)
 
 TEST_F(l2_leaky_relu_test, case_specific_values)
 {
-    auto tensor_desc =
-        TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0});
+    auto tensor_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
+                           .Value(vector<float>{-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0});
     auto scalar_desc = ScalarDesc(0.1f);
 
     auto ut = OP_API_UT(aclnnLeakyRelu, INPUT(tensor_desc, scalar_desc), OUTPUT(tensor_desc));

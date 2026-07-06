@@ -19,17 +19,17 @@
 class FakeQuantWithMinMaxArgsTilingData {
 public:
     // ---- elewise tiling ----
-    int64_t totalLen;          // 总元素数
-    int64_t numCore;           // 实际使用核数
-    int64_t blockFactor;       // 普通核每核元素数
-    int64_t blockTailFactor;   // 尾核元素数
-    int64_t baseLen;           // 单次 Compute 元素数（基本单元）
+    int64_t totalLen;        // 总元素数
+    int64_t numCore;         // 实际使用核数
+    int64_t blockFactor;     // 普通核每核元素数
+    int64_t blockTailFactor; // 尾核元素数
+    int64_t baseLen;         // 单次 Compute 元素数（基本单元）
     // ---- nudge constants (TF Eigen) ----
-    float   nudgedMin;         // 浮点下界
-    float   nudgedMax;         // 浮点上界
-    float   scale;             // 反量化比例 = (max-min)/(qMax-qMin)
-    float   scaleInv;          // 量化比例（必须 re-divide，不能用 1/scale）
-    float   quantZero;         // floor(-nudgedMin*scaleInv + 0.5)，作为浮点存放
+    float nudgedMin; // 浮点下界
+    float nudgedMax; // 浮点上界
+    float scale;     // 反量化比例 = (max-min)/(qMax-qMin)
+    float scaleInv;  // 量化比例（必须 re-divide，不能用 1/scale）
+    float quantZero; // floor(-nudgedMin*scaleInv + 0.5)，作为浮点存放
 };
 
 #endif // FAKE_QUANT_WITH_MIN_MAX_ARGS_TILINGDATA_H_

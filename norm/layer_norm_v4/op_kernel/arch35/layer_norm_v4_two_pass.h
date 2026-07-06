@@ -111,8 +111,8 @@ public:
         if (this->hasBeta) {
             pipe.InitBuffer(betaQueue, 1, this->rAlign * sizeof(U));
         }
-        int64_t aFactorAlignF32 =
-            (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / FLOAT_BYTES;
+        int64_t aFactorAlignF32 = (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                                  FLOAT_BYTES;
         pipe.InitBuffer(batchMeanQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
         pipe.InitBuffer(batchRstdQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
 
@@ -140,8 +140,8 @@ public:
         for (int64_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             int64_t offset = ubLoopIdx * this->aFactor * this->r;
             int64_t aOffset = ubLoopIdx * this->aFactor;
-            int64_t currentA =
-                (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) : this->aFactor;
+            int64_t currentA = (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) :
+                                                               this->aFactor;
             CopyInX(offset, currentA);
             CaculateWithHighLevelApi(gammaInUb, betaInUb, currentA);
             CopyOutY(offset, currentA);
@@ -198,8 +198,8 @@ private:
         xQueue.EnQue(xInUb);
     }
 
-    __aicore__ inline void CaculateWithHighLevelApi(
-        LocalTensor<U> gammaInUb, LocalTensor<U> betaInUb, int64_t currentANum)
+    __aicore__ inline void CaculateWithHighLevelApi(LocalTensor<U> gammaInUb, LocalTensor<U> betaInUb,
+                                                    int64_t currentANum)
     {
         LocalTensor<T> xInUb = xQueue.template DeQue<T>();
         LocalTensor<T> yInUb = yQueue.AllocTensor<T>();
@@ -212,21 +212,21 @@ private:
         para.rLength = this->layerNormTiling.rLength;
         para.rLengthWithPadding = this->rAlign;
         if (this->hasGamma && this->hasBeta) {
-            AscendC::LayerNorm<U, T, true, hasGammaBetaConfig>(
-                yInUb, batchMeanOutUb, batchRstdOutUb, xInUb, gammaInUb, betaInUb, this->epsilon, binaryAddTensor, para,
-                this->layerNormTiling);
+            AscendC::LayerNorm<U, T, true, hasGammaBetaConfig>(yInUb, batchMeanOutUb, batchRstdOutUb, xInUb, gammaInUb,
+                                                               betaInUb, this->epsilon, binaryAddTensor, para,
+                                                               this->layerNormTiling);
         } else if (!this->hasGamma && this->hasBeta) {
-            AscendC::LayerNorm<U, T, true, noGammaHasBetaConfig>(
-                yInUb, batchMeanOutUb, batchRstdOutUb, xInUb, gammaInUb, betaInUb, this->epsilon, binaryAddTensor, para,
-                this->layerNormTiling);
+            AscendC::LayerNorm<U, T, true, noGammaHasBetaConfig>(yInUb, batchMeanOutUb, batchRstdOutUb, xInUb,
+                                                                 gammaInUb, betaInUb, this->epsilon, binaryAddTensor,
+                                                                 para, this->layerNormTiling);
         } else if (this->hasGamma && !this->hasBeta) {
-            AscendC::LayerNorm<U, T, true, hasGammaNoBetaConfig>(
-                yInUb, batchMeanOutUb, batchRstdOutUb, xInUb, gammaInUb, betaInUb, this->epsilon, binaryAddTensor, para,
-                this->layerNormTiling);
+            AscendC::LayerNorm<U, T, true, hasGammaNoBetaConfig>(yInUb, batchMeanOutUb, batchRstdOutUb, xInUb,
+                                                                 gammaInUb, betaInUb, this->epsilon, binaryAddTensor,
+                                                                 para, this->layerNormTiling);
         } else {
-            AscendC::LayerNorm<U, T, true, noGammaNoBetaConfig>(
-                yInUb, batchMeanOutUb, batchRstdOutUb, xInUb, gammaInUb, betaInUb, this->epsilon, binaryAddTensor, para,
-                this->layerNormTiling);
+            AscendC::LayerNorm<U, T, true, noGammaNoBetaConfig>(yInUb, batchMeanOutUb, batchRstdOutUb, xInUb, gammaInUb,
+                                                                betaInUb, this->epsilon, binaryAddTensor, para,
+                                                                this->layerNormTiling);
         }
 
         xQueue.FreeTensor(xInUb);
@@ -250,10 +250,10 @@ private:
     {
         if constexpr (!IsSameType<M, float>::value) {
             // float to bfloat16 or float16, input continue and output each repeat have only half value
-            CastBatchMeanRstdToDtype<M>(
-                (__local_mem__ float*)batchMeanOutUb.GetPhyAddr(), (__local_mem__ float*)batchRstdOutUb.GetPhyAddr(),
-                (__local_mem__ M*)batchMeanOutUb.GetPhyAddr(), (__local_mem__ M*)batchRstdOutUb.GetPhyAddr(),
-                currentANum);
+            CastBatchMeanRstdToDtype<M>((__local_mem__ float*)batchMeanOutUb.GetPhyAddr(),
+                                        (__local_mem__ float*)batchRstdOutUb.GetPhyAddr(),
+                                        (__local_mem__ M*)batchMeanOutUb.GetPhyAddr(),
+                                        (__local_mem__ M*)batchRstdOutUb.GetPhyAddr(), currentANum);
             batchMeanQueue.EnQue(batchMeanOutUb);
             batchRstdQueue.EnQue(batchRstdOutUb);
             LocalTensor<M> batchMeanInUb = batchMeanQueue.template DeQue<M>();
@@ -279,12 +279,10 @@ private:
                 copyInParamsTail.blockLen = tailSize * sizeof(M);
                 copyInParamsTail.srcStride = 0;
                 copyInParamsTail.dstStride = 0;
-                DataCopyPad(
-                    batchMeanGm[offset + castDmaLoops * VL_F32], batchMeanInUb[castDmaLoops * VL_MEAN],
-                    copyInParamsTail);
-                DataCopyPad(
-                    batchRstdGm[offset + castDmaLoops * VL_F32], batchRstdInUb[castDmaLoops * VL_MEAN],
-                    copyInParamsTail);
+                DataCopyPad(batchMeanGm[offset + castDmaLoops * VL_F32], batchMeanInUb[castDmaLoops * VL_MEAN],
+                            copyInParamsTail);
+                DataCopyPad(batchRstdGm[offset + castDmaLoops * VL_F32], batchRstdInUb[castDmaLoops * VL_MEAN],
+                            copyInParamsTail);
             }
             batchMeanQueue.FreeTensor(batchMeanInUb);
             batchRstdQueue.FreeTensor(batchRstdInUb);

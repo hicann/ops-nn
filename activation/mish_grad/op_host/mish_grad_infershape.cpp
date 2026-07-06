@@ -11,8 +11,7 @@
 #include "log/log.h"
 #include "op_common/op_host/infershape_elewise_util.h"
 using namespace ge;
-namespace ops
-{
+namespace ops {
 
 static ge::graphStatus InferShape4MishGrad(gert::InferShapeContext* context)
 {
@@ -21,4 +20,4 @@ static ge::graphStatus InferShape4MishGrad(gert::InferShapeContext* context)
 
 IMPL_OP_INFERSHAPE(MishGrad).InferShape(InferShape4MishGrad);
 
-}  // namespace ops
+} // namespace ops

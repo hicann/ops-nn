@@ -39,10 +39,7 @@ const ge::AscendString SCALE_1 = "scale1";
 const ge::AscendString RELU_WEIGHT_0 = "relu_weight0";
 const ge::AscendString RELU_WEIGHT_1 = "relu_weight1";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
-    {"Ascend950", NpuArch::DAV_3510},
-    {"MC62", NpuArch::DAV_5102}
-};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"MC62", NpuArch::DAV_5102}};
 const std::string FUSION_NAME = "Conv2DPostCubeToExtendConv2DFusionPass";
 
 constexpr int32_t EXTENDCONV2D_QUANT_SCALE_0_INDEX = 4;
@@ -60,30 +57,25 @@ const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES = {
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32},
-    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}
-};
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}};
 
 // Fmap Filter Output
 const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_3510 = {
-    {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW},
-    {ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NHWC}
-};
+    {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW}, {ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NHWC}};
 
 // Fmap Filter Output
 const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_5102 = {
     {ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NCHW},
     {ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_Z_C04, ge::FORMAT_NCHW},
     {ge::FORMAT_NHWC, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NHWC},
-    {ge::FORMAT_NHWC, ge::FORMAT_FRACTAL_Z_C04, ge::FORMAT_NHWC}
-};
+    {ge::FORMAT_NHWC, ge::FORMAT_FRACTAL_Z_C04, ge::FORMAT_NHWC}};
 
 // Fmap Filter PostCubeIn PostCubeOut
 const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510 = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8},
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
-    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}
-};
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}};
 
 // Fmap Filter PostCubeIn PostCubeOut
 const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 = {
@@ -92,55 +84,46 @@ const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
-    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}
-};
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}};
 
-const std::vector<ge::AscendString> SUPPORTED_NODE_TYPES = {
-    "Conv2D", "AscendDequant", "AscendRequant", "AscendQuant", "Relu", "LeakyRelu"
-};
-const std::vector<ge::AscendString> POST_CUBE_NODE_TYPES = {
-    "AscendDequant", "AscendRequant", "AscendQuant", "Relu", "LeakyRelu"
-};
-enum class OutputCase : std::uint8_t {
-    SINGLE,
-    DUAL_POST_CUBE,
-    POST_CUBE_OTHER,
-    OTHER_POST_CUBE
-};
+const std::vector<ge::AscendString> SUPPORTED_NODE_TYPES = {"Conv2D",      "AscendDequant", "AscendRequant",
+                                                            "AscendQuant", "Relu",          "LeakyRelu"};
+const std::vector<ge::AscendString> POST_CUBE_NODE_TYPES = {"AscendDequant", "AscendRequant", "AscendQuant", "Relu",
+                                                            "LeakyRelu"};
+enum class OutputCase : std::uint8_t { SINGLE, DUAL_POST_CUBE, POST_CUBE_OTHER, OTHER_POST_CUBE };
 } // namespace Conv2DPostCubeToExtendConv2DFusion
 
 class __attribute__((visibility("default"))) Conv2DPostCubeToExtendConv2DFusionPass : public ConvFusionBasePass {
 protected:
     void InitMember() override;
-    bool MeetRequirements(const ge::GNode &convNode) override;
+    bool MeetRequirements(const ge::GNode& convNode) override;
     ge::AscendString GetNodeType() const override;
     void PrintGraphStructure() const override;
-    ge::Status ConvFusionPreImpl(ge::GraphPtr &graph, ge::GNode &convNode,
-        const ge::CustomPassContext &pass_context) override;
-    bool ConvFusionReplaceImpl(ge::GraphPtr &graph, const ge::GNode &convNode) override;
-    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode &convNode) override;
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
+    ge::Status ConvFusionPreImpl(ge::GraphPtr& graph, ge::GNode& convNode,
+                                 const ge::CustomPassContext& pass_context) override;
+    bool ConvFusionReplaceImpl(ge::GraphPtr& graph, const ge::GNode& convNode) override;
+    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode& convNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
 
 private:
-    bool AddScaleReluToBoundAry(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary);
+    bool AddScaleReluToBoundAry(std::unique_ptr<ge::fusion::SubgraphBoundary>& boundary);
     bool CheckConvPostCubeDtype(const ge::GNodePtr postCubeNode) const;
     bool CheckDescInfo();
     bool CheckSupportPostCubeCase(const ge::GNodePtr postCubeNode);
-    bool GetPostCubeNodes(const ge::GNode &convNode);
-    bool IsReluEnable(const std::vector<ge::AscendString> &postCubeFusionOp,
-        const ge::AscendString &opType = "default") const;
-    bool IsScaleEnable(const std::vector<ge::AscendString> &postCubeFusionOp) const;
-    void SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchLists) const;
-    bool UpdateExtendConv2DDesc(ge::GNode *extendConv2D) const;
-    bool UpdateScaleReluDesc(ge::GNodePtr postCube, ge::GNode *extendConv2D,
-        const int32_t getIndex, const int32_t updateIndex, const ge::AscendString &name) const;
+    bool GetPostCubeNodes(const ge::GNode& convNode);
+    bool IsReluEnable(const std::vector<ge::AscendString>& postCubeFusionOp,
+                      const ge::AscendString& opType = "default") const;
+    bool IsScaleEnable(const std::vector<ge::AscendString>& postCubeFusionOp) const;
+    void SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo>& matchLists) const;
+    bool UpdateExtendConv2DDesc(ge::GNode* extendConv2D) const;
+    bool UpdateScaleReluDesc(ge::GNodePtr postCube, ge::GNode* extendConv2D, const int32_t getIndex,
+                             const int32_t updateIndex, const ge::AscendString& name) const;
 
     std::vector<std::vector<ge::AscendString>> postCubeFusionOps = {};
     std::vector<ge::GNodePtr> postCubeNodes = {};
     std::vector<std::pair<ge::GNodePtr, int32_t>> otherNodes = {};
 
-    Conv2DPostCubeToExtendConv2DFusion::OutputCase outputCase =
-        Conv2DPostCubeToExtendConv2DFusion::OutputCase::SINGLE;
+    Conv2DPostCubeToExtendConv2DFusion::OutputCase outputCase = Conv2DPostCubeToExtendConv2DFusion::OutputCase::SINGLE;
 
     bool hasScale0 = false;
     bool hasScale1 = false;

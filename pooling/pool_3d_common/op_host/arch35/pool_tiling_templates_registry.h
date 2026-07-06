@@ -23,37 +23,33 @@
 #include "log/log.h"
 #include "error_util.h"
 
-namespace optiling 
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
-template <typename T> std::unique_ptr<TilingBaseClass> TILING_CLASS(gert::TilingContext *context)
+template <typename T>
+std::unique_ptr<TilingBaseClass> TILING_CLASS(gert::TilingContext* context)
 {
     return std::unique_ptr<T>(new (std::nothrow) T(context));
 }
 
-using TilingClassCase = std::unique_ptr<TilingBaseClass> (*)(gert::TilingContext *);
+using TilingClassCase = std::unique_ptr<TilingBaseClass> (*)(gert::TilingContext*);
 
 class TilingCases {
 public:
-    explicit TilingCases(std::string op_type) : op_type_(std::move(op_type))
-    {
-    }
+    explicit TilingCases(std::string op_type) : op_type_(std::move(op_type)) {}
 
-    template <typename T> void AddTiling(int32_t priority)
+    template <typename T>
+    void AddTiling(int32_t priority)
     {
         OPS_ERR_IF(cases_.find(priority) != cases_.end(),
-                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "There are duplicate registrations."), return);
+                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "There are duplicate registrations."), return );
         cases_[priority] = TILING_CLASS<T>;
         OPS_ERR_IF(
             cases_[priority] == nullptr,
             OPS_REPORT_VECTOR_INNER_ERR(op_type_, "PoolRegister op tiling func failed, please check the class name."),
-            return);
+            return );
     }
 
-    const std::map<int32_t, TilingClassCase> &GetTilingCases()
-    {
-        return cases_;
-    }
+    const std::map<int32_t, TilingClassCase>& GetTilingCases() { return cases_; }
 
 private:
     std::map<int32_t, TilingClassCase> cases_;
@@ -66,17 +62,16 @@ public:
     PoolTilingRegistryNew() = default;
 
 #ifdef ASCENDC_OP_TEST
-    static PoolTilingRegistryNew &GetInstance();
+    static PoolTilingRegistryNew& GetInstance();
 #else
-    static PoolTilingRegistryNew &GetInstance()
+    static PoolTilingRegistryNew& GetInstance()
     {
         static PoolTilingRegistryNew registry_impl_;
         return registry_impl_;
     }
 #endif
 
-    std::shared_ptr<TilingCases> RegisterOp(const std::string &op_type,
-                                            int32_t soc_version)
+    std::shared_ptr<TilingCases> RegisterOp(const std::string& op_type, int32_t soc_version)
     {
         auto soc_iter = registry_map_.find(soc_version);
         if (soc_iter == registry_map_.end()) {
@@ -85,26 +80,26 @@ public:
             registry_map_[soc_version] = op_type_map;
         } else {
             if (soc_iter->second.find(op_type) == soc_iter->second.end()) {
-                soc_iter->second[op_type] =
-                    std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(op_type));
+                soc_iter->second[op_type] = std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(op_type));
             }
         }
 
-        OPS_ERR_IF(registry_map_[soc_version][op_type] == nullptr,
-                    OPS_REPORT_VECTOR_INNER_ERR(op_type, "PoolRegister tiling func failed, please check the class name."),
-                    return nullptr);
+        OPS_ERR_IF(
+            registry_map_[soc_version][op_type] == nullptr,
+            OPS_REPORT_VECTOR_INNER_ERR(op_type, "PoolRegister tiling func failed, please check the class name."),
+            return nullptr);
         return registry_map_[soc_version][op_type];
     }
 
-    ge::graphStatus DoTilingImpl(gert::TilingContext *context)
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context)
     {
         int32_t soc_version = (int32_t)platform_ascendc::SocVersion::RESERVED_VERSION;
-        const char *op_type = context->GetNodeType();
-        fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+        const char* op_type = context->GetNodeType();
+        fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
         if (platformInfoPtr == nullptr) {
-            auto compileInfoPtr = static_cast<const Ops::NN::Optiling::CompileInfoCommon *>(context->GetCompileInfo());
+            auto compileInfoPtr = static_cast<const Ops::NN::Optiling::CompileInfoCommon*>(context->GetCompileInfo());
             OPS_ERR_IF(compileInfoPtr == nullptr, OPS_REPORT_VECTOR_INNER_ERR(op_type, "compileInfoPtr is null."),
-                        return ge::GRAPH_FAILED);
+                       return ge::GRAPH_FAILED);
             soc_version = compileInfoPtr->socVersion;
             OPS_LOG_D(context, "soc version in compileInfo is %d", soc_version);
         } else {
@@ -132,15 +127,15 @@ public:
         return ge::GRAPH_FAILED;
     }
 
-    ge::graphStatus DoTilingImpl(gert::TilingContext *context, const std::vector<int32_t> &priorities)
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context, const std::vector<int32_t>& priorities)
     {
         int32_t soc_version;
-        const char *op_type = context->GetNodeType();
+        const char* op_type = context->GetNodeType();
         auto platformInfoPtr = context->GetPlatformInfo();
         if (platformInfoPtr == nullptr) {
-            auto compileInfoPtr = static_cast<const Ops::NN::Optiling::CompileInfoCommon *>(context->GetCompileInfo());
+            auto compileInfoPtr = static_cast<const Ops::NN::Optiling::CompileInfoCommon*>(context->GetCompileInfo());
             OPS_ERR_IF(compileInfoPtr == nullptr, OPS_REPORT_VECTOR_INNER_ERR(op_type, "compileInfoPtr is null."),
-                        return ge::GRAPH_FAILED);
+                       return ge::GRAPH_FAILED);
             soc_version = compileInfoPtr->socVersion;
             OPS_LOG_D(context, "soc version in compileInfo is %d", soc_version);
         } else {
@@ -167,18 +162,17 @@ public:
         return ge::GRAPH_FAILED;
     }
 
-    const std::map<int32_t, TilingClassCase> &GetTilingTemplates(const std::string &op_type,
-                                                                    int32_t soc_version)
+    const std::map<int32_t, TilingClassCase>& GetTilingTemplates(const std::string& op_type, int32_t soc_version)
     {
         auto soc_iter = registry_map_.find(soc_version);
         OPS_ERR_IF(soc_iter == registry_map_.end(),
-                    OPS_REPORT_VECTOR_INNER_ERR(op_type, "Get op tiling func failed, please check the soc version %d",
-                                                soc_version),
-                    return empty_tiling_case_);
+                   OPS_REPORT_VECTOR_INNER_ERR(op_type, "Get op tiling func failed, please check the soc version %d",
+                                               soc_version),
+                   return empty_tiling_case_);
         auto op_iter = soc_iter->second.find(op_type);
         OPS_ERR_IF(op_iter == soc_iter->second.end(),
-                    OPS_REPORT_VECTOR_INNER_ERR(op_type, "Get op tiling func failed, please check the op name."),
-                    return empty_tiling_case_);
+                   OPS_REPORT_VECTOR_INNER_ERR(op_type, "Get op tiling func failed, please check the op name."),
+                   return empty_tiling_case_);
         return op_iter->second->GetTilingCases();
     }
 
@@ -189,27 +183,27 @@ private:
 
 class PoolRegisterNew {
 public:
-    explicit PoolRegisterNew(std::string op_type) : op_type_(std::move(op_type))
-    {
-    }
+    explicit PoolRegisterNew(std::string op_type) : op_type_(std::move(op_type)) {}
 
-    template <typename T> PoolRegisterNew &tiling(int32_t priority, int32_t soc_version)
+    template <typename T>
+    PoolRegisterNew& tiling(int32_t priority, int32_t soc_version)
     {
         auto tilingCases = PoolTilingRegistryNew::GetInstance().RegisterOp(op_type_, soc_version);
         OPS_ERR_IF(tilingCases == nullptr,
-                    OPS_REPORT_VECTOR_INNER_ERR(op_type_, "PoolRegister op tiling failed, please the op name."),
-                    return *this);
+                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "PoolRegister op tiling failed, please the op name."),
+                   return *this);
         tilingCases->AddTiling<T>(priority);
         return *this;
     }
 
-    template <typename T> PoolRegisterNew &tiling(int32_t priority, const std::vector<int32_t>& soc_versions)
+    template <typename T>
+    PoolRegisterNew& tiling(int32_t priority, const std::vector<int32_t>& soc_versions)
     {
         for (int32_t soc_version : soc_versions) {
             auto tilingCases = PoolTilingRegistryNew::GetInstance().RegisterOp(op_type_, soc_version);
             OPS_ERR_IF(tilingCases == nullptr,
-                        OPS_REPORT_VECTOR_INNER_ERR(op_type_, "PoolRegister op tiling failed, please the op name."),
-                        return *this);
+                       OPS_REPORT_VECTOR_INNER_ERR(op_type_, "PoolRegister op tiling failed, please the op name."),
+                       return *this);
             tilingCases->AddTiling<T>(priority);
         }
         return *this;
@@ -225,29 +219,30 @@ public:
     PoolTilingRegistry() = default;
 
 #ifdef ASCENDC_OP_TEST
-    static PoolTilingRegistry &GetInstance();
+    static PoolTilingRegistry& GetInstance();
 #else
-    static PoolTilingRegistry &GetInstance()
+    static PoolTilingRegistry& GetInstance()
     {
         static PoolTilingRegistry registry_impl_;
         return registry_impl_;
     }
 #endif
 
-    std::shared_ptr<TilingCases> RegisterOp(const std::string &op_type)
+    std::shared_ptr<TilingCases> RegisterOp(const std::string& op_type)
     {
         if (registry_map_.find(op_type) == registry_map_.end()) {
             registry_map_[op_type] = std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(op_type));
         }
-        OPS_ERR_IF(registry_map_[op_type] == nullptr,
-                   OPS_REPORT_VECTOR_INNER_ERR(op_type, "PoolRegister tiling func failed, please check the class name."),
-                   return nullptr);
+        OPS_ERR_IF(
+            registry_map_[op_type] == nullptr,
+            OPS_REPORT_VECTOR_INNER_ERR(op_type, "PoolRegister tiling func failed, please check the class name."),
+            return nullptr);
         return registry_map_[op_type];
     }
 
-    ge::graphStatus DoTilingImpl(gert::TilingContext *context)
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context)
     {
-        const char *op_type = context->GetNodeType();
+        const char* op_type = context->GetNodeType();
         auto tilingTemplateRegistryMap = GetTilingTemplates(op_type);
         for (auto it = tilingTemplateRegistryMap.begin(); it != tilingTemplateRegistryMap.end(); ++it) {
             auto tilingTemplate = it->second(context);
@@ -264,9 +259,9 @@ public:
         return ge::GRAPH_FAILED;
     }
 
-    ge::graphStatus DoTilingImpl(gert::TilingContext *context, const std::vector<int32_t> &priorities)
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context, const std::vector<int32_t>& priorities)
     {
-        const char *op_type = context->GetNodeType();
+        const char* op_type = context->GetNodeType();
         auto tilingTemplateRegistryMap = GetTilingTemplates(op_type);
         for (auto priorityId : priorities) {
             auto templateFunc = tilingTemplateRegistryMap[priorityId](context);
@@ -287,7 +282,7 @@ public:
         return ge::GRAPH_FAILED;
     }
 
-    const std::map<int32_t, TilingClassCase> &GetTilingTemplates(const std::string &op_type)
+    const std::map<int32_t, TilingClassCase>& GetTilingTemplates(const std::string& op_type)
     {
         OPS_ERR_IF(registry_map_.find(op_type) == registry_map_.end(),
                    OPS_REPORT_VECTOR_INNER_ERR(op_type, "Get op tiling func failed, please check the op name."),
@@ -302,11 +297,10 @@ private:
 
 class PoolRegister {
 public:
-    explicit PoolRegister(std::string op_type) : op_type_(std::move(op_type))
-    {
-    }
+    explicit PoolRegister(std::string op_type) : op_type_(std::move(op_type)) {}
 
-    template <typename T> PoolRegister &tiling(int32_t priority)
+    template <typename T>
+    PoolRegister& tiling(int32_t priority)
     {
         auto tilingCases = PoolTilingRegistry::GetInstance().RegisterOp(op_type_);
         OPS_ERR_IF(tilingCases == nullptr,
@@ -322,29 +316,32 @@ private:
 
 // op_type: 算子名称， class_name: 注册的 tiling 类, soc_version：芯片版本号
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
-#define REGISTER_POOL_TILING_TEMPLATE_WITH_SOCVERSION(op_type, class_name, soc_versions, priority) \
-    static PoolRegisterNew VAR_UNUSED##op_type##class_name##priority_register = \
-        PoolRegisterNew(#op_type).tiling<class_name>(priority, soc_versions)
+#define REGISTER_POOL_TILING_TEMPLATE_WITH_SOCVERSION(op_type, class_name, soc_versions, priority)                \
+    static PoolRegisterNew VAR_UNUSED##op_type##class_name##priority_register = PoolRegisterNew(#op_type)         \
+                                                                                    .tiling<class_name>(priority, \
+                                                                                                        soc_versions)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
-#define REGISTER_POOL_TILING_TEMPLATE(op_type, class_name, priority)                                                        \
-    static PoolRegister VAR_UNUSED##op_type_##class_name##priority_register = PoolRegister(op_type).tiling<class_name>(priority)
+#define REGISTER_POOL_TILING_TEMPLATE(op_type, class_name, priority)                                \
+    static PoolRegister VAR_UNUSED##op_type_##class_name##priority_register = PoolRegister(op_type) \
+                                                                                  .tiling<class_name>(priority)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // soc_version: soc版本，用于区分不同的soc
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
-#define REGISTER_POOL_TILING_TEMPLATE_NEW(op_type, class_name, soc_version, priority)            \
-    static PoolRegisterNew VAR_UNUSED##op_type##class_name##priority_register =        \
-        PoolRegisterNew(#op_type).tiling<class_name>(priority, soc_version)
+#define REGISTER_POOL_TILING_TEMPLATE_NEW(op_type, class_name, soc_version, priority)                             \
+    static PoolRegisterNew VAR_UNUSED##op_type##class_name##priority_register = PoolRegisterNew(#op_type)         \
+                                                                                    .tiling<class_name>(priority, \
+                                                                                                        soc_version)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 REGISTER_POOL_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
 #define REGISTER_OPS_POOL_TILING_TEMPLATE(op_type, class_name, priority) \
-    static PoolRegister __attribute__((unused)) tiling_##op_type##_##class_name##_##priority##_register = \
-    PoolRegister(#op_type).tiling<class_name>(priority)
+    static PoolRegister __attribute__((unused))                          \
+    tiling_##op_type##_##class_name##_##priority##_register = PoolRegister(#op_type).tiling<class_name>(priority)
 
 } // namespace optiling
 
-#endif  // CONV_TILING_TEMPLATES_REGISTRY
+#endif // CONV_TILING_TEMPLATES_REGISTRY

@@ -22,32 +22,29 @@
 #include "platform/platform_info.h"
 
 class LogSigmoidTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "log_sigmoid test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "log_sigmoid test SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "log_sigmoid test TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "log_sigmoid test TearDown" << std::endl; }
 };
 
-TEST_F(LogSigmoidTest, log_sigmoid_infershape_test) {
-  ge::op::LogSigmoid op;
+TEST_F(LogSigmoidTest, log_sigmoid_infershape_test)
+{
+    ge::op::LogSigmoid op;
 
-  std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
+    std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
 
-  auto tensor_desc =
-      create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
-  op.UpdateInputDesc("grad", tensor_desc);
-  op.UpdateInputDesc("x", tensor_desc);
-  auto ret = op.InferShapeAndType();
-  ASSERT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                               shape_range);
+    op.UpdateInputDesc("grad", tensor_desc);
+    op.UpdateInputDesc("x", tensor_desc);
+    auto ret = op.InferShapeAndType();
+    ASSERT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
-  auto output_desc = op.GetOutputDescByName("y");
-  std::vector<int64_t> expected_output_shape = {-1, -1};
-  ASSERT_EQ(output_desc.GetShape().GetDims(), expected_output_shape);
+    auto output_desc = op.GetOutputDescByName("y");
+    std::vector<int64_t> expected_output_shape = {-1, -1};
+    ASSERT_EQ(output_desc.GetShape().GetDims(), expected_output_shape);
 
-  auto output0_desc = op.GetOutputDescByName("y");
-  ASSERT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
+    auto output0_desc = op.GetOutputDescByName("y");
+    ASSERT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }

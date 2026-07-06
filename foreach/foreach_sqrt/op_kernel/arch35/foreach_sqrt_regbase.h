@@ -20,14 +20,13 @@
 namespace ForeachSqrt {
 using namespace AscendC;
 template <typename T, typename Tiling>
-class ForeachSqrtRegbase : public ForeachRegbaseUnary<T, Tiling, ForeachSqrtRegbase<T, Tiling>>
-{
+class ForeachSqrtRegbase : public ForeachRegbaseUnary<T, Tiling, ForeachSqrtRegbase<T, Tiling>> {
 public:
     using Base = ForeachRegbaseUnary<T, Tiling, ForeachSqrtRegbase<T, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachSqrtRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData,
+                                TPipe* tPipe)
     {
         Base::Init(inputs, outputs, workspace, tilingData, tPipe);
         if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {

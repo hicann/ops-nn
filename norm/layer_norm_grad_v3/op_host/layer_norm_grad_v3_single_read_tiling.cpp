@@ -36,9 +36,9 @@ bool LayerNormGradV3SingleReadTiling::IsCapable()
     }
     if (LNG_MIN_COL > commonParams.colSize || commonParams.colSize > LNG_MAX_COL) {
         OP_LOGI(context_->GetNodeName(),
-            "LayerNormGradV3SingleReadTiling: col value(=%ld) is not support now, "
-            "please check.",
-            commonParams.colSize);
+                "LayerNormGradV3SingleReadTiling: col value(=%ld) is not support now, "
+                "please check.",
+                commonParams.colSize);
         return false;
     }
     return true;
@@ -46,12 +46,13 @@ bool LayerNormGradV3SingleReadTiling::IsCapable()
 
 ge::graphStatus LayerNormGradV3SingleReadTiling::DoOpTiling()
 {
-    colAlignV =  Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B32_ALIGN_FACTOR) * LNG_B32_ALIGN_FACTOR;
+    colAlignV = Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B32_ALIGN_FACTOR) *
+                LNG_B32_ALIGN_FACTOR;
     if (commonParams.dyDtype == ge::DataType::DT_FLOAT) {
         colAlignM = colAlignV;
     } else {
-        colAlignM =
-             Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B16_ALIGN_FACTOR) * LNG_B16_ALIGN_FACTOR;
+        colAlignM = Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B16_ALIGN_FACTOR) *
+                    LNG_B16_ALIGN_FACTOR;
     }
 
     td_.set_row(commonParams.rowSize);
@@ -59,27 +60,27 @@ ge::graphStatus LayerNormGradV3SingleReadTiling::DoOpTiling()
     td_.set_colAlignV(colAlignV);
     td_.set_colAlignM(colAlignM);
     // calculate block tiling, row split block
-    int64_t blockFormer =
-         Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.rowSize), static_cast<int64_t>(commonParams.coreNum));
-    int64_t blockNum =  Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.rowSize), blockFormer);
+    int64_t blockFormer = Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.rowSize),
+                                             static_cast<int64_t>(commonParams.coreNum));
+    int64_t blockNum = Ops::Base::CeilDiv(static_cast<int64_t>(commonParams.rowSize), blockFormer);
     int64_t blockTail = commonParams.rowSize - (blockNum - 1) * blockFormer;
     td_.set_blockFormer(blockFormer);
     td_.set_blockNum(blockNum);
     td_.set_blockTail(blockTail);
     // calculate ub tiling, row split block
     int64_t maxBufferSize = (commonParams.ubSizePlatForm - LNG_TMP_BUFFER_SIZE_0 * LNG_CONSTANT_FIVE -
-        LNG_TMP_BUFFER_SIZE_1 * LNG_CONSTANT_TWO) /
-        LNG_B32_DTYPE_SIZE / LNG_MAX_BUFFER_NUM;
+                             LNG_TMP_BUFFER_SIZE_1 * LNG_CONSTANT_TWO) /
+                            LNG_B32_DTYPE_SIZE / LNG_MAX_BUFFER_NUM;
     if (maxBufferSize < colAlignM) {
         OP_LOGE(context_->GetNodeName(),
-            "LayerNormGradV3SingleReadTiling: ubSize (=%lu) and maxBufferSize (=%ld) is less than colAlignM(=%ld) "
-            "please check.",
-            commonParams.ubSizePlatForm, maxBufferSize, colAlignM);
+                "LayerNormGradV3SingleReadTiling: ubSize (=%lu) and maxBufferSize (=%ld) is less than colAlignM(=%ld) "
+                "please check.",
+                commonParams.ubSizePlatForm, maxBufferSize, colAlignM);
         return ge::GRAPH_FAILED;
     }
     int64_t ubFormer = maxBufferSize / colAlignM;
-    int64_t ubLoopOfFormerBlock =  Ops::Base::CeilDiv(blockFormer, ubFormer);
-    int64_t ubLoopOfTailBlock =  Ops::Base::CeilDiv(blockTail, ubFormer);
+    int64_t ubLoopOfFormerBlock = Ops::Base::CeilDiv(blockFormer, ubFormer);
+    int64_t ubLoopOfTailBlock = Ops::Base::CeilDiv(blockTail, ubFormer);
     td_.set_ubFormer(ubFormer);
     td_.set_ubLoopOfFormerBlock(ubLoopOfFormerBlock);
     td_.set_ubLoopOfTailBlock(ubLoopOfTailBlock);
@@ -92,7 +93,7 @@ ge::graphStatus LayerNormGradV3SingleReadTiling::DoOpTiling()
 
 ge::graphStatus LayerNormGradV3SingleReadTiling::GetWorkspaceSize()
 {
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     // workspace size is coreNum * colAlignV * 4 * 2
     workspaces[0] = td_.get_blockNum() * colAlignV * LNG_B32_DTYPE_SIZE * LNG_CONSTANT_TWO + LNG_WORKSPACE_RESERVED;
 
@@ -112,7 +113,7 @@ uint64_t LayerNormGradV3SingleReadTiling::GetTilingKey() const
 {
     uint64_t templateKey = static_cast<uint64_t>(LNGTemplateKey::SINGEL_READ);
     return templateKey * LNG_TEMPLATE_KEY_WEIGHT + commonParams.isDeterministicKey * LNG_DETERMINISTIC_KEY_WEIGHT +
-        static_cast<uint64_t>(commonParams.dtypeKey);
+           static_cast<uint64_t>(commonParams.dtypeKey);
 }
 
 REGISTER_TILING_TEMPLATE("LayerNormGradV3", LayerNormGradV3SingleReadTiling, 1000);

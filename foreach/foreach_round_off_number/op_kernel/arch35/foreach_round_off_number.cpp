@@ -28,8 +28,8 @@ enum class ForeachRoundOffNumberTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_round_off_number(
-    GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_round_off_number(GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachRoundOffNumberTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachRoundOffNumberTilingData, tilingData, tiling);

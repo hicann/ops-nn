@@ -21,15 +21,9 @@
 
 class Conv3DBackpropInputV2ProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Conv3DBackpropInputV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Conv3DBackpropInputV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Conv3DBackpropInputV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Conv3DBackpropInputV2 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(Conv3DBackpropInputV2ProtoTest, basic)
@@ -47,28 +41,26 @@ TEST_F(Conv3DBackpropInputV2ProtoTest, basic)
     gert::StorageShape output_shape = {{}, {}};
 
     size_t total_size = 0;
-    auto tensor_holder =
-        gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64, total_size);
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
     auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
     tensor->MutableStorageShape().AppendDim(input_size_shape.GetStorageShape().GetDimNum());
     tensor->MutableOriginShape().AppendDim(input_size_shape.GetOriginShape().GetDimNum());
     tensor->SetOriginFormat(ge::FORMAT_NDHWC);
     tensor->SetStorageFormat(ge::FORMAT_NDHWC);
-    (void)memcpy_s(
-        tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
-        input_size.size() * sizeof(int64_t));
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({tensor, &filter_shape, &out_backprop_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
@@ -96,28 +88,26 @@ TEST_F(Conv3DBackpropInputV2ProtoTest, dynamic)
     gert::StorageShape output_shape = {{}, {}};
 
     size_t total_size = 0;
-    auto tensor_holder =
-        gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64, total_size);
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
     auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
     tensor->MutableStorageShape().AppendDim(input_size_shape.GetStorageShape().GetDimNum());
     tensor->MutableOriginShape().AppendDim(input_size_shape.GetOriginShape().GetDimNum());
     tensor->SetOriginFormat(ge::FORMAT_NDHWC);
     tensor->SetStorageFormat(ge::FORMAT_NDHWC);
-    (void)memcpy_s(
-        tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
-        input_size.size() * sizeof(int64_t));
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({tensor, &filter_shape, &out_backprop_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
@@ -146,12 +136,11 @@ TEST_F(Conv3DBackpropInputV2ProtoTest, base_dtype)
     auto holder = gert::InferDataTypeContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
@@ -183,28 +172,26 @@ TEST_F(Conv3DBackpropInputV2ProtoTest, 2d_extend_3d)
     gert::StorageShape output_shape = {{}, {}};
 
     size_t total_size = 0;
-    auto tensor_holder =
-        gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT32, total_size);
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT32,
+                                                       total_size);
     auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
     tensor->MutableStorageShape().AppendDim(input_size_shape.GetStorageShape().GetDimNum());
     tensor->MutableOriginShape().AppendDim(input_size_shape.GetOriginShape().GetDimNum());
     tensor->SetOriginFormat(ge::FORMAT_NDHWC);
     tensor->SetStorageFormat(ge::FORMAT_NDHWC);
-    (void)memcpy_s(
-        tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
-        input_size.size() * sizeof(int32_t));
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int32_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({tensor, &filter_shape, &out_backprop_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN)

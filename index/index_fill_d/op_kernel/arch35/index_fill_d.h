@@ -15,15 +15,14 @@
 
 #ifndef CANN_CUSTOM_OPS_INDEX_FILL_D_H
 #define CANN_CUSTOM_OPS_INDEX_FILL_D_H
- 
 
 using namespace AscendC;
 static const int BUFFER_NUM = 2;
-template<typename T>
+template <typename T>
 class IndexFillD {
 public:
-    __aicore__ inline IndexFillD(const IndexFillDTilingData& tilingData, TPipe &pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline IndexFillD(const IndexFillDTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void CopyIn(int64_t offset, int64_t dataLen);
     __aicore__ inline void CopyOut(int64_t offset, int64_t dataLen);
@@ -39,31 +38,31 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> assist1Queue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> assist2Queue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> yQueue_;
-    TPipe &pipe_;
+    TPipe& pipe_;
     const IndexFillDTilingData& tilingData_;
 };
 
-template<typename T>
+template <typename T>
 __aicore__ inline void IndexFillD<T>::Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, GM_ADDR workspace)
 {
     if (GetBlockIdx() >= GetBlockNum()) {
         return;
     }
-    xGm_.SetGlobalBuffer((__gm__ T *)(x) + GetBlockIdx() * tilingData_.normalCoreData);
-    assist1Gm_.SetGlobalBuffer((__gm__ T *)(assist1) + GetBlockIdx() * tilingData_.normalCoreData);
-    assist2Gm_.SetGlobalBuffer((__gm__ T *)(assist2) + GetBlockIdx() * tilingData_.normalCoreData);
-    yGm_.SetGlobalBuffer((__gm__ T *)(y) + GetBlockIdx() * tilingData_.normalCoreData);
+    xGm_.SetGlobalBuffer((__gm__ T*)(x) + GetBlockIdx() * tilingData_.normalCoreData);
+    assist1Gm_.SetGlobalBuffer((__gm__ T*)(assist1) + GetBlockIdx() * tilingData_.normalCoreData);
+    assist2Gm_.SetGlobalBuffer((__gm__ T*)(assist2) + GetBlockIdx() * tilingData_.normalCoreData);
+    yGm_.SetGlobalBuffer((__gm__ T*)(y) + GetBlockIdx() * tilingData_.normalCoreData);
     pipe_.InitBuffer(xQueue_, BUFFER_NUM, tilingData_.ubFactor * sizeof(T));
     pipe_.InitBuffer(assist1Queue_, BUFFER_NUM, tilingData_.ubFactor * sizeof(T));
     pipe_.InitBuffer(assist2Queue_, BUFFER_NUM, tilingData_.ubFactor * sizeof(T));
     pipe_.InitBuffer(yQueue_, BUFFER_NUM, tilingData_.ubFactor * sizeof(T));
 }
 
-template<typename T>
+template <typename T>
 __aicore__ inline void IndexFillD<T>::CopyIn(int64_t offset, int64_t dataLen)
 {
-    DataCopyExtParams inParams = { 1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
-    DataCopyPadExtParams<T> padParams = { false, 0, 0, false };
+    DataCopyExtParams inParams = {1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> padParams = {false, 0, 0, false};
     LocalTensor<T> xLocal = xQueue_.AllocTensor<T>();
     DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
     xQueue_.EnQue(xLocal);
@@ -77,19 +76,19 @@ __aicore__ inline void IndexFillD<T>::CopyIn(int64_t offset, int64_t dataLen)
     assist2Queue_.EnQue(assist2Local);
 }
 
-template<typename T>
+template <typename T>
 __aicore__ inline void IndexFillD<T>::CopyOut(int64_t offset, int64_t dataLen)
 {
-    DataCopyExtParams outParams = { 1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0 };
+    DataCopyExtParams outParams = {1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0};
     LocalTensor<T> yLocal = yQueue_.DeQue<T>();
     DataCopyPad(yGm_[offset], yLocal, outParams);
     yQueue_.FreeTensor(yLocal);
 }
 
-template<typename DTYPE>
-__simd_vf__ inline void CompareVfKernel(__ubuf__ DTYPE* xPtr, __ubuf__ DTYPE* assist1Ptr,
-                                __ubuf__ DTYPE* assist2Ptr, __ubuf__ DTYPE* yPtr,
-                                uint32_t count, uint16_t onRepeatSize, uint16_t repeatTimes)
+template <typename DTYPE>
+__simd_vf__ inline void CompareVfKernel(__ubuf__ DTYPE* xPtr, __ubuf__ DTYPE* assist1Ptr, __ubuf__ DTYPE* assist2Ptr,
+                                        __ubuf__ DTYPE* yPtr, uint32_t count, uint16_t onRepeatSize,
+                                        uint16_t repeatTimes)
 {
     MicroAPI::RegTensor<DTYPE> vSrcRegX;
     MicroAPI::RegTensor<DTYPE> vSrcRegAssist1;
@@ -108,20 +107,17 @@ __simd_vf__ inline void CompareVfKernel(__ubuf__ DTYPE* xPtr, __ubuf__ DTYPE* as
     }
 }
 
-template<typename T, typename DTYPE>
-static __aicore__ inline void CompareVf(LocalTensor<T> &xLocal, LocalTensor<T> &assist1Local,
-                                LocalTensor<T> &assist2Local, LocalTensor<T> &yLocal,
-                                uint32_t count, uint16_t onRepeatSize, uint16_t repeatTimes)
+template <typename T, typename DTYPE>
+static __aicore__ inline void CompareVf(LocalTensor<T>& xLocal, LocalTensor<T>& assist1Local,
+                                        LocalTensor<T>& assist2Local, LocalTensor<T>& yLocal, uint32_t count,
+                                        uint16_t onRepeatSize, uint16_t repeatTimes)
 {
-    CompareVfKernel<DTYPE>(
-        (__ubuf__ DTYPE*)xLocal.GetPhyAddr(),
-        (__ubuf__ DTYPE*)assist1Local.GetPhyAddr(),
-        (__ubuf__ DTYPE*)assist2Local.GetPhyAddr(),
-        (__ubuf__ DTYPE*)yLocal.GetPhyAddr(),
-        count, onRepeatSize, repeatTimes);
+    CompareVfKernel<DTYPE>((__ubuf__ DTYPE*)xLocal.GetPhyAddr(), (__ubuf__ DTYPE*)assist1Local.GetPhyAddr(),
+                           (__ubuf__ DTYPE*)assist2Local.GetPhyAddr(), (__ubuf__ DTYPE*)yLocal.GetPhyAddr(), count,
+                           onRepeatSize, repeatTimes);
 }
 
-template<typename T>
+template <typename T>
 __aicore__ inline void IndexFillD<T>::Compute(int64_t dataLen)
 {
     LocalTensor<T> xLocal = xQueue_.DeQue<T>();
@@ -141,7 +137,7 @@ __aicore__ inline void IndexFillD<T>::Compute(int64_t dataLen)
     assist2Queue_.FreeTensor(assist2Local);
 }
 
-template<typename T>
+template <typename T>
 __aicore__ inline void IndexFillD<T>::Process()
 {
     if (GetBlockIdx() >= GetBlockNum()) {
@@ -169,4 +165,4 @@ __aicore__ inline void IndexFillD<T>::Process()
     CopyOut(offset, dataLen);
 }
 
-#endif  // CANN_CUSTOM_OPS_INDEX_FILL_D_H
+#endif // CANN_CUSTOM_OPS_INDEX_FILL_D_H

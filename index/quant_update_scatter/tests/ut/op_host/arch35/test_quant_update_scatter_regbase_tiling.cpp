@@ -30,25 +30,18 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class QuantUpdateScatterRegBaseTiling : public testing::Test
-{
+class QuantUpdateScatterRegBaseTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantUpdateScatterRegBaseTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantUpdateScatterRegBaseTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantUpdateScatterRegBaseTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantUpdateScatterRegBaseTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    std::vector<ge::DataType> dtypes, gert::StorageShape varShape, gert::StorageShape indicesShape,
-    gert::StorageShape updatesShape, gert::StorageShape scalesShape, gert::StorageShape zeroPointsShape,
-    gert::StorageShape outShape, string reduce, int64_t axis, int64_t quant_axis, bool reciprocal_scale,
-    string round_mode, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(std::vector<ge::DataType> dtypes, gert::StorageShape varShape,
+                            gert::StorageShape indicesShape, gert::StorageShape updatesShape,
+                            gert::StorageShape scalesShape, gert::StorageShape zeroPointsShape,
+                            gert::StorageShape outShape, string reduce, int64_t axis, int64_t quant_axis,
+                            bool reciprocal_scale, string round_mode, ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -89,8 +82,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -114,12 +107,11 @@ static void ExecuteTestCase(
                       .NodeInputTd(3, dtypes[3], ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(4, dtypes[4], ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtypes[5], ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduce", Ops::NN::AnyValue::CreateFrom<string>(reduce)},
-                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
-                           {"quant_axis", Ops::NN::AnyValue::CreateFrom<int64_t>(quant_axis)},
-                           {"reciprocal_scale", Ops::NN::AnyValue::CreateFrom<bool>(reciprocal_scale)},
-                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)}})
+                      .NodeAttrs({{"reduce", Ops::NN::AnyValue::CreateFrom<string>(reduce)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
+                                  {"quant_axis", Ops::NN::AnyValue::CreateFrom<int64_t>(quant_axis)},
+                                  {"reciprocal_scale", Ops::NN::AnyValue::CreateFrom<bool>(reciprocal_scale)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -150,10 +142,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter1)
     bool reciprocal_scale = false;
     string round_mode = "rint";
 
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter2)
@@ -170,10 +161,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter2)
     bool reciprocal_scale = false;
     string round_mode = "rint";
 
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter3)
@@ -190,10 +180,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter3)
     bool reciprocal_scale = false;
     string round_mode = "rint";
 
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter4)
@@ -209,10 +198,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter4)
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter5)
@@ -228,10 +216,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter5)
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter6)
@@ -247,10 +234,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter6)
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter7)
@@ -267,10 +253,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter7)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter8)
@@ -288,10 +273,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter8)
     bool reciprocal_scale = false;
     string round_mode = "rint";
 
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter9)
@@ -309,10 +293,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter9)
     bool reciprocal_scale = false;
     string round_mode = "rint";
 
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_empty_tensor)
@@ -329,10 +312,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_empty_tensor)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_var_error_dtype)
@@ -349,10 +331,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_var_error_dtype)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_index_error_dtype)
@@ -369,10 +350,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_index_error_dtype)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_error_dtype)
@@ -389,10 +369,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_error_dtype)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_scale_error_dtype)
@@ -409,10 +388,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_scale_error_dtype)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_quant_zero_points_error_dtype)
@@ -429,10 +407,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_quant_zero_points_err
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT8, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT8, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_error_rank)
@@ -449,10 +426,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_error_rank)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_indices_shape_error)
@@ -469,10 +445,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_indices_shape_error)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_attr_reduce_error)
@@ -489,10 +464,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_attr_reduce_error)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_attr_axis_error)
@@ -509,10 +483,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_attr_axis_error)
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_attr_quant_axis_error)
@@ -529,10 +502,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_attr_quant_axis_error
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_var_update_shape_dim_diff)
@@ -549,10 +521,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_var_update_shape_dim_
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_index_shape_value_diff)
@@ -569,10 +540,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_index_shape_va
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_shape_larger_var)
@@ -589,10 +559,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_shape_larger_v
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_shape_larger_var2)
@@ -609,10 +578,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_update_shape_larger_v
 
     bool reciprocal_scale = false;
     string round_mode = "rint";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_round_mode_illegal)
@@ -628,10 +596,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_round_mode_illegal)
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "trunc";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_round_mode_not_match)
@@ -647,10 +614,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_round_mode_not_match)
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "hybrid";
-    ExecuteTestCase(
-        {ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_INT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8}, varShape,
+                    indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis,
+                    reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_round_mode_match)
@@ -666,10 +632,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_round_mode_match)
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "hybrid";
-    ExecuteTestCase(
-        {ge::DT_HIFLOAT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_HIFLOAT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_HIFLOAT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_HIFLOAT8},
+                    varShape, indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis,
+                    quant_axis, reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_axis_not_neg2_shape_error)
@@ -685,10 +650,9 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_axis_not_neg2_shape_e
     int64_t quant_axis = -1;
     bool reciprocal_scale = false;
     string round_mode = "hybrid";
-    ExecuteTestCase(
-        {ge::DT_HIFLOAT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_HIFLOAT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase({ge::DT_HIFLOAT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_HIFLOAT8},
+                    varShape, indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis,
+                    quant_axis, reciprocal_scale, round_mode, ge::GRAPH_FAILED);
 }
 
 TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_axis_not_neg2)
@@ -705,8 +669,7 @@ TEST_F(QuantUpdateScatterRegBaseTiling, QuantUpdateScatter_axis_not_neg2)
     bool reciprocal_scale = false;
     string round_mode = "hybrid";
 
-    ExecuteTestCase(
-        {ge::DT_HIFLOAT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_HIFLOAT8}, varShape, indicesShape,
-        updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis, quant_axis, reciprocal_scale, round_mode,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase({ge::DT_HIFLOAT8, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_HIFLOAT8},
+                    varShape, indicesShape, updatesShape, scalesShape, zeroPointsShape, outShape, reduce, axis,
+                    quant_axis, reciprocal_scale, round_mode, ge::GRAPH_SUCCESS);
 }

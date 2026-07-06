@@ -27,8 +27,7 @@ __global__ __aicore__ void foreach_cosh(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     REGISTER_TILING_DEFAULT(ForeachCoshTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachCoshTilingData, tilingData, tiling);
 
-    const __gm__ ForeachCoshTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachCoshTilingData*>(tiling);
+    const __gm__ ForeachCoshTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachCoshTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachCoshTilingKey::TILING_KEY_FLOAT)) {
         NsForeachCosh::Process<float>(x, y, tilingGm);

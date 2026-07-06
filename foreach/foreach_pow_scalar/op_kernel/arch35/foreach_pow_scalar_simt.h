@@ -48,9 +48,17 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
  * \brief Type promotion helper: low-precision types promote to float32 for computation
  */
 template <typename T>
-struct ComputeType { using type = T; };
-template <> struct ComputeType<half> { using type = float; };
-template <> struct ComputeType<bfloat16_t> { using type = float; };
+struct ComputeType {
+    using type = T;
+};
+template <>
+struct ComputeType<half> {
+    using type = float;
+};
+template <>
+struct ComputeType<bfloat16_t> {
+    using type = float;
+};
 
 /**
  * \brief Integer fast power implementation, aligned with PyTorch powi behavior
@@ -91,13 +99,10 @@ __simt_callee__ inline int32_t PowiImpl(int32_t base, int32_t exp)
  * \brief SIMT VF kernel: compute y = x^scalar for all elements across all tensors
  */
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachPowScalarSimt(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList,
-    S scalarVal)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarSimt(int32_t tensorCount,
+                                                                                   __gm__ int64_t* tensorElements,
+                                                                                   GM_ADDR xList, GM_ADDR yList,
+                                                                                   S scalarVal)
 {
     using C = typename ComputeType<T>::type;
 
@@ -110,11 +115,9 @@ inline void OpForeachPowScalarSimt(
         __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
         __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             T xVal = xData[idx];
@@ -136,9 +139,7 @@ inline void OpForeachPowScalarSimt(
  * \brief Process entry: read scalar from GM, launch SIMT VF for foreach_pow_scalar
  */
 template <typename T, typename S>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
-    const __gm__ ForeachPowScalarTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, const __gm__ ForeachPowScalarTilingData* tilingGm)
 {
     // Read scalar value from GM (single-element tensor)
     __gm__ S* scalarGm = reinterpret_cast<__gm__ S*>(scalar);
@@ -146,19 +147,13 @@ __aicore__ inline void Process(
 
     // Extract tensorElements array pointer from GM tiling data
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachPowScalarTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachPowScalarTilingData*>(tilingGm)) +
         offsetof(ForeachPowScalarTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
-    AscendC::Simt::VF_CALL<OpForeachPowScalarSimt<T, S>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        tensorCount,
-        elemCounts,
-        x,
-        y,
-        scalarVal);
+    AscendC::Simt::VF_CALL<OpForeachPowScalarSimt<T, S>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y,
+                                                         scalarVal);
 }
 
 } // namespace NsForeachPowScalar

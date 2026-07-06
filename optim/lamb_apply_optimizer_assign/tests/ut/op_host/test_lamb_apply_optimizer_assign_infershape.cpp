@@ -38,7 +38,8 @@ TEST_F(LambApplyOptimizerAssignProtoTest, lamb_apply_optimizer_assign_case_2d)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape})
+                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape,
+                                    &inShape, &inShape, &inShape, &inShape})
                       .OutputShapes({&outShape, &outShape, &outShape})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -74,7 +75,8 @@ TEST_F(LambApplyOptimizerAssignProtoTest, lamb_apply_optimizer_assign_case_fp16_
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape})
+                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape,
+                                    &inShape, &inShape, &inShape, &inShape})
                       .OutputShapes({&outShape, &outShape, &outShape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -100,4 +102,3 @@ TEST_F(LambApplyOptimizerAssignProtoTest, lamb_apply_optimizer_assign_case_fp16_
     auto od2 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
     ASSERT_EQ(Ops::Base::ToString(*od2), Ops::Base::ToString(expShape));
 }
-

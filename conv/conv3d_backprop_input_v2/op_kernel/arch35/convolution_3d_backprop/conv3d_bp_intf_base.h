@@ -35,8 +35,7 @@ struct ConvBpIntf {
     using L0cT = typename Config::L0cT;
     using BiasT = typename Config::BiasT;
     using ScaleT = typename Config::ScaleT;
-    using IndexT = typename AscendC::Conditional<
-        AscendC::IsSameType<SrcBT, float>::value, uint32_t, uint16_t>::type;
+    using IndexT = typename AscendC::Conditional<AscendC::IsSameType<SrcBT, float>::value, uint32_t, uint16_t>::type;
     using ContextData = typename Ext::ContextData;
 
 public:
@@ -46,7 +45,7 @@ public:
 public:
     __aicore__ inline ConvBpIntf() {}
 
-    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias=false)
+    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling, const bool hasBias = false)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数
@@ -55,7 +54,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmap(const GlobalTensor<SrcAT> &fmap)
+    __aicore__ inline void SetFmap(const GlobalTensor<SrcAT>& fmap)
     {
         using Local = typename Ext::SetFmap;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, fmap)) {
@@ -63,7 +62,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetWeight(const GlobalTensor<SrcBT> &weight)
+    __aicore__ inline void SetWeight(const GlobalTensor<SrcBT>& weight)
     {
         using Local = typename Ext::SetWeight;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, weight)) {
@@ -71,7 +70,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcAT> &outBackprop)
+    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcAT>& outBackprop)
     {
         using Local = typename Ext::SetOutBackprop;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, outBackprop)) {
@@ -79,7 +78,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetBias(const GlobalTensor<BiasT> &bias)
+    __aicore__ inline void SetBias(const GlobalTensor<BiasT>& bias)
     {
         using Local = typename Ext::SetBias;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, bias)) {
@@ -87,7 +86,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetScale(const GlobalTensor<ScaleT> &scale)
+    __aicore__ inline void SetScale(const GlobalTensor<ScaleT>& scale)
     {
         using Local = typename Ext::SetScale;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, scale)) {
@@ -121,12 +120,12 @@ public:
         }
     }
 
-    __aicore__ inline void SetStartIdx(uint32_t curDinStartIdx, int64_t curMStartIdx,
-        int32_t curCinStartIdx, int32_t curCoutStartIdx)
+    __aicore__ inline void SetStartIdx(uint32_t curDinStartIdx, int64_t curMStartIdx, int32_t curCinStartIdx,
+                                       int32_t curCoutStartIdx)
     {
         using Local = typename Ext::SetStartIdx;
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, curDinStartIdx, curMStartIdx,
-            curCinStartIdx, curCoutStartIdx)) {
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, curDinStartIdx, curMStartIdx, curCinStartIdx,
+                                curCoutStartIdx)) {
             Local::call(this, curDinStartIdx, curMStartIdx, curCinStartIdx, curCoutStartIdx);
         }
     }
@@ -165,16 +164,18 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void IterateAll(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0, bool fullLoadBiasFlag_=false, bool freeBiasFlag_=false)
+    __aicore__ inline void IterateAll(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0,
+                                      bool fullLoadBiasFlag_ = false, bool freeBiasFlag_ = false)
     {
         using Local = typename Ext::template IterateAll<sync>;
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, fullLoadBiasFlag_, freeBiasFlag_)) {
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, fullLoadBiasFlag_,
+                                freeBiasFlag_)) {
             Local::call(this, output, enAtomic, fullLoadBiasFlag_, freeBiasFlag_);
         }
     }
 
     template <bool sync = true>
-    __aicore__ inline void IterateAllForKernelSplit(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+    __aicore__ inline void IterateAllForKernelSplit(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0)
     {
         using Local = typename Ext::template IterateAllForKernelSplit<sync>;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic)) {
@@ -183,7 +184,7 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void GetTensorC(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0,
+    __aicore__ inline void GetTensorC(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0,
                                       bool enSequentialWrite = false)
     {
         using Local = typename Ext::template GetTensorC<sync>;
@@ -193,8 +194,8 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void VecPreProcess(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0,
-                                      bool enSequentialWrite = false)
+    __aicore__ inline void VecPreProcess(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0,
+                                         bool enSequentialWrite = false)
     {
         using Local = typename Ext::template VecPreProcess<sync>;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
@@ -203,8 +204,8 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void VecPostProcess(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0,
-                                      bool enSequentialWrite = false)
+    __aicore__ inline void VecPostProcess(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0,
+                                          bool enSequentialWrite = false)
     {
         using Local = typename Ext::template VecPostProcess<sync>;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
@@ -221,6 +222,6 @@ public:
     }
 };
 
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 
 #endif

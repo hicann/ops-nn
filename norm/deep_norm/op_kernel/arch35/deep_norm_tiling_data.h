@@ -22,15 +22,15 @@
 #include <cstdint>
 
 struct DeepNormTilingData {
-    uint32_t numCore = 0;      // used core number
-    uint32_t numCol = 0;       // last dim length D (reduce axis)
-    uint32_t numRow = 0;       // product of leading dims N
-    uint32_t rowPerCore = 0;   // rows handled by a non-tail core
-    uint32_t numColAlign = 0;  // D aligned up to the fp32 vector length
-    uint32_t powerSplit = 0;   // largest power-of-two <= D (>= vl), reduce fold point
-    float eps = 0.0f;          // epsilon
-    float alpha = 0.0f;        // alpha scale for x
-    float avgFactor = 0.0f;    // 1 / D
+    uint32_t numCore = 0;     // used core number
+    uint32_t numCol = 0;      // last dim length D (reduce axis)
+    uint32_t numRow = 0;      // product of leading dims N
+    uint32_t rowPerCore = 0;  // rows handled by a non-tail core
+    uint32_t numColAlign = 0; // D aligned up to the fp32 vector length
+    uint32_t powerSplit = 0;  // largest power-of-two <= D (>= vl), reduce fold point
+    float eps = 0.0f;         // epsilon
+    float alpha = 0.0f;       // alpha scale for x
+    float avgFactor = 0.0f;   // 1 / D
 };
 
 #endif // _DEEP_NORM_TILING_DATA_H_

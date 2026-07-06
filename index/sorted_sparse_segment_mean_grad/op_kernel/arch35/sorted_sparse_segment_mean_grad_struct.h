@@ -16,7 +16,6 @@
 #ifndef SORTED_SPARSE_SEGMENT_MEAN_GRAD_STRUCT_H
 #define SORTED_SPARSE_SEGMENT_MEAN_GRAD_STRUCT_H
 
-
 class SortedSparseSegmentMeanGradSimtTilingData {
 public:
     int64_t needCoreNum;

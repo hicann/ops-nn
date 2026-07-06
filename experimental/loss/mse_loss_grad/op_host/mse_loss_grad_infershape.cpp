@@ -32,13 +32,14 @@ static ge::graphStatus InferShapeMseLossGrad(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    *yShape = *xShape; 
+    *yShape = *xShape;
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeMseLossGrad");
     return GRAPH_SUCCESS;
 }
 
-ge::graphStatus InferDataType4MseLossGrad(gert::InferDataTypeContext* context) {
+ge::graphStatus InferDataType4MseLossGrad(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "InferDataType4MseLossGrad enter");
     auto input_x_dtype = context->GetInputDataType(IDX_0);
     context->SetOutputDataType(IDX_0, input_x_dtype);

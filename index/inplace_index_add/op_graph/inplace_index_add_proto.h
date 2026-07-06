@@ -39,25 +39,22 @@ namespace ge {
 * @attention Constraints:
 * @li The shape values of var and updates should be the same in other dimensions except the axis dimension.
 * @li The shape size of indices should be the same as updates in the axis dimension.
-* @li The indices cannot contain negative values, and its value range cannot exceed the shape value range of var in the axis dimension.
+* @li The indices cannot contain negative values, and its value range cannot exceed the shape value range of var in the
+axis dimension.
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator index_add_.
 */
 REG_OP(InplaceIndexAdd)
-    .INPUT(var, TensorType({DT_INT16, DT_INT32, DT_INT8,
-                            DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE,
-                            DT_INT64, DT_BOOL, DT_BF16}))
+    .INPUT(var, TensorType({DT_INT16, DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE, DT_INT64, DT_BOOL,
+                            DT_BF16}))
     .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
-    .INPUT(updates, TensorType({DT_INT16, DT_INT32, DT_INT8,
-                                DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE,
-                                DT_INT64, DT_BOOL, DT_BF16}))
-    .OPTIONAL_INPUT(alpha, TensorType({DT_INT16, DT_INT32, DT_INT8,
-                                       DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE,
+    .INPUT(updates, TensorType({DT_INT16, DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE, DT_INT64,
+                                DT_BOOL, DT_BF16}))
+    .OPTIONAL_INPUT(alpha, TensorType({DT_INT16, DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE,
                                        DT_INT64, DT_BOOL, DT_BF16}))
-    .OUTPUT(var, TensorType({DT_INT16, DT_INT32, DT_INT8,
-                             DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE,
-                             DT_INT64, DT_BOOL, DT_BF16}))
+    .OUTPUT(var, TensorType({DT_INT16, DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT32, DT_FLOAT16, DT_DOUBLE, DT_INT64,
+                             DT_BOOL, DT_BF16}))
     .REQUIRED_ATTR(axis, Int)
     .OP_END_FACTORY_REG(InplaceIndexAdd)
 

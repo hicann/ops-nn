@@ -43,19 +43,19 @@ using Ops::Base::FloorAlign;
 using Ops::Base::FloorDiv;
 
 // ---------- 常量 ----------
-constexpr uint32_t WS_SYS_SIZE     = 0U;
-constexpr size_t   WORKSPACE_NUM   = 1;
-constexpr int64_t  RESERVED_UB     = 4096;     // 给 stack / event / SPR / 中间小 buf
-constexpr int64_t  BUFF_NUM        = 2;        // 双缓冲
-constexpr int64_t  CACHE_LINE      = 128;      // arch35
-constexpr int64_t  BLOCK_SIZE      = 32;       // DMA 最小对齐单元
-constexpr int64_t  VL_BYTES        = 256;      // VECTOR_REG_WIDTH (arch3510)
-constexpr int64_t  PC_NDDMA_THR    = 32;       // dim1 < 32B 时 PC → PC_NDDMA
+constexpr uint32_t WS_SYS_SIZE = 0U;
+constexpr size_t WORKSPACE_NUM = 1;
+constexpr int64_t RESERVED_UB = 4096; // 给 stack / event / SPR / 中间小 buf
+constexpr int64_t BUFF_NUM = 2;       // 双缓冲
+constexpr int64_t CACHE_LINE = 128;   // arch35
+constexpr int64_t BLOCK_SIZE = 32;    // DMA 最小对齐单元
+constexpr int64_t VL_BYTES = 256;     // VECTOR_REG_WIDTH (arch3510)
+constexpr int64_t PC_NDDMA_THR = 32;  // dim1 < 32B 时 PC → PC_NDDMA
 
-constexpr int64_t MODE_PT       = 0;
-constexpr int64_t MODE_PC       = 1;
+constexpr int64_t MODE_PT = 0;
+constexpr int64_t MODE_PC = 1;
 constexpr int64_t MODE_PC_NDDMA = 2;
-constexpr int64_t MODE_PH       = 3;
+constexpr int64_t MODE_PH = 3;
 
 // fake-quant 单元素字节模型（含 mask + 中间 fp32/int32 + DB）
 // 行相关：x(in) + y(out) + mask(uint8) → 双缓冲乘 2
@@ -77,9 +77,12 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
 
 static int64_t XDtypeBytes(ge::DataType dt)
 {
-    if (dt == ge::DT_FLOAT)   return 4;
-    if (dt == ge::DT_FLOAT16) return 2;
-    if (dt == ge::DT_BF16)    return 2;
+    if (dt == ge::DT_FLOAT)
+        return 4;
+    if (dt == ge::DT_FLOAT16)
+        return 2;
+    if (dt == ge::DT_BF16)
+        return 2;
     return 4;
 }
 
@@ -98,11 +101,11 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
 
 // ---------- 形状属性 ----------
 struct ShapeInfo {
-    gert::Shape  xShape;
-    int64_t      scaleNum = 0;
-    int64_t      zpNum    = 0;
-    int64_t      axisNorm = -1;
-    int64_t      totalNum = 0;
+    gert::Shape xShape;
+    int64_t scaleNum = 0;
+    int64_t zpNum = 0;
+    int64_t axisNorm = -1;
+    int64_t totalNum = 0;
     ge::DataType xDtype;
     ge::DataType zpDtype;
 };
@@ -137,19 +140,21 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ShapeInfo
 
     int64_t rank = static_cast<int64_t>(info->xShape.GetDimNum());
     int64_t axisVal = *axisPtr;
-    if (axisVal < 0) axisVal += rank;
-    if (axisVal < 0) axisVal = 0;
-    if (axisVal >= rank) axisVal = rank - 1;
+    if (axisVal < 0)
+        axisVal += rank;
+    if (axisVal < 0)
+        axisVal = 0;
+    if (axisVal >= rank)
+        axisVal = rank - 1;
     info->axisNorm = axisVal;
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     OP_CHECK_IF(supportedDtype.count(info->xDtype) == 0,
-                OP_LOGE(context, "x dtype not supported: %d", static_cast<int>(info->xDtype)),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "x dtype not supported: %d", static_cast<int>(info->xDtype)), return ge::GRAPH_FAILED);
     // zp 只允许 INT32 或与 x 同 dtype
     OP_CHECK_IF(!(info->zpDtype == ge::DT_INT32 || info->zpDtype == info->xDtype),
-                OP_LOGE(context, "zp dtype must be INT32 or same as x: zp=%d x=%d",
-                        static_cast<int>(info->zpDtype), static_cast<int>(info->xDtype)),
+                OP_LOGE(context, "zp dtype must be INT32 or same as x: zp=%d x=%d", static_cast<int>(info->zpDtype),
+                        static_cast<int>(info->xDtype)),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -157,15 +162,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ShapeInfo
 // ---------- SelectMode ----------
 static int64_t SelectMode(const ShapeInfo& info)
 {
-    if (info.scaleNum <= 1) return MODE_PT;
+    if (info.scaleNum <= 1)
+        return MODE_PT;
     int64_t rank = static_cast<int64_t>(info.xShape.GetDimNum());
-    if (info.axisNorm == rank - 1) return MODE_PC;
+    if (info.axisNorm == rank - 1)
+        return MODE_PC;
     return MODE_PH;
 }
 
 // ---------- MergeShape ----------
-static void MergeShape(const ShapeInfo& info, int64_t mode,
-                       int64_t* dim0, int64_t* dim1, int64_t* dim2)
+static void MergeShape(const ShapeInfo& info, int64_t mode, int64_t* dim0, int64_t* dim1, int64_t* dim2)
 {
     int64_t rank = static_cast<int64_t>(info.xShape.GetDimNum());
     if (mode == MODE_PT) {
@@ -176,31 +182,34 @@ static void MergeShape(const ShapeInfo& info, int64_t mode,
     }
     if (mode == MODE_PC || mode == MODE_PC_NDDMA) {
         *dim1 = info.xShape.GetDim(rank - 1);
-        if (*dim1 <= 0) *dim1 = 1;
+        if (*dim1 <= 0)
+            *dim1 = 1;
         *dim0 = (*dim1 > 0) ? (info.totalNum / (*dim1)) : 1;
         *dim2 = 1;
         return;
     }
     // PH
     int64_t pre = 1, cur = info.xShape.GetDim(info.axisNorm), post = 1;
-    for (int64_t i = 0; i < info.axisNorm; ++i)  pre  *= info.xShape.GetDim(i);
-    for (int64_t i = info.axisNorm + 1; i < rank; ++i) post *= info.xShape.GetDim(i);
-    *dim0 = pre  <= 0 ? 1 : pre;
-    *dim1 = cur  <= 0 ? 1 : cur;
+    for (int64_t i = 0; i < info.axisNorm; ++i)
+        pre *= info.xShape.GetDim(i);
+    for (int64_t i = info.axisNorm + 1; i < rank; ++i)
+        post *= info.xShape.GetDim(i);
+    *dim0 = pre <= 0 ? 1 : pre;
+    *dim1 = cur <= 0 ? 1 : cur;
     *dim2 = post <= 0 ? 1 : post;
 }
 
 // ---------- TilingResult ----------
 struct TilingResult {
-    int64_t mode            = 0;
-    int64_t numCore         = 0;
-    int64_t blockAxis       = 0;
-    int64_t blockUnion      = 1;
-    int64_t blockFactor     = 0;
+    int64_t mode = 0;
+    int64_t numCore = 0;
+    int64_t blockAxis = 0;
+    int64_t blockUnion = 1;
+    int64_t blockFactor = 0;
     int64_t blockTailFactor = 0;
-    int64_t ubAxis          = 0;
-    int64_t baseN           = 1;
-    int64_t baseLen         = 0;
+    int64_t ubAxis = 0;
+    int64_t baseN = 1;
+    int64_t baseLen = 0;
 };
 
 // 公用：按 dataCount 与字节模型求 maxBase
@@ -208,26 +217,30 @@ static int64_t CalcMaxBaseLen(int64_t ubSize, int64_t xBytes, bool perChannelLik
 {
     int64_t bytesPerElem = BYTES_X(xBytes) + BYTES_INTERMEDIATE;
     if (perChannelLike) {
-        bytesPerElem += BYTES_SCALE_ZP_FP32;   // scale/zp 按 baseLen 段加载（不乘 baseN）
+        bytesPerElem += BYTES_SCALE_ZP_FP32; // scale/zp 按 baseLen 段加载（不乘 baseN）
     }
     int64_t available = ubSize - RESERVED_UB;
-    if (available <= 0) available = ubSize / 2;
+    if (available <= 0)
+        available = ubSize / 2;
     int64_t maxBase = available / bytesPerElem;
-    if (maxBase < BLOCK_SIZE) maxBase = BLOCK_SIZE;
+    if (maxBase < BLOCK_SIZE)
+        maxBase = BLOCK_SIZE;
     return maxBase;
 }
 
 // 公用：给定 base（行宽），计算还能放多少行
 static int64_t CalcMaxN(int64_t ubSize, int64_t base, int64_t xBytes)
 {
-    int64_t bytesPerNRow  = base * BYTES_X(xBytes);                         // 行相关 × baseN
-    int64_t bytesScaleSeg = base * BYTES_SCALE_ZP_FP32;                     // 行无关常驻
-    int64_t bytesIntermed = base * BYTES_INTERMEDIATE;                      // 中间 buf（按 baseLen）
-    int64_t fixed         = RESERVED_UB + bytesScaleSeg + bytesIntermed;
-    int64_t available     = ubSize - fixed;
-    if (available <= 0) return 1;
+    int64_t bytesPerNRow = base * BYTES_X(xBytes);      // 行相关 × baseN
+    int64_t bytesScaleSeg = base * BYTES_SCALE_ZP_FP32; // 行无关常驻
+    int64_t bytesIntermed = base * BYTES_INTERMEDIATE;  // 中间 buf（按 baseLen）
+    int64_t fixed = RESERVED_UB + bytesScaleSeg + bytesIntermed;
+    int64_t available = ubSize - fixed;
+    if (available <= 0)
+        return 1;
     int64_t maxN = available / bytesPerNRow;
-    if (maxN < 1) maxN = 1;
+    if (maxN < 1)
+        maxN = 1;
     return maxN;
 }
 
@@ -239,68 +252,77 @@ static TilingResult CalcPTTiling(int64_t dim1, int64_t coreNum, int64_t ubSize, 
     TilingResult r;
     r.mode = MODE_PT;
     r.blockAxis = 1;
-    r.ubAxis    = 1;
-    r.baseN     = 1;
+    r.ubAxis = 1;
+    r.baseN = 1;
     r.blockUnion = 1;
 
-    if (xBytes <= 0) return TilingResult{};
+    if (xBytes <= 0)
+        return TilingResult{};
     int64_t cacheLineElems = CACHE_LINE / (xBytes > 0 ? xBytes : 1);
-    if (cacheLineElems <= 0) cacheLineElems = 1;
+    if (cacheLineElems <= 0)
+        cacheLineElems = 1;
 
     int64_t cacheLineNum = CeilDiv(dim1, cacheLineElems);
-    int64_t actCore      = CeilDiv(cacheLineNum, CeilDiv(cacheLineNum, coreNum));
-    if (actCore <= 0) actCore = 1;
+    int64_t actCore = CeilDiv(cacheLineNum, CeilDiv(cacheLineNum, coreNum));
+    if (actCore <= 0)
+        actCore = 1;
     r.numCore = actCore;
     r.blockFactor = CeilDiv(cacheLineNum, actCore) * cacheLineElems;
     r.blockTailFactor = dim1 - r.blockFactor * (actCore - 1);
-    if (r.blockTailFactor <= 0) r.blockTailFactor = r.blockFactor;
+    if (r.blockTailFactor <= 0)
+        r.blockTailFactor = r.blockFactor;
 
     // UB
-    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/false),
-                                  cacheLineElems);
-    if (maxBase < cacheLineElems) maxBase = cacheLineElems;
+    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/false), cacheLineElems);
+    if (maxBase < cacheLineElems)
+        maxBase = cacheLineElems;
     int64_t blockBase = CeilAlign(r.blockFactor, cacheLineElems);
     r.baseLen = std::min(blockBase, maxBase);
-    if (r.baseLen <= 0) r.baseLen = cacheLineElems;
+    if (r.baseLen <= 0)
+        r.baseLen = cacheLineElems;
     return r;
 }
 
 // ---------- PC Tiling ----------
 //   blockAxis ∈ {0, 1}（二路竞争）；ubAxis ∈ {0, 1}；baseN ∈ {1, maxN}
 //   blockAxis=0 切合轴（行）；blockAxis=1 切尾轴（列，按 cacheLine 块）
-static TilingResult CalcPCTiling(int64_t dim0, int64_t dim1, int64_t coreNum,
-                                  int64_t ubSize, int64_t xBytes)
+static TilingResult CalcPCTiling(int64_t dim0, int64_t dim1, int64_t coreNum, int64_t ubSize, int64_t xBytes)
 {
     TilingResult r;
     r.mode = MODE_PC;
-    if (xBytes <= 0) return TilingResult{};
+    if (xBytes <= 0)
+        return TilingResult{};
     int64_t cacheLineElems = CACHE_LINE / (xBytes > 0 ? xBytes : 1);
-    if (cacheLineElems <= 0) cacheLineElems = 1;
+    if (cacheLineElems <= 0)
+        cacheLineElems = 1;
 
     int64_t cacheLineNum = CeilDiv(dim1, cacheLineElems);
-    int64_t actCore0     = CeilDiv(dim0, CeilDiv(dim0, coreNum));         // 切 dim0
-    int64_t actCore1     = CeilDiv(cacheLineNum, CeilDiv(cacheLineNum, coreNum)); // 切 dim1
-    if (actCore0 <= 0) actCore0 = 1;
-    if (actCore1 <= 0) actCore1 = 1;
+    int64_t actCore0 = CeilDiv(dim0, CeilDiv(dim0, coreNum));                 // 切 dim0
+    int64_t actCore1 = CeilDiv(cacheLineNum, CeilDiv(cacheLineNum, coreNum)); // 切 dim1
+    if (actCore0 <= 0)
+        actCore0 = 1;
+    if (actCore1 <= 0)
+        actCore1 = 1;
 
     if (actCore0 >= actCore1) {
         r.blockAxis = 0;
-        r.numCore   = actCore0;
-        r.blockFactor     = CeilDiv(dim0, actCore0);
+        r.numCore = actCore0;
+        r.blockFactor = CeilDiv(dim0, actCore0);
         r.blockTailFactor = dim0 - r.blockFactor * (actCore0 - 1);
     } else {
         r.blockAxis = 1;
-        r.numCore   = actCore1;
-        r.blockFactor     = CeilDiv(cacheLineNum, actCore1) * cacheLineElems;
+        r.numCore = actCore1;
+        r.blockFactor = CeilDiv(cacheLineNum, actCore1) * cacheLineElems;
         r.blockTailFactor = dim1 - r.blockFactor * (actCore1 - 1);
     }
-    if (r.blockTailFactor <= 0) r.blockTailFactor = r.blockFactor;
+    if (r.blockTailFactor <= 0)
+        r.blockTailFactor = r.blockFactor;
     r.blockUnion = 1;
 
     // UB 二选一
-    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true),
-                                  cacheLineElems);
-    if (maxBase < cacheLineElems) maxBase = cacheLineElems;
+    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true), cacheLineElems);
+    if (maxBase < cacheLineElems)
+        maxBase = cacheLineElems;
     int64_t blockBase = (r.blockAxis == 0) ? dim1 : r.blockFactor;
     blockBase = CeilAlign(blockBase, cacheLineElems);
 
@@ -308,16 +330,18 @@ static TilingResult CalcPCTiling(int64_t dim0, int64_t dim1, int64_t coreNum,
         // 多行模式
         int64_t maxN = CalcMaxN(ubSize, blockBase, xBytes);
         int64_t blockInner = (r.blockAxis == 0) ? r.blockFactor : dim0;
-        r.ubAxis  = 0;
-        r.baseN   = std::min(maxN, blockInner);
-        if (r.baseN < 1) r.baseN = 1;
+        r.ubAxis = 0;
+        r.baseN = std::min(maxN, blockInner);
+        if (r.baseN < 1)
+            r.baseN = 1;
         r.baseLen = blockBase;
     } else {
         // 单行退化
-        r.ubAxis  = 1;
-        r.baseN   = 1;
+        r.ubAxis = 1;
+        r.baseN = 1;
         r.baseLen = std::min(blockBase, maxBase);
-        if (r.baseLen <= 0) r.baseLen = cacheLineElems;
+        if (r.baseLen <= 0)
+            r.baseLen = cacheLineElems;
     }
     return r;
 }
@@ -327,24 +351,28 @@ static TilingResult CalcPCTiling(int64_t dim0, int64_t dim1, int64_t coreNum,
 //   降级行为：mode 改 PC_NDDMA；UB 不做 cacheLine 对齐
 static void DemoteToPCNddma(TilingResult* r, int64_t dim1, int64_t xBytes, int64_t ubSize)
 {
-    if (!(r->blockAxis == 0 && dim1 * xBytes < PC_NDDMA_THR)) return;
+    if (!(r->blockAxis == 0 && dim1 * xBytes < PC_NDDMA_THR))
+        return;
     r->mode = MODE_PC_NDDMA;
     // UB 不对齐 cacheLine（NDDMA 自带跨距）
     int64_t maxBase = CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true);
     int64_t blockBase = dim1; // 切合轴时 blockBase = dim1
-    if (blockBase <= 0) blockBase = 1;
+    if (blockBase <= 0)
+        blockBase = 1;
     if (blockBase <= maxBase / 2) {
         int64_t maxN = CalcMaxN(ubSize, blockBase, xBytes);
         int64_t blockInner = r->blockFactor;
-        r->ubAxis  = 0;
-        r->baseN   = std::min(maxN, blockInner);
-        if (r->baseN < 1) r->baseN = 1;
+        r->ubAxis = 0;
+        r->baseN = std::min(maxN, blockInner);
+        if (r->baseN < 1)
+            r->baseN = 1;
         r->baseLen = blockBase;
     } else {
-        r->ubAxis  = 1;
-        r->baseN   = 1;
+        r->ubAxis = 1;
+        r->baseN = 1;
         r->baseLen = std::min(blockBase, maxBase);
-        if (r->baseLen <= 0) r->baseLen = 1;
+        if (r->baseLen <= 0)
+            r->baseLen = 1;
     }
 }
 
@@ -353,103 +381,121 @@ static void DemoteToPCNddma(TilingResult* r, int64_t dim1, int64_t xBytes, int64
 //   UB 三级退化：整块 / 整行批 / 部分列
 static int64_t GetCoreNumDoubleCut(int64_t outerDim, int64_t innerDim, int64_t totalCore)
 {
-    if (outerDim <= 0) return 0;
+    if (outerDim <= 0)
+        return 0;
     int64_t yCore = totalCore / (outerDim > 0 ? outerDim : 1);
-    if (yCore == 0) return 0;
+    if (yCore == 0)
+        return 0;
     return outerDim * CeilDiv(innerDim, CeilDiv(innerDim, yCore));
 }
 
-static void SelectPHBlockAxis(TilingResult* r, int64_t dim0, int64_t dim1, int64_t dim2,
-                               int64_t coreNum, int64_t cacheLineNum, int64_t xBytes)
+static void SelectPHBlockAxis(TilingResult* r, int64_t dim0, int64_t dim1, int64_t dim2, int64_t coreNum,
+                              int64_t cacheLineNum, int64_t xBytes)
 {
     int64_t core0 = (dim0 > 0) ? CeilDiv(dim0, CeilDiv(dim0, coreNum)) : 0;
     int64_t core1 = GetCoreNumDoubleCut(dim0, dim1, coreNum);
-    int64_t core2 = (dim2 * xBytes > BLOCK_SIZE)
-                      ? GetCoreNumDoubleCut(dim0 * dim1, cacheLineNum, coreNum)
-                      : 0;
+    int64_t core2 = (dim2 * xBytes > BLOCK_SIZE) ? GetCoreNumDoubleCut(dim0 * dim1, cacheLineNum, coreNum) : 0;
 
     r->blockAxis = 0;
-    r->numCore   = (core0 > 0) ? core0 : 1;
+    r->numCore = (core0 > 0) ? core0 : 1;
     if (core1 > r->numCore) {
         r->blockAxis = 1;
-        r->numCore   = core1;
+        r->numCore = core1;
     }
     if (core2 > r->numCore && dim2 * xBytes > BLOCK_SIZE) {
         r->blockAxis = 2;
-        r->numCore   = core2;
+        r->numCore = core2;
     }
-    if (r->numCore <= 0) r->numCore = 1;
+    if (r->numCore <= 0)
+        r->numCore = 1;
 }
 
-static void CalcPHBlockParams(TilingResult* r, int64_t dim0, int64_t dim1, int64_t dim2,
-                               int64_t cacheLineNum, int64_t cacheLineElems)
+static void CalcPHBlockParams(TilingResult* r, int64_t dim0, int64_t dim1, int64_t dim2, int64_t cacheLineNum,
+                              int64_t cacheLineElems)
 {
     if (r->blockAxis == 0) {
         r->blockUnion = 1;
-        r->blockFactor     = CeilDiv(dim0, r->numCore);
+        r->blockFactor = CeilDiv(dim0, r->numCore);
         r->blockTailFactor = dim0 - r->blockFactor * (r->numCore - 1);
     } else if (r->blockAxis == 1) {
         r->blockUnion = (dim0 > 0) ? (r->numCore / dim0) : 1;
-        if (r->blockUnion <= 0) r->blockUnion = 1;
-        r->blockFactor     = CeilDiv(dim1, r->blockUnion);
+        if (r->blockUnion <= 0)
+            r->blockUnion = 1;
+        r->blockFactor = CeilDiv(dim1, r->blockUnion);
         r->blockTailFactor = dim1 - r->blockFactor * (r->blockUnion - 1);
     } else {
         int64_t outer = dim0 * dim1;
         r->blockUnion = (outer > 0) ? (r->numCore / outer) : 1;
-        if (r->blockUnion <= 0) r->blockUnion = 1;
+        if (r->blockUnion <= 0)
+            r->blockUnion = 1;
         int64_t bf_cl = CeilDiv(cacheLineNum, r->blockUnion);
-        r->blockFactor     = bf_cl * cacheLineElems;
+        r->blockFactor = bf_cl * cacheLineElems;
         r->blockTailFactor = dim2 - r->blockFactor * (r->blockUnion - 1);
     }
-    if (r->blockTailFactor <= 0) r->blockTailFactor = r->blockFactor;
+    if (r->blockTailFactor <= 0)
+        r->blockTailFactor = r->blockFactor;
 }
 
-static void CalcPHUbTiling(TilingResult* r, int64_t dim1, int64_t dim2,
-                            int64_t ubSize, int64_t xBytes,
-                            int64_t cacheLineElems)
+static void CalcPHUbTiling(TilingResult* r, int64_t dim1, int64_t dim2, int64_t ubSize, int64_t xBytes,
+                           int64_t cacheLineElems)
 {
-    int64_t shape2  = CeilAlign(dim2, cacheLineElems);
-    if (shape2 <= 0) shape2 = 1;
-    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true),
-                                  cacheLineElems);
-    if (maxBase < cacheLineElems) maxBase = cacheLineElems;
+    int64_t shape2 = CeilAlign(dim2, cacheLineElems);
+    if (shape2 <= 0)
+        shape2 = 1;
+    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true), cacheLineElems);
+    if (maxBase < cacheLineElems)
+        maxBase = cacheLineElems;
     int64_t blockSize = CeilAlign(r->blockFactor, cacheLineElems);
 
     if (r->blockAxis == 0) {
         if (dim1 * shape2 <= maxBase) {
-            r->ubAxis = 0; r->baseN = dim1;                       r->baseLen = shape2;
+            r->ubAxis = 0;
+            r->baseN = dim1;
+            r->baseLen = shape2;
         } else if (shape2 <= maxBase) {
-            r->ubAxis = 1; r->baseN = std::max<int64_t>(maxBase / (shape2 > 0 ? shape2 : 1), 1); r->baseLen = shape2;
+            r->ubAxis = 1;
+            r->baseN = std::max<int64_t>(maxBase / (shape2 > 0 ? shape2 : 1), 1);
+            r->baseLen = shape2;
         } else {
-            r->ubAxis = 2; r->baseN = 1;                          r->baseLen = maxBase;
+            r->ubAxis = 2;
+            r->baseN = 1;
+            r->baseLen = maxBase;
         }
     } else if (r->blockAxis == 1) {
         if (shape2 <= maxBase) {
             r->ubAxis = 1;
-            r->baseN  = std::min<int64_t>(r->blockFactor, std::max<int64_t>(maxBase / (shape2 > 0 ? shape2 : 1), 1));
+            r->baseN = std::min<int64_t>(r->blockFactor, std::max<int64_t>(maxBase / (shape2 > 0 ? shape2 : 1), 1));
             r->baseLen = shape2;
         } else {
-            r->ubAxis = 2; r->baseN = 1; r->baseLen = maxBase;
+            r->ubAxis = 2;
+            r->baseN = 1;
+            r->baseLen = maxBase;
         }
     } else {
-        r->ubAxis = 2; r->baseN = 1; r->baseLen = std::min(blockSize, maxBase);
+        r->ubAxis = 2;
+        r->baseN = 1;
+        r->baseLen = std::min(blockSize, maxBase);
     }
-    if (r->baseLen <= 0) r->baseLen = cacheLineElems;
-    if (r->baseN  <= 0) r->baseN  = 1;
+    if (r->baseLen <= 0)
+        r->baseLen = cacheLineElems;
+    if (r->baseN <= 0)
+        r->baseN = 1;
 
     if ((dim2 * xBytes) % BLOCK_SIZE != 0) {
         r->baseN = 1;
     }
 }
 
-static TilingResult CalcPHTiling(int64_t dim0, int64_t dim1, int64_t dim2,
-                                  int64_t coreNum, int64_t ubSize, int64_t xBytes)
+static TilingResult CalcPHTiling(int64_t dim0, int64_t dim1, int64_t dim2, int64_t coreNum, int64_t ubSize,
+                                 int64_t xBytes)
 {
     TilingResult r;
     r.mode = MODE_PH;
-    if (xBytes <= 0) return TilingResult{};
+    if (xBytes <= 0)
+        return TilingResult{};
     int64_t cacheLineElems = CACHE_LINE / (xBytes > 0 ? xBytes : 1);
-    if (cacheLineElems <= 0) cacheLineElems = 1;
+    if (cacheLineElems <= 0)
+        cacheLineElems = 1;
 
     int64_t cacheLineNum = CeilDiv(dim2, cacheLineElems);
 
@@ -460,27 +506,26 @@ static TilingResult CalcPHTiling(int64_t dim0, int64_t dim1, int64_t dim2,
 }
 
 // ---------- WriteTilingData ----------
-static void WriteTilingData(FakeQuantAffineCachemaskTilingDataArch35* td, const TilingResult& r,
-                            int64_t dim0, int64_t dim1, int64_t dim2,
-                            int64_t hasZeroPoint, int64_t axisNorm,
-                            int64_t quantMin, int64_t quantMax)
+static void WriteTilingData(FakeQuantAffineCachemaskTilingDataArch35* td, const TilingResult& r, int64_t dim0,
+                            int64_t dim1, int64_t dim2, int64_t hasZeroPoint, int64_t axisNorm, int64_t quantMin,
+                            int64_t quantMax)
 {
-    td->numCore         = r.numCore;
-    td->mode            = r.mode;
-    td->dim0            = dim0;
-    td->dim1            = dim1;
-    td->dim2            = dim2;
-    td->blockAxis       = r.blockAxis;
-    td->blockUnion      = r.blockUnion;
-    td->blockFactor     = r.blockFactor;
+    td->numCore = r.numCore;
+    td->mode = r.mode;
+    td->dim0 = dim0;
+    td->dim1 = dim1;
+    td->dim2 = dim2;
+    td->blockAxis = r.blockAxis;
+    td->blockUnion = r.blockUnion;
+    td->blockFactor = r.blockFactor;
     td->blockTailFactor = r.blockTailFactor;
-    td->ubAxis          = r.ubAxis;
-    td->baseN           = r.baseN;
-    td->baseLen         = r.baseLen;
-    td->hasZeroPoint    = hasZeroPoint;
-    td->axis            = axisNorm;
-    td->quantMin        = quantMin;
-    td->quantMax        = quantMax;
+    td->ubAxis = r.ubAxis;
+    td->baseN = r.baseN;
+    td->baseLen = r.baseLen;
+    td->hasZeroPoint = hasZeroPoint;
+    td->axis = axisNorm;
+    td->quantMin = quantMin;
+    td->quantMax = quantMax;
 }
 
 // ---------- Workspace ----------
@@ -493,9 +538,8 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 }
 
 // ---------- Dispatch ----------
-static bool DispatchTiling(int64_t mode, int64_t dim0, int64_t dim1, int64_t dim2,
-                            int64_t coreNum, int64_t ubSize, int64_t xBytes,
-                            TilingResult* res)
+static bool DispatchTiling(int64_t mode, int64_t dim0, int64_t dim1, int64_t dim2, int64_t coreNum, int64_t ubSize,
+                           int64_t xBytes, TilingResult* res)
 {
     switch (mode) {
         case MODE_PT:
@@ -514,22 +558,17 @@ static bool DispatchTiling(int64_t mode, int64_t dim0, int64_t dim1, int64_t dim
 }
 
 // ---------- 空张量处理 ----------
-static void HandleEmptyTensor(gert::TilingContext* context,
-                               FakeQuantAffineCachemaskTilingDataArch35* tiling,
-                               int64_t mode, int64_t dim0, int64_t dim1, int64_t dim2,
-                               int64_t hasZeroPoint, int64_t axisNorm,
-                               int64_t quantMin, int64_t quantMax,
-                               ge::DataType xDtype, ge::DataType zpDtype)
+static void HandleEmptyTensor(gert::TilingContext* context, FakeQuantAffineCachemaskTilingDataArch35* tiling,
+                              int64_t mode, int64_t dim0, int64_t dim1, int64_t dim2, int64_t hasZeroPoint,
+                              int64_t axisNorm, int64_t quantMin, int64_t quantMax, ge::DataType xDtype,
+                              ge::DataType zpDtype)
 {
-    WriteTilingData(tiling, TilingResult{}, dim0, dim1, dim2,
-                    hasZeroPoint, axisNorm, quantMin, quantMax);
+    WriteTilingData(tiling, TilingResult{}, dim0, dim1, dim2, hasZeroPoint, axisNorm, quantMin, quantMax);
     tiling->numCore = 1;
-    tiling->mode    = mode;
+    tiling->mode = mode;
     context->SetBlockDim(1);
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(xDtype),
-                          static_cast<uint32_t>(zpDtype),
-                          static_cast<uint32_t>(mode),
-                          static_cast<uint32_t>(hasZeroPoint));
+    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(xDtype), static_cast<uint32_t>(zpDtype),
+                          static_cast<uint32_t>(mode), static_cast<uint32_t>(hasZeroPoint));
 }
 
 // ---------- 入口 ----------
@@ -541,11 +580,11 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
                 OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
 
     ShapeInfo info;
-    OP_CHECK_IF(GetShapeAttrsInfo(context, &info) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetShapeAttrsInfo failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, &info) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAttrsInfo failed"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize failed"),
+                return ge::GRAPH_FAILED);
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -563,12 +602,11 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
 
     auto* tiling = context->GetTilingData<FakeQuantAffineCachemaskTilingDataArch35>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK,
-                OP_LOGE(context, "memset tiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK, OP_LOGE(context, "memset tiling failed"),
+                return ge::GRAPH_FAILED);
 
     if (info.totalNum == 0) {
-        HandleEmptyTensor(context, tiling, mode, dim0, dim1, dim2,
-                          hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr,
+        HandleEmptyTensor(context, tiling, mode, dim0, dim1, dim2, hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr,
                           info.xDtype, info.zpDtype);
         return ge::GRAPH_SUCCESS;
     }
@@ -576,22 +614,17 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
     TilingResult res;
     int64_t ubSizeI = static_cast<int64_t>(ubSize);
     OP_CHECK_IF(!DispatchTiling(mode, dim0, dim1, dim2, coreNum, ubSizeI, xBytes, &res),
-                OP_LOGE(context, "unsupported mode %ld", static_cast<long>(mode)),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "unsupported mode %ld", static_cast<long>(mode)), return ge::GRAPH_FAILED);
 
-    WriteTilingData(tiling, res, dim0, dim1, dim2,
-                    hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr);
+    WriteTilingData(tiling, res, dim0, dim1, dim2, hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr);
 
     context->SetBlockDim(static_cast<uint32_t>(res.numCore));
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(info.xDtype),
-                          static_cast<uint32_t>(info.zpDtype),
-                          static_cast<uint32_t>(res.mode),
-                          static_cast<uint32_t>(hasZeroPoint));
+    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(info.xDtype), static_cast<uint32_t>(info.zpDtype),
+                          static_cast<uint32_t>(res.mode), static_cast<uint32_t>(hasZeroPoint));
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForFakeQuantAffineCachemask(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForFakeQuantAffineCachemask([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

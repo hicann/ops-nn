@@ -64,10 +64,8 @@ class ApplyAddSignKernel {
 public:
     __aicore__ inline ApplyAddSignKernel() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR m, GM_ADDR lr, GM_ADDR alpha,
-        GM_ADDR signDecay, GM_ADDR beta, GM_ADDR grad,
-        GM_ADDR varOut, const ApplyAddSignTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR m, GM_ADDR lr, GM_ADDR alpha, GM_ADDR signDecay, GM_ADDR beta,
+                                GM_ADDR grad, GM_ADDR varOut, const ApplyAddSignTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -143,10 +141,10 @@ private:
 // Init
 // ============================================================================
 template <typename T_IN, typename T_COMPUTE>
-__aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Init(
-    GM_ADDR var, GM_ADDR m, GM_ADDR lr, GM_ADDR alpha,
-    GM_ADDR signDecay, GM_ADDR beta, GM_ADDR grad,
-    GM_ADDR varOut, const ApplyAddSignTilingData* tilingData)
+__aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Init(GM_ADDR var, GM_ADDR m, GM_ADDR lr, GM_ADDR alpha,
+                                                                 GM_ADDR signDecay, GM_ADDR beta, GM_ADDR grad,
+                                                                 GM_ADDR varOut,
+                                                                 const ApplyAddSignTilingData* tilingData)
 {
     // Per-core slice
     int64_t remainderLength = tilingData->dim0 - tilingData->blockFactor * AscendC::GetBlockIdx();
@@ -160,10 +158,14 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Init(
     }
 
     // 张量 GM
-    varGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(var) + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    mGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(m) + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    gradGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(grad) + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    varOutGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(varOut) + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    varGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(var) + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                           blockLength_);
+    mGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(m) + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                         blockLength_);
+    gradGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(grad) + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                            blockLength_);
+    varOutGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(varOut) + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                              blockLength_);
 
     // 标量 GM（1 元素）
     lrGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(lr), 1);
@@ -172,15 +174,15 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Init(
     betaGM_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IN*>(beta), 1);
 
     // VECIN Queues（BUF_NUM=2 双缓冲）
-    pipe.InitBuffer(varQueue,  BUF_NUM, ubLength_ * sizeof(T_IN));
-    pipe.InitBuffer(mQueue,    BUF_NUM, ubLength_ * sizeof(T_IN));
+    pipe.InitBuffer(varQueue, BUF_NUM, ubLength_ * sizeof(T_IN));
+    pipe.InitBuffer(mQueue, BUF_NUM, ubLength_ * sizeof(T_IN));
     pipe.InitBuffer(gradQueue, BUF_NUM, ubLength_ * sizeof(T_IN));
 
     // 标量 Queue（深 1）
-    pipe.InitBuffer(lrQueue,        1, 1 * sizeof(T_IN));
-    pipe.InitBuffer(alphaQueue,     1, 1 * sizeof(T_IN));
+    pipe.InitBuffer(lrQueue, 1, 1 * sizeof(T_IN));
+    pipe.InitBuffer(alphaQueue, 1, 1 * sizeof(T_IN));
     pipe.InitBuffer(signDecayQueue, 1, 1 * sizeof(T_IN));
-    pipe.InitBuffer(betaQueue,      1, 1 * sizeof(T_IN));
+    pipe.InitBuffer(betaQueue, 1, 1 * sizeof(T_IN));
 
     // VECOUT Queue（BUF_NUM=2 双缓冲）
     pipe.InitBuffer(varOutQueue, BUF_NUM, ubLength_ * sizeof(T_IN));
@@ -191,22 +193,22 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Init(
     constexpr uint32_t COMPUTE_TYPE_SIZE = sizeof(T_COMPUTE);
     uint32_t calcBytes = static_cast<uint32_t>(ubLength_) * COMPUTE_TYPE_SIZE;
 
-    pipe.InitBuffer(varF32Buf,    calcBytes);
-    pipe.InitBuffer(mF32Buf,      calcBytes);
-    pipe.InitBuffer(gradF32Buf,   calcBytes);
+    pipe.InitBuffer(varF32Buf, calcBytes);
+    pipe.InitBuffer(mF32Buf, calcBytes);
+    pipe.InitBuffer(gradF32Buf, calcBytes);
     pipe.InitBuffer(varOutF32Buf, calcBytes);
-    pipe.InitBuffer(lrBuf,        calcBytes);
-    pipe.InitBuffer(alphaBuf,     calcBytes);
+    pipe.InitBuffer(lrBuf, calcBytes);
+    pipe.InitBuffer(alphaBuf, calcBytes);
     pipe.InitBuffer(signDecayBuf, calcBytes);
-    pipe.InitBuffer(betaBuf,      calcBytes);
-    pipe.InitBuffer(betaM1Buf,    calcBytes);
-    pipe.InitBuffer(mNewBuf,      calcBytes);
-    pipe.InitBuffer(tmpBuf,       calcBytes);
-    pipe.InitBuffer(signGradBuf,  calcBytes);
-    pipe.InitBuffer(signMBuf,     calcBytes);
-    pipe.InitBuffer(signGmBuf,    calcBytes);
-    pipe.InitBuffer(scaleBuf,     calcBytes);
-    pipe.InitBuffer(updateBuf,    calcBytes);
+    pipe.InitBuffer(betaBuf, calcBytes);
+    pipe.InitBuffer(betaM1Buf, calcBytes);
+    pipe.InitBuffer(mNewBuf, calcBytes);
+    pipe.InitBuffer(tmpBuf, calcBytes);
+    pipe.InitBuffer(signGradBuf, calcBytes);
+    pipe.InitBuffer(signMBuf, calcBytes);
+    pipe.InitBuffer(signGmBuf, calcBytes);
+    pipe.InitBuffer(scaleBuf, calcBytes);
+    pipe.InitBuffer(updateBuf, calcBytes);
 
     // Sign tmpBuffer。Host 侧通过 GetSignMaxMinTmpSize 精算并下发；Kernel
     // 仍保留兜底（256B）以兼容旧 Tiling 路径 (tilingData->signTmpSize==0)。
@@ -232,11 +234,11 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::CopyIn(int64_t progr
 
     DataCopyParams params;
     params.blockCount = 1;
-    params.blockLen   = static_cast<uint16_t>(currentNum * sizeof(T_IN));
-    params.srcStride  = 0;
-    params.dstStride  = 0;
-    DataCopyPad(varLocal,  varGM_[progress * ubLength_],  params, {false, 0, 0, 0});
-    DataCopyPad(mLocal,    mGM_[progress * ubLength_],    params, {false, 0, 0, 0});
+    params.blockLen = static_cast<uint16_t>(currentNum * sizeof(T_IN));
+    params.srcStride = 0;
+    params.dstStride = 0;
+    DataCopyPad(varLocal, varGM_[progress * ubLength_], params, {false, 0, 0, 0});
+    DataCopyPad(mLocal, mGM_[progress * ubLength_], params, {false, 0, 0, 0});
     DataCopyPad(gradLocal, gradGM_[progress * ubLength_], params, {false, 0, 0, 0});
 
     varQueue.EnQue(varLocal);
@@ -244,20 +246,20 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::CopyIn(int64_t progr
     gradQueue.EnQue(gradLocal);
 
     // 标量搬运（1 元素），DataCopyPad 自动 32B 对齐
-    LocalTensor<T_IN> lrLocal        = lrQueue.AllocTensor<T_IN>();
-    LocalTensor<T_IN> alphaLocal     = alphaQueue.AllocTensor<T_IN>();
+    LocalTensor<T_IN> lrLocal = lrQueue.AllocTensor<T_IN>();
+    LocalTensor<T_IN> alphaLocal = alphaQueue.AllocTensor<T_IN>();
     LocalTensor<T_IN> signDecayLocal = signDecayQueue.AllocTensor<T_IN>();
-    LocalTensor<T_IN> betaLocal      = betaQueue.AllocTensor<T_IN>();
+    LocalTensor<T_IN> betaLocal = betaQueue.AllocTensor<T_IN>();
 
     DataCopyParams scalarParams;
     scalarParams.blockCount = 1;
-    scalarParams.blockLen   = static_cast<uint16_t>(1 * sizeof(T_IN));
-    scalarParams.srcStride  = 0;
-    scalarParams.dstStride  = 0;
-    DataCopyPad(lrLocal,        lrGM_,        scalarParams, {false, 0, 0, 0});
-    DataCopyPad(alphaLocal,     alphaGM_,     scalarParams, {false, 0, 0, 0});
+    scalarParams.blockLen = static_cast<uint16_t>(1 * sizeof(T_IN));
+    scalarParams.srcStride = 0;
+    scalarParams.dstStride = 0;
+    DataCopyPad(lrLocal, lrGM_, scalarParams, {false, 0, 0, 0});
+    DataCopyPad(alphaLocal, alphaGM_, scalarParams, {false, 0, 0, 0});
     DataCopyPad(signDecayLocal, signDecayGM_, scalarParams, {false, 0, 0, 0});
-    DataCopyPad(betaLocal,      betaGM_,      scalarParams, {false, 0, 0, 0});
+    DataCopyPad(betaLocal, betaGM_, scalarParams, {false, 0, 0, 0});
 
     lrQueue.EnQue(lrLocal);
     alphaQueue.EnQue(alphaLocal);
@@ -272,15 +274,15 @@ template <typename T_IN, typename T_COMPUTE>
 __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Compute(int64_t currentNum)
 {
     // --- DeQue tensor inputs ---
-    LocalTensor<T_IN> varLocalIn  = varQueue.DeQue<T_IN>();
-    LocalTensor<T_IN> mLocalIn    = mQueue.DeQue<T_IN>();
+    LocalTensor<T_IN> varLocalIn = varQueue.DeQue<T_IN>();
+    LocalTensor<T_IN> mLocalIn = mQueue.DeQue<T_IN>();
     LocalTensor<T_IN> gradLocalIn = gradQueue.DeQue<T_IN>();
 
     // --- DeQue scalars ---
-    LocalTensor<T_IN> lrLocalUb        = lrQueue.DeQue<T_IN>();
-    LocalTensor<T_IN> alphaLocalUb     = alphaQueue.DeQue<T_IN>();
+    LocalTensor<T_IN> lrLocalUb = lrQueue.DeQue<T_IN>();
+    LocalTensor<T_IN> alphaLocalUb = alphaQueue.DeQue<T_IN>();
     LocalTensor<T_IN> signDecayLocalUb = signDecayQueue.DeQue<T_IN>();
-    LocalTensor<T_IN> betaLocalUb      = betaQueue.DeQue<T_IN>();
+    LocalTensor<T_IN> betaLocalUb = betaQueue.DeQue<T_IN>();
 
     // 标量取值：
     //   - fp32 / fp16：可以直接 GetValue + C++ scalar static_cast 到 float（half
@@ -295,24 +297,24 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Compute(int64_t curr
     if constexpr (std::is_same_v<T_IN, bfloat16_t>) {
         // 借用 lrBuf / alphaBuf / signDecayBuf / betaBuf 的前 1 元素做 1-elem Cast。
         // 这些 buf 在后续 Duplicate 之前不会被使用，可安全复用。
-        LocalTensor<T_COMPUTE> lrTmp    = lrBuf.template Get<T_COMPUTE>();
+        LocalTensor<T_COMPUTE> lrTmp = lrBuf.template Get<T_COMPUTE>();
         LocalTensor<T_COMPUTE> alphaTmp = alphaBuf.template Get<T_COMPUTE>();
-        LocalTensor<T_COMPUTE> sdTmp    = signDecayBuf.template Get<T_COMPUTE>();
-        LocalTensor<T_COMPUTE> betaTmp  = betaBuf.template Get<T_COMPUTE>();
-        Cast(lrTmp,    lrLocalUb,        AscendC::RoundMode::CAST_NONE, 1);
-        Cast(alphaTmp, alphaLocalUb,     AscendC::RoundMode::CAST_NONE, 1);
-        Cast(sdTmp,    signDecayLocalUb, AscendC::RoundMode::CAST_NONE, 1);
-        Cast(betaTmp,  betaLocalUb,      AscendC::RoundMode::CAST_NONE, 1);
+        LocalTensor<T_COMPUTE> sdTmp = signDecayBuf.template Get<T_COMPUTE>();
+        LocalTensor<T_COMPUTE> betaTmp = betaBuf.template Get<T_COMPUTE>();
+        Cast(lrTmp, lrLocalUb, AscendC::RoundMode::CAST_NONE, 1);
+        Cast(alphaTmp, alphaLocalUb, AscendC::RoundMode::CAST_NONE, 1);
+        Cast(sdTmp, signDecayLocalUb, AscendC::RoundMode::CAST_NONE, 1);
+        Cast(betaTmp, betaLocalUb, AscendC::RoundMode::CAST_NONE, 1);
         PipeBarrier<PIPE_V>();
-        lrVal        = lrTmp.GetValue(0);
-        alphaVal     = alphaTmp.GetValue(0);
+        lrVal = lrTmp.GetValue(0);
+        alphaVal = alphaTmp.GetValue(0);
         signDecayVal = sdTmp.GetValue(0);
-        betaVal      = betaTmp.GetValue(0);
+        betaVal = betaTmp.GetValue(0);
     } else {
-        lrVal        = static_cast<T_COMPUTE>(lrLocalUb.GetValue(0));
-        alphaVal     = static_cast<T_COMPUTE>(alphaLocalUb.GetValue(0));
+        lrVal = static_cast<T_COMPUTE>(lrLocalUb.GetValue(0));
+        alphaVal = static_cast<T_COMPUTE>(alphaLocalUb.GetValue(0));
         signDecayVal = static_cast<T_COMPUTE>(signDecayLocalUb.GetValue(0));
-        betaVal      = static_cast<T_COMPUTE>(betaLocalUb.GetValue(0));
+        betaVal = static_cast<T_COMPUTE>(betaLocalUb.GetValue(0));
     }
 
     lrQueue.FreeTensor(lrLocalUb);
@@ -331,46 +333,49 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Compute(int64_t curr
     LocalTensor<T_COMPUTE> gradLocal;
 
     if constexpr (std::is_same_v<T_IN, T_COMPUTE>) {
-        varLocal  = varLocalIn;
-        mLocal    = mLocalIn;
+        varLocal = varLocalIn;
+        mLocal = mLocalIn;
         gradLocal = gradLocalIn;
     } else {
-        LocalTensor<T_COMPUTE> varF32  = varF32Buf.template Get<T_COMPUTE>();
-        LocalTensor<T_COMPUTE> mF32    = mF32Buf.template Get<T_COMPUTE>();
+        LocalTensor<T_COMPUTE> varF32 = varF32Buf.template Get<T_COMPUTE>();
+        LocalTensor<T_COMPUTE> mF32 = mF32Buf.template Get<T_COMPUTE>();
         LocalTensor<T_COMPUTE> gradF32 = gradF32Buf.template Get<T_COMPUTE>();
-        Cast(varF32,  varLocalIn,  AscendC::RoundMode::CAST_NONE, currentNum);
-        Cast(mF32,    mLocalIn,    AscendC::RoundMode::CAST_NONE, currentNum);
+        Cast(varF32, varLocalIn, AscendC::RoundMode::CAST_NONE, currentNum);
+        Cast(mF32, mLocalIn, AscendC::RoundMode::CAST_NONE, currentNum);
         Cast(gradF32, gradLocalIn, AscendC::RoundMode::CAST_NONE, currentNum);
-        varLocal  = varF32;
-        mLocal    = mF32;
+        varLocal = varF32;
+        mLocal = mF32;
         gradLocal = gradF32;
     }
 
     // --- 中间 buffer ---
-    LocalTensor<T_COMPUTE> lrDup    = lrBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> lrDup = lrBuf.template Get<T_COMPUTE>();
     LocalTensor<T_COMPUTE> alphaDup = alphaBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> sdDup    = signDecayBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> betaDup  = betaBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> betaM1   = betaM1Buf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> mNew     = mNewBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> tmp      = tmpBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> sdDup = signDecayBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> betaDup = betaBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> betaM1 = betaM1Buf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> mNew = mNewBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> tmp = tmpBuf.template Get<T_COMPUTE>();
     LocalTensor<T_COMPUTE> signGrad = signGradBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> signM    = signMBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> signGm   = signGmBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> scale    = scaleBuf.template Get<T_COMPUTE>();
-    LocalTensor<T_COMPUTE> update   = updateBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> signM = signMBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> signGm = signGmBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> scale = scaleBuf.template Get<T_COMPUTE>();
+    LocalTensor<T_COMPUTE> update = updateBuf.template Get<T_COMPUTE>();
 
-    LocalTensor<uint8_t> signTmp  = signTmpBuf.Get<uint8_t>(signTmpSize_);
-    LocalTensor<uint8_t> nanMask  = nanMaskBuf.Get<uint8_t>(nanMaskSize_);
+    LocalTensor<uint8_t> signTmp = signTmpBuf.Get<uint8_t>(signTmpSize_);
+    LocalTensor<uint8_t> nanMask = nanMaskBuf.Get<uint8_t>(nanMaskSize_);
 
     // --- 标量 broadcast ---
-    Duplicate<T_COMPUTE>(lrDup,    lrVal,        currentNum);
-    Duplicate<T_COMPUTE>(alphaDup, alphaVal,     currentNum);
-    Duplicate<T_COMPUTE>(sdDup,    signDecayVal, currentNum);
-    Duplicate<T_COMPUTE>(betaDup,  betaVal,      currentNum);
+    Duplicate<T_COMPUTE>(lrDup, lrVal, currentNum);
+    Duplicate<T_COMPUTE>(alphaDup, alphaVal, currentNum);
+    Duplicate<T_COMPUTE>(sdDup, signDecayVal, currentNum);
+    Duplicate<T_COMPUTE>(betaDup, betaVal, currentNum);
 
     // NaN scalar (T_COMPUTE 类型)，通过位拷贝构造避免编译器优化字面量
-    union { uint32_t bits; float f; } nanU32 = { 0x7FC00000U };  // IEEE-754 quiet NaN
+    union {
+        uint32_t bits;
+        float f;
+    } nanU32 = {0x7FC00000U}; // IEEE-754 quiet NaN
     T_COMPUTE nanScalar = static_cast<T_COMPUTE>(nanU32.f);
 
     // ==========================================================
@@ -395,16 +400,14 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Compute(int64_t curr
     // ==========================================================
     Sign(signGrad, gradLocal, signTmp, currentNum);
     Compare(nanMask, gradLocal, gradLocal, CMPMODE::EQ, currentNum);
-    Select(signGrad, nanMask, signGrad, nanScalar,
-           SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+    Select(signGrad, nanMask, signGrad, nanScalar, SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
     // ==========================================================
     // Step 4: sign_m = Sign(m_new) + NaN-Patch
     // ==========================================================
     Sign(signM, mNew, signTmp, currentNum);
     Compare(nanMask, mNew, mNew, CMPMODE::EQ, currentNum);
-    Select(signM, nanMask, signM, nanScalar,
-           SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+    Select(signM, nanMask, signM, nanScalar, SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
     // ==========================================================
     // Step 5: sign_gm = sign_grad * sign_m
@@ -434,11 +437,11 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::Compute(int64_t curr
     //     fp32 无 subnormal 精度差异（mantissa 23bit）。
     // ==========================================================
     if constexpr (std::is_same_v<T_IN, half> || std::is_same_v<T_IN, bfloat16_t>) {
-        Mul(tmp, scale, gradLocal, currentNum);    // scale * grad (fp16/bf16 normal)
-        Muls(update, tmp, lrVal, currentNum);      // * lr
+        Mul(tmp, scale, gradLocal, currentNum); // scale * grad (fp16/bf16 normal)
+        Muls(update, tmp, lrVal, currentNum);   // * lr
     } else {
-        Muls(tmp, scale, lrVal, currentNum);       // lr * scale (fp32 防溢出)
-        Mul(update, tmp, gradLocal, currentNum);   // * grad
+        Muls(tmp, scale, lrVal, currentNum);     // lr * scale (fp32 防溢出)
+        Mul(update, tmp, gradLocal, currentNum); // * grad
     }
 
     // ==========================================================
@@ -474,9 +477,9 @@ __aicore__ inline void ApplyAddSignKernel<T_IN, T_COMPUTE>::CopyOut(int64_t prog
 
     DataCopyParams params;
     params.blockCount = 1;
-    params.blockLen   = static_cast<uint16_t>(currentNum * sizeof(T_IN));
-    params.srcStride  = 0;
-    params.dstStride  = 0;
+    params.blockLen = static_cast<uint16_t>(currentNum * sizeof(T_IN));
+    params.srcStride = 0;
+    params.dstStride = 0;
     DataCopyPad(varOutGM_[progress * ubLength_], varOutLocal, params);
 
     varOutQueue.FreeTensor(varOutLocal);

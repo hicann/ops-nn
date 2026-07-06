@@ -36,16 +36,16 @@ namespace ge {
  * @li x_clamped_loss: A Tensor. Same dtype as data.
  */
 REG_OP(ActsULQ)
-  .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-  .INPUT(clamp_min, TensorType({DT_FLOAT16, DT_FLOAT}))
-  .INPUT(clamp_max, TensorType({DT_FLOAT16, DT_FLOAT}))
-  .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-  .OUTPUT(clamp_min_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
-  .OUTPUT(clamp_max_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
-  .OUTPUT(x_clamped_loss, TensorType({DT_FLOAT16, DT_FLOAT}))
-  .ATTR(fixed_min, Bool, false)
-  .ATTR(num_bits, Int, 8)
-  .OP_END_FACTORY_REG(ActsULQ)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(clamp_min, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(clamp_max, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(clamp_min_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(clamp_max_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(x_clamped_loss, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .ATTR(fixed_min, Bool, false)
+    .ATTR(num_bits, Int, 8)
+    .OP_END_FACTORY_REG(ActsULQ)
 
 } // namespace ge
 

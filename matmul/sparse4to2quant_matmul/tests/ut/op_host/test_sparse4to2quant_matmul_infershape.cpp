@@ -17,22 +17,20 @@
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
-
 namespace ge {
 
 class TestSparse4to2QuantMatmulInferShape : public testing::Test {
-    protected:
-        static void SetUpTestCase() {
-            std::cout << "TestSparse4to2QuantMatmulInferShape Proto Test SetUp" << std::endl;
-        }
+protected:
+    static void SetUpTestCase() { std::cout << "TestSparse4to2QuantMatmulInferShape Proto Test SetUp" << std::endl; }
 
-        static void TearDownTestCase() {
-            std::cout << "TestSparse4to2QuantMatmulInferShape Proto Test TearDown" << std::endl;
-        }
+    static void TearDownTestCase()
+    {
+        std::cout << "TestSparse4to2QuantMatmulInferShape Proto Test TearDown" << std::endl;
+    }
 };
 
-
-TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_InferShapeCheck) {
+TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_InferShapeCheck)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Sparse4to2QuantMatmul"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Sparse4to2QuantMatmul")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -40,20 +38,21 @@ TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_InferShapeChec
     gert::Shape x1 = {64, 512};
     gert::Shape x2 = {256, 256};
     gert::Shape outputShape = {64, 256};
-    int64_t dtype = static_cast<int64_t> (ge::DT_BF16);
+    int64_t dtype = static_cast<int64_t>(ge::DT_BF16);
     auto context_holder = gert::InferShapeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&x1, &x2})
-        .OutputShapes({&outputShape})
-        .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                    {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-        .Build();
+                              .NodeIoNum(2, 1)
+                              .IrInstanceNum({1, 1})
+                              .InputShapes({&x1, &x2})
+                              .OutputShapes({&outputShape})
+                              .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                          {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                          {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                              .Build();
     ASSERT_EQ(infer_shape_func(context_holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_WrongDimCase) {
+TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_WrongDimCase)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Sparse4to2QuantMatmul"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Sparse4to2QuantMatmul")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -61,20 +60,21 @@ TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_WrongDimCase) 
     gert::Shape x1 = {64, 512};
     gert::Shape x2 = {16, 8, 16, 32};
     gert::Shape outputShape = {64, 256};
-    int64_t dtype = static_cast<int64_t> (ge::DT_BF16);
+    int64_t dtype = static_cast<int64_t>(ge::DT_BF16);
     auto context_holder = gert::InferShapeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&x1, &x2})
-        .OutputShapes({&outputShape})
-        .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                    {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-        .Build();
+                              .NodeIoNum(2, 1)
+                              .IrInstanceNum({1, 1})
+                              .InputShapes({&x1, &x2})
+                              .OutputShapes({&outputShape})
+                              .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                          {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                          {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                              .Build();
     ASSERT_EQ(infer_shape_func(context_holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_UknownDimCase) {
+TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_UknownDimCase)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Sparse4to2QuantMatmul"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Sparse4to2QuantMatmul")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -82,17 +82,17 @@ TEST_F(TestSparse4to2QuantMatmulInferShape, Sparse4to2QuantMatmul_UknownDimCase)
     gert::Shape x1 = {64, 512};
     gert::Shape x2 = {-2};
     gert::Shape outputShape = {-2};
-    int64_t dtype = static_cast<int64_t> (ge::DT_BF16);
+    int64_t dtype = static_cast<int64_t>(ge::DT_BF16);
     auto context_holder = gert::InferShapeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&x1, &x2})
-        .OutputShapes({&outputShape})
-        .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                    {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-        .Build();
+                              .NodeIoNum(2, 1)
+                              .IrInstanceNum({1, 1})
+                              .InputShapes({&x1, &x2})
+                              .OutputShapes({&outputShape})
+                              .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                          {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                          {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                              .Build();
     ASSERT_EQ(infer_shape_func(context_holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-}
+} // namespace ge

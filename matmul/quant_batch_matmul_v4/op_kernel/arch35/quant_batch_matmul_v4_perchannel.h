@@ -20,21 +20,19 @@
 
 using matmul::MatmulImpl;
 
-namespace QuantBatchMatmulV4
-{
+namespace QuantBatchMatmulV4 {
 
 template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz = false>
 class QuantBatchMatmulV4PerChannelKernel
     : public QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset,
-                                                   antiQuantType, scaleType, weightNz>
-{
+                                                   antiQuantType, scaleType, weightNz> {
 public:
     __aicore__ inline QuantBatchMatmulV4PerChannelKernel(){};
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-        GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y, GM_ADDR workspace,
-        const qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tilingData, TPipe* tPipe);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
+                                GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y,
+                                GM_ADDR workspace, const qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tilingData,
+                                TPipe* tPipe);
     __aicore__ inline void CopyND2NZ(int aL1Idx);
     __aicore__ inline void GetAL1(int64_t kFactorIdx, AscendC::TEventID eventIdsMte1ToMte2[MAX_AL1_BUF_NUM]);
     __aicore__ inline void GetBL1(int64_t kFactorIdx);
@@ -48,15 +46,13 @@ public:
     MatmulImpl<inputXType, inputWType, outputYType, inputBiasType, CFG_MDL> mmObj_;
 };
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
 __aicore__ inline void QuantBatchMatmulV4PerChannelKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType, scaleType, weightNz>::
-    Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-        GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y, GM_ADDR workspace,
-        const qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tilingData, TPipe* tPipe)
+    xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType, scaleType,
+    weightNz>::Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale,
+                    GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y, GM_ADDR workspace,
+                    const qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tilingData, TPipe* tPipe)
 {
     this->tiling_ = tilingData;
     this->pipe_ = tPipe;
@@ -88,51 +84,98 @@ __aicore__ inline void QuantBatchMatmulV4PerChannelKernel<
             int32_t bL1DataSizeTotal = this->DOUBLE_BUFFER * this->bL1DataSize_ * sizeof(xType);
             if (this->tiling_->AL1Pingpong == this->QUADRUPLE_BUFFER) {
                 this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
-                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
-                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, this->aL1DataSize_);
-                this->aL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType), this->aL1DataSize_);
-                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, this->aL1DataSize_);
-                this->aL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType), this->aL1DataSize_);
-                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE, this->bL1DataSize_);
-                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
+                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType),
+                                                                  this->bL1DataSize_);
+                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, this->aL1DataSize_);
+                this->aL1LocalBuf2_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType),
+                    this->aL1DataSize_);
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal,
+                                                                  this->aL1DataSize_);
+                this->aL1LocalBuf3_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType), this->aL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE,
+                                                                  this->bL1DataSize_);
+                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType),
+                    this->bL1DataSize_);
             } else if (this->tiling_->AL1Pingpong == this->DOUBLE_BUFFER) {
                 this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
-                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
-                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, this->aL1DataSize_);
-                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, this->aL1DataSize_);
-                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE, this->bL1DataSize_);
-                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
-            } else {  // this->tiling_->AL1Pingpong == 1
+                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType),
+                                                                  this->bL1DataSize_);
+                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + bL1DataSizeTotal, this->aL1DataSize_);
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal,
+                                                                  this->aL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->L1_BUFFER_HALF_SIZE,
+                                                                  this->bL1DataSize_);
+                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM, this->L1_BUFFER_HALF_SIZE + this->bL1DataSize_ * sizeof(xType),
+                    this->bL1DataSize_);
+            } else { // this->tiling_->AL1Pingpong == 1
                 this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
-                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
-                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal, this->aL1DataSize_);
-                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)), this->bL1DataSize_);
-                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)) + this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
+                this->bL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType),
+                                                                  this->bL1DataSize_);
+                this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, bL1DataSizeTotal,
+                                                                  this->aL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM,
+                    this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)),
+                    this->bL1DataSize_);
+                this->bL1LocalBuf3_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM,
+                    this->Max(this->L1_BUFFER_HALF_SIZE, bL1DataSizeTotal + this->aL1DataSize_ * sizeof(xType)) +
+                        this->bL1DataSize_ * sizeof(xType),
+                    this->bL1DataSize_);
             }
         } else {
             // BL1 为 single buffer 或 double buffer (未考虑 L1 bank 冲突)
             this->bL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, 0, this->bL1DataSize_);
             if (this->tiling_->BL1Pingpong == this->DOUBLE_BUFFER) {
-                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType), this->bL1DataSize_);
+                this->bL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->bL1DataSize_ * sizeof(xType),
+                                                                  this->bL1DataSize_);
             }
-            this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(TPosition::TSCM, this->vecPingpong_ * this->bL1DataSize_ * sizeof(xType), this->aL1DataSize_);
+            this->aL1LocalBuf0_ = AscendC::LocalTensor<xType>(
+                TPosition::TSCM, this->vecPingpong_ * this->bL1DataSize_ * sizeof(xType), this->aL1DataSize_);
             if (this->tiling_->AL1Pingpong == this->QUADRUPLE_BUFFER) {
-                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
-                this->aL1LocalBuf2_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ * IDX_2 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
-                this->aL1LocalBuf3_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ * IDX_3 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM,
+                    (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType),
+                    this->aL1DataSize_);
+                this->aL1LocalBuf2_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM,
+                    (this->aL1DataSize_ * IDX_2 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType),
+                    this->aL1DataSize_);
+                this->aL1LocalBuf3_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM,
+                    (this->aL1DataSize_ * IDX_3 + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType),
+                    this->aL1DataSize_);
             } else if (this->tiling_->AL1Pingpong == this->DOUBLE_BUFFER) {
-                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(TPosition::TSCM, (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType), this->aL1DataSize_);
+                this->aL1LocalBuf1_ = AscendC::LocalTensor<xType>(
+                    TPosition::TSCM,
+                    (this->aL1DataSize_ + this->tiling_->BL1Pingpong * this->bL1DataSize_) * sizeof(xType),
+                    this->aL1DataSize_);
             }
         }
         mmObj_.SetSubBlockIdx(0);
         mmObj_.Init(&this->tiling_->matmulTiling, tPipe);
     } else {
-        this->weightInUb_ = AscendC::LocalTensor<wType>(TPosition::VECIN, 0, this->vecWeightInLen_ << this->INT4_DTYPE_PARAM );
-        this->scaleInUb_ = AscendC::LocalTensor<scaleType>(TPosition::VECIN, this->vecWeightInLen_, this->vecScaleOffsetLen_ / sizeof(scaleType));
-        this->weightOutUb_ = AscendC::LocalTensor<xType>(TPosition::VECOUT, this->vecWeightInLen_ + this->vecScaleOffsetLen_, this->vecWeightOutLen_ / sizeof(xType));
-        this->scaleMaskUb_ = AscendC::LocalTensor<uint64_t>(TPosition::VECIN, this->vecWeightInLen_ + this->vecScaleOffsetLen_ + this->vecWeightOutLen_, PERGROUP_NZ_MASK_REG / sizeof(uint64_t));
+        this->weightInUb_ = AscendC::LocalTensor<wType>(TPosition::VECIN, 0,
+                                                        this->vecWeightInLen_ << this->INT4_DTYPE_PARAM);
+        this->scaleInUb_ = AscendC::LocalTensor<scaleType>(TPosition::VECIN, this->vecWeightInLen_,
+                                                           this->vecScaleOffsetLen_ / sizeof(scaleType));
+        this->weightOutUb_ = AscendC::LocalTensor<xType>(TPosition::VECOUT,
+                                                         this->vecWeightInLen_ + this->vecScaleOffsetLen_,
+                                                         this->vecWeightOutLen_ / sizeof(xType));
+        this->scaleMaskUb_ = AscendC::LocalTensor<uint64_t>(
+            TPosition::VECIN, this->vecWeightInLen_ + this->vecScaleOffsetLen_ + this->vecWeightOutLen_,
+            PERGROUP_NZ_MASK_REG / sizeof(uint64_t));
         if constexpr (hasAntiQuantOffset) {
-            this->offsetInUb_ = AscendC::LocalTensor<xType>(TPosition::VECIN, this->vecWeightInLen_ + this->vecScaleOffsetLen_ + this->vecWeightOutLen_ + PERGROUP_NZ_MASK_REG, this->vecScaleOffsetLen_ / sizeof(xType));
+            this->offsetInUb_ = AscendC::LocalTensor<xType>(
+                TPosition::VECIN,
+                this->vecWeightInLen_ + this->vecScaleOffsetLen_ + this->vecWeightOutLen_ + PERGROUP_NZ_MASK_REG,
+                this->vecScaleOffsetLen_ / sizeof(xType));
         }
         this->scaleMaskUb_.SetValue(0, 0x00000000ffffffff);
         this->scaleMaskUb_.SetValue(1, 0x00000000ffffffff);
@@ -180,7 +223,7 @@ template <typename xType, typename wType, typename biasType, typename yType, boo
 __aicore__ inline void
 QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
                                    scaleType, weightNz>::GetAL1(int64_t kFactorIdx,
-                                                      AscendC::TEventID eventIdsMte1ToMte2[MAX_AL1_BUF_NUM])
+                                                                AscendC::TEventID eventIdsMte1ToMte2[MAX_AL1_BUF_NUM])
 {
     if ASCEND_IS_AIC {
         this->kAL1Offset_ = kFactorIdx / this->kAl1Factor_ * this->kAL1Size_;
@@ -209,9 +252,8 @@ QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans
  */
 template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
           bool hasAntiQuantOffset, QuantType antiQuantType, typename scaleType, bool weightNz>
-__aicore__ inline void
-QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
-                                   scaleType, weightNz>::Process()
+__aicore__ inline void QuantBatchMatmulV4PerChannelKernel<
+    xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType, scaleType, weightNz>::Process()
 {
     uint64_t usedCoreNum = this->tiling_->cubeNumBlocksM * this->tiling_->cubeNumBlocksN;
     if ((this->curBlockIdx_) >= usedCoreNum) {
@@ -228,9 +270,9 @@ QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans
             this->PostProcess(kFactorIdx, eventIdsMte1ToMte2);
         }
         if ASCEND_IS_AIC {
-            uint64_t outOffset =
-                (this->mBlockOffset_ + this->curML0Idx_ * this->tiling_->matmulTiling.baseM) * this->tiling_->nSize +
-                this->nBlockOffset_ + this->curNL0Idx_ * this->tiling_->matmulTiling.baseN;
+            uint64_t outOffset = (this->mBlockOffset_ + this->curML0Idx_ * this->tiling_->matmulTiling.baseM) *
+                                     this->tiling_->nSize +
+                                 this->nBlockOffset_ + this->curNL0Idx_ * this->tiling_->matmulTiling.baseN;
 #ifndef __CCE_KT_TEST__
             mmObj_.GetTensorC(this->yGlobal_[outOffset]);
 #endif
@@ -281,28 +323,27 @@ QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans
                                    this->tiling_->matmulTiling.baseM * this->CeilAlign(this->kAL1Len_, BLOCK_CUBE);
         } else {
             // (k1,m1,m0,k0), offsetM + offsetK
-            this->aL1Offset_ =
-                (this->curML0Idx_ % this->tiling_->matmulTiling.stepM) * this->tiling_->matmulTiling.baseM *
-                    BLOCK_CUBE +
-                (kFactorIdx % this->kAl1Factor_) * this->kBL1Size_ * this->CeilAlign(this->mAL1Len_, BLOCK_CUBE);
+            this->aL1Offset_ = (this->curML0Idx_ % this->tiling_->matmulTiling.stepM) *
+                                   this->tiling_->matmulTiling.baseM * BLOCK_CUBE +
+                               (kFactorIdx % this->kAl1Factor_) * this->kBL1Size_ *
+                                   this->CeilAlign(this->mAL1Len_, BLOCK_CUBE);
         }
         if constexpr (aTrans) {
             if constexpr (bTrans) {
                 mmObj_.SetOrgShape(this->mAL1Len_, this->CeilAlign(this->nBL1Len_, BLOCK_CUBE),
-                                         this->CeilAlign(this->kAL1Len_, BLOCK_CUBE), this->kBL1Len_,
-                                         this->tiling_->nSize);
+                                   this->CeilAlign(this->kAL1Len_, BLOCK_CUBE), this->kBL1Len_, this->tiling_->nSize);
             } else {
                 mmObj_.SetOrgShape(this->mAL1Len_, this->nBL1Len_, this->CeilAlign(this->kAL1Len_, BLOCK_CUBE),
-                                         this->CeilAlign(this->kBL1Len_, BLOCK_CUBE), this->tiling_->nSize);
+                                   this->CeilAlign(this->kBL1Len_, BLOCK_CUBE), this->tiling_->nSize);
             }
         } else {
             if constexpr (bTrans) {
                 mmObj_.SetOrgShape(this->CeilAlign(this->mAL1Len_, BLOCK_CUBE),
-                                         this->CeilAlign(this->nBL1Len_, BLOCK_CUBE), this->kAL1Len_, this->kBL1Len_,
-                                         this->tiling_->nSize);
+                                   this->CeilAlign(this->nBL1Len_, BLOCK_CUBE), this->kAL1Len_, this->kBL1Len_,
+                                   this->tiling_->nSize);
             } else {
                 mmObj_.SetOrgShape(this->CeilAlign(this->mAL1Len_, BLOCK_CUBE), this->nBL1Len_, this->kAL1Len_,
-                                         this->CeilAlign(this->kBL1Len_, BLOCK_CUBE), this->tiling_->nSize);
+                                   this->CeilAlign(this->kBL1Len_, BLOCK_CUBE), this->tiling_->nSize);
             }
         }
         if (this->curAL1BufIdx_ == IDX_0) {
@@ -316,10 +357,10 @@ QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans
         }
         if constexpr (bTrans) {
             // (k1,n1,n0,k0), offsetN + offsetK
-            this->bL1Offset_ =
-                (this->curNL0Idx_ % this->tiling_->matmulTiling.stepN) * this->tiling_->matmulTiling.baseN *
-                    BLOCK_CUBE +
-                (kFactorIdx % this->kBl1Factor_) * this->kAL1Size_ * this->CeilAlign(this->nBL1Len_, BLOCK_CUBE);
+            this->bL1Offset_ = (this->curNL0Idx_ % this->tiling_->matmulTiling.stepN) *
+                                   this->tiling_->matmulTiling.baseN * BLOCK_CUBE +
+                               (kFactorIdx % this->kBl1Factor_) * this->kAL1Size_ *
+                                   this->CeilAlign(this->nBL1Len_, BLOCK_CUBE);
         } else {
             // (n1,k1,k0,n0), offsetK + offsetN
             this->bL1Offset_ = (kFactorIdx % this->kBl1Factor_) * this->kAL1Size_ * BLOCK_CUBE +
@@ -345,5 +386,4 @@ QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans
         mmObj_.Iterate(kFactorIdx != 0);
     }
 }
-}  // namespace QuantBatchMatmulV4
-
+} // namespace QuantBatchMatmulV4

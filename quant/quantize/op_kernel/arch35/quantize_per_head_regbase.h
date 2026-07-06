@@ -25,8 +25,8 @@ class QuantizePerHeadRegbase : public QuantizeBase<T, T1, T2, U, DivMode, RoundM
 public:
     __aicore__ inline QuantizePerHeadRegbase(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const QuantizeTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const QuantizeTilingData* tilingData)
     {
         this->SetFloatOverflowModeForRegbase();
         blockIdx_ = GetBlockIdx();
@@ -79,9 +79,8 @@ private:
         runTilingData = *tilingData;
     }
 
-    __aicore__ inline void GetXInCopyParams(
-        const QuantizeTilingData& runTilingData, int64_t xN, int64_t xLen, int64_t lastDimLen,
-        DataCopyExtParams& copyParams)
+    __aicore__ inline void GetXInCopyParams(const QuantizeTilingData& runTilingData, int64_t xN, int64_t xLen,
+                                            int64_t lastDimLen, DataCopyExtParams& copyParams)
     {
         copyParams.blockCount = xN;
         copyParams.blockLen = xLen * sizeof(T);
@@ -97,9 +96,8 @@ private:
         }
     }
 
-    __aicore__ inline void GetOutCopyParams(
-        const QuantizeTilingData& runTilingData, int64_t yN, int64_t yLen, int64_t lastDimLen,
-        DataCopyExtParams& copyParams)
+    __aicore__ inline void GetOutCopyParams(const QuantizeTilingData& runTilingData, int64_t yN, int64_t yLen,
+                                            int64_t lastDimLen, DataCopyExtParams& copyParams)
     {
         int64_t yLenReal = yLen;
         if constexpr (IsSameType<U, int4b_t>::value) {
@@ -166,9 +164,8 @@ private:
                          blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor * tilingData_.dim2;
             gmSOffset_ = blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor;
         } else {
-            gmXOffset_ =
-                (blockIdx_ / tilingData_.blockUnion * tilingData_.dim2 +
-                 blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
+            gmXOffset_ = (blockIdx_ / tilingData_.blockUnion * tilingData_.dim2 +
+                          blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
             gmSOffset_ = blockIdx_ / tilingData_.blockUnion;
         }
     }
@@ -216,8 +213,8 @@ private:
         inQueueScale_.FreeTensor(scaleLocal);
     }
 
-    __aicore__ inline void ProcessInputLoop(
-        int64_t nLoopLen, int64_t baseXOffset, LocalTensor<T1>& scaleLocal, LocalTensor<T2>& offsetLocal)
+    __aicore__ inline void ProcessInputLoop(int64_t nLoopLen, int64_t baseXOffset, LocalTensor<T1>& scaleLocal,
+                                            LocalTensor<T2>& offsetLocal)
     {
         auto loopLen = tilingData_.baseLen;
         auto lenLoopNum = blockLen_ / loopLen;
@@ -236,9 +233,8 @@ private:
     }
 
     template <typename dtypeCopyIn>
-    __aicore__ inline void CopyInParam(
-        TQue<QuePosition::VECIN, bufferNum_>& inQueue, GlobalTensor<dtypeCopyIn>& inGm, int64_t paramLen,
-        int64_t paramOffset)
+    __aicore__ inline void CopyInParam(TQue<QuePosition::VECIN, bufferNum_>& inQueue, GlobalTensor<dtypeCopyIn>& inGm,
+                                       int64_t paramLen, int64_t paramOffset)
     {
         auto paramLocal = inQueue.AllocTensor<dtypeCopyIn>();
         static constexpr AscendC::MultiCopyConfig copyConfig = {false, 0, 0, false};
@@ -255,9 +251,8 @@ private:
         dtypeCopyIn constValue = 0;
         AscendC::MultiCopyParams<dtypeCopyIn, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::MULTI_COPY_DIM>
             paramsMain = {multiCopyParams, constValue};
-        AscendC::DataCopy<
-            dtypeCopyIn, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::MULTI_COPY_DIM, copyConfig>(
-            paramLocal, inGm[paramOffset], paramsMain);
+        AscendC::DataCopy<dtypeCopyIn, QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::MULTI_COPY_DIM,
+                          copyConfig>(paramLocal, inGm[paramOffset], paramsMain);
         inQueue.EnQue(paramLocal);
     }
 
@@ -283,8 +278,8 @@ private:
         outQueueY_.FreeTensor(outLocal);
     }
 
-    __aicore__ inline void Compute(
-        int64_t nRow, int64_t dataCount, LocalTensor<T1>& scaleLocal, LocalTensor<T2>& offsetLocal)
+    __aicore__ inline void Compute(int64_t nRow, int64_t dataCount, LocalTensor<T1>& scaleLocal,
+                                   LocalTensor<T2>& offsetLocal)
     {
         auto inLocal = inQueueX_.DeQue<T>();
         auto outLocal = outQueueY_.AllocTensor<yCopyDtype>();
@@ -314,8 +309,8 @@ private:
             AscendC::MicroAPI::RegTensor<float> vregTmp1;
             AscendC::MicroAPI::RegTensor<float> vregTmp2;
             AscendC::MicroAPI::MaskReg mask;
-            AscendC::MicroAPI::MaskReg mask4Int4 =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+            AscendC::MicroAPI::MaskReg
+                mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
 
             mask = AscendC::MicroAPI::CreateMask<float>();
             for (uint16_t j = 0; j < static_cast<uint16_t>(nRow); ++j) {
@@ -429,16 +424,16 @@ private:
                             AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
                         AscendC::MicroAPI::Div<float, &divMode>(vregTmp1, vregFloatX, vregFloatS, mask);
                     } else {
-                        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                            vregTmp1, vregFloatX, vregFloatS, mask);
+                        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregTmp1, vregFloatX,
+                                                                                                 vregFloatS, mask);
                         if constexpr (SqrtMode == TPL_SQRT_MODE) {
-                            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                                vregTmp1, vregTmp1, vregFloatS, mask);
+                            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregTmp1, vregTmp1,
+                                                                                                     vregFloatS, mask);
                         }
                     }
 
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                        vregFloatY, vregTmp1, vregFloatO, mask);
+                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregFloatY, vregTmp1,
+                                                                                             vregFloatO, mask);
 
                     // cast and sd for y
                     if constexpr (IsSameType<U, hifloat8_t>::value) {

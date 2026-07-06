@@ -65,8 +65,8 @@ public:
     };
 
 public:
-    __aicore__ inline BlockSchedulerRotateQuantBuiltIn(
-        const ProblemShape& shape, int64_t blockNum, const Params& params)
+    __aicore__ inline BlockSchedulerRotateQuantBuiltIn(const ProblemShape& shape, int64_t blockNum,
+                                                       const Params& params)
     {
         m_ = shape.m;
         n_ = shape.n; // x :(m_,n_)
@@ -168,8 +168,8 @@ public:
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInRotateQuantScheduler, TransA_, TransB_> {
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInRotateQuantScheduler,
+                              TransA_, TransB_> {
     using SchedulerOp = BlockSchedulerRotateQuantBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 } // namespace Block

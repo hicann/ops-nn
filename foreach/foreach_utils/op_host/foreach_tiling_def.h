@@ -151,43 +151,26 @@ REGISTER_TILING_DATA_CLASS(ForeachDivScalar_10001, ForeachSoloTilingDataRegbase)
 REGISTER_TILING_DATA_CLASS(ForeachDivScalar_10002, ForeachSoloTilingDataRegbase)
 REGISTER_TILING_DATA_CLASS(ForeachDivScalar_10004, ForeachSoloTilingDataRegbase)
 
-#define MEMBASE_TILING(OP_TYPE, OP_CODE, INPUT_TYPE)                                              \
-    class OP_TYPE##MembaseTiling : public ForeachBaseClass                                        \
-    {                                                                                             \
-    public:                                                                                       \
-        explicit OP_TYPE##MembaseTiling(gert::TilingContext* context) : ForeachBaseClass(context) \
-        {}                                                                                        \
-        ~OP_TYPE##MembaseTiling() override = default;                                             \
-        void Reset(gert::TilingContext* context) override                                         \
-        {                                                                                         \
-            ForeachBaseClass::Reset(context);                                                     \
-        }                                                                                         \
-                                                                                                  \
-    protected:                                                                                    \
-        bool IsCapable() override                                                                 \
-        {                                                                                         \
-            return !Ops::NN::OpTiling::IsRegbaseSocVersion(context_);                             \
-        }                                                                                         \
-        ge::graphStatus DoOpTiling() override                                                     \
-        {                                                                                         \
-            ForeachCommonTiling tilingObject(context_);                                           \
-            if (tilingObject.Init(OP_CODE, INPUT_TYPE) != ge::GRAPH_SUCCESS) {                    \
-                return ge::GRAPH_FAILED;                                                          \
-            }                                                                                     \
-            return tilingObject.RunBigScalarKernelTiling();                                       \
-        }                                                                                         \
-        ge::graphStatus PostTiling() override                                                     \
-        {                                                                                         \
-            return ge::GRAPH_SUCCESS;                                                             \
-        }                                                                                         \
-        ge::graphStatus GetShapeAttrsInfo() override                                              \
-        {                                                                                         \
-            return ge::GRAPH_SUCCESS;                                                             \
-        }                                                                                         \
-        uint64_t GetTilingKey() const override                                                    \
-        {                                                                                         \
-            return context_->GetTilingKey();                                                      \
-        }                                                                                         \
+#define MEMBASE_TILING(OP_TYPE, OP_CODE, INPUT_TYPE)                                                 \
+    class OP_TYPE##MembaseTiling : public ForeachBaseClass {                                         \
+    public:                                                                                          \
+        explicit OP_TYPE##MembaseTiling(gert::TilingContext* context) : ForeachBaseClass(context) {} \
+        ~OP_TYPE##MembaseTiling() override = default;                                                \
+        void Reset(gert::TilingContext* context) override { ForeachBaseClass::Reset(context); }      \
+                                                                                                     \
+    protected:                                                                                       \
+        bool IsCapable() override { return !Ops::NN::OpTiling::IsRegbaseSocVersion(context_); }      \
+        ge::graphStatus DoOpTiling() override                                                        \
+        {                                                                                            \
+            ForeachCommonTiling tilingObject(context_);                                              \
+            if (tilingObject.Init(OP_CODE, INPUT_TYPE) != ge::GRAPH_SUCCESS) {                       \
+                return ge::GRAPH_FAILED;                                                             \
+            }                                                                                        \
+            return tilingObject.RunBigScalarKernelTiling();                                          \
+        }                                                                                            \
+        ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }                          \
+        ge::graphStatus GetShapeAttrsInfo() override { return ge::GRAPH_SUCCESS; }                   \
+        uint64_t GetTilingKey() const override { return context_->GetTilingKey(); }                  \
     }
 
 } // namespace optiling

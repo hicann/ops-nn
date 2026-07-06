@@ -22,8 +22,8 @@ static constexpr size_t IN_X = 0;
 static constexpr size_t IN_AXIS = 1;
 static constexpr size_t OUT_Y = 0;
 
-static ge::graphStatus CopyShapeInput2OutputWithIdxForReverseV2(
-    gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
+static ge::graphStatus CopyShapeInput2OutputWithIdxForReverseV2(gert::InferShapeContext* context, int64_t input_idx,
+                                                                int64_t output_idx)
 {
     auto in_shape = context->GetInputShape(input_idx);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
@@ -33,10 +33,11 @@ static ge::graphStatus CopyShapeInput2OutputWithIdxForReverseV2(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShape4ReverseV2(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "begin to do InferShape4ReverseV2 with CopyShapeInput2OutputWithIdx");
-  return CopyShapeInput2OutputWithIdxForReverseV2(context, IN_X, OUT_Y);
+static ge::graphStatus InferShape4ReverseV2(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "begin to do InferShape4ReverseV2 with CopyShapeInput2OutputWithIdx");
+    return CopyShapeInput2OutputWithIdxForReverseV2(context, IN_X, OUT_Y);
 }
 
 IMPL_OP_INFERSHAPE(ReverseV2).InferShape(InferShape4ReverseV2).InputsDataDependency({IN_AXIS});
-}  // namespace ops
+} // namespace ops

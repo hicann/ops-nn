@@ -14,8 +14,7 @@
  */
 #include "register/op_def_registry.h"
 namespace ops {
-class MseLossGradV2 : public OpDef
-{
+class MseLossGradV2 : public OpDef {
 public:
     explicit MseLossGradV2(const char* const name) : OpDef(name)
     {

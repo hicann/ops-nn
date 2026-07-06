@@ -27,7 +27,7 @@ namespace Conv {
 
 class ExtendConvTransposeTiling : public Conv3DDXV2InnerProductTiling {
 public:
-    explicit ExtendConvTransposeTiling(gert::TilingContext *context) : Conv3DDXV2InnerProductTiling(context)
+    explicit ExtendConvTransposeTiling(gert::TilingContext* context) : Conv3DDXV2InnerProductTiling(context)
     {
         Reset();
         opType_ = optiling::OpTypeV2::kExtendConvTranspose;
@@ -36,56 +36,57 @@ public:
 };
 
 class ExtendConvTransposeSmallShapeTiling : public Conv3DDXV2SmallShapeTiling {
-    public:
-        explicit ExtendConvTransposeSmallShapeTiling(gert::TilingContext *context) : Conv3DDXV2SmallShapeTiling(context)
-        {
-            Reset();
-            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
-        }
-        ~ExtendConvTransposeSmallShapeTiling() override = default;
+public:
+    explicit ExtendConvTransposeSmallShapeTiling(gert::TilingContext* context) : Conv3DDXV2SmallShapeTiling(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+    }
+    ~ExtendConvTransposeSmallShapeTiling() override = default;
 };
 
 class ExtendConvTransposeFullLoadTiling : public Conv3DDXV2FullLoadTiling {
-    public:
-        explicit ExtendConvTransposeFullLoadTiling(gert::TilingContext *context) : Conv3DDXV2FullLoadTiling(context)
-        {
-            Reset();
-            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
-        }
-        ~ExtendConvTransposeFullLoadTiling() override = default;
+public:
+    explicit ExtendConvTransposeFullLoadTiling(gert::TilingContext* context) : Conv3DDXV2FullLoadTiling(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+    }
+    ~ExtendConvTransposeFullLoadTiling() override = default;
 };
 
 class ExtendConvTransposeInnerProductTiling : public Conv3DDXV2InnerProductTiling {
-    public:
-        explicit ExtendConvTransposeInnerProductTiling(gert::TilingContext *context) : Conv3DDXV2InnerProductTiling(context)
-        {
-            Reset();
-            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
-        }
-        ~ExtendConvTransposeInnerProductTiling() override = default;
+public:
+    explicit ExtendConvTransposeInnerProductTiling(gert::TilingContext* context) : Conv3DDXV2InnerProductTiling(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+    }
+    ~ExtendConvTransposeInnerProductTiling() override = default;
 };
 
 class ExtendConvTransposeKernelSplitTiling : public Conv3DDXV2KernelSplitTiling {
-    public:
-        explicit ExtendConvTransposeKernelSplitTiling(gert::TilingContext *context) : Conv3DDXV2KernelSplitTiling(context)
-        {
-            Reset();
-            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
-        }
-        ~ExtendConvTransposeKernelSplitTiling() override = default;
+public:
+    explicit ExtendConvTransposeKernelSplitTiling(gert::TilingContext* context) : Conv3DDXV2KernelSplitTiling(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+    }
+    ~ExtendConvTransposeKernelSplitTiling() override = default;
 };
 
 class ExtendConvTransposeKernelSplitFullLoadTiling : public Conv3DDXV2KernelSplitFullLoadTiling {
-    public:
-        explicit ExtendConvTransposeKernelSplitFullLoadTiling(gert::TilingContext *context) : Conv3DDXV2KernelSplitFullLoadTiling(context)
-        {
-            Reset();
-            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
-        }
-        ~ExtendConvTransposeKernelSplitFullLoadTiling() override = default;
+public:
+    explicit ExtendConvTransposeKernelSplitFullLoadTiling(gert::TilingContext* context)
+        : Conv3DDXV2KernelSplitFullLoadTiling(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+    }
+    ~ExtendConvTransposeKernelSplitFullLoadTiling() override = default;
 };
 
 } // namespace Conv
 } // namespace NN
 } // namespace Ops
-#endif  // EXTEND_CONV_TRANSPOSE_TILING_ADVANCE_H
+#endif // EXTEND_CONV_TRANSPOSE_TILING_ADVANCE_H

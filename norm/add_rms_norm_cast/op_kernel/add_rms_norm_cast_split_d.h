@@ -22,9 +22,8 @@ using namespace RmsNorm;
 template <typename T>
 class KernelAddRmsNormCastSplitD {
 public:
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRMSNormCastTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRMSNormCastTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numCol = tiling->num_col;
@@ -65,10 +64,7 @@ public:
         Ppipe->InitBuffer(reduceFp32Buf, NUM_PER_REP_FP32 * sizeof(float));
     }
 
-    __aicore__ inline KernelAddRmsNormCastSplitD(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormCastSplitD(TPipe* pipe) { Ppipe = pipe; }
 
     __aicore__ inline void Process()
     {
@@ -152,9 +148,8 @@ private:
         outQueueY.FreeTensor(x_out);
     }
 
-    __aicore__ inline void ComputeFormer(
-        uint32_t i_o_idx, uint32_t calc_row_num_1, uint32_t j_idx, LocalTensor<float>& rstdLocal,
-        LocalTensor<float>& sumLocal, uint32_t num)
+    __aicore__ inline void ComputeFormer(uint32_t i_o_idx, uint32_t calc_row_num_1, uint32_t j_idx,
+                                         LocalTensor<float>& rstdLocal, LocalTensor<float>& sumLocal, uint32_t num)
     {
         for (uint32_t i_i = 0; i_i < calc_row_num_1; i_i++) {
             CopyInAndAdd(i_o_idx * rowFactor + i_i, j_idx, num);
@@ -198,8 +193,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeLatter(
-        uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx, LocalTensor<float>& rstdLocal, uint32_t num)
+    __aicore__ inline void ComputeLatter(uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx,
+                                         LocalTensor<float>& rstdLocal, uint32_t num)
     {
         CopyInGamma(j_idx, num);
         LocalTensor<T> gammaLocal = inQueueGamma.DeQue<T>();
@@ -232,8 +227,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeY(
-        uint32_t i_i_idx_1, LocalTensor<half>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t num, uint32_t gmOffset)
+    __aicore__ inline void ComputeY(uint32_t i_i_idx_1, LocalTensor<half>& gammaLocal, LocalTensor<float>& rstdLocal,
+                                    uint32_t num, uint32_t gmOffset)
     {
         LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
@@ -264,9 +259,8 @@ private:
         outQueueY.EnQue<half>(yLocal);
     }
 
-    __aicore__ inline void ComputeY(
-        uint32_t i_i_idx, LocalTensor<bfloat16_t>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t num,
-        uint32_t gmOffset)
+    __aicore__ inline void ComputeY(uint32_t i_i_idx, LocalTensor<bfloat16_t>& gammaLocal,
+                                    LocalTensor<float>& rstdLocal, uint32_t num, uint32_t gmOffset)
     {
         LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();

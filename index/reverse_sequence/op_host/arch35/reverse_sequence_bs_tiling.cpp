@@ -25,8 +25,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 using namespace ReverseSequence;
 
 static constexpr int64_t DOUBLE_BUFFER = 2;
@@ -34,7 +33,7 @@ static constexpr int64_t DIGIT_TWO = 2;
 static constexpr int64_t DIGIT_FOUR = 4;
 
 static constexpr int64_t COPY_THRESHOLD = 128;
-static constexpr int64_t DCACHE_SIZE = 131072;  // 128k 
+static constexpr int64_t DCACHE_SIZE = 131072; // 128k
 static constexpr int64_t SPLIT_DIMA = 1;
 static constexpr int64_t SPLIT_DIMS = 3;
 static constexpr int64_t SPLIT_DIMB = 2;
@@ -47,13 +46,14 @@ static constexpr int64_t TYPE_BS = 1;
 static constexpr int64_t TYPE_ABS = 3;
 
 template <typename T>
-static std::string ToString(const T* value, size_t size) {
-  std::string r = "[";
-  for (size_t i = 0; i < size; i++) {
-    r = r + std::to_string(value[i]) + ", ";
-  }
-  r = r + "]";
-  return r;
+static std::string ToString(const T* value, size_t size)
+{
+    std::string r = "[";
+    for (size_t i = 0; i < size; i++) {
+        r = r + std::to_string(value[i]) + ", ";
+    }
+    r = r + "]";
+    return r;
 }
 
 bool ReverseSequenceBSTiling::IsCapable()
@@ -85,9 +85,9 @@ ge::graphStatus ReverseSequenceBSTiling::InitializationVars()
 {
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / inputData_.xDtypeSize;
     OP_CHECK_IF((ubSize_ <= DCACHE_SIZE),
-                    OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize_),
-                    return ge::GRAPH_FAILED);
-    ubSize_  = ubSize_ - DCACHE_SIZE;
+                OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize_),
+                return ge::GRAPH_FAILED);
+    ubSize_ = ubSize_ - DCACHE_SIZE;
     availableUb_ = static_cast<int64_t>(ubSize_) / inputData_.xDtypeSize;
     return ge::GRAPH_SUCCESS;
 }
@@ -132,7 +132,7 @@ void ReverseSequenceBSTiling::CalcSplitDimB()
         OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorB_ is %ld.", ubFactorB_);
         return;
     }
-    
+
     aLoop_ = aDim_;
     bLoop_ = (inputData_.inputDim[dimB_] + ubFactorB_ - 1) / ubFactorB_;
     sLoop_ = 1;
@@ -156,12 +156,12 @@ void ReverseSequenceBSTiling::CalcSplitDimS()
 }
 
 void ReverseSequenceBSTiling::CalcSplitDimA()
-{    
+{
     int64_t inDimALower = 1;
     int64_t inDimAUpper = aDim_;
     while (inDimALower < inDimAUpper) {
         int64_t inDimAMid = (inDimALower + inDimAUpper + 1) / DIGIT_TWO;
-        // split_a 
+        // split_a
         int64_t midBuffer = CalcBufferSize(inDimAMid, inputData_.inputDim[dimB_], inputData_.inputDim[dimS_], true);
         if (midBuffer <= availableUb_) {
             inDimALower = inDimAMid;
@@ -169,7 +169,7 @@ void ReverseSequenceBSTiling::CalcSplitDimA()
             inDimAUpper = inDimAMid - 1;
         }
     }
-    
+
     ubFactorA_ = inDimALower;
     ubFactorB_ = inputData_.inputDim[dimB_];
     ubFactorS_ = inputData_.inputDim[dimS_];
@@ -220,18 +220,15 @@ void ReverseSequenceBSTiling::DoUBTiling()
 ge::graphStatus ReverseSequenceBSTiling::DoOpTiling()
 {
     OP_CHECK_IF(InitializationVars() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize_),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize_),
+                return ge::GRAPH_FAILED);
     DoUBTiling();
     DoBlockTiling();
     SetTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ReverseSequenceBSTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReverseSequenceBSTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t ReverseSequenceBSTiling::GetTilingKey() const
 {
@@ -260,14 +257,15 @@ ge::graphStatus ReverseSequenceBSTiling::PostTiling()
     context_->SetTilingKey(GetTilingKey());
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 void ReverseSequenceBSTiling::SetTilingData() const
 {
-     ReverseSequence::ReverseSequenceBSTilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceBSTilingData>();
+    ReverseSequence::ReverseSequenceBSTilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceBSTilingData>();
 
     tilingData->bDim = inputData_.inputDim[dimB_];
     tilingData->sDim = inputData_.inputDim[dimS_];
@@ -288,8 +286,7 @@ void ReverseSequenceBSTiling::SetTilingData() const
 
 void ReverseSequenceBSTiling::DumpTilingInfo()
 {
-    ReverseSequenceBSTilingData* tilingData =
-        context_->GetTilingData<ReverseSequenceBSTilingData>();
+    ReverseSequenceBSTilingData* tilingData = context_->GetTilingData<ReverseSequenceBSTilingData>();
     std::string str;
     str += " bDim:" + std::to_string(tilingData->bDim);
     str += " sDim:" + std::to_string(tilingData->sDim);
@@ -321,4 +318,4 @@ ge::graphStatus ReverseSequenceBSTiling::GetShapeAttrsInfo()
 
 REGISTER_TILING_TEMPLATE("ReverseSequence", ReverseSequenceBSTiling, 3);
 
-}  // namespace optiling
+} // namespace optiling

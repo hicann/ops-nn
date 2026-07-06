@@ -21,14 +21,14 @@
 
 using namespace op;
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                              op::DataType::DT_INT64};
 
 namespace l0op {
 OP_TYPE_REGISTER(LinearIndexV2);
 
-const aclTensor* LinearIndexV2(
-    const aclTensorList* indicesList, const aclTensor* stride, const aclTensor* valueSize, aclOpExecutor* executor)
+const aclTensor* LinearIndexV2(const aclTensorList* indicesList, const aclTensor* stride, const aclTensor* valueSize,
+                               aclOpExecutor* executor)
 {
     L0_DFX(LinearIndexV2, indicesList, stride, valueSize);
 
@@ -66,23 +66,21 @@ const aclTensor* LinearIndexV2(
     outShape.SetDimNum(1);
     outShape.SetDim(0, outputSize);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        auto index = executor->AllocTensor(
-            outShape, (*indicesList)[validIdx]->GetDataType(), (*indicesList)[validIdx]->GetViewFormat());
-        auto ret =
-            ADD_TO_LAUNCHER_LIST_AICORE(LinearIndexV2, OP_INPUT(indicesList, stride, valueSize), OP_OUTPUT(index));
-        OP_CHECK(
-            ret == ACLNN_SUCCESS,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LinearIndexV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-            return nullptr);
+        auto index = executor->AllocTensor(outShape, (*indicesList)[validIdx]->GetDataType(),
+                                           (*indicesList)[validIdx]->GetViewFormat());
+        auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LinearIndexV2, OP_INPUT(indicesList, stride, valueSize),
+                                               OP_OUTPUT(index));
+        OP_CHECK(ret == ACLNN_SUCCESS,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LinearIndexV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+                 return nullptr);
         return index;
     } else {
         auto index = executor->AllocTensor(outShape, op::DataType::DT_INT32, (*indicesList)[0]->GetViewFormat());
-        auto ret =
-            ADD_TO_LAUNCHER_LIST_AICORE(LinearIndexV2, OP_INPUT(indicesList, stride, valueSize), OP_OUTPUT(index));
-        OP_CHECK(
-            ret == ACLNN_SUCCESS,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LinearIndexV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-            return nullptr);
+        auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LinearIndexV2, OP_INPUT(indicesList, stride, valueSize),
+                                               OP_OUTPUT(index));
+        OP_CHECK(ret == ACLNN_SUCCESS,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LinearIndexV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+                 return nullptr);
         return index;
     }
 }

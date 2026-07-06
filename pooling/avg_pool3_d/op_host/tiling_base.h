@@ -42,11 +42,9 @@ struct AiCoreParams {
     uint64_t l0cSize = 0UL;
 };
 
-class TilingBaseClass
-{
+class TilingBaseClass {
 public:
-    explicit TilingBaseClass(gert::TilingContext* context) : context_(context)
-    {}
+    explicit TilingBaseClass(gert::TilingContext* context) : context_(context) {}
 
     virtual ~TilingBaseClass() = default;
 
@@ -89,10 +87,7 @@ public:
     }
 
     // 更新 context
-    virtual void Reset(gert::TilingContext* context)
-    {
-        context_ = context;
-    }
+    virtual void Reset(gert::TilingContext* context) { context_ = context; }
 
 protected:
     virtual bool IsCapable() = 0;
@@ -111,10 +106,7 @@ protected:
     // 7、保存Tiling数据
     virtual ge::graphStatus PostTiling() = 0;
     // 8、Dump Tiling数据
-    virtual void DumpTilingInfo()
-    {
-        OP_LOGD(context_, "%ld", DefaultTilingInfoDump());
-    }
+    virtual void DumpTilingInfo() { OP_LOGD(context_, "%ld", DefaultTilingInfoDump()); }
 
     int64_t DefaultTilingInfoDump()
     {
@@ -159,8 +151,8 @@ protected:
         return oss.str();
     }
 
-    [[nodiscard]] std::string GetTensorDebugStr(
-        const gert::StorageShape* shape, const gert::CompileTimeTensorDesc* tensor)
+    [[nodiscard]] std::string GetTensorDebugStr(const gert::StorageShape* shape,
+                                                const gert::CompileTimeTensorDesc* tensor)
     {
         if (shape == nullptr || tensor == nullptr) {
             return "nil ";
@@ -216,4 +208,4 @@ protected:
 
 } // namespace optiling
 
-#endif  // TILING_BASE_H__
+#endif // TILING_BASE_H__

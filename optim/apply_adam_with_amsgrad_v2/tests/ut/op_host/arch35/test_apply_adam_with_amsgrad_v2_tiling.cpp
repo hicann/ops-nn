@@ -71,24 +71,18 @@ using namespace ge;
 
 class TestApplyAdamWithAmsgradV2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyAdamWithAmsgradV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyAdamWithAmsgradV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyAdamWithAmsgradV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyAdamWithAmsgradV2Tiling TearDown" << std::endl; }
 };
 
 // TilingKey constant: def 驱动 dtype 后 tiling key 仅编码占位轴 schMode=0。
 // op 已收窄为 fp32-only 单变体，host tiling key 恒为 0。
-static constexpr uint64_t TILING_KEY_FP32 = 0;   // schMode=0
+static constexpr uint64_t TILING_KEY_FP32 = 0; // schMode=0
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -122,13 +116,9 @@ struct ApplyAdamWithAmsgradV2TilingResult {
 // var/m/v/vhat/grad share tensorDtype; the 6 scalar inputs are always fp32
 // (matches Op def: scalars locked to DT_FLOAT, ValueDepend(REQUIRED, TILING)).
 static ApplyAdamWithAmsgradV2TilingResult DoApplyAdamWithAmsgradV2TilingCase(
-    const std::initializer_list<int64_t>& varShape,
-    const std::initializer_list<int64_t>& mShape,
-    const std::initializer_list<int64_t>& vShape,
-    const std::initializer_list<int64_t>& vhatShape,
-    const std::initializer_list<int64_t>& gradShape,
-    ge::DataType tensorDtype,
-    ge::Format inputFormat)
+    const std::initializer_list<int64_t>& varShape, const std::initializer_list<int64_t>& mShape,
+    const std::initializer_list<int64_t>& vShape, const std::initializer_list<int64_t>& vhatShape,
+    const std::initializer_list<int64_t>& gradShape, ge::DataType tensorDtype, ge::Format inputFormat)
 {
     ApplyAdamWithAmsgradV2TilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0};
 
@@ -171,28 +161,26 @@ static ApplyAdamWithAmsgradV2TilingResult DoApplyAdamWithAmsgradV2TilingCase(
                       .SetOpType(opType)
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &mStorage, &vStorage, &vhatStorage,
-                           &scalarStorage, &scalarStorage, &scalarStorage,
-                           &scalarStorage, &scalarStorage, &scalarStorage, &gradStorage})
+                      .InputShapes({&varStorage, &mStorage, &vStorage, &vhatStorage, &scalarStorage, &scalarStorage,
+                                    &scalarStorage, &scalarStorage, &scalarStorage, &scalarStorage, &gradStorage})
                       .OutputShapes({&varStorage, &mStorage, &vStorage, &vhatStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                      .NodeInputTd(0, tensorDtype, inputFormat, inputFormat)     // var
-                      .NodeInputTd(1, tensorDtype, inputFormat, inputFormat)     // m
-                      .NodeInputTd(2, tensorDtype, inputFormat, inputFormat)     // v
-                      .NodeInputTd(3, tensorDtype, inputFormat, inputFormat)     // vhat
-                      .NodeInputTd(4, ge::DT_FLOAT, inputFormat, inputFormat)    // beta1_power
-                      .NodeInputTd(5, ge::DT_FLOAT, inputFormat, inputFormat)    // beta2_power
-                      .NodeInputTd(6, ge::DT_FLOAT, inputFormat, inputFormat)    // lr
-                      .NodeInputTd(7, ge::DT_FLOAT, inputFormat, inputFormat)    // beta1
-                      .NodeInputTd(8, ge::DT_FLOAT, inputFormat, inputFormat)    // beta2
-                      .NodeInputTd(9, ge::DT_FLOAT, inputFormat, inputFormat)    // epsilon
-                      .NodeInputTd(10, tensorDtype, inputFormat, inputFormat)    // grad
-                      .NodeOutputTd(0, tensorDtype, inputFormat, inputFormat)    // var_out
-                      .NodeOutputTd(1, tensorDtype, inputFormat, inputFormat)    // m_out
-                      .NodeOutputTd(2, tensorDtype, inputFormat, inputFormat)    // v_out
-                      .NodeOutputTd(3, tensorDtype, inputFormat, inputFormat)    // vhat_out
+                      .NodeInputTd(0, tensorDtype, inputFormat, inputFormat)  // var
+                      .NodeInputTd(1, tensorDtype, inputFormat, inputFormat)  // m
+                      .NodeInputTd(2, tensorDtype, inputFormat, inputFormat)  // v
+                      .NodeInputTd(3, tensorDtype, inputFormat, inputFormat)  // vhat
+                      .NodeInputTd(4, ge::DT_FLOAT, inputFormat, inputFormat) // beta1_power
+                      .NodeInputTd(5, ge::DT_FLOAT, inputFormat, inputFormat) // beta2_power
+                      .NodeInputTd(6, ge::DT_FLOAT, inputFormat, inputFormat) // lr
+                      .NodeInputTd(7, ge::DT_FLOAT, inputFormat, inputFormat) // beta1
+                      .NodeInputTd(8, ge::DT_FLOAT, inputFormat, inputFormat) // beta2
+                      .NodeInputTd(9, ge::DT_FLOAT, inputFormat, inputFormat) // epsilon
+                      .NodeInputTd(10, tensorDtype, inputFormat, inputFormat) // grad
+                      .NodeOutputTd(0, tensorDtype, inputFormat, inputFormat) // var_out
+                      .NodeOutputTd(1, tensorDtype, inputFormat, inputFormat) // m_out
+                      .NodeOutputTd(2, tensorDtype, inputFormat, inputFormat) // v_out
+                      .NodeOutputTd(3, tensorDtype, inputFormat, inputFormat) // vhat_out
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -209,10 +197,8 @@ static ApplyAdamWithAmsgradV2TilingResult DoApplyAdamWithAmsgradV2TilingCase(
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ApplyAdamWithAmsgradV2TilingData)) {
-            const auto* td = reinterpret_cast<const ApplyAdamWithAmsgradV2TilingData*>(
-                rawTilingData->GetData());
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ApplyAdamWithAmsgradV2TilingData)) {
+            const auto* td = reinterpret_cast<const ApplyAdamWithAmsgradV2TilingData*>(rawTilingData->GetData());
             result.totalNum = td->totalNum;
             result.blockFactor = td->blockFactor;
             result.ubFactor = td->ubFactor;
@@ -224,21 +210,19 @@ static ApplyAdamWithAmsgradV2TilingResult DoApplyAdamWithAmsgradV2TilingCase(
 // Convenience wrapper: build a "valid" context where var/m/v/vhat/grad share the
 // same shape and the 6 scalars are shape {1}. Returns the tiling result.
 static ApplyAdamWithAmsgradV2TilingResult DoApplyAdamWithAmsgradV2ValidCase(
-    const std::initializer_list<int64_t>& tensorShape,
-    ge::DataType tensorDtype)
+    const std::initializer_list<int64_t>& tensorShape, ge::DataType tensorDtype)
 {
-    return DoApplyAdamWithAmsgradV2TilingCase(
-        tensorShape, tensorShape, tensorShape, tensorShape, tensorShape,
-        tensorDtype, ge::FORMAT_ND);
+    return DoApplyAdamWithAmsgradV2TilingCase(tensorShape, tensorShape, tensorShape, tensorShape, tensorShape,
+                                              tensorDtype, ge::FORMAT_ND);
 }
 
 // Heterogeneous-dtype builder: var/m/v/vhat/grad share tensorShape but each may
 // carry an independent dtype. Used to exercise the m/v/vhat/grad-vs-var dtype
 // consistency check in GetShapeAttrsInfo (heterogeneous dtype must FAIL).
-static ge::graphStatus DoApplyAdamWithAmsgradV2HeteroDtypeCase(
-    const std::initializer_list<int64_t>& tensorShape,
-    ge::DataType varDtype, ge::DataType mDtype, ge::DataType vDtype,
-    ge::DataType vhatDtype, ge::DataType gradDtype)
+static ge::graphStatus DoApplyAdamWithAmsgradV2HeteroDtypeCase(const std::initializer_list<int64_t>& tensorShape,
+                                                               ge::DataType varDtype, ge::DataType mDtype,
+                                                               ge::DataType vDtype, ge::DataType vhatDtype,
+                                                               ge::DataType gradDtype)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -273,10 +257,9 @@ static ge::graphStatus DoApplyAdamWithAmsgradV2HeteroDtypeCase(
                       .SetOpType(opType)
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&tensorStorage, &tensorStorage, &tensorStorage, &tensorStorage,
-                           &scalarStorage, &scalarStorage, &scalarStorage,
-                           &scalarStorage, &scalarStorage, &scalarStorage, &tensorStorage})
+                      .InputShapes({&tensorStorage, &tensorStorage, &tensorStorage, &tensorStorage, &scalarStorage,
+                                    &scalarStorage, &scalarStorage, &scalarStorage, &scalarStorage, &scalarStorage,
+                                    &tensorStorage})
                       .OutputShapes({&tensorStorage, &tensorStorage, &tensorStorage, &tensorStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -434,8 +417,7 @@ TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_scalar_shape_1)
 TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_m_shape_mismatch)
 {
     auto result = DoApplyAdamWithAmsgradV2TilingCase(
-        /*var=*/{2048}, /*m=*/{1024}, /*v=*/{2048}, /*vhat=*/{2048}, /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND);
+        /*var=*/{2048}, /*m=*/{1024}, /*v=*/{2048}, /*vhat=*/{2048}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -445,8 +427,7 @@ TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_m_shape_mismatch)
 TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_grad_shape_mismatch)
 {
     auto result = DoApplyAdamWithAmsgradV2TilingCase(
-        /*var=*/{2048}, /*m=*/{2048}, /*v=*/{2048}, /*vhat=*/{2048}, /*grad=*/{1024},
-        ge::DT_FLOAT, ge::FORMAT_ND);
+        /*var=*/{2048}, /*m=*/{2048}, /*v=*/{2048}, /*vhat=*/{2048}, /*grad=*/{1024}, ge::DT_FLOAT, ge::FORMAT_ND);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -456,8 +437,7 @@ TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_grad_shape_mismat
 TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_vhat_shape_mismatch)
 {
     auto result = DoApplyAdamWithAmsgradV2TilingCase(
-        /*var=*/{2048}, /*m=*/{2048}, /*v=*/{2048}, /*vhat=*/{1024}, /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND);
+        /*var=*/{2048}, /*m=*/{2048}, /*v=*/{2048}, /*vhat=*/{1024}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -467,8 +447,7 @@ TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_vhat_shape_mismat
 TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_v_shape_mismatch)
 {
     auto result = DoApplyAdamWithAmsgradV2TilingCase(
-        /*var=*/{2048}, /*m=*/{2048}, /*v=*/{1024}, /*vhat=*/{2048}, /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND);
+        /*var=*/{2048}, /*m=*/{2048}, /*v=*/{1024}, /*vhat=*/{2048}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -480,7 +459,7 @@ TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_rank_8_boundary)
     auto result = DoApplyAdamWithAmsgradV2ValidCase({2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, TILING_KEY_FP32);
-    EXPECT_EQ(result.totalNum, 256);  // 2^8
+    EXPECT_EQ(result.totalNum, 256); // 2^8
 }
 
 // =====================================================================
@@ -502,8 +481,8 @@ TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_unsupported_dtype
 // =====================================================================
 TEST_F(TestApplyAdamWithAmsgradV2Tiling, apply_adam_amsgrad_v2_hetero_dtype_m_mismatch)
 {
-    auto status = DoApplyAdamWithAmsgradV2HeteroDtypeCase(
-        {2048}, /*var=*/ge::DT_FLOAT, /*m=*/ge::DT_FLOAT16,
-        /*v=*/ge::DT_FLOAT, /*vhat=*/ge::DT_FLOAT, /*grad=*/ge::DT_FLOAT);
+    auto status = DoApplyAdamWithAmsgradV2HeteroDtypeCase({2048}, /*var=*/ge::DT_FLOAT, /*m=*/ge::DT_FLOAT16,
+                                                          /*v=*/ge::DT_FLOAT, /*vhat=*/ge::DT_FLOAT,
+                                                          /*grad=*/ge::DT_FLOAT);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }

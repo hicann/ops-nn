@@ -26,8 +26,9 @@ struct BasicLSTMInplaceFillWindowCacheAttr {
     std::string direction = "forward";
 };
 
-static Status BasicLSTMInplaceFillWindowCacheAttrFromOnnx(
-    const NodeProto* node, BasicLSTMInplaceFillWindowCacheAttr& node_attr, ge::Operator& op_dest)
+static Status BasicLSTMInplaceFillWindowCacheAttrFromOnnx(const NodeProto* node,
+                                                          BasicLSTMInplaceFillWindowCacheAttr& node_attr,
+                                                          ge::Operator& op_dest)
 {
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "hidden_size" && attr.type() == ge::onnx::AttributeProto::INT) {
@@ -65,8 +66,8 @@ static Status BasicLSTMInplaceFillWindowCacheAttrFromOnnx(
     return SUCCESS;
 }
 
-static Status QuantUpdateAttrFromOnnx(
-    const NodeProto* node, BasicLSTMInplaceFillWindowCacheAttr& node_attr, ge::Operator& op_dest)
+static Status QuantUpdateAttrFromOnnx(const NodeProto* node, BasicLSTMInplaceFillWindowCacheAttr& node_attr,
+                                      ge::Operator& op_dest)
 {
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "quant_scale_x" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
@@ -116,18 +117,17 @@ static Status ParseParamBasicLSTMInplaceFillWindowCache(const Message* op_src, g
 
 REGISTER_CUSTOM_OP("BasicLSTMInplaceFillWindowCache")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::8::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::9::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::10::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::11::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::12::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::13::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::14::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::15::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::16::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::17::BasicLSTMInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::18::BasicLSTMInplaceFillWindowCache")})
+    .OriginOpType({ge::AscendString("ai.onnx::8::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::9::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::10::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::11::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::12::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::13::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::14::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::15::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::16::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::17::BasicLSTMInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::18::BasicLSTMInplaceFillWindowCache")})
     .ParseParamsFn(ParseParamBasicLSTMInplaceFillWindowCache)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

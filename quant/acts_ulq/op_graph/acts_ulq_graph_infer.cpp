@@ -35,4 +35,4 @@ static ge::graphStatus InferDataTypeForActsUlq(gert::InferDataTypeContext* conte
 }
 
 IMPL_OP(ActsULQ).InferDataType(InferDataTypeForActsUlq);
-}  // namespace ops
+} // namespace ops

@@ -15,7 +15,7 @@
 #define UNIQUE_CONSECUTIVE_CONSTANT_H
 
 constexpr int64_t UINT64_SHAPE_DIM_ONE = 0x80000001;
-constexpr int32_t SHAPE_LEN = 27; //3 * (1 + 8), each of the 3 outputs has 1 axis number and 8 axis information
+constexpr int32_t SHAPE_LEN = 27; // 3 * (1 + 8), each of the 3 outputs has 1 axis number and 8 axis information
 
 constexpr uint64_t START_POSITION = 0;
 constexpr uint64_t SINGLE_OFFSET = 1;
@@ -32,4 +32,4 @@ constexpr int32_t SHAPE2_DIM0_IDX = 19;
 constexpr int32_t CORE_COLLECT_NUM_OFFSET = 16;
 constexpr int32_t CORE_LAST_UNIQUE_IDX_OFFSET = 1;
 
-#endif  // UNIQUE_CONSECUTIVE_CONSTANT_H
+#endif // UNIQUE_CONSECUTIVE_CONSTANT_H

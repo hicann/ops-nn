@@ -55,9 +55,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -69,9 +68,8 @@ int CreateAclTensor(
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; --i) {
         strides[i] = shape[i + 1] * strides[i + 1];
     }
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -146,23 +144,19 @@ int main()
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; --i) {
         strides[i] = shape[i + 1] * strides[i + 1];
     }
-    varOut = aclCreateTensor(
-        shape.data(), shape.size(), aclDataType::ACL_FLOAT, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-        shape.size(), varDeviceAddr);
-    mOut = aclCreateTensor(
-        shape.data(), shape.size(), aclDataType::ACL_FLOAT, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-        shape.size(), mDeviceAddr);
-    vOut = aclCreateTensor(
-        shape.data(), shape.size(), aclDataType::ACL_FLOAT, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-        shape.size(), vDeviceAddr);
+    varOut = aclCreateTensor(shape.data(), shape.size(), aclDataType::ACL_FLOAT, strides.data(), 0,
+                             aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), varDeviceAddr);
+    mOut = aclCreateTensor(shape.data(), shape.size(), aclDataType::ACL_FLOAT, strides.data(), 0,
+                           aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), mDeviceAddr);
+    vOut = aclCreateTensor(shape.data(), shape.size(), aclDataType::ACL_FLOAT, strides.data(), 0,
+                           aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), vDeviceAddr);
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     bool useLocking = false;
     bool useNesterov = false;
-    ret = aclnnApplyAdamDGetWorkspaceSize(
-        var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, useLocking, useNesterov, varOut, mOut, vOut,
-        &workspaceSize, &executor);
+    ret = aclnnApplyAdamDGetWorkspaceSize(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad,
+                                          useLocking, useNesterov, varOut, mOut, vOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnApplyAdamDGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     if (workspaceSize > 0) {
@@ -180,20 +174,19 @@ int main()
     std::vector<float> varResult(size, 0.0f);
     std::vector<float> mResult(size, 0.0f);
     std::vector<float> vResult(size, 0.0f);
-    ret = aclrtMemcpy(
-        varResult.data(), varResult.size() * sizeof(float), varDeviceAddr, size * sizeof(float),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(varResult.data(), varResult.size() * sizeof(float), varDeviceAddr, size * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy var result failed. ERROR: %d\n", ret); return ret);
-    ret = aclrtMemcpy(
-        mResult.data(), mResult.size() * sizeof(float), mDeviceAddr, size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(mResult.data(), mResult.size() * sizeof(float), mDeviceAddr, size * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy m result failed. ERROR: %d\n", ret); return ret);
-    ret = aclrtMemcpy(
-        vResult.data(), vResult.size() * sizeof(float), vDeviceAddr, size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(vResult.data(), vResult.size() * sizeof(float), vDeviceAddr, size * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy v result failed. ERROR: %d\n", ret); return ret);
 
     for (int64_t i = 0; i < size; ++i) {
-        LOG_PRINT(
-            "var_out[%ld]=%.6f  m_out[%ld]=%.6f  v_out[%ld]=%.6f\n", i, varResult[i], i, mResult[i], i, vResult[i]);
+        LOG_PRINT("var_out[%ld]=%.6f  m_out[%ld]=%.6f  v_out[%ld]=%.6f\n", i, varResult[i], i, mResult[i], i,
+                  vResult[i]);
     }
 
     aclDestroyTensor(var);

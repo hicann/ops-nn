@@ -29,23 +29,18 @@ namespace l0op {
 OP_TYPE_REGISTER(RmsNormGradQuant);
 
 const std::array<aclTensor*, RMS_NORM_GRAD_QUANT_OUT_NUM> RmsNormGradQuant(
-    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
-    const aclTensor* scalesX, const aclTensor* offsetXOptional,
-    const char* quantMode, bool divMode, int32_t dstType, aclTensor* dxOut,
+    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma, const aclTensor* scalesX,
+    const aclTensor* offsetXOptional, const char* quantMode, bool divMode, int32_t dstType, aclTensor* dxOut,
     aclTensor* dgammaOut, aclOpExecutor* executor)
 {
     L0_DFX(RmsNormGradQuant, dy, x, rstd, gamma, scalesX, offsetXOptional, quantMode, divMode, dstType);
 
-    OP_LOGD(
-        "dxOut=[%s], dgammaOut=[%s].", op::ToString(dxOut->GetViewShape()).GetString(),
-        op::ToString(dgammaOut->GetViewShape()).GetString());
+    OP_LOGD("dxOut=[%s], dgammaOut=[%s].", op::ToString(dxOut->GetViewShape()).GetString(),
+            op::ToString(dgammaOut->GetViewShape()).GetString());
 
     std::string quantModeStr(quantMode != nullptr ? quantMode : "static");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        RmsNormGradQuant,
-        OP_INPUT(dy, x, rstd, gamma, scalesX, offsetXOptional),
-        OP_OUTPUT(dxOut, dgammaOut),
-        OP_ATTR(quantModeStr, divMode, dstType));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RmsNormGradQuant, OP_INPUT(dy, x, rstd, gamma, scalesX, offsetXOptional),
+                                           OP_OUTPUT(dxOut, dgammaOut), OP_ATTR(quantModeStr, divMode, dstType));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RmsNormGradQuant ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::array<aclTensor*, RMS_NORM_GRAD_QUANT_OUT_NUM>{nullptr, nullptr};

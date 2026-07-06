@@ -17,10 +17,10 @@ using namespace Ops::Base;
 
 struct EluGradV2TilingData {
     EleBaseTilingData baseTiling;
-	float negcoef;
-	float scale;
-	float inputScale;
-	uint32_t alignHolder;
+    float negcoef;
+    float scale;
+    float inputScale;
+    uint32_t alignHolder;
 };
-}
+} // namespace EluGradV2Ns
 #endif // OPS_NN_DEV_ELUGRADV2_STRUCT_H

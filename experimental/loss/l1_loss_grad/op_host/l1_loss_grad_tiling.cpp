@@ -41,10 +41,12 @@ static ge::graphStatus TilingParseForL1LossGrad([[maybe_unused]] gert::TilingPar
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(
-    uint64_t inputLengthAlgin, uint32_t blockSize, int64_t coreNum, uint64_t tileBlockNum, uint64_t inputBytes,
-    uint64_t tileDataNum, uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum,
-    uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum, uint64_t& tailBlockNum)
+static ge::graphStatus CalculateCoreBlockNums(uint64_t inputLengthAlgin, uint32_t blockSize, int64_t coreNum,
+                                              uint64_t tileBlockNum, uint64_t inputBytes, uint64_t tileDataNum,
+                                              uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum,
+                                              uint64_t& smallTailDataNum, uint64_t& bigTailDataNum,
+                                              uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum,
+                                              uint64_t& tailBlockNum)
 {
     // Declare safe fallback constants to satisfy static divide-by-zero checks.
     const uint32_t safeBlockSize = (blockSize == 0) ? 1U : blockSize;
@@ -78,12 +80,10 @@ static ge::graphStatus L1LossGradTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
     auto inputShapePtr = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShapePtr);
-    OP_CHECK_IF(
-        context->GetPlatformInfo() == nullptr, OP_LOGE(context, "context->GetPlatformInfo() is nullptr"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        context->GetInputDesc(1) == nullptr, OP_LOGE(context, "context->GetInputDesc(1) is nullptr"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context->GetPlatformInfo() == nullptr, OP_LOGE(context, "context->GetPlatformInfo() is nullptr"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context->GetInputDesc(1) == nullptr, OP_LOGE(context, "context->GetInputDesc(1) is nullptr"),
+                return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -146,10 +146,9 @@ static ge::graphStatus L1LossGradTilingFunc(gert::TilingContext* context)
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        ubSize <= RESERVED_UB_SIZE,
-        OP_LOGE(context, "ubSize is too small after reserving profile headroom, ubSize=%lu", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize <= RESERVED_UB_SIZE,
+                OP_LOGE(context, "ubSize is too small after reserving profile headroom, ubSize=%lu", ubSize),
+                return ge::GRAPH_FAILED);
     ubSize -= RESERVED_UB_SIZE;
 
     uint64_t tileBlockNum = (ubSize / safeBlockSize) / currentUbBlockNum;
@@ -166,9 +165,9 @@ static ge::graphStatus L1LossGradTilingFunc(gert::TilingContext* context)
     uint64_t finalBigTileNum = 0;
     uint64_t tailBlockNum = 0;
 
-    CalculateCoreBlockNums(
-        inputLengthAlgin, blockSize, coreNum, tileBlockNum, inputBytes, tileDataNum, smallCoreDataNum, bigCoreDataNum,
-        smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum);
+    CalculateCoreBlockNums(inputLengthAlgin, blockSize, coreNum, tileBlockNum, inputBytes, tileDataNum,
+                           smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum,
+                           finalBigTileNum, tailBlockNum);
 
     L1LossGradTilingData* tilingData = context->GetTilingData<L1LossGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);

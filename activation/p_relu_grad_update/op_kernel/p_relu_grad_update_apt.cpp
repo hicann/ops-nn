@@ -26,9 +26,8 @@ using namespace AscendC;
 using namespace Ops::Base;
 
 template <uint64_t schMode>
-__global__ __aicore__ void prelu_grad_update(
-    GM_ADDR grads, GM_ADDR features, GM_ADDR weights, GM_ADDR dx,
-    GM_ADDR update, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void prelu_grad_update(GM_ADDR grads, GM_ADDR features, GM_ADDR weights, GM_ADDR dx,
+                                             GM_ADDR update, GM_ADDR workspace, GM_ADDR tiling)
 {
     using OpDag = PReluGradUpdate::PReluGradUpdateDAG<DTYPE_GRADS>::OpDag;
     BroadcastSch<schMode, OpDag> sch(tiling);

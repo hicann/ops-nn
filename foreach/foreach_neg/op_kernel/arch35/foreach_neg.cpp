@@ -30,8 +30,7 @@ __global__ __aicore__ void foreach_neg(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, 
     REGISTER_TILING_DEFAULT(ForeachNegTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachNegTilingData, tilingData, tiling);
 
-    const __gm__ ForeachNegTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachNegTilingData*>(tiling);
+    const __gm__ ForeachNegTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachNegTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachNegTilingKey::TILING_KEY_FLOAT)) {
         NsForeachNeg::Process<float>(x, y, tilingGm);

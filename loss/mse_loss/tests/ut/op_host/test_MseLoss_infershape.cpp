@@ -27,23 +27,17 @@
 
 class mse_loss : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "mse_loss Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "mse_loss Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "mse_loss Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "mse_loss Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(mse_loss, mse_loss_infershape_diff_test)
 {
     ge::op::MseLoss op;
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{15, 16}, {8, 8}, {375, 375}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, 8, 375}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 8, 375}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, 8, 375}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 8, 375}, ge::FORMAT_ND,
+                                               shape_range);
     op.UpdateInputDesc("predict", tensor_desc);
     op.UpdateInputDesc("label", tensor_desc);
     op.SetAttr("reduction", "mean");

@@ -74,8 +74,8 @@ bool MaxPool3DGradTilingBase::CheckInputShape()
     std::string data_formatStr = data_format;
 
     if (!(data_formatStr == "NCDHW" || data_formatStr == "NDHWC")) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            opName_, "Attribute data_format", data_format, "expect [NDHWC] or [NCDHW]");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "Attribute data_format", data_format,
+                                                "expect [NDHWC] or [NCDHW]");
         return false;
     }
 
@@ -89,9 +89,9 @@ bool MaxPool3DGradTilingBase::CheckInputShape()
     }
     for (uint32_t i = 0; i < origXDimNum; i++) {
         if (origXShape->GetStorageShape().GetDim(i) == 0) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                opName_, "orig_x", std::to_string(origXShape->GetStorageShape().GetDim(i)).c_str(),
-                "Input x shape dimension can not be 0");
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "orig_x",
+                                                     std::to_string(origXShape->GetStorageShape().GetDim(i)).c_str(),
+                                                     "Input x shape dimension can not be 0");
             return false;
         }
     }
@@ -114,12 +114,11 @@ bool MaxPool3DGradTilingBase::CheckInputShape()
     uint64_t xCDim = origXShape->GetStorageShape().GetDim(cPosIdx);
     uint64_t gradCDim = origYShape->GetStorageShape().GetDim(cPosIdx);
     if ((xNDim != gradNDim) || (xCDim != gradCDim)) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            opName_, "orig_x, grads",
-            (std::to_string(xNDim) + "," + std::to_string(xCDim) + " vs " + std::to_string(gradNDim) + "," +
-             std::to_string(gradCDim))
-                .c_str(),
-            "N and C dimensions of orig_x and grads must be equal");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_, "orig_x, grads",
+                                                  (std::to_string(xNDim) + "," + std::to_string(xCDim) + " vs " +
+                                                   std::to_string(gradNDim) + "," + std::to_string(gradCDim))
+                                                      .c_str(),
+                                                  "N and C dimensions of orig_x and grads must be equal");
         return false;
     }
 
@@ -140,9 +139,9 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckInputDtype()
         std::string xDtypeStr = std::to_string(static_cast<int32_t>(xDataType));
         std::string origYDtypeStr = std::to_string(static_cast<int32_t>(origYDataType));
         std::string gradsDtypeStr = std::to_string(static_cast<int32_t>(gradsDataType));
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName_, "orig_x, orig_y, grads", (xDtypeStr + ", " + origYDtypeStr + ", " + gradsDtypeStr).c_str(),
-            "orig_x, orig_y, grads data type must be same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "orig_x, orig_y, grads",
+                                               (xDtypeStr + ", " + origYDtypeStr + ", " + gradsDtypeStr).c_str(),
+                                               "orig_x, orig_y, grads data type must be same");
         return ge::GRAPH_FAILED;
     }
     if ((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16)) {
@@ -201,23 +200,23 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckAttrVal()
     }
     for (uint32_t i = 0; i < static_cast<uint32_t>(kSizeDimNum); i++) {
         if (kSizeVector[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, "kSize", std::to_string(kSizeVector[i]).c_str(), "kSize value should be bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "kSize", std::to_string(kSizeVector[i]).c_str(),
+                                                  "kSize value should be bigger than 0");
             return ge::GRAPH_FAILED;
         }
     }
     for (uint32_t i = 0; i < static_cast<uint32_t>(stridesDimNum); i++) {
         if (stridesVector[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, "strides", std::to_string(stridesVector[i]).c_str(), "strides value should be bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "strides", std::to_string(stridesVector[i]).c_str(),
+                                                  "strides value should be bigger than 0");
             return ge::GRAPH_FAILED;
         }
     }
     auto padsVector = attrs->GetListInt(PADS_ATTR_INDEX)->GetData();
     for (uint32_t i = 0; i < static_cast<uint32_t>(padsDimNum); i++) {
         if (padsVector[i] < 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, "pads", std::to_string(padsVector[i]).c_str(), "pads value should be bigger or equal 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "pads", std::to_string(padsVector[i]).c_str(),
+                                                  "pads value should be bigger or equal 0");
             return ge::GRAPH_FAILED;
         }
     }
@@ -237,8 +236,8 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckAttrShape()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, padMode);
     std::string padModeStr = padMode;
     if (IsInvalidPaddingModeWithCalculated(padModeStr)) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            opName_, "padMode", padMode, "only support VALID, SAME or CALCULATED padding mode");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padMode", padMode,
+                                              "only support VALID, SAME or CALCULATED padding mode");
         return ge::GRAPH_FAILED;
     }
 
@@ -333,14 +332,14 @@ ge::graphStatus MaxPool3DGradTilingBase::SetAttrParams()
         inputData.hPad = 0;
         inputData.wPad = 0;
     } else if (padModeStr == "SAME") {
-        int64_t dPadNeed =
-            std::max(int64_t{0}, (inputData.dGrad - 1) * inputData.dStride + inputData.dKernel - inputData.dX);
+        int64_t dPadNeed = std::max(int64_t{0},
+                                    (inputData.dGrad - 1) * inputData.dStride + inputData.dKernel - inputData.dX);
         inputData.dPad = dPadNeed / DIGIT_TWO;
-        int64_t hPadNeed =
-            std::max(int64_t{0}, (inputData.hGrad - 1) * inputData.hStride + inputData.hKernel - inputData.hX);
+        int64_t hPadNeed = std::max(int64_t{0},
+                                    (inputData.hGrad - 1) * inputData.hStride + inputData.hKernel - inputData.hX);
         inputData.hPad = hPadNeed / DIGIT_TWO;
-        int64_t wPadNeed =
-            std::max(int64_t{0}, (inputData.wGrad - 1) * inputData.wStride + inputData.wKernel - inputData.wX);
+        int64_t wPadNeed = std::max(int64_t{0},
+                                    (inputData.wGrad - 1) * inputData.wStride + inputData.wKernel - inputData.wX);
         inputData.wPad = wPadNeed / DIGIT_TWO;
     } else if (padModeStr == "CALCULATED") {
         auto padsVector = attrs->GetListInt(PADS_ATTR_INDEX)->GetData();
@@ -442,13 +441,13 @@ ge::graphStatus MaxPool3DGradTilingBase::GetShapeAttrsInfo()
 
     OP_LOGD(context_->GetNodeName(), "Enter MaxPool3DGradTilingBase GetShapeAttrsInfo.");
     if (ge::GRAPH_SUCCESS != CheckInputDtype()) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName_, "orig_x, orig_y, grads", "invalid_dtypes", "The input dtype is invalid");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "orig_x, orig_y, grads", "invalid_dtypes",
+                                               "The input dtype is invalid");
         return ge::GRAPH_FAILED;
     }
     if (!CheckInputShape()) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName_, "orig_x, orig_y, grads", "invalid_shapes", "The input relationship is invalid");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "orig_x, orig_y, grads", "invalid_shapes",
+                                               "The input relationship is invalid");
         return ge::GRAPH_FAILED;
     }
     if (ge::GRAPH_SUCCESS != CheckAttrShape()) {
@@ -486,9 +485,8 @@ ge::graphStatus MaxPool3DGradTilingBase::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = static_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                    return ge::GRAPH_FAILED);
         coreNum_ = compileInfoPtr->totalCoreNum;
         ubSize_ = compileInfoPtr->maxUbSize;
     } else {

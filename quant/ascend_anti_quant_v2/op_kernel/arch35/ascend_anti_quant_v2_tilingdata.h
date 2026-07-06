@@ -32,4 +32,4 @@ public:
     int64_t sqrtMode;
 };
 
-#endif   // ASCEND_ANTI_QUANT_V2_TILINGDATA_H_
+#endif // ASCEND_ANTI_QUANT_V2_TILINGDATA_H_

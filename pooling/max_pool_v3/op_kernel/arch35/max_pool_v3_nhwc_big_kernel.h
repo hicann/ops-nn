@@ -70,10 +70,7 @@ private:
     __aicore__ inline void ComputeSingleNorm(int32_t localCurIdx, int64_t loop, int64_t dataCount);
     template <bool CLEAR>
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -132,8 +129,8 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CalcKernelSize(
-    int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW,
+                                                                 int64_t& curInOffset)
 {
     if (tilingData_->isSigOut) {
         curInOffset = curIdx * inHW_ * tilingData_->channel;
@@ -218,8 +215,8 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyInSingleRow(int64_t offset
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyInMultiRows(
-    int64_t offset, int64_t rows, int64_t cols, int64_t blockLen)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyInMultiRows(int64_t offset, int64_t rows, int64_t cols,
+                                                                  int64_t blockLen)
 {
     if (tilingData_->channel * sizeof(T) <= GATHER_THRES) {
         CopyInMultiRowsContiguous(offset, rows, cols * tilingData_->channel);
@@ -297,16 +294,16 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyMaxOut(int64_t curIdx)
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::NoSplitKernelProcess(
-    int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH,
+                                                                       int64_t curkW, int64_t curInOffset)
 {
     CopyInMultiRows(curInOffset, curkH, curkW, tilingData_->channel);
     ComputeSingle<false>(localCurIdx, curkW * curkH, tilingData_->channel);
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelHProcess(
-    int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelHProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                      int64_t curInOffset)
 {
     int64_t realIndex = 0;
     int64_t inputOffset = curInOffset;
@@ -326,8 +323,8 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelHProcess(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelWProcess(
-    int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelWProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                      int64_t curInOffset)
 {
     // 单行很大，单行循环搬
     int64_t hLoops = curkH;
@@ -347,8 +344,8 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelWProcess(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitChannelProcess(
-    int32_t curIdx, int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitChannelProcess(int32_t curIdx, int64_t curkH, int64_t curkW,
+                                                                      int64_t curInOffset)
 {
     // 单行很大，单行循环搬
     int64_t hLoops = curkH;
@@ -400,16 +397,13 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::InitOutLocal(int32_t localCurI
         repeatTimes = CeilDivision(maxLocalLen, twoTraitElm);
     }
     __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
-    __VEC_SCOPE__
-    {
-        CustomDuplicate(addr, num, repeatTimes);
-    }
+    __VEC_SCOPE__ { CustomDuplicate(addr, num, repeatTimes); }
 }
 
 template <typename T>
 template <bool MERGE>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleNorm(
-    int32_t localCurIdx, int64_t loop, int64_t dataCount)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleNorm(int32_t localCurIdx, int64_t loop,
+                                                                    int64_t dataCount)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -461,8 +455,8 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleNorm(
 
 template <typename T>
 template <bool MERGE>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleWithGather(
-    int32_t localCurIdx, int64_t loop, int64_t dataCount)
+__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleWithGather(int32_t localCurIdx, int64_t loop,
+                                                                          int64_t dataCount)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -479,8 +473,8 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleWithGather(
     uint16_t loopNum = dataCount;
     __VEC_SCOPE__
     {
-        using RegDstT = typename std::conditional<
-            sizeof(M) == B64, MicroAPI::RegTensor<M, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<M>>::type;
+        using RegDstT = typename std::conditional<sizeof(M) == B64, MicroAPI::RegTensor<M, MicroAPI::RegTraitNumTwo>,
+                                                  MicroAPI::RegTensor<M>>::type;
         using regType = typename VciTypeGet<U>::type;
         using gatherType = typename GetGatherType<M>::type;
         RegDstT res;

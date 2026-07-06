@@ -17,51 +17,43 @@
 
 namespace Ops {
 namespace NN {
-enum class NonContiguousMode : int32_t
-{
-    CONTINUOUS = 0,
-    B_NON_CONTINUOUS = 1,
-    AB_NON_CONTINUOUS = 2
-};
+enum class NonContiguousMode : int32_t { CONTINUOUS = 0, B_NON_CONTINUOUS = 1, AB_NON_CONTINUOUS = 2 };
 
-const aclTensor *ExecBmmOpWithBiasV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
-    const aclTensor *out, int8_t cubeMathType, aclOpExecutor *executor, bool isBaddbmm = false);
+const aclTensor* ExecBmmOpWithBiasV2(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                                     const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
+                                     bool isBaddbmm = false);
 
 const aclTensor* ExecBatchMatmulOpWithBiasAndAttrsV2(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, bool adjX1, bool adjX2,
-    int8_t cubeMathType, aclOpExecutor* executor,
-    NonContiguousMode nonContiguousMode = NonContiguousMode::CONTINUOUS, bool isBaddbmm = false);
+    int8_t cubeMathType, aclOpExecutor* executor, NonContiguousMode nonContiguousMode = NonContiguousMode::CONTINUOUS,
+    bool isBaddbmm = false);
 
-const aclTensor *ExecBmmOpV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
-    aclOpExecutor *executor, bool isBaddbmm = false);
+const aclTensor* ExecBmmOpV2(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType,
+                             aclOpExecutor* executor, bool isBaddbmm = false);
 
-const aclTensor* ExecBmmOpWithBias(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    aclOpExecutor* executor, bool isBaddbmm = false);
+const aclTensor* ExecBmmOpWithBias(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                                   const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
+                                   bool isBaddbmm = false);
 
-const aclTensor *ExecBatchMatmulOpWithBiasAndAttrs(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
-                                                   const aclTensor *out, bool adjX1, bool adjX2, int8_t cubeMathType,
-                                                   aclOpExecutor *executor, bool isTransposeMat2Contiguous = false,
+const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                                                   const aclTensor* out, bool adjX1, bool adjX2, int8_t cubeMathType,
+                                                   aclOpExecutor* executor, bool isTransposeMat2Contiguous = false,
                                                    bool isBaddbmm = false);
 
-const aclTensor *ExecBatchMatmulOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, bool adjX1,
-                                   bool adjX2, int8_t cubeMathType, aclOpExecutor *executor);
+const aclTensor* ExecBatchMatmulOp(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, bool adjX1,
+                                   bool adjX2, int8_t cubeMathType, aclOpExecutor* executor);
 
-const aclTensor *ExecBmmOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
-                           aclOpExecutor *executor, bool isBaddbmm = false);
+const aclTensor* ExecBmmOp(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType,
+                           aclOpExecutor* executor, bool isBaddbmm = false);
 
-int64_t ProcessEqual1Cases(
-    const aclTensor*& selfCast, const aclTensor*& mat2Cast, MmOpInfo& matmulOpInfo, const aclTensor*& bias, bool& adjX1,
-    bool& adjX2, const aclTensor*& selfReshape, const aclTensor*& mat2Reshape, aclOpExecutor* executor,
-    bool& ifKEqual1);
+int64_t ProcessEqual1Cases(const aclTensor*& selfCast, const aclTensor*& mat2Cast, MmOpInfo& matmulOpInfo,
+                           const aclTensor*& bias, bool& adjX1, bool& adjX2, const aclTensor*& selfReshape,
+                           const aclTensor*& mat2Reshape, aclOpExecutor* executor, bool& ifKEqual1);
 
-bool checkFusedmm(
-    const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha, const aclScalar* beta,
-    int8_t cubeMathType, bool& isNeedSwapInnerTwoDim);
+bool checkFusedmm(const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha,
+                  const aclScalar* beta, int8_t cubeMathType, bool& isNeedSwapInnerTwoDim);
 
-const aclTensor* ExecFusedmmOp(
-    const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType,
-    const bool isNeedSwapInnerTwoDim, aclOpExecutor* executor);
-}  // namespace Ops
-}  // namespace NN
-
+const aclTensor* ExecFusedmmOp(const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType,
+                               const bool isNeedSwapInnerTwoDim, aclOpExecutor* executor);
+} // namespace NN
+} // namespace Ops

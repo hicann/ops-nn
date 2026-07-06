@@ -81,16 +81,16 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::VerifyIndicesAndPosIdx()
     if ((indicesDtype_ != ge::DT_INT32 && indicesDtype_ != ge::DT_INT64) || posIdxDtype != ge::DT_INT32) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(indicesDtype_) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(posIdxDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "indices and pos_idx", dtypeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName_, "indices and pos_idx", dtypeMsg.c_str(),
             "The dtype of indices must be INT32 or INT64, and the dtype of pos_idx must be INT32");
         return ge::GRAPH_FAILED;
     }
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
-    OP_CHECK_IF(
-        indicesDtypeSize_ <= 0,
-        OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
-            ge::TypeUtils::DataTypeToSerialString(indicesDtype_).c_str(), "non zero"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDtypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
+                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype_).c_str(), "non zero"),
+                return ge::GRAPH_FAILED);
 
     auto indicesTensor = context_->GetInputShape(EMBEDDING_DENSE_GRAD_IN_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesTensor);
@@ -102,7 +102,8 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::VerifyIndicesAndPosIdx()
     if (indicesShape.GetShapeSize() != posIdxShape.GetShapeSize()) {
         std::string sizeMsg = std::to_string(indicesShape.GetShapeSize()) + " and " +
                               std::to_string(posIdxShape.GetShapeSize());
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName_, "sort indices and pos_idx", sizeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            opName_, "sort indices and pos_idx", sizeMsg.c_str(),
             "The shape size of sort indices must be equal to the shape size of pos_idx");
         return ge::GRAPH_FAILED;
     }
@@ -121,11 +122,10 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
 
     const gert::Shape& gradOutShape = gradOutTensor->GetStorageShape();
     int64_t gradOutDimNum = gradOutShape.GetDimNum();
-    OP_CHECK_IF(
-        (gradOutDimNum < DOUBLE),
-        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "grad", std::to_string(gradOutDimNum).c_str(),
-            "greater than or equal to 2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((gradOutDimNum < DOUBLE),
+                OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "grad", std::to_string(gradOutDimNum).c_str(),
+                                             "greater than or equal to 2"),
+                return ge::GRAPH_FAILED);
 
     elewiseAxis_ = gradOutShape.GetDim(gradOutDimNum - 1);
 
@@ -133,11 +133,10 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradOutDesc);
     gradDType_ = gradOutDesc->GetDataType();
     gradDtypeSize_ = ge::GetSizeByDataType(gradDType_);
-    OP_CHECK_IF(
-        gradDtypeSize_ <= 0,
-        OP_LOGE_FOR_INVALID_DTYPE(opName_, "grad",
-            ge::TypeUtils::DataTypeToSerialString(gradDType_).c_str(), "non zero"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradDtypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE(opName_, "grad", ge::TypeUtils::DataTypeToSerialString(gradDType_).c_str(),
+                                          "non zero"),
+                return ge::GRAPH_FAILED);
 
     if (VerifyIndicesAndPosIdx() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -149,7 +148,8 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     }
     if (gradScatterShapeSize != scatterAxis_) {
         std::string sizeMsg = std::to_string(scatterAxis_) + " and " + std::to_string(gradScatterShapeSize);
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName_, "indices and grad", sizeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            opName_, "indices and grad", sizeMsg.c_str(),
             "The shape size of indices must be equal to the product of the first (dim-1) axes of grad");
         return ge::GRAPH_FAILED;
     }
@@ -165,28 +165,25 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     const gert::Shape& gradWeightShape = gradWeightTensor->GetStorageShape();
     int64_t gradWeightDimNum = gradWeightShape.GetDimNum();
     if (gradWeightDimNum != DOUBLE || static_cast<int64_t>(gradWeightShape.GetDim(0)) != numWeights_) {
-        std::string reasonMsg = "The shape of grad_weight must be {" + std::to_string(numWeights_) +
-                                ", " + std::to_string(elewiseAxis_) + "} with 2 dimensions";
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "grad_weight",
-            Ops::Base::ToString(gradWeightShape).c_str(), reasonMsg.c_str());
+        std::string reasonMsg = "The shape of grad_weight must be {" + std::to_string(numWeights_) + ", " +
+                                std::to_string(elewiseAxis_) + "} with 2 dimensions";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "grad_weight", Ops::Base::ToString(gradWeightShape).c_str(),
+                                              reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-bool EmbeddingDenseGradV2ForRegBase::IsCapable()
-{
-    return true;
-}
+bool EmbeddingDenseGradV2ForRegBase::IsCapable() { return true; }
 
-void EmbeddingDenseGradV2ForRegBase::SetTilingData(
-    int64_t scatterDimLoopNum, int64_t elewiseDimLoopNum, int64_t elewiseDimOuterLoopNum, int64_t normalBlockLoopNum,
-    int64_t tailBlockLoopNum)
+void EmbeddingDenseGradV2ForRegBase::SetTilingData(int64_t scatterDimLoopNum, int64_t elewiseDimLoopNum,
+                                                   int64_t elewiseDimOuterLoopNum, int64_t normalBlockLoopNum,
+                                                   int64_t tailBlockLoopNum)
 {
     OP_LOGD(opName_, "EmbeddingDenseGradV2ForRegBase SetTilingData.");
-    EmbeddingDenseGradV2TilingData4RegBase* tilingData =
-        context_->GetTilingData<EmbeddingDenseGradV2TilingData4RegBase>();
+    EmbeddingDenseGradV2TilingData4RegBase* tilingData = context_
+                                                             ->GetTilingData<EmbeddingDenseGradV2TilingData4RegBase>();
     tilingData->scatterDimSize = scatterAxis_;
     tilingData->elewiseDimSize = elewiseAxis_;
     tilingData->scatterDimLoopNum = scatterDimLoopNum;
@@ -206,8 +203,8 @@ void EmbeddingDenseGradV2ForRegBase::SetTilingData(
     tilingData->elewiseDimLastTailLoopNum = tailBlockLastLoop_;
 }
 
-bool EmbeddingDenseGradV2ForRegBase::DoUBTilingSingle(
-    int64_t avaliableUbSize, uint32_t elewiseAligned, int64_t resBufSize)
+bool EmbeddingDenseGradV2ForRegBase::DoUBTilingSingle(int64_t avaliableUbSize, uint32_t elewiseAligned,
+                                                      int64_t resBufSize)
 {
     // 1、切UB
     int64_t lastResBuf = Ops::Base::CeilAlign(resBufSize, static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_)));
@@ -222,10 +219,10 @@ bool EmbeddingDenseGradV2ForRegBase::DoUBTilingSingle(
     uint32_t noDupCountBuff = 1;
     uint32_t inputBuff = elewiseAligned;
     uint32_t outputBuff = inputBuff;
-    uint32_t scatterPerUb =
-        static_cast<uint32_t>(avaliableUbSize) /
-        ((indicesBuff + noDupCountBuff) * indicesDtypeSize_ + posIdexBuff * static_cast<uint32_t>(sizeof(int32_t)) +
-         (inputBuff + outputBuff) * gradDtypeSize_);
+    uint32_t scatterPerUb = static_cast<uint32_t>(avaliableUbSize) /
+                            ((indicesBuff + noDupCountBuff) * indicesDtypeSize_ +
+                             posIdexBuff * static_cast<uint32_t>(sizeof(int32_t)) +
+                             (inputBuff + outputBuff) * gradDtypeSize_);
 
     uint32_t sFactor = Ops::Base::FloorAlign(scatterPerUb, Ops::Base::GetUbBlockSize(context_)); // 一次ub处理的行数
     if (sFactor <= SCATTER_FACTOR_LIMIT) {
@@ -243,8 +240,8 @@ void EmbeddingDenseGradV2ForRegBase::FinalizeProcessOpTiling()
     uint32_t indexCountInBlock = oneBlkSize / indicesDtypeSize_;
     uint32_t indicesBufSize = Ops::Base::CeilAlign(totalIndicesNumber + 1, indexCountInBlock) * indicesDtypeSize_;
     uint32_t indexBufferCount = FOUR_BUFFER;
-    uint32_t freqBufferSize =
-        Ops::Base::CeilAlign(totalIndicesNumber + 1, indexCountInBlock) * oneBlkSize; // 包含Begin和End
+    uint32_t freqBufferSize = Ops::Base::CeilAlign(totalIndicesNumber + 1, indexCountInBlock) *
+                              oneBlkSize; // 包含Begin和End
     uint32_t avaliableUb = static_cast<uint32_t>(
         ubSize_ - static_cast<uint64_t>(EXTRA_BYTE_FOR_COUNT * DOUBLE) -
         static_cast<uint64_t>(indicesBufSize * indexBufferCount + freqBufferSize));
@@ -261,8 +258,8 @@ void EmbeddingDenseGradV2ForRegBase::FinalizeProcessOpTiling()
     normalBlockLastLoop_ = Ops::Base::CeilDiv(elewiseLoopNum, static_cast<uint64_t>(blockDim_));
     blockLastNum_ = Ops::Base::CeilDiv(elewiseLoopNum, normalBlockLastLoop_);
     tailBlockLastLoop_ = elewiseLoopNum - (blockLastNum_ - 1UL) * normalBlockLastLoop_;
-    elewiseTailCount_ =
-        static_cast<uint32_t>(elewiseAxis_) - (static_cast<uint32_t>(elewiseLoopNum) - 1U) * elewiseNormalCount_;
+    elewiseTailCount_ = static_cast<uint32_t>(elewiseAxis_) -
+                        (static_cast<uint32_t>(elewiseLoopNum) - 1U) * elewiseNormalCount_;
 }
 
 // 3、计算数据切分TilingData
@@ -296,8 +293,8 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::DoOpTiling()
         avaliableUbSize = avaliableUbSize - BLOCK_SPLIT_THRESHOLD;
     } while (avaliableUbSize > BLOCK_SPLIT_THRESHOLD);
 
-    int64_t elewiseInnerNum =
-        elewiseTotalSize > MAX_ELEWISE_AXIS_LIMIT ? MAX_ELEWISE_AXIS_LIMIT / sizeof(float) : elewiseAxis_;
+    int64_t elewiseInnerNum = elewiseTotalSize > MAX_ELEWISE_AXIS_LIMIT ? MAX_ELEWISE_AXIS_LIMIT / sizeof(float) :
+                                                                          elewiseAxis_;
     int64_t elewiseDimLoopNum = Ops::Base::CeilDiv(elewiseInnerNum, static_cast<int64_t>(elewiseAligned));
     int64_t elewiseDimOuterLoopNum = Ops::Base::CeilDiv(elewiseTotalSize, MAX_ELEWISE_AXIS_LIMIT);
 
@@ -313,10 +310,7 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::DoOpTiling()
 }
 
 // 4、计算高阶API的TilingData
-ge::graphStatus EmbeddingDenseGradV2ForRegBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus EmbeddingDenseGradV2ForRegBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 // 5、计算TilingKey
 uint64_t EmbeddingDenseGradV2ForRegBase::GetTilingKey() const
@@ -333,8 +327,8 @@ uint64_t EmbeddingDenseGradV2ForRegBase::GetTilingKey() const
 ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetWorkspaceSize()
 {
     workspaceSize_ = RESERVED_WORKSPACE + CACHE_LINE;
-    workspaceSize_ +=
-        blockDim_ * DOUBLE * (CACHE_LINE * DOUBLE + Ops::Base::CeilAlign(elewiseAxis_ * sizeof(float), CACHE_LINE));
+    workspaceSize_ += blockDim_ * DOUBLE *
+                      (CACHE_LINE * DOUBLE + Ops::Base::CeilAlign(elewiseAxis_ * sizeof(float), CACHE_LINE));
 
     return ge::GRAPH_SUCCESS;
 }
@@ -362,8 +356,8 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::PostTiling()
 void EmbeddingDenseGradV2ForRegBase::DumpTilingInfo()
 {
     std::ostringstream info;
-    EmbeddingDenseGradV2TilingData4RegBase* tilingData =
-        context_->GetTilingData<EmbeddingDenseGradV2TilingData4RegBase>();
+    EmbeddingDenseGradV2TilingData4RegBase* tilingData = context_
+                                                             ->GetTilingData<EmbeddingDenseGradV2TilingData4RegBase>();
 
     info << "scatterAxis: " << scatterAxis_ << std::endl;
     info << "elewiseAxis: " << elewiseAxis_ << std::endl;

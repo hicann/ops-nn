@@ -22,13 +22,11 @@ namespace GroupNormSilu {
 using namespace AscendC;
 
 template <typename T>
-class GroupNormSiluB32 : public GroupNormSiluBase<T>
-{
+class GroupNormSiluB32 : public GroupNormSiluBase<T> {
 public:
     __aicore__ inline GroupNormSiluB32(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -44,8 +42,8 @@ private:
     __aicore__ inline void AccumulateXandX2MultipleLoop(const int64_t& outIdx);
     __aicore__ inline void CalcSilu(const float& scale, const float& bias, const int64_t& calcNum);
     __aicore__ inline void CopyOutY(const int64_t& yOffset, const int64_t& copyNum);
-    __aicore__ inline void CopyOutYWithPad(
-        const float& scale, const float& bias, const int64_t& yOffset, const int64_t& copyNum);
+    __aicore__ inline void CopyOutYWithPad(const float& scale, const float& bias, const int64_t& yOffset,
+                                           const int64_t& copyNum);
     __aicore__ inline void CopyOutMeanAndRstd(const int64_t& copyNum);
     __aicore__ inline void ProcessPerCore(const int64_t& loopNum);
 
@@ -87,9 +85,9 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GroupNormSiluB32<T>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-    const GroupNormSiluTilingData* tilingData)
+__aicore__ inline void GroupNormSiluB32<T>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean,
+                                                 GM_ADDR rstd, GM_ADDR workspace,
+                                                 const GroupNormSiluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     tiling = tilingData;
@@ -230,8 +228,8 @@ __aicore__ inline void GroupNormSiluB32<T>::ComputeMultipleLoop(const int64_t& l
                 CalcSilu(scale, bias, tiling->processSize);
                 CopyOutY(xOffset, tiling->processSize);
             }
-            int64_t tailOffset =
-                outIdx * tiling->elemNum + dIdx * tiling->hwNum + (tiling->innerLoopNum - 1) * tiling->processSize;
+            int64_t tailOffset = outIdx * tiling->elemNum + dIdx * tiling->hwNum +
+                                 (tiling->innerLoopNum - 1) * tiling->processSize;
             CopyInX<false>(tailOffset, tiling->innerLoopTail);
             CalcSilu(scale, bias, tiling->innerLoopTail);
             CopyOutYWithPad(scale, bias, tailOffset, tiling->innerLoopTail);
@@ -357,8 +355,8 @@ __aicore__ inline void GroupNormSiluB32<T>::CopyOutY(const int64_t& yOffset, con
 }
 
 template <typename T>
-__aicore__ inline void GroupNormSiluB32<T>::CopyOutYWithPad(
-    const float& scale, const float& bias, const int64_t& yOffset, const int64_t& copyNum)
+__aicore__ inline void GroupNormSiluB32<T>::CopyOutYWithPad(const float& scale, const float& bias,
+                                                            const int64_t& yOffset, const int64_t& copyNum)
 {
     LocalTensor<T> outSilu = outQueueSilu.DeQue<T>();
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))

@@ -22,20 +22,17 @@ namespace Common {
 namespace OpKernel {
 using namespace AscendC;
 
-template <
-    typename T, OneScalarQuaternaryImplictOutputOp<T>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT>
+template <typename T, OneScalarQuaternaryImplictOutputOp<T>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT>
 class ForeachOneScalarListQuaternaryImplictOutput
-    : public KernelForeachUnary<
-          T, ForeachOneScalarListQuaternaryImplictOutput<T, op, bufferNum, paramsCount>, bufferNum, paramsCount,
-          false> {
+    : public KernelForeachUnary<T, ForeachOneScalarListQuaternaryImplictOutput<T, op, bufferNum, paramsCount>,
+                                bufferNum, paramsCount, false> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachOneScalarListQuaternaryImplictOutput<T, op, bufferNum, paramsCount>, bufferNum, paramsCount, false>;
+    using Base = KernelForeachUnary<T, ForeachOneScalarListQuaternaryImplictOutput<T, op, bufferNum, paramsCount>,
+                                    bufferNum, paramsCount, false>;
     using Operator = OneScalarQuaternaryImplictOutputOp<T>;
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
-        const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
     __aicore__ inline ForeachOneScalarListQuaternaryImplictOutput() : Base(*this){};
 
@@ -50,8 +47,8 @@ protected:
     float scalarValue = 0.0;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> inLocal1 = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> inLocal2 = InQueue_2.DeQue<T>();
@@ -95,39 +92,21 @@ private:
         InQueue_3.EnQue(inLocal3);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
-    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
-    {}
+    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart) {}
 
-    __aicore__ inline void valueScalar(const bfloat16_t& bVal)
-    {
-        scalarValue = ToFloat(bVal);
-    }
+    __aicore__ inline void valueScalar(const bfloat16_t& bVal) { scalarValue = ToFloat(bVal); }
 
-    __aicore__ inline void valueScalar(const half& bVal)
-    {
-        scalarValue = (float)bVal;
-    }
+    __aicore__ inline void valueScalar(const half& bVal) { scalarValue = (float)bVal; }
 
-    __aicore__ inline void valueScalar(const int& bVal)
-    {
-        scalarValue = static_cast<float>(bVal);
-    }
+    __aicore__ inline void valueScalar(const int& bVal) { scalarValue = static_cast<float>(bVal); }
 
-    __aicore__ inline void valueScalar(const float& bVal)
-    {
-        scalarValue = bVal;
-    }
+    __aicore__ inline void valueScalar(const float& bVal) { scalarValue = bVal; }
 
     friend Base;
 };

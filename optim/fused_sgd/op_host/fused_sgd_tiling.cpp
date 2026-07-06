@@ -42,18 +42,12 @@ constexpr uint32_t FP32_DTYPE_SIZE = 4;
 
 std::string FusedSgdTiling::TilingDataToString() const
 {
-    return "weightDecay = " + std::to_string(weightDecay_) + \
-           ", momentum = " + std::to_string(momentum_) + \
-           ", lr = " + std::to_string(lr_) + \
-           ", dampening = " + std::to_string(dampening_) + \
-           ", nesterov = " + std::to_string(nesterov_) + \
-           ", maximize = " + std::to_string(maximize_) + \
-           ", isFirstStep = " + std::to_string(isFirstStep_) + \
-           ", useGradScale = " + std::to_string(useGradScale_) + \
-           ", useMomentum = " + std::to_string(useMomentum_) + \
-           ", tensorNum = " + std::to_string(tensorNum_) + \
-           ", tensorsPerCore = " + std::to_string(tensorsPerCore_) + \
-           ", usedCoreNum = " + std::to_string(usedCoreNum_) + \
+    return "weightDecay = " + std::to_string(weightDecay_) + ", momentum = " + std::to_string(momentum_) +
+           ", lr = " + std::to_string(lr_) + ", dampening = " + std::to_string(dampening_) +
+           ", nesterov = " + std::to_string(nesterov_) + ", maximize = " + std::to_string(maximize_) +
+           ", isFirstStep = " + std::to_string(isFirstStep_) + ", useGradScale = " + std::to_string(useGradScale_) +
+           ", useMomentum = " + std::to_string(useMomentum_) + ", tensorNum = " + std::to_string(tensorNum_) +
+           ", tensorsPerCore = " + std::to_string(tensorsPerCore_) + ", usedCoreNum = " + std::to_string(usedCoreNum_) +
            ", coreCalcMax = " + std::to_string(coreCalcMax_);
 }
 
@@ -110,7 +104,7 @@ void FusedSgdTiling::CheckOptionalInputs()
         uint32_t gradScaleDims = inputShapeGradScale.GetDimNum();
         bool flag = true;
         if (gradScaleDims > 0) {
-            for(uint32_t i = 0; i < gradScaleDims; i++) {
+            for (uint32_t i = 0; i < gradScaleDims; i++) {
                 int64_t dimValue = inputShapeGradScale.GetDim(i);
                 if (dimValue == 0) {
                     flag = false;
@@ -126,7 +120,7 @@ void FusedSgdTiling::CheckOptionalInputs()
     } else {
         useGradScale_ = 0;
     }
-    
+
     // 判断tensorlist为空
     auto momentumBufferListInput = context_->GetDynamicInputShape(INPUT_MOMENTUM_BUFFER_IDX, 0);
     if (momentumBufferListInput != nullptr) {
@@ -137,7 +131,7 @@ void FusedSgdTiling::CheckOptionalInputs()
             flag = false;
         }
         if (flag) {
-            for(uint32_t i = 0; i < momentumBufferListDims; i++) {
+            for (uint32_t i = 0; i < momentumBufferListDims; i++) {
                 int64_t dimValue = inputShapeMomentumBufferList.GetDim(i);
                 if (dimValue == 0) {
                     flag = false;
@@ -165,10 +159,9 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context, uint32_t us
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInput);
     auto gradsDtype = dtypeInput->GetDataType();
 
-    bool isDiffDtype =
-        (paramsDtype != gradsDtype);
+    bool isDiffDtype = (paramsDtype != gradsDtype);
     ge::DataType momentumDtype;
-    if(useMomentum_) {
+    if (useMomentum_) {
         dtypeInput = context->GetDynamicInputDesc(INPUT_MOMENTUM_BUFFER_IDX, 0);
         OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInput);
         momentumDtype = dtypeInput->GetDataType();
@@ -176,25 +169,24 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context, uint32_t us
     }
 
     if (isDiffDtype) {
-        std::string dtypeMsg = Ops::Base::ToString(paramsDtype) + ", " +
-                               Ops::Base::ToString(gradsDtype);
-        if(!useMomentum_) {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context->GetNodeName(), "params, grads", dtypeMsg.c_str(),
-                "params, grads should have the same dtype");
+        std::string dtypeMsg = Ops::Base::ToString(paramsDtype) + ", " + Ops::Base::ToString(gradsDtype);
+        if (!useMomentum_) {
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "params, grads", dtypeMsg.c_str(),
+                                                   "params, grads should have the same dtype");
         } else {
             dtypeMsg = dtypeMsg + " and " + Ops::Base::ToString(momentumDtype);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context->GetNodeName(), "params, grads and momentum_buffer_list", dtypeMsg.c_str(),
-                "params, grads and momentum_buffer_list should have the same dtype");
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "params, grads and momentum_buffer_list",
+                                                   dtypeMsg.c_str(),
+                                                   "params, grads and momentum_buffer_list should have the same dtype");
         }
         return ge::GRAPH_FAILED;
     }
 
-    bool isInvalidType = (paramsDtype != ge::DT_FLOAT) && (paramsDtype != ge::DT_BF16) && (paramsDtype != ge::DT_FLOAT16);
+    bool isInvalidType = (paramsDtype != ge::DT_FLOAT) && (paramsDtype != ge::DT_BF16) &&
+                         (paramsDtype != ge::DT_FLOAT16);
     if (isInvalidType) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "params/grads/momentum_buffer_list",
-            Ops::Base::ToString(paramsDtype).c_str(), "float16, bfloat16 and float");
+                                  Ops::Base::ToString(paramsDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
 
@@ -226,21 +218,19 @@ ge::graphStatus FusedSgdTiling::GetInputTensorInfo()
         gert::Shape paramsShape = paramsShapePtr->GetStorageShape();
         gert::Shape gradsShape = gradsShapePtr->GetStorageShape();
         bool isDiffSize = paramsShape != gradsShape;
-        
+
         gert::Shape momentumShape;
-        if(useMomentum_) {
+        if (useMomentum_) {
             auto momentumShapePtr = context_->GetDynamicInputShape(INPUT_MOMENTUM_BUFFER_IDX, i);
             OP_CHECK_NULL_WITH_CONTEXT(context_, momentumShapePtr);
             momentumShape = momentumShapePtr->GetStorageShape();
             isDiffSize = isDiffSize || paramsShape != momentumShape;
         }
         if (isDiffSize) {
-            std::string shapesMsg = Ops::Base::ToString(paramsShape) + ", " +
-                                    Ops::Base::ToString(gradsShape);
-            if(!useMomentum_) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    context_->GetNodeName(), "params, grads", shapesMsg.c_str(),
-                    "params, grads should have the same shape");
+            std::string shapesMsg = Ops::Base::ToString(paramsShape) + ", " + Ops::Base::ToString(gradsShape);
+            if (!useMomentum_) {
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "params, grads", shapesMsg.c_str(),
+                                                       "params, grads should have the same shape");
             } else {
                 shapesMsg = shapesMsg + " and " + Ops::Base::ToString(momentumShape);
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
@@ -259,7 +249,9 @@ ge::graphStatus FusedSgdTiling::CalculateOutputInfo()
     usedCoreNum_ = tensorNum_ < static_cast<uint64_t>(coreNum_) ? tensorNum_ : static_cast<uint64_t>(coreNum_);
     tensorsPerCore_ = static_cast<uint32_t>((tensorNum_ + usedCoreNum_ - 1) / usedCoreNum_);
 
-    dtypeSize_ = context_->GetDynamicInputDesc(INPUT_PARAMS_IDX, 0)->GetDataType() == ge::DT_FLOAT ? FP32_DTYPE_SIZE : FP16_BF16_DTYPE_SIZE;
+    dtypeSize_ = context_->GetDynamicInputDesc(INPUT_PARAMS_IDX, 0)->GetDataType() == ge::DT_FLOAT ?
+                     FP32_DTYPE_SIZE :
+                     FP16_BF16_DTYPE_SIZE;
     uint64_t tBuffersize = BUFFER_NUM * BYTE_ONE_BLK;
     uint64_t bufferSize = ubSize_ - tBuffersize;
     // 计算处理一个元素所需的ub大小
@@ -280,7 +272,8 @@ ge::graphStatus FusedSgdTiling::CalculateOutputInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-void FusedSgdTiling::SetTilingData(FusedSgdTilingData* tilingData) {
+void FusedSgdTiling::SetTilingData(FusedSgdTilingData* tilingData)
+{
     tilingData->weightDecay = weightDecay_;
     tilingData->momentum = momentum_;
     tilingData->lr = lr_;
@@ -305,35 +298,25 @@ ge::graphStatus Tiling4FusedSgd(gert::TilingContext* context)
 {
     OP_LOGD(context, "Tiling4FusedSgd");
     FusedSgdTiling tiling(context);
-    OP_CHECK_IF(
-        tiling.GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        tiling.GetAttrInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetAttrInfo error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        tiling.GetInputTensorInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetInputTensorInfo error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        tiling.CalculateOutputInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateOutputInfo error"),
-        return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(tiling.GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tiling.GetAttrInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetAttrInfo error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tiling.GetInputTensorInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetInputTensorInfo error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tiling.CalculateOutputInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateOutputInfo error"),
+                return ge::GRAPH_FAILED);
+
     FusedSgdTilingData* tilingData = context->GetTilingData<FusedSgdTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
-    OP_CHECK_IF(
-        memset_s(tilingData, sizeof(FusedSgdTilingData), 0, sizeof(FusedSgdTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingData, sizeof(FusedSgdTilingData), 0, sizeof(FusedSgdTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     tiling.SetTilingData(tilingData);
     OP_LOGD(context, "tiling data: %s", tiling.TilingDataToString().c_str());
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4FusedSgd([[maybe_unused]] gert::TilingParseContext* context)
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepare4FusedSgd([[maybe_unused]] gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
-IMPL_OP_OPTILING(FusedSgd)
-    .Tiling(Tiling4FusedSgd)
-    .TilingParse<FusedSgdCompileInfo>(TilingPrepare4FusedSgd);
+IMPL_OP_OPTILING(FusedSgd).Tiling(Tiling4FusedSgd).TilingParse<FusedSgdCompileInfo>(TilingPrepare4FusedSgd);
 } // namespace optiling

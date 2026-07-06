@@ -20,9 +20,11 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const std::array<const aclTensor*, 4> SyncBatchNormGatherStatsFused(
-    const aclTensor* mean, const aclTensor* invstd, const aclTensor* counts, const aclTensor* runningMean,
-    const aclTensor* runningVar, float momentum, float eps, aclOpExecutor* executor);
+const std::array<const aclTensor*, 4> SyncBatchNormGatherStatsFused(const aclTensor* mean, const aclTensor* invstd,
+                                                                    const aclTensor* counts,
+                                                                    const aclTensor* runningMean,
+                                                                    const aclTensor* runningVar, float momentum,
+                                                                    float eps, aclOpExecutor* executor);
 
 } // namespace l0op
 

@@ -25,8 +25,10 @@ namespace ge {
 
 * @par Inputs:
 * Two inputs, including:
-* @li gradients: A tensor. Must be one of the following types: bfloat16, float16, float32, double. The backpropagated gradients to the corresponding LeakyRelu operation.
-* @li features: A tensor. Has the same type as "gradients". The features passed as input to the corresponding LeakyRelu operation. \n
+* @li gradients: A tensor. Must be one of the following types: bfloat16, float16, float32, double. The backpropagated
+gradients to the corresponding LeakyRelu operation.
+* @li features: A tensor. Has the same type as "gradients". The features passed as input to the corresponding LeakyRelu
+operation. \n
 
 * @par Attributes:
 * negative_slope: An optional float32. Negative Slope. Defaults to "0.0". \n
@@ -48,6 +50,6 @@ REG_OP(LeakyReluGrad)
     .OUTPUT(backprops, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_BF16}))
     .OP_END_FACTORY_REG(LeakyReluGrad)
 
-}
+} // namespace ge
 
 #endif // LEAKY_RELU_GRAD_PROTO_H_

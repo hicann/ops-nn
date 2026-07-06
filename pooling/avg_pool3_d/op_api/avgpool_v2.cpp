@@ -27,7 +27,7 @@ const uint64_t NCHW_C_IDX = 1;
 const uint64_t NCHW_H_IDX = 2;
 const uint64_t NCHW_W_IDX = 3;
 
-//AvgPoolV2的L0
+// AvgPoolV2的L0
 constexpr int64_t DIM_N = 0;
 constexpr int64_t DIM_C = 1;
 constexpr int64_t DIM_H = 2;
@@ -75,19 +75,19 @@ OP_TYPE_REGISTER(AvgPoolV2);
 //     .ATTR(exclusive, Bool, true)
 //     .ATTR(divisor_override, Int, 0)
 //     .OP_END_FACTORY_REG(AvgPoolV2)
-const aclTensor *AvgPoolNchw(const aclTensor *x, const aclIntArray *window, const aclIntArray *stride,
-                             const std::string &paddingMode, const aclIntArray *pad, const std::string &dataFormat,
+const aclTensor* AvgPoolNchw(const aclTensor* x, const aclIntArray* window, const aclIntArray* stride,
+                             const std::string& paddingMode, const aclIntArray* pad, const std::string& dataFormat,
                              const bool globalPooling, const bool ceilMode, const bool exclusive,
-                             const int64_t divisorOverride, aclOpExecutor *executor)
+                             const int64_t divisorOverride, aclOpExecutor* executor)
 {
     L0_DFX(AvgPoolNchw, x, window, stride, paddingMode, pad, dataFormat, globalPooling, ceilMode, exclusive,
-        divisorOverride);
+           divisorOverride);
     static internal::AicpuTaskSpace space("AvgPoolV2");
 
-    FVector<int64_t> newWindow { (*window)[0], (*window)[1], (*window)[2], (*window)[3] };
+    FVector<int64_t> newWindow{(*window)[0], (*window)[1], (*window)[2], (*window)[3]};
     auto window4 = executor->AllocIntArray(newWindow.data(), 4);
 
-    FVector<int64_t> newStride { (*stride)[0], (*stride)[1], (*stride)[2], (*stride)[3] };
+    FVector<int64_t> newStride{(*stride)[0], (*stride)[1], (*stride)[2], (*stride)[3]};
     auto stride4 = executor->AllocIntArray(newStride.data(), 4);
 
     // modify pads if ceil_mode
@@ -128,7 +128,7 @@ const aclTensor *AvgPoolNchw(const aclTensor *x, const aclIntArray *window, cons
         }
     }
 
-    FVector<int64_t> newPad { padT, padD, padL, padR };
+    FVector<int64_t> newPad{padT, padD, padL, padR};
     auto pad4 = executor->AllocIntArray(newPad.data(), 4);
 
     auto avgPoolingOut = executor->AllocTensor(x->GetDataType(), op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
@@ -138,19 +138,21 @@ const aclTensor *AvgPoolNchw(const aclTensor *x, const aclIntArray *window, cons
     avgPoolingOut->SetOriginalShape(shape);
     avgPoolingOut->SetViewShape(shape);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(AvgPoolV2, OP_ATTR_NAMES({"ksize", "strides", "padding_mode", "pads",
-        "data_format", "global_pooling", "ceil_mode", "exclusive", "divisor_override"}), OP_INPUT(x),
-        OP_OUTPUT(avgPoolingOut), OP_ATTR(window4, stride4, paddingMode, pad4, dataFormat, globalPooling,
-        ceilMode, exclusive, divisorOverride));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
+        AvgPoolV2,
+        OP_ATTR_NAMES({"ksize", "strides", "padding_mode", "pads", "data_format", "global_pooling", "ceil_mode",
+                       "exclusive", "divisor_override"}),
+        OP_INPUT(x), OP_OUTPUT(avgPoolingOut),
+        OP_ATTR(window4, stride4, paddingMode, pad4, dataFormat, globalPooling, ceilMode, exclusive, divisorOverride));
 
-    OP_CHECK(ret ==  ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPoolNchw ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPoolNchw ADD_TO_LAUNCHER_LIST_AICPU failed."),
+             return nullptr);
     return avgPoolingOut;
 }
 
-//AvgPoolV2的L0
-static const std::initializer_list<DataType> REGBASE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-                                                                                 DataType::DT_FLOAT16,
-                                                                                 DataType::DT_BF16};
+// AvgPoolV2的L0
+static const std::initializer_list<DataType> REGBASE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                           DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
 static inline bool IsAiCoreSupport(const aclTensor* input)
@@ -162,43 +164,49 @@ static inline bool IsAiCoreSupport(const aclTensor* input)
 }
 
 // AICORE算子kernel
-static inline const aclTensor* AvgPoolV2AiCore(
-    const aclTensor* input, aclTensor* output, const aclIntArray *ksize, const aclIntArray *strides,
-    const std::string &paddingMode, const aclIntArray *pads, const std::string &dataFormat, const bool globalPooling,
-    const bool ceilMode, const bool exclusive, const int64_t divisorOverride, aclOpExecutor* executor)
+static inline const aclTensor* AvgPoolV2AiCore(const aclTensor* input, aclTensor* output, const aclIntArray* ksize,
+                                               const aclIntArray* strides, const std::string& paddingMode,
+                                               const aclIntArray* pads, const std::string& dataFormat,
+                                               const bool globalPooling, const bool ceilMode, const bool exclusive,
+                                               const int64_t divisorOverride, aclOpExecutor* executor)
 {
-    L0_DFX(AvgPoolV2AiCore, input, output, ksize, strides, paddingMode, pads, dataFormat,
-        globalPooling, ceilMode, exclusive, divisorOverride);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AvgPoolV2, OP_INPUT(input), OP_OUTPUT(output),
-    OP_ATTR(ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode, exclusive, divisorOverride));
+    L0_DFX(AvgPoolV2AiCore, input, output, ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode,
+           exclusive, divisorOverride);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        AvgPoolV2, OP_INPUT(input), OP_OUTPUT(output),
+        OP_ATTR(ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode, exclusive, divisorOverride));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
-        "AvgPoolV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+                                         "AvgPoolV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return output;
 }
 
 // AICPU算子kernel
-static inline const aclTensor* AvgPoolV2AiCPU(
-    const aclTensor* input, aclTensor* output, const aclIntArray *ksize, const aclIntArray *strides,
-    const std::string &paddingMode, const aclIntArray *pads, const std::string &dataFormat, const bool globalPooling,
-    const bool ceilMode, const bool exclusive, const int64_t divisorOverride, aclOpExecutor* executor)
+static inline const aclTensor* AvgPoolV2AiCPU(const aclTensor* input, aclTensor* output, const aclIntArray* ksize,
+                                              const aclIntArray* strides, const std::string& paddingMode,
+                                              const aclIntArray* pads, const std::string& dataFormat,
+                                              const bool globalPooling, const bool ceilMode, const bool exclusive,
+                                              const int64_t divisorOverride, aclOpExecutor* executor)
 {
-    L0_DFX(AvgPoolV2AiCPU, input, output, ksize, strides, paddingMode, pads, dataFormat,
-        globalPooling, ceilMode, exclusive, divisorOverride);
+    L0_DFX(AvgPoolV2AiCPU, input, output, ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode,
+           exclusive, divisorOverride);
     static internal::AicpuTaskSpace space("AvgPoolV2");
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(AvgPoolV2, OP_ATTR_NAMES({"ksize", "strides", "padding_mode", "pads",
-        "data_format", "global_pooling", "ceil_mode", "exclusive", "divisor_override"}), OP_INPUT(input),
-        OP_OUTPUT(output), OP_ATTR(ksize, strides, paddingMode, pads, dataFormat, globalPooling,
-        ceilMode, exclusive, divisorOverride));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
+        AvgPoolV2,
+        OP_ATTR_NAMES({"ksize", "strides", "padding_mode", "pads", "data_format", "global_pooling", "ceil_mode",
+                       "exclusive", "divisor_override"}),
+        OP_INPUT(input), OP_OUTPUT(output),
+        OP_ATTR(ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode, exclusive, divisorOverride));
 
-    OP_CHECK(ret ==  ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPoolV2 ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPoolV2 ADD_TO_LAUNCHER_LIST_AICPU failed."),
+             return nullptr);
     return output;
 }
 
-const aclTensor *AvgPoolV2(const aclTensor *x, const aclIntArray *ksize, const aclIntArray *strides,
-                             const std::string &paddingMode, const aclIntArray *pads, const std::string &dataFormat,
-                             const bool globalPooling, const bool ceilMode, const bool exclusive,
-                             const int64_t divisorOverride, aclOpExecutor *executor)
+const aclTensor* AvgPoolV2(const aclTensor* x, const aclIntArray* ksize, const aclIntArray* strides,
+                           const std::string& paddingMode, const aclIntArray* pads, const std::string& dataFormat,
+                           const bool globalPooling, const bool ceilMode, const bool exclusive,
+                           const int64_t divisorOverride, aclOpExecutor* executor)
 {
     int64_t outH = 0;
     int64_t outW = 0;
@@ -248,11 +256,11 @@ const aclTensor *AvgPoolV2(const aclTensor *x, const aclIntArray *ksize, const a
     CHECK_RET(output != nullptr, nullptr);
 
     if (IsAiCoreSupport(x)) {
-        return AvgPoolV2AiCore(x, output, ksize, strides, paddingMode, pads, dataFormat, globalPooling,
-            ceilMode, exclusive, divisorOverride, executor);
+        return AvgPoolV2AiCore(x, output, ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode,
+                               exclusive, divisorOverride, executor);
     } else {
-        return AvgPoolV2AiCPU(x, output, ksize, strides, paddingMode, pads, dataFormat, globalPooling,
-            ceilMode, exclusive, divisorOverride, executor);
+        return AvgPoolV2AiCPU(x, output, ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode,
+                              exclusive, divisorOverride, executor);
     }
 }
 } // namespace l0op

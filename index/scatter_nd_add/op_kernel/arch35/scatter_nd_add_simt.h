@@ -42,7 +42,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
             idx += indiceVal * strideListAddr[dim];
         }
         if (!outOfBound) {
-            if (idx >= 0 && idx < varInAxis) {//索引越界
+            if (idx >= 0 && idx < varInAxis) { //索引越界
                 uint64_t dstIndex = static_cast<uint64_t>(idx * sliceSize + scatterAxisIdx);
                 if constexpr (IsSameType<PARAMS_T, bool>::value) {
                     PARAMS_T value = xLocalAddr[index];
@@ -85,8 +85,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-class ScatterNdAddSimt
-{
+class ScatterNdAddSimt {
 public:
     __aicore__ inline ScatterNdAddSimt(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe)
         : pipe_(pipe), tiling_(tilingData){};
@@ -128,8 +127,8 @@ private:
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::Init(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates,
+                                                                           GM_ADDR y, GM_ADDR workspace)
 {
     if (tiling_.sliceSize == 0) {
         return;
@@ -242,7 +241,7 @@ __aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::ComputeDim
     uint32_t rankSize = tiling_.rankSize;
     TYPE_T indiceOffSetCur = this->indiceOffSet;
     int64_t varInAxis = tiling_.varInAxis;
-    
+
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
@@ -254,8 +253,8 @@ __aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::ComputeDim
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::CopyIn(
-    LocalTensor<INDICES_T>& idxLocal, LocalTensor<PARAMS_T>& xLocal)
+__aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::CopyIn(LocalTensor<INDICES_T>& idxLocal,
+                                                                             LocalTensor<PARAMS_T>& xLocal)
 {
     DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(this->currIdxTilingSize * sizeof(INDICES_T)), 0, 0, 0};
     DataCopyPadExtParams<INDICES_T> idxPadParams{false, 0, 0, 0};
@@ -272,8 +271,8 @@ __aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::CopyIn(
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::SimdFree(
-    LocalTensor<INDICES_T>& idxLocal, LocalTensor<PARAMS_T>& xLocal)
+__aicore__ inline void ScatterNdAddSimt<PARAMS_T, INDICES_T, TYPE_T>::SimdFree(LocalTensor<INDICES_T>& idxLocal,
+                                                                               LocalTensor<PARAMS_T>& xLocal)
 {
     inQueIdx.FreeTensor(idxLocal);
     inQueX.FreeTensor(xLocal);

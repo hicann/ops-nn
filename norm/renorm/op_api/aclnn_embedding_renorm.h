@@ -123,4 +123,4 @@ ACLNN_API aclnnStatus aclnnEmbeddingRenorm(void* workspace, uint64_t workspaceSi
 }
 #endif
 
-#endif  // OP_API_INC_EMBEDDING_RENORM_H_
+#endif // OP_API_INC_EMBEDDING_RENORM_H_

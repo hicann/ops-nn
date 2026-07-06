@@ -20,22 +20,27 @@
 template <typename T>
 class KernelDeepNormGradLargeNSmallD : public KernelDeepNormGradBase<T> {
 public:
-    __aicore__ inline KernelDeepNormGradLargeNSmallD()
-    {}
+    __aicore__ inline KernelDeepNormGradLargeNSmallD() {}
 
-    __aicore__ inline void InitGM(
-        GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean, GM_ADDR dataGamma,
-        GM_ADDR outputDx, GM_ADDR outputDgx, GM_ADDR outputDgamma, GM_ADDR outputDbeta)
+    __aicore__ inline void InitGM(GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean,
+                                  GM_ADDR dataGamma, GM_ADDR outputDx, GM_ADDR outputDgx, GM_ADDR outputDgamma,
+                                  GM_ADDR outputDbeta)
     {
-        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
-        xGm.SetGlobalBuffer((__gm__ T*)dataX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
-        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                             static_cast<uint64_t>(nDeal) * dDimNum);
+        xGm.SetGlobalBuffer((__gm__ T*)dataX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                            static_cast<uint64_t>(nDeal) * dDimNum);
+        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                             static_cast<uint64_t>(nDeal) * dDimNum);
         meanGm.SetGlobalBuffer((__gm__ float*)dataMean + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
         rstdGm.SetGlobalBuffer((__gm__ float*)dataRstd + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
         gammaGm.SetGlobalBuffer((__gm__ T*)dataGamma, dDimNum);
 
-        outputDxGm.SetGlobalBuffer((__gm__ T*)outputDx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
-        outputDgxGm.SetGlobalBuffer((__gm__ T*)outputDgx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        outputDxGm.SetGlobalBuffer((__gm__ T*)outputDx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                                   static_cast<uint64_t>(nDeal) * dDimNum);
+        outputDgxGm.SetGlobalBuffer(
+            (__gm__ T*)outputDgx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+            static_cast<uint64_t>(nDeal) * dDimNum);
         outputDbetaGm.SetGlobalBuffer((__gm__ float*)outputDbeta, dDimNum);
         outputDgammaGm.SetGlobalBuffer((__gm__ float*)outputDgamma, dDimNum);
     }
@@ -49,7 +54,7 @@ public:
         uint64_t brcbNFp32 = static_cast<uint64_t>(brcbLineAlignedPer) * elemWithoutDInUBFp32 * sizeof(float);
         uint64_t brcbNDFp32 = static_cast<uint64_t>(brcbLineAlignedPer) * elemWithDInUB * sizeof(float);
 
-        pipe.InitBuffer(dyQue, BUFFER_NUM, sizeND); 
+        pipe.InitBuffer(dyQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(xQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(gxQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(meanQue, BUFFER_NUM, brcbNFp32);
@@ -59,7 +64,7 @@ public:
         pipe.InitBuffer(outputPdGxQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(outputPdBetaQue, BUFFER_NUM, sizeDFp32);
         pipe.InitBuffer(outputPdGammaQue, BUFFER_NUM, sizeDFp32);
-        
+
         // tmp buffer
         pipe.InitBuffer(tmpNDBuf, sizeNDFp32);
         pipe.InitBuffer(brcbNDBuf1, brcbNDFp32);
@@ -78,10 +83,9 @@ public:
         }
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean, GM_ADDR dataGamma,
-        GM_ADDR outputDx, GM_ADDR outputDgx, GM_ADDR outputDgamma, GM_ADDR outputDbeta, DeepNormGradTilingData tiling,
-        GM_ADDR usrWorkspace)
+    __aicore__ inline void Init(GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean,
+                                GM_ADDR dataGamma, GM_ADDR outputDx, GM_ADDR outputDgx, GM_ADDR outputDgamma,
+                                GM_ADDR outputDbeta, DeepNormGradTilingData tiling, GM_ADDR usrWorkspace)
     {
         useCoreNum = tiling.useCoreNum;
         nDimNum = tiling.nDimNum;
@@ -140,7 +144,7 @@ public:
     }
 
     __aicore__ inline void Process()
-    {   
+    {
         CopyInPre(dDimNum);
         LocalTensor<T> gamma = gammaQue.DeQue<T>();
         LocalTensor<float> dbeta = outputPdBetaQue.AllocTensor<float>();
@@ -172,8 +176,8 @@ public:
         }
     }
 
-    __aicore__ inline void ProcessMergeNFp16(
-        const LocalTensor<float>& gamma, const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma)
+    __aicore__ inline void ProcessMergeNFp16(const LocalTensor<float>& gamma, const LocalTensor<float>& dbeta,
+                                             const LocalTensor<float>& dgamma)
     {
         for (uint32_t iMerge = 0; iMerge < mergeNTime; ++iMerge) {
             uint32_t mergeNCountUpdate = (iMerge != mergeNTime - 1) ? mergeNCountUpdatePer : mergeNCountUpdateTail;
@@ -185,8 +189,8 @@ public:
         }
     }
 
-    __aicore__ inline void ProcessMergeNFp32(
-        const LocalTensor<float>& gamma, const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma)
+    __aicore__ inline void ProcessMergeNFp32(const LocalTensor<float>& gamma, const LocalTensor<float>& dbeta,
+                                             const LocalTensor<float>& dgamma)
     {
         for (uint32_t iMerge = 0; iMerge < mergeNTime; ++iMerge) {
             uint32_t mergeNCountUpdate = (iMerge != mergeNTime - 1) ? mergeNCountUpdatePer : mergeNCountUpdateTail;
@@ -288,15 +292,12 @@ private:
 
 #else
         for (uint32_t idx = 0; idx < processNCount; idx++) {
-            DataCopy(
-                dyLocal[idx * this->BlockAlign(processElem, blockElem)], dyGm[offsetND + idx * processElem],
-                this->BlockAlign(processElem, blockElem));
-            DataCopy(
-                xLocal[idx * this->BlockAlign(processElem, blockElem)], xGm[offsetND + idx * processElem],
-                this->BlockAlign(processElem, blockElem));
-            DataCopy(
-                gxLocal[idx * this->BlockAlign(processElem, blockElem)], gxGm[offsetND + idx * processElem],
-                this->BlockAlign(processElem, blockElem));
+            DataCopy(dyLocal[idx * this->BlockAlign(processElem, blockElem)], dyGm[offsetND + idx * processElem],
+                     this->BlockAlign(processElem, blockElem));
+            DataCopy(xLocal[idx * this->BlockAlign(processElem, blockElem)], xGm[offsetND + idx * processElem],
+                     this->BlockAlign(processElem, blockElem));
+            DataCopy(gxLocal[idx * this->BlockAlign(processElem, blockElem)], gxGm[offsetND + idx * processElem],
+                     this->BlockAlign(processElem, blockElem));
         }
         // mean&rstd
         DataCopy(meanLocal, meanGm[offsetN], this->BlockAlign(processNCount, BRCB_ONCE_ELEM));
@@ -322,9 +323,9 @@ private:
         outputPdGxQue.FreeTensor(outputPdGxLocal);
     }
 
-    __aicore__ inline void ComputeMergeNFp32(
-        uint32_t processID, uint32_t processNCount, uint32_t brcbLineAligned, uint32_t processElem,
-        const LocalTensor<float>& gamma, const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeMergeNFp32(uint32_t processID, uint32_t processNCount, uint32_t brcbLineAligned,
+                                             uint32_t processElem, const LocalTensor<float>& gamma,
+                                             const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma)
     {
         LocalTensor<T> inputDy = dyQue.DeQue<T>();
         LocalTensor<T> inputX = xQue.DeQue<T>();
@@ -334,9 +335,8 @@ private:
         LocalTensor<T> outputDx = outputPdXQue.AllocTensor<T>();
         LocalTensor<T> outputDgx = outputPdGxQue.AllocTensor<T>();
 
-        MainCompute(
-            inputDy, inputX, inputGx, inputRstd, inputMean, gamma, outputDx, outputDgx, dbeta, dgamma, processNCount,
-            brcbLineAligned, processElem);
+        MainCompute(inputDy, inputX, inputGx, inputRstd, inputMean, gamma, outputDx, outputDgx, dbeta, dgamma,
+                    processNCount, brcbLineAligned, processElem);
 
         dyQue.FreeTensor(inputDy);
         xQue.FreeTensor(inputX);
@@ -347,9 +347,9 @@ private:
         outputPdGxQue.EnQue(outputDgx);
     }
 
-    __aicore__ inline void ComputeMergeNFp16(
-        uint32_t processID, uint32_t processNCount, uint32_t brcbLineAligned, uint32_t processElem,
-        const LocalTensor<float>& gamma, const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeMergeNFp16(uint32_t processID, uint32_t processNCount, uint32_t brcbLineAligned,
+                                             uint32_t processElem, const LocalTensor<float>& gamma,
+                                             const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma)
     {
         LocalTensor<T> inputDy = dyQue.DeQue<T>();
         LocalTensor<T> inputX = xQue.DeQue<T>();
@@ -375,9 +375,8 @@ private:
         Cast(gxFp32Local, inputGx, RoundMode::CAST_NONE, processElemND);
         PipeBarrier<PIPE_V>();
 
-        MainCompute(
-            dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, gamma, outputPdXFp32Local, outputPdGxFp32Local,
-            dbeta, dgamma, processNCount, brcbLineAligned, processElem);
+        MainCompute(dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, gamma, outputPdXFp32Local,
+                    outputPdGxFp32Local, dbeta, dgamma, processNCount, brcbLineAligned, processElem);
 
         if constexpr (is_same<T, half>::value) {
             Cast(outputDx, outputPdXFp32Local, RoundMode::CAST_NONE, processElemND);
@@ -396,11 +395,12 @@ private:
         outputPdGxQue.EnQue(outputDgx);
     }
 
-    __aicore__ inline void MainCompute(
-        const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX, const LocalTensor<float>& inputGx,
-        const LocalTensor<float>& inputRstd, const LocalTensor<float>& inputMean, const LocalTensor<float>& inputGamma,
-        const LocalTensor<float>& outputDx, const LocalTensor<float>& outputDgx, const LocalTensor<float>& outputDbeta,
-        const LocalTensor<float>& outputDgamma, uint32_t processNCount, uint32_t brcbLineAligned, uint32_t processElem)
+    __aicore__ inline void MainCompute(const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX,
+                                       const LocalTensor<float>& inputGx, const LocalTensor<float>& inputRstd,
+                                       const LocalTensor<float>& inputMean, const LocalTensor<float>& inputGamma,
+                                       const LocalTensor<float>& outputDx, const LocalTensor<float>& outputDgx,
+                                       const LocalTensor<float>& outputDbeta, const LocalTensor<float>& outputDgamma,
+                                       uint32_t processNCount, uint32_t brcbLineAligned, uint32_t processElem)
     {
         LocalTensor<float> tmpNDBufLocal = tmpNDBuf.Get<float>();
         LocalTensor<float> brcbNDBufLocal1 = brcbNDBuf1.Get<float>();
@@ -409,7 +409,7 @@ private:
         uint64_t processElemND = static_cast<uint64_t>(processNCount) * elemWithDInUB;
         uint32_t brcbRepTimes = brcbLineAligned / BRCB_ONCE_ELEM;
         uint8_t brcbBlockStride = elemWithDInUB / FLOAT_BLOCK_ELEM;
-        uint16_t brcbRepStride = brcbBlockStride * BRCB_ONCE_ELEM; 
+        uint16_t brcbRepStride = brcbBlockStride * BRCB_ONCE_ELEM;
 
         // 1.1. x_sum = alpha * x + gx
         Axpy(inputGx, inputX, alphaVal, processElemND);
@@ -418,16 +418,18 @@ private:
         this->Level0MulFp32Short(outputDgx, inputDy, inputGamma, elemWithDInUB, processNCount, processElem);
         PipeBarrier<PIPE_V>();
         // 1.3. brcb mean
-        for (uint32_t colIdx1 = 0; colIdx1 < processNCount; colIdx1 ++) {
+        for (uint32_t colIdx1 = 0; colIdx1 < processNCount; colIdx1++) {
             for (uint32_t elemIndex1 = 0; elemIndex1 < elemWithDInUB; elemIndex1 += FLOAT_BLOCK_ELEM) {
-                Brcb(brcbNDBufLocal1[colIdx1 * elemWithDInUB + elemIndex1], inputMean[colIdx1 * FLOAT_BLOCK_ELEM], brcbRepTimes, {brcbBlockStride, brcbRepStride});
+                Brcb(brcbNDBufLocal1[colIdx1 * elemWithDInUB + elemIndex1], inputMean[colIdx1 * FLOAT_BLOCK_ELEM],
+                     brcbRepTimes, {brcbBlockStride, brcbRepStride});
             }
         }
         PipeBarrier<PIPE_V>();
         // 1.4. brcb rstd
-        for (uint32_t colIdx2 = 0; colIdx2 < processNCount; colIdx2 ++) {
+        for (uint32_t colIdx2 = 0; colIdx2 < processNCount; colIdx2++) {
             for (uint32_t elemIndex2 = 0; elemIndex2 < elemWithDInUB; elemIndex2 += FLOAT_BLOCK_ELEM) {
-                Brcb(brcbNDBufLocal2[colIdx2 * elemWithDInUB + elemIndex2], inputRstd[colIdx2 * FLOAT_BLOCK_ELEM], brcbRepTimes, {brcbBlockStride, brcbRepStride});
+                Brcb(brcbNDBufLocal2[colIdx2 * elemWithDInUB + elemIndex2], inputRstd[colIdx2 * FLOAT_BLOCK_ELEM],
+                     brcbRepTimes, {brcbBlockStride, brcbRepStride});
             }
         }
         PipeBarrier<PIPE_V>();
@@ -441,7 +443,7 @@ private:
         // 2.3. d_mean/d_gx process: tmpTensor1 * rstd
         Mul(tmpNDBufLocal, outputDgx, brcbNDBufLocal2, processElemND);
         PipeBarrier<PIPE_V>();
-        
+
         // 3.1. d_gamma process: tmpTensor2 * rstd
         Mul(outputDx, inputGx, brcbNDBufLocal2, processElemND);
         PipeBarrier<PIPE_V>();
@@ -450,9 +452,10 @@ private:
         PipeBarrier<PIPE_V>();
 
         // 4.1. brcb rstd^3
-        for (uint32_t colIdx3 = 0; colIdx3 < processNCount; colIdx3 ++) {
+        for (uint32_t colIdx3 = 0; colIdx3 < processNCount; colIdx3++) {
             for (uint32_t elemIndex3 = 0; elemIndex3 < elemWithDInUB; elemIndex3 += FLOAT_BLOCK_ELEM) {
-                Brcb(brcbNDBufLocal1[colIdx3 * elemWithDInUB + elemIndex3], inputRstd[colIdx3 * FLOAT_BLOCK_ELEM], brcbRepTimes, {brcbBlockStride, brcbRepStride});
+                Brcb(brcbNDBufLocal1[colIdx3 * elemWithDInUB + elemIndex3], inputRstd[colIdx3 * FLOAT_BLOCK_ELEM],
+                     brcbRepTimes, {brcbBlockStride, brcbRepStride});
             }
         }
         PipeBarrier<PIPE_V>();

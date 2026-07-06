@@ -80,4 +80,4 @@ public:
 };
 
 OP_ADD(SyncBatchNormGatherStats);
-}  // namespace ops
+} // namespace ops

@@ -28,59 +28,63 @@ OP_TYPE_REGISTER(MSELossV2);
 
 static const std::string REDUCTION_NONE = "none";
 
-const aclTensor* MSELossV2(const aclTensor *self, const aclTensor *target, const std::string &reduction,
-                         aclOpExecutor *executor) {
-  L0_DFX(MSELossV2, self, target)
-  op::Shape broadcastShape;
-  if (!BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), broadcastShape)) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self tensor shape:%s and target tensor shape:%s can't broadcast.",
-            ToString(self->GetViewShape()).GetString(), ToString(target->GetViewShape()).GetString());
-    return nullptr;
-  }
-  aclTensor *lossOut = nullptr;
-  if (reduction == REDUCTION_NONE) {
-    lossOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-  } else {
-    lossOut = executor->AllocTensor({}, self->GetDataType());
-  }
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MSELossV2, OP_INPUT(self, target), OP_OUTPUT(lossOut), OP_ATTR(reduction));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MSELossV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return lossOut;
+const aclTensor* MSELossV2(const aclTensor* self, const aclTensor* target, const std::string& reduction,
+                           aclOpExecutor* executor)
+{
+    L0_DFX(MSELossV2, self, target)
+    op::Shape broadcastShape;
+    if (!BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), broadcastShape)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self tensor shape:%s and target tensor shape:%s can't broadcast.",
+                ToString(self->GetViewShape()).GetString(), ToString(target->GetViewShape()).GetString());
+        return nullptr;
+    }
+    aclTensor* lossOut = nullptr;
+    if (reduction == REDUCTION_NONE) {
+        lossOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    } else {
+        lossOut = executor->AllocTensor({}, self->GetDataType());
+    }
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MSELossV2, OP_INPUT(self, target), OP_OUTPUT(lossOut), OP_ATTR(reduction));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MSELossV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    return lossOut;
 }
 
-const aclTensor* MseLossV1(const aclTensor *self, const aclTensor *target, const std::string &reduction,
-                         aclOpExecutor *executor) {
-  L0_DFX(MseLossV1, self, target)
-  op::Shape broadcastShape;
-  if (!BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), broadcastShape)) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self tensor shape:%s and target tensor shape:%s can't broadcast.",
-            ToString(self->GetViewShape()).GetString(), ToString(target->GetViewShape()).GetString());
-    return nullptr;
-  }
-  aclTensor *lossOut = nullptr;
-  if (reduction == REDUCTION_NONE) {
-    lossOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-  } else {
-    lossOut = executor->AllocTensor({}, self->GetDataType());
-  }
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MseLoss, OP_INPUT(self, target), OP_OUTPUT(lossOut), OP_ATTR(reduction));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MseLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return lossOut;
+const aclTensor* MseLossV1(const aclTensor* self, const aclTensor* target, const std::string& reduction,
+                           aclOpExecutor* executor)
+{
+    L0_DFX(MseLossV1, self, target)
+    op::Shape broadcastShape;
+    if (!BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), broadcastShape)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self tensor shape:%s and target tensor shape:%s can't broadcast.",
+                ToString(self->GetViewShape()).GetString(), ToString(target->GetViewShape()).GetString());
+        return nullptr;
+    }
+    aclTensor* lossOut = nullptr;
+    if (reduction == REDUCTION_NONE) {
+        lossOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    } else {
+        lossOut = executor->AllocTensor({}, self->GetDataType());
+    }
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MseLoss, OP_INPUT(self, target), OP_OUTPUT(lossOut), OP_ATTR(reduction));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MseLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    return lossOut;
 }
 
-const aclTensor *MseLoss(const aclTensor *self, const aclTensor *target, const std::string &reduction,
-                         aclOpExecutor *executor) {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if ((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-       socVersion == SocVersion::ASCEND310P) && // MSELossV2算子仅支持910B/910_93和310P芯片
-      self->GetViewShape() == target->GetViewShape() && self->GetViewFormat() == target->GetViewFormat() &&
-      (self->GetViewFormat() == ge::FORMAT_ND || self->GetViewFormat() == ge::FORMAT_NCL)) {
-    OP_LOGD("MSELossV2");
-    return MSELossV2(self, target, reduction, executor);
-  }
-  OP_LOGD("MSELossV1");
-  return MseLossV1(self, target, reduction, executor);
+const aclTensor* MseLoss(const aclTensor* self, const aclTensor* target, const std::string& reduction,
+                         aclOpExecutor* executor)
+{
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if ((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+         socVersion == SocVersion::ASCEND310P) && // MSELossV2算子仅支持910B/910_93和310P芯片
+        self->GetViewShape() == target->GetViewShape() &&
+        self->GetViewFormat() == target->GetViewFormat() &&
+        (self->GetViewFormat() == ge::FORMAT_ND || self->GetViewFormat() == ge::FORMAT_NCL)) {
+        OP_LOGD("MSELossV2");
+        return MSELossV2(self, target, reduction, executor);
+    }
+    OP_LOGD("MSELossV1");
+    return MseLossV1(self, target, reduction, executor);
 }
-}  // namespace l0op
+} // namespace l0op

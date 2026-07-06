@@ -19,8 +19,7 @@
 
 namespace optiling {
 
-class DynamicQuantRegbaseTiling
-{
+class DynamicQuantRegbaseTiling {
 public:
     DynamicQuantRegbaseTiling() = default;
     ~DynamicQuantRegbaseTiling() = default;
@@ -28,15 +27,15 @@ public:
     ge::graphStatus RunFusionKernelTiling(gert::TilingContext* context);
 
 private:
-    void SetTilingKey(gert::TilingContext* context)const;
+    void SetTilingKey(gert::TilingContext* context) const;
     ge::graphStatus CheckInputDtype(const gert::TilingContext* context);
     ge::graphStatus CheckOutputDtype(const gert::TilingContext* context);
     ge::graphStatus CheckOpInputShape(const gert::TilingContext* context);
     ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context) const;
     ge::graphStatus CheckAttrs(const gert::TilingContext* context);
     ge::graphStatus CheckOpShape(const gert::TilingContext* context);
-    ge::graphStatus CheckOpDim(
-        const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim)const;
+    ge::graphStatus CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim,
+                               uint32_t shape2Dim) const;
     ge::graphStatus CheckOpParams(const gert::TilingContext* context);
     void ResetLargeTilingParams();
     void SetTilingData(gert::TilingContext* context) const;

@@ -65,5 +65,6 @@ public:
     int64_t isSort;
     int64_t isOpti;
     int64_t singleCol;
-};} // namespace ScatterNdAdd
+};
+} // namespace ScatterNdAdd
 #endif

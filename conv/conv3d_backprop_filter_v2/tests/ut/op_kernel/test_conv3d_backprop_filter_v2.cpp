@@ -29,45 +29,48 @@ using namespace std;
 using namespace AscendC;
 
 class conv3d_backprop_filter_v2_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "conv3d_backprop_filter_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "conv3d_backprop_filter_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "conv3d_backprop_filter_v2_test TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./conv3d_backprop_filter_v2_data");
         kernel_ut::CleanGeneratedBinFiles("./conv3d_backprop_filter_v2_fp32_data");
     }
 };
 
-
-TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_bf16) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_bf16)
+{
     size_t shape_x = 1 * 1 * 1 * 32 * 32 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 1 * 72 * 16 * 16 * 16 * sizeof(int16_t);
     size_t shape_y = 1 * 1152 * 1 * 16 * 16 * sizeof(float);
     size_t tiling_data_size = sizeof(Conv3DBackpropFilterV2TilingData);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(shape_x);
-    uint8_t *filter_size = (uint8_t *)AscendC::GmAlloc(shape_filter_size);
-    uint8_t *dedy = (uint8_t *)AscendC::GmAlloc(shape_dedy);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(shape_x);
+    uint8_t* filter_size = (uint8_t*)AscendC::GmAlloc(shape_filter_size);
+    uint8_t* dedy = (uint8_t*)AscendC::GmAlloc(shape_dedy);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"1", "4", "1152", "1", "16", "16", "1", "32", "32", "1", "2", "2"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data",
+                                    "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data",
+                          {"1", "4", "1152", "1", "16", "16", "1", "32", "32", "1", "2", "2"});
     kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "conv_stdit_01_bf16");
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
-    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
+    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size,
+             shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
         ::conv3d_backprop_filter_v2<0>(x, filter_size, out_backprop, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
@@ -81,33 +84,38 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_bf16) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise) {
+TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise)
+{
     size_t shape_x = 1 * 16 * 11 * 64 * 64 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 16 * 9 * 64 * 64 * 16 * sizeof(int16_t);
     size_t shape_y = 432 * 1 * 16 * 16 * sizeof(float);
     size_t tiling_data_size = sizeof(Conv3DBackpropFilterV2TilingData);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(shape_x);
-    uint8_t *filter_size = (uint8_t *)AscendC::GmAlloc(shape_filter_size);
-    uint8_t *dedy = (uint8_t *)AscendC::GmAlloc(shape_dedy);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(shape_x);
+    uint8_t* filter_size = (uint8_t*)AscendC::GmAlloc(shape_filter_size);
+    uint8_t* dedy = (uint8_t*)AscendC::GmAlloc(shape_dedy);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"1", "256", "256", "9", "64", "64", "11", "64", "64", "3", "3", "3"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data",
+                                    "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data",
+                          {"1", "256", "256", "9", "64", "64", "11", "64", "64", "3", "3", "3"});
     kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "c256_depthwise");
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
-    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
+    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size,
+             shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
         ::conv3d_backprop_filter_v2<0>(x, filter_size, out_backprop, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
@@ -121,33 +129,38 @@ TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16)
+{
     size_t shape_x = 4 * 4 * 16 * 64 * 64 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 4 * 4 * 86 * 64 * 64 * 16 * sizeof(int16_t);
     size_t shape_y = 16 * 86 * 16 * 16 * sizeof(float);
     size_t tiling_data_size = sizeof(Conv3DBackpropFilterV2TilingData);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(shape_x);
-    uint8_t *filter_size = (uint8_t *)AscendC::GmAlloc(shape_filter_size);
-    uint8_t *dedy = (uint8_t *)AscendC::GmAlloc(shape_dedy);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(shape_x);
+    uint8_t* filter_size = (uint8_t*)AscendC::GmAlloc(shape_filter_size);
+    uint8_t* dedy = (uint8_t*)AscendC::GmAlloc(shape_dedy);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"4", "256", "1364", "4", "64", "64", "4", "64", "64", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data",
+                                    "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data",
+                          {"4", "256", "1364", "4", "64", "64", "4", "64", "64", "1", "1", "1"});
     kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "conv_net_ID_03_b16");
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
-    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
+    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size,
+             shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
         ::conv3d_backprop_filter_v2<2>(x, filter_size, out_backprop, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(2);
@@ -161,33 +174,38 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16)
+{
     size_t shape_x = 1 * 17 * 16 * 256 * 256 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 17 * 8 * 256 * 256 * 16 * sizeof(int16_t);
     size_t shape_y = 16 * 8 * 16 * 16 * sizeof(float);
     size_t tiling_data_size = sizeof(Conv3DBackpropFilterV2TilingData);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(shape_x);
-    uint8_t *filter_size = (uint8_t *)AscendC::GmAlloc(shape_filter_size);
-    uint8_t *dedy = (uint8_t *)AscendC::GmAlloc(shape_dedy);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(shape_x);
+    uint8_t* filter_size = (uint8_t*)AscendC::GmAlloc(shape_filter_size);
+    uint8_t* dedy = (uint8_t*)AscendC::GmAlloc(shape_dedy);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"1", "256", "128", "17", "128", "128", "17", "128", "128", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data",
+                                    "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data",
+                          {"1", "256", "128", "17", "128", "128", "17", "128", "128", "1", "1", "1"});
     kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "conv_03_b16");
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
-    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
+    ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size,
+             shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
         ::conv3d_backprop_filter_v2<1>(x, filter_size, out_backprop, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(1);
@@ -201,33 +219,39 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32)
+{
     size_t shape_x = 1 * 1 * 1 * 32 * 32 * 16 * sizeof(float);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 1 * 72 * 16 * 16 * 16 * sizeof(float);
     size_t shape_y = 1 * 1152 * 1 * 16 * 16 * sizeof(float);
     size_t tiling_data_size = sizeof(Conv3DBackpropFilterV2TilingData);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(shape_x);
-    uint8_t *filter_size = (uint8_t *)AscendC::GmAlloc(shape_filter_size);
-    uint8_t *dedy = (uint8_t *)AscendC::GmAlloc(shape_dedy);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(shape_x);
+    uint8_t* filter_size = (uint8_t*)AscendC::GmAlloc(shape_filter_size);
+    uint8_t* dedy = (uint8_t*)AscendC::GmAlloc(shape_dedy);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_fp32_data", "conv3d_backprop_filter_v2_fp32_data");
-    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_fp32_data", {"1", "4", "1152", "1", "16", "16", "1", "32", "32", "1", "2", "2"});
+    kernel_ut::SetupTestEnvironment(
+        "conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_fp32_data",
+        "conv3d_backprop_filter_v2_fp32_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_fp32_data",
+                          {"1", "4", "1152", "1", "16", "16", "1", "32", "32", "1", "2", "2"});
     kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_fp32_data", "conv_stdit_01_fp32");
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/x.bin", shape_x, x, shape_x);
-    ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
+    ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/filter_size.bin", shape_filter_size, filter_size,
+             shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/dedy.bin", shape_dedy, dedy, shape_dedy);
     ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+    auto Conv3DDWKernel = [](GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
         ::conv3d_backprop_filter_v2<0>(x, filter_size, out_backprop, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);

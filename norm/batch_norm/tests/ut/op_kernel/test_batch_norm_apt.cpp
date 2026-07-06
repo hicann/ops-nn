@@ -33,21 +33,16 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void batch_norm(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR mean, GM_ADDR variance, GM_ADDR y, GM_ADDR batch_mean,
-    GM_ADDR batch_variance, GM_ADDR reserve_space_1, GM_ADDR reserve_space_2, GM_ADDR reserve_space_3,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void batch_norm(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR mean,
+                                                 GM_ADDR variance, GM_ADDR y, GM_ADDR batch_mean,
+                                                 GM_ADDR batch_variance, GM_ADDR reserve_space_1,
+                                                 GM_ADDR reserve_space_2, GM_ADDR reserve_space_3, GM_ADDR workspace,
+                                                 GM_ADDR tiling);
 
 class batch_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "batch_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "batch_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "batch_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "batch_norm_test TearDown\n" << endl; }
 };
 
 std::string Shape2Str(const std::vector<int64_t>& shape)
@@ -73,9 +68,8 @@ static inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void ExcuteTestCase(
-    const std::vector<int64_t>& xShape, const std::vector<int64_t>& wShape, const std::string& dtype, int64_t tilingKey,
-    uint32_t blockNum, uint8_t* tiling, bool is_training = true)
+void ExcuteTestCase(const std::vector<int64_t>& xShape, const std::vector<int64_t>& wShape, const std::string& dtype,
+                    int64_t tilingKey, uint32_t blockNum, uint8_t* tiling, bool is_training = true)
 {
     uint32_t typeSize = 4;
     uint32_t fp32TypeSize = 4;
@@ -103,9 +97,8 @@ void ExcuteTestCase(
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        batch_norm, realBlockNum, x, scale, offset, mean, variance, y, batch_mean, batch_variance, reserve_space_1,
-        reserve_space_2, reserve_space_3, workspace, tiling);
+    ICPU_RUN_KF(batch_norm, realBlockNum, x, scale, offset, mean, variance, y, batch_mean, batch_variance,
+                reserve_space_1, reserve_space_2, reserve_space_3, workspace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(scale);
@@ -131,8 +124,8 @@ TEST_F(batch_norm_test, test_full_reduce_float32)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormFullReduceRegbaseTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    BatchNormFullReduceRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<BatchNormFullReduceRegbaseTilingData*>(tiling);
+    BatchNormFullReduceRegbaseTilingData* tilingDatafromBin = reinterpret_cast<BatchNormFullReduceRegbaseTilingData*>(
+        tiling);
 
     tilingDatafromBin->r1 = 32;
     tilingDatafromBin->r0 = 208;

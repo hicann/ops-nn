@@ -23,7 +23,6 @@ constexpr uint64_t TILING_KEY_SPLITD_HALF = 110001;
 // 1, splitD=1, splitH=0, splitW=0, splitKernel = 0, dtype=bfloat16
 constexpr uint64_t TILING_KEY_SPLITD_BF16 = 110002;
 
-
 namespace optiling {
 
 bool MaxPool3DWithArgmaxV2SplitDTiling::IsCapable()
@@ -31,11 +30,11 @@ bool MaxPool3DWithArgmaxV2SplitDTiling::IsCapable()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
-    } 
-    array<uint64_t, DHW_DIMS> parts{
-        padInputData.padInputShape[D_DIM], padInputData.padInputShape[H_DIM], padInputData.padInputShape[W_DIM]};
+    }
+    array<uint64_t, DHW_DIMS> parts{padInputData.padInputShape[D_DIM], padInputData.padInputShape[H_DIM],
+                                    padInputData.padInputShape[W_DIM]};
     array<uint64_t, DHW_DIMS> partOuts{inputData.outShape[D_DIM], inputData.outShape[H_DIM], inputData.outShape[W_DIM]};
 
     FindSplitParts(parts, partOuts, bufSizes, D_DIM);
@@ -73,8 +72,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2SplitDTiling::SmallBatchesTiling(void)
     uint64_t curPos = 0;
     uint64_t d = 0;
     uint64_t dOut = 0;
-    uint64_t offD =
-        splitData.partD - (inputData.kernelSize[D_DIM] - 1) * inputData.dilation[D_DIM] + inputData.stride[D_DIM] - 1;
+    uint64_t offD = splitData.partD - (inputData.kernelSize[D_DIM] - 1) * inputData.dilation[D_DIM] +
+                    inputData.stride[D_DIM] - 1;
     for (uint64_t b = 0UL; b < (batchesBlock + (batchesRem != 0UL)); b++) {
         if ((count != 0UL) && (curPos > 0UL)) {
             if (b < batchesBlock) {

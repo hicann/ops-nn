@@ -20,8 +20,9 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SoftplusV2Grad);
 
-const aclTensor *SoftplusV2Grad(const aclTensor *grad_output, const aclTensor *self, float beta, float threshold,
-                                aclOpExecutor *executor) {
+const aclTensor* SoftplusV2Grad(const aclTensor* grad_output, const aclTensor* self, float beta, float threshold,
+                                aclOpExecutor* executor)
+{
     // AICORE算子kernel
     L0_DFX(SoftplusV2Grad, grad_output, self, beta, threshold);
 
@@ -36,4 +37,4 @@ const aclTensor *SoftplusV2Grad(const aclTensor *grad_output, const aclTensor *s
              return nullptr);
     return grad_input;
 }
-}  // namespace l0op
+} // namespace l0op

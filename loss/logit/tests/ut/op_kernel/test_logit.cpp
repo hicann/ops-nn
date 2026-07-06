@@ -23,24 +23,16 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void logit(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class logit_test : public testing::Test
-{
+class logit_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "logit SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "logit TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "logit SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "logit TearDown\n" << endl; }
 };
 
 TEST_F(logit_test, test_logit_float_0)
 {
-    system(
-        "cp -rf "
-        "../../../../loss/logit/tests/ut/op_kernel/logit_data ./ ");
+    system("cp -rf "
+           "../../../../loss/logit/tests/ut/op_kernel/logit_data ./ ");
     system("chmod -R 755 ./logit_data/");
     system("cd ./logit_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'float32'");
     size_t M = 2;
@@ -83,9 +75,8 @@ TEST_F(logit_test, test_logit_float_0)
 
 TEST_F(logit_test, test_logit_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../loss/logit/tests/ut/op_kernel/logit_data ./");
+    system("cp -rf "
+           "../../../../loss/logit/tests/ut/op_kernel/logit_data ./");
     system("chmod -R 755 ./logit_data/");
     system("cd ./logit_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'float16'");
     size_t M = 2;
@@ -128,9 +119,8 @@ TEST_F(logit_test, test_logit_float16_1)
 
 TEST_F(logit_test, test_logit_bfloat16_2)
 {
-    system(
-        "cp -rf "
-        "../../../../loss/logit/tests/ut/op_kernel/logit_data ./");
+    system("cp -rf "
+           "../../../../loss/logit/tests/ut/op_kernel/logit_data ./");
     system("chmod -R 755 ./logit_data/");
     system("cd ./logit_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'bfloat16_t'");
     size_t M = 2;

@@ -18,15 +18,9 @@
 // ----------------KlDivTargetLossGrad--------------
 class KlDivTargetLossGradInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "KlDivTargetLossGradInfershapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "KlDivTargetLossGradInfershapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "KlDivTargetLossGradInfershapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "KlDivTargetLossGradInfershapeTest TearDown" << std::endl; }
 };
 
 TEST_F(KlDivTargetLossGradInfershapeTest, kl_div_target_loss_grad_test1)
@@ -50,9 +44,8 @@ TEST_F(KlDivTargetLossGradInfershapeTest, kl_div_target_loss_grad_test1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&gradShape, &inputShape, &targetShape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"log_target", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"log_target", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)

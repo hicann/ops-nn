@@ -28,23 +28,24 @@ namespace l0op {
 OP_TYPE_REGISTER(GroupNorm);
 
 // AICORE算子kernel
-static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormAICore(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t numGroups, float eps, bool isTraining,
-    aclTensor* y, aclTensor* mean, aclTensor* variance, aclOpExecutor* executor)
+static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormAICore(const aclTensor* x, const aclTensor* gamma,
+                                                                      const aclTensor* beta, int64_t numGroups,
+                                                                      float eps, bool isTraining, aclTensor* y,
+                                                                      aclTensor* mean, aclTensor* variance,
+                                                                      aclOpExecutor* executor)
 {
     L0_DFX(GroupNormAICore, x, gamma, beta, numGroups, eps, isTraining, y, mean, variance);
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
         GroupNorm, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, variance),
         OP_ATTR(numGroups, op::ToString(op::Format::FORMAT_NHWC).GetString(), eps, isTraining));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr, nullptr),
-        "GroupNorm add to aicore launch list failed.");
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr, nullptr),
+                                         "GroupNorm add to aicore launch list failed.");
     return std::tie(y, mean, variance);
 }
 
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t numGroups,
-    float eps, bool isTraining, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(const aclTensor* x, const aclTensor* gamma,
+                                                               const aclTensor* beta, int64_t N, int64_t numGroups,
+                                                               float eps, bool isTraining, aclOpExecutor* executor)
 {
     auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType(), x->GetViewFormat());
     int64_t mvShape = N * numGroups;

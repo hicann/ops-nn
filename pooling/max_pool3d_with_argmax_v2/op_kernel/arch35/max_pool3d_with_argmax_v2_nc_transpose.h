@@ -31,21 +31,15 @@ constexpr uint64_t NC_TRANS_TRANS_LEN_B32 = 8;
 // 统一索引类型选择器
 template <typename T1>
 struct SelectIndexType {
-    using type = std::conditional_t<
-        std::is_same_v<T1, half> || std::is_same_v<T1, bfloat16_t>,
-        int16_t,
-        int32_t
-    >;
+    using type = std::conditional_t<std::is_same_v<T1, half> || std::is_same_v<T1, bfloat16_t>, int16_t, int32_t>;
 };
 
-template <typename T1, typename T2, const uint32_t IS_PAD = 0,
-          typename IDX_T = typename SelectIndexType<T1>::type>
+template <typename T1, typename T2, const uint32_t IS_PAD = 0, typename IDX_T = typename SelectIndexType<T1>::type>
 class MaxPool3DWithArgmaxV2NcTransposeKernel {
 public:
     __aicore__ inline MaxPool3DWithArgmaxV2NcTransposeKernel(
-        TPipe& pipeIn,
-        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData& tilingData)
-        : pipe_(pipeIn), tilingData_(tilingData) {};
+        TPipe& pipeIn, const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData& tilingData)
+        : pipe_(pipeIn), tilingData_(tilingData){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR argmax);
     __aicore__ inline void Process();
 
@@ -58,20 +52,18 @@ private:
     __aicore__ inline void CopyOut(int64_t loopNum);
 
     template <typename U>
-    __aicore__ inline void TransposeB32(
-        LocalTensor<U> dst, LocalTensor<U> src, uint32_t rowNum, uint32_t colNum);
-    __aicore__ inline void TransposeB16(
-        LocalTensor<T1> dst, LocalTensor<T1> src, uint32_t rowNum, uint32_t colNum);
+    __aicore__ inline void TransposeB32(LocalTensor<U> dst, LocalTensor<U> src, uint32_t rowNum, uint32_t colNum);
+    __aicore__ inline void TransposeB16(LocalTensor<T1> dst, LocalTensor<T1> src, uint32_t rowNum, uint32_t colNum);
 
-    __aicore__ inline void ComputeMaxArgmax(
-        __local_mem__ T1* transInputAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr,
-        LocalTensor<T1> transInputLocal, LocalTensor<T1> maxValueLocal, LocalTensor<T2> argmaxLocal);
+    __aicore__ inline void ComputeMaxArgmax(__local_mem__ T1* transInputAddr, __local_mem__ T1* maxValueAddr,
+                                            __local_mem__ T2* argmaxAddr, LocalTensor<T1> transInputLocal,
+                                            LocalTensor<T1> maxValueLocal, LocalTensor<T2> argmaxLocal);
 
-    __aicore__ inline void ConvertDeltaToArgmax(
-        LocalTensor<IDX_T> deltaAll, LocalTensor<int32_t> int32Scratch, LocalTensor<T2> argmaxLocal,
-        int64_t ncAligned, int64_t totalOut, int64_t ncLoop, int64_t ncTail, int64_t ncStep,
-        int64_t globalDBase, int64_t globalHBase, int64_t globalWBase,
-        int64_t hInputWInput, int64_t wInput, int64_t dStride, int64_t hStride, int64_t wStride);
+    __aicore__ inline void ConvertDeltaToArgmax(LocalTensor<IDX_T> deltaAll, LocalTensor<int32_t> int32Scratch,
+                                                LocalTensor<T2> argmaxLocal, int64_t ncAligned, int64_t totalOut,
+                                                int64_t ncLoop, int64_t ncTail, int64_t ncStep, int64_t globalDBase,
+                                                int64_t globalHBase, int64_t globalWBase, int64_t hInputWInput,
+                                                int64_t wInput, int64_t dStride, int64_t hStride, int64_t wStride);
 
     TPipe& pipe_;
     const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData& tilingData_;
@@ -81,7 +73,7 @@ private:
     TQue<QuePosition::VECOUT, NC_TRANS_BUFFER_NUM> argmaxQue_;
     TBuf<TPosition::VECCALC> transInputBuf_;
     TBuf<TPosition::VECCALC> deltaIndexBuf_;
-    TQue<QuePosition::VECOUT, NC_TRANS_BUFFER_NUM> castQue_;  // int32→int64 Cast 输出队列
+    TQue<QuePosition::VECOUT, NC_TRANS_BUFFER_NUM> castQue_; // int32→int64 Cast 输出队列
 
     GlobalTensor<T1> xGm_;
     GlobalTensor<T1> yGm_;
@@ -117,20 +109,20 @@ private:
 };
 
 template <typename T1, typename T2, const uint32_t IS_PAD, typename IDX_T>
-__aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR argmax)
+__aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::Init(GM_ADDR x, GM_ADDR y,
+                                                                                           GM_ADDR argmax)
 {
     blockIdx_ = GetBlockIdx();
     if (blockIdx_ >= tilingData_.usedCoreNum) {
         return;
     }
 
-    argmaxGm_.SetGlobalBuffer((__gm__ T2*)argmax);   
+    argmaxGm_.SetGlobalBuffer((__gm__ T2*)argmax);
     yGm_.SetGlobalBuffer((__gm__ T1*)y);
     xGm_.SetGlobalBuffer((__gm__ T1*)x);
-    
-    curCoreProcessNum_ =
-        (blockIdx_ + 1 == tilingData_.usedCoreNum) ? tilingData_.tailCoreProcessNum : tilingData_.normalCoreProcessNum;
+
+    curCoreProcessNum_ = (blockIdx_ + 1 == tilingData_.usedCoreNum) ? tilingData_.tailCoreProcessNum :
+                                                                      tilingData_.normalCoreProcessNum;
     inputPlaneSize_ = tilingData_.dInput * tilingData_.hInput * tilingData_.wInput;
 
     pipe_.InitBuffer(inputQue_, NC_TRANS_BUFFER_NUM, tilingData_.inputBufferSize);
@@ -183,7 +175,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
     wInputActual_ = (wOutputReal_ - 1) * tilingData_.wStride + tilingData_.wKernel;
 
     ncInputOffset_ = ncIndex_ * tilingData_.ncInner * inputPlaneSize_;
-    dInputOffset_ = dAxisIndex_ * tilingData_.dOutputInner * tilingData_.dStride * tilingData_.hInput * tilingData_.wInput;
+    dInputOffset_ = dAxisIndex_ * tilingData_.dOutputInner * tilingData_.dStride * tilingData_.hInput *
+                    tilingData_.wInput;
     hInputOffset_ = hAxisIndex_ * tilingData_.hOutputInner * tilingData_.hStride * tilingData_.wInput;
     wInputOffset_ = wAxisIndex_ * tilingData_.wOutputInner * tilingData_.wStride;
 }
@@ -232,8 +225,10 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
 
 template <typename T1, typename T2, const uint32_t IS_PAD, typename IDX_T>
 template <typename U>
-__aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::TransposeB32(
-    LocalTensor<U> dst, LocalTensor<U> src, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::TransposeB32(LocalTensor<U> dst,
+                                                                                                   LocalTensor<U> src,
+                                                                                                   uint32_t rowNum,
+                                                                                                   uint32_t colNum)
 {
     uint64_t dstList[NC_TRANS_ALIGN_16];
     uint64_t srcList[NC_TRANS_ALIGN_16];
@@ -279,8 +274,10 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD, typename IDX_T>
-__aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::TransposeB16(
-    LocalTensor<T1> dst, LocalTensor<T1> src, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::TransposeB16(LocalTensor<T1> dst,
+                                                                                                   LocalTensor<T1> src,
+                                                                                                   uint32_t rowNum,
+                                                                                                   uint32_t colNum)
 {
     uint64_t dstList[NC_TRANS_ALIGN_16];
     uint64_t srcList[NC_TRANS_ALIGN_16];
@@ -310,8 +307,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
             for (int32_t i = 0; i < NC_TRANS_ALIGN_16; i++) {
                 srcList[i] = static_cast<uint64_t>(
                     src[rowLoopIdx * NC_TRANS_ALIGN_16 * colNum + i * colNum].GetPhyAddr());
-                dstList[i] = static_cast<uint64_t>(
-                    dst[rowLoopIdx * NC_TRANS_ALIGN_16 + i * rowNum].GetPhyAddr());
+                dstList[i] = static_cast<uint64_t>(dst[rowLoopIdx * NC_TRANS_ALIGN_16 + i * rowNum].GetPhyAddr());
             }
             TransDataTo5HD<T1>(dstList, srcList, transParams);
         }
@@ -367,7 +363,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
     int64_t globalWBase = wAxisIndex_ * tilingData_.wOutputInner * wStride;
 
     int64_t wInput = tilingData_.wInput;
-    int64_t hInputWInput = tilingData_.hInput * tilingData_.wInput; 
+    int64_t hInputWInput = tilingData_.hInput * tilingData_.wInput;
 
     LocalTensor<IDX_T> deltaUb = deltaIndexBuf_.template Get<IDX_T>();
     int32_t maxDeltaCount = 0;
@@ -408,7 +404,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                         int64_t localDStart = dOut * dStride;
                         int64_t localHStart = hOut * hStride;
                         int64_t localWStart = wOut * wStride;
-                        int64_t baseSpatialIdx = localDStart * dSpatialStride + localHStart * hSpatialStride + localWStart * wSpatialStride;
+                        int64_t baseSpatialIdx = localDStart * dSpatialStride + localHStart * hSpatialStride +
+                                                 localWStart * wSpatialStride;
 
                         MicroAPI::DataCopy(vreg0, transInputAddr + baseSpatialIdx * ncAligned + ncOffset);
                         MicroAPI::Duplicate(argDeltaVreg, static_cast<IDX_T>(0));
@@ -417,7 +414,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                         for (uint16_t kd = 0; kd < correctDK; kd++) {
                             for (uint16_t kh = 0; kh < correctHK; kh++) {
                                 for (uint16_t kw = 0; kw < correctWK; kw++) {
-                                    int64_t spatialIdx = baseSpatialIdx + kd*dSpatialStride + kh*hSpatialStride + kw*wSpatialStride;
+                                    int64_t spatialIdx = baseSpatialIdx + kd * dSpatialStride + kh * hSpatialStride +
+                                                         kw * wSpatialStride;
                                     MicroAPI::DataCopy(vreg1, transInputAddr + spatialIdx * ncAligned + ncOffset);
 
                                     MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
@@ -432,9 +430,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                             }
                         }
 
-                        int64_t outputOffset = (dOut * hOutputReal_ * wOutputReal_ + hOut * wOutputReal_ + wOut) * ncAligned + ncOffset;
+                        int64_t outputOffset = (dOut * hOutputReal_ * wOutputReal_ + hOut * wOutputReal_ + wOut) *
+                                                   ncAligned +
+                                               ncOffset;
                         MicroAPI::DataCopy(maxValueAddr + outputOffset, vreg0, computeMaskT1);
-                        MicroAPI::DataCopy((__local_mem__ IDX_T*)(argmaxAddr) + outputOffset, argDeltaVreg, computeMaskT1);
+                        MicroAPI::DataCopy((__local_mem__ IDX_T*)(argmaxAddr) + outputOffset, argDeltaVreg,
+                                           computeMaskT1);
                     }
                 }
             }
@@ -446,46 +447,39 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
         LocalTensor<IDX_T> deltaAll = argmaxLocal.template ReinterpretCast<IDX_T>();
         LocalTensor<int32_t> int32Scratch = transInputLocal.template ReinterpretCast<int32_t>();
         int64_t totalOut = dOutputReal_ * hOutputReal_ * wOutputReal_;
-        ConvertDeltaToArgmax(deltaAll, int32Scratch, argmaxLocal,
-                             ncAligned, totalOut, ncLoop, ncTail, ncStep,
-                             globalDBase, globalHBase, globalWBase,
-                             hInputWInput, wInput, dStride, hStride, wStride);
+        ConvertDeltaToArgmax(deltaAll, int32Scratch, argmaxLocal, ncAligned, totalOut, ncLoop, ncTail, ncStep,
+                             globalDBase, globalHBase, globalWBase, hInputWInput, wInput, dStride, hStride, wStride);
     }
 }
 
 // ==================== 索引转换 ====================
 template <typename T1, typename T2, const uint32_t IS_PAD, typename IDX_T>
 __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::ConvertDeltaToArgmax(
-    LocalTensor<IDX_T> deltaAll, LocalTensor<int32_t> int32Scratch, LocalTensor<T2> argmaxLocal,
-    int64_t ncAligned, int64_t totalOut, int64_t ncLoop, int64_t ncTail, int64_t ncStep,
-    int64_t globalDBase, int64_t globalHBase, int64_t globalWBase,
-    int64_t hInputWInput, int64_t wInput, int64_t dStride, int64_t hStride, int64_t wStride)
+    LocalTensor<IDX_T> deltaAll, LocalTensor<int32_t> int32Scratch, LocalTensor<T2> argmaxLocal, int64_t ncAligned,
+    int64_t totalOut, int64_t ncLoop, int64_t ncTail, int64_t ncStep, int64_t globalDBase, int64_t globalHBase,
+    int64_t globalWBase, int64_t hInputWInput, int64_t wInput, int64_t dStride, int64_t hStride, int64_t wStride)
 {
-    for (int64_t ncChunkR = ncLoop - 1; ncChunkR >= 0; ncChunkR--)
-    {
+    for (int64_t ncChunkR = ncLoop - 1; ncChunkR >= 0; ncChunkR--) {
         uint32_t curVL = (ncChunkR == ncLoop - 1) ? ncTail : ncStep;
         uint32_t curNcOffset = ncChunkR * ncStep;
 
-        if (static_cast<int64_t>(curVL) == ncAligned)
-        {
+        if (static_cast<int64_t>(curVL) == ncAligned) {
             int64_t totalElements = totalOut * static_cast<int64_t>(curVL);
             int64_t outIdx = 0;
 
             // 当IDX_T已经是int32_t时（float输入），直接使用原地操作，跳过Cast
             if constexpr (std::is_same_v<IDX_T, int32_t>) {
                 LocalTensor<int32_t> deltaAllI32 = deltaAll.template ReinterpretCast<int32_t>();
-                for (uint16_t dOut = 0; dOut < static_cast<uint16_t>(dOutputReal_); dOut++)
-                {
-                    for (uint16_t hOut = 0; hOut < static_cast<uint16_t>(hOutputReal_); hOut++)
-                    {
-                        for (uint16_t wOut = 0; wOut < static_cast<uint16_t>(wOutputReal_); wOut++)
-                        {
+                for (uint16_t dOut = 0; dOut < static_cast<uint16_t>(dOutputReal_); dOut++) {
+                    for (uint16_t hOut = 0; hOut < static_cast<uint16_t>(hOutputReal_); hOut++) {
+                        for (uint16_t wOut = 0; wOut < static_cast<uint16_t>(wOutputReal_); wOut++) {
                             int64_t gh = globalHBase + hOut * hStride;
                             int64_t gw = globalWBase + wOut * wStride;
                             int64_t gd = globalDBase + dOut * dStride;
                             int32_t startIdx = static_cast<int32_t>(gd * hInputWInput + gh * wInput + gw);
 
-                            LocalTensor<int32_t> argSlice = argmaxLocal.template ReinterpretCast<int32_t>()[outIdx * ncAligned + curNcOffset];
+                            LocalTensor<int32_t> argSlice = argmaxLocal.template ReinterpretCast<
+                                int32_t>()[outIdx * ncAligned + curNcOffset];
                             Adds(argSlice, deltaAllI32[outIdx * curVL + curNcOffset], startIdx, curVL);
                             outIdx++;
                         }
@@ -495,36 +489,29 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                 // 对于int16_t类型cast到int32再累加
                 Cast(int32Scratch, deltaAll[curNcOffset], RoundMode::CAST_NONE, totalElements);
 
-                for (uint16_t dOut = 0; dOut < static_cast<uint16_t>(dOutputReal_); dOut++)
-                {
-                    for (uint16_t hOut = 0; hOut < static_cast<uint16_t>(hOutputReal_); hOut++)
-                    {
-                        for (uint16_t wOut = 0; wOut < static_cast<uint16_t>(wOutputReal_); wOut++)
-                        {
+                for (uint16_t dOut = 0; dOut < static_cast<uint16_t>(dOutputReal_); dOut++) {
+                    for (uint16_t hOut = 0; hOut < static_cast<uint16_t>(hOutputReal_); hOut++) {
+                        for (uint16_t wOut = 0; wOut < static_cast<uint16_t>(wOutputReal_); wOut++) {
                             int64_t gd = globalDBase + dOut * dStride;
                             int64_t gh = globalHBase + hOut * hStride;
                             int64_t gw = globalWBase + wOut * wStride;
                             int32_t startIdx = static_cast<int32_t>(gd * hInputWInput + gh * wInput + gw);
 
-                            LocalTensor<int32_t> argSlice = argmaxLocal.template ReinterpretCast<int32_t>()[outIdx * ncAligned + curNcOffset];
+                            LocalTensor<int32_t> argSlice = argmaxLocal.template ReinterpretCast<
+                                int32_t>()[outIdx * ncAligned + curNcOffset];
                             Adds(argSlice, int32Scratch[outIdx * curVL], startIdx, curVL);
                             outIdx++;
                         }
                     }
                 }
             }
-        }
-        else 
-        {
+        } else {
             if constexpr (std::is_same_v<IDX_T, int32_t>) {
                 // float 输入: IDX_T=int32, in-place 安全，反向遍历
                 int64_t revIdx = totalOut - 1;
-                for (int64_t dOut = dOutputReal_ - 1; dOut >= 0; dOut--)
-                {
-                    for (int64_t hOut = hOutputReal_ - 1; hOut >= 0; hOut--)
-                    {
-                        for (int64_t wOut = wOutputReal_ - 1; wOut >= 0; wOut--)
-                        {
+                for (int64_t dOut = dOutputReal_ - 1; dOut >= 0; dOut--) {
+                    for (int64_t hOut = hOutputReal_ - 1; hOut >= 0; hOut--) {
+                        for (int64_t wOut = wOutputReal_ - 1; wOut >= 0; wOut--) {
                             int64_t gd = globalDBase + dOut * dStride;
                             int64_t gh = globalHBase + hOut * hStride;
                             int64_t gw = globalWBase + wOut * wStride;
@@ -545,12 +532,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                 PipeBarrier<PIPE_ALL>();
 
                 int64_t outIdx = 0;
-                for (int64_t dOut = 0; dOut < dOutputReal_; dOut++)
-                {
-                    for (int64_t hOut = 0; hOut < hOutputReal_; hOut++)
-                    {
-                        for (int64_t wOut = 0; wOut < wOutputReal_; wOut++)
-                        {
+                for (int64_t dOut = 0; dOut < dOutputReal_; dOut++) {
+                    for (int64_t hOut = 0; hOut < hOutputReal_; hOut++) {
+                        for (int64_t wOut = 0; wOut < wOutputReal_; wOut++) {
                             int64_t gd = globalDBase + dOut * dStride;
                             int64_t gh = globalHBase + hOut * hStride;
                             int64_t gw = globalWBase + wOut * wStride;
@@ -679,8 +663,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
     }
 
     maxValueQue_.FreeTensor(maxValueLocal);
-    argmaxQue_.FreeTensor(argmaxLocal);    
+    argmaxQue_.FreeTensor(argmaxLocal);
 }
 
-}  // namespace MaxPool3DWithArgmaxV2NcTransposeNameSpace
+} // namespace MaxPool3DWithArgmaxV2NcTransposeNameSpace
 #endif

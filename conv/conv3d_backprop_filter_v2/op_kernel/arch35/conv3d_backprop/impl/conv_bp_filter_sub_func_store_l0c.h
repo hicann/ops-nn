@@ -29,8 +29,8 @@ static __aicore__ inline void UpdateHwKIterState(Intf* self, bool tailCinExist, 
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmDkhkwkEqOne(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmDkhkwkEqOne(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                    LocalTensor<typename Intf::L0cT>& l0c)
 {
     bool tailCinExist = (self->ctx.singleShapeCin_ & 0xF) != 0;
     CalcL0cParams(self, tailCinExist);
@@ -67,8 +67,8 @@ static __aicore__ inline void LoadL0c2GmDkhkwkEqOne(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmDkhkwkEqOneNz2DHWCN(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmDkhkwkEqOneNz2DHWCN(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                            LocalTensor<typename Intf::L0cT>& l0c)
 {
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM +
                         self->ctx.curNIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->cout;
@@ -103,8 +103,8 @@ static __aicore__ inline void LoadL0c2GmDkhkwkEqOneNz2DHWCN(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmBaseNUndivided(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmBaseNUndivided(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                       LocalTensor<typename Intf::L0cT>& l0c)
 {
     constexpr uint64_t baseCin = BLOCK_CUBE;
     bool tailCinExist = (self->ctx.singleShapeCin_ % baseCin != 0);
@@ -114,8 +114,9 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
-    uint32_t numBaseNIncludeHwk =
-        (c1hkwk + self->ctx.head_ >= self->ctx.hwK_) ? (c1hkwk - (self->ctx.hwK_ - self->ctx.head_)) : 0;
+    uint32_t numBaseNIncludeHwk = (c1hkwk + self->ctx.head_ >= self->ctx.hwK_) ?
+                                      (c1hkwk - (self->ctx.hwK_ - self->ctx.head_)) :
+                                      0;
     uint64_t baseNIter = Ceil(numBaseNIncludeHwk, self->ctx.hwK_) + 1;
 
     for (uint64_t j = 0; j < baseNIter; j++) {
@@ -155,11 +156,11 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(
         int64_t dstCinOffset = (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
                                baseNAlignLength * baseNAlignLength * self->ctx.tiling_->dk;
 
-        int64_t dstBaseNOffset =
-            dstOffset + dstDkOffset + dstCinOffset + self->ctx.head_ + j * baseNAlignLength * self->ctx.tiling_->dk;
+        int64_t dstBaseNOffset = dstOffset + dstDkOffset + dstCinOffset + self->ctx.head_ +
+                                 j * baseNAlignLength * self->ctx.tiling_->dk;
 
-        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(
-            output[dstBaseNOffset], l0c[srcOffset], fixPipeParams);
+        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstBaseNOffset], l0c[srcOffset],
+                                                                       fixPipeParams);
         UpdateHwKIterState<Intf>(self, tailCinExist, baseCin);
     }
     self->ctx.lastNIdx_ = self->ctx.curNIdx_;
@@ -167,8 +168,8 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                            LocalTensor<typename Intf::L0cT>& l0c)
 {
     constexpr uint64_t baseCin = BLOCK_CUBE;
     bool tailCinExist = (self->ctx.singleShapeCin_ % baseCin != 0);
@@ -210,13 +211,13 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(
         nValueSum += nValue;
         int64_t baseNAlignLength = baseCin * self->ctx.hwK_;
         int64_t dstDkOffset = (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_ * self->ctx.cinG_;
-        int64_t dstCinOffset =
-            (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN / baseNAlignLength * baseCin;
+        int64_t dstCinOffset = (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
+                               baseNAlignLength * baseCin;
 
-        int64_t dstBaseNOffset =
-            dstOffset + dstDkOffset + dstCinOffset + self->ctx.head_ * self->ctx.cinG_ + j * baseCin;
-        AscendC::Fixpipe<typename Intf::DstT, float, CFG_ROW_MAJOR>(
-            output[dstBaseNOffset], l0c[srcOffset], fixPipeParams);
+        int64_t dstBaseNOffset = dstOffset + dstDkOffset + dstCinOffset + self->ctx.head_ * self->ctx.cinG_ +
+                                 j * baseCin;
+        AscendC::Fixpipe<typename Intf::DstT, float, CFG_ROW_MAJOR>(output[dstBaseNOffset], l0c[srcOffset],
+                                                                    fixPipeParams);
         UpdateHwKIterState<Intf>(self, tailCinExist, baseCin);
     }
     self->ctx.lastNIdx_ = self->ctx.curNIdx_;
@@ -224,8 +225,9 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(Intf* self,
+                                                               const GlobalTensor<typename Intf::DstT>& output,
+                                                               LocalTensor<typename Intf::L0cT>& l0c)
 {
     // (dk, ci1, hkwk, co1, co0, ci0) -> (dk, hk, wk, ci, co) NZ2DN
     constexpr uint64_t baseCin = BLOCK_CUBE;
@@ -279,8 +281,8 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(
         int64_t dstBaseNOffset = dstOffset + dstDkOffset + dstCinOffset +
                                  self->ctx.head_ * self->ctx.cinG_ * self->ctx.tiling_->cout +
                                  j * baseCin * self->ctx.tiling_->cout;
-        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(
-            output[dstBaseNOffset], l0c[srcOffset], fixPipeParams);
+        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstBaseNOffset], l0c[srcOffset],
+                                                                       fixPipeParams);
         UpdateHwKIterState<Intf>(self, tailCinExist, baseCin);
     }
     self->ctx.lastNIdx_ = self->ctx.curNIdx_;
@@ -288,8 +290,8 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmNormal(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmNormal(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                               LocalTensor<typename Intf::L0cT>& l0c)
 {
     bool tailCinExist = (self->ctx.singleShapeCin_ & 0xF) != 0;
     CalcL0cParams(self, tailCinExist);
@@ -329,8 +331,8 @@ static __aicore__ inline void LoadL0c2GmNormal(
         int64_t srcDkStride = i * ShiftCeilM0(fixPipeParams.nSize, BLOCK_CUBE) * BLOCK_CUBE * self->ctx.hwK_ *
                               ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE;
         int64_t dstDkStride = i * self->ctx.hwK_;
-        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(
-            output[dstOffset + dstDkStride], l0c[srcDkStride], fixPipeParams);
+        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstOffset + dstDkStride],
+                                                                       l0c[srcDkStride], fixPipeParams);
     }
     if (tailCinExist) {
         self->ctx.cinRemainLen_ -= baseCin;
@@ -341,17 +343,17 @@ static __aicore__ inline void LoadL0c2GmNormal(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmNormalNz2Nd(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmNormalNz2Nd(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                    LocalTensor<typename Intf::L0cT>& l0c)
 {
     bool tailCinExist = (self->ctx.singleShapeCin_ & 0xF) != 0;
     CalcL0cParams(self, tailCinExist);
 
     uint32_t curCin = Ceil(self->ctx.tiling_->baseN, self->ctx.curSingleCoreDk_ * self->ctx.hwK_);
-    int64_t dstOffset =
-        self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
-        (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * curCin +
-        (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ * self->ctx.cinG_;
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
+                        (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * curCin +
+                        (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ *
+                            self->ctx.cinG_;
 
     AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
     fixPipeParams.params.ndNum = self->ctx.hwK_;
@@ -380,8 +382,8 @@ static __aicore__ inline void LoadL0c2GmNormalNz2Nd(
         int64_t srcDkStride = i * ShiftCeilM0(fixPipeParams.nSize, BLOCK_CUBE) * BLOCK_CUBE * self->ctx.hwK_ *
                               ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE;
         int64_t dstDkStride = i * self->ctx.hwK_ * self->ctx.cinG_;
-        AscendC::Fixpipe<typename Intf::DstT, float, CFG_ROW_MAJOR>(
-            output[dstOffset + dstDkStride], l0c[srcDkStride], fixPipeParams);
+        AscendC::Fixpipe<typename Intf::DstT, float, CFG_ROW_MAJOR>(output[dstOffset + dstDkStride], l0c[srcDkStride],
+                                                                    fixPipeParams);
     }
     if (tailCinExist) {
         self->ctx.cinRemainLen_ -= baseCin;
@@ -392,8 +394,8 @@ static __aicore__ inline void LoadL0c2GmNormalNz2Nd(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmNormalNz2DHWCN(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void LoadL0c2GmNormalNz2DHWCN(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                       LocalTensor<typename Intf::L0cT>& l0c)
 {
     uint32_t curCin = Ceil(self->ctx.tiling_->baseN, self->ctx.curSingleCoreDk_ * self->ctx.hwK_);
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM +
@@ -430,8 +432,8 @@ static __aicore__ inline void LoadL0c2GmNormalNz2DHWCN(
         int64_t srcDkStride = i * ShiftCeilM0(fixPipeParams.nSize, BLOCK_CUBE) * BLOCK_CUBE * self->ctx.hwK_ *
                               ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE;
         int64_t dstDkStride = i * self->ctx.hwK_ * self->ctx.cinG_ * self->ctx.tiling_->cout;
-        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(
-            output[dstOffset + dstDkStride], l0c[srcDkStride], fixPipeParams);
+        AscendC::Fixpipe<typename Intf::DstT, float, CFG_COLUMN_MAJOR>(output[dstOffset + dstDkStride],
+                                                                       l0c[srcDkStride], fixPipeParams);
     }
     return;
 }

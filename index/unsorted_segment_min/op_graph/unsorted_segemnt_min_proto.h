@@ -26,7 +26,8 @@ namespace ge {
 
 * @par Inputs:
 * Three inputs, including:
-* @li x: A Tensor of type double, float32, float16, bfloat16, int8, int16, int32, int64, uint8, uint16, uint32, uint64, format is ND. bank of shape must greater zero.
+* @li x: A Tensor of type double, float32, float16, bfloat16, int8, int16, int32, int64, uint8, uint16, uint32, uint64,
+format is ND. bank of shape must greater zero.
 * @li segment_ids: A Tensor of type int32, int64, whose shape is a prefix of "x", format is ND.
 * @li num_segments: A 1D Tensor contains a single element of type int32, int64, format is ND.
 * Indicates the output segment.
@@ -45,4 +46,4 @@ REG_OP(UnsortedSegmentMin)
     .OP_END_FACTORY_REG(UnsortedSegmentMin)
 } // namespace ge
 
-#endif  // UNSPRTED_SEGMENT_MIN_PROTO_H_
+#endif // UNSPRTED_SEGMENT_MIN_PROTO_H_

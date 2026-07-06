@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *EluGradV2(const aclTensor *gradOutput, float alpha, float scale, float inputScale, bool isResult,
-                           const aclTensor *selfOrResult, aclOpExecutor *executor);
+const aclTensor* EluGradV2(const aclTensor* gradOutput, float alpha, float scale, float inputScale, bool isResult,
+                           const aclTensor* selfOrResult, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_ELU_GRAD_V2_H_

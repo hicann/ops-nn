@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_erfc_proto.h"
 
-class ForeachErfcTest : public testing::Test
-{
+class ForeachErfcTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachErfc SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachErfc SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachErfc TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachErfc TearDown" << std::endl; }
 };
 
 TEST_F(ForeachErfcTest, infer_shape_known_success)

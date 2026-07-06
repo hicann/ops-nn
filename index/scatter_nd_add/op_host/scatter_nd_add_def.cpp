@@ -16,52 +16,53 @@
 
 namespace ops {
 class ScatterNdAdd : public OpDef {
- public:
-  explicit ScatterNdAdd(const char* name) : OpDef(name) {
-    this->Input("var")
-      .ParamType(REQUIRED)
-      .DataType({ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL, ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT,
-                 ge::DT_FLOAT16, ge::DT_BOOL})
-      .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-      .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                           ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("indices")
-      .ParamType(REQUIRED)
-      .DataType({ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                 ge::DT_INT32, ge::DT_INT32})
-      .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-      .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                           ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("updates")
-      .ParamType(REQUIRED)
-      .DataType({ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL, ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT,
-                 ge::DT_FLOAT16, ge::DT_BOOL})
-      .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-      .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                           ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Output("var")
-      .ParamType(REQUIRED)
-      .DataType({ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL, ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT,
-                 ge::DT_FLOAT16, ge::DT_BOOL})
-      .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-      .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                           ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
-    OpAICoreConfig aicore_config;
-    aicore_config.DynamicCompileStaticFlag(true)
-      .DynamicFormatFlag(false)
-      .DynamicRankSupportFlag(true)
-      .DynamicShapeSupportFlag(true)
-      .NeedCheckSupportFlag(false)
-      .PrecisionReduceFlag(true)
-      .ExtendCfgInfo("opFile.value", "scatter_nd_add_apt");
-    this->AICore().AddConfig("ascend950", aicore_config);
-  }
+public:
+    explicit ScatterNdAdd(const char* name) : OpDef(name)
+    {
+        this->Input("var")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL, ge::DT_INT64,
+                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("indices")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("updates")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL, ge::DT_INT64,
+                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("var")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL, ge::DT_INT64,
+                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "scatter_nd_add_apt");
+        this->AICore().AddConfig("ascend950", aicore_config);
+    }
 };
 
 OP_ADD(ScatterNdAdd);
-}  // namespace ops
+} // namespace ops

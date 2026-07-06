@@ -23,15 +23,13 @@ using namespace AscendC;
 using namespace NsForeachDivList;
 
 enum class ForeachDivListTilingKey : uint32_t {
-    TILING_KEY_FLOAT32  = 0,
-    TILING_KEY_FLOAT16  = 1,
+    TILING_KEY_FLOAT32 = 0,
+    TILING_KEY_FLOAT16 = 1,
     TILING_KEY_BFLOAT16 = 2,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_div_list(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_div_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachDivListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachDivListTilingData, tilingData, tiling);

@@ -80,7 +80,7 @@ const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
 std::string GeFormatToString(const ge::Format& geFormat);
 std::string GeDtypeToString(const ge::DataType& geDtype);
 
-inline std::string SocListToString(const std::map<std::string, NpuArch> &socList)
+inline std::string SocListToString(const std::map<std::string, NpuArch>& socList)
 {
     std::string result = "[";
     for (auto it = socList.begin(); it != socList.end(); ++it) {
@@ -155,31 +155,29 @@ struct ConvDescInfo {
 
 class ConvFusionUtilsPass {
 public:
-    static bool AddSubgraphInput(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary, const ge::GNode &node,
-        const int64_t subgraphIndex, const int64_t boundaryIndex);
-    static bool AddSubgraphOutput(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary, const ge::GNode &node,
-        const int64_t subgraphIndex, const int64_t boundaryIndex);
+    static bool AddSubgraphInput(std::unique_ptr<ge::fusion::SubgraphBoundary>& boundary, const ge::GNode& node,
+                                 const int64_t subgraphIndex, const int64_t boundaryIndex);
+    static bool AddSubgraphOutput(std::unique_ptr<ge::fusion::SubgraphBoundary>& boundary, const ge::GNode& node,
+                                  const int64_t subgraphIndex, const int64_t boundaryIndex);
     template <typename T>
-    static bool CheckSupportList(const std::vector<std::vector<T>> &supportLists,
-        const std::vector<T> &curList);
-    static bool CheckSocList(const std::map<std::string, NpuArch> &socList, NpuArch &npuArch);
-    static bool GetConvBaseAttr(const ge::GNode &convNode, ConvBaseAttrs &baseAttrs,
-        const ConvDescInfo &convDescInfo);
-    static bool GetConvDescInfo(const ge::GNode &convNode, ConvDescInfo &convDescInfo);
-    static bool GetMatchedNodes(const ge::GraphPtr &graph, std::vector<ge::GNode> &matchedNodes,
-        const ge::AscendString &nodeType);
-    static ge::GNodePtr GetNodePtr(const ge::GNode &node, const ConvDescInfo &convDescInfo);
-    static bool IsUnknownShape(const ge::TensorDesc &tensorDesc);
-    static ge::AscendString ListToAscendString(const std::vector<ge::AscendString> &strList);
-    static void PrintConvDescInfo(const ConvDescInfo &convDescInfo);
-    static bool UpdateInputDesc(ge::GNode *convNode, const ConvDescInfo &convDescInfo);
-    static bool BuildConv2dNode(ge::Graph *graph, const std::string &nodeName,
-        const std::vector<ge::es::EsTensorHolder> &inputs, ge::GNode &conv2dNode);
+    static bool CheckSupportList(const std::vector<std::vector<T>>& supportLists, const std::vector<T>& curList);
+    static bool CheckSocList(const std::map<std::string, NpuArch>& socList, NpuArch& npuArch);
+    static bool GetConvBaseAttr(const ge::GNode& convNode, ConvBaseAttrs& baseAttrs, const ConvDescInfo& convDescInfo);
+    static bool GetConvDescInfo(const ge::GNode& convNode, ConvDescInfo& convDescInfo);
+    static bool GetMatchedNodes(const ge::GraphPtr& graph, std::vector<ge::GNode>& matchedNodes,
+                                const ge::AscendString& nodeType);
+    static ge::GNodePtr GetNodePtr(const ge::GNode& node, const ConvDescInfo& convDescInfo);
+    static bool IsUnknownShape(const ge::TensorDesc& tensorDesc);
+    static ge::AscendString ListToAscendString(const std::vector<ge::AscendString>& strList);
+    static void PrintConvDescInfo(const ConvDescInfo& convDescInfo);
+    static bool UpdateInputDesc(ge::GNode* convNode, const ConvDescInfo& convDescInfo);
+    static bool BuildConv2dNode(ge::Graph* graph, const std::string& nodeName,
+                                const std::vector<ge::es::EsTensorHolder>& inputs, ge::GNode& conv2dNode);
 };
 
 template <typename T>
-bool ConvFusionUtilsPass::CheckSupportList(const std::vector<std::vector<T>> &supportLists,
-    const std::vector<T> &curList)
+bool ConvFusionUtilsPass::CheckSupportList(const std::vector<std::vector<T>>& supportLists,
+                                           const std::vector<T>& curList)
 {
     size_t compareSize = curList.size();
 

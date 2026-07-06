@@ -19,19 +19,19 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(IndexPutWithSortTilingData)
-    TILING_DATA_FIELD_DEF(uint32_t, coreNums);
-    TILING_DATA_FIELD_DEF(uint64_t, sliceSizeAligned);
-    TILING_DATA_FIELD_DEF(uint64_t, sliceSize);
-    TILING_DATA_FIELD_DEF(uint32_t, frontCoreNums);
-    TILING_DATA_FIELD_DEF(uint64_t, frontCoreIndicesNums);
-    TILING_DATA_FIELD_DEF(uint64_t, tailCoreIndicesNums);
-    TILING_DATA_FIELD_DEF(uint64_t, frontBlocks);
-    TILING_DATA_FIELD_DEF(uint32_t, frontBlockSize);
-    TILING_DATA_FIELD_DEF(uint32_t, lastBlockSize);
-    TILING_DATA_FIELD_DEF(uint64_t, frontCoreDataLength);
-    TILING_DATA_FIELD_DEF(uint64_t, tailCoreDataLength);
-    TILING_DATA_FIELD_DEF(uint64_t, indicesNums);
-    TILING_DATA_FIELD_DEF(uint32_t, accumulate);
+TILING_DATA_FIELD_DEF(uint32_t, coreNums);
+TILING_DATA_FIELD_DEF(uint64_t, sliceSizeAligned);
+TILING_DATA_FIELD_DEF(uint64_t, sliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, frontCoreNums);
+TILING_DATA_FIELD_DEF(uint64_t, frontCoreIndicesNums);
+TILING_DATA_FIELD_DEF(uint64_t, tailCoreIndicesNums);
+TILING_DATA_FIELD_DEF(uint64_t, frontBlocks);
+TILING_DATA_FIELD_DEF(uint32_t, frontBlockSize);
+TILING_DATA_FIELD_DEF(uint32_t, lastBlockSize);
+TILING_DATA_FIELD_DEF(uint64_t, frontCoreDataLength);
+TILING_DATA_FIELD_DEF(uint64_t, tailCoreDataLength);
+TILING_DATA_FIELD_DEF(uint64_t, indicesNums);
+TILING_DATA_FIELD_DEF(uint32_t, accumulate);
 END_TILING_DATA_DEF
 
 REGISTER_TILING_DATA_CLASS(IndexPutWithSort, IndexPutWithSortTilingData)
@@ -41,5 +41,5 @@ struct IndexPutWithSortCompileInfo {
     uint64_t ubSizePlatForm = 0;
     uint64_t workspaceSize = 0;
 };
-}
+} // namespace optiling
 #endif // INDEX_PUT_WITH_SORT_TILING_H

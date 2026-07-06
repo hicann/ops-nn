@@ -55,10 +55,10 @@ static __aicore__ inline void SetEnAtomic(Intf* self, uint8_t enAtomic)
         if (enAtomic == 1) {
             SetAtomicAdd<typename Intf::DstT>();
         }
-    } else if constexpr (
-        std::is_same<typename Intf::DstT, bfloat16_t>::value || std::is_same<typename Intf::DstT, half>::value ||
-        std::is_same<typename Intf::DstT, hifloat8_t>::value ||
-        std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+    } else if constexpr (std::is_same<typename Intf::DstT, bfloat16_t>::value ||
+                         std::is_same<typename Intf::DstT, half>::value ||
+                         std::is_same<typename Intf::DstT, hifloat8_t>::value ||
+                         std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
         if (self->ctx.enableSplitDk_) {
             // 满足此条件时当前Din不是第一次计算，开启累加
             enAtomic = (self->ctx.curDkIdx_ > 0) &&
@@ -77,8 +77,8 @@ static __aicore__ inline void SetEnAtomic(Intf* self, uint8_t enAtomic)
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2OutForNz2Dn(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& useC1Buf)
+static __aicore__ inline void LoadL0c2OutForNz2Dn(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                  LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         LoadL0c2OutForKernelSplitHW<Intf>(self, useC1Buf);
@@ -90,8 +90,8 @@ static __aicore__ inline void LoadL0c2OutForNz2Dn(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2OutForNz2Nd(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& useC1Buf)
+static __aicore__ inline void LoadL0c2OutForNz2Nd(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                  LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         LoadL0c2GmNdForKernelSplitH<Intf>(self, output, useC1Buf);
@@ -101,8 +101,8 @@ static __aicore__ inline void LoadL0c2OutForNz2Nd(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2Gm(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
+static __aicore__ inline void LoadL0c2Gm(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                         uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
         if ASCEND_IS_AIV_SHOULD_RETURN {
@@ -130,9 +130,9 @@ static __aicore__ inline void LoadL0c2Gm(
         LoadL0c2OutForNz2Nd<Intf>(self, output, useC1Buf);
 #endif
     }
-    if constexpr (
-        std::is_same<typename Intf::DstT, float>::value || std::is_same<typename Intf::DstT, bfloat16_t>::value ||
-        std::is_same<typename Intf::DstT, half>::value) {
+    if constexpr (std::is_same<typename Intf::DstT, float>::value ||
+                  std::is_same<typename Intf::DstT, bfloat16_t>::value ||
+                  std::is_same<typename Intf::DstT, half>::value) {
         if (enAtomic == 1) {
             SetAtomicNone();
         }

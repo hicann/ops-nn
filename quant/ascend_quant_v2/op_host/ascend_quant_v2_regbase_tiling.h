@@ -32,8 +32,7 @@ using namespace Ops::NN::Optiling;
 
 namespace optiling {
 namespace ascendquantv2regbase {
-enum class RoundMode
-{
+enum class RoundMode {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -51,8 +50,8 @@ public:
 protected:
     ge::graphStatus GetCompileInfo();
     ge::graphStatus GetOpParam();
-    ge::graphStatus CheckInputValid(
-        const gert::Shape& input1, const gert::Shape& input2, int32_t axis, const std::string& param) const;
+    ge::graphStatus CheckInputValid(const gert::Shape& input1, const gert::Shape& input2, int32_t axis,
+                                    const std::string& param) const;
     ge::graphStatus CheckAttrs(const gert::Shape& xShape);
     RoundMode GetRoundMode(std::string& roundMode);
     void MergeInputShape(const gert::Shape& input);

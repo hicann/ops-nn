@@ -20,13 +20,13 @@ constexpr int32_t MAX_TENSOR_NUM_FOREACH_COPY = 128;
 
 class ForeachCopyTilingData {
 public:
-    int32_t needCoreNum;       // 需要的核数（≤ maxCoreNum）
-    int32_t tensorNum;         // 张量列表中的张量总数
-    int32_t tensorStart;       // 本核处理的起始张量索引（0-based）
-    int64_t tensorOffset;      // 本核在起始张量内的元素偏移
-    int64_t totalElements;     // 所有张量的元素总数（用于核内 stride 循环终止判断）
-    uint64_t dtypeKey;         // 数据类型枚举值，用于 kernel 分发到对应模板实例
-    int64_t numels[MAX_TENSOR_NUM_FOREACH_COPY];  // 每个张量的元素数量
+    int32_t needCoreNum;   // 需要的核数（≤ maxCoreNum）
+    int32_t tensorNum;     // 张量列表中的张量总数
+    int32_t tensorStart;   // 本核处理的起始张量索引（0-based）
+    int64_t tensorOffset;  // 本核在起始张量内的元素偏移
+    int64_t totalElements; // 所有张量的元素总数（用于核内 stride 循环终止判断）
+    uint64_t dtypeKey;     // 数据类型枚举值，用于 kernel 分发到对应模板实例
+    int64_t numels[MAX_TENSOR_NUM_FOREACH_COPY]; // 每个张量的元素数量
 };
 
 #endif // FOREACH_COPY_TILING_DATA_H

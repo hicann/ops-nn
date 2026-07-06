@@ -27,10 +27,9 @@ using namespace SparseSegmentMeanGradNameSpace;
 #define SMALL_INNER_LT_INNER_GT_OUTTER_TILING_KEY 301
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-__aicore__ inline void invokeTemplateMeanSimtLarge(
-    GM_ADDR x, GM_ADDR sorted_indices, GM_ADDR segment_ids, GM_ADDR output_dim0,
-    GM_ADDR location, GM_ADDR y, GM_ADDR workspace,
-    const SortedSparseSegmentMeanGradSimtTilingData& tilingData)
+__aicore__ inline void invokeTemplateMeanSimtLarge(GM_ADDR x, GM_ADDR sorted_indices, GM_ADDR segment_ids,
+                                                   GM_ADDR output_dim0, GM_ADDR location, GM_ADDR y, GM_ADDR workspace,
+                                                   const SortedSparseSegmentMeanGradSimtTilingData& tilingData)
 {
     SortedSparseSegmentMeanGradSimtLargeInner<T1, T2, T3, T4, T6, T5> op;
     op.Init(x, sorted_indices, segment_ids, output_dim0, location, y, workspace, &tilingData);
@@ -38,18 +37,19 @@ __aicore__ inline void invokeTemplateMeanSimtLarge(
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-__aicore__ inline void invokeTemplateMeanSimtSmall(
-    GM_ADDR x, GM_ADDR sorted_indices, GM_ADDR segment_ids, GM_ADDR output_dim0,
-    GM_ADDR location, GM_ADDR y, GM_ADDR workspace,
-    const SortedSparseSegmentMeanGradSimtTilingData& tilingData)
+__aicore__ inline void invokeTemplateMeanSimtSmall(GM_ADDR x, GM_ADDR sorted_indices, GM_ADDR segment_ids,
+                                                   GM_ADDR output_dim0, GM_ADDR location, GM_ADDR y, GM_ADDR workspace,
+                                                   const SortedSparseSegmentMeanGradSimtTilingData& tilingData)
 {
     SortedSparseSegmentMeanGradSimtSmallInner<T1, T2, T3, T4, T6, T5> op;
     op.Init(x, sorted_indices, segment_ids, output_dim0, location, y, workspace, &tilingData);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void sorted_sparse_segment_mean_grad(
-    GM_ADDR x, GM_ADDR sorted_indices, GM_ADDR pre_location_indices, GM_ADDR segment_ids, GM_ADDR output_dim0, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sorted_sparse_segment_mean_grad(GM_ADDR x, GM_ADDR sorted_indices,
+                                                                      GM_ADDR pre_location_indices, GM_ADDR segment_ids,
+                                                                      GM_ADDR output_dim0, GM_ADDR y, GM_ADDR workspace,
+                                                                      GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -66,21 +66,33 @@ extern "C" __global__ __aicore__ void sorted_sparse_segment_mean_grad(
 
     if (TILING_KEY_IS(LARGE_INNER_LT_INNER_LT_OUTTER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SortedSparseSegmentMeanGradSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS, uint32_t, uint32_t>(x, sorted_indices, segment_ids, output_dim0, pre_location_indices, y, userWs, tilingData);
+        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS,
+                                    uint32_t, uint32_t>(x, sorted_indices, segment_ids, output_dim0,
+                                                        pre_location_indices, y, userWs, tilingData);
     } else if (TILING_KEY_IS(LARGE_INNER_LT_INNER_GT_OUTTER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SortedSparseSegmentMeanGradSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS, uint32_t, uint64_t>(x, sorted_indices, segment_ids, output_dim0, pre_location_indices, y, userWs, tilingData);
+        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS,
+                                    uint32_t, uint64_t>(x, sorted_indices, segment_ids, output_dim0,
+                                                        pre_location_indices, y, userWs, tilingData);
     } else if (TILING_KEY_IS(LARGE_INNER_GT_INNER_LT_OUTTER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SortedSparseSegmentMeanGradSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS, uint64_t, uint32_t>(x, sorted_indices, segment_ids, output_dim0, pre_location_indices, y, userWs, tilingData);
+        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS,
+                                    uint64_t, uint32_t>(x, sorted_indices, segment_ids, output_dim0,
+                                                        pre_location_indices, y, userWs, tilingData);
     } else if (TILING_KEY_IS(LARGE_INNER_GT_INNER_GT_OUTTER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SortedSparseSegmentMeanGradSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS, uint64_t, uint64_t>(x, sorted_indices, segment_ids, output_dim0, pre_location_indices, y, userWs, tilingData);
+        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS,
+                                    uint64_t, uint64_t>(x, sorted_indices, segment_ids, output_dim0,
+                                                        pre_location_indices, y, userWs, tilingData);
     } else if (TILING_KEY_IS(SMALL_INNER_LT_INNER_LT_OUTTER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SortedSparseSegmentMeanGradSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtSmall<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS, uint32_t, uint32_t>(x, sorted_indices, segment_ids, output_dim0, pre_location_indices, y, userWs, tilingData);
+        invokeTemplateMeanSimtSmall<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS,
+                                    uint32_t, uint32_t>(x, sorted_indices, segment_ids, output_dim0,
+                                                        pre_location_indices, y, userWs, tilingData);
     } else if (TILING_KEY_IS(SMALL_INNER_LT_INNER_GT_OUTTER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SortedSparseSegmentMeanGradSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtSmall<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS, uint32_t, uint64_t>(x, sorted_indices, segment_ids, output_dim0, pre_location_indices, y, userWs, tilingData);
+        invokeTemplateMeanSimtSmall<DTYPE_X, DTYPE_SORTED_INDICES, DTYPE_PRE_LOCATION_INDICES, DTYPE_SEGMENT_IDS,
+                                    uint32_t, uint64_t>(x, sorted_indices, segment_ids, output_dim0,
+                                                        pre_location_indices, y, userWs, tilingData);
     }
 }

@@ -24,10 +24,12 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AdaLayerNormQuant);
 
-const std::tuple<aclTensor*, aclTensor*> AdaLayerNormQuant(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* smoothScalesOptional, float epsilon, const char* quantMode,
-    int32_t dstType, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> AdaLayerNormQuant(const aclTensor* x, const aclTensor* scale,
+                                                           const aclTensor* shift, const aclTensor* weightOptional,
+                                                           const aclTensor* biasOptional,
+                                                           const aclTensor* smoothScalesOptional, float epsilon,
+                                                           const char* quantMode, int32_t dstType,
+                                                           aclOpExecutor* executor)
 {
     L0_DFX(AdaLayerNormQuant, x, scale, shift, weightOptional, biasOptional, smoothScalesOptional, epsilon, quantMode);
 

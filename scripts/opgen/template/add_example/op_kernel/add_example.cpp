@@ -15,8 +15,7 @@
 
 #include "add_example.h"
 
-enum class AddExampleTilingKey : uint32_t
-{
+enum class AddExampleTilingKey : uint32_t {
     TILING_KEY_EXAMPLE_FLOAT = 0,
     TILING_KEY_EXAMPLE_INT32 = 1,
 };

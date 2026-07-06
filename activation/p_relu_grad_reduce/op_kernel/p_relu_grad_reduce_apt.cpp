@@ -21,8 +21,8 @@ using namespace Ops::Base::ReduceOpTmpl;
 using namespace AscendC;
 
 template <REDUCE_TPL_PARAM>
-__global__ __aicore__ void prelu_grad_reduce(GM_ADDR grads, GM_ADDR features, GM_ADDR weights,
-                                             GM_ADDR updates, GM_ADDR da, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void prelu_grad_reduce(GM_ADDR grads, GM_ADDR features, GM_ADDR weights, GM_ADDR updates,
+                                             GM_ADDR da, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

@@ -49,27 +49,26 @@ const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES = {
 
 // Fmap Filter Output
 const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_3510 = {
-    {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW},
-    {ge::FORMAT_NDHWC, ge::FORMAT_DHWCN, ge::FORMAT_NDHWC}
-};
+    {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}, {ge::FORMAT_NDHWC, ge::FORMAT_DHWCN, ge::FORMAT_NDHWC}};
 
 } // namespace Conv3DDequantToQuantConv3DFusion
 
 class __attribute__((visibility("default"))) Conv3DDequantToQuantConv3DFusionPass : public ConvFusionBasePass {
 protected:
     void InitMember() override;
-    bool MeetRequirements(const ge::GNode &convNode) override;
+    bool MeetRequirements(const ge::GNode& convNode) override;
     ge::AscendString GetNodeType() const override;
-    void PrintGraphStructure() const override {};
-    ge::Status ConvFusionPreImpl(
-        ge::GraphPtr &graph, ge::GNode &convNode, const ge::CustomPassContext &pass_context) override;
-    bool ConvFusionReplaceImpl(ge::GraphPtr &graph, const ge::GNode &convNode) override;
-    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode &convNode) override;
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
+    void PrintGraphStructure() const override{};
+    ge::Status ConvFusionPreImpl(ge::GraphPtr& graph, ge::GNode& convNode,
+                                 const ge::CustomPassContext& pass_context) override;
+    bool ConvFusionReplaceImpl(ge::GraphPtr& graph, const ge::GNode& convNode) override;
+    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode& convNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
+
 private:
-    bool GetPostCubeNodes(const ge::GNode &convNode);
-    void SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchVec);
-    bool UpdateQuantConv3DDesc(ge::GNode *quantConv3D, ge::TensorDesc &postCubeOutDesc);
+    bool GetPostCubeNodes(const ge::GNode& convNode);
+    void SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo>& matchVec);
+    bool UpdateQuantConv3DDesc(ge::GNode* quantConv3D, ge::TensorDesc& postCubeOutDesc);
 
     ge::GNodePtr postCubeNode = nullptr;
 };

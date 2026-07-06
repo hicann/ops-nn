@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn_dynamic_quant.h"
 #include "quant/dynamic_quant_v2/op_host/op_api/dynamic_quant_v2.h"
 #include "aclnn_dynamic_quant_v3.h"
@@ -50,13 +50,13 @@ using DtypeCheck = std::initializer_list<op::DataType>;
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static const std::initializer_list<op::DataType> INPUT_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> INPUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                             op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> INPUT_DTYPE_SUPPORT_LIST_FP16 = {op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> GROUP_INDEX_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> GROUP_INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                                   op::DataType::DT_INT64};
 
 static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT4, op::DataType::DT_INT8, op::DataType::DT_INT32};
@@ -118,9 +118,8 @@ static inline const std::initializer_list<op::DataType>& GetOutputSupportListByN
             return OUTPUT_DTYPE_SUPPORT_LIST_INT8;
         }
         default: {
-            OP_LOGE(
-                ACLNN_ERR_RUNTIME_ERROR, "API aclnnDynamicQuant support for %u is not implemented",
-                static_cast<uint32_t>(npuArch));
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "API aclnnDynamicQuant support for %u is not implemented",
+                    static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }
@@ -148,8 +147,8 @@ static aclnnStatus CheckOpDim(const op::Shape& shape1, const op::Shape& shape2, 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckInt32OutputShape(
-    const op::Shape& shape1, const op::Shape& shape2, uint32_t shape1Dim, uint32_t shape2Dim)
+static aclnnStatus CheckInt32OutputShape(const op::Shape& shape1, const op::Shape& shape2, uint32_t shape1Dim,
+                                         uint32_t shape2Dim)
 {
     if (shape1Dim != shape2Dim) {
         return ACLNN_ERR_PARAM_INVALID;
@@ -159,22 +158,20 @@ static aclnnStatus CheckInt32OutputShape(
     int64_t dimOutput = shape2.GetDim(shape2Dim - 1);
     // check last dim
     if (dimInput != (dimOutput * INT4_NUMS_IN_INT32_SPACE)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "If output dtype is int32, "
-            "the last dimension of output must be 1/8 of the last dimension of input, "
-            "the last dim of input is (%ld), the last dim of output is (%ld).",
-            dimInput, dimOutput);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "If output dtype is int32, "
+                "the last dimension of output must be 1/8 of the last dimension of input, "
+                "the last dim of input is (%ld), the last dim of output is (%ld).",
+                dimInput, dimOutput);
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     for (int64_t i = 0; i < shape1Dim - 1; i++) {
         if (shape1.GetDim(i) != shape2.GetDim(i)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The (%ld)-th dim of input must be the same as (%ld)-th dim of output, "
-                "where input is (%ld) and output is (%ld).",
-                i, i, shape1.GetDim(i), shape2.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The (%ld)-th dim of input must be the same as (%ld)-th dim of output, "
+                    "where input is (%ld) and output is (%ld).",
+                    i, i, shape1.GetDim(i), shape2.GetDim(i));
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
@@ -216,25 +213,24 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
     if (dynamicQuantParams.smoothScales) {
         if (dynamicQuantParams.groupIndex) {
             auto groupDimNum = dynamicQuantParams.groupIndex->GetViewShape().GetDimNum();
-            CHECK_COND(
-                groupDimNum == 1, ACLNN_ERR_PARAM_INVALID, "The dimNum[%lu] of group_indexs should be equal to one.",
-                groupDimNum);
+            CHECK_COND(groupDimNum == 1, ACLNN_ERR_PARAM_INVALID,
+                       "The dimNum[%lu] of group_indexs should be equal to one.", groupDimNum);
         } else {
             auto smoothDimNum = dynamicQuantParams.smoothScales->GetViewShape().GetDimNum();
-            CHECK_COND(
-                smoothDimNum == 1, ACLNN_ERR_PARAM_INVALID, "The dimNum[%lu] of smooth_scales should be equal to one.",
-                smoothDimNum);
+            CHECK_COND(smoothDimNum == 1, ACLNN_ERR_PARAM_INVALID,
+                       "The dimNum[%lu] of smooth_scales should be equal to one.", smoothDimNum);
             if (mode == "perchannel") {
                 CHECK_COND(
                     dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastToSecondDimInput,
                     ACLNN_ERR_PARAM_INVALID,
-                    "If quantMode is perchannel, the second to last dim[%ld] of x and the last dim[%ld] of smooth_scales shoule be equal.",
+                    "If quantMode is perchannel, the second to last dim[%ld] of x and the last dim[%ld] of "
+                    "smooth_scales shoule be equal.",
                     xLastToSecondDimInput, dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
             } else {
-                CHECK_COND(
-                    dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastDimInput,
-                    ACLNN_ERR_PARAM_INVALID, "The last dim[%ld] of x and the dim[%ld] of smooth_scales shoule be equal.",
-                    xLastDimInput, dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
+                CHECK_COND(dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastDimInput,
+                           ACLNN_ERR_PARAM_INVALID,
+                           "The last dim[%ld] of x and the dim[%ld] of smooth_scales shoule be equal.", xLastDimInput,
+                           dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
             }
         }
     }
@@ -242,28 +238,24 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
     auto yDtype = dynamicQuantParams.y->GetDataType();
     auto yDimNum = dynamicQuantParams.y->GetViewShape().GetDimNum();
     if (yDtype != op::DataType::DT_INT32) {
-        CHECK_COND(
-            CheckOpDim(dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.y->GetViewShape(), xDimNum, yDimNum) ==
-                ACLNN_SUCCESS,
-            ACLNN_ERR_PARAM_INVALID, "The shapes of x and y are inconsistent.");
+        CHECK_COND(CheckOpDim(dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.y->GetViewShape(), xDimNum,
+                              yDimNum) == ACLNN_SUCCESS,
+                   ACLNN_ERR_PARAM_INVALID, "The shapes of x and y are inconsistent.");
     }
 
     // check y dtype int32
     if (yDtype == op::DataType::DT_INT32) {
-        CHECK_RET(
-            CheckInt32OutputShape(
-                dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.y->GetViewShape(), xDimNum, yDimNum) ==
-                ACLNN_SUCCESS,
-            ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckInt32OutputShape(dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.y->GetViewShape(),
+                                        xDimNum, yDimNum) == ACLNN_SUCCESS,
+                  ACLNN_ERR_PARAM_INVALID);
     }
 
     // check y dtype int4
     if (yDtype == op::DataType::DT_INT4) {
         if (xLastDimInput % INT4_NUMS_IN_INT8_SPACE) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "If y dtype is int4, the last dim of x must be divisible by 2, but the last dim is (%ld).",
-                xLastDimInput);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "If y dtype is int4, the last dim of x must be divisible by 2, but the last dim is (%ld).",
+                    xLastDimInput);
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
@@ -271,31 +263,25 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
     // check scale shape
     auto scaleNum = dynamicQuantParams.scale->GetViewShape().GetDimNum();
     if (mode == "pertoken") {
-        CHECK_COND(
-            CheckOpDim(
-                dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.scale->GetViewShape(), xDimNum - 1,
-                scaleNum) == ACLNN_SUCCESS,
-            ACLNN_ERR_PARAM_INVALID,
-            "The shapes of x and scale should be consistent except for the last dimension of x.");
+        CHECK_COND(CheckOpDim(dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.scale->GetViewShape(),
+                              xDimNum - 1, scaleNum) == ACLNN_SUCCESS,
+                   ACLNN_ERR_PARAM_INVALID,
+                   "The shapes of x and scale should be consistent except for the last dimension of x.");
     } else if (mode == "pertensor") {
-        CHECK_COND(
-            scaleNum == 1, ACLNN_ERR_PARAM_INVALID, "If quantMode is pertensor, the shape of scale must be (1,).");
-        CHECK_COND(
-            dynamicQuantParams.scale->GetViewShape().GetDim(0) == 1, ACLNN_ERR_PARAM_INVALID,
-            "If quantMode is pertensor, the shape of scale must be (1,).");
+        CHECK_COND(scaleNum == 1, ACLNN_ERR_PARAM_INVALID,
+                   "If quantMode is pertensor, the shape of scale must be (1,).");
+        CHECK_COND(dynamicQuantParams.scale->GetViewShape().GetDim(0) == 1, ACLNN_ERR_PARAM_INVALID,
+                   "If quantMode is pertensor, the shape of scale must be (1,).");
     } else if (mode == "perchannel") {
-        CHECK_COND(
-            CheckOpDim(
-                dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.scale->GetViewShape(), xDimNum - NUM_TWO,
-                scaleNum - 1) == ACLNN_SUCCESS,
-            ACLNN_ERR_PARAM_INVALID,
-            "If quantMode is perchannel, the shapes of x excluding the last two dimensions "
-            "must be the same as the shape of scale excluding the last dimension.");
-        CHECK_COND(
-            (dynamicQuantParams.scale->GetViewShape().GetDim(scaleNum - 1) == 
-                dynamicQuantParams.x->GetViewShape().GetDim(xDimNum - 1)),
-            ACLNN_ERR_PARAM_INVALID,
-            "If quantMode is perchannel, the last dim of scale must be equal to the last dim of x.");
+        CHECK_COND(CheckOpDim(dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.scale->GetViewShape(),
+                              xDimNum - NUM_TWO, scaleNum - 1) == ACLNN_SUCCESS,
+                   ACLNN_ERR_PARAM_INVALID,
+                   "If quantMode is perchannel, the shapes of x excluding the last two dimensions "
+                   "must be the same as the shape of scale excluding the last dimension.");
+        CHECK_COND((dynamicQuantParams.scale->GetViewShape().GetDim(scaleNum - 1) ==
+                    dynamicQuantParams.x->GetViewShape().GetDim(xDimNum - 1)),
+                   ACLNN_ERR_PARAM_INVALID,
+                   "If quantMode is perchannel, the last dim of scale must be equal to the last dim of x.");
     } else {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantMode is invalid, must be pertoken, pertensor or perchannel.");
         return ACLNN_ERR_PARAM_INVALID;
@@ -317,12 +303,11 @@ static aclnnStatus CheckDtype(const DynamicQuantParams& dynamicQuantParams)
     if (dynamicQuantParams.smoothScales) {
         // 检查smooth的数据类型是否在add算子的支持列表内
         OP_CHECK_DTYPE_NOT_SUPPORT(dynamicQuantParams.smoothScales, dtypeSupportList, return ACLNN_ERR_PARAM_INVALID);
-        CHECK_COND(
-            dynamicQuantParams.x->GetDataType() == dynamicQuantParams.smoothScales->GetDataType(),
-            ACLNN_ERR_PARAM_INVALID, "The dtypes of x and smooth_scales are not equal.");
+        CHECK_COND(dynamicQuantParams.x->GetDataType() == dynamicQuantParams.smoothScales->GetDataType(),
+                   ACLNN_ERR_PARAM_INVALID, "The dtypes of x and smooth_scales are not equal.");
         if (dynamicQuantParams.groupIndex) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(
-                dynamicQuantParams.groupIndex, GROUP_INDEX_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+            OP_CHECK_DTYPE_NOT_SUPPORT(dynamicQuantParams.groupIndex, GROUP_INDEX_DTYPE_SUPPORT_LIST,
+                                       return ACLNN_ERR_PARAM_INVALID);
         }
     }
     const std::initializer_list<op::DataType> outputSupportList = GetOutputSupportListByNpuArch();
@@ -336,9 +321,8 @@ static aclnnStatus CheckDtype(const DynamicQuantParams& dynamicQuantParams)
 
 inline static aclnnStatus CheckParams(DynamicQuantParams& dynamicQuantParams)
 {
-    CHECK_COND(
-        CheckNotNull(dynamicQuantParams) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR,
-        "One of the required inputs is nullptr.");
+    CHECK_COND(CheckNotNull(dynamicQuantParams) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR,
+               "One of the required inputs is nullptr.");
     CHECK_RET(CheckAttr(dynamicQuantParams) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_COND(CheckDtype(dynamicQuantParams) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "invalid dtype.");
     CHECK_RET(CheckShape(dynamicQuantParams) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
@@ -358,8 +342,8 @@ static aclnnStatus Int42Int32PackedTensor(const aclTensor* out, const aclTensor*
 }
 }; // namespace
 
-aclnnStatus InputsContiguous(
-    const aclTensor* tensor, const aclTensor*& reformatedTensor, const std::string& tensorName, aclOpExecutor* executor)
+aclnnStatus InputsContiguous(const aclTensor* tensor, const aclTensor*& reformatedTensor, const std::string& tensorName,
+                             aclOpExecutor* executor)
 {
     if (tensor == nullptr) {
         return ACLNN_SUCCESS;
@@ -369,8 +353,8 @@ aclnnStatus InputsContiguous(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus GetDynamicQuantResultByL0Api(
-    DynamicQuantParams& dynamicQuantParams, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus GetDynamicQuantResultByL0Api(DynamicQuantParams& dynamicQuantParams, uint64_t* workspaceSize,
+                                         aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -410,9 +394,9 @@ aclnnStatus GetDynamicQuantResultByL0Api(
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         // DynamicQuantV2 consolidates and remains backward compatible with DynamicQuant in socVersion ASCEND950
-        auto dynamicQuantV2Result = l0op::DynamicQuantV2(
-            x, smoothScales, groupIndex, yDtype, dynamicQuantParams.isSymmetrical, dynamicQuantParams.quantMode,
-            dynamicQuantParams.dstTypeMax, uniqueExecutor.get());
+        auto dynamicQuantV2Result = l0op::DynamicQuantV2(x, smoothScales, groupIndex, yDtype,
+                                                         dynamicQuantParams.isSymmetrical, dynamicQuantParams.quantMode,
+                                                         dynamicQuantParams.dstTypeMax, uniqueExecutor.get());
         y = std::get<0>(dynamicQuantV2Result);
         outputTensor = std::get<0>(dynamicQuantV2Result);
         scale = std::get<1>(dynamicQuantV2Result);
@@ -431,8 +415,8 @@ aclnnStatus GetDynamicQuantResultByL0Api(
             scale = std::get<1>(dynamicQuantResult);
             CHECK_RET(y != nullptr && scale != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
-            auto dynamicQuantV2Result =
-                l0op::DynamicQuantV2(x, smoothScales, groupIndex, yDtype, false, "pertoken", 0.0, uniqueExecutor.get());
+            auto dynamicQuantV2Result = l0op::DynamicQuantV2(x, smoothScales, groupIndex, yDtype, false, "pertoken",
+                                                             0.0, uniqueExecutor.get());
             y = std::get<0>(dynamicQuantV2Result);
             outputTensor = std::get<0>(dynamicQuantV2Result);
             scale = std::get<1>(dynamicQuantV2Result);
@@ -464,13 +448,13 @@ aclnnStatus GetDynamicQuantResultByL0Api(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnDynamicQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* yOut, const aclTensor* scaleOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnDynamicQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* smoothScalesOptional,
+                                              const aclTensor* yOut, const aclTensor* scaleOut, uint64_t* workspaceSize,
+                                              aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnDynamicQuant, DFX_IN(x, smoothScalesOptional), DFX_OUT(yOut, scaleOut));
-    DynamicQuantParams dynamicQuantParams{x, smoothScalesOptional, nullptr, 2, true, "pertoken", 0.0, yOut, scaleOut,
-                                          nullptr};
+    DynamicQuantParams dynamicQuantParams{
+        x, smoothScalesOptional, nullptr, 2, true, "pertoken", 0.0, yOut, scaleOut, nullptr};
     return GetDynamicQuantResultByL0Api(dynamicQuantParams, workspaceSize, executor);
 }
 
@@ -485,14 +469,14 @@ aclnnStatus aclnnDynamicQuant(void* workspace, uint64_t workspaceSize, aclOpExec
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnDynamicQuantV2GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexOptional, int64_t dstType,
-    const aclTensor* yOut, const aclTensor* scaleOut, const aclTensor* offsetOut, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnDynamicQuantV2GetWorkspaceSize(const aclTensor* x, const aclTensor* smoothScalesOptional,
+                                                const aclTensor* groupIndexOptional, int64_t dstType,
+                                                const aclTensor* yOut, const aclTensor* scaleOut,
+                                                const aclTensor* offsetOut, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnDynamicQuantV2, DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType),
-        DFX_OUT(yOut, scaleOut, offsetOut));
+    L2_DFX_PHASE_1(aclnnDynamicQuantV2, DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType),
+                   DFX_OUT(yOut, scaleOut, offsetOut));
 
     bool isSymmetrical = (offsetOut == nullptr);
     const char* quantMode = "pertoken";
@@ -512,14 +496,15 @@ aclnnStatus aclnnDynamicQuantV2(void* workspace, uint64_t workspaceSize, aclOpEx
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnDynamicQuantV3GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexOptional, int64_t dstType,
-    bool isSymmetrical, const char* quantMode, const aclTensor* yOut, const aclTensor* scaleOut,
-    const aclTensor* offsetOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnDynamicQuantV3GetWorkspaceSize(const aclTensor* x, const aclTensor* smoothScalesOptional,
+                                                const aclTensor* groupIndexOptional, int64_t dstType,
+                                                bool isSymmetrical, const char* quantMode, const aclTensor* yOut,
+                                                const aclTensor* scaleOut, const aclTensor* offsetOut,
+                                                uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnDynamicQuantV3, DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode),
-        DFX_OUT(yOut, scaleOut, offsetOut));
+    L2_DFX_PHASE_1(aclnnDynamicQuantV3,
+                   DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode),
+                   DFX_OUT(yOut, scaleOut, offsetOut));
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV3 only support socVersion Ascend950");
         return ACLNN_ERR_INNER;
@@ -540,21 +525,30 @@ aclnnStatus aclnnDynamicQuantV3(void* workspace, uint64_t workspaceSize, aclOpEx
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnDynamicQuantV4GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexOptional, int64_t dstType,
-    bool isSymmetrical, const char* quantMode, float dstTypeMax, const aclTensor* yOut, const aclTensor* scaleOut,
-    const aclTensor* offsetOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnDynamicQuantV4GetWorkspaceSize(const aclTensor* x, const aclTensor* smoothScalesOptional,
+                                                const aclTensor* groupIndexOptional, int64_t dstType,
+                                                bool isSymmetrical, const char* quantMode, float dstTypeMax,
+                                                const aclTensor* yOut, const aclTensor* scaleOut,
+                                                const aclTensor* offsetOut, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnDynamicQuantV4, DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode),
-        DFX_OUT(yOut, scaleOut, offsetOut));
+    L2_DFX_PHASE_1(aclnnDynamicQuantV4,
+                   DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode),
+                   DFX_OUT(yOut, scaleOut, offsetOut));
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV4 only support socVersion Ascend950");
         return ACLNN_ERR_INNER;
     }
-    DynamicQuantParams dynamicQuantParams{
-        x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode,
-        dstTypeMax, yOut, scaleOut, offsetOut};
+    DynamicQuantParams dynamicQuantParams{x,
+                                          smoothScalesOptional,
+                                          groupIndexOptional,
+                                          dstType,
+                                          isSymmetrical,
+                                          quantMode,
+                                          dstTypeMax,
+                                          yOut,
+                                          scaleOut,
+                                          offsetOut};
     return GetDynamicQuantResultByL0Api(dynamicQuantParams, workspaceSize, executor);
 }
 

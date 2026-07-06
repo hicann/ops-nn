@@ -23,16 +23,13 @@ using namespace ge;
 
 class DynamicBlockQuantTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "dynamic_block_quant test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "dynamic_block_quant test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "dynamic_block_quant test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "dynamic_block_quant test TearDown" << std::endl; }
 };
 
-TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_1) {
+TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_1)
+{
     ge::op::DynamicBlockQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({128, 128});
@@ -41,7 +38,8 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_1) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
+    Runtime2TestParam param{
+        {"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = quant_op.GetOutputDesc(0);
@@ -52,7 +50,8 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_1) {
     EXPECT_EQ(output_scale_desc.GetShape().GetDims(), expected_scale_shape);
 }
 
-TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_2) {
+TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_2)
+{
     ge::op::DynamicBlockQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({1, 128});
@@ -61,7 +60,8 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_2) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
+    Runtime2TestParam param{
+        {"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = quant_op.GetOutputDesc(0);
@@ -72,7 +72,8 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_2) {
     EXPECT_EQ(output_scale_desc.GetShape().GetDims(), expected_scale_shape);
 }
 
-TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_3) {
+TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_3)
+{
     ge::op::DynamicBlockQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({2, 1, 128});
@@ -81,7 +82,8 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_3) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
+    Runtime2TestParam param{
+        {"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = quant_op.GetOutputDesc(0);
@@ -92,7 +94,8 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_test_case_3) {
     EXPECT_EQ(output_scale_desc.GetShape().GetDims(), expected_scale_shape);
 }
 
-TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_fail_test_case) {
+TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_fail_test_case)
+{
     ge::op::DynamicBlockQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({4, 2, 1, 128});
@@ -101,6 +104,7 @@ TEST_F(DynamicBlockQuantTest, dynamic_block_quant_infershape_fail_test_case) {
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
 
-    Runtime2TestParam param{{"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
+    Runtime2TestParam param{
+        {"min_scale", "round_mode", "dst_type", "row_block_size", "col_block_size", "dst_type_max"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_FAILED);
 }

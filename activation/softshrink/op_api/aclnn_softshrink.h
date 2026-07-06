@@ -80,4 +80,4 @@ ACLNN_API aclnnStatus aclnnSoftshrink(void* workspace, uint64_t workspaceSize, a
 }
 #endif
 
-#endif  // OP_API_INC_SOFTSHRINK_H_
+#endif // OP_API_INC_SOFTSHRINK_H_

@@ -49,6 +49,6 @@ REG_OP(MaxPoolV2)
     .ATTR(data_format, String, "NHWC")
     .OP_END_FACTORY_REG(MaxPoolV2)
 
-}  // namespace ge
+} // namespace ge
 
 #endif

@@ -25,7 +25,7 @@ constexpr int64_t BLOCK_SIZE = 32;
 template <typename XTYPE, typename WSTYPE, typename BIASTYPE, typename YTYPE, bool IFBIAS>
 class DequantBiasImpl {
 public:
-    __aicore__ inline DequantBiasImpl() {};
+    __aicore__ inline DequantBiasImpl(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activateScale, GM_ADDR bias, GM_ADDR y,
                                 const DequantBiasTilingData* tilingData);
     __aicore__ inline void Process();
@@ -67,16 +67,16 @@ protected:
     // tiling data
     uint32_t N_ = 0;
     uint32_t nAlign_ = 0;
-    uint32_t asExist_ = 0;   // active scale是否存在
+    uint32_t asExist_ = 0; // active scale是否存在
     uint32_t needCoreNum_ = 0;
     uint32_t mainCoreRow_ = 0;
-    uint32_t curCoreRow_ = 0; // 当前核处理的总行数
+    uint32_t curCoreRow_ = 0;   // 当前核处理的总行数
     uint32_t inBufferSize_ = 0; // bytes
     uint32_t wsBufferSize_ = 0;
     uint32_t biasBufferSize_ = 0;
-    uint32_t curCoreLoopRow_ = 0; // 当前核每次循环能处理的行数
+    uint32_t curCoreLoopRow_ = 0;     // 当前核每次循环能处理的行数
     uint32_t curCoreTailLoopRow_ = 0; // 尾行
-    uint32_t curCoreLoops_ = 0; // 当前核的总循环次数
+    uint32_t curCoreLoops_ = 0;       // 当前核的总循环次数
 
     bool oneBlockMore_ = false;
 };
@@ -111,9 +111,9 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
 }
 
 template <typename XTYPE, typename WSTYPE, typename BIASTYPE, typename YTYPE, bool IFBIAS>
-__aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::Init(GM_ADDR x,
-    GM_ADDR weightScale, GM_ADDR activateScale,
-    GM_ADDR bias, GM_ADDR y, const DequantBiasTilingData* tilingData)
+__aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::Init(
+    GM_ADDR x, GM_ADDR weightScale, GM_ADDR activateScale, GM_ADDR bias, GM_ADDR y,
+    const DequantBiasTilingData* tilingData)
 {
     blockIdx_ = GetBlockIdx();
     ParseBaseTilingData(tilingData);
@@ -129,7 +129,7 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
     pipe_.InitBuffer(pongBuf_, inBufferSize_ / 2);
     pipe_.InitBuffer(wsBuf_, wsBufferSize_);
 
-    if constexpr(IFBIAS) {
+    if constexpr (IFBIAS) {
         biasGM_.SetGlobalBuffer((__gm__ BIASTYPE*)bias);
         pipe_.InitBuffer(biasBuf_, biasBufferSize_);
     }
@@ -179,10 +179,11 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
 
 template <typename XTYPE, typename WSTYPE, typename BIASTYPE, typename YTYPE, bool IFBIAS>
 __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::CopyIn(LocalTensor<XTYPE>& xLocal,
-    int64_t rowOffset, int64_t inRows)
+                                                                                       int64_t rowOffset,
+                                                                                       int64_t inRows)
 {
     DataCopyExtParams extParams;
-    DataCopyPadExtParams<XTYPE> padParams {false, 0, 0, 0};
+    DataCopyPadExtParams<XTYPE> padParams{false, 0, 0, 0};
     extParams.blockCount = inRows;
     extParams.blockLen = N_ * sizeof(XTYPE);
     extParams.srcStride = 0;
@@ -192,7 +193,8 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
 
 template <typename XTYPE, typename WSTYPE, typename BIASTYPE, typename YTYPE, bool IFBIAS>
 __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::CopyOut(LocalTensor<XTYPE>& xLocal,
-    int64_t rowOffset, int64_t outRows)
+                                                                                        int64_t rowOffset,
+                                                                                        int64_t outRows)
 {
     LocalTensor<YTYPE> yLocal = xLocal.template ReinterpretCast<YTYPE>();
     DataCopyExtParams extParams;
@@ -207,8 +209,8 @@ template <typename XTYPE, typename WSTYPE, typename BIASTYPE, typename YTYPE, bo
 __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::ComputeDequant(
     LocalTensor<XTYPE>& xLocal, int64_t inRows, int64_t rowsOffset)
 {
-    if constexpr(IFBIAS == true) {
-        if constexpr(IsSameType<BIASTYPE, int32_t>::value) {
+    if constexpr (IFBIAS == true) {
+        if constexpr (IsSameType<BIASTYPE, int32_t>::value) {
             ComputeDequantWithBiasInt32(xLocal, inRows, rowsOffset);
         } else {
             ComputeDequantWithBiasFloat(xLocal, inRows, rowsOffset);
@@ -303,11 +305,11 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
     // weight scale一定存在
     DataCopyInWeightScale();
 
-    if constexpr(IFBIAS == true) {
+    if constexpr (IFBIAS == true) {
         // bias是int32
-        if constexpr(IsSameType<BIASTYPE, int32_t>::value) {
-            DataCopyPadExtParams<BIASTYPE> biasPadParams {false, 0, 0, 0};
-            DataCopyExtParams biasParams {1, static_cast<uint32_t>(N_ * sizeof(BIASTYPE)), 0, 0, 0};
+        if constexpr (IsSameType<BIASTYPE, int32_t>::value) {
+            DataCopyPadExtParams<BIASTYPE> biasPadParams{false, 0, 0, 0};
+            DataCopyExtParams biasParams{1, static_cast<uint32_t>(N_ * sizeof(BIASTYPE)), 0, 0, 0};
             biasLocal_ = biasBuf_.Get<BIASTYPE>();
             DataCopyPad(biasLocal_, biasGM_, biasParams, biasPadParams);
         } else {
@@ -319,8 +321,8 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
     // activate scale 是 fp32
     if (asExist_ != 0) {
         asLocal_ = asBuf_.Get<float>();
-        DataCopyPadExtParams<float> asPadParams {false, 0, 0, 0};
-        DataCopyExtParams extParams {1, static_cast<uint32_t>(curCoreRow_ * sizeof(float)), 0, 0, 0};
+        DataCopyPadExtParams<float> asPadParams{false, 0, 0, 0};
+        DataCopyExtParams extParams{1, static_cast<uint32_t>(curCoreRow_ * sizeof(float)), 0, 0, 0};
         DataCopyPad(asLocal_, activeScaleGM_[mainCoreRow_ * blockIdx_], extParams, asPadParams);
     }
 }
@@ -330,9 +332,9 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
 {
     wsLocal_ = wsBuf_.Get<float>();
     int64_t wsTypeNum = 0;
-    DataCopyExtParams wsParams {1, static_cast<uint32_t>(N_ * sizeof(WSTYPE)), 0, 0, 0};
-    if constexpr(!IsSameType<WSTYPE, float>::value) {
-        DataCopyPadExtParams<WSTYPE> padParams {false, 0, 0, 0};
+    DataCopyExtParams wsParams{1, static_cast<uint32_t>(N_ * sizeof(WSTYPE)), 0, 0, 0};
+    if constexpr (!IsSameType<WSTYPE, float>::value) {
+        DataCopyPadExtParams<WSTYPE> padParams{false, 0, 0, 0};
         wsTypeNum = wsBufferSize_ / sizeof(WSTYPE) / 2;
         LocalTensor<WSTYPE> tmpBuf = wsBuf_.GetWithOffset<WSTYPE>(wsTypeNum, wsBufferSize_ / 2);
         DataCopyPad(tmpBuf, weightScaleGM_, wsParams, padParams);
@@ -342,7 +344,7 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
         Cast(wsLocal_, tmpBuf, RoundMode::CAST_NONE, N_);
         PipeBarrier<PIPE_V>();
     } else {
-        DataCopyPadExtParams<float> padParams {false, 0, 0, 0};
+        DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
         DataCopyPad(wsLocal_, weightScaleGM_, wsParams, padParams);
     }
 }
@@ -350,10 +352,10 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
 template <typename XTYPE, typename WSTYPE, typename BIASTYPE, typename YTYPE, bool IFBIAS>
 __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::DataCopyInBiasFloat()
 {
-    DataCopyExtParams biasParams {1, static_cast<uint32_t>(N_ * sizeof(BIASTYPE)), 0, 0, 0};
+    DataCopyExtParams biasParams{1, static_cast<uint32_t>(N_ * sizeof(BIASTYPE)), 0, 0, 0};
     biasLocal_ = biasBuf_.Get<BIASTYPE>();
-    if constexpr(!IsSameType<BIASTYPE, float>::value) {
-        DataCopyPadExtParams<BIASTYPE> biasPadParams {false, 0, 0, 0};
+    if constexpr (!IsSameType<BIASTYPE, float>::value) {
+        DataCopyPadExtParams<BIASTYPE> biasPadParams{false, 0, 0, 0};
         int64_t biasTypeNum = biasBufferSize_ / sizeof(BIASTYPE) / 2;
         LocalTensor<BIASTYPE> tmpBuf = biasBuf_.GetWithOffset<BIASTYPE>(biasTypeNum, biasBufferSize_ / 2);
         DataCopyPad(tmpBuf, biasGM_, biasParams, biasPadParams);
@@ -363,11 +365,11 @@ __aicore__ inline void DequantBiasImpl<XTYPE, WSTYPE, BIASTYPE, YTYPE, IFBIAS>::
         Cast(biasLocal_.template ReinterpretCast<float>(), tmpBuf, RoundMode::CAST_NONE, N_);
         PipeBarrier<PIPE_V>();
     } else {
-        DataCopyPadExtParams<float> biasPadParams {false, 0, 0, 0};
+        DataCopyPadExtParams<float> biasPadParams{false, 0, 0, 0};
         DataCopyPad(biasLocal_, biasGM_, biasParams, biasPadParams);
     }
 }
 
-} // namespace
+} // namespace DequantBias
 
 #endif // DEQUANT_BIAS_IMPL_H

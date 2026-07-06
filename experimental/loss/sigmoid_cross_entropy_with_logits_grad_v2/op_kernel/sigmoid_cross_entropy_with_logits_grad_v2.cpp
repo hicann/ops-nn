@@ -332,9 +332,10 @@ __aicore__ inline void KernelSigmoidCrossEntropyWithLogitsGradV2<T, HAS_WEIGHT, 
         op.Process();                                                              \
     }
 
-extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_grad_v2(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR dout, GM_ADDR weight, GM_ADDR pos_weight, GM_ADDR gradient,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_grad_v2(GM_ADDR predict, GM_ADDR target,
+                                                                                GM_ADDR dout, GM_ADDR weight,
+                                                                                GM_ADDR pos_weight, GM_ADDR gradient,
+                                                                                GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SigmoidCrossEntropyWithLogitsGradV2TilingData);
     GET_TILING_DATA(tiling_data, tiling);

@@ -33,10 +33,7 @@ constexpr int32_t MAX_TENSOR_NUM = 256;
 
 struct ForeachSubScalarListCompileInfo {};
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
-{
-    return in_shape;
-}
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape) { return in_shape; }
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
@@ -54,10 +51,8 @@ static ge::graphStatus ForeachSubScalarListTilingFunc(gert::TilingContext* conte
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -73,13 +68,10 @@ static ge::graphStatus ForeachSubScalarListTilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(ForeachSubScalarListTilingData), 0, sizeof(ForeachSubScalarListTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        tensorNum > MAX_TENSOR_NUM,
-        OP_LOGE(context, "tensorNum should be less than or equal to 256"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM, OP_LOGE(context, "tensorNum should be less than or equal to 256"),
+                return ge::GRAPH_FAILED);
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
 
@@ -97,8 +89,8 @@ static ge::graphStatus ForeachSubScalarListTilingFunc(gert::TilingContext* conte
         tiling->needCoreNum = 1;
         context->SetBlockDim(1);
     } else {
-        int64_t needCoreNum = std::min(coreNum, static_cast<int64_t>(
-            (totalElements + MIN_PER_CORE - 1) / MIN_PER_CORE));
+        int64_t needCoreNum = std::min(coreNum,
+                                       static_cast<int64_t>((totalElements + MIN_PER_CORE - 1) / MIN_PER_CORE));
         tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
         context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     }
@@ -127,8 +119,7 @@ static ge::graphStatus ForeachSubScalarListTilingFunc(gert::TilingContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForForeachSubScalarList(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachSubScalarList([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

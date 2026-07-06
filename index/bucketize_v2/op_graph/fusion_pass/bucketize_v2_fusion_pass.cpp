@@ -34,24 +34,24 @@ namespace ops {
 namespace {
 const std::string kPassName = "BucketizeFusionPass";
 const char* kSourceOpTypes = "Bucketize";
-}
+} // namespace
 
-es::EsTensorHolder CreatePatternBucketize(es::EsGraphBuilder &graphBuilder, const char *opType,
- 	     const std::string &nodeName, const es::EsTensorHolder &x)
+es::EsTensorHolder CreatePatternBucketize(es::EsGraphBuilder& graphBuilder, const char* opType,
+                                          const std::string& nodeName, const es::EsTensorHolder& x)
 {
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto bucketize = es::CompliantNodeBuilder(graph)
-                    .OpType(opType)
-                    .Name(nodeName.c_str())
-                    .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-                    .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                    .Build();
+                         .OpType(opType)
+                         .Name(nodeName.c_str())
+                         .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                         .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                         .Build();
 
     OP_LOGE_IF(
         es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0) != GRAPH_SUCCESS,
         es::EsTensorHolder(), kPassName.c_str(), "AddEdgeAndUpdatePeerDesc failed.");
 
-    auto *y_holder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* y_holder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     return es::EsTensorHolder(y_holder);
 }
 
@@ -89,17 +89,16 @@ bool IsTargetPlatform()
 bool IsShapeAndDtypeValid(const std::unique_ptr<MatchResult>& match_result)
 {
     NodeIo bucketize_io;
-    OP_LOGE_IF(
-        match_result->GetCapturedTensor(0, bucketize_io) != SUCCESS, false, kPassName,
-        "Failed to get bucketize in meetrequirements");
+    OP_LOGE_IF(match_result->GetCapturedTensor(0, bucketize_io) != SUCCESS, false, kPassName,
+               "Failed to get bucketize in meetrequirements");
     auto bucketize_node = bucketize_io.node;
 
     TensorDesc bucketize_input_desc;
     OP_LOGE_IF(bucketize_node.GetInputDesc(0, bucketize_input_desc) != SUCCESS, false, kPassName.c_str(),
- 	    "Get input desc failed.");
+               "Get input desc failed.");
     TensorDesc bucketize_output_desc;
     OP_LOGE_IF(bucketize_node.GetOutputDesc(0, bucketize_output_desc) != SUCCESS, false, kPassName.c_str(),
- 	    "Get output desc failed.");
+               "Get output desc failed.");
 
     if (bucketize_input_desc.GetDataType() == DT_DOUBLE) {
         OPS_LOG_D(kPassName.c_str(), "Not support dtype DT_DOUBLE of input.");
@@ -115,7 +114,7 @@ bool BucketizeFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& m
     if (!IsTargetPlatform()) {
         return false;
     }
-    if (!IsShapeAndDtypeValid(match_result)){
+    if (!IsShapeAndDtypeValid(match_result)) {
         return false;
     }
     return true;
@@ -128,13 +127,14 @@ GraphUniqPtr BucketizeFusionPass::Replacement(const std::unique_ptr<MatchResult>
 
     NodeIo bucketize_io;
     OP_LOGE_IF(match_result->GetCapturedTensor(0, bucketize_io) != SUCCESS, nullptr, kPassName.c_str(),
-  	    "Get bucketize node failed.");
+               "Get bucketize node failed.");
 
     TensorDesc bucketize_input_desc;
     bucketize_io.node.GetInputDesc(0, bucketize_input_desc);
 
-    auto x = replace_graph_builder.CreateInput(0, "x", bucketize_input_desc.GetDataType(), bucketize_input_desc.GetFormat(), 
-            bucketize_input_desc.GetShape().GetDims());
+    auto x = replace_graph_builder.CreateInput(0, "x", bucketize_input_desc.GetDataType(),
+                                               bucketize_input_desc.GetFormat(),
+                                               bucketize_input_desc.GetShape().GetDims());
 
     std::vector<float32_t> boundaries;
     bucketize_io.node.GetAttr("boundaries", boundaries);
@@ -153,12 +153,12 @@ GraphUniqPtr BucketizeFusionPass::Replacement(const std::unique_ptr<MatchResult>
 
     ge::DataType dtype = DT_UNDEFINED;
     OP_LOGE_IF(bucketize_io.node.GetAttr("dtype", dtype) != SUCCESS, nullptr, kPassName.c_str(),
-  	    "Get bucketize attr dtype failed.");
+               "Get bucketize attr dtype failed.");
     bool out_int32 = dtype == DT_INT32 ? true : false;
 
     bool right;
     OP_LOGE_IF(bucketize_io.node.GetAttr("right", right) != SUCCESS, nullptr, kPassName.c_str(),
-  	    "Get bucketize attr right failed.");
+               "Get bucketize attr right failed.");
     auto bucketize_v2 = es::BucketizeV2(x, boundaries_tensor, out_int32, right);
 
     TensorDesc bucketize_output_desc;
@@ -172,4 +172,4 @@ GraphUniqPtr BucketizeFusionPass::Replacement(const std::unique_ptr<MatchResult>
 }
 
 REG_FUSION_PASS(BucketizeFusionPass).Stage(CustomPassStage::kAfterInferShape);
-} //namespace ops
+} // namespace ops

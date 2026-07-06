@@ -21,8 +21,7 @@
 namespace AscendC {
 class Sparse4to2QuantMatmulBlock {
 public:
-    __aicore__ inline Sparse4to2QuantMatmulBlock()
-    {}
+    __aicore__ inline Sparse4to2QuantMatmulBlock() {}
     __aicore__ inline void Init(const SparseQmm::Sparse4to2QuantMatmulTilingData* tilingData);
     __aicore__ inline void Init(const SparseQmm::L2cacheTileParams* tilingL2, const TCubeTiling* matmulTilingData);
     __aicore__ inline void UpdateBlockCnt(uint64_t mTileIndex, uint64_t nTileIndex);
@@ -52,8 +51,8 @@ __aicore__ inline void Sparse4to2QuantMatmulBlock::Init(const SparseQmm::Sparse4
     this->Init(&(tilingData->tileL2cacheTiling), &(tilingData->matmulTiling));
 }
 
-__aicore__ inline void Sparse4to2QuantMatmulBlock::Init(
-    const SparseQmm::L2cacheTileParams* tilingL2, const TCubeTiling* matmulTilingData)
+__aicore__ inline void Sparse4to2QuantMatmulBlock::Init(const SparseQmm::L2cacheTileParams* tilingL2,
+                                                        const TCubeTiling* matmulTilingData)
 {
     blockIdx_ = static_cast<uint32_t>(GetBlockIdx());
     if ASCEND_IS_AIV {
@@ -181,8 +180,8 @@ __aicore__ inline void Sparse4to2QuantMatmulBlock::InitBlockIndex()
             params_.index = indexEnd * round_ + (blockIdx_ - indexEnd) * (round_ - 1);
             realRound_ = round_ - 1;
         } else {
-            params_.index =
-                (indexEnd * round_ + (indexStart - indexEnd) * (round_ - 1) + (blockIdx_ - indexStart) * round_);
+            params_.index = (indexEnd * round_ + (indexStart - indexEnd) * (round_ - 1) +
+                             (blockIdx_ - indexStart) * round_);
             realRound_ = round_;
         }
         if (rowOrder_ == COL_FIRST) {

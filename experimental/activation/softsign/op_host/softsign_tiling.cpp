@@ -41,8 +41,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 // Double buffer threshold: enable double buffer when totalNum > this value
@@ -50,7 +50,8 @@ constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -73,9 +74,8 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataT
 {
     auto* tiling = context->GetTilingData<SoftsignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftsignTilingData), 0, sizeof(SoftsignTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftsignTilingData), 0, sizeof(SoftsignTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     context->SetBlockDim(1);
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     uint64_t useDoubleBuffer = 0;
@@ -91,8 +91,7 @@ static int64_t CalcBytesPerElement(ge::DataType dataType, uint64_t useDoubleBuff
     if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
         // fp16/bf16 Cast path: 2 TIn buffers (in/out) + 3 float buffers (castIn/tmp/calcOut)
         int64_t bufferNum = useDoubleBuffer ? 2 : 1;
-        return static_cast<int64_t>(sizeof(uint16_t)) * 2 * bufferNum +
-               static_cast<int64_t>(sizeof(float)) * 3;
+        return static_cast<int64_t>(sizeof(uint16_t)) * 2 * bufferNum + static_cast<int64_t>(sizeof(float)) * 3;
     }
     // fp32: direct compute path (in + tmp + out) with in/out having BUFFER_NUM copies
     int64_t bufferCount = useDoubleBuffer ? 5 : 3;
@@ -103,10 +102,8 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
@@ -123,9 +120,8 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
 
     auto* tiling = context->GetTilingData<SoftsignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftsignTilingData), 0, sizeof(SoftsignTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftsignTilingData), 0, sizeof(SoftsignTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = totalNum;
     tiling->blockFactor = CeilDiv(totalNum, coreNum);

@@ -20,24 +20,20 @@
 #define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_MODE_0 0
 #define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_MODE_1 1
 
-//template <uint64_t schId, uint64_t db>
+// template <uint64_t schId, uint64_t db>
 
-#define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_KEY_DECL()                                                                   \
-    ASCENDC_TPL_UINT_DECL(schId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1),                                                    \
-    ASCENDC_TPL_UINT_DECL(db, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1)                                                        \
+#define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_KEY_DECL()                \
+    ASCENDC_TPL_UINT_DECL(schId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1), \
+        ASCENDC_TPL_UINT_DECL(db, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1)
 
-#define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_SPLITR_KEY_SEL()                                                             \
-    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 1),                                                                          \
-    ASCENDC_TPL_UINT_SEL(db, ASCENDC_TPL_UI_LIST, 0, 1)                                                                           \
+#define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_SPLITR_KEY_SEL() \
+    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 1), ASCENDC_TPL_UINT_SEL(db, ASCENDC_TPL_UI_LIST, 0, 1)
 
-#define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_FULLLOAD_KEY_SEL()                                                           \
-    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 0),                                                                          \
-    ASCENDC_TPL_UINT_SEL(db, ASCENDC_TPL_UI_LIST, 0, 1)                                                                           \
+#define SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_FULLLOAD_KEY_SEL() \
+    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 0), ASCENDC_TPL_UINT_SEL(db, ASCENDC_TPL_UI_LIST, 0, 1)
 
 ASCENDC_TPL_ARGS_DECL(SparseSoftmaxCrossEntropyWithLogits, SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_KEY_DECL());
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_FULLLOAD_KEY_SEL()),
-    ASCENDC_TPL_ARGS_SEL(SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_SPLITR_KEY_SEL())
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_FULLLOAD_KEY_SEL()),
+                ASCENDC_TPL_ARGS_SEL(SPARSE_SOFTMAX_CROSS_ENTROPY_WITH_LOGITS_TPL_SPLITR_KEY_SEL()));
 #endif

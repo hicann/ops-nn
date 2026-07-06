@@ -27,14 +27,9 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_INT32, DataType::DT_INT64
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_INT32, DataType::DT_INT64};
 
-static bool IsDtypeSupported(DataType dtype)
-{
-    return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsDtypeSupported(DataType dtype) { return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST); }
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* y)
 {
@@ -47,8 +42,7 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* y)
 {
     OP_CHECK_DTYPE_NOT_MATCH(y, x->GetDataType(), return false);
     OP_CHECK(IsDtypeSupported(x->GetDataType()),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Dtype not supported: dtype=%d. Supported: INT32, INT64.",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dtype not supported: dtype=%d. Supported: INT32, INT64.",
                      static_cast<int>(x->GetDataType())),
              return false);
     return true;
@@ -59,9 +53,8 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* y)
     auto formatX = x->GetStorageFormat();
     auto formatY = y->GetStorageFormat();
     OP_CHECK(!(IsPrivateFormat(formatX) || IsPrivateFormat(formatY)),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Private format not supported: x=%d, y=%d",
-                     static_cast<int>(formatX), static_cast<int>(formatY)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format not supported: x=%d, y=%d", static_cast<int>(formatX),
+                     static_cast<int>(formatY)),
              return false);
     return true;
 }
@@ -73,27 +66,21 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y)
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* x, const char* srcFormat,
-                                const char* dstFormat, const aclTensor* y)
+static aclnnStatus CheckParams(const aclTensor* x, const char* srcFormat, const char* dstFormat, const aclTensor* y)
 {
     CHECK_COND(CheckNotNull(x, y), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed");
     CHECK_COND(srcFormat != nullptr, ACLNN_ERR_PARAM_NULLPTR, "srcFormat is null");
     CHECK_COND(dstFormat != nullptr, ACLNN_ERR_PARAM_NULLPTR, "dstFormat is null");
-    CHECK_COND(CheckDtypeValid(x, y), ACLNN_ERR_PARAM_INVALID,
-               "CheckDtypeValid failed: x_dtype=%d, y_dtype=%d",
+    CHECK_COND(CheckDtypeValid(x, y), ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed: x_dtype=%d, y_dtype=%d",
                static_cast<int>(x->GetDataType()), static_cast<int>(y->GetDataType()));
     CHECK_COND(CheckFormat(x, y), ACLNN_ERR_PARAM_INVALID, "CheckFormat failed");
     CHECK_COND(CheckShape(x, y), ACLNN_ERR_PARAM_INVALID, "CheckShape failed");
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnDataFormatDimMapGetWorkspaceSize(
-    const aclTensor* x,
-    const char* srcFormat,
-    const char* dstFormat,
-    const aclTensor* y,
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnDataFormatDimMapGetWorkspaceSize(const aclTensor* x, const char* srcFormat,
+                                                             const char* dstFormat, const aclTensor* y,
+                                                             uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnDataFormatDimMap, DFX_IN(x, srcFormat, dstFormat), DFX_OUT(y));
 
@@ -112,8 +99,7 @@ extern "C" aclnnStatus aclnnDataFormatDimMapGetWorkspaceSize(
     auto xContiguous = l0op::Contiguous(x, uniqueExecutor.get());
     CHECK_RET(xContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor* opResult = l0op::DataFormatDimMap(
-        xContiguous, srcFormat, dstFormat, uniqueExecutor.get());
+    const aclTensor* opResult = l0op::DataFormatDimMap(xContiguous, srcFormat, dstFormat, uniqueExecutor.get());
     CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResult = l0op::ViewCopy(opResult, y, uniqueExecutor.get());
@@ -124,11 +110,8 @@ extern "C" aclnnStatus aclnnDataFormatDimMapGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnDataFormatDimMap(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnDataFormatDimMap(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                             aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnDataFormatDimMap);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

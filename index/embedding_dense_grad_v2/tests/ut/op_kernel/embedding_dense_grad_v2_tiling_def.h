@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 struct EmbeddingDenseGradV2TilingParam {
     uint32_t coreNum;
     uint32_t tailRowNum;
@@ -88,7 +87,7 @@ inline void InitEmbeddingDenseGradV2TilingData(uint8_t* tiling, EmbeddingDenseGr
     memcpy(data, tiling, sizeof(EmbeddingDenseGradV2TilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                               \
-    EmbeddingDenseGradV2TilingData tiling_data;                                \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    EmbeddingDenseGradV2TilingData tiling_data;  \
     InitEmbeddingDenseGradV2TilingData(tiling_arg, &tiling_data)
 #endif // EMBEDDING_DENSE_GRAD_V2_TILING_DEF_H

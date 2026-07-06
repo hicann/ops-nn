@@ -20,8 +20,8 @@
 namespace ge {
 
 /**
-*@brief Computes the gradients of convolution3D with respect to the input.
-*@par Inputs:
+ *@brief Computes the gradients of convolution3D with respect to the input.
+ *@par Inputs:
  * @li input_size: A 1D tensor of type int32 or int64.
  * The tensor representing the shape of feature map (the input of the convolution),
  * where feature map is a 5D tensor.
@@ -44,7 +44,7 @@ namespace ge {
  * [batch, out_depth, out_height, out_width, out_channels] or
  * [batch, out_channels, out_depth, out_height, out_width].
  * Gradients with respect to the "output" of the convolution.
-*@par Attributes:
+ *@par Attributes:
  * @li strides: Required. A tuple/list of 5 integers. Specifies the stride of the sliding window
  * for each dimension of feature map. The strides have the same axes sequence as feature map:
  * [batch, stride_depth, stride_height, stride_width, channels] or
@@ -84,16 +84,16 @@ namespace ge {
  * Specify the data format of the out_backprop and y.
  * @li enable_hf32: Optional. An optional bool parameter. Used to enable hf32 computation.
  * If true, enable hf32 computation, otherwise, disable hf32 computation. Defaults to false. \n
-*@par Outputs:
+ *@par Outputs:
  * y: A tensor. It has the same format as out_backprop.
  * The type is float16, bfloat16, float32.
  * The gradients of feature map.
  * @attention Constraints:
  * In Ascend 950PR/Ascend 950DT: The behavior of gradient computation in the padding region depends on the input shape.
  * Depending on the operator optimization strategy, the padding gradients may be directly set to 0.\n
-*@par Third-party framework compatibility
+ *@par Third-party framework compatibility
  * Compatible with Tensorflow's conv3d_backprop_input
-*/
+ */
 REG_OP(Conv3DBackpropInputV2)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))
     .INPUT(filter, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))

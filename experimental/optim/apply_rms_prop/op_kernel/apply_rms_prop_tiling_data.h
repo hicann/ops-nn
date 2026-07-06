@@ -24,21 +24,21 @@
 #include <cstdint>
 
 struct ApplyRmsPropTilingData {
-    float lr    = 0.0f;
+    float lr = 0.0f;
     float rho1m = 0.0f;
-    float mom   = 0.0f;
-    float eps   = 0.0f;
+    float mom = 0.0f;
+    float eps = 0.0f;
 
-    int64_t totalLength      = 0;
-    int64_t blockLength      = 0;
-    int64_t lastBlockLength  = 0;
-    int64_t tileLength       = 0;
-    int64_t tileNum          = 0;
-    int64_t lastTileLength   = 0;
+    int64_t totalLength = 0;
+    int64_t blockLength = 0;
+    int64_t lastBlockLength = 0;
+    int64_t tileLength = 0;
+    int64_t tileNum = 0;
+    int64_t lastTileLength = 0;
     int64_t lastBlockTileNum = 0;
     int64_t lastBlockLastTileLength = 0;
-    int32_t usedCoreNum      = 0;
-    int32_t reserved         = 0;
+    int32_t usedCoreNum = 0;
+    int32_t reserved = 0;
 };
 
-#endif  // _APPLY_RMS_PROP_TILING_DATA_H_
+#endif // _APPLY_RMS_PROP_TILING_DATA_H_

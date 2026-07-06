@@ -24,10 +24,11 @@ constexpr uint32_t kDouble = 2;          // workspace: head/tail 两行
 constexpr uint32_t TMP_BUFFER_NUM = 2;
 namespace KernelUtil {
 
-__aicore__ inline void InitRowColTiling(
-    const ScatterAddWithSortedSimdTilingData* tiling, uint32_t blockIdx, uint32_t& rowCoreIdx, uint32_t& colCoreIdx,
-    bool& isStartRowCore, bool& isEndRowCore, int64_t& rowGmOffset, int64_t& colGmOffset, int64_t& rowUbLoop,
-    int64_t& colUbLoop, int64_t& normalLoopRows, int64_t& tailLoopRows, int64_t& normalLoopCols, int64_t& tailLoopCols)
+__aicore__ inline void InitRowColTiling(const ScatterAddWithSortedSimdTilingData* tiling, uint32_t blockIdx,
+                                        uint32_t& rowCoreIdx, uint32_t& colCoreIdx, bool& isStartRowCore,
+                                        bool& isEndRowCore, int64_t& rowGmOffset, int64_t& colGmOffset,
+                                        int64_t& rowUbLoop, int64_t& colUbLoop, int64_t& normalLoopRows,
+                                        int64_t& tailLoopRows, int64_t& normalLoopCols, int64_t& tailLoopCols)
 {
     rowCoreIdx = blockIdx / tiling->coreNumInCol;
     colCoreIdx = blockIdx % tiling->coreNumInCol;
@@ -42,23 +43,22 @@ __aicore__ inline void InitRowColTiling(
 
     colUbLoop = (colCoreIdx == tiling->coreNumInCol - 1) ? tiling->tailCoreColUbLoop : tiling->normalCoreColUbLoop;
 
-    normalLoopRows =
-        (rowCoreIdx == tiling->coreNumInRow - 1) ? tiling->tailCoreNormalLoopRows : tiling->normalCoreNormalLoopRows;
+    normalLoopRows = (rowCoreIdx == tiling->coreNumInRow - 1) ? tiling->tailCoreNormalLoopRows :
+                                                                tiling->normalCoreNormalLoopRows;
 
-    tailLoopRows =
-        (rowCoreIdx == tiling->coreNumInRow - 1) ? tiling->tailCoreTailLoopRows : tiling->normalCoreTailLoopRows;
+    tailLoopRows = (rowCoreIdx == tiling->coreNumInRow - 1) ? tiling->tailCoreTailLoopRows :
+                                                              tiling->normalCoreTailLoopRows;
 
-    normalLoopCols =
-        (colCoreIdx == tiling->coreNumInCol - 1) ? tiling->tailCoreNormalLoopCols : tiling->normalCoreNormalLoopCols;
+    normalLoopCols = (colCoreIdx == tiling->coreNumInCol - 1) ? tiling->tailCoreNormalLoopCols :
+                                                                tiling->normalCoreNormalLoopCols;
 
-    tailLoopCols =
-        (colCoreIdx == tiling->coreNumInCol - 1) ? tiling->tailCoreTailLoopCols : tiling->normalCoreTailLoopCols;
+    tailLoopCols = (colCoreIdx == tiling->coreNumInCol - 1) ? tiling->tailCoreTailLoopCols :
+                                                              tiling->normalCoreTailLoopCols;
 }
 
 template <typename T>
-__aicore__ inline void CopyIn(
-    LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-    uint32_t srcStride = 0, uint32_t dstStride = 0)
+__aicore__ inline void CopyIn(LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst,
+                              uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0)
 {
     DataCopyPadExtParams<T> pad;
     pad.isPad = false;
@@ -76,9 +76,8 @@ __aicore__ inline void CopyIn(
 }
 
 template <typename T>
-__aicore__ inline void CopyOut(
-    GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-    uint32_t srcStride = 0, uint32_t dstStride = 0)
+__aicore__ inline void CopyOut(GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst,
+                               uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0)
 {
     DataCopyExtParams ext;
     ext.blockCount = nBurst;
@@ -90,9 +89,8 @@ __aicore__ inline void CopyOut(
 }
 
 template <typename U>
-__aicore__ inline void CopyInIndices(
-    LocalTensor<U> dstLocal, GlobalTensor<U> srcGm, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-    uint32_t srcStride = 0, uint32_t dstStride = 0)
+__aicore__ inline void CopyInIndices(LocalTensor<U> dstLocal, GlobalTensor<U> srcGm, uint64_t offset, uint32_t nBurst,
+                                     uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0)
 {
     CopyIn<U>(dstLocal, srcGm, offset, nBurst, copyLen, srcStride, dstStride);
 }
@@ -122,8 +120,8 @@ __aicore__ inline void WaitMte3ToV()
 }
 
 template <typename T>
-__aicore__ inline void AtomicAddCopyOutSync(
-    GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t dstOffset, uint32_t copyLen)
+__aicore__ inline void AtomicAddCopyOutSync(GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t dstOffset,
+                                            uint32_t copyLen)
 {
     WaitVToMte3();
     SetAtomicAdd<T>();
@@ -133,27 +131,26 @@ __aicore__ inline void AtomicAddCopyOutSync(
 }
 
 template <typename T, typename U>
-__aicore__ inline bool InitSimdBase(
-    const ScatterAddWithSortedSimdTilingData* tilingData, uint32_t blockIdx, uint32_t& rowCoreIdx, uint32_t& colCoreIdx,
-    bool& isStartRowCore, bool& isEndRowCore, int64_t& rowGmOffset, int64_t& colGmOffset, int64_t& rowUbLoop,
-    int64_t& colUbLoop, int64_t& normalLoopRows, int64_t& tailLoopRows, int64_t& normalLoopCols, int64_t& tailLoopCols,
-    GlobalTensor<T>& updatesGm, GlobalTensor<U>& indicesGm, GM_ADDR updates, GM_ADDR indices)
+__aicore__ inline bool InitSimdBase(const ScatterAddWithSortedSimdTilingData* tilingData, uint32_t blockIdx,
+                                    uint32_t& rowCoreIdx, uint32_t& colCoreIdx, bool& isStartRowCore,
+                                    bool& isEndRowCore, int64_t& rowGmOffset, int64_t& colGmOffset, int64_t& rowUbLoop,
+                                    int64_t& colUbLoop, int64_t& normalLoopRows, int64_t& tailLoopRows,
+                                    int64_t& normalLoopCols, int64_t& tailLoopCols, GlobalTensor<T>& updatesGm,
+                                    GlobalTensor<U>& indicesGm, GM_ADDR updates, GM_ADDR indices)
 {
     if (blockIdx >= tilingData->needCoreNum) {
         return false;
     }
-    InitRowColTiling(
-        tilingData, blockIdx, rowCoreIdx, colCoreIdx, isStartRowCore, isEndRowCore, rowGmOffset, colGmOffset, rowUbLoop,
-        colUbLoop, normalLoopRows, tailLoopRows, normalLoopCols, tailLoopCols);
+    InitRowColTiling(tilingData, blockIdx, rowCoreIdx, colCoreIdx, isStartRowCore, isEndRowCore, rowGmOffset,
+                     colGmOffset, rowUbLoop, colUbLoop, normalLoopRows, tailLoopRows, normalLoopCols, tailLoopCols);
     updatesGm.SetGlobalBuffer((__gm__ T*)(updates));
     indicesGm.SetGlobalBuffer((__gm__ U*)(indices));
     return true;
 }
 
 template <typename T, typename U>
-__aicore__ inline bool AccumulateOrInit(
-    LocalTensor<T>& yLocal, LocalTensor<T>& updatesLocal, U& preId, U curId, int32_t curLoopCols,
-    int32_t curLoopColsAlign)
+__aicore__ inline bool AccumulateOrInit(LocalTensor<T>& yLocal, LocalTensor<T>& updatesLocal, U& preId, U curId,
+                                        int32_t curLoopCols, int32_t curLoopColsAlign)
 {
     if (curId == preId) {
         Add(yLocal, yLocal, updatesLocal, curLoopCols);
@@ -168,9 +165,9 @@ __aicore__ inline bool AccumulateOrInit(
 }
 
 template <typename U, bool withPos>
-__aicore__ inline void CopyInRowIndices(
-    TQue<QuePosition::VECIN, kBufferNum>& indicesQueue, TQue<QuePosition::VECIN, kBufferNum>& posQueue,
-    GlobalTensor<U>& indicesGm, GlobalTensor<U>& posGm, int64_t indicesGmOffset, uint32_t curLoopRows)
+__aicore__ inline void CopyInRowIndices(TQue<QuePosition::VECIN, kBufferNum>& indicesQueue,
+                                        TQue<QuePosition::VECIN, kBufferNum>& posQueue, GlobalTensor<U>& indicesGm,
+                                        GlobalTensor<U>& posGm, int64_t indicesGmOffset, uint32_t curLoopRows)
 {
     LocalTensor<U> indicesLocal = indicesQueue.AllocTensor<U>();
     CopyInIndices<U>(indicesLocal, indicesGm, indicesGmOffset, 1, curLoopRows);

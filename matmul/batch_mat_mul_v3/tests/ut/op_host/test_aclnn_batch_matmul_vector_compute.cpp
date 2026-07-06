@@ -21,18 +21,11 @@
 using namespace std;
 using namespace op;
 
-class l2_batch_matmul_vector_compute_test : public testing::Test
-{
+class l2_batch_matmul_vector_compute_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "batch_matmul_vector_compute_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "batch_matmul_vector_compute_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "batch_matmul_vector_compute_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "batch_matmul_vector_compute_test TearDown" << endl; }
 };
 
 TEST_F(l2_batch_matmul_vector_compute_test, ascend910b_vector_case_1)

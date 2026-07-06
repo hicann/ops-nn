@@ -22,7 +22,7 @@
 namespace optiling {
 namespace pp_matmul {
 
-class PpMatMulDefault{
+class PpMatMulDefault {
 public:
     explicit PpMatMulDefault(gert::TilingContext* context) : context_(context) {}
     virtual ~PpMatMulDefault() = default;
@@ -30,12 +30,12 @@ public:
     void GetHardwareInfo();
     bool GetMatMulTilingData();
     void PrintTiling();
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     MatMulInfo matMulInfo_;
     PpMatmulDefaultTilingData ppMatmulDefaultTilingData_{};
     HardwareInfo hardwareInfo_;
     uint64_t kernelKey_;
 };
-}
-}
+} // namespace pp_matmul
+} // namespace optiling
 #endif

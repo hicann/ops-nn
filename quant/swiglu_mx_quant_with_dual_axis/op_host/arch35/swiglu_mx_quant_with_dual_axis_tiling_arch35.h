@@ -37,8 +37,8 @@ struct SwigluMxQuantWithDualAxisCompileInfo {
 };
 
 struct SwigluMxQuantWithDualAxisTilingParam {
-    int64_t totalCoreNum{0};    // 平台总核数（仅 tiling 侧使用）
-    int64_t usedCoreNum{0};     // 传给 kernel 的核数
+    int64_t totalCoreNum{0}; // 平台总核数（仅 tiling 侧使用）
+    int64_t usedCoreNum{0};  // 传给 kernel 的核数
     int64_t ubSize{0};
     int64_t roundMode{0};
     int64_t dstType{0};
@@ -72,17 +72,16 @@ ge::graphStatus TilingPrepareForSwigluMxQuantWithDualAxis(gert::TilingParseConte
 
 class SwigluMxQuantWithDualAxisTiling {
 public:
-    explicit SwigluMxQuantWithDualAxisTiling(gert::TilingContext* context) : context_(context)
-    {}
-    ~SwigluMxQuantWithDualAxisTiling()
-    {}
+    explicit SwigluMxQuantWithDualAxisTiling(gert::TilingContext* context) : context_(context) {}
+    ~SwigluMxQuantWithDualAxisTiling() {}
     ge::graphStatus DoTiling();
 
 private:
     ge::graphStatus GetAttr();
     ge::graphStatus CheckDtype();
     ge::graphStatus CheckShape();
-    ge::graphStatus CheckScaleShape(const gert::Shape& mxScale1Shape, const gert::Shape& mxScale2Shape, const gert::Shape& xShape);
+    ge::graphStatus CheckScaleShape(const gert::Shape& mxScale1Shape, const gert::Shape& mxScale2Shape,
+                                    const gert::Shape& xShape);
     ge::graphStatus CheckYShape(const gert::Shape& xShape, const gert::Shape& y1Shape, const gert::Shape& y2Shape);
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus ComputeTilingParams();

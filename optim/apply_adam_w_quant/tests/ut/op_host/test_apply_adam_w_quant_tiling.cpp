@@ -31,15 +31,9 @@ using namespace ge;
 
 class ApplyAdamWQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamWQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamWQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamWQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamWQuantTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -65,34 +59,33 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-void TilingTest(
-    std::string opName,
-    std::initializer_list<int64_t>& varShape,        // 输入var的shape
-    std::initializer_list<int64_t>& gradShape,       // 输入grad的shape
-    std::initializer_list<int64_t>& mRefShape,       // 输入mRefShape的shape
-    std::initializer_list<int64_t>& vRefShape,       // 输入vRefShape的shape
-    std::initializer_list<int64_t>& qmapMShape,      // 输入qmapMShape的shape
-    std::initializer_list<int64_t>& qmapVShape,      // 输入qmapVShape的shape
-    std::initializer_list<int64_t>& absmaxMRefShape, // 输入absmaxMRefShape的shape
-    std::initializer_list<int64_t>& absmaxVRefShape, // 输入absmaxVRefShape的shape
-    std::initializer_list<int64_t>& stepShape,       // 输入stepShape的shape
-    float lr_in,                                     // attr的输入
-    float beta1_in,                                  // attr的输入
-    float beta2_in,                                  // attr的输入
-    float weight_decay_in,                           // attr的输入
-    float eps_in,                                    // attr的输入
-    float gnorm_scale_in,                            // attr的输入
-    int64_t block_size_in,                           // attr的输入
-    string quantModeOptiona_in,
-    const int32_t inputNum,       // 输入个数
-    const int32_t outputNum,      // 输出个数
-    ge::DataType datatype1,       // 输入var和grad的dtype
-    ge::DataType datatype2,       // 输入mRef和vRef的dtype
-    ge::DataType datatype3,       // 输入其余所有的dtype，float32
-    ge::DataType datatype4,       // 输入step的dtype，int64
-    ge::Format format,            // 所有的format都一样
-    const ge::graphStatus status, // 成功的结果
-    uint64_t tilingKeyValue       // Tiling Key 值
+void TilingTest(std::string opName,
+                std::initializer_list<int64_t>& varShape,        // 输入var的shape
+                std::initializer_list<int64_t>& gradShape,       // 输入grad的shape
+                std::initializer_list<int64_t>& mRefShape,       // 输入mRefShape的shape
+                std::initializer_list<int64_t>& vRefShape,       // 输入vRefShape的shape
+                std::initializer_list<int64_t>& qmapMShape,      // 输入qmapMShape的shape
+                std::initializer_list<int64_t>& qmapVShape,      // 输入qmapVShape的shape
+                std::initializer_list<int64_t>& absmaxMRefShape, // 输入absmaxMRefShape的shape
+                std::initializer_list<int64_t>& absmaxVRefShape, // 输入absmaxVRefShape的shape
+                std::initializer_list<int64_t>& stepShape,       // 输入stepShape的shape
+                float lr_in,                                     // attr的输入
+                float beta1_in,                                  // attr的输入
+                float beta2_in,                                  // attr的输入
+                float weight_decay_in,                           // attr的输入
+                float eps_in,                                    // attr的输入
+                float gnorm_scale_in,                            // attr的输入
+                int64_t block_size_in,                           // attr的输入
+                string quantModeOptiona_in,
+                const int32_t inputNum,       // 输入个数
+                const int32_t outputNum,      // 输出个数
+                ge::DataType datatype1,       // 输入var和grad的dtype
+                ge::DataType datatype2,       // 输入mRef和vRef的dtype
+                ge::DataType datatype3,       // 输入其余所有的dtype，float32
+                ge::DataType datatype4,       // 输入step的dtype，int64
+                ge::Format format,            // 所有的format都一样
+                const ge::graphStatus status, // 成功的结果
+                uint64_t tilingKeyValue       // Tiling Key 值
 )
 {
     std::string op_type(opName);
@@ -123,19 +116,19 @@ void TilingTest(
     optiling::Tiling4ApplyAdamWQuantCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -202,15 +195,14 @@ void TilingTest(
                       .NodeOutputTd(3, othersDtype, format, format)
                       .NodeOutputTd(4, othersDtype, format, format)
                       .TilingData(param.get())
-                      .NodeAttrs(
-                          {{"lr", Ops::NN::AnyValue::CreateFrom<float>(lr_in)},
-                           {"beta1", Ops::NN::AnyValue::CreateFrom<float>(beta1_in)},
-                           {"beta2", Ops::NN::AnyValue::CreateFrom<float>(beta2_in)},
-                           {"weight_decay", Ops::NN::AnyValue::CreateFrom<float>(weight_decay_in)},
-                           {"eps", Ops::NN::AnyValue::CreateFrom<float>(eps_in)},
-                           {"gnorm_scale", Ops::NN::AnyValue::CreateFrom<float>(gnorm_scale_in)},
-                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>(quantModeOptiona_in)},
-                           {"block_size", Ops::NN::AnyValue::CreateFrom<int64_t>(block_size_in)}})
+                      .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom<float>(lr_in)},
+                                  {"beta1", Ops::NN::AnyValue::CreateFrom<float>(beta1_in)},
+                                  {"beta2", Ops::NN::AnyValue::CreateFrom<float>(beta2_in)},
+                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom<float>(weight_decay_in)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom<float>(eps_in)},
+                                  {"gnorm_scale", Ops::NN::AnyValue::CreateFrom<float>(gnorm_scale_in)},
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>(quantModeOptiona_in)},
+                                  {"block_size", Ops::NN::AnyValue::CreateFrom<int64_t>(block_size_in)}})
                       .Workspace(ws_size)
                       .Build();
 
@@ -254,10 +246,10 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_tilingkey_100)
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
     uint64_t tilingKeyValue = 100;
 
-    TilingTest(
-        "ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape, absmaxm_shape,
-        absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size, mode, 9, 5,
-        ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, tilingKeyValue);
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size,
+               mode, 9, 5, ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status,
+               tilingKeyValue);
 }
 
 TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_tilingkey_200)
@@ -283,10 +275,10 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_tilingkey_200)
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
     uint64_t tilingKeyValue = 200;
 
-    TilingTest(
-        "ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape, absmaxm_shape,
-        absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size, mode, 9, 5,
-        ge::DT_FLOAT16, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, tilingKeyValue);
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size,
+               mode, 9, 5, ge::DT_FLOAT16, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status,
+               tilingKeyValue);
 }
 
 TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_tilingkey_300)
@@ -312,8 +304,8 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_tilingkey_300)
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
     uint64_t tilingKeyValue = 300;
 
-    TilingTest(
-        "ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape, absmaxm_shape,
-        absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size, mode, 9, 5,
-        ge::DT_BF16, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, tilingKeyValue);
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size,
+               mode, 9, 5, ge::DT_BF16, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status,
+               tilingKeyValue);
 }

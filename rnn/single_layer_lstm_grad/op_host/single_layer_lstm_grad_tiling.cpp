@@ -102,13 +102,14 @@ public:
     void PrintTilingData();
     void LogCutBatchTilingParam(const std::string& paramName, const CutBatchTilingParam& param);
     CutBatchTilingParam CalculateCutBatchTilingParam(int64_t ubParaNum, int64_t alignedSize, int64_t actualSize,
-                              int64_t copyMLinesMax, int64_t batch);
+                                                     int64_t copyMLinesMax, int64_t batch);
     void VectorBlockCalculate();
     void ReduceBlockCalculate();
     void SplitDxhBlockCalculate();
     void ConcatXhBlockCalculate();
-    bool ValidateInputShape (int index, const std::vector<int64_t>& expected_dims);
-    bool ValidateOutputShape (int index, const std::vector<int64_t>& expected_dims);
+    bool ValidateInputShape(int index, const std::vector<int64_t>& expected_dims);
+    bool ValidateOutputShape(int index, const std::vector<int64_t>& expected_dims);
+
 private:
     SingleLayerLstmGradTilingData tilingData_;
     gert::TilingContext* context_ = nullptr;
@@ -131,7 +132,7 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
                                    matmul_tiling::DataType::DT_FLOAT);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetAType fail."),
                     return ge::GRAPH_FAILED);
-    ret = rnnMatmul1.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, 
+    ret = rnnMatmul1.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                               matmul_tiling::DataType::DT_FLOAT);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetBType fail."),
                     return ge::GRAPH_FAILED);
@@ -141,8 +142,7 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
                     return ge::GRAPH_FAILED);
 
     ret = rnnMatmul1.SetDim(rnnParams_.sysAivCoreNum);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetDim fail."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetDim fail."), return ge::GRAPH_FAILED);
     ret = rnnMatmul1.SetOrgShape(rnnParams_.batch, rnnParams_.inputSize + rnnParams_.hiddenSize,
                                  rnnParams_.hiddenSize * GATES_NUM);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetOrgShape fail."),
@@ -169,12 +169,11 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetBType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
-                                matmul_tiling::DataType::DT_FLOAT);
+                              matmul_tiling::DataType::DT_FLOAT);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetCType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetDim(rnnParams_.sysAivCoreNum);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetDim fail."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetDim fail."), return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetOrgShape(rnnParams_.hiddenSize * GATES_NUM, rnnParams_.hiddenSize + rnnParams_.inputSize,
                                  rnnParams_.batch * rnnParams_.timeStep);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetOrgShape fail."),
@@ -209,17 +208,15 @@ bool SingleLayerLstmGradTiling::CheckParamsDtype()
         }
         auto dtype = context_->GetInputDesc(inputIdx)->GetDataType();
         if (std::find(supportDtype.begin(), supportDtype.end(), dtype) == supportDtype.end()) {
-            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_,
-                "Input dtype not supported at index %ld.", inputIdx);
+            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Input dtype not supported at index %ld.", inputIdx);
             return false;
         }
         if (dtype != baseDtype) {
-            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_,
-                "Input dtype inconsistent at index %ld.", inputIdx);
+            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Input dtype inconsistent at index %ld.", inputIdx);
             return false;
         }
     }
-    
+
     // output check
     for (int64_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
         bool optionalOutputNull = (outputIdx == OUTPUT_DB_INDEX && !rnnParams_.isBias);
@@ -228,69 +225,61 @@ bool SingleLayerLstmGradTiling::CheckParamsDtype()
         }
         auto dtype = context_->GetOutputDesc(outputIdx)->GetDataType();
         if (std::find(supportDtype.begin(), supportDtype.end(), dtype) == supportDtype.end()) {
-            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_,
-                "Output dtype not supported at index %ld.", outputIdx);
+            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Output dtype not supported at index %ld.", outputIdx);
             return false;
         }
         if (dtype != baseDtype) {
-            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_,
-                "Output dtype inconsistent at index %ld \n", outputIdx);
+            VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Output dtype inconsistent at index %ld \n", outputIdx);
             return false;
         }
     }
-    
+
     return true;
 }
 
 bool SingleLayerLstmGradTiling::ValidateInputShape(int index, const std::vector<int64_t>& expected_dims)
 {
-  auto input = context_->GetInputShape(index);
-  OP_CHECK_IF(input == nullptr,
-          OP_LOGE(nodeName_, "input %d is nullptr", index),
-          return false);
-  auto shape = input->GetStorageShape();
-  if (shape.GetDimNum() != expected_dims.size()) {
-      OP_LOGE(nodeName_, "Input %d has wrong dimension count", index);
-      return false;
-  }
-
-  for (size_t i = 0; i < expected_dims.size(); ++i) {
-      if (expected_dims[i] != shape.GetDim(i)) {
-        OP_LOGE(nodeName_, "Input %d dim %zu mismatch", index, i);
+    auto input = context_->GetInputShape(index);
+    OP_CHECK_IF(input == nullptr, OP_LOGE(nodeName_, "input %d is nullptr", index), return false);
+    auto shape = input->GetStorageShape();
+    if (shape.GetDimNum() != expected_dims.size()) {
+        OP_LOGE(nodeName_, "Input %d has wrong dimension count", index);
         return false;
-      }
-  }
-  return true;
+    }
+
+    for (size_t i = 0; i < expected_dims.size(); ++i) {
+        if (expected_dims[i] != shape.GetDim(i)) {
+            OP_LOGE(nodeName_, "Input %d dim %zu mismatch", index, i);
+            return false;
+        }
+    }
+    return true;
 };
 
-bool SingleLayerLstmGradTiling::ValidateOutputShape (int index, const std::vector<int64_t>& expected_dims)
+bool SingleLayerLstmGradTiling::ValidateOutputShape(int index, const std::vector<int64_t>& expected_dims)
 {
-  auto output = context_->GetOutputShape(index);
-  OP_CHECK_IF(output == nullptr,
-              OP_LOGE(nodeName_, "output %d is nullptr", index),
-              return false);
-  auto shape = output->GetStorageShape();
-  if (shape.GetDimNum() != expected_dims.size()) {
-      OP_LOGE(nodeName_, "Output %d has wrong dimension count", index);
-      return false;
-  }
+    auto output = context_->GetOutputShape(index);
+    OP_CHECK_IF(output == nullptr, OP_LOGE(nodeName_, "output %d is nullptr", index), return false);
+    auto shape = output->GetStorageShape();
+    if (shape.GetDimNum() != expected_dims.size()) {
+        OP_LOGE(nodeName_, "Output %d has wrong dimension count", index);
+        return false;
+    }
 
-  for (size_t i = 0; i < expected_dims.size(); ++i) {
-      if (expected_dims[i] != shape.GetDim(i)) {
-          OP_LOGE(nodeName_, "Output %d dim %zu mismatch", index, i);
-          return false;
-      }
-  }
-  return true;
+    for (size_t i = 0; i < expected_dims.size(); ++i) {
+        if (expected_dims[i] != shape.GetDim(i)) {
+            OP_LOGE(nodeName_, "Output %d dim %zu mismatch", index, i);
+            return false;
+        }
+    }
+    return true;
 };
 
 bool SingleLayerLstmGradTiling::CheckParamsShape()
 {
     // get input shape
     auto xInput = context_->GetInputShape(INPUT_X_INDEX);
-    OP_CHECK_IF(xInput == nullptr,
-              OP_LOGE(nodeName_, "input 0 is nullptr"),
-              return false);
+    OP_CHECK_IF(xInput == nullptr, OP_LOGE(nodeName_, "input 0 is nullptr"), return false);
     auto xShape = xInput->GetStorageShape();
     if (xShape.GetDimNum() != INPUT_DIM_NUM) {
         OP_LOGE(nodeName_, "Input x must be 3D tensor");
@@ -298,9 +287,7 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
     }
     // get wight shape
     auto initHInput = context_->GetInputShape(INPUT_INIT_H_INDEX);
-    OP_CHECK_IF(initHInput == nullptr,
-              OP_LOGE(nodeName_, "input 4 is nullptr"),
-              return false);
+    OP_CHECK_IF(initHInput == nullptr, OP_LOGE(nodeName_, "input 4 is nullptr"), return false);
     auto initHShape = initHInput->GetStorageShape();
     if (initHShape.GetDimNum() != INPUT_DIM_NUM) {
         OP_LOGE(nodeName_, "Input initH must be 3D tensor");
@@ -314,7 +301,8 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
     OP_TILING_CHECK(
         rnnParams_.inputSize <= 0 || rnnParams_.hiddenSize <= 0 || rnnParams_.timeStep <= 0 || rnnParams_.batch <= 0,
         VECTOR_INNER_ERR_REPORT_TILIING(nodeName_,
-        "SingleLayerLstmGrad tensor shape not support 0 or negtive, please check."), return false);
+                                        "SingleLayerLstmGrad tensor shape not support 0 or negtive, please check."),
+        return false);
 
     // get optional input
     auto biasShape = context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
@@ -323,13 +311,18 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
     auto seqDesc = context_->GetOptionalInputDesc(INPUT_SEQ_LENGTH_INDEX);
     auto yShape = context_->GetOptionalInputShape(INPUT_Y_INDEX);
     auto yDesc = context_->GetOptionalInputDesc(INPUT_Y_INDEX);
-    rnnParams_.isBias =
-        (biasDesc != nullptr && biasShape != nullptr &&
-        biasShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ? 1 : 0;
+    rnnParams_.isBias = (biasDesc != nullptr && biasShape != nullptr &&
+                         biasShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ?
+                            1 :
+                            0;
     rnnParams_.isSeqLength = (seqDesc != nullptr && seqShape != nullptr &&
-        seqShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ? 1 : 0;
+                              seqShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ?
+                                 1 :
+                                 0;
     bool isY = (yDesc != nullptr && yShape != nullptr &&
-        yShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ? true : false;
+                yShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ?
+                   true :
+                   false;
 
     std::vector<int64_t> biasDim = {GATES_NUM * rnnParams_.hiddenSize};
     std::vector<int64_t> initDim = {1, rnnParams_.batch, rnnParams_.hiddenSize};
@@ -337,26 +330,18 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
     std::vector<int64_t> weightDim = {GATES_NUM * rnnParams_.hiddenSize, rnnParams_.inputSize + rnnParams_.hiddenSize};
     std::vector<int64_t> inputDim = {rnnParams_.timeStep, rnnParams_.batch, rnnParams_.inputSize};
     std::vector<int64_t> seqDim = {rnnParams_.timeStep, rnnParams_.batch, rnnParams_.hiddenSize};
-    bool ret =
-      ValidateInputShape(INPUT_WEIGHT_INDEX, weightDim) &&
-      ValidateInputShape(INPUT_INIT_H_INDEX, initDim) &&
-      ValidateInputShape(INPUT_INIT_C_INDEX, initDim) &&
-      ValidateInputShape(INPUT_H_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_C_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_DY_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_DH_INDEX, initDim) &&
-      ValidateInputShape(INPUT_DC_INDEX, initDim) &&
-      ValidateInputShape(INPUT_I_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_J_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_F_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_O_INDEX, hiddenDim) &&
-      ValidateInputShape(INPUT_TANHC_INDEX, hiddenDim) &&
-      ValidateOutputShape(OUTPUT_DW_INDEX, weightDim) &&
-      ValidateOutputShape(OUTPUT_DX_INDEX, inputDim) &&
-      ValidateOutputShape(OUTPUT_DINIT_H_INDEX, initDim) &&
-      ValidateOutputShape(OUTPUT_DINIT_C_INDEX, initDim);
-    ret = rnnParams_.isBias ? ret && ValidateInputShape(INPUT_BIAS_INDEX, biasDim) &&
-        ValidateOutputShape(OUTPUT_DB_INDEX, biasDim) : ret;
+    bool ret = ValidateInputShape(INPUT_WEIGHT_INDEX, weightDim) && ValidateInputShape(INPUT_INIT_H_INDEX, initDim) &&
+               ValidateInputShape(INPUT_INIT_C_INDEX, initDim) && ValidateInputShape(INPUT_H_INDEX, hiddenDim) &&
+               ValidateInputShape(INPUT_C_INDEX, hiddenDim) && ValidateInputShape(INPUT_DY_INDEX, hiddenDim) &&
+               ValidateInputShape(INPUT_DH_INDEX, initDim) && ValidateInputShape(INPUT_DC_INDEX, initDim) &&
+               ValidateInputShape(INPUT_I_INDEX, hiddenDim) && ValidateInputShape(INPUT_J_INDEX, hiddenDim) &&
+               ValidateInputShape(INPUT_F_INDEX, hiddenDim) && ValidateInputShape(INPUT_O_INDEX, hiddenDim) &&
+               ValidateInputShape(INPUT_TANHC_INDEX, hiddenDim) && ValidateOutputShape(OUTPUT_DW_INDEX, weightDim) &&
+               ValidateOutputShape(OUTPUT_DX_INDEX, inputDim) && ValidateOutputShape(OUTPUT_DINIT_H_INDEX, initDim) &&
+               ValidateOutputShape(OUTPUT_DINIT_C_INDEX, initDim);
+    ret = rnnParams_.isBias ?
+              ret && ValidateInputShape(INPUT_BIAS_INDEX, biasDim) && ValidateOutputShape(OUTPUT_DB_INDEX, biasDim) :
+              ret;
     ret = rnnParams_.isSeqLength ? ret && ValidateInputShape(INPUT_SEQ_LENGTH_INDEX, seqDim) : ret;
     ret = isY ? ret && ValidateInputShape(INPUT_Y_INDEX, hiddenDim) : ret;
     return ret;
@@ -364,7 +349,7 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
 
 bool SingleLayerLstmGradTiling::CheckAttr()
 {
-  return CheckAttrOps() == ge::GRAPH_SUCCESS && CheckAttrTiling() == ge::GRAPH_SUCCESS;
+    return CheckAttrOps() == ge::GRAPH_SUCCESS && CheckAttrTiling() == ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SingleLayerLstmGradTiling::CheckAttrTiling()
@@ -375,8 +360,7 @@ ge::graphStatus SingleLayerLstmGradTiling::CheckAttrTiling()
     const char* gateOrder = attrs->GetAttrPointer<char>(ATTR_GATE_ORDER_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gateOrder);
     if (strcmp(gateOrder, "ifjo") != 0 && strcmp(gateOrder, "ijfo") != 0) {
-        OP_LOGE(nodeName_,
-            "SingleLayerLstmGrad attr gate_order [%s] is not support, please check.", gateOrder);
+        OP_LOGE(nodeName_, "SingleLayerLstmGrad attr gate_order [%s] is not support, please check.", gateOrder);
         return ge::GRAPH_FAILED;
     }
     rnnParams_.gateOrder = strcmp(gateOrder, "ijfo") == 0 ? static_cast<int64_t>(GateOrder::IJFO) :
@@ -391,46 +375,49 @@ ge::graphStatus SingleLayerLstmGradTiling::CheckAttrOps()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const char* direction = attrs->GetAttrPointer<char>(ATTR_DIRECTION_INDEX);
     OP_CHECK_IF(std::find(SUPPORT_DIRECTION.begin(), SUPPORT_DIRECTION.end(), direction) == SUPPORT_DIRECTION.end(),
-                    OP_LOGE(nodeName_,
-                    "SingleLayerLstmGrad attr direction is not support, please check."), return ge::GRAPH_FAILED);
+                OP_LOGE(nodeName_, "SingleLayerLstmGrad attr direction is not support, please check."),
+                return ge::GRAPH_FAILED);
     rnnParams_.direction = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingData()
 {
-  auto dataType = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
-  inputDSize_ = dataType == ge::DT_FLOAT ? FP32_BYTES : FP32_BYTES / AIV_DOUBLE;
-  alignedPara_ = dataType == ge::DT_FLOAT ? DEFAULT_ALIGNED_FP32 : DEFAULT_ALIGNED_FP16;
-  auto ret = GetMMTilingDataSplit();
+    auto dataType = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
+    inputDSize_ = dataType == ge::DT_FLOAT ? FP32_BYTES : FP32_BYTES / AIV_DOUBLE;
+    alignedPara_ = dataType == ge::DT_FLOAT ? DEFAULT_ALIGNED_FP32 : DEFAULT_ALIGNED_FP16;
+    auto ret = GetMMTilingDataSplit();
 
-  return ret;
+    return ret;
 }
 
 void SingleLayerLstmGradTiling::VectorBlockCalculate()
 {
     int64_t hiddenUbNum = rnnParams_.isSeqLength ? HIDDEN_UB_NUM_WITH_SEQ : HIDDEN_UB_NUM_WITHOUT_SEQ;
     int64_t sizeLimit = (rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / hiddenUbNum / FP32_BYTES / alignedPara_ *
-        alignedPara_;
-    //cut M
+                        alignedPara_;
+    // cut M
     rnnParams_.singleCoreM = Ops::Base::CeilDiv(rnnParams_.batch, rnnParams_.sysAivCoreNum);
     rnnParams_.mCnt = Ops::Base::CeilDiv(rnnParams_.batch, rnnParams_.singleCoreM);
-    rnnParams_.singleCoreMTail = rnnParams_.batch - (rnnParams_.mCnt - 1)  * rnnParams_.singleCoreM;
+    rnnParams_.singleCoreMTail = rnnParams_.batch - (rnnParams_.mCnt - 1) * rnnParams_.singleCoreM;
     rnnParams_.nCnt = rnnParams_.batch < rnnParams_.sysAivCoreNum ?
-        Ops::Base::CeilDiv(rnnParams_.sysAivCoreNum, rnnParams_.mCnt) : 1;
-    //cut N
+                          Ops::Base::CeilDiv(rnnParams_.sysAivCoreNum, rnnParams_.mCnt) :
+                          1;
+    // cut N
     rnnParams_.singleCoreN = Ops::Base::CeilDiv(rnnParams_.hiddenSize, rnnParams_.nCnt);
     rnnParams_.singleCoreN = rnnParams_.singleCoreN < (BLOCK_BYTES / inputDSize_) ? BLOCK_BYTES / inputDSize_ :
-                             rnnParams_.singleCoreN;
+                                                                                    rnnParams_.singleCoreN;
     rnnParams_.nCnt = Ops::Base::CeilDiv(rnnParams_.hiddenSize, rnnParams_.singleCoreN);
     rnnParams_.singleCoreNTail = rnnParams_.hiddenSize - (rnnParams_.nCnt - 1) * rnnParams_.singleCoreN;
-    rnnParams_.baseN = rnnParams_.singleCoreN < sizeLimit ? Ops::Base::CeilDiv(rnnParams_.singleCoreN, alignedPara_) *
-                       alignedPara_ : sizeLimit;
+    rnnParams_.baseN = rnnParams_.singleCoreN < sizeLimit ?
+                           Ops::Base::CeilDiv(rnnParams_.singleCoreN, alignedPara_) * alignedPara_ :
+                           sizeLimit;
     rnnParams_.baseM = sizeLimit / rnnParams_.baseN;
 }
 
 CutBatchTilingParam SingleLayerLstmGradTiling::CalculateCutBatchTilingParam(int64_t ubParaNum, int64_t alignedSize,
-    int64_t actualSize, int64_t copyMLinesMax, int64_t batch)
+                                                                            int64_t actualSize, int64_t copyMLinesMax,
+                                                                            int64_t batch)
 {
     CutBatchTilingParam resParams;
     // calculate copy lines at M
@@ -438,16 +425,16 @@ CutBatchTilingParam SingleLayerLstmGradTiling::CalculateCutBatchTilingParam(int6
     resParams.copyMLines = resParams.copyMLines < copyMLinesMax ? resParams.copyMLines : copyMLinesMax;
     resParams.taskNum = Ops::Base::CeilDiv(batch, resParams.copyMLines);
     resParams.copyMLinesTail = batch - (resParams.taskNum - 1) * resParams.copyMLines;
-    
+
     // calculate loop params at N
-    resParams.copyNLength = Ops::Base::CeilAlign(Ops::Base::CeilDiv(ubParaNum,  resParams.copyMLines), alignedSize);
+    resParams.copyNLength = Ops::Base::CeilAlign(Ops::Base::CeilDiv(ubParaNum, resParams.copyMLines), alignedSize);
     resParams.nLoop = Ops::Base::CeilDiv(actualSize, resParams.copyNLength);
-    resParams.copyNLengthTail = actualSize - (resParams.nLoop - 1) * resParams.copyNLength ;
-    
+    resParams.copyNLengthTail = actualSize - (resParams.nLoop - 1) * resParams.copyNLength;
+
     // calculate block params
     resParams.splitTaskPerCore = resParams.taskNum / rnnParams_.sysAivCoreNum;
     resParams.splitPreCore = resParams.taskNum % rnnParams_.sysAivCoreNum;
-    
+
     return resParams;
 }
 
@@ -463,26 +450,26 @@ void SingleLayerLstmGradTiling::SplitDxhBlockCalculate()
     int64_t copyMLinesMax = Ops::Base::CeilDiv(rnnParams_.batch, rnnParams_.sysAivCoreNum);
     if (ubParaNum > rnnParams_.oneLineAligned && rnnParams_.isSeqLength == 0) {
         dxhInputParam_ = dxhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.oneLineAligned,
-            rnnParams_.inputSize + rnnParams_.hiddenSize, copyMLinesMax, rnnParams_.batch);
+                                                                        rnnParams_.inputSize + rnnParams_.hiddenSize,
+                                                                        copyMLinesMax, rnnParams_.batch);
     } else if (rnnParams_.isSeqLength == 0) {
         factor = inputDSize_ == FP32_BYTES ? DEFAULT_COPY_FACTOR_FP32 : DEFAULT_COPY_FACTOR_FP16;
         ubParaNum = Ops::Base::CeilAlign((rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / factor, alignedPara_);
-        dxhInputParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.inputSizeAligned,
-            rnnParams_.inputSize, copyMLinesMax, rnnParams_.batch);
-        dxhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.hiddenSizeAligned,
-            rnnParams_.hiddenSize, copyMLinesMax, rnnParams_.batch);
+        dxhInputParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.inputSizeAligned, rnnParams_.inputSize,
+                                                      copyMLinesMax, rnnParams_.batch);
+        dxhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.hiddenSizeAligned, rnnParams_.hiddenSize,
+                                                       copyMLinesMax, rnnParams_.batch);
     } else if (rnnParams_.isSeqLength == 1) {
         factor = inputDSize_ == FP32_BYTES ? DEFAULT_COPY_FACTOR_FP32 : DEFAULT_COPY_FACTOR_FP16;
         ubParaNum = Ops::Base::CeilAlign((rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / factor, alignedPara_);
-        dxhInputParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.inputSizeAligned,
-            rnnParams_.inputSize, copyMLinesMax, rnnParams_.batch);
-        int64_t factorHidden = inputDSize_ == FP32_BYTES ?
-                                              DEFAULT_COPY_FACTOR_FP32 * SEQ_UB_NUM :
-                                              DEFAULT_COPY_FACTOR_FP16 * SEQ_UB_NUM;
-        int64_t ubParaNumHidden = Ops::Base::CeilAlign(
-            (rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / factorHidden, alignedPara_);
+        dxhInputParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.inputSizeAligned, rnnParams_.inputSize,
+                                                      copyMLinesMax, rnnParams_.batch);
+        int64_t factorHidden = inputDSize_ == FP32_BYTES ? DEFAULT_COPY_FACTOR_FP32 * SEQ_UB_NUM :
+                                                           DEFAULT_COPY_FACTOR_FP16 * SEQ_UB_NUM;
+        int64_t ubParaNumHidden = Ops::Base::CeilAlign((rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / factorHidden,
+                                                       alignedPara_);
         dxhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNumHidden, rnnParams_.hiddenSizeAligned,
-            rnnParams_.hiddenSize, copyMLinesMax, rnnParams_.batch);
+                                                       rnnParams_.hiddenSize, copyMLinesMax, rnnParams_.batch);
     }
 }
 
@@ -490,28 +477,32 @@ void SingleLayerLstmGradTiling::ConcatXhBlockCalculate()
 {
     int64_t factor = inputDSize_ == FP32_BYTES ? DEFAULT_COPY_FACTOR_FP32 : DEFAULT_COPY_FACTOR_FP16;
     int64_t ubParaNum = Ops::Base::CeilDiv((rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / factor, alignedPara_) *
-        alignedPara_;
+                        alignedPara_;
     int64_t dxhSmallFlag = ubParaNum <= rnnParams_.oneLineAligned ? 1 : 0;
     tilingKey_ += dxhSmallFlag * SMALL_FLAG_MULTIPLIER_CONCAT;
     int64_t copyMLinesMax = Ops::Base::CeilDiv(rnnParams_.batch, rnnParams_.sysAivCoreNum);
     if (ubParaNum > rnnParams_.oneLineAligned) {
         xhInputParam_ = xhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.oneLineAligned,
-            rnnParams_.inputSize + rnnParams_.hiddenSize, copyMLinesMax, rnnParams_.batch);
+                                                                      rnnParams_.inputSize + rnnParams_.hiddenSize,
+                                                                      copyMLinesMax, rnnParams_.batch);
     } else {
-        xhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.hiddenSizeAligned,
-            rnnParams_.hiddenSize, copyMLinesMax, rnnParams_.batch);
-        int64_t copyMLinesMaxInput= Ops::Base::CeilDiv(rnnParams_.batch * rnnParams_.timeStep, rnnParams_.sysAivCoreNum);
-        xhInputParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.inputSizeAligned,
-            rnnParams_.inputSize, copyMLinesMaxInput, rnnParams_.batch * rnnParams_.timeStep);
+        xhHiddenParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.hiddenSizeAligned, rnnParams_.hiddenSize,
+                                                      copyMLinesMax, rnnParams_.batch);
+        int64_t copyMLinesMaxInput = Ops::Base::CeilDiv(rnnParams_.batch * rnnParams_.timeStep,
+                                                        rnnParams_.sysAivCoreNum);
+        xhInputParam_ = CalculateCutBatchTilingParam(ubParaNum, rnnParams_.inputSizeAligned, rnnParams_.inputSize,
+                                                     copyMLinesMaxInput, rnnParams_.batch * rnnParams_.timeStep);
     }
 }
 
 void SingleLayerLstmGradTiling::ReduceBlockCalculate()
 {
     rnnParams_.baseReduceN = Ops::Base::CeilDiv(
-        Ops::Base::CeilDiv(rnnParams_.hiddenSize * GATES_NUM, rnnParams_.sysAivCoreNum), alignedPara_) * alignedPara_;
-    rnnParams_.baseReduceN =  rnnParams_.baseReduceN > DEFAULT_REDUCE_N_LIMIT ? DEFAULT_REDUCE_N_LIMIT :
-        rnnParams_.baseReduceN;
+                                 Ops::Base::CeilDiv(rnnParams_.hiddenSize * GATES_NUM, rnnParams_.sysAivCoreNum),
+                                 alignedPara_) *
+                             alignedPara_;
+    rnnParams_.baseReduceN = rnnParams_.baseReduceN > DEFAULT_REDUCE_N_LIMIT ? DEFAULT_REDUCE_N_LIMIT :
+                                                                               rnnParams_.baseReduceN;
     rnnParams_.maxReduceNumOnce = (rnnParams_.ubSize - DEFAULT_UB_RESERVE_SIZE) / FP32_BYTES / rnnParams_.baseReduceN;
     rnnParams_.reduceBlockSize = rnnParams_.timeStep * rnnParams_.batch;
     int64_t baseReduceNNums = Ops::Base::CeilDiv(rnnParams_.hiddenSize * GATES_NUM, rnnParams_.baseReduceN);
@@ -519,8 +510,8 @@ void SingleLayerLstmGradTiling::ReduceBlockCalculate()
     int64_t reduceNNumsPerCore = Ops::Base::CeilDiv(baseReduceNNums, rnnParams_.nReduceCnt);
     rnnParams_.nReduceCnt = Ops::Base::CeilDiv(baseReduceNNums, reduceNNumsPerCore);
     rnnParams_.singleCoreReduceN = reduceNNumsPerCore * rnnParams_.baseReduceN;
-    rnnParams_.singleCoreReduceNTail = rnnParams_.hiddenSize * GATES_NUM - (rnnParams_.nReduceCnt - 1) *
-        rnnParams_.singleCoreReduceN;
+    rnnParams_.singleCoreReduceNTail = rnnParams_.hiddenSize * GATES_NUM -
+                                       (rnnParams_.nReduceCnt - 1) * rnnParams_.singleCoreReduceN;
     /*Since the data volume of the reduce operation will vary, the number of rows (for each core to move multiple rows
       at a time) has to be handled within the kernel.*/
 }
@@ -533,35 +524,29 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
     auto platformInfo = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     uint32_t aicCoreNum = ascendcPlatform.GetCoreNumAic();
-    OP_TILING_CHECK((aicCoreNum <= 0),
-                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Failed to get core num."),
+    OP_TILING_CHECK((aicCoreNum <= 0), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Failed to get core num."),
                     return ge::GRAPH_FAILED);
     uint32_t aivCoreNum = aicCoreNum * AIV_DOUBLE;
-    OP_TILING_CHECK((aivCoreNum <= 0),
-                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Failed to get core num."),
+    OP_TILING_CHECK((aivCoreNum <= 0), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Failed to get core num."),
                     return ge::GRAPH_FAILED);
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
-    OP_TILING_CHECK(!CheckParamsShape(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check shape fail."),
+    OP_TILING_CHECK(!CheckParamsShape(), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check shape fail."),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(!CheckParamsDtype(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check dtype fail."),
+    OP_TILING_CHECK(!CheckParamsDtype(), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check dtype fail."),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(!CheckAttr(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check attr fail."),
+    OP_TILING_CHECK(!CheckAttr(), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check attr fail."),
                     return ge::GRAPH_FAILED);
-    
+
     // get UB L1 size
     rnnParams_.sysAicCoreNum = static_cast<int64_t>(aicCoreNum);
     rnnParams_.sysAivCoreNum = static_cast<int64_t>(aivCoreNum);
     rnnParams_.ubSize = ubSizePlatForm;
     // get matmul tiling data
-    OP_TILING_CHECK(
-        GetMMTilingData() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "get matmul tiling data fail."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetMMTilingData() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "get matmul tiling data fail."),
+                    return ge::GRAPH_FAILED);
 
     VectorBlockCalculate();
     ReduceBlockCalculate();
@@ -574,23 +559,25 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
     int64_t mmWeightKeyFlag = rnnParams_.timeStep * rnnParams_.batch > GM2L1_CHECK ? MM_WEIGHT_KEY_FACTOR : 0;
     tilingKey_ = tilingKey_ + mmGateKeyFlag + mmWeightKeyFlag;
     context_->SetTilingKey(tilingKey_);
-    size_t *currentWorkspace = context_->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     // wFp32 + dwFp32 + dhPrevFp32 + dcPrevFp32
     int64_t workspaceFp32 = GATES_NUM * rnnParams_.hiddenSize * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
-        FP32_BYTES * WORKSPACE_FP32_MULTIPLIER + rnnParams_.batch * rnnParams_.hiddenSize * FP32_BYTES *
-        WORKSPACE_FP32_MULTIPLIER;
+                                FP32_BYTES * WORKSPACE_FP32_MULTIPLIER +
+                            rnnParams_.batch * rnnParams_.hiddenSize * FP32_BYTES * WORKSPACE_FP32_MULTIPLIER;
 
     // dgate + xh + dxh + sys
     currentWorkspace[0] = rnnParams_.timeStep * rnnParams_.batch * GATES_NUM * rnnParams_.hiddenSize * FP32_BYTES +
-        rnnParams_.timeStep * rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) * FP32_BYTES +
-        rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) * FP32_BYTES + sysWorkspaceSize;
+                          rnnParams_.timeStep * rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
+                              FP32_BYTES +
+                          rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) * FP32_BYTES +
+                          sysWorkspaceSize;
     currentWorkspace[0] = inputDSize_ == FP32_BYTES ? currentWorkspace[0] : currentWorkspace[0] + workspaceFp32;
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
 void SingleLayerLstmGradTiling::SetTilingData()
-{   
+{
     tilingData_.set_ubSize(rnnParams_.ubSize);
     tilingData_.set_timeStep(rnnParams_.timeStep);
     tilingData_.set_batch(rnnParams_.batch);
@@ -718,21 +705,20 @@ void SingleLayerLstmGradTiling::PrintTilingData()
 static ge::graphStatus TilingFunc4SingleLayerLstmGrad(gert::TilingContext* context)
 {
     SingleLayerLstmGradTiling tilingObject(context);
-    if (tilingObject.Init()!=ge::GRAPH_SUCCESS){
-        OP_LOGE(context->GetNodeName(),  "Tiling Init failed!");
+    if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context->GetNodeName(), "Tiling Init failed!");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepareForSingleLayerLstmGrad([[maybe_unused]] gert::TilingParseContext *context)
+ge::graphStatus TilingPrepareForSingleLayerLstmGrad([[maybe_unused]] gert::TilingParseContext* context)
 {
-  return ge::GRAPH_SUCCESS;
+    return ge::GRAPH_SUCCESS;
 }
-
 
 IMPL_OP_OPTILING(SingleLayerLstmGrad)
     .Tiling(TilingFunc4SingleLayerLstmGrad)
     .TilingParse<SingleLayerLstmGradCompileInfo>(TilingPrepareForSingleLayerLstmGrad);
-}
+} // namespace optiling

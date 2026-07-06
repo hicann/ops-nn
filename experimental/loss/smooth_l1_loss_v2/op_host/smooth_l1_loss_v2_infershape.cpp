@@ -47,19 +47,17 @@ static ge::graphStatus InferShapeSmoothL1LossV2(gert::InferShapeContext* context
     OP_CHECK_NULL_WITH_CONTEXT(context, labelShape);
 
     // check rank
-    OP_CHECK_IF(
-        predictShape->GetDimNum() != labelShape->GetDimNum(),
-        OP_LOGE(
-            context, "Predict and label rank mismatch: %zu vs %zu", predictShape->GetDimNum(), labelShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(predictShape->GetDimNum() != labelShape->GetDimNum(),
+                OP_LOGE(context, "Predict and label rank mismatch: %zu vs %zu", predictShape->GetDimNum(),
+                        labelShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     // check each dimension
     for (size_t i = 0; i < predictShape->GetDimNum(); ++i) {
-        OP_CHECK_IF(
-            predictShape->GetDim(i) != labelShape->GetDim(i),
-            OP_LOGE(
-                context, "Shape mismatch at dim %zu: %ld vs %ld", i, predictShape->GetDim(i), labelShape->GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(predictShape->GetDim(i) != labelShape->GetDim(i),
+                    OP_LOGE(context, "Shape mismatch at dim %zu: %ld vs %ld", i, predictShape->GetDim(i),
+                            labelShape->GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
 
     // get output shape

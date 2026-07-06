@@ -31,10 +31,9 @@ namespace Conv3dFunc {
 template <class Intf>
 class LoadAL1WithPointWiseTools {
 public:
-    __aicore__ inline LoadAL1WithPointWiseTools()
-    {}
+    __aicore__ inline LoadAL1WithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         al1BlockNum = AL1_BLOCK_SIZE / self_->ctx.sizeOfFmap;
@@ -49,8 +48,7 @@ public:
         if (IsMTail() || IsKAL1Tail()) {
             // L1 刷零，大小按照L0B对齐
             InitConstValueParams<typename Intf::FmapT> initConstValueParams;
-            SetInitConstValueParams(initConstValueParams, 1,
-                alignCurrentMAL1 * alignCurrentKAL1 / al1BlockNum);
+            SetInitConstValueParams(initConstValueParams, 1, alignCurrentMAL1 * alignCurrentKAL1 / al1BlockNum);
             InitConstValue<typename Intf::FmapT>(self_->ctx.al1, initConstValueParams);
             AscendC::PipeBarrier<PIPE_MTE2>();
         }
@@ -66,17 +64,15 @@ public:
     }
 
 private:
-    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<typename Intf::FmapT> &initConstValueParams,
-        const uint64_t repeatTimes, const uint64_t blockNum)
+    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<typename Intf::FmapT>& initConstValueParams,
+                                                   const uint64_t repeatTimes, const uint64_t blockNum)
     {
         initConstValueParams.repeatTimes = repeatTimes;
         initConstValueParams.blockNum = blockNum;
         initConstValueParams.dstGap = 0;
         initConstValueParams.initValue = 0;
-        ASC_OP_LOGD(
-            "[LoadAL1WithPointWise] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
-            initConstValueParams.repeatTimes,
-            initConstValueParams.blockNum);
+        ASC_OP_LOGD("[LoadAL1WithPointWise] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
+                    initConstValueParams.repeatTimes, initConstValueParams.blockNum);
     }
 
     __aicore__ inline void SetNd2NzParams(uint16_t nValue, uint16_t srcDValue, uint16_t dstNzC0Stride)
@@ -91,15 +87,9 @@ private:
         nd2NzParams.dstNzMatrixStride = 1;
     }
 
-    __aicore__ inline bool IsMTail()
-    {
-        return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter;
-    }
+    __aicore__ inline bool IsMTail() { return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter; }
 
-    __aicore__ inline bool IsKAL1Tail()
-    {
-        return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter;
-    }
+    __aicore__ inline bool IsKAL1Tail() { return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter; }
 
     __aicore__ inline void PreProcess()
     {
@@ -120,8 +110,8 @@ private:
         }
 
         aL1GmOffset = self_->ctx.kAL1Iter * self_->ctx.conv3dTiling->kAL1 * dihiwi +
-                    self_->ctx.dOutIter * self_->ctx.conv3dTiling->orgHixWi +
-                    self_->ctx.mAL1Iter * self_->ctx.conv3dTiling->mAL1;
+                      self_->ctx.dOutIter * self_->ctx.conv3dTiling->orgHixWi +
+                      self_->ctx.mAL1Iter * self_->ctx.conv3dTiling->mAL1;
         ASC_OP_LOGD("[LoadAL1WithPointWise] aL1GmOffset %u\n", aL1GmOffset);
     }
 
@@ -131,14 +121,11 @@ private:
             SetNd2NzParams(1, currentMAL1, alignCurrentKAL1);
             for (uint64_t i = 0; i < currentKAL1; ++i) {
                 DataCopy<typename Intf::FmapT>(self_->ctx.al1[i * al1BlockNum],
-                                            self_->ctx.agm[aL1GmOffset + i * dihiwi],
-                                            nd2NzParams);
+                                               self_->ctx.agm[aL1GmOffset + i * dihiwi], nd2NzParams);
             }
         } else {
             SetNd2NzParams(currentKAL1, dihiwi, alignCurrentKAL1);
-            DataCopy<typename Intf::FmapT>(self_->ctx.al1,
-                                            self_->ctx.agm[aL1GmOffset],
-                                            nd2NzParams);
+            DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], nd2NzParams);
         }
     }
 
@@ -161,14 +148,14 @@ private:
             currentDataCopyLines = copyIdx * DATA_COPY_OP_LEN;
             if (dihiwi > MAX_UINT16) {
                 for (uint64_t innerTime = 0; innerTime < DATA_COPY_OP_LEN; ++innerTime) {
-                    DataCopy<typename Intf::FmapT>(self_->ctx.al1[singleDataCopyOffset + innerTime * al1BlockNum],
-                                        self_->ctx.agm[aL1GmOffset + dihiwi * (currentDataCopyLines + innerTime)],
-                                        nd2NzParams);
+                    DataCopy<typename Intf::FmapT>(
+                        self_->ctx.al1[singleDataCopyOffset + innerTime * al1BlockNum],
+                        self_->ctx.agm[aL1GmOffset + dihiwi * (currentDataCopyLines + innerTime)], nd2NzParams);
                 }
             } else {
                 DataCopy<typename Intf::FmapT>(self_->ctx.al1[singleDataCopyOffset],
-                                        self_->ctx.agm[aL1GmOffset + dihiwi * currentDataCopyLines],
-                                        nd2NzParams);
+                                               self_->ctx.agm[aL1GmOffset + dihiwi * currentDataCopyLines],
+                                               nd2NzParams);
             }
         }
 
@@ -177,21 +164,21 @@ private:
             currentDataCopyLines = upperLimits * DATA_COPY_OP_LEN;
             if (dihiwi > MAX_UINT16) {
                 for (uint64_t innerTime = 0; innerTime < tailKAL1; ++innerTime) {
-                    DataCopy<typename Intf::FmapT>(self_->ctx.al1[singleDataCopyOffset + innerTime * al1BlockNum],
-                                        self_->ctx.agm[aL1GmOffset + dihiwi * (currentDataCopyLines + innerTime)],
-                                        nd2NzParams);
+                    DataCopy<typename Intf::FmapT>(
+                        self_->ctx.al1[singleDataCopyOffset + innerTime * al1BlockNum],
+                        self_->ctx.agm[aL1GmOffset + dihiwi * (currentDataCopyLines + innerTime)], nd2NzParams);
                 }
             } else {
                 nd2NzParams.nValue = tailKAL1;
                 DataCopy<typename Intf::FmapT>(self_->ctx.al1[singleDataCopyOffset],
-                                        self_->ctx.agm[aL1GmOffset + dihiwi * currentDataCopyLines],
-                                        nd2NzParams);
+                                               self_->ctx.agm[aL1GmOffset + dihiwi * currentDataCopyLines],
+                                               nd2NzParams);
             }
         }
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t currentMAL1 = 0;
     uint64_t currentKAL1 = 0;
     uint64_t al1BlockNum = 16;
@@ -207,10 +194,9 @@ private:
 template <class Intf>
 class LoadBL1WithPointWiseTools {
 public:
-    __aicore__ inline LoadBL1WithPointWiseTools()
-    {}
+    __aicore__ inline LoadBL1WithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         bl1BlockNum = ONE_BLK_SIZE / self_->ctx.sizeOfWeight;
@@ -224,14 +210,13 @@ public:
         if (IsNTail() || IsKBL1Tail()) {
             // L1 刷零
             InitConstValueParams<typename Intf::WeightT> initConstValueParams;
-            SetInitConstValueParams(initConstValueParams, 1,
-                alignCurrentNBL1 * alignCurrentKBL1 / bl1BlockNum);
+            SetInitConstValueParams(initConstValueParams, 1, alignCurrentNBL1 * alignCurrentKBL1 / bl1BlockNum);
             InitConstValue<typename Intf::WeightT>(self_->ctx.bl1, initConstValueParams);
             AscendC::PipeBarrier<PIPE_MTE2>();
         }
 
         uint64_t bL1GmOffset = self_->ctx.nBL1Iter * self_->ctx.conv3dTiling->nBL1 * self_->ctx.orgCi +
-                                self_->ctx.kBL1Iter * self_->ctx.conv3dTiling->kBL1;
+                               self_->ctx.kBL1Iter * self_->ctx.conv3dTiling->kBL1;
         ASC_OP_LOGD("[LoadBL1WithPointWise] bL1GmOffset %u\n", bL1GmOffset);
         SetNd2NzParams();
         if (self_->ctx.orgCi > MAX_UINT16) {
@@ -239,17 +224,16 @@ public:
             nd2NzParams.nValue = 1;
             ASC_OP_LOGD("[LoadBL1WithPointWise] srcDValue Beyond MAX_UINT16. LoopTimes %d nd2NzParams.nValue %d "
                         "nd2NzParams.dValue %d nd2NzParams.srcDValue %d nd2NzParams.dstNzC0Stride %d.\n",
-                        currentNBL1, nd2NzParams.nValue, nd2NzParams.dValue,
-                        nd2NzParams.srcDValue, nd2NzParams.dstNzC0Stride);
+                        currentNBL1, nd2NzParams.nValue, nd2NzParams.dValue, nd2NzParams.srcDValue,
+                        nd2NzParams.dstNzC0Stride);
             for (uint64_t i = 0; i < currentNBL1; ++i) {
                 DataCopy<typename Intf::WeightT>(self_->ctx.bl1[i * bl1BlockNum],
-                                                self_->ctx.bgm[bL1GmOffset + self_->ctx.orgCi * i], nd2NzParams);
+                                                 self_->ctx.bgm[bL1GmOffset + self_->ctx.orgCi * i], nd2NzParams);
             }
         } else {
             ASC_OP_LOGD("[LoadBL1WithPointWise] nd2NzParams.nValue %d "
                         "nd2NzParams.dValue %d nd2NzParams.srcDValue %d nd2NzParams.dstNzC0Stride %d.\n",
-                        nd2NzParams.nValue, nd2NzParams.dValue,
-                        nd2NzParams.srcDValue, nd2NzParams.dstNzC0Stride);
+                        nd2NzParams.nValue, nd2NzParams.dValue, nd2NzParams.srcDValue, nd2NzParams.dstNzC0Stride);
             DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], nd2NzParams);
         }
     }
@@ -274,27 +258,19 @@ private:
         }
     }
 
-        __aicore__ inline bool IsNTail()
-    {
-        return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter;
-    }
+    __aicore__ inline bool IsNTail() { return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter; }
 
-    __aicore__ inline bool IsKBL1Tail()
-    {
-        return self_->ctx.kBL1Iter == self_->ctx.maxKBL1Iter;
-    }
+    __aicore__ inline bool IsKBL1Tail() { return self_->ctx.kBL1Iter == self_->ctx.maxKBL1Iter; }
 
-    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<typename Intf::WeightT> &initConstValueParams,
-        const uint64_t repeatTimes, const uint64_t blockNum)
+    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<typename Intf::WeightT>& initConstValueParams,
+                                                   const uint64_t repeatTimes, const uint64_t blockNum)
     {
         initConstValueParams.repeatTimes = repeatTimes;
         initConstValueParams.blockNum = blockNum;
         initConstValueParams.dstGap = 0;
         initConstValueParams.initValue = 0;
-        ASC_OP_LOGD(
-            "[LoadBL1WithPointWise] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
-            initConstValueParams.repeatTimes,
-            initConstValueParams.blockNum);
+        ASC_OP_LOGD("[LoadBL1WithPointWise] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
+                    initConstValueParams.repeatTimes, initConstValueParams.blockNum);
     }
 
     __aicore__ inline void SetNd2NzParams()
@@ -310,7 +286,7 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t bl1BlockNum = 16;
     uint64_t currentNBL1 = 0;
     uint64_t currentKBL1 = 0;
@@ -321,6 +297,6 @@ private:
     Nd2NzParams nd2NzParams;
 };
 
-};  // namespace Conv3dFunc
+}; // namespace Conv3dFunc
 
-#endif  // __CONV3D_MTE2_POINTWISE_SUB_API_H__
+#endif // __CONV3D_MTE2_POINTWISE_SUB_API_H__

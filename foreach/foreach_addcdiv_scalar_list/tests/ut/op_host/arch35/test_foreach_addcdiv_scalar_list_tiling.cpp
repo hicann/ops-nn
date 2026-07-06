@@ -21,15 +21,9 @@ using namespace ge;
 
 class ForeachAddcdivScalarListTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachAddcdivScalarListTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachAddcdivScalarListTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachAddcdivScalarListTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachAddcdivScalarListTiling TearDown" << std::endl; }
 };
 
 static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
@@ -41,34 +35,34 @@ TEST_F(ForeachAddcdivScalarListTiling, foreach_addcdiv_scalar_list_float32)
     ForeachAddcdivScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 24;
     compileInfo.ubSize = 1024 * 1024;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcdivScalarList",
-        {
-            // DYNAMIC_INPUT x1: 1 tensor of FP32
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            // DYNAMIC_INPUT x2: 1 tensor of FP32
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            // DYNAMIC_INPUT x3: 1 tensor of FP32
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            // INPUT scalars: 1D tensor of FP32
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            // DYNAMIC_OUTPUT y: 1 tensor of FP32
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        24,     // number of cores
-        1024 * 1024, // ubsize
-        4096);  // max tiling data size
-    uint64_t expectTilingKey = 1;  // FP32 = TILING_KEY_FLOAT32 = 1
+    gert::TilingContextPara tilingContextPara("ForeachAddcdivScalarList",
+                                              {
+                                                  // DYNAMIC_INPUT x1: 1 tensor of FP32
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  // DYNAMIC_INPUT x2: 1 tensor of FP32
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  // DYNAMIC_INPUT x3: 1 tensor of FP32
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  // INPUT scalars: 1D tensor of FP32
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  // DYNAMIC_OUTPUT y: 1 tensor of FP32
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo,
+                                              24,          // number of cores
+                                              1024 * 1024, // ubsize
+                                              4096);       // max tiling data size
+    uint64_t expectTilingKey = 1;                          // FP32 = TILING_KEY_FLOAT32 = 1
     // tensorNum=1, needCoreNum=2 → combined int64 = 8589934593
     // perTensorElementNum[0]=2048, rest=0
     string expectTilingData = "8589934593 2048 ";
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
@@ -80,30 +74,27 @@ TEST_F(ForeachAddcdivScalarListTiling, foreach_addcdiv_scalar_list_float16)
     ForeachAddcdivScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 24;
     compileInfo.ubSize = 1024 * 1024;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcdivScalarList",
-        {
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{2}, {2}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        24,
-        1024 * 1024,
-        4096);
-    uint64_t expectTilingKey = 0;  // FP16 = TILING_KEY_FLOAT16 = 0
+    gert::TilingContextPara tilingContextPara("ForeachAddcdivScalarList",
+                                              {
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{2}, {2}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 24, 1024 * 1024, 4096);
+    uint64_t expectTilingKey = 0; // FP16 = TILING_KEY_FLOAT16 = 0
     // tensorNum=1, needCoreNum=2 → combined int64 = 1 + 2*4294967296 = 8589934593
     // perTensorElementNum[0]=2048, rest=0
     string expectTilingData = "8589934593 2048 ";
     std::vector<size_t> expectWorkspaces = {0};
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
 
@@ -114,29 +105,26 @@ TEST_F(ForeachAddcdivScalarListTiling, foreach_addcdiv_scalar_list_bfloat16)
     ForeachAddcdivScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 24;
     compileInfo.ubSize = 1024 * 1024;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcdivScalarList",
-        {
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        24,
-        1024 * 1024,
-        4096);
-    uint64_t expectTilingKey = 2;  // BF16 = TILING_KEY_BFLOAT16 = 2
+    gert::TilingContextPara tilingContextPara("ForeachAddcdivScalarList",
+                                              {
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{32, 4, 4, 4}, {32, 4, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 24, 1024 * 1024, 4096);
+    uint64_t expectTilingKey = 2; // BF16 = TILING_KEY_BFLOAT16 = 2
     // tensorNum=1, needCoreNum=2 → combined int64 = 8589934593
     // perTensorElementNum[0]=2048, rest=0
     string expectTilingData = "8589934593 2048 ";
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }

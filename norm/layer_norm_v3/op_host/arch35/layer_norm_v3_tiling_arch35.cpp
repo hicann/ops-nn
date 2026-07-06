@@ -38,8 +38,7 @@ struct LayerNormV3CacheKeyWord {
     float epsilon;
 };
 
-static Ops::NN::TilingCache<
-    OpHashInput<LayerNormV3CacheKeyWord>, GenericHashItem<OpHashInput<LayerNormV3CacheKeyWord>>>
+static Ops::NN::TilingCache<OpHashInput<LayerNormV3CacheKeyWord>, GenericHashItem<OpHashInput<LayerNormV3CacheKeyWord>>>
     op_tiling_cache;
 
 static ge::graphStatus TilingPrepare4LayerNormV3(gert::TilingParseContext* context)
@@ -108,14 +107,12 @@ static ge::graphStatus LayerNormV3UnknowAxisTiling(gert::TilingContext* context,
     // update mean cof
     gert::TilingData* tiling_data = context->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling_data);
-    OP_CHECK_IF(
-        op_info->reduce_mean_cof_dtype.empty(), OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling end"),
-        return ge::GRAPH_SUCCESS);
+    OP_CHECK_IF(op_info->reduce_mean_cof_dtype.empty(),
+                OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling end"), return ge::GRAPH_SUCCESS);
 
     OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling will do AddReduceMeanCof");
-    OP_CHECK_IF(
-        !AddReduceMeanCof(input_shape, op_info->reduce_mean_cof_ge_dtype, reduce_axis, tiling_data),
-        OP_LOGE(context->GetNodeName(), "do AddReduceMeanCof failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!AddReduceMeanCof(input_shape, op_info->reduce_mean_cof_ge_dtype, reduce_axis, tiling_data),
+                OP_LOGE(context->GetNodeName(), "do AddReduceMeanCof failed"), return ge::GRAPH_FAILED);
 
     if (hash_item.SetContext(*context, hash_input)) {
         op_tiling_cache.Add(hash_key, hash_input, hash_item);

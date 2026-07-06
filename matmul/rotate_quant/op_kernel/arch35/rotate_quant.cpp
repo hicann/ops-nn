@@ -22,8 +22,8 @@ using namespace Cmct;
 using namespace Cmct::Gemm;
 using RotateQuantAptOpt::RotateQuantAptTilingData;
 
-extern "C" __global__ __aicore__ void rotate_quant(
-    GM_ADDR x, GM_ADDR rot, GM_ADDR alpha, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void rotate_quant(GM_ADDR x, GM_ADDR rot, GM_ADDR alpha, GM_ADDR y, GM_ADDR scale,
+                                                   GM_ADDR workSpace, GM_ADDR tiling)
 {
     AscendC::InitSocState();
     REGISTER_TILING_DEFAULT(RotateQuantAptTilingData);
@@ -35,6 +35,6 @@ extern "C" __global__ __aicore__ void rotate_quant(
         return;
     }
 
-    RotateQuantCmctKernel<DTYPE_X, DTYPE_Y, DTYPE_SCALE, layout::RowMajor>(
-        x, rot, alpha, y, scale, userWorkspace, tilingData);
+    RotateQuantCmctKernel<DTYPE_X, DTYPE_Y, DTYPE_SCALE, layout::RowMajor>(x, rot, alpha, y, scale, userWorkspace,
+                                                                           tilingData);
 }

@@ -33,10 +33,7 @@ constexpr int64_t kShapeInputIdx = 3;
 
 class LayerNormRemoveBroadcastFusionPassTest : public testing::Test {
 protected:
-    void SetUp() override
-    {
-        SetPlatform("Ascend950");
-    }
+    void SetUp() override { SetPlatform("Ascend950"); }
 
     static void SetPlatform(const std::string& soc)
     {
@@ -49,17 +46,17 @@ protected:
         PlatformInfoManager::Instance().SetOptionalCompilationInfo(optional_info);
     }
 
-    static std::shared_ptr<Graph> BuildGraph(
-        const std::vector<int64_t>& x_shape, const std::vector<int64_t>& gamma_shape,
-        const std::vector<int64_t>& beta_shape, int64_t begin_norm_axis = -1, DataType x_dtype = DT_FLOAT16,
-        DataType params_dtype = DT_FLOAT)
+    static std::shared_ptr<Graph> BuildGraph(const std::vector<int64_t>& x_shape,
+                                             const std::vector<int64_t>& gamma_shape,
+                                             const std::vector<int64_t>& beta_shape, int64_t begin_norm_axis = -1,
+                                             DataType x_dtype = DT_FLOAT16, DataType params_dtype = DT_FLOAT)
     {
         auto graph_builder = es::EsGraphBuilder("layer_norm_remove_broadcast_fusion_test");
         auto x = graph_builder.CreateInput(kXInputIdx, "x", x_dtype, FORMAT_ND, x_shape);
         auto gamma = graph_builder.CreateInput(kGammaInputIdx, "gamma", params_dtype, FORMAT_ND, gamma_shape);
         auto beta = graph_builder.CreateInput(kBetaInputIdx, "beta", params_dtype, FORMAT_ND, beta_shape);
-        auto shape = graph_builder.CreateInput(
-            kShapeInputIdx, "shape", DT_INT64, FORMAT_ND, {static_cast<int64_t>(x_shape.size())});
+        auto shape = graph_builder.CreateInput(kShapeInputIdx, "shape", DT_INT64, FORMAT_ND,
+                                               {static_cast<int64_t>(x_shape.size())});
         auto gamma_brc = es::BroadcastTo(gamma, shape);
         auto beta_brc = es::BroadcastTo(beta, shape);
         auto layer_norm = es::LayerNorm(x, gamma_brc, beta_brc, begin_norm_axis, 0, kEpsilon);
@@ -78,8 +75,8 @@ protected:
         return graph_builder.BuildAndReset({layer_norm.y, layer_norm.mean, layer_norm.variance});
     }
 
-    static void UpdateInputDesc(
-        const es::EsTensorHolder& tensor, int32_t index, DataType dtype, const std::vector<int64_t>& shape)
+    static void UpdateInputDesc(const es::EsTensorHolder& tensor, int32_t index, DataType dtype,
+                                const std::vector<int64_t>& shape)
     {
         TensorDesc desc;
         tensor.GetProducer()->GetInputDesc(index, desc);
@@ -89,8 +86,8 @@ protected:
         tensor.GetProducer()->UpdateInputDesc(index, desc);
     }
 
-    static void UpdateOutputDesc(
-        const es::EsTensorHolder& tensor, int32_t index, DataType dtype, const std::vector<int64_t>& shape)
+    static void UpdateOutputDesc(const es::EsTensorHolder& tensor, int32_t index, DataType dtype,
+                                 const std::vector<int64_t>& shape)
     {
         TensorDesc desc;
         tensor.GetProducer()->GetOutputDesc(index, desc);
@@ -144,7 +141,7 @@ protected:
         return type == op_type.c_str();
     }
 };
-}  // namespace
+} // namespace
 
 TEST_F(LayerNormRemoveBroadcastFusionPassTest, remove_broadcast_success)
 {

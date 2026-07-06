@@ -36,7 +36,8 @@ class FakeQuantWithMinMaxArgsGradientRegbase {
 public:
     __aicore__ inline FakeQuantWithMinMaxArgsGradientRegbase(
         const FakeQuantWithMinMaxArgsGradientTilingData* tilingData)
-        : tilingData_(tilingData) {}
+        : tilingData_(tilingData)
+    {}
 
     __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
@@ -62,8 +63,7 @@ private:
 };
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::Init(
-    GM_ADDR gradients, GM_ADDR x, GM_ADDR y)
+__aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR y)
 {
     blockIdx_ = GetBlockIdx();
     gGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(gradients));
@@ -117,8 +117,7 @@ __aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::Process(
 }
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::CopyIn(
-    int64_t gmOffset, int64_t dataCount)
+__aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::CopyIn(int64_t gmOffset, int64_t dataCount)
 {
     LocalTensor<float> gLocal = inQueueG_.AllocTensor<float>();
     LocalTensor<float> xLocal = inQueueX_.AllocTensor<float>();
@@ -136,8 +135,7 @@ __aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::CopyIn(
 }
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::CopyOut(
-    int64_t gmOffset, int64_t dataCount)
+__aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::CopyOut(int64_t gmOffset, int64_t dataCount)
 {
     LocalTensor<float> yLocal = outQueueY_.DeQue<float>();
     DataCopyExtParams params;
@@ -206,12 +204,11 @@ __aicore__ inline void FakeQuantWithMinMaxArgsGradientRegbase<SchMode>::Compute(
             // Step 2.5: ±0 sign-bit re-injection (Ascend Mul may drop sign of -0).
             // vSignG = vG_u32 & 0x80000000;  vOut_u32 = vOut_u32 | vSignG.
             AscendC::Reg::And(vSignG, (AscendC::Reg::RegTensor<uint32_t>&)vG, vSignMask, mask);
-            AscendC::Reg::Or((AscendC::Reg::RegTensor<uint32_t>&)vOut,
-                             (AscendC::Reg::RegTensor<uint32_t>&)vOut, vSignG, mask);
+            AscendC::Reg::Or((AscendC::Reg::RegTensor<uint32_t>&)vOut, (AscendC::Reg::RegTensor<uint32_t>&)vOut, vSignG,
+                             mask);
 
             // Step 3: store.
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
-                yAddr + i * VL, vOut, mask);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(yAddr + i * VL, vOut, mask);
         }
     }
 

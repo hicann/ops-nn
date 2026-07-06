@@ -23,14 +23,14 @@
 
 namespace optiling {
 struct ScatterKvCompileInfo {
-  int64_t core_num;
-  int64_t ub_size;
+    int64_t core_num;
+    int64_t ub_size;
 };
 
-
 template <typename T>
-static inline T* GetCompileInfoPtr(gert::TilingParseContext* context) {
-  return context->GetCompiledInfo<T>();
+static inline T* GetCompileInfoPtr(gert::TilingParseContext* context)
+{
+    return context->GetCompiledInfo<T>();
 }
-}  // namespace optiling
-#endif  // CANN_SCATTER_H
+} // namespace optiling
+#endif // CANN_SCATTER_H

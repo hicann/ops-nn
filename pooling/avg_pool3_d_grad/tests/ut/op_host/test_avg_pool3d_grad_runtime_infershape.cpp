@@ -35,15 +35,9 @@ std::string Shape2String(const T& shape)
 } // namespace avgpool3dgrad_infershpe_ut
 class AvgPool3DGradRuntimeProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AvgPool3DGradRuntimeProtoTest Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AvgPool3DGradRuntimeProtoTest Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AvgPool3DGradRuntimeProtoTest Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AvgPool3DGradRuntimeProtoTest Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(AvgPool3DGradRuntimeProtoTest, basic)
@@ -59,27 +53,25 @@ TEST_F(AvgPool3DGradRuntimeProtoTest, basic)
     gert::StorageShape output_shape = {{}, {}};
 
     size_t total_size = 0;
-    auto tensor_holder =
-        gert::Tensor::CreateFollowing(orig_input_shape.GetStorageShape().GetDimNum(), ge::DT_INT64, total_size);
+    auto tensor_holder = gert::Tensor::CreateFollowing(orig_input_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
     auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
     tensor->MutableStorageShape().AppendDim(orig_input_shape.MutableStorageShape().GetDimNum());
     tensor->MutableOriginShape().AppendDim(orig_input_shape.MutableOriginShape().GetDimNum());
     tensor->SetOriginFormat(ge::FORMAT_NDHWC);
     tensor->SetStorageFormat(ge::FORMAT_NDHWC);
-    (void)memcpy_s(
-        tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), orig_input.data(),
-        orig_input.size() * sizeof(int64_t));
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), orig_input.data(),
+                   orig_input.size() * sizeof(int64_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({tensor, &grads_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)

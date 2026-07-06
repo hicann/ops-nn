@@ -46,8 +46,8 @@ constexpr static int64_t CONST_SIX = 6;
 constexpr static int64_t CONST_SEVEN = 7;
 constexpr static int64_t CONST_EIGHT = 8;
 constexpr static int64_t CONST_SIXTY_THREE = 63;
-constexpr static uint32_t VL_FP32 =
-    static_cast<int64_t>(platform::GetVRegSize()) / sizeof(float); // 一个向量寄存器可以容纳多少个float元素
+constexpr static uint32_t VL_FP32 = static_cast<int64_t>(platform::GetVRegSize()) /
+                                    sizeof(float); // 一个向量寄存器可以容纳多少个float元素
 
 class SoftmaxGradExtBase {
 public:
@@ -58,15 +58,15 @@ protected:
     __aicore__ inline static int64_t GetCacheID(const int64_t idx);
 
 protected:
-    __aicore__ inline static void LastReduceSumSmallR(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t aSize,
-        const int64_t rSize, const int64_t stride);
-    __aicore__ inline static void LastReduceSum(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
-        const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride);
-    __aicore__ inline static void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-        const int64_t stride, const int64_t count);
+    __aicore__ inline static void LastReduceSumSmallR(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& srcTensor, const int64_t aSize,
+                                                      const int64_t rSize, const int64_t stride);
+    __aicore__ inline static void LastReduceSum(const LocalTensor<float>& dstTensor,
+                                                const LocalTensor<float>& srcTensor,
+                                                const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize,
+                                                const int64_t rSize, const int64_t stride);
+    __aicore__ inline static void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                              const int64_t cacheID, const int64_t stride, const int64_t count);
 
 protected:
     TPipe* pipe_;
@@ -93,9 +93,9 @@ __aicore__ inline int64_t SoftmaxGradExtBase::GetCacheID(const int64_t idx)
     return bcnt1(idx ^ (idx + CONST_ONE)) - CONST_ONE;
 }
 
-__aicore__ inline void SoftmaxGradExtBase::LastReduceSumSmallR(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t aSize, const int64_t rSize,
-    const int64_t stride)
+__aicore__ inline void SoftmaxGradExtBase::LastReduceSumSmallR(const LocalTensor<float>& dstTensor,
+                                                               const LocalTensor<float>& srcTensor, const int64_t aSize,
+                                                               const int64_t rSize, const int64_t stride)
 {
     // LastReduceSumSmallR
     if (aSize <= 0) {
@@ -135,8 +135,8 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSumSmallR(
             AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
             AscendC::MicroAPI::UnalignReg UReg;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 DataCopy(aReg, (__local_mem__ float*)src0 + i * stride);
                 DataCopy(bReg, (__local_mem__ float*)src1 + i * stride);
@@ -150,9 +150,10 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSumSmallR(
     }
 }
 
-__aicore__ inline void SoftmaxGradExtBase::LastReduceSum(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
-    const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride)
+__aicore__ inline void SoftmaxGradExtBase::LastReduceSum(const LocalTensor<float>& dstTensor,
+                                                         const LocalTensor<float>& srcTensor,
+                                                         const LocalTensor<float>& reduceSumTempTensor,
+                                                         const int64_t aSize, const int64_t rSize, const int64_t stride)
 {
     // LastReduceSum
     if (aSize <= 0) {
@@ -166,10 +167,10 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSum(
         return;
     }
 
-    int64_t ceilVLCount =
-        ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
-    int64_t floorVLCount =
-        ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    int64_t ceilVLCount = ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)),
+                                       static_cast<int64_t>(platform::GetVRegSize()));
+    int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)),
+                                         static_cast<int64_t>(platform::GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -179,8 +180,8 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSum(
     uint16_t unFoldLoopTimes = foldPoint + foldPoint - ceilVLCount;
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
-    uint32_t outerLoopDstStride =
-        ops::Aligned(static_cast<int64_t>(foldPoint), static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
+    uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
+                                               static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;
@@ -233,32 +234,32 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSum(
 
 template <uint32_t RSize, int32_t TailCount = -1, int32_t Index = 0, int32_t Depth = 1>
 struct NlastDichotomyAdd {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         __local_mem__ float* srcAOffset = srcA + stride * CONST_TWO;
         __local_mem__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
-            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(
-                aReg, srcA, srcAOffset, pMask, stride * CONST_TWO);
+            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(aReg, srcA, srcAOffset, pMask,
+                                                                          stride * CONST_TWO);
             NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(bReg, srcB, srcBOffset, pMask, stride * CONST_TWO);
         }
         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         __local_mem__ float* srcAOffset = srcA + stride * CONST_TWO;
         __local_mem__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
-            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(
-                aReg, srcA, srcAOffset, pMask, stride * CONST_TWO, offset);
-            NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(
-                bReg, srcB, srcBOffset, pMask, stride * CONST_TWO, offset);
+            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(aReg, srcA, srcAOffset, pMask,
+                                                                          stride * CONST_TWO, offset);
+            NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(bReg, srcB, srcBOffset, pMask, stride * CONST_TWO,
+                                                                    offset);
         } else {
             NlastDichotomyAdd<(RSize + 1) / CONST_TWO, TailCount, Index, Depth * CONST_TWO>::LoadAndAccumulate(
                 aReg, srcA, srcAOffset, pMask, stride * CONST_TWO, offset);
@@ -271,18 +272,18 @@ struct NlastDichotomyAdd {
 
 template <int32_t TailCount, int32_t Index, int32_t Depth>
 struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         DataCopy(aReg, (__local_mem__ float*)srcA);
         DataCopy(bReg, (__local_mem__ float*)srcB);
         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
     {
         if constexpr (TailCount <= 0) {
             AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
@@ -322,18 +323,18 @@ struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
 
 template <>
 struct NlastDichotomyAdd<CONST_TWO> {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         DataCopy(aReg, (__local_mem__ float*)srcA);
         DataCopy(bReg, (__local_mem__ float*)srcB);
         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
         DataCopy(aReg, (__local_mem__ float*)srcA);
@@ -348,21 +349,21 @@ struct NlastDichotomyAdd<CONST_TWO> {
 
 template <>
 struct NlastDichotomyAdd<1> {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         DataCopy(acc, (__local_mem__ float*)srcA);
     }
 };
 
-__aicore__ inline void SoftmaxGradExtBase::UpdateCache(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-    const int64_t stride, const int64_t count)
+__aicore__ inline void SoftmaxGradExtBase::UpdateCache(const LocalTensor<float>& dstTensor,
+                                                       const LocalTensor<float>& srcTensor, const int64_t cacheID,
+                                                       const int64_t stride, const int64_t count)
 {
     // UpdateCache
-    uint16_t outerLoopTimes =
-        ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
+                                           static_cast<int64_t>(platform::GetVRegSize()));
     uint16_t innerLoopTimes = cacheID;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;

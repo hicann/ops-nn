@@ -19,15 +19,15 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ForeachPowScalar);
 
-const aclTensorList *ForeachPowScalarV2(const aclTensorList *x,  const aclTensor *scalar, const aclTensorList *out, aclOpExecutor *executor) {
+const aclTensorList* ForeachPowScalarV2(const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out,
+                                        aclOpExecutor* executor)
+{
     L0_DFX(ForeachPowScalarV2, x, scalar);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachPowScalar,
-                                      OP_INPUT(x, scalar),
-                                      OP_OUTPUT(out));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachPowScalar, OP_INPUT(x, scalar), OP_OUTPUT(out));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
     }
     return out;
 }
-}  // namespace l0op
+} // namespace l0op

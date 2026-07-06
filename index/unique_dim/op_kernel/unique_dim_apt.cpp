@@ -12,8 +12,8 @@
 
 template <typename T, bool RETURN_INVERSE, bool RETURN_COUNTS>
 __aicore__ inline void RunUniqueDimKernel(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inverseOut, GM_ADDR countsOut,
-                                          GM_ADDR shapeOut, GM_ADDR workspace,
-                                          const UniqueDimTilingData *tilingData, TPipe *pipe)
+                                          GM_ADDR shapeOut, GM_ADDR workspace, const UniqueDimTilingData* tilingData,
+                                          TPipe* pipe)
 {
     UniqueDimKernel<T, RETURN_INVERSE, RETURN_COUNTS> op(pipe);
     op.Init(x, valueOut, inverseOut, countsOut, shapeOut, workspace, tilingData);
@@ -22,8 +22,8 @@ __aicore__ inline void RunUniqueDimKernel(GM_ADDR x, GM_ADDR valueOut, GM_ADDR i
 
 template <typename T>
 __aicore__ inline void DispatchByFlags(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inverseOut, GM_ADDR countsOut,
-                                       GM_ADDR shapeOut, GM_ADDR workspace,
-                                       const UniqueDimTilingData *tilingData, TPipe *pipe)
+                                       GM_ADDR shapeOut, GM_ADDR workspace, const UniqueDimTilingData* tilingData,
+                                       TPipe* pipe)
 {
     bool returnInverse = (tilingData->returnInverse != 0);
     bool returnCounts = (tilingData->returnCounts != 0);
@@ -39,12 +39,12 @@ __aicore__ inline void DispatchByFlags(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inve
     }
 }
 
-__aicore__ inline void CopyOutEmptyShape(GM_ADDR shapeOut, TPipe *pipe)
+__aicore__ inline void CopyOutEmptyShape(GM_ADDR shapeOut, TPipe* pipe)
 {
     GlobalTensor<uint64_t> shapeGm;
     TBuf<TPosition::VECCALC> shapeBuf;
 
-    shapeGm.SetGlobalBuffer((__gm__ uint64_t *)shapeOut);
+    shapeGm.SetGlobalBuffer((__gm__ uint64_t*)shapeOut);
     pipe->InitBuffer(shapeBuf, SHAPE_LEN * sizeof(uint64_t));
 
     LocalTensor<uint64_t> shapeTensor = shapeBuf.Get<uint64_t>();
@@ -68,15 +68,14 @@ __aicore__ inline void CopyOutEmptyShape(GM_ADDR shapeOut, TPipe *pipe)
     DataCopyPad(shapeGm, shapeTensor, dataCopyParams);
 }
 
-extern "C" __global__ __aicore__ void unique_dim(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inverseOut,
-                                                  GM_ADDR countsOut, GM_ADDR shapeOut, GM_ADDR workspace,
-                                                  GM_ADDR tiling)
+extern "C" __global__ __aicore__ void unique_dim(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inverseOut, GM_ADDR countsOut,
+                                                 GM_ADDR shapeOut, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     TPipe pipe;
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
     GET_TILING_DATA_WITH_STRUCT(UniqueDimTilingData, tilingDataIn, tiling);
-    const UniqueDimTilingData *__restrict tilingData = &tilingDataIn;
+    const UniqueDimTilingData* __restrict tilingData = &tilingDataIn;
 
     if (TILING_KEY_IS(0)) {
         // Empty input — write zero shapes

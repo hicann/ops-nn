@@ -145,7 +145,8 @@ struct TilingParams {
     platform_ascendc::SocVersion socVersion;
 };
 
-static inline uint64_t FindDivisorWindowNum(uint64_t len, uint64_t initWindowNum) {
+static inline uint64_t FindDivisorWindowNum(uint64_t len, uint64_t initWindowNum)
+{
     std::vector<uint64_t> divisors;
     uint64_t maxWindowNum = 0;
 
@@ -158,7 +159,7 @@ static inline uint64_t FindDivisorWindowNum(uint64_t len, uint64_t initWindowNum
         }
     }
 
-    for (auto w: divisors) {
+    for (auto w : divisors) {
         if (w <= initWindowNum && maxWindowNum < w) {
             maxWindowNum = w;
         }
@@ -173,12 +174,13 @@ namespace avgPool3DTiling {
 using namespace Ops::NN::OpTiling;
 using namespace avgPool3DTilingCompileInfo;
 
-inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context) {
-  auto json_str = context->GetCompiledJson();
-  OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
-  std::unique_ptr<nlohmann::json> parsed_object_cinfo =
-      std::make_unique<nlohmann::json>(nlohmann::json::parse(json_str));
-  return parsed_object_cinfo;
+inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context)
+{
+    auto json_str = context->GetCompiledJson();
+    OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
+    std::unique_ptr<nlohmann::json> parsed_object_cinfo = std::make_unique<nlohmann::json>(
+        nlohmann::json::parse(json_str));
+    return parsed_object_cinfo;
 }
 
 ge::graphStatus Tiling4AvgPool3DNNRegBase(gert::TilingContext* context)
@@ -186,14 +188,15 @@ ge::graphStatus Tiling4AvgPool3DNNRegBase(gert::TilingContext* context)
     return PoolTilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static void ComputeCoreTilingStrategy(TilingParams& params, int32_t& usedCoreNum) {
+static void ComputeCoreTilingStrategy(TilingParams& params, int32_t& usedCoreNum)
+{
     uint64_t outputNum = 0;
 
     if (params.dataFormat == "NDHWC") {
         outputNum = params.inN * params.outD * params.outH * params.outW;
-    } else if (params.dataFormat == "NCDHW" && params.isonlyT){
+    } else if (params.dataFormat == "NCDHW" && params.isonlyT) {
         outputNum = params.inN * params.inC * params.outD;
-    } else{
+    } else {
         outputNum = params.inN * params.inC * params.outD * params.outH * params.outW;
     }
 
@@ -222,8 +225,8 @@ static void ComputeCoreTilingStrategy(TilingParams& params, int32_t& usedCoreNum
 static bool IsCapbale(TilingParams& params)
 {
     // 按照搬运对齐的大小全载UB 和 params.kW<=16, 判断是否走当前模板
-    auto kernelWMaxAlign =
-        (params.kW + static_cast<unsigned long>(7)) / static_cast<unsigned long>(8) * static_cast<unsigned long>(8);
+    auto kernelWMaxAlign = (params.kW + static_cast<unsigned long>(7)) / static_cast<unsigned long>(8) *
+                           static_cast<unsigned long>(8);
     bool limitSizeMax = (params.kD * params.kH * kernelWMaxAlign <= KERNEL_SIZE_LIMIT);
     bool limitWMax = (params.kW <= KERNEL_W_LIMIT);
     bool isCapable = limitSizeMax && limitWMax;
@@ -244,7 +247,7 @@ static void SetNormalTilingParams(TilingParams& params)
         auto doCntNeed = (params.coreNum + params.ncOuter - static_cast<unsigned long>(1)) / params.ncOuter;
         if (static_cast<unsigned long>(0) != doCntNeed) {
             params.doFactor = params.outD / doCntNeed < static_cast<unsigned long>(1) ? static_cast<unsigned long>(1) :
-                              params.outD / doCntNeed;
+                                                                                        params.outD / doCntNeed;
         }
     }
     params.doOuter = (params.outD + params.doFactor - static_cast<unsigned long>(1)) / params.doFactor;
@@ -255,48 +258,47 @@ static void SetNormalTilingParams(TilingParams& params)
                          (params.ncOuter * params.doOuter);
         if (static_cast<unsigned long>(0) != hoCntNeed) {
             params.hoFactor = params.outH / hoCntNeed < static_cast<unsigned long>(1) ? static_cast<unsigned long>(1) :
-                              params.outH / hoCntNeed;
+                                                                                        params.outH / hoCntNeed;
         }
     }
     params.hoOuter = (params.outH + params.hoFactor - static_cast<unsigned long>(1)) / params.hoFactor;
     params.hoTail = params.outH - (params.hoOuter - static_cast<unsigned long>(1)) * params.hoFactor;
-    if(params.ncOuter * params.doOuter * params.hoOuter < params.coreNum) {
-        auto woCntNeed =
-            (params.coreNum + params.ncOuter * params.doOuter * params.hoOuter - static_cast<unsigned long>(1)) /
-            (params.ncOuter * params.doOuter * params.hoOuter);
+    if (params.ncOuter * params.doOuter * params.hoOuter < params.coreNum) {
+        auto woCntNeed = (params.coreNum + params.ncOuter * params.doOuter * params.hoOuter -
+                          static_cast<unsigned long>(1)) /
+                         (params.ncOuter * params.doOuter * params.hoOuter);
         if (static_cast<unsigned long>(0) != woCntNeed) {
             params.woFactor = params.outW / woCntNeed < static_cast<unsigned long>(1) ? static_cast<unsigned long>(1) :
-                              params.outW / woCntNeed;
+                                                                                        params.outW / woCntNeed;
         }
     }
     params.woOuter = (params.outW + params.woFactor - static_cast<unsigned long>(1)) / params.woFactor;
     params.woTail = params.outW - (params.woOuter - static_cast<unsigned long>(1)) * params.woFactor;
-    params.totalIdx = params.ncOuter * params.woOuter * params.hoOuter * params.doOuter;  // 总共的UB块
+    params.totalIdx = params.ncOuter * params.woOuter * params.hoOuter * params.doOuter; // 总共的UB块
     params.blockFactor = (params.totalIdx + params.coreNum - static_cast<unsigned long>(1)) / params.coreNum;
     params.useCoreNum = (params.totalIdx + params.blockFactor - static_cast<unsigned long>(1)) / params.blockFactor;
     params.blockTail = params.totalIdx - (params.useCoreNum - static_cast<unsigned long>(1)) * params.blockFactor;
 }
 
-static void Tilling4NCDHWNormal(TilingParams& params)
-{
-    SetNormalTilingParams(params);
-}
+static void Tilling4NCDHWNormal(TilingParams& params) { SetNormalTilingParams(params); }
 
 static bool CheckBigKernel(TilingParams& params)
 {
     uint64_t sumK = params.kD * params.kH * params.kW;
     bool bigKernel = (params.kD > BIG_KERNEL_SINGLE_LIMIT || params.kH > BIG_KERNEL_SINGLE_LIMIT ||
-                        params.kW > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
+                      params.kW > BIG_KERNEL_SINGLE_LIMIT) &&
+                     sumK > BIG_KERNEL_SUM_LIMIT;
 
     uint64_t windowsCalc = params.outD * params.outH * params.outW * sumK;
     // 非全局平均池化下，kernel较大，C通道小于64，且达到一定计算数据量时走Big Kernel分支
-    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && params.inC < BIG_KERNEL_CHANNEL_LIMIT){
+    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && params.inC < BIG_KERNEL_CHANNEL_LIMIT) {
         return true;
     }
     return false;
 }
 
-static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
+static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode)
+{
     int32_t dataTypeSize = params.dataTypeKey == FP32_DTYPE_KEY ? 4 : 2;
 
     uint64_t alignNum = static_cast<uint64_t>(BLOCK_SIZE) * 2UL / dataTypeSize;
@@ -310,13 +312,13 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
         uint64_t tileTailLen = (params.inH * params.inW) % params.tileHW;
         params.atomicAddNum = (tileTailLen < alignNum) && (tileTailLen != 0UL) ? 1UL : 0UL;
         return;
-    }else if(params.dataFormat == "NCDHW" && (CheckBigKernel(params))){
+    } else if (params.dataFormat == "NCDHW" && (CheckBigKernel(params))) {
         mode = MODE_BIG_KERNEL;
         return;
     } else if (params.dataFormat == "NCDHW") {
         //走Nornal模板
         bool isNormal = IsCapbale(params);
-        if(isNormal){
+        if (isNormal) {
             Tilling4NCDHWNormal(params);
             mode = MODE_NORMAL;
             return;
@@ -339,13 +341,13 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
         params.atomicAddNum = (alignCSingle - 1UL) / params.inC;
     }
 
-    uint64_t tileInput =
-        (static_cast<uint64_t>(params.ubSize) / alignC - static_cast<uint64_t>(dataTypeSize) - sizeof(float)) /
-        sizeof(float);
+    uint64_t tileInput = (static_cast<uint64_t>(params.ubSize) / alignC - static_cast<uint64_t>(dataTypeSize) -
+                          sizeof(float)) /
+                         sizeof(float);
     if (tileInput < params.kW) {
         mode = MODE_SPLIT_W;
         params.tileInput = tileInput < static_cast<uint64_t>(MAX_TILE_NUM) ? tileInput :
-                           static_cast<uint64_t>(MAX_TILE_NUM);
+                                                                             static_cast<uint64_t>(MAX_TILE_NUM);
         return;
     }
 
@@ -356,14 +358,16 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
     }
 
     uint64_t windowWNum = (params.ubSize / alignC - params.kW * sizeof(float)) /
-        ((params.dW + 1UL) * sizeof(float) + static_cast<uint64_t>(dataTypeSize));
+                          ((params.dW + 1UL) * sizeof(float) + static_cast<uint64_t>(dataTypeSize));
 
     mode = MODE_MULTI_W;
-    // when multiW kw over 1024 and  datacopy step by step(avoid DataCopyParams), skip MAX_TILE_NUM limit to reduce loop iterations.
+    // when multiW kw over 1024 and  datacopy step by step(avoid DataCopyParams), skip MAX_TILE_NUM limit to reduce loop
+    // iterations.
     if (!(params.socVersion == platform_ascendc::SocVersion::ASCEND310P && params.kW > 1024 &&
           alignCSingle != params.inC)) {
-        windowWNum = windowWNum * params.kW <= static_cast<uint64_t>(MAX_TILE_NUM) ? windowWNum :
-        static_cast<uint64_t>(MAX_TILE_NUM) / params.kW;
+        windowWNum = windowWNum * params.kW <= static_cast<uint64_t>(MAX_TILE_NUM) ?
+                         windowWNum :
+                         static_cast<uint64_t>(MAX_TILE_NUM) / params.kW;
     }
     windowWNum = windowWNum < params.outW ? windowWNum : params.outW;
     params.windowWNum = FindDivisorWindowNum(params.indexBufLen, windowWNum);
@@ -374,7 +378,8 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
     }
 }
 
-static void SetTiling(const TilingParams& params, AvgPool3DTilingData& tiling) {
+static void SetTiling(const TilingParams& params, AvgPool3DTilingData& tiling)
+{
     tiling.set_inN(params.inN);
     tiling.set_inC(params.inC);
     tiling.set_tileC(params.tileC);
@@ -425,7 +430,8 @@ static void SetTiling(const TilingParams& params, AvgPool3DTilingData& tiling) {
     tiling.set_usedCoreNum(params.usedCoreNum);
 }
 
-static void PrintTiling(const gert::TilingContext* context, AvgPool3DTilingData& tiling, uint32_t tilingKey) {
+static void PrintTiling(const gert::TilingContext* context, AvgPool3DTilingData& tiling, uint32_t tilingKey)
+{
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "tilingKey:          %d.", tilingKey);
     OP_LOGD(nodeName, "usedCoreNum:        %ld.", tiling.get_usedCoreNum());
@@ -478,7 +484,8 @@ static void PrintTiling(const gert::TilingContext* context, AvgPool3DTilingData&
     OP_LOGD(nodeName, "coreNums:           %ld.", tiling.get_coreNums());
 }
 
-static bool GetDataTypeKey(ge::DataType dataType, int32_t& dataTypeKey) {
+static bool GetDataTypeKey(ge::DataType dataType, int32_t& dataTypeKey)
+{
     switch (dataType) {
         case ge::DT_FLOAT16:
             dataTypeKey = FP16_DTYPE_KEY;
@@ -496,7 +503,8 @@ static bool GetDataTypeKey(ge::DataType dataType, int32_t& dataTypeKey) {
     return true;
 }
 
-static ge::graphStatus KernelTiling(gert::TilingContext* context, TilingParams& params) {
+static ge::graphStatus KernelTiling(gert::TilingContext* context, TilingParams& params)
+{
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "Tiling start.");
 
@@ -525,7 +533,7 @@ static ge::graphStatus KernelTiling(gert::TilingContext* context, TilingParams& 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = params.atomicAddNum == 0UL ? static_cast<size_t>(WORK_SPACE_SIZE) :
-                          static_cast<size_t>(WORK_SPACE_SIZE + CORE_SYNC_SPACE_SIZE);
+                                                       static_cast<size_t>(WORK_SPACE_SIZE + CORE_SYNC_SPACE_SIZE);
 
     OP_LOGD(nodeName, "Tiling end.");
 
@@ -540,49 +548,40 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
     auto compileInfo = static_cast<const AvgPool3DCubeCompileInfo*>(context->GetCompileInfo());
 
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
-    OP_CHECK_IF(
-        xShape.GetDimNum() != X_DIMS,
-        OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal 5."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal 5."),
+                return ge::GRAPH_FAILED);
 
     auto dataType = context->GetInputDesc(X_INDEX)->GetDataType();
     int32_t dataTypeKey = FP32_DTYPE_KEY;
-    OP_CHECK_IF(
-        GetDataTypeKey(dataType, dataTypeKey) == false,
-        OP_LOGE(nodeName, "The dtype of input must be in [float32, float16, bfloat16]."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetDataTypeKey(dataType, dataTypeKey) == false,
+                OP_LOGE(nodeName, "The dtype of input must be in [float32, float16, bfloat16]."),
+                return ge::GRAPH_FAILED);
 
     const gert::Shape yShape = context->GetOutputShape(Y_INDEX)->GetStorageShape();
-    OP_CHECK_IF(
-        yShape.GetDimNum() != Y_DIMS,
-        OP_LOGE(nodeName, "Check y shape failed, the dims of y not equal 5."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yShape.GetDimNum() != Y_DIMS, OP_LOGE(nodeName, "Check y shape failed, the dims of y not equal 5."),
+                return ge::GRAPH_FAILED);
 
     auto attrPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrPtr);
 
     auto ksizePtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(KSIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksizePtr);
-    OP_CHECK_IF(
-        ksizePtr->GetSize() != 5 && ksizePtr->GetSize() != 3 && ksizePtr->GetSize() != 1,
-        OP_LOGE(nodeName, "Check kernel_size failed, the size of kernel_size not equal 5, 3 or 1."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ksizePtr->GetSize() != 5 && ksizePtr->GetSize() != 3 && ksizePtr->GetSize() != 1,
+                OP_LOGE(nodeName, "Check kernel_size failed, the size of kernel_size not equal 5, 3 or 1."),
+                return ge::GRAPH_FAILED);
     auto ksize = static_cast<const int64_t*>(ksizePtr->GetData());
 
     auto stridesPtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(STRIDES_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, stridesPtr);
-    OP_CHECK_IF(
-        stridesPtr->GetSize() != 5 && stridesPtr->GetSize() != 3 && stridesPtr->GetSize() != 1,
-        OP_LOGE(nodeName, "Check stride failed, the size of strides not equal 5, 3 or 1."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(stridesPtr->GetSize() != 5 && stridesPtr->GetSize() != 3 && stridesPtr->GetSize() != 1,
+                OP_LOGE(nodeName, "Check stride failed, the size of strides not equal 5, 3 or 1."),
+                return ge::GRAPH_FAILED);
     auto strides = static_cast<const int64_t*>(stridesPtr->GetData());
 
     auto padsPtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(PADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, padsPtr);
-    OP_CHECK_IF(
-        padsPtr->GetSize() != COMPATIABLE_PAD_DIM && padsPtr->GetSize() != 3 && padsPtr->GetSize() != 1,
-        OP_LOGE(nodeName, "Check pad failed, the size of pad not equal 6, 3 or 1."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(padsPtr->GetSize() != COMPATIABLE_PAD_DIM && padsPtr->GetSize() != 3 && padsPtr->GetSize() != 1,
+                OP_LOGE(nodeName, "Check pad failed, the size of pad not equal 6, 3 or 1."), return ge::GRAPH_FAILED);
     auto pads = static_cast<const int64_t*>(padsPtr->GetData());
 
     const bool* ceilMode = attrPtr->GetAttrPointer<bool>(CEIL_MODE_INDEX);
@@ -590,10 +589,9 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
     const int64_t* divisorOverride = attrPtr->GetAttrPointer<int64_t>(DIVISOR_OVERRIDE_INDEX);
 
     const std::string dataFormat = static_cast<std::string>(attrPtr->GetStr(DATA_FORMAT_INDEX));
-    OP_CHECK_IF(
-        dataFormat != "NDHWC" && dataFormat != "NCDHW",
-        OP_LOGE(nodeName, "Check data_format failed, the value of data_format should be NDHWC or NCDHW."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataFormat != "NDHWC" && dataFormat != "NCDHW",
+                OP_LOGE(nodeName, "Check data_format failed, the value of data_format should be NDHWC or NCDHW."),
+                return ge::GRAPH_FAILED);
 
     TilingParams params;
     params.dataFormat = dataFormat;
@@ -620,21 +618,21 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
         params.outW = yShape.GetDim(DIM3);
     }
 
-    if (ksizePtr->GetSize() == LEN1 || ksizePtr->GetSize() == LEN3){
+    if (ksizePtr->GetSize() == LEN1 || ksizePtr->GetSize() == LEN3) {
         params.kD = ksize[DIM0];
         params.kH = ksizePtr->GetSize() == LEN1 ? ksize[DIM0] : ksize[DIM1];
         params.kW = ksizePtr->GetSize() == LEN1 ? ksize[DIM0] : ksize[DIM2];
-    }else{
+    } else {
         params.kD = dataFormat == "NCDHW" ? ksize[DIM2] : ksize[DIM1];
         params.kH = dataFormat == "NCDHW" ? ksize[DIM3] : ksize[DIM2];
         params.kW = dataFormat == "NCDHW" ? ksize[DIM4] : ksize[DIM3];
     }
 
-    if (stridesPtr->GetSize() == LEN1 || stridesPtr->GetSize() == LEN3){
+    if (stridesPtr->GetSize() == LEN1 || stridesPtr->GetSize() == LEN3) {
         params.dD = strides[DIM0];
         params.dH = stridesPtr->GetSize() == LEN1 ? strides[DIM0] : strides[DIM1];
         params.dW = stridesPtr->GetSize() == LEN1 ? strides[DIM0] : strides[DIM2];
-    }else{
+    } else {
         params.dD = dataFormat == "NCDHW" ? strides[DIM2] : strides[DIM1];
         params.dH = dataFormat == "NCDHW" ? strides[DIM3] : strides[DIM2];
         params.dW = dataFormat == "NCDHW" ? strides[DIM4] : strides[DIM3];
@@ -692,10 +690,10 @@ static ge::graphStatus TilingPrepare4AvgPool3DVec(gert::TilingParseContext* cont
 
 // remove rt1.0 op register, rt2.0 include rt1.0 tiling REGISTER_OP_TILING_FUNC_BUFFERED_V2(AvgPool3D, AvgPool3DTiling)
 
-ge::graphStatus Tiling4AvgPool3D(gert::TilingContext *context)
+ge::graphStatus Tiling4AvgPool3D(gert::TilingContext* context)
 {
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3D", "context is null"), return ge::GRAPH_FAILED);
-    auto compileInfo = static_cast<const AvgPool3DCubeCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const AvgPool3DCubeCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     if (compileInfo->is_regbase) {
         return Tiling4AvgPool3DNNRegBase(context);
@@ -716,16 +714,12 @@ static ge::graphStatus TilingPrepare4AvgPool3D(gert::TilingParseContext* context
     if (isAscendC) {
         return TilingPrepare4AvgPool3DVec(context);
     } else {
-        return ParseCubeCompileInfo<AvgPool3DCubeCompileInfo, 4>(context);  // 4: ndhw
+        return ParseCubeCompileInfo<AvgPool3DCubeCompileInfo, 4>(context); // 4: ndhw
     }
 }
 
-IMPL_OP_OPTILING(AvgPool3D)
-    .Tiling(Tiling4AvgPool3D)
-    .TilingParse<AvgPool3DCubeCompileInfo>(TilingPrepare4AvgPool3D);
+IMPL_OP_OPTILING(AvgPool3D).Tiling(Tiling4AvgPool3D).TilingParse<AvgPool3DCubeCompileInfo>(TilingPrepare4AvgPool3D);
 
-IMPL_OP_OPTILING(AvgPool3DV2)
-.Tiling(Tiling4AvgPool3D)
-.TilingParse<AvgPool3DCubeCompileInfo>(TilingPrepare4AvgPool3D);
+IMPL_OP_OPTILING(AvgPool3DV2).Tiling(Tiling4AvgPool3D).TilingParse<AvgPool3DCubeCompileInfo>(TilingPrepare4AvgPool3D);
 } // namespace avgPool3DTiling
 } // namespace optiling

@@ -19,26 +19,26 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(IndexFillTilingData)
-  TILING_DATA_FIELD_DEF(uint32_t, coreNum);
-  TILING_DATA_FIELD_DEF(uint64_t, N); // x在axis上的维度值
-  TILING_DATA_FIELD_DEF(uint64_t, indicesNum); // 索引tensor长度
-  TILING_DATA_FIELD_DEF(uint64_t, indicesProcessMode); // 索引处理模式
-  // N < coreNum * 16，按indicesNum分核。N >= coreNum * 16，按N分核，都使用下面四个分核参数
-  TILING_DATA_FIELD_DEF(uint64_t, frontCoreNumTaskIndices);
-  TILING_DATA_FIELD_DEF(uint64_t, tailCoreNumTaskIndices);
-  TILING_DATA_FIELD_DEF(uint64_t, frontCoreDataTaskIndices); 
-  TILING_DATA_FIELD_DEF(uint64_t, tailCoreDataTaskIndices);
-  TILING_DATA_FIELD_DEF(uint64_t, ubSize);
-  // 非尾轴场景所用核
-  TILING_DATA_FIELD_DEF(uint64_t, P); // x在axis轴前面的轴乘积
-  TILING_DATA_FIELD_DEF(uint64_t, Q); // x在axis轴后面的轴乘积
+TILING_DATA_FIELD_DEF(uint32_t, coreNum);
+TILING_DATA_FIELD_DEF(uint64_t, N);                  // x在axis上的维度值
+TILING_DATA_FIELD_DEF(uint64_t, indicesNum);         // 索引tensor长度
+TILING_DATA_FIELD_DEF(uint64_t, indicesProcessMode); // 索引处理模式
+// N < coreNum * 16，按indicesNum分核。N >= coreNum * 16，按N分核，都使用下面四个分核参数
+TILING_DATA_FIELD_DEF(uint64_t, frontCoreNumTaskIndices);
+TILING_DATA_FIELD_DEF(uint64_t, tailCoreNumTaskIndices);
+TILING_DATA_FIELD_DEF(uint64_t, frontCoreDataTaskIndices);
+TILING_DATA_FIELD_DEF(uint64_t, tailCoreDataTaskIndices);
+TILING_DATA_FIELD_DEF(uint64_t, ubSize);
+// 非尾轴场景所用核
+TILING_DATA_FIELD_DEF(uint64_t, P); // x在axis轴前面的轴乘积
+TILING_DATA_FIELD_DEF(uint64_t, Q); // x在axis轴后面的轴乘积
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(IndexFill, IndexFillTilingData)
 
 struct IndexFillCompileInfo {
-  int32_t totalCoreNum = 0;
-  uint64_t ubSizePlatForm = 0;
+    int32_t totalCoreNum = 0;
+    uint64_t ubSizePlatForm = 0;
 };
-}
+} // namespace optiling
 #endif

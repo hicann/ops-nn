@@ -30,56 +30,55 @@ constexpr uint16_t OPTILING_MAX_SHAPE_RANK = 8;
 // tilingdata define
 /////////////////////////////////////
 BEGIN_TILING_DATA_DEF(ScatterNdAddTilingData)
-  TILING_DATA_FIELD_DEF(uint64_t, blockNum);
-  TILING_DATA_FIELD_DEF(uint32_t, rankSize);
-  TILING_DATA_FIELD_DEF(uint64_t, blockTilingSize);
-  TILING_DATA_FIELD_DEF(uint64_t, tailBlockTilingSize);
-  TILING_DATA_FIELD_DEF(uint32_t, ubTilingSize);
-  TILING_DATA_FIELD_DEF(uint64_t, sliceSize);
-  TILING_DATA_FIELD_DEF_ARR(uint64_t, OPTILING_MAX_SHAPE_RANK, outPutShape);
-  TILING_DATA_FIELD_DEF_ARR(uint64_t, OPTILING_MAX_RANK_COUNT, strideList);
-  TILING_DATA_FIELD_DEF(uint64_t, indiceCastMode);
-  /* for determinstic */
-  TILING_DATA_FIELD_DEF(int64_t, varInAxis);
-  TILING_DATA_FIELD_DEF(int64_t, indexRankSize);
-  TILING_DATA_FIELD_DEF(int64_t, afterAxis);
+TILING_DATA_FIELD_DEF(uint64_t, blockNum);
+TILING_DATA_FIELD_DEF(uint32_t, rankSize);
+TILING_DATA_FIELD_DEF(uint64_t, blockTilingSize);
+TILING_DATA_FIELD_DEF(uint64_t, tailBlockTilingSize);
+TILING_DATA_FIELD_DEF(uint32_t, ubTilingSize);
+TILING_DATA_FIELD_DEF(uint64_t, sliceSize);
+TILING_DATA_FIELD_DEF_ARR(uint64_t, OPTILING_MAX_SHAPE_RANK, outPutShape);
+TILING_DATA_FIELD_DEF_ARR(uint64_t, OPTILING_MAX_RANK_COUNT, strideList);
+TILING_DATA_FIELD_DEF(uint64_t, indiceCastMode);
+/* for determinstic */
+TILING_DATA_FIELD_DEF(int64_t, varInAxis);
+TILING_DATA_FIELD_DEF(int64_t, indexRankSize);
+TILING_DATA_FIELD_DEF(int64_t, afterAxis);
 
-  TILING_DATA_FIELD_DEF(int64_t, updateLoopSize);
-  TILING_DATA_FIELD_DEF(int64_t, updateTailNum);
-  TILING_DATA_FIELD_DEF(int64_t, indicesLoopSize);
-  TILING_DATA_FIELD_DEF(int64_t, indiceTailNum);
+TILING_DATA_FIELD_DEF(int64_t, updateLoopSize);
+TILING_DATA_FIELD_DEF(int64_t, updateTailNum);
+TILING_DATA_FIELD_DEF(int64_t, indicesLoopSize);
+TILING_DATA_FIELD_DEF(int64_t, indiceTailNum);
 
-  TILING_DATA_FIELD_DEF(int64_t, usedCoreNumBefore);
-  TILING_DATA_FIELD_DEF(int64_t, usedCoreNumAfter);
-  TILING_DATA_FIELD_DEF(int64_t, indicesFactor);
-  TILING_DATA_FIELD_DEF(int64_t, afterAxisFactor);
-  /* split after */
-  TILING_DATA_FIELD_DEF(int64_t, eachCoreAfterAxisCount);
-  TILING_DATA_FIELD_DEF(int64_t, tailCoreAfterAxisCount);
-  TILING_DATA_FIELD_DEF(int64_t, tailUpdateLoopSize);
-  TILING_DATA_FIELD_DEF(int64_t, tailUpdateAxisNum);
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNumBefore);
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNumAfter);
+TILING_DATA_FIELD_DEF(int64_t, indicesFactor);
+TILING_DATA_FIELD_DEF(int64_t, afterAxisFactor);
+/* split after */
+TILING_DATA_FIELD_DEF(int64_t, eachCoreAfterAxisCount);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreAfterAxisCount);
+TILING_DATA_FIELD_DEF(int64_t, tailUpdateLoopSize);
+TILING_DATA_FIELD_DEF(int64_t, tailUpdateAxisNum);
 
-  TILING_DATA_FIELD_DEF(int64_t, ubQuantaIndxFactor);
-  TILING_DATA_FIELD_DEF(int64_t, ubRowFactor);
-  TILING_DATA_FIELD_DEF(int64_t, ubRowOptiFactor);
-  TILING_DATA_FIELD_DEF(int64_t, eachCoreIndexCount);
-  TILING_DATA_FIELD_DEF(int64_t, tailCoreIndexCount);
-  TILING_DATA_FIELD_DEF(int64_t, eachCoreVarCount);
-  TILING_DATA_FIELD_DEF(int64_t, tailCoreVarCount);
-  TILING_DATA_FIELD_DEF(int64_t, isSplitAfterAxis);
-  TILING_DATA_FIELD_DEF(int64_t, isDeterminstic);
-  TILING_DATA_FIELD_DEF(int64_t, isSimdNonDeterminstic);
-  TILING_DATA_FIELD_DEF(int64_t, isSort);
-  TILING_DATA_FIELD_DEF(int64_t, isOpti);
-  TILING_DATA_FIELD_DEF(int64_t, singleCol);
+TILING_DATA_FIELD_DEF(int64_t, ubQuantaIndxFactor);
+TILING_DATA_FIELD_DEF(int64_t, ubRowFactor);
+TILING_DATA_FIELD_DEF(int64_t, ubRowOptiFactor);
+TILING_DATA_FIELD_DEF(int64_t, eachCoreIndexCount);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreIndexCount);
+TILING_DATA_FIELD_DEF(int64_t, eachCoreVarCount);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreVarCount);
+TILING_DATA_FIELD_DEF(int64_t, isSplitAfterAxis);
+TILING_DATA_FIELD_DEF(int64_t, isDeterminstic);
+TILING_DATA_FIELD_DEF(int64_t, isSimdNonDeterminstic);
+TILING_DATA_FIELD_DEF(int64_t, isSort);
+TILING_DATA_FIELD_DEF(int64_t, isOpti);
+TILING_DATA_FIELD_DEF(int64_t, singleCol);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterNdAdd, ScatterNdAddTilingData)
 
 class ScatterNdAddSimtTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ScatterNdAddSimtTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {
-    }
+    explicit ScatterNdAddSimtTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 #ifdef DAVID_FPGA
     uint32_t maxThread_{128};
 #else
@@ -87,16 +86,14 @@ public:
 #endif
     uint64_t coreNum_;
     uint64_t ubSize_;
+
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
-    int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes,
-                                 int64_t originalSize, int64_t postAxisSize, ge::DataType idType);
+    int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes, int64_t originalSize, int64_t postAxisSize,
+                                 ge::DataType idType);
     void DoOpTilingSplitAfter();
     void DoOpTilingForDeterminsticSplitIndices();
     void DoOpTilingSimdSplitIndices();
@@ -111,37 +108,37 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus GetCastType();
-    
+
     // customized functions
     ge::graphStatus GenerateTilingKey();
 
 private:
-  ge::graphStatus UbTiling();
-  void BlockTiling();
-  void SetTilingData();
-  void SetStride();
-  std::string TilingDataToString();
+    ge::graphStatus UbTiling();
+    void BlockTiling();
+    void SetTilingData();
+    void SetStride();
+    std::string TilingDataToString();
 
 private:
-    int64_t totalCoreNum_ {0};
+    int64_t totalCoreNum_{0};
     ge::DataType updateDtype_;
     ge::DataType indiceDtype_;
     ge::DataType indiceCastDtype_;
-    uint64_t indiceCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
-    uint64_t updateShapeSize {0};
-    uint64_t indiceShapeSize {0};
-    uint64_t varDimNum_ {0};
+    uint64_t indiceCastMode_ = 0; // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
+    uint64_t updateShapeSize{0};
+    uint64_t indiceShapeSize{0};
+    uint64_t varDimNum_{0};
     uint64_t outputShapeSize = 1;
-    uint64_t alignFactor {0};
-    uint64_t blockNum {0};
-    uint64_t blockTilingSize {0};
-    uint64_t tailBlockTilingSize {0};
-    uint32_t ubTilingSize {0};
-    uint32_t rankSize_ {0};
-    uint64_t sliceSize {0};
+    uint64_t alignFactor{0};
+    uint64_t blockNum{0};
+    uint64_t blockTilingSize{0};
+    uint64_t tailBlockTilingSize{0};
+    uint32_t ubTilingSize{0};
+    uint32_t rankSize_{0};
+    uint64_t sliceSize{0};
     uint64_t strideList[OPTILING_MAX_RANK_COUNT] = {0};
     uint64_t outPutShape[OPTILING_MAX_SHAPE_RANK] = {0};
-    uint64_t workspaceSize {0};
+    uint64_t workspaceSize{0};
 
     int64_t indicesAxis_ = 0;
     int64_t varInAxis_ = 1;
@@ -179,10 +176,10 @@ private:
     int64_t isSort_ = 0;
     int64_t isOpti_ = 0;
     int64_t singleCol_ = 0;
-    
+
     const char* opName = "ScatterNdAdd";
     ScatterNdAddTilingData tilingData;
 };
 
-} //namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ND_ADD_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ND_ADD_TILING_H_

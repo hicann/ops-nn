@@ -55,7 +55,10 @@ struct RotateQuantAptInfo {
 
 class RotateQuantAptTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit RotateQuantAptTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) { InitCompileInfo(); };
+    explicit RotateQuantAptTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
+    {
+        InitCompileInfo();
+    };
     ~RotateQuantAptTiling() override = default;
 
 protected:

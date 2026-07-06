@@ -17,20 +17,17 @@
 
 class SwiGluTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-      std::cout << "SwiGluTest Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwiGluTest Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-      std::cout << "SwiGluTest Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwiGluTest Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_legal_input) {
+TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_legal_input)
+{
     ge::op::SwiGlu op;
     op.UpdateInputDesc("x", create_desc({4, 4}, ge::DT_FLOAT16));
     op.SetAttr("dim", -1);
-    Runtime2TestParam param{{"dim"},{},{}};
+    Runtime2TestParam param{{"dim"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = op.GetOutputDesc(0);
@@ -38,55 +35,59 @@ TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_legal_input) {
     EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_dynamic_input) {
-  ge::op::SwiGlu op;
-  op.UpdateInputDesc("x", create_desc({-1, -1}, ge::DT_FLOAT16));
-  op.SetAttr("dim", -1);
-  Runtime2TestParam param{{"dim"},{},{}};
-  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_dynamic_input)
+{
+    ge::op::SwiGlu op;
+    op.UpdateInputDesc("x", create_desc({-1, -1}, ge::DT_FLOAT16));
+    op.SetAttr("dim", -1);
+    Runtime2TestParam param{{"dim"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
-  auto output_y_desc = op.GetOutputDesc(0);
-  std::vector<int64_t> expected_output_shape = {-1, -1};
-  EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_output_shape);
+    auto output_y_desc = op.GetOutputDesc(0);
+    std::vector<int64_t> expected_output_shape = {-1, -1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_illegal_input) {
-  ge::op::SwiGlu op;
-  op.UpdateInputDesc("x", create_desc({1, 3}, ge::DT_FLOAT16));
-  op.SetAttr("dim", -1);
-  Runtime2TestParam param{{"dim"},{},{}};
-  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
+TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_illegal_input)
+{
+    ge::op::SwiGlu op;
+    op.UpdateInputDesc("x", create_desc({1, 3}, ge::DT_FLOAT16));
+    op.SetAttr("dim", -1);
+    Runtime2TestParam param{{"dim"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
 }
 
-TEST_F(SwiGluTest, SwiGlu_infer_dtype_test) {
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SwiGlu"), nullptr);
-  auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SwiGlu")->infer_datatype;
+TEST_F(SwiGluTest, SwiGlu_infer_dtype_test)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SwiGlu"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SwiGlu")->infer_datatype;
 
-  if (data_type_func != nullptr) {
-    ge::DataType input_ref = ge::DT_FLOAT;
-    ge::DataType output_ref = ge::DT_FLOAT;
-    auto context_holder = gert::InferDataTypeContextFaker()
-        .IrInputNum(1)
-        .NodeIoNum(1,1)
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .InputDataTypes({&input_ref})
-        .OutputDataTypes({&output_ref})
-        .Build();
-    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-    EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-    ASSERT_NE(context, nullptr);
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_FLOAT;
+        ge::DataType output_ref = ge::DT_FLOAT;
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(1)
+                                  .NodeIoNum(1, 1)
+                                  .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref})
+                                  .OutputDataTypes({&output_ref})
+                                  .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+        ASSERT_NE(context, nullptr);
 
-    EXPECT_EQ(context->GetInputDataType(0), input_ref);
-    EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-  }
+        EXPECT_EQ(context->GetInputDataType(0), input_ref);
+        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
+    }
 }
 
-TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_dynamic_input_negative_two) {
+TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_dynamic_input_negative_two)
+{
     ge::op::SwiGlu op;
     op.UpdateInputDesc("x", create_desc({-2}, ge::DT_FLOAT16));
     op.SetAttr("dim", -1);
-    Runtime2TestParam param{{"dim"},{},{}};
+    Runtime2TestParam param{{"dim"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
     auto output_y_desc = op.GetOutputDesc(0);

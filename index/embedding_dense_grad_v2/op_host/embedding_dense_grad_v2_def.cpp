@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class EmbeddingDenseGradV2 : public OpDef
-{
+class EmbeddingDenseGradV2 : public OpDef {
 public:
     explicit EmbeddingDenseGradV2(const char* name) : OpDef(name)
     {

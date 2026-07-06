@@ -23,15 +23,11 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fatrelu_mul(
-    GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fatrelu_mul(GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace,
+                                                  GM_ADDR tiling);
 class fatrelu_mul_test : public testing::Test {
 protected:
-
-    static void SetUpTestCase()
-    {
-        cout << "fatrelu_mul SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "fatrelu_mul SetUp\n" << endl; }
 
     static void TearDownTestCase()
     {
@@ -39,7 +35,6 @@ protected:
         kernel_ut::CleanGeneratedBinFiles("./fatrelu_mul_data");
     }
 };
-
 
 TEST_F(fatrelu_mul_test, test_fatrelu_mul_float_0)
 {

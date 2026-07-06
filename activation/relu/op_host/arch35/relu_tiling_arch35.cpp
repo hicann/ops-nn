@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -26,7 +26,7 @@ namespace optiling {
 using namespace ge;
 using namespace Ops::Base;
 
-constexpr uint64_t SYS_WORKSPACE = 16777216; //16M
+constexpr uint64_t SYS_WORKSPACE = 16777216; // 16M
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_FP16 = 101;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_BF16 = 102;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_FP32 = 103;
@@ -45,10 +45,11 @@ ge::graphStatus ReluTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
 
     OP_CHECK_IF(inputDtype != this->outputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "The dtypes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+                                                       ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                                       "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -56,9 +57,8 @@ ge::graphStatus ReluTiling::RunTiling()
 {
     auto tiling = tilingContext->GetTilingData<Ops::Base::EleBaseTilingData16B>();
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "get output dtype failed"),
-               return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         res = elewiseBaseTiling.DoTiling<ReluOp::GraphRelu<half, half>::OpDag>(*tiling);
@@ -74,13 +74,12 @@ ge::graphStatus ReluTiling::RunTiling()
         res = elewiseBaseTiling.DoTiling<ReluOp::GraphReluMax<int64_t>::OpDag>(*tiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_INT32, DT_INT64");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_INT32, DT_INT64");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(res == ge::GRAPH_FAILED,
-        OP_LOGE(tilingContext, "DoTiling failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "DoTiling failed"), return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
@@ -103,7 +102,7 @@ ge::graphStatus ReluTiling::RunTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus Tiling4Relu(gert::TilingContext *context)
+static ge::graphStatus Tiling4Relu(gert::TilingContext* context)
 {
     OP_LOGD("ReluTiling", "Enter Tiling4Relu");
     if (context == nullptr) {
@@ -131,6 +130,5 @@ ge::graphStatus TilingPrepareForRelu(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Relu).Tiling(Tiling4Relu)
-                            .TilingParse<ReluCompileInfo>(TilingPrepareForRelu);
-}  // namespace optiling
+IMPL_OP_OPTILING(Relu).Tiling(Tiling4Relu).TilingParse<ReluCompileInfo>(TilingPrepareForRelu);
+} // namespace optiling

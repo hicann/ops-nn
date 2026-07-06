@@ -30,13 +30,13 @@ using namespace AscendC;
 using namespace AscendC::MicroAPI;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
-using RmsNorm::GetOverflowMode;
-using RmsNorm::SetOverflowMode;
 using RmsNorm::castTraitFp322Fp8;
 using RmsNorm::castTraitFp322Hifp8;
-using RmsNorm::CopyOutX;
 using RmsNorm::CopyInX;
+using RmsNorm::CopyOutX;
 using RmsNorm::CopyOutY;
+using RmsNorm::GetOverflowMode;
+using RmsNorm::SetOverflowMode;
 using RmsNorm::YCopyOutImpl;
 
 constexpr uint64_t ALIGN_512_FACTOR = 512;
@@ -71,11 +71,10 @@ constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
 };
 
 template <typename TilingData>
-__aicore__ inline void InitTiling(
-    uint64_t& numM, uint64_t& numN, uint64_t& baseM, uint64_t& baseN,
-    uint64_t& baseNDtypeAlign, uint64_t& baseNReduceAlign, uint64_t& powerSplit,
-    uint64_t& mPerCore, uint64_t& mLastCore, float& epsilon, float& avgFactor,
-    const TilingData* tilingData)
+__aicore__ inline void InitTiling(uint64_t& numM, uint64_t& numN, uint64_t& baseM, uint64_t& baseN,
+                                  uint64_t& baseNDtypeAlign, uint64_t& baseNReduceAlign, uint64_t& powerSplit,
+                                  uint64_t& mPerCore, uint64_t& mLastCore, float& epsilon, float& avgFactor,
+                                  const TilingData* tilingData)
 {
     numM = tilingData->numM;
     numN = tilingData->numN;
@@ -90,8 +89,8 @@ __aicore__ inline void InitTiling(
     avgFactor = tilingData->avgFactor;
 }
 
-__aicore__ inline void CopyOutScale(
-    GlobalTensor<float>& scaleGm, TQue<QuePosition::VECOUT, 1>& outQueueScale, uint64_t gmOffset, uint32_t blockLen)
+__aicore__ inline void CopyOutScale(GlobalTensor<float>& scaleGm, TQue<QuePosition::VECOUT, 1>& outQueueScale,
+                                    uint64_t gmOffset, uint32_t blockLen)
 {
     LocalTensor<float> scaleLocal = outQueueScale.DeQue<float>();
     RmsNorm::DataCopyImpl<float>(scaleGm[gmOffset], scaleLocal, 1, blockLen);
@@ -108,8 +107,10 @@ __aicore__ inline void CopyInParamToQueue(Queue& inQueue, GlobalTensor<T>& srcGm
 
 template <typename T_SMOOTH_SCALE, typename SmoothScale1Queue, typename SmoothScale2Queue>
 __aicore__ inline void CopyInDynamicQuantCommon(SmoothScale1Queue& inQueueSmoothScale1,
-    SmoothScale2Queue& inQueueSmoothScale2, GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm,
-    GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2)
+                                                SmoothScale2Queue& inQueueSmoothScale2,
+                                                GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm,
+                                                GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm, uint64_t numN,
+                                                bool hasSmoothScale1, bool hasSmoothScale2)
 {
     if (hasSmoothScale1) {
         CopyInParamToQueue(inQueueSmoothScale1, smoothScale1Gm, numN);
@@ -120,11 +121,14 @@ __aicore__ inline void CopyInDynamicQuantCommon(SmoothScale1Queue& inQueueSmooth
 }
 
 template <typename T_X, typename T_SMOOTH_SCALE, typename SmoothScale1Queue, typename SmoothScale2Queue,
-    typename BetaQueue>
+          typename BetaQueue>
 __aicore__ inline void PrepareOptionalParamLocals(SmoothScale1Queue& inQueueSmoothScale1,
-    SmoothScale2Queue& inQueueSmoothScale2, BetaQueue& inQueueBeta, GlobalTensor<T_X>& betaGm,
-    LocalTensor<T_SMOOTH_SCALE>& smoothScale1Local, LocalTensor<T_SMOOTH_SCALE>& smoothScale2Local,
-    LocalTensor<T_X>& betaLocal, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2, bool hasBeta)
+                                                  SmoothScale2Queue& inQueueSmoothScale2, BetaQueue& inQueueBeta,
+                                                  GlobalTensor<T_X>& betaGm,
+                                                  LocalTensor<T_SMOOTH_SCALE>& smoothScale1Local,
+                                                  LocalTensor<T_SMOOTH_SCALE>& smoothScale2Local,
+                                                  LocalTensor<T_X>& betaLocal, uint64_t numN, bool hasSmoothScale1,
+                                                  bool hasSmoothScale2, bool hasBeta)
 {
     if (hasSmoothScale1) {
         smoothScale1Local = inQueueSmoothScale1.template DeQue<T_SMOOTH_SCALE>();
@@ -139,12 +143,13 @@ __aicore__ inline void PrepareOptionalParamLocals(SmoothScale1Queue& inQueueSmoo
 }
 
 template <typename T_X, typename T_Y, typename T_SMOOTH_SCALE>
-__aicore__ inline void InitOptionalGmBuffers(
-    GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm, GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm,
-    GlobalTensor<T_Y>& y2Gm, GlobalTensor<float>& scale2Gm, GlobalTensor<T_X>& betaGm,
-    GM_ADDR smoothScale1, GM_ADDR smoothScale2, GM_ADDR y2, GM_ADDR scale2, GM_ADDR beta,
-    uint64_t gmOffset, uint64_t gmLen, uint64_t scalesGmOffset, uint64_t mCore, uint64_t numN,
-    bool hasSmoothScale1, bool hasSmoothScale2, bool hasY2Scale2, bool hasBeta)
+__aicore__ inline void InitOptionalGmBuffers(GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm,
+                                             GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm, GlobalTensor<T_Y>& y2Gm,
+                                             GlobalTensor<float>& scale2Gm, GlobalTensor<T_X>& betaGm,
+                                             GM_ADDR smoothScale1, GM_ADDR smoothScale2, GM_ADDR y2, GM_ADDR scale2,
+                                             GM_ADDR beta, uint64_t gmOffset, uint64_t gmLen, uint64_t scalesGmOffset,
+                                             uint64_t mCore, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2,
+                                             bool hasY2Scale2, bool hasBeta)
 {
     if (hasSmoothScale1) {
         smoothScale1Gm.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smoothScale1, numN);
@@ -161,13 +166,12 @@ __aicore__ inline void InitOptionalGmBuffers(
     }
 }
 
-template <
-    typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
-    bool HAS_BETA = false, typename T_Y>
-__aicore__ inline void ComputeYScale(
-    LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
-    LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, LocalTensor<float>& yTmpLocal,
-    uint32_t rstdScaleOffset, uint32_t calCount)
+template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
+          bool HAS_BETA = false, typename T_Y>
+__aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal,
+                                     LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal,
+                                     LocalTensor<T_GAMMA>& betaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal,
+                                     LocalTensor<float>& yTmpLocal, uint32_t rstdScaleOffset, uint32_t calCount)
 {
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 
@@ -265,11 +269,13 @@ __aicore__ inline void ComputeYScale(
     }
 }
 
-template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true, bool HAS_BETA = false, typename T_Y>
-__aicore__ inline void ComputeReduceMax(
-    LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal, LocalTensor<T_X>& xLocal,
-    LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
-    LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, uint32_t rstdScaleOffset, uint32_t calCount)
+template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
+          bool HAS_BETA = false, typename T_Y>
+__aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal,
+                                        LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
+                                        LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+                                        LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, uint32_t rstdScaleOffset,
+                                        uint32_t calCount)
 {
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 
@@ -355,9 +361,8 @@ __aicore__ inline void ComputeScale(LocalTensor<float>& scaleLocal, uint32_t rst
 }
 
 template <typename T_Y>
-__aicore__ inline void ComputeY(
-    LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<float>& xLocal, uint32_t rstdScaleOffset,
-    uint32_t calCount)
+__aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<float>& xLocal,
+                                uint32_t rstdScaleOffset, uint32_t calCount)
 {
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 

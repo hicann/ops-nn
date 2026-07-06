@@ -30,15 +30,15 @@ constexpr uint32_t UB_AGLIN = 32;
 constexpr uint32_t DOUBLE_BUFFER = 2;
 
 template <typename X_T, typename IDS_T>
-class USSKernelDeterministicBigInnerDim
-{
+class USSKernelDeterministicBigInnerDim {
 public:
-    __aicore__ inline USSKernelDeterministicBigInnerDim(const UnsortedSegmentSumDeterministicBigInnerDimTilingData* tiling, TPipe* pipe)
+    __aicore__ inline USSKernelDeterministicBigInnerDim(
+        const UnsortedSegmentSumDeterministicBigInnerDimTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output);
     __aicore__ inline void Process();
-    __aicore__ inline void CopyInData(uint64_t blockOffset, uint64_t sLoop, uint64_t aLoop, 
-        uint64_t cols, uint64_t rows, uint64_t colsAlign, int64_t localOffset);
+    __aicore__ inline void CopyInData(uint64_t blockOffset, uint64_t sLoop, uint64_t aLoop, uint64_t cols,
+                                      uint64_t rows, uint64_t colsAlign, int64_t localOffset);
 
 private:
     TPipe* pipe_ = nullptr;
@@ -49,7 +49,7 @@ private:
     GlobalTensor<IDS_T> idsGm_;
     TQue<QuePosition::VECIN, 1> xQueue_;
     TQue<QuePosition::VECIN, 1> segmentIdQueue_;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> yQueue_;  
+    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> yQueue_;
     TBuf<QuePosition::VECCALC> sharedTmpBuf;
     TBuf<QuePosition::VECCALC> sortedIdBuf;
     TBuf<QuePosition::VECCALC> sortedIdIndexBuf;
@@ -69,7 +69,8 @@ private:
 };
 
 template <typename X_T, typename IDS_T>
-__aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+__aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Init(GM_ADDR x, GM_ADDR segmentIds,
+                                                                           GM_ADDR output)
 {
     blockId_ = GetBlockIdx();
     innerDim_ = td_->innerDim;
@@ -84,7 +85,7 @@ __aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Init(GM_AD
     xGm_.SetGlobalBuffer((__gm__ X_T*)(x));
     idsGm_.SetGlobalBuffer((__gm__ IDS_T*)(segmentIds));
     yGm_.SetGlobalBuffer((__gm__ X_T*)(output));
-    
+
     // yGm分多核清零
     uint32_t coreNum = GetBlockNum();
     initPerCore_ = outputOuterDim_ * innerDim_ / coreNum;
@@ -96,9 +97,9 @@ __aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Init(GM_AD
     SyncAll();
     pipe_->Reset();
 
-    uint32_t xQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(baseS_* baseA_ * sizeof(float)), UB_AGLIN);
-    uint32_t segmentIdQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(baseS_* sizeof(IDS_T)), UB_AGLIN);
-    uint32_t sortedIdIndexBufSize = Ops::Base::CeilAlign(static_cast<uint32_t>(baseS_* sizeof(uint32_t)), UB_AGLIN);
+    uint32_t xQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(baseS_ * baseA_ * sizeof(float)), UB_AGLIN);
+    uint32_t segmentIdQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(baseS_ * sizeof(IDS_T)), UB_AGLIN);
+    uint32_t sortedIdIndexBufSize = Ops::Base::CeilAlign(static_cast<uint32_t>(baseS_ * sizeof(uint32_t)), UB_AGLIN);
     xQueSize_ = xQueueSize;
     pipe_->InitBuffer(xQueue_, 1, xQueueSize);
     pipe_->InitBuffer(segmentIdQueue_, 1, segmentIdQueueSize);
@@ -109,19 +110,22 @@ __aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Init(GM_AD
 }
 
 template <typename X_T, typename IDS_T>
-__aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::CopyInData(uint64_t blockOffset, uint64_t sLoop, 
-    uint64_t aLoop, uint64_t cols, uint64_t rows, uint64_t colsAlign, int64_t localOffset)
+__aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::CopyInData(uint64_t blockOffset, uint64_t sLoop,
+                                                                                 uint64_t aLoop, uint64_t cols,
+                                                                                 uint64_t rows, uint64_t colsAlign,
+                                                                                 int64_t localOffset)
 {
-    // copy in x 
+    // copy in x
     LocalTensor<X_T> xLocal = xQueue_.AllocTensor<X_T>();
-    uint64_t inputOffset = blockOffset + sLoop * baseS_ * innerDim_ + aLoop * baseA_;  
-    DataCopyExtParams dataCopyParam{(uint16_t)rows, (uint32_t)(cols * sizeof(X_T)), (uint32_t)((innerDim_ - cols) * sizeof(X_T)), 
-        (uint32_t)((colsAlign - cols) * sizeof(X_T) / ONE_BLOCK_SIZE), 0};
+    uint64_t inputOffset = blockOffset + sLoop * baseS_ * innerDim_ + aLoop * baseA_;
+    DataCopyExtParams dataCopyParam{(uint16_t)rows, (uint32_t)(cols * sizeof(X_T)),
+                                    (uint32_t)((innerDim_ - cols) * sizeof(X_T)),
+                                    (uint32_t)((colsAlign - cols) * sizeof(X_T) / ONE_BLOCK_SIZE), 0};
     DataCopyPadExtParams<X_T> dataPadParam{false, 0, 0, 0};
     DataCopyPad(xLocal[localOffset], xGm_[inputOffset], dataCopyParam, dataPadParam);
     xQueue_.EnQue<X_T>(xLocal);
 
-    // copy in segmentId 
+    // copy in segmentId
     LocalTensor<IDS_T> segmentIdLocal = segmentIdQueue_.AllocTensor<IDS_T>();
     DataCopyExtParams idCopyParam{(uint16_t)1, (uint32_t)(rows * sizeof(IDS_T)), 0, 0, 0};
     DataCopyPadExtParams<IDS_T> idPadParam{false, 0, 0, 0};
@@ -142,13 +146,14 @@ __aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Process()
     }
 
     uint64_t curCoreCols = GetBlockIdx() != (GetBlockNum() - 1) ? normalCoreProcessCols_ : tailCoreProcessCols_;
-    uint64_t blockOffset = GetBlockIdx() * normalCoreProcessCols_;  
+    uint64_t blockOffset = GetBlockIdx() * normalCoreProcessCols_;
     uint64_t aLoopNum = Ops::Base::CeilDiv(curCoreCols, baseA_);
     uint64_t sLoopNum = Ops::Base::CeilDiv(inputOuterDim_, baseS_);
 
     for (uint64_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
         uint64_t cols = (aLoop == aLoopNum - 1) ? (curCoreCols - aLoop * baseA_) : baseA_;
-        uint64_t colsAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) / sizeof(X_T);
+        uint64_t colsAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) /
+                             sizeof(X_T);
         for (uint64_t sLoop = 0; sLoop < sLoopNum; sLoop++) {
             uint64_t rows = (sLoop == sLoopNum - 1) ? (inputOuterDim_ - sLoop * baseS_) : baseS_;
             CopyInData(blockOffset, sLoop, aLoop, cols, rows, colsAlign, xLocalOffsetStart);
@@ -163,9 +168,9 @@ __aicore__ inline void USSKernelDeterministicBigInnerDim<X_T, IDS_T>::Process()
             LocalTensor<IDS_T> sortedIdTensor = sortedIdBuf.Get<IDS_T>();
             LocalTensor<uint32_t> sortedIdIndexTensor = sortedIdIndexBuf.Get<uint32_t>();
             LocalTensor<uint8_t> sharedTmpTensor = sharedTmpBuf.Get<uint8_t>();
-            AscendC::Sort<IDS_T, false, sortConfig>(sortedIdTensor, sortedIdIndexTensor, segmentIdTensor, sharedTmpTensor,
-                                                static_cast<uint32_t>(rows));
-            
+            AscendC::Sort<IDS_T, false, sortConfig>(sortedIdTensor, sortedIdIndexTensor, segmentIdTensor,
+                                                    sharedTmpTensor, static_cast<uint32_t>(rows));
+
             LocalTensor<float> yLocal = yQueue_.AllocTensor<float>();
             Duplicate(yLocal, static_cast<float>(0), colsAlign);
 

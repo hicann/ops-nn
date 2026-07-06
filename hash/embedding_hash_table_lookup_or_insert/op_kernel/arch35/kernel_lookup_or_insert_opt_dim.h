@@ -89,8 +89,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
                         succ = true;
 
                         // 处理evict调用后的逻辑，这块与evict算子的逻辑相照应
-                        auto currFlag =
-                            *reinterpret_cast<__gm__ volatile int32_t*>(pCurrBucket + TABLE_FLAG_OFFSET_FOR_B32);
+                        auto currFlag = *reinterpret_cast<__gm__ volatile int32_t*>(pCurrBucket +
+                                                                                    TABLE_FLAG_OFFSET_FOR_B32);
                         if ((currFlag & EVICTED_FLAG_MASK) != 0) {
                             auto newFlag = currFlag ^ EVICTED_FLAG_MASK;
                             auto oldFlag = asc_atomic_cas(
@@ -115,12 +115,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
             pCurrBucket = pTable + currIdx * bucketSize;
             if (threadXIdx == 0) {
                 //  由控制线程来执行bucket的counter++操作
-                asc_atomic_add(
-                    reinterpret_cast<__gm__ int64_t*>(pCurrBucket + COUNTER_OFFSET), static_cast<int64_t>(1));
+                asc_atomic_add(reinterpret_cast<__gm__ int64_t*>(pCurrBucket + COUNTER_OFFSET),
+                               static_cast<int64_t>(1));
             }
-            __gm__ float* pCurrValue =
-                reinterpret_cast<__gm__ float*>(pCurrBucket + VALUES_OFFSET) + threadXIdx; // 读取pCurrBucket的j列
-            pValues[i * EMBEDDING_DIM + threadXIdx] = *pCurrValue;                         // 写回i行j列
+            __gm__ float* pCurrValue = reinterpret_cast<__gm__ float*>(pCurrBucket + VALUES_OFFSET) +
+                                       threadXIdx;                 // 读取pCurrBucket的j列
+            pValues[i * EMBEDDING_DIM + threadXIdx] = *pCurrValue; // 写回i行j列
         }
     } // threadY的for循环
 
@@ -145,14 +145,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
 
 class KernelLookupOrInsertOptDim : public KernelLookupOrInsertBase {
 public:
-    __aicore__ KernelLookupOrInsertOptDim(TPipe* pipe) : KernelLookupOrInsertBase(pipe)
-    {}
+    __aicore__ KernelLookupOrInsertOptDim(TPipe* pipe) : KernelLookupOrInsertBase(pipe) {}
 
     __aicore__ void Process()
     {
         LocalTensor<int64_t> threadInsertCountsLocal = threadInsertCountsBuf_.Get<int64_t>();
-        __ubuf__ int64_t* pThreadInsertCounts =
-            reinterpret_cast<__ubuf__ int64_t*>(threadInsertCountsLocal.GetPhyAddr());
+        __ubuf__ int64_t* pThreadInsertCounts = reinterpret_cast<__ubuf__ int64_t*>(
+            threadInsertCountsLocal.GetPhyAddr());
 
         // SIMT计算插入/查询
         if (embeddingDim_ == EMBEDDING_DIM_1) {

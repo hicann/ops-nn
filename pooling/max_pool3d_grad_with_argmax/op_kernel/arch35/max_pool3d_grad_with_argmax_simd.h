@@ -51,7 +51,7 @@ constexpr AscendC::MicroAPI::CastTrait castTraitI64I32 = {
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_ROUND,
 };
-  
+
 constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
     AscendC::MicroAPI::RegLayout::ZERO,
     AscendC::MicroAPI::SatMode::NO_SAT,
@@ -82,35 +82,34 @@ __aicore__ inline MicroAPI::MaskReg GenT2Mask(uint32_t& maskCount)
 }
 
 template <typename T>
-__aicore__ inline void GradientAcc(
-    __local_mem__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg, MicroAPI::RegTensor<T>& argmaxReg,
-    MicroAPI::MaskReg& pregArgmax)
+__aicore__ inline void GradientAcc(__local_mem__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg,
+                                   MicroAPI::RegTensor<T>& argmaxReg, MicroAPI::MaskReg& pregArgmax)
 {
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
     AscendC::MicroAPI::RegTensor<computeType> scatterAccResReg;
-    AscendC::MicroAPI::DataCopyGather(
-        scatterAccResReg, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg, pregArgmax);
+    AscendC::MicroAPI::DataCopyGather(scatterAccResReg, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg,
+                                      pregArgmax);
     AscendC::MicroAPI::Add(scatterAccResReg, scatterAccResReg, gradReg, pregArgmax);
-    AscendC::MicroAPI::DataCopyScatter(
-        yAddr, scatterAccResReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg, pregArgmax);
+    AscendC::MicroAPI::DataCopyScatter(yAddr, scatterAccResReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg,
+                                       pregArgmax);
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GetConCurrentInput(
-    MicroAPI::RegTensor<int32_t>& argmaxReg, MicroAPI::RegTensor<computeType>& gradReg, __local_mem__ T1* gradAddr,
-    __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex, MicroAPI::MaskReg& pregT1,
-    MicroAPI::MaskReg& pregT2)
+__aicore__ inline void GetConCurrentInput(MicroAPI::RegTensor<int32_t>& argmaxReg,
+                                          MicroAPI::RegTensor<computeType>& gradReg, __local_mem__ T1* gradAddr,
+                                          __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
+                                          MicroAPI::MaskReg& pregT1, MicroAPI::MaskReg& pregT2)
 {
     if constexpr (std::negation<std::is_same<T1, float>>::value) {
         AscendC::MicroAPI::RegTensor<T1> gradRegT1;
         AscendC::MicroAPI::RegTensor<uint16_t> parallelRegIndexU16;
-        AscendC::MicroAPI::MaskReg allMaskU32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(parallelRegIndexU16, parallelRegIndex, allMaskU32);
         AscendC::MicroAPI::Pack(parallelRegIndexU16, (AscendC::MicroAPI::RegTensor<int32_t>&)parallelRegIndexU16);
         AscendC::MicroAPI::DataCopyGather(gradRegT1, gradAddr, parallelRegIndexU16, pregT1);
-        AscendC::MicroAPI::UnPack(
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)gradRegT1, (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
+        AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<uint32_t>&)gradRegT1,
+                                  (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
         AscendC::MicroAPI::Cast<computeType, T1, castTraitT1ComputeType>(gradReg, gradRegT1, allMaskU32);
     } else {
         AscendC::MicroAPI::DataCopyGather(gradReg, gradAddr, parallelRegIndex, pregT1);
@@ -132,9 +131,8 @@ __aicore__ inline void IndexConvNcdhwFastDiv(
     MicroAPI::RegTensor<int32_t>& argmaxReg, MicroAPI::RegTensor<uint32_t>& dTmpReg,
     MicroAPI::RegTensor<uint32_t>& hTmpReg, MicroAPI::RegTensor<uint32_t>& wTmpReg,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
-    int16_t shiftW, int32_t hwOutputAligned,
-    int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput, int32_t baseOffset,
-    int32_t highOutputPlaneActual, int32_t highArgmaxPlaneActual,
+    int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
+    int32_t baseOffset, int32_t highOutputPlaneActual, int32_t highArgmaxPlaneActual,
     MicroAPI::RegTensor<uint32_t>& magicHighReg, int16_t shiftHigh)
 {
     MicroAPI::MaskReg allMask = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
@@ -159,9 +157,8 @@ __aicore__ inline void IndexConvNcdhwFastDiv(
         MicroAPI::RegTensor<int32_t> highIncRegI32;
         MicroAPI::Arange(highIncRegI32, 0);
         MicroAPI::RegTensor<uint32_t> highIncReg;
-        FastDivImpl(
-            (MicroAPI::RegTensor<uint32_t>&)highIncReg, (MicroAPI::RegTensor<uint32_t>&)highIncRegI32, magicHighReg,
-            shiftHigh, allMask);
+        FastDivImpl((MicroAPI::RegTensor<uint32_t>&)highIncReg, (MicroAPI::RegTensor<uint32_t>&)highIncRegI32,
+                    magicHighReg, shiftHigh, allMask);
         MicroAPI::Muls(highIncRegI32, (MicroAPI::RegTensor<int32_t>&)highIncReg, highOutputPlaneActual, allMask);
         MicroAPI::Add(argmaxReg, argmaxReg, highIncRegI32, allMask);
     }
@@ -182,23 +179,28 @@ __aicore__ inline int64_t PEnd(int64_t index, int64_t pad, int64_t stride, int64
     return (index + pad) / stride + 1 < pooledSize ? (index + pad) / stride + 1 : pooledSize;
 };
 
-__aicore__ inline void FilterMask3D(
-    MicroAPI::MaskReg& preg, MicroAPI::RegTensor<uint32_t>& dTmpReg, MicroAPI::RegTensor<uint32_t>& hTmpReg,
-    MicroAPI::RegTensor<uint32_t>& wTmpReg, MicroAPI::RegTensor<int32_t>& dLowerReg,
-    MicroAPI::RegTensor<int32_t>& hLowerReg, MicroAPI::RegTensor<int32_t>& wLowerReg,
-    MicroAPI::RegTensor<int32_t>& dUpperReg, MicroAPI::RegTensor<int32_t>& hUpperReg,
-    MicroAPI::RegTensor<int32_t>& wUpperReg)
+__aicore__ inline void FilterMask3D(MicroAPI::MaskReg& preg, MicroAPI::RegTensor<uint32_t>& dTmpReg,
+                                    MicroAPI::RegTensor<uint32_t>& hTmpReg, MicroAPI::RegTensor<uint32_t>& wTmpReg,
+                                    MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
+                                    MicroAPI::RegTensor<int32_t>& wLowerReg, MicroAPI::RegTensor<int32_t>& dUpperReg,
+                                    MicroAPI::RegTensor<int32_t>& hUpperReg, MicroAPI::RegTensor<int32_t>& wUpperReg)
 {
     AscendC::MicroAPI::MaskReg allMask = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg hMask;
     AscendC::MicroAPI::MaskReg wMask;
     AscendC::MicroAPI::MaskReg dMask;
-    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(hMask, (AscendC::MicroAPI::RegTensor<int32_t>&)hTmpReg, hLowerReg, allMask);
-    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(wMask, (AscendC::MicroAPI::RegTensor<int32_t>&)wTmpReg, wLowerReg, allMask);
-    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(dMask, (AscendC::MicroAPI::RegTensor<int32_t>&)dTmpReg, dLowerReg, allMask);
-    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(hMask, hUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)hTmpReg, hMask);
-    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(wMask, wUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)wTmpReg, wMask);
-    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(dMask, dUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)dTmpReg, dMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(hMask, (AscendC::MicroAPI::RegTensor<int32_t>&)hTmpReg, hLowerReg,
+                                                     allMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(wMask, (AscendC::MicroAPI::RegTensor<int32_t>&)wTmpReg, wLowerReg,
+                                                     allMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(dMask, (AscendC::MicroAPI::RegTensor<int32_t>&)dTmpReg, dLowerReg,
+                                                     allMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(hMask, hUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)hTmpReg,
+                                                     hMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(wMask, wUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)wTmpReg,
+                                                     wMask);
+    AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(dMask, dUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)dTmpReg,
+                                                     dMask);
     AscendC::MicroAPI::MaskAnd(hMask, hMask, wMask, allMask);
     AscendC::MicroAPI::MaskAnd(dMask, dMask, hMask, allMask);
     AscendC::MicroAPI::MaskAnd(preg, preg, dMask, allMask);
@@ -210,8 +212,7 @@ __aicore__ inline void DoSingleNCNchwFastDiv(
     MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
     int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
-    int32_t baseOffset,
-    MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
+    int32_t baseOffset, MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
     MicroAPI::RegTensor<int32_t>& wLowerReg, MicroAPI::RegTensor<int32_t>& dUpperReg,
     MicroAPI::RegTensor<int32_t>& hUpperReg, MicroAPI::RegTensor<int32_t>& wUpperReg)
 {
@@ -230,22 +231,21 @@ __aicore__ inline void DoSingleNCNchwFastDiv(
     AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
 
     GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, pregT1, pregT2);
-    IndexConvNcdhwFastDiv<0>(
-        argmaxReg, dTmpReg, hTmpReg, wTmpReg, magicHWReg, shiftHW, magicWReg, shiftW,
-        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset, 0, 0,
-        dummyMagicHighReg, dummyShiftHigh);
+    IndexConvNcdhwFastDiv<0>(argmaxReg, dTmpReg, hTmpReg, wTmpReg, magicHWReg, shiftHW, magicWReg, shiftW,
+                             hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset, 0, 0, dummyMagicHighReg,
+                             dummyShiftHigh);
     if constexpr (std::is_same<T2, int32_t>::value) {
         if constexpr (IS_CHECK_RANGE == 1) {
-            FilterMask3D(pregT2, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg,
-                         dUpperReg, hUpperReg, wUpperReg);
+            FilterMask3D(pregT2, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
         }
         GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregT2);
     } else {
         uint32_t argmaxMask = argmaxMaskCount;
         AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
         if constexpr (IS_CHECK_RANGE == 1) {
-            FilterMask3D(pregArgmax, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg,
-                         dUpperReg, hUpperReg, wUpperReg);
+            FilterMask3D(pregArgmax, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
         }
         GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
     }
@@ -257,15 +257,14 @@ __aicore__ inline void DoSingleNCNcdhwFastDiv(
     MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
     int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
-    int32_t baseOffset,
-    MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
+    int32_t baseOffset, MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
     MicroAPI::RegTensor<int32_t>& wLowerReg, MicroAPI::RegTensor<int32_t>& dUpperReg,
     MicroAPI::RegTensor<int32_t>& hUpperReg, MicroAPI::RegTensor<int32_t>& wUpperReg)
 {
-    DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
-        yAddr, gradAddr, argmaxAddr, parallelRegIndex, argmaxMaskCount, magicHWReg, shiftHW, magicWReg, shiftW,
-        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+    DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, argmaxMaskCount,
+                                                  magicHWReg, shiftHW, magicWReg, shiftW, hwOutputAligned,
+                                                  wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg,
+                                                  wLowerReg, dUpperReg, hUpperReg, wUpperReg);
 }
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
@@ -274,12 +273,10 @@ __aicore__ inline void DoMulNCNcdhwFastDiv(
     MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
     int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
-    int32_t baseOffset,
-    MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
+    int32_t baseOffset, MicroAPI::RegTensor<int32_t>& dLowerReg, MicroAPI::RegTensor<int32_t>& hLowerReg,
     MicroAPI::RegTensor<int32_t>& wLowerReg, MicroAPI::RegTensor<int32_t>& dUpperReg,
-    MicroAPI::RegTensor<int32_t>& hUpperReg, MicroAPI::RegTensor<int32_t>& wUpperReg,
-    int32_t highOutputPlaneActual, int32_t highArgmaxPlaneActual,
-    MicroAPI::RegTensor<uint32_t>& magicHighReg, int16_t shiftHigh)
+    MicroAPI::RegTensor<int32_t>& hUpperReg, MicroAPI::RegTensor<int32_t>& wUpperReg, int32_t highOutputPlaneActual,
+    int32_t highArgmaxPlaneActual, MicroAPI::RegTensor<uint32_t>& magicHighReg, int16_t shiftHigh)
 {
     AscendC::MicroAPI::RegTensor<computeType> gradReg;
     AscendC::MicroAPI::RegTensor<int32_t> argmaxReg;
@@ -292,23 +289,22 @@ __aicore__ inline void DoMulNCNcdhwFastDiv(
     AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
     GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, pregT1, pregT2);
 
-    IndexConvNcdhwFastDiv<1>(
-        argmaxReg, dTmpReg, hTmpReg, wTmpReg, magicHWReg, shiftHW, magicWReg, shiftW,
-        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-        highOutputPlaneActual, highArgmaxPlaneActual, magicHighReg, shiftHigh);
+    IndexConvNcdhwFastDiv<1>(argmaxReg, dTmpReg, hTmpReg, wTmpReg, magicHWReg, shiftHW, magicWReg, shiftW,
+                             hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset, highOutputPlaneActual,
+                             highArgmaxPlaneActual, magicHighReg, shiftHigh);
 
     if constexpr (std::is_same<T2, int32_t>::value) {
         if constexpr (IS_CHECK_RANGE == 1) {
-            FilterMask3D(pregT2, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg,
-                         dUpperReg, hUpperReg, wUpperReg);
+            FilterMask3D(pregT2, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
         }
         GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregT2);
     } else {
         uint32_t argmaxMask = argmaxMaskCount;
         AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
         if constexpr (IS_CHECK_RANGE == 1) {
-            FilterMask3D(pregArgmax, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg,
-                         dUpperReg, hUpperReg, wUpperReg);
+            FilterMask3D(pregArgmax, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
         }
         GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
     }
@@ -323,8 +319,8 @@ __aicore__ inline void GenInitial1DIndices(MicroAPI::RegTensor<T>& indexReg, int
 }
 
 template <typename T>
-__aicore__ inline void GenInitial2DHighIndices(
-    MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t colGenRate, int64_t fullBatchColNum)
+__aicore__ inline void GenInitial2DHighIndices(MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t colGenRate,
+                                               int64_t fullBatchColNum)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -349,9 +345,8 @@ __aicore__ inline void Gen2DHighIndexOne(MicroAPI::RegTensor<T>& indexReg, int64
 }
 
 template <typename T>
-__aicore__ inline void GenInitial2DIndices(
-    MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum)
+__aicore__ inline void GenInitial2DIndices(MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
+                                           int64_t colNumAligned, int64_t fullBatchColNum)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -367,9 +362,8 @@ __aicore__ inline void GenInitial2DIndices(
     AscendC::MicroAPI::Add(indexReg, segmentScalarReg, segmentIncReg, preg);
 }
 template <typename T>
-__aicore__ inline void DhwGenInitial2DIndices(
-    MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum)
+__aicore__ inline void DhwGenInitial2DIndices(MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
+                                              int64_t colNumAligned, int64_t fullBatchColNum)
 {
     GenInitial2DIndices<T>(indexReg, colGenRate, rowGenRate, colNumAligned, fullBatchColNum);
 }
@@ -389,9 +383,9 @@ __aicore__ inline void DhwGen2DIndexOne(MicroAPI::RegTensor<T>& indexReg, int64_
 }
 
 template <typename T>
-__aicore__ inline void GenInitial3DIndices(
-    MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate, int64_t colGenRate, int64_t fullBatchRowNum,
-    int64_t rowNumCount, int64_t fullBatchColNum, int64_t colNumAligned)
+__aicore__ inline void GenInitial3DIndices(MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate,
+                                           int64_t colGenRate, int64_t fullBatchRowNum, int64_t rowNumCount,
+                                           int64_t fullBatchColNum, int64_t colNumAligned)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -421,9 +415,8 @@ __aicore__ inline void GenInitial3DIndices(
 }
 
 template <typename T>
-__aicore__ inline void Gen3DIndexOne(
-    MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchRowNum, int64_t rowNumCount)
+__aicore__ inline void Gen3DIndexOne(MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate,
+                                     int64_t colNumAligned, int64_t fullBatchRowNum, int64_t rowNumCount)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -446,9 +439,9 @@ __aicore__ inline void Gen3DIndexOne(
 }
 
 template <typename T>
-__aicore__ inline void GenInitial3DHighIndices(
-    MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum, int64_t fullBatchRowNum)
+__aicore__ inline void GenInitial3DHighIndices(MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t colGenRate,
+                                               int64_t rowGenRate, int64_t colNumAligned, int64_t fullBatchColNum,
+                                               int64_t fullBatchRowNum)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> constReg;
@@ -483,9 +476,8 @@ __aicore__ inline void GenInitial3DHighIndices(
 }
 
 template <typename T>
-__aicore__ inline void Gen3DHighIndexOne(
-    MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchRowNum)
+__aicore__ inline void Gen3DHighIndexOne(MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t rowGenRate,
+                                         int64_t colNumAligned, int64_t fullBatchRowNum)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> constReg;
@@ -508,10 +500,9 @@ __aicore__ inline void Gen3DHighIndexOne(
 }
 
 template <typename T>
-__aicore__ inline void GenInitial4DIndices(
-    MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum, int64_t fullBatchRowNum, int64_t fullBatchDepthNum, int64_t depthStride,
-    int64_t highStride)
+__aicore__ inline void GenInitial4DIndices(MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
+                                           int64_t colNumAligned, int64_t fullBatchColNum, int64_t fullBatchRowNum,
+                                           int64_t fullBatchDepthNum, int64_t depthStride, int64_t highStride)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
@@ -555,9 +546,9 @@ __aicore__ inline void GenInitial4DIndices(
 }
 
 template <typename T>
-__aicore__ inline void Gen4DIndexOne(
-    MicroAPI::RegTensor<T>& indexReg, int64_t rowGenRate, int64_t colNumAligned, int64_t fullBatchRowNum,
-    int64_t fullBatchDepthNum, int64_t depthStride, int64_t highStride)
+__aicore__ inline void Gen4DIndexOne(MicroAPI::RegTensor<T>& indexReg, int64_t rowGenRate, int64_t colNumAligned,
+                                     int64_t fullBatchRowNum, int64_t fullBatchDepthNum, int64_t depthStride,
+                                     int64_t highStride)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
@@ -604,8 +595,8 @@ __aicore__ inline DivMagic PrecomputeDiv(uint32_t divisor)
     return dm;
 }
 
-__aicore__ inline void FastDivInt32(
-    MicroAPI::RegTensor<int32_t>& res, MicroAPI::RegTensor<int32_t>& src, const DivMagic& dm)
+__aicore__ inline void FastDivInt32(MicroAPI::RegTensor<int32_t>& res, MicroAPI::RegTensor<int32_t>& src,
+                                    const DivMagic& dm)
 {
     MicroAPI::RegTensor<uint32_t> tmp;
     MicroAPI::RegTensor<uint32_t> magicReg;
@@ -616,9 +607,8 @@ __aicore__ inline void FastDivInt32(
 }
 
 template <typename T>
-__aicore__ inline void GenInitial2DHighIndicesFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t colGenRate, int64_t fullBatchColNum,
-    const DivMagic& divW)
+__aicore__ inline void GenInitial2DHighIndicesFast(MicroAPI::RegTensor<T>& indexReg, int64_t highStride,
+                                                   int64_t colGenRate, int64_t fullBatchColNum, const DivMagic& divW)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -633,9 +623,8 @@ __aicore__ inline void GenInitial2DHighIndicesFast(
 }
 
 template <typename T>
-__aicore__ inline void GenInitial2DIndicesFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum, const DivMagic& divW)
+__aicore__ inline void GenInitial2DIndicesFast(MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
+                                               int64_t colNumAligned, int64_t fullBatchColNum, const DivMagic& divW)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -650,18 +639,18 @@ __aicore__ inline void GenInitial2DIndicesFast(
 }
 
 template <typename T>
-__aicore__ inline void DhwGenInitial2DIndicesFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum, const DivMagic& divW)
+__aicore__ inline void DhwGenInitial2DIndicesFast(MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate,
+                                                  int64_t rowGenRate, int64_t colNumAligned, int64_t fullBatchColNum,
+                                                  const DivMagic& divW)
 {
     GenInitial2DIndicesFast<T>(indexReg, colGenRate, rowGenRate, colNumAligned, fullBatchColNum, divW);
 }
 
 template <typename T>
-__aicore__ inline void GenInitial3DIndicesFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate, int64_t colGenRate, int64_t fullBatchRowNum,
-    int64_t rowNumCount, int64_t fullBatchColNum, int64_t colNumAligned,
-    const DivMagic& divWH, const DivMagic& divW)
+__aicore__ inline void GenInitial3DIndicesFast(MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate,
+                                               int64_t colGenRate, int64_t fullBatchRowNum, int64_t rowNumCount,
+                                               int64_t fullBatchColNum, int64_t colNumAligned, const DivMagic& divWH,
+                                               const DivMagic& divW)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -688,9 +677,9 @@ __aicore__ inline void GenInitial3DIndicesFast(
 }
 
 template <typename T>
-__aicore__ inline void Gen3DIndexOneFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchRowNum, int64_t rowNumCount, const DivMagic& divH)
+__aicore__ inline void Gen3DIndexOneFast(MicroAPI::RegTensor<T>& indexReg, int64_t dGenRate, int64_t rowGenRate,
+                                         int64_t colNumAligned, int64_t fullBatchRowNum, int64_t rowNumCount,
+                                         const DivMagic& divH)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -708,10 +697,10 @@ __aicore__ inline void Gen3DIndexOneFast(
 }
 
 template <typename T>
-__aicore__ inline void GenInitial3DHighIndicesFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum, int64_t fullBatchRowNum,
-    const DivMagic& divWH, const DivMagic& divW)
+__aicore__ inline void GenInitial3DHighIndicesFast(MicroAPI::RegTensor<T>& indexReg, int64_t highStride,
+                                                   int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
+                                                   int64_t fullBatchColNum, int64_t fullBatchRowNum,
+                                                   const DivMagic& divWH, const DivMagic& divW)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> highReg;
@@ -743,9 +732,8 @@ __aicore__ inline void GenInitial3DHighIndicesFast(
 }
 
 template <typename T>
-__aicore__ inline void Gen3DHighIndexOneFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchRowNum, const DivMagic& divH)
+__aicore__ inline void Gen3DHighIndexOneFast(MicroAPI::RegTensor<T>& indexReg, int64_t highStride, int64_t rowGenRate,
+                                             int64_t colNumAligned, int64_t fullBatchRowNum, const DivMagic& divH)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> highReg;
@@ -766,11 +754,10 @@ __aicore__ inline void Gen3DHighIndexOneFast(
 }
 
 template <typename T>
-__aicore__ inline void GenInitial4DIndicesFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate, int64_t colNumAligned,
-    int64_t fullBatchColNum, int64_t fullBatchRowNum, int64_t fullBatchDepthNum, int64_t depthStride,
-    int64_t highStride,
-    const DivMagic& divDHW, const DivMagic& divHW, const DivMagic& divW)
+__aicore__ inline void GenInitial4DIndicesFast(MicroAPI::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
+                                               int64_t colNumAligned, int64_t fullBatchColNum, int64_t fullBatchRowNum,
+                                               int64_t fullBatchDepthNum, int64_t depthStride, int64_t highStride,
+                                               const DivMagic& divDHW, const DivMagic& divHW, const DivMagic& divW)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
@@ -810,10 +797,9 @@ __aicore__ inline void GenInitial4DIndicesFast(
 }
 
 template <typename T>
-__aicore__ inline void Gen4DIndexOneFast(
-    MicroAPI::RegTensor<T>& indexReg, int64_t rowGenRate, int64_t colNumAligned, int64_t fullBatchRowNum,
-    int64_t fullBatchDepthNum, int64_t depthStride, int64_t highStride,
-    const DivMagic& divHD, const DivMagic& divH)
+__aicore__ inline void Gen4DIndexOneFast(MicroAPI::RegTensor<T>& indexReg, int64_t rowGenRate, int64_t colNumAligned,
+                                         int64_t fullBatchRowNum, int64_t fullBatchDepthNum, int64_t depthStride,
+                                         int64_t highStride, const DivMagic& divHD, const DivMagic& divH)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
@@ -846,9 +832,8 @@ template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 class MaxPool3DGradWithArgmaxNCDHWKernel {
 public:
     __aicore__ inline MaxPool3DGradWithArgmaxNCDHWKernel(void){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
-        const MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
+                                const MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData& tilingData);
     __aicore__ inline void ParseTilingData(
         const MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData& tilingData);
     __aicore__ inline void Process();
@@ -856,14 +841,14 @@ public:
     __aicore__ inline void ProcessPerLoop();
     __aicore__ inline void CopyIn();
     __aicore__ inline void Compute();
-    __aicore__ inline void singleLineProcessVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void multipleLineProcessVF2(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void multipleLineHwProcessVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void multipleLineDhwProcessVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
+    __aicore__ inline void singleLineProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
+                                               __local_mem__ T2* argmaxAddr);
+    __aicore__ inline void multipleLineProcessVF2(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
+                                                  __local_mem__ T2* argmaxAddr);
+    __aicore__ inline void multipleLineHwProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
+                                                   __local_mem__ T2* argmaxAddr);
+    __aicore__ inline void multipleLineDhwProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
+                                                    __local_mem__ T2* argmaxAddr);
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
 
@@ -958,8 +943,9 @@ public:
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
 
-    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK =
-        BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ? BLOCK_SIZE / sizeof(T1) : BLOCK_SIZE / sizeof(T2);
+    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK = BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ?
+                                                             BLOCK_SIZE / sizeof(T1) :
+                                                             BLOCK_SIZE / sizeof(T2);
     constexpr static int64_t VREG_LENGTH_DATA_NUM_T2 = platform::GetVRegSize() / sizeof(T2);
 };
 
@@ -1059,8 +1045,8 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
     wAxisIndex_ = tempTail2 - wOutputOuter_ * hAxisIndex_;
     wOutputActual_ = wAxisIndex_ == (wOutputOuter_ - 1) ? wOutputTail_ : wOutputInner_;
 
-    wOutputAligned_ =
-        (wOutputActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK * MAX_DATA_NUM_IN_ONE_BLOCK;
+    wOutputAligned_ = (wOutputActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK *
+                      MAX_DATA_NUM_IN_ONE_BLOCK;
     int64_t dArgmaxActualStart = PStart(dAxisIndex_ * dOutputInner_, padD_, kernelD_, dilationD_, strideD_);
     int64_t dArgmaxActualEnd = PEnd(dAxisIndex_ * dOutputInner_ + dOutputActual_ - 1, padD_, strideD_, dArgmax_);
     int64_t hArgmaxActualStart = PStart(hAxisIndex_ * hOutputInner_, padH_, kernelH_, dilationH_, strideH_);
@@ -1068,8 +1054,8 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
     int64_t wArgmaxActualStart = PStart(wAxisIndex_ * wOutputInner_, padW_, kernelW_, dilationW_, strideW_);
     int64_t wArgmaxActualEnd = PEnd(wAxisIndex_ * wOutputInner_ + wOutputActual_ - 1, padW_, strideW_, wArgmax_);
     wArgmaxActual_ = wArgmaxActualEnd - wArgmaxActualStart;
-    wArgmaxAligned_ =
-        (wArgmaxActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK * MAX_DATA_NUM_IN_ONE_BLOCK;
+    wArgmaxAligned_ = (wArgmaxActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK *
+                      MAX_DATA_NUM_IN_ONE_BLOCK;
     hArgmaxActual_ = hArgmaxActualEnd - hArgmaxActualStart;
     dArgmaxActual_ = dArgmaxActualEnd - dArgmaxActualStart;
 
@@ -1099,10 +1085,10 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
     loopModeParamsT1.loop2DstStride = dArgmaxActual_ * hArgmaxActual_ * wArgmaxAligned_ * sizeof(T1);
 
     SetLoopModePara(loopModeParamsT1, DataCopyMVType::OUT_TO_UB);
-    DataCopyExtParams copyOutParamT1 = {
-        static_cast<uint16_t>(hArgmaxActual_), static_cast<uint32_t>(wArgmaxActual_ * sizeof(T1)),
-        static_cast<uint32_t>((wArgmax_ - wArgmaxActual_) * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParamT1 = {static_cast<uint16_t>(hArgmaxActual_),
+                                        static_cast<uint32_t>(wArgmaxActual_ * sizeof(T1)),
+                                        static_cast<uint32_t>((wArgmax_ - wArgmaxActual_) * sizeof(T1)),
+                                        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(gradLocal, gradGm_[argmaxGmOffset], copyOutParamT1, paramsT1);
 
@@ -1117,10 +1103,10 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
 
     uint32_t dstStrideT2 = (wArgmaxAligned_ - wArgmaxActual_) * sizeof(T2) / BLOCK_SIZE;
     SetLoopModePara(loopModeParamsT2, DataCopyMVType::OUT_TO_UB);
-    DataCopyExtParams copyOutParamT2 = {
-        static_cast<uint16_t>(hArgmaxActual_), static_cast<uint32_t>(wArgmaxActual_ * sizeof(T2)),
-        static_cast<uint32_t>((wArgmax_ - wArgmaxActual_) * sizeof(T2)), static_cast<uint32_t>(dstStrideT2),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParamT2 = {static_cast<uint16_t>(hArgmaxActual_),
+                                        static_cast<uint32_t>(wArgmaxActual_ * sizeof(T2)),
+                                        static_cast<uint32_t>((wArgmax_ - wArgmaxActual_) * sizeof(T2)),
+                                        static_cast<uint32_t>(dstStrideT2), static_cast<uint32_t>(0)};
 
     DataCopyPad(argmaxLocal, argmaxGm_[argmaxGmOffset], copyOutParamT2, paramsT2);
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
@@ -1149,10 +1135,10 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
     loopModeParamsT1.loop2DstStride = outputPlaneDHW * sizeof(T1);
 
     SetLoopModePara(loopModeParamsT1, DataCopyMVType::UB_TO_OUT);
-    DataCopyExtParams copyOutParamT1 = {
-        static_cast<uint16_t>(hOutputActual_), static_cast<uint32_t>(wOutputActual_ * sizeof(T1)),
-        static_cast<uint32_t>(0), static_cast<uint32_t>((wOutput_ - wOutputActual_) * sizeof(T1)),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParamT1 = {static_cast<uint16_t>(hOutputActual_),
+                                        static_cast<uint32_t>(wOutputActual_ * sizeof(T1)), static_cast<uint32_t>(0),
+                                        static_cast<uint32_t>((wOutput_ - wOutputActual_) * sizeof(T1)),
+                                        static_cast<uint32_t>(0)};
 
     DataCopyPad(yGm_[outputGmOffset], yLocal, copyOutParamT1);
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);

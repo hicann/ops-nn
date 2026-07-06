@@ -24,9 +24,7 @@
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-
-namespace optiling
-{
+namespace optiling {
 // ar小尾轴
 BEGIN_TILING_DATA_DEF(SoftmaxGradARSmallRTilingData)
 TILING_DATA_FIELD_DEF(int64_t, totalA0Len);
@@ -42,24 +40,24 @@ END_TILING_DATA_DEF;
 
 // ar全载
 BEGIN_TILING_DATA_DEF(SoftmaxGradARTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);             // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);             // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, rAligned);      // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);      // UB内一次循环处理的a_in_in
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);  // 单核处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, rLoopCount);    // r / VL_Len
+TILING_DATA_FIELD_DEF(int64_t, a);            // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);            // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, rAligned);     // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);     // UB内一次循环处理的a_in_in
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor); // 单核处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, rLoopCount);   // r / VL_Len
 END_TILING_DATA_DEF;
 
 // ar重计算
 BEGIN_TILING_DATA_DEF(SoftmaxGradARRecomputeTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);               // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);               // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);        // UB处理的r_in
-TILING_DATA_FIELD_DEF(int64_t, ubFactorTail);    // UB处理的r_in的尾块，值可能为0
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);    // 每个AIV处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, aLoopCountCeil);  // CeilDiv(r, r_in)
-TILING_DATA_FIELD_DEF(int64_t, basicBlockLoop);  // 二分累加：循环次数，折叠点左半部分的block数量
-TILING_DATA_FIELD_DEF(int64_t, mainFoldCount);   // 二分累加：折叠的块数，折叠点右半部分的block数量减1
+TILING_DATA_FIELD_DEF(int64_t, a);              // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);              // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);       // UB处理的r_in
+TILING_DATA_FIELD_DEF(int64_t, ubFactorTail);   // UB处理的r_in的尾块，值可能为0
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);   // 每个AIV处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, aLoopCountCeil); // CeilDiv(r, r_in)
+TILING_DATA_FIELD_DEF(int64_t, basicBlockLoop); // 二分累加：循环次数，折叠点左半部分的block数量
+TILING_DATA_FIELD_DEF(int64_t, mainFoldCount); // 二分累加：折叠的块数，折叠点右半部分的block数量减1
 END_TILING_DATA_DEF;
 
 // ara 全载
@@ -182,43 +180,25 @@ constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
 constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 
-class SoftmaxGradTilingBase : virtual public Ops::NN::Optiling::TilingBaseClass
-{
+class SoftmaxGradTilingBase : virtual public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit SoftmaxGradTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {
-    }
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    explicit SoftmaxGradTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
     ~SoftmaxGradTilingBase() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return false;
-    }
+    bool IsCapable() override { return false; }
 
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     // 5、计算TilingKey
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    }
+    uint64_t GetTilingKey() const override { return 0; }
     // 6、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override
     {
@@ -227,10 +207,7 @@ protected:
         return ge::GRAPH_SUCCESS;
     }
     // 7、保存Tiling数据
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }
 
     ge::graphStatus CheckFormatValid();
     virtual ge::graphStatus GetAndCheckDtypes();
@@ -261,19 +238,14 @@ protected:
 };
 
 // ar小尾轴
-class SoftmaxGradTilingARSmallR : virtual public SoftmaxGradTilingBase
-{
+class SoftmaxGradTilingARSmallR : virtual public SoftmaxGradTilingBase {
 public:
     explicit SoftmaxGradTilingARSmallR(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradTilingARSmallR() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        SoftmaxGradTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { SoftmaxGradTilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override;
@@ -286,19 +258,14 @@ protected:
 };
 
 // ar全载
-class SoftmaxGradTilingAR : virtual public SoftmaxGradTilingBase
-{
+class SoftmaxGradTilingAR : virtual public SoftmaxGradTilingBase {
 public:
     explicit SoftmaxGradTilingAR(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradTilingAR() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        SoftmaxGradTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { SoftmaxGradTilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override;
@@ -311,13 +278,11 @@ protected:
 };
 
 // ar重计算
-class SoftmaxGradTilingARRecompute : virtual public SoftmaxGradTilingBase
-{
+class SoftmaxGradTilingARRecompute : virtual public SoftmaxGradTilingBase {
 public:
     explicit SoftmaxGradTilingARRecompute(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradTilingARRecompute() override = default;
 
 protected:
@@ -340,13 +305,11 @@ private:
 };
 
 // ara 全载
-class SoftmaxGradARATiling : virtual public SoftmaxGradTilingBase
-{
+class SoftmaxGradARATiling : virtual public SoftmaxGradTilingBase {
 public:
     explicit SoftmaxGradARATiling(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradARATiling() override = default;
 
 protected:
@@ -363,13 +326,11 @@ private:
 };
 
 // ara重计算
-class SoftmaxGradARARecomputeTiling : virtual public SoftmaxGradTilingBase
-{
+class SoftmaxGradARARecomputeTiling : virtual public SoftmaxGradTilingBase {
 public:
     explicit SoftmaxGradARARecomputeTiling(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradARARecomputeTiling() override = default;
 
 protected:
@@ -406,6 +367,6 @@ private:
 extern ge::graphStatus TilingForSoftmaxGrad(gert::TilingContext* context);
 extern ge::graphStatus TilingPrepareForSoftmaxGrad(gert::TilingParseContext* context);
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SOFTMAX_GRAD_TILING_BASE_H_
+#endif // SOFTMAX_GRAD_TILING_BASE_H_

@@ -20,9 +20,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void group_norm_swish_grad(
-    GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
-    GM_ADDR dbeta, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void group_norm_swish_grad(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
+                                                            GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
+                                                            GM_ADDR dbeta, GM_ADDR workspace, GM_ADDR tiling);
 
 class group_norm_swish_grad_apt_test : public testing::Test {
 protected:
@@ -125,10 +125,10 @@ static void RunKernelCase(const KernelCaseConfig& config)
     size_t dxSize = dySize;
     size_t dgammaSize = gammaSize;
     size_t dbetaSize = betaSize;
-    const size_t minWorkspaceSize =
-        static_cast<size_t>(config.workSpaceSize) * 2 * sizeof(float) + DEFAULT_WORKSPACE_BYTES;
-    const size_t workspaceSize =
-        (minWorkspaceSize > DEFAULT_WORKSPACE_BYTES) ? minWorkspaceSize : DEFAULT_WORKSPACE_BYTES;
+    const size_t minWorkspaceSize = static_cast<size_t>(config.workSpaceSize) * 2 * sizeof(float) +
+                                    DEFAULT_WORKSPACE_BYTES;
+    const size_t workspaceSize = (minWorkspaceSize > DEFAULT_WORKSPACE_BYTES) ? minWorkspaceSize :
+                                                                                DEFAULT_WORKSPACE_BYTES;
 
     uint8_t* dy = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(dySize));
     uint8_t* mean = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(meanSize));
@@ -154,9 +154,8 @@ static void RunKernelCase(const KernelCaseConfig& config)
     auto* tilingData = reinterpret_cast<GroupNormSwishGradTilingData*>(tiling);
     FillTilingData(tilingData, config);
     ICPU_SET_TILING_KEY(config.kernelTilingKey);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, config.blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        reinterpret_cast<uint8_t*>(tilingData));
+    ICPU_RUN_KF(group_norm_swish_grad, config.blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                reinterpret_cast<uint8_t*>(tilingData));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);

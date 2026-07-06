@@ -18,9 +18,10 @@ using namespace op;
 namespace l0op {
 constexpr size_t GRAD_V3_OUT_NUM = 3;
 
-const std::array<aclTensor*, GRAD_V3_OUT_NUM> LayerNormGradV3(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean,
-    const aclTensor* weight, const aclBoolArray* outputMask, const DataType gradWeightType, aclOpExecutor* executor);
+const std::array<aclTensor*, GRAD_V3_OUT_NUM> LayerNormGradV3(const aclTensor* gradOut, const aclTensor* input,
+                                                              const aclTensor* rstd, const aclTensor* mean,
+                                                              const aclTensor* weight, const aclBoolArray* outputMask,
+                                                              const DataType gradWeightType, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_LAYER_NORM_GRAD_V3_H_

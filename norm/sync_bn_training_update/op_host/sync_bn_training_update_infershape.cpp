@@ -18,13 +18,14 @@
 
 using namespace ge;
 namespace ops {
-ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx) {
-  auto in_shape = context->GetInputShape(input_idx);
-  OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
-  auto out_shape = context->GetOutputShape(output_idx);
-  OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-  *out_shape = *in_shape;
-  return ge::GRAPH_SUCCESS;
+ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
+{
+    auto in_shape = context->GetInputShape(input_idx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
+    auto out_shape = context->GetOutputShape(output_idx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    *out_shape = *in_shape;
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus InferShape4InIdx1AndOutIdx0(gert::InferShapeContext* context)

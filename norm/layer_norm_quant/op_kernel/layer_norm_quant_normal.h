@@ -24,8 +24,8 @@ public:
 
     __aicore__ inline uint32_t ROUND_UP_FUNC(uint32_t x) { return (x + BLOCK_NUM - 1) / BLOCK_NUM * BLOCK_NUM; }
 
-    __aicore__ inline void Init(__gm__ uint8_t *x, __gm__ uint8_t *gamma, __gm__ uint8_t *beta, __gm__ uint8_t *scale,
-                                __gm__ uint8_t *offset, __gm__ uint8_t *z, LayerNormQuantTilingData tilingData)
+    __aicore__ inline void Init(__gm__ uint8_t* x, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* scale,
+                                __gm__ uint8_t* offset, __gm__ uint8_t* z, LayerNormQuantTilingData tilingData)
     {
         num_core = tilingData.numCore;
         num_last_dim = tilingData.numLastDim;
@@ -45,15 +45,15 @@ public:
             row_work = l_first_dim_per_core;
             row_step = MIN(first_dim_per_times, row_work);
         }
-        
-        copyLenAlign = BLOCK_ALIGN(num_last_dim * sizeof(T), 32) / sizeof(T);  // 向上对齐
+
+        copyLenAlign = BLOCK_ALIGN(num_last_dim * sizeof(T), 32) / sizeof(T); // 向上对齐
         row_tail_ = (row_work % first_dim_per_times == 0) ? first_dim_per_times : (row_work % first_dim_per_times);
         gm_offset_ = static_cast<uint64_t>(nl_first_dim_per_core) * num_last_dim;
 
-        x_gm.SetGlobalBuffer((__gm__ T *)x + AscendC::GetBlockIdx() * gm_offset_);
-        z_gm.SetGlobalBuffer((__gm__ int8_t *)z + AscendC::GetBlockIdx() * gm_offset_);
-        beta_gm.SetGlobalBuffer((__gm__ T *)beta);
-        gamma_gm.SetGlobalBuffer((__gm__ T *)gamma);
+        x_gm.SetGlobalBuffer((__gm__ T*)x + AscendC::GetBlockIdx() * gm_offset_);
+        z_gm.SetGlobalBuffer((__gm__ int8_t*)z + AscendC::GetBlockIdx() * gm_offset_);
+        beta_gm.SetGlobalBuffer((__gm__ T*)beta);
+        gamma_gm.SetGlobalBuffer((__gm__ T*)gamma);
 
 #if __CCE_AICORE__ == 220
 #else
@@ -120,8 +120,8 @@ private:
 
 #if __CCE_AICORE__ == 220
         DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = size;  // 搬多少块
-        dataCopyParams.blockLen = num_last_dim * sizeof(T);  // 搬多长
+        dataCopyParams.blockCount = size;                   // 搬多少块
+        dataCopyParams.blockLen = num_last_dim * sizeof(T); // 搬多长
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
 
@@ -135,7 +135,8 @@ private:
         x_que.EnQue(x_local);
     }
 
-    __aicore__ inline void FastCopyInGammaBeta(){
+    __aicore__ inline void FastCopyInGammaBeta()
+    {
         AscendC::LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         AscendC::LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
 
@@ -179,7 +180,8 @@ private:
         return ave_local_temp;
     }
 
-    __aicore__ inline float ComputeVarValue(LocalTensor<float>& x_local_fp32, LocalTensor<float>& y_local_fp32, float ave_local_temp)
+    __aicore__ inline float ComputeVarValue(LocalTensor<float>& x_local_fp32, LocalTensor<float>& y_local_fp32,
+                                            float ave_local_temp)
     {
         AscendC::LocalTensor<float> var_local = var_buf.Get<float>();
         AscendC::LocalTensor<float> z_fp32_local = z_buf_fp32.Get<float>();
@@ -259,8 +261,8 @@ private:
 
 #if __CCE_AICORE__ == 220
         DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = size;  // 搬多少块
-        dataCopyParams.blockLen = num_last_dim * 1;  // 搬多长
+        dataCopyParams.blockCount = size;           // 搬多少块
+        dataCopyParams.blockLen = num_last_dim * 1; // 搬多长
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
 
@@ -274,10 +276,10 @@ private:
         z_que.FreeTensor(z);
     }
 
-    __aicore__ inline void GetScaleAndOffset(__gm__ uint8_t *scale, __gm__ uint8_t *offset)
+    __aicore__ inline void GetScaleAndOffset(__gm__ uint8_t* scale, __gm__ uint8_t* offset)
     {
         AscendC::GlobalTensor<T> gm_s;
-        gm_s.SetGlobalBuffer((__gm__ T *)scale);
+        gm_s.SetGlobalBuffer((__gm__ T*)scale);
         AscendC::LocalTensor<T> tempFp16 = x_buf_fp32.Get<T>();
         DataCopy(tempFp16, gm_s, BLOCK_SIZE / sizeof(T));
         if constexpr (AscendC::IsSameType<T, half>::value) {
@@ -294,7 +296,7 @@ private:
             inputScale = 1 / ((float)(tempFp32.GetValue(0)) == 0 ? 1 : (float)(tempFp32.GetValue(0)));
         }
         AscendC::GlobalTensor<int8_t> gm_o;
-        gm_o.SetGlobalBuffer((__gm__ int8_t *)offset);
+        gm_o.SetGlobalBuffer((__gm__ int8_t*)offset);
         AscendC::LocalTensor<int8_t> tempInt8 = x_buf_fp32.Get<int8_t>();
         DataCopy(tempInt8, gm_o, BLOCK_SIZE / sizeof(int8_t));
         AscendC::SetFlag<HardEvent::MTE2_S>(EVENT_ID0);

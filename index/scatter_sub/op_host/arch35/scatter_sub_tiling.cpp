@@ -17,20 +17,18 @@
 
 namespace optiling {
 // -----------------ScatterSub Util START------------------
-static ge::graphStatus TilingPrepare4ScatterSub(gert::TilingParseContext* context) {
-  return ge::GRAPH_SUCCESS;
-}
+static ge::graphStatus TilingPrepare4ScatterSub(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
-static ge::graphStatus Tiling4ScatterSub(gert::TilingContext* context) 
+static ge::graphStatus Tiling4ScatterSub(gert::TilingContext* context)
 {
-  OP_LOGD(context->GetNodeName(), "ScatterSubTiling running begin");
-  auto compileInfo = reinterpret_cast<const ScatterSubCompileInfo*>(context->GetCompileInfo());
-  OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    OP_LOGD(context->GetNodeName(), "ScatterSubTiling running begin");
+    auto compileInfo = reinterpret_cast<const ScatterSubCompileInfo*>(context->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
-  OP_LOGD(context->GetNodeName(), "ScatterSubTiling is ascendc. runing ascendc tiling.");
-  return ScatterAddTilingForAscendC(context); 
+    OP_LOGD(context->GetNodeName(), "ScatterSubTiling is ascendc. runing ascendc tiling.");
+    return ScatterAddTilingForAscendC(context);
 }
 
 // register tiling interface of the ScatterSubTiling op.
 IMPL_OP_OPTILING(ScatterSub).Tiling(Tiling4ScatterSub).TilingParse<ScatterSubCompileInfo>(TilingPrepare4ScatterSub);
-}  // namespace optiling
+} // namespace optiling

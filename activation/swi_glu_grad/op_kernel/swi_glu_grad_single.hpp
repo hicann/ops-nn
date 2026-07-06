@@ -17,7 +17,7 @@
 #include "../swi_glu/glu_tiling_kernel.hpp"
 
 using namespace AscendC;
-template<typename ParentClass, typename inType, typename outType>
+template <typename ParentClass, typename inType, typename outType>
 class SwiGluGradSingle : public ParentClass {
 public:
     __aicore__ inline SwiGluGradSingle() = default;
@@ -40,6 +40,7 @@ public:
         }
 #endif
     }
+
 protected:
     __aicore__ inline void InitGmBuffer(GM_ADDR grad_gm, GM_ADDR input_gm, GM_ADDR output_gm)
     {
@@ -51,16 +52,14 @@ protected:
         this->mGm.SetGlobalBuffer((__gm__ outType*)output_gm, singleTiling.totalBlockLen);
     }
 
-    __aicore__ inline void CopyIn(SwiGluSingleTileOffsetParam &offsetParam, SwiGluSinlgeTileCopyParam &SwiGluCopyParam)
+    __aicore__ inline void CopyIn(SwiGluSingleTileOffsetParam& offsetParam, SwiGluSinlgeTileCopyParam& SwiGluCopyParam)
     {
         DataCopyParams splitCopyinParams = {SwiGluCopyParam.splitVecCopyParam.blockCount,
                                             SwiGluCopyParam.splitVecCopyParam.blockLen,
-                                            SwiGluCopyParam.splitVecCopyParam.stride,
-                                            0};
+                                            SwiGluCopyParam.splitVecCopyParam.stride, 0};
         DataCopyParams indepCopyinParams = {SwiGluCopyParam.indepVecCopyParam.blockCount,
                                             SwiGluCopyParam.indepVecCopyParam.blockLen,
-                                            SwiGluCopyParam.indepVecCopyParam.stride,
-                                            0};
+                                            SwiGluCopyParam.indepVecCopyParam.stride, 0};
 
         // Copy A
         LocalTensor<inType> aLocal = this->inQueueA.template AllocTensor<inType>();
@@ -76,11 +75,10 @@ protected:
         this->inQueueB.template EnQue(bLocal);
     }
 
-    __aicore__ inline void CopyOut(SwiGluSingleTileOffsetParam &offsetParam, SwiGluSinlgeTileCopyParam &SwiGluCopyParam)
+    __aicore__ inline void CopyOut(SwiGluSingleTileOffsetParam& offsetParam, SwiGluSinlgeTileCopyParam& SwiGluCopyParam)
     {
         DataCopyParams splitCopyoutParams = {SwiGluCopyParam.splitVecCopyParam.blockCount,
-                                             SwiGluCopyParam.splitVecCopyParam.blockLen,
-                                             0,
+                                             SwiGluCopyParam.splitVecCopyParam.blockLen, 0,
                                              SwiGluCopyParam.splitVecCopyParam.stride};
 
         // deque output tensor from VECOUT queue
@@ -100,16 +98,15 @@ protected:
         this->outQueueN.template FreeTensor(nLocal);
     }
 
-    __aicore__ inline void CopyIn_Non32BAligned(SwiGluSingleTileOffsetParam &offsetParam, SwiGluSinlgeTileCopyParam &SwiGluCopyParam)
+    __aicore__ inline void CopyIn_Non32BAligned(SwiGluSingleTileOffsetParam& offsetParam,
+                                                SwiGluSinlgeTileCopyParam& SwiGluCopyParam)
     {
         DataCopyParams splitCopyinParams = {SwiGluCopyParam.splitVecCopyParam.blockCount,
                                             SwiGluCopyParam.splitVecCopyParam.blockLen,
-                                            SwiGluCopyParam.splitVecCopyParam.stride,
-                                            0};
+                                            SwiGluCopyParam.splitVecCopyParam.stride, 0};
         DataCopyParams indepCopyinParams = {SwiGluCopyParam.indepVecCopyParam.blockCount,
                                             SwiGluCopyParam.indepVecCopyParam.blockLen,
-                                            SwiGluCopyParam.indepVecCopyParam.stride,
-                                            0};
+                                            SwiGluCopyParam.indepVecCopyParam.stride, 0};
         DataCopyPadParams copyPadParams = {false, 0, 0, 0};
         // Copy A
         LocalTensor<inType> aLocal = this->inQueueA.template AllocTensor<inType>();
@@ -125,11 +122,11 @@ protected:
         this->inQueueB.template EnQue(bLocal);
     }
 
-    __aicore__ inline void CopyOut_Non32BAligned(SwiGluSingleTileOffsetParam &offsetParam, SwiGluSinlgeTileCopyParam &SwiGluCopyParam)
+    __aicore__ inline void CopyOut_Non32BAligned(SwiGluSingleTileOffsetParam& offsetParam,
+                                                 SwiGluSinlgeTileCopyParam& SwiGluCopyParam)
     {
         DataCopyParams splitCopyoutParams = {SwiGluCopyParam.splitVecCopyParam.blockCount,
-                                             SwiGluCopyParam.splitVecCopyParam.blockLen,
-                                             0,
+                                             SwiGluCopyParam.splitVecCopyParam.blockLen, 0,
                                              SwiGluCopyParam.splitVecCopyParam.stride};
 
         // deque output tensor from VECOUT queue

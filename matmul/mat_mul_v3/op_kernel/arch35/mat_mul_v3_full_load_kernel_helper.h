@@ -27,8 +27,9 @@ struct MatmulL1GmType : MatmulType<POSITION, FORMAT, TYPE, ISTRANS, LAYOUT, IBSH
 };
 
 template <class A_TYPE, class A_T, class BLOCK_TYPE>
-__aicore__ inline void AswAL1FullLoadKernelCopyInA1(BLOCK_TYPE &block, const MatMulV3TilingData *matmulv3TilingData,
-    bool isMMultiCore, GlobalTensor<A_T> &aGlobal, TQue<QuePosition::A1, 1> &InQueueAL1, LocalTensor<A_T> &al1Local)
+__aicore__ inline void AswAL1FullLoadKernelCopyInA1(BLOCK_TYPE& block, const MatMulV3TilingData* matmulv3TilingData,
+                                                    bool isMMultiCore, GlobalTensor<A_T>& aGlobal,
+                                                    TQue<QuePosition::A1, 1>& InQueueAL1, LocalTensor<A_T>& al1Local)
 {
     uint64_t innerAlignedBlock = BLOCK_BYTE_SIZE / sizeof(A_T);
     uint64_t mAligned = MMV3CeilAlign(matmulv3TilingData->tCubeTiling.singleCoreM, BLOCK_SIZE);
@@ -43,9 +44,9 @@ __aicore__ inline void AswAL1FullLoadKernelCopyInA1(BLOCK_TYPE &block, const Mat
     nd2nzParams.ndNum = 1;
     int32_t shapeM = matmulv3TilingData->tCubeTiling.M;
     int32_t shapeK = matmulv3TilingData->tCubeTiling.Ka;
-    uint64_t instrM = isMMultiCore && block.params_.mCntIndex == block.params_.mCnt - 1
-                          ? block.params_.mBaseTail
-                          : static_cast<uint64_t>(matmulv3TilingData->tCubeTiling.singleCoreM);
+    uint64_t instrM = isMMultiCore && block.params_.mCntIndex == block.params_.mCnt - 1 ?
+                          block.params_.mBaseTail :
+                          static_cast<uint64_t>(matmulv3TilingData->tCubeTiling.singleCoreM);
     uint64_t nDim = static_cast<uint64_t>(instrM);
     uint64_t dDim = static_cast<uint64_t>(shapeK);
     uint64_t offsetA = block.params_.mCntIndex * matmulv3TilingData->tCubeTiling.singleCoreM * shapeK;
@@ -66,11 +67,14 @@ __aicore__ inline void AswAL1FullLoadKernelCopyInA1(BLOCK_TYPE &block, const Mat
     al1Local = InQueueAL1.DeQue<A_T>();
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MM_CFG> &mm,
-    BLOCK_TYPE &block, const MatMulV3TilingData *matmulv3TilingData, GlobalTensor<typename B_TYPE::T> &bGlobal,
-    GlobalTensor<typename C_TYPE::T> &cGlobal, GlobalTensor<typename BIAS_TYPE::T> &biasGlobal,
-    TQue<QuePosition::A1, 1> &InQueueAL1, LocalTensor<typename A_TYPE::T> &al1Local, uint8_t enAtomic)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MM_CFG>& mm,
+                                                    BLOCK_TYPE& block, const MatMulV3TilingData* matmulv3TilingData,
+                                                    GlobalTensor<typename B_TYPE::T>& bGlobal,
+                                                    GlobalTensor<typename C_TYPE::T>& cGlobal,
+                                                    GlobalTensor<typename BIAS_TYPE::T>& biasGlobal,
+                                                    TQue<QuePosition::A1, 1>& InQueueAL1,
+                                                    LocalTensor<typename A_TYPE::T>& al1Local, uint8_t enAtomic)
 {
     mm.SetSubBlockIdx(0);
     mm.Init(&matmulv3TilingData->tCubeTiling, GetTPipePtr());
@@ -78,9 +82,9 @@ __aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
     mm.SetHF32(matmulv3TilingData->isHf32, 1);
 
     for (uint64_t j = 0; j < block.params_.round; j++) {
-        uint64_t newBlockIdx =
-            (j == block.params_.round - 1) ? (GetBlockIdx() / block.params_.totalSplitCnt) : GetBlockIdx();
-        block.UpdateBasicIndex(j, newBlockIdx);  // 使能错位分核更新Index
+        uint64_t newBlockIdx = (j == block.params_.round - 1) ? (GetBlockIdx() / block.params_.totalSplitCnt) :
+                                                                GetBlockIdx();
+        block.UpdateBasicIndex(j, newBlockIdx); // 使能错位分核更新Index
         if (block.params_.index < block.params_.totalCnt) {
             block.template UpdateBlockParams<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(j);
             if (block.params_.singleCoreM > 0 && block.params_.singleCoreN > 0) {
@@ -92,10 +96,10 @@ __aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
                     mm.SetBias(biasGlobal[block.offset_.offsetBias]);
                 }
                 mm.SetSingleShape(block.params_.singleCoreM, block.params_.singleCoreN,
-                    matmulv3TilingData->tCubeTiling.singleCoreK);
+                                  matmulv3TilingData->tCubeTiling.singleCoreK);
                 // MDL模板，L1输入场景默认al1M=M，分核全载需要通过设置SetOrgShape指定al1M=singleCoreM
                 mm.SetOrgShape(block.params_.singleCoreM, matmulv3TilingData->tCubeTiling.N,
-                    matmulv3TilingData->tCubeTiling.Ka);
+                               matmulv3TilingData->tCubeTiling.Ka);
                 mm.IterateAll(cGlobal[block.offset_.offsetC], enAtomic);
             }
         }
@@ -112,8 +116,8 @@ __aicore__ inline void CalCopyBL1Nd2NzParams(const MatMulV3TilingData* matmulv3T
     nd2nzParams.nValue = B_TYPE::isTrans ? instrN : static_cast<uint64_t>(matmulv3TilingData->tCubeTiling.Kb);
     nd2nzParams.dValue = B_TYPE::isTrans ? static_cast<uint64_t>(matmulv3TilingData->tCubeTiling.Kb) : instrN;
     nd2nzParams.srcNdMatrixStride = 0;
-    nd2nzParams.srcDValue =
-        static_cast<uint64_t>(B_TYPE::isTrans ? matmulv3TilingData->tCubeTiling.Kb : matmulv3TilingData->tCubeTiling.N);
+    nd2nzParams.srcDValue = static_cast<uint64_t>(B_TYPE::isTrans ? matmulv3TilingData->tCubeTiling.Kb :
+                                                                    matmulv3TilingData->tCubeTiling.N);
     nd2nzParams.dstNzC0Stride = MMV3CeilAlign(nd2nzParams.nValue, BLOCK_SIZE);
     nd2nzParams.dstNzNStride = 1;
     nd2nzParams.dstNzMatrixStride = 0;
@@ -125,8 +129,8 @@ __aicore__ inline void CalCopyBL1Nz2NzParams(const BLOCK_TYPE& block, const MatM
 {
     if (B_TYPE::isTrans && isNMultiCore) {
         dataCopyParams.blockCount = MMV3DivCeil(matmulv3TilingData->tCubeTiling.Kb, block.params_.kbAlignSize);
-        dataCopyParams.blockLen =
-            block.params_.kbAlignSize * MMV3CeilAlign(instrN, block.params_.nAlignSize) * sizeof(B_T) / BLOCK_BYTE_SIZE;
+        dataCopyParams.blockLen = block.params_.kbAlignSize * MMV3CeilAlign(instrN, block.params_.nAlignSize) *
+                                  sizeof(B_T) / BLOCK_BYTE_SIZE;
         dataCopyParams.srcStride = block.params_.kbAlignSize *
                                    (MMV3CeilAlign(matmulv3TilingData->tCubeTiling.N, block.params_.nAlignSize) -
                                     MMV3CeilAlign(instrN, block.params_.nAlignSize)) *
@@ -143,27 +147,26 @@ __aicore__ inline void CalCopyBL1Nz2NzParams(const BLOCK_TYPE& block, const MatM
 }
 
 template <class B_TYPE, class B_T, class BLOCK_TYPE>
-__aicore__ inline void AswBL1FullLoadKernelCopyInB1(BLOCK_TYPE &block, const MatMulV3TilingData* matmulv3TilingData,
+__aicore__ inline void AswBL1FullLoadKernelCopyInB1(BLOCK_TYPE& block, const MatMulV3TilingData* matmulv3TilingData,
                                                     bool isNMultiCore, GlobalTensor<B_T>& bGlobal,
                                                     TQue<QuePosition::B1, 1>& InQueueBL1, LocalTensor<B_T>& bl1Local)
 {
     uint64_t kAligned = MMV3CeilAlign(matmulv3TilingData->tCubeTiling.Kb, block.params_.kbAlignSize);
     uint64_t nAligned = MMV3CeilAlign(matmulv3TilingData->tCubeTiling.singleCoreN, block.params_.nAlignSize);
 
-
     GetTPipePtr()->InitBuffer(InQueueBL1, 1, kAligned * nAligned * sizeof(B_T));
     bl1Local = InQueueBL1.AllocTensor<B_T>();
 
-    uint64_t instrN = isNMultiCore && block.params_.nCntIndex == block.params_.nCnt - 1
-                          ? block.params_.nBaseTail
-                          : static_cast<uint64_t>(matmulv3TilingData->tCubeTiling.singleCoreN);
+    uint64_t instrN = isNMultiCore && block.params_.nCntIndex == block.params_.nCnt - 1 ?
+                          block.params_.nBaseTail :
+                          static_cast<uint64_t>(matmulv3TilingData->tCubeTiling.singleCoreN);
     uint64_t offsetB;
     if constexpr (B_TYPE::format == CubeFormat::ND) {
         Nd2NzParams nd2nzParams;
         CalCopyBL1Nd2NzParams<B_TYPE>(matmulv3TilingData, nd2nzParams, instrN);
         offsetB = B_TYPE::isTrans ? block.params_.nCntIndex * matmulv3TilingData->tCubeTiling.singleCoreN *
-                                        matmulv3TilingData->tCubeTiling.Kb
-                                    : block.params_.nCntIndex * matmulv3TilingData->tCubeTiling.singleCoreN;
+                                        matmulv3TilingData->tCubeTiling.Kb :
+                                    block.params_.nCntIndex * matmulv3TilingData->tCubeTiling.singleCoreN;
         DataCopy(bl1Local, bGlobal[offsetB], nd2nzParams);
     } else {
         DataCopyParams dataCopyParams;
@@ -183,40 +186,42 @@ __aicore__ inline void AswBL1FullLoadKernelCopyInB1(BLOCK_TYPE &block, const Mat
     bl1Local = InQueueBL1.DeQue<B_T>();
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MM_CFG> &mm,
-    BLOCK_TYPE &block, const MatMulV3TilingData *matmulv3TilingData, GlobalTensor<typename A_TYPE::T> &aGlobal,
-    GlobalTensor<typename C_TYPE::T> &cGlobal, GlobalTensor<typename BIAS_TYPE::T> &biasGlobal,
-    TQue<QuePosition::B1, 1> &InQueueBL1, LocalTensor<typename B_TYPE::T> &bl1Local, uint8_t enAtomic)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MM_CFG>& mm,
+                                                    BLOCK_TYPE& block, const MatMulV3TilingData* matmulv3TilingData,
+                                                    GlobalTensor<typename A_TYPE::T>& aGlobal,
+                                                    GlobalTensor<typename C_TYPE::T>& cGlobal,
+                                                    GlobalTensor<typename BIAS_TYPE::T>& biasGlobal,
+                                                    TQue<QuePosition::B1, 1>& InQueueBL1,
+                                                    LocalTensor<typename B_TYPE::T>& bl1Local, uint8_t enAtomic)
 {
     mm.SetSubBlockIdx(0);
     mm.SetHF32(matmulv3TilingData->isHf32, 1);
     mm.Init(&matmulv3TilingData->tCubeTiling, GetTPipePtr());
-    SetMMLayoutTransform(true);  // fixp使用n搬出，达到cube和fixp并行的效果
+    SetMMLayoutTransform(true); // fixp使用n搬出，达到cube和fixp并行的效果
     SetAtomicNone();
     for (uint64_t j = 0; j < block.params_.round; j++) {
-        uint64_t newBlockIdx = (j == block.params_.round - 1) ?
-            (GetBlockIdx() / block.params_.totalSplitCnt) : GetBlockIdx();
+        uint64_t newBlockIdx = (j == block.params_.round - 1) ? (GetBlockIdx() / block.params_.totalSplitCnt) :
+                                                                GetBlockIdx();
         block.UpdateBasicIndex(j, newBlockIdx); // 使能错位分核更新Index
         if (block.params_.index < block.params_.totalCnt) {
             block.template UpdateBlockParams<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(j);
             if (block.params_.singleCoreM > 0 && block.params_.singleCoreN > 0) {
-              block.template CalcGMOffset<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>();
-              mm.SetTensorA(aGlobal[block.offset_.offsetA], A_TYPE::isTrans);
-              mm.SetTensorB(bl1Local, B_TYPE::isTrans);
-              if (matmulv3TilingData->tCubeTiling.isBias) {
-                mm.SetBias(biasGlobal[block.offset_.offsetBias]);
-              }
-              mm.SetSingleShape(block.params_.singleCoreM, block.params_.singleCoreN,
-                                matmulv3TilingData->tCubeTiling.singleCoreK);
-              // MDL模板，L1输入场景默认bl1N=N，分核全载需要通过设置SetOrgShape指定al1N=singleCoreN,
-              // N为内轴，L0C->GM需重置shape
-              mm.SetOrgShape(matmulv3TilingData->tCubeTiling.M, block.params_.singleCoreN,
-                             matmulv3TilingData->tCubeTiling.Kb,
-                             matmulv3TilingData->tCubeTiling.Kb,
-                             matmulv3TilingData->tCubeTiling.N);
-              mm.Iterate();
-              mm.GetTensorC(cGlobal[block.offset_.offsetC], enAtomic);
+                block.template CalcGMOffset<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>();
+                mm.SetTensorA(aGlobal[block.offset_.offsetA], A_TYPE::isTrans);
+                mm.SetTensorB(bl1Local, B_TYPE::isTrans);
+                if (matmulv3TilingData->tCubeTiling.isBias) {
+                    mm.SetBias(biasGlobal[block.offset_.offsetBias]);
+                }
+                mm.SetSingleShape(block.params_.singleCoreM, block.params_.singleCoreN,
+                                  matmulv3TilingData->tCubeTiling.singleCoreK);
+                // MDL模板，L1输入场景默认bl1N=N，分核全载需要通过设置SetOrgShape指定al1N=singleCoreN,
+                // N为内轴，L0C->GM需重置shape
+                mm.SetOrgShape(matmulv3TilingData->tCubeTiling.M, block.params_.singleCoreN,
+                               matmulv3TilingData->tCubeTiling.Kb, matmulv3TilingData->tCubeTiling.Kb,
+                               matmulv3TilingData->tCubeTiling.N);
+                mm.Iterate();
+                mm.GetTensorC(cGlobal[block.offset_.offsetC], enAtomic);
             }
         }
     }
@@ -225,4 +230,3 @@ __aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
 }
 
 } // namespace MatmulV3Advanced
-

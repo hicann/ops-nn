@@ -39,18 +39,18 @@ public:
     using Base = ForeachRegbaseTernaryScalarList<T, Tiling, ForeachAddcListRegbase<T, ScalarT, Tiling, OP>>;
     using Base::Process;
     __aicore__ inline ForeachAddcListRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
-        const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs,
+                                GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(inputs, tensor1, tensor2, outputs, workspace, tilingData, tPipe);
         inScalarPtr_ = reinterpret_cast<__gm__ ScalarT*>(scalars);
     }
 
     // fp16/bf16/fp32 path: load + promote to fp32, y = in + scalar*(t1 OP t2), store back as T.
-    __aicore__ inline void ComputeFloatPath(
-        __local_mem__ T* inUbAddr, __local_mem__ T* tensorOneUbAddr, __local_mem__ T* tensorTwoUbAddr,
-        __local_mem__ T* outUbAddr, float scalarVal, uint16_t repeatTimes, uint32_t sreg, uint32_t dataCountPerLoop)
+    __aicore__ inline void ComputeFloatPath(__local_mem__ T* inUbAddr, __local_mem__ T* tensorOneUbAddr,
+                                            __local_mem__ T* tensorTwoUbAddr, __local_mem__ T* outUbAddr,
+                                            float scalarVal, uint16_t repeatTimes, uint32_t sreg,
+                                            uint32_t dataCountPerLoop)
     {
         __VEC_SCOPE__
         {
@@ -75,9 +75,10 @@ public:
     }
 
     // int32 path: compute in int RegTensor, y = in + scalar*(t1 OP t2).
-    __aicore__ inline void ComputeIntPath(
-        __local_mem__ T* inUbAddr, __local_mem__ T* tensorOneUbAddr, __local_mem__ T* tensorTwoUbAddr,
-        __local_mem__ T* outUbAddr, int32_t scalarVal, uint16_t repeatTimes, uint32_t sreg, uint32_t dataCountPerLoop)
+    __aicore__ inline void ComputeIntPath(__local_mem__ T* inUbAddr, __local_mem__ T* tensorOneUbAddr,
+                                          __local_mem__ T* tensorTwoUbAddr, __local_mem__ T* outUbAddr,
+                                          int32_t scalarVal, uint16_t repeatTimes, uint32_t sreg,
+                                          uint32_t dataCountPerLoop)
     {
         __VEC_SCOPE__
         {
@@ -102,9 +103,8 @@ public:
         }
     }
 
-    __aicore__ inline void Compute(
-        LocalTensor<T> inLocal, LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal, LocalTensor<T> outLocal,
-        int64_t tensorIndex, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T> inLocal, LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal,
+                                   LocalTensor<T> outLocal, int64_t tensorIndex, int64_t dataCount)
     {
         // y = input + scalars[tensorIndex] * (tensor1 OP tensor2)
         __local_mem__ T* inUbAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
@@ -118,18 +118,18 @@ public:
         // bf16→fp32 用位移手动完成（bf16 即 fp32 的高 16 位）。
         if constexpr (AscendC::IsSameType<T, int32_t>::value) {
             ComputeIntPath(inUbAddr, tensorOneUbAddr, tensorTwoUbAddr, outUbAddr,
-                static_cast<int32_t>(inScalarPtr_[tensorIndex]), repeatTimes, sreg, dataCountPerLoop);
+                           static_cast<int32_t>(inScalarPtr_[tensorIndex]), repeatTimes, sreg, dataCountPerLoop);
         } else {
             float scalarVal;
             if constexpr (AscendC::IsSameType<T, bfloat16_t>::value) {
-                uint32_t bits =
-                    static_cast<uint32_t>(*reinterpret_cast<__gm__ uint16_t*>(inScalarPtr_ + tensorIndex)) << 16;
+                uint32_t bits = static_cast<uint32_t>(*reinterpret_cast<__gm__ uint16_t*>(inScalarPtr_ + tensorIndex))
+                                << 16;
                 *reinterpret_cast<uint32_t*>(&scalarVal) = bits;
             } else {
                 scalarVal = static_cast<float>(inScalarPtr_[tensorIndex]);
             }
             ComputeFloatPath(inUbAddr, tensorOneUbAddr, tensorTwoUbAddr, outUbAddr, scalarVal, repeatTimes, sreg,
-                dataCountPerLoop);
+                             dataCountPerLoop);
         }
     }
 

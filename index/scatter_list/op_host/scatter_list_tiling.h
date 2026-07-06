@@ -64,8 +64,7 @@ struct ScatterListCompileInfo {
     uint64_t totalUbSize = 0;
 };
 
-enum class ScatterListTilingKey : int64_t
-{
+enum class ScatterListTilingKey : int64_t {
     TILINGKEY_TSMALL = 100,
     TILINGKEY_TMORE = 101,
     TILINGKEY_TLARGE = 102,

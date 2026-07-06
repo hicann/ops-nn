@@ -21,8 +21,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 using Ops::NN::OpTiling::EnsureNotScalar;
 
@@ -61,13 +61,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
     auto outputShape = EnsureNotScalar(outputDesc->GetStorageShape());
 
-    OP_CHECK_IF(
-        gradientsShape != featuresShape || gradientsShape != outputShape,
-        OP_LOGE(
-            context, "SoftsignGrad: shape mismatch: gradients=%s, features=%s, output=%s",
-            Ops::Base::ToString(gradientsShape).c_str(), Ops::Base::ToString(featuresShape).c_str(),
-	    Ops::Base::ToString(outputShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradientsShape != featuresShape || gradientsShape != outputShape,
+                OP_LOGE(context, "SoftsignGrad: shape mismatch: gradients=%s, features=%s, output=%s",
+                        Ops::Base::ToString(gradientsShape).c_str(), Ops::Base::ToString(featuresShape).c_str(),
+                        Ops::Base::ToString(outputShape).c_str()),
+                return ge::GRAPH_FAILED);
 
     totalNum = gradientsShape.GetShapeSize();
 
@@ -82,10 +80,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
 
     auto featuresDescInfo = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, featuresDescInfo);
-    OP_CHECK_IF(
-        featuresDescInfo->GetDataType() != dataType,
-        OP_LOGE(context, "SoftsignGrad: gradients and features dtype mismatch"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(featuresDescInfo->GetDataType() != dataType,
+                OP_LOGE(context, "SoftsignGrad: gradients and features dtype mismatch"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -105,33 +101,24 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalNum;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     SoftsignGradTilingData* tiling = context->GetTilingData<SoftsignGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftsignGradTilingData), 0, sizeof(SoftsignGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftsignGradTilingData), 0, sizeof(SoftsignGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(totalNum <= 0,
-        OP_LOGE(context, "SoftsignGrad: totalNum=%ld, empty shape is not supported", totalNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(totalNum <= 0, OP_LOGE(context, "SoftsignGrad: totalNum=%ld, empty shape is not supported", totalNum),
+                return ge::GRAPH_FAILED);
 
     tiling->totalNum = totalNum;
     tiling->blockFactor = CeilDiv(totalNum, coreNum);
@@ -148,9 +135,7 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
         bufferNum = useDoubleBuffer ? BUFFER_NUM_NOCAST_DB : BUFFER_NUM_NOCAST_SB;
     }
 
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / FP32_SIZE, bufferNum),
-        ubBlockSize);
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / FP32_SIZE, bufferNum), ubBlockSize);
 
     context->SetBlockDim(usedCoreNum);
 

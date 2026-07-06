@@ -36,17 +36,15 @@ constexpr float MIN_FLOAT_VALUE = -3.4028235e+38f;
 template <typename T1, typename T2, typename T3>
 class DynamicQuantUpdateScatterBase {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterBase()
-    {}
+    __aicore__ inline DynamicQuantUpdateScatterBase() {}
 
-    __aicore__ inline void InitBase(
-        GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void InitBase(GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR smoothScales,
+                                    const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         blockIdx = GetBlockIdx();
 
-        uint64_t indexAlignElements =
-            (tilingPtr->indexElements * sizeof(T2) + THIRTY_TWO) / THIRTY_TWO * THIRTY_TWO / sizeof(T2);
+        uint64_t indexAlignElements = (tilingPtr->indexElements * sizeof(T2) + THIRTY_TWO) / THIRTY_TWO * THIRTY_TWO /
+                                      sizeof(T2);
 
         if (smoothScales != nullptr) {
             hasSmoothScales = true;
@@ -79,10 +77,7 @@ public:
         updatesGm.SetGlobalBuffer((__gm__ T3*)updates + Offset, elements);
     }
 
-    __aicore__ inline void InitUpdatesInQueue(int64_t ubSize)
-    {
-        pipe.InitBuffer(updatesInQueue, BUFFER_NUM, ubSize);
-    }
+    __aicore__ inline void InitUpdatesInQueue(int64_t ubSize) { pipe.InitBuffer(updatesInQueue, BUFFER_NUM, ubSize); }
 
     __aicore__ inline void InitSmoothScalesInQueue(int64_t ubSize, int64_t ubF32Size)
     {
@@ -96,25 +91,13 @@ public:
         }
     }
 
-    __aicore__ inline void InitVarOutQueue(int64_t ubSize)
-    {
-        pipe.InitBuffer(varOutQueue, BUFFER_NUM, ubSize);
-    }
+    __aicore__ inline void InitVarOutQueue(int64_t ubSize) { pipe.InitBuffer(varOutQueue, BUFFER_NUM, ubSize); }
 
-    __aicore__ inline void InitTempF32(int64_t ubSize)
-    {
-        pipe.InitBuffer(tempF32, ubSize);
-    }
+    __aicore__ inline void InitTempF32(int64_t ubSize) { pipe.InitBuffer(tempF32, ubSize); }
 
-    __aicore__ inline void InitTempI32(int64_t ubSize)
-    {
-        pipe.InitBuffer(tempI32, ubSize);
-    }
+    __aicore__ inline void InitTempI32(int64_t ubSize) { pipe.InitBuffer(tempI32, ubSize); }
 
-    __aicore__ inline void InitUpdateF32(int64_t ubSize)
-    {
-        pipe.InitBuffer(updateF32, ubSize);
-    }
+    __aicore__ inline void InitUpdateF32(int64_t ubSize) { pipe.InitBuffer(updateF32, ubSize); }
 
     __aicore__ inline void CopyIndicesIn(const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
@@ -135,8 +118,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeForLittleQuant(
-        const DynamicQuantUpdateScatterTilingData* tilingPtr, float& scalesQuant)
+    __aicore__ inline void ComputeForLittleQuant(const DynamicQuantUpdateScatterTilingData* tilingPtr,
+                                                 float& scalesQuant)
     {
         LocalTensor<T3> updatesLocal = updatesInQueue.template DeQue<T3>();
         LocalTensor<T3> smoothScalesLocal;
@@ -167,9 +150,9 @@ public:
         return;
     }
 
-    __aicore__ inline int64_t GetDetOffsetNeg2LargeEle(
-        int64_t coreBatchIndex, int64_t updateDim0Index, int64_t updateDim1Index, LocalTensor<T2>& indicesLocal,
-        const DynamicQuantUpdateScatterTilingData* tiling)
+    __aicore__ inline int64_t GetDetOffsetNeg2LargeEle(int64_t coreBatchIndex, int64_t updateDim0Index,
+                                                       int64_t updateDim1Index, LocalTensor<T2>& indicesLocal,
+                                                       const DynamicQuantUpdateScatterTilingData* tiling)
     {
         int64_t dstOffset = 0;
         int64_t actualBatchIdx = 0;
@@ -178,14 +161,14 @@ public:
             int64_t bsIdx = indicesLocal.GetValue(indexIdx * INDICES_RANK2);
             int64_t validIdx = indicesLocal.GetValue(indexIdx * INDICES_RANK2 + 1);
             actualBatchIdx = bsIdx * tiling->dstFirSecBsStride + tiling->dstBsStride * updateDim1Index;
-            dstOffset =
-                actualBatchIdx + (validIdx + tiling->eachCoreBsNum * blockIdx + coreBatchIndex) * tiling->sizePerHead;
+            dstOffset = actualBatchIdx +
+                        (validIdx + tiling->eachCoreBsNum * blockIdx + coreBatchIndex) * tiling->sizePerHead;
         } else {
             int64_t indexIdx = updateDim0Index;
             int64_t bsIdx = indicesLocal.GetValue(indexIdx);
             actualBatchIdx = indexIdx * tiling->dstFirSecBsStride + tiling->dstBsStride * updateDim1Index;
-            dstOffset =
-                actualBatchIdx + (bsIdx + tiling->eachCoreBsNum * blockIdx + coreBatchIndex) * tiling->sizePerHead;
+            dstOffset = actualBatchIdx +
+                        (bsIdx + tiling->eachCoreBsNum * blockIdx + coreBatchIndex) * tiling->sizePerHead;
         }
 
         return dstOffset;
@@ -201,8 +184,8 @@ public:
         varScaleOutQueue.FreeTensor(varScaleLocal);
     }
 
-    __aicore__ inline void CopyUpdatesAndScalesByEle(
-        int64_t offset, int64_t loopIndex, int64_t Elements, const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void CopyUpdatesAndScalesByEle(int64_t offset, int64_t loopIndex, int64_t Elements,
+                                                     const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         LocalTensor<T3> updatesLocal = updatesInQueue.AllocTensor<T3>();
         LocalTensor<T3> smoothScalesLocal;
@@ -255,8 +238,8 @@ public:
         return;
     }
 
-    __aicore__ inline void ComputeQuantByEle(
-        LocalTensor<T1>& varOutLocal, LocalTensor<float>& Updates, float scale, int64_t elements)
+    __aicore__ inline void ComputeQuantByEle(LocalTensor<T1>& varOutLocal, LocalTensor<float>& Updates, float scale,
+                                             int64_t elements)
     {
         Muls(Updates, Updates, scale, elements);
 #if defined(ORIG_DTYPE_VAR) && (ORIG_DTYPE_VAR == DT_INT32)
@@ -357,8 +340,8 @@ public:
         varOutQueue.FreeTensor(varOutLocal);
     }
 
-    __aicore__ inline void CopyOutByOneBatch(
-        int64_t coreBatchIndex, int scalesNum, const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void CopyOutByOneBatch(int64_t coreBatchIndex, int scalesNum,
+                                             const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         LocalTensor<T2> indicesLocal = indicesInQueue.DeQue<T2>();
         LocalTensor<T1> varOutLocal = varOutQueue.DeQue<T1>();
@@ -375,9 +358,8 @@ public:
         varScaleOutQueue.FreeTensor(varScaleLocal);
     }
 
-    __aicore__ inline void ComputeQuantByOne(
-        LocalTensor<float>& Updates, LocalTensor<float>& smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr, float& scalesQuant)
+    __aicore__ inline void ComputeQuantByOne(LocalTensor<float>& Updates, LocalTensor<float>& smoothScales,
+                                             const DynamicQuantUpdateScatterTilingData* tilingPtr, float& scalesQuant)
     {
         LocalTensor<T1> varOutLocal = varOutQueue.AllocTensor<T1>();
         LocalTensor<float> temp = tempF32.Get<float>();
@@ -407,9 +389,8 @@ public:
         return;
     }
 
-    __aicore__ inline void ComputeQuant(
-        LocalTensor<float>& Updates, LocalTensor<float>& smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr, int64_t rptNum)
+    __aicore__ inline void ComputeQuant(LocalTensor<float>& Updates, LocalTensor<float>& smoothScales,
+                                        const DynamicQuantUpdateScatterTilingData* tilingPtr, int64_t rptNum)
     {
         LocalTensor<T1> varOutLocal = varOutQueue.AllocTensor<T1>();
         LocalTensor<float> varScaleOutLocal = varScaleOutQueue.AllocTensor<float>();
@@ -446,8 +427,8 @@ public:
         return;
     }
 
-    __aicore__ inline int64_t GetDetOffsetNeg2(
-        int64_t coreBatchIndex, LocalTensor<T2>& indicesLocal, const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline int64_t GetDetOffsetNeg2(int64_t coreBatchIndex, LocalTensor<T2>& indicesLocal,
+                                               const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         int64_t dstOffset = 0;
         int64_t actualBatchIdx = 0;

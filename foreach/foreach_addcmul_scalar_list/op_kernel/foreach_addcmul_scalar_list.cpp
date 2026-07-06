@@ -25,9 +25,10 @@ using namespace AscendC;
 using namespace Common::OpKernel;
 
 template <typename T>
-__aicore__ void AddcMulScalarListAdapterForFloat(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<T>& float32Tensor, const T scalarValue, const uint32_t maxCastDataCount, const int64_t dataCount)
+__aicore__ void AddcMulScalarListAdapterForFloat(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
+                                                 const LocalTensor<T>& tensor3Local,
+                                                 const LocalTensor<T>& float32Tensor, const T scalarValue,
+                                                 const uint32_t maxCastDataCount, const int64_t dataCount)
 {
     Mul(tensor2Local, tensor2Local, tensor3Local, dataCount);
     PipeBarrier<PIPE_V>();
@@ -35,10 +36,10 @@ __aicore__ void AddcMulScalarListAdapterForFloat(
 }
 
 template <typename T>
-__aicore__ void AddcMulScalarListAdapterForInt(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<float>& float32Tensor, const float scalarValue, const uint32_t maxCastDataCount,
-    const int64_t dataCount)
+__aicore__ void AddcMulScalarListAdapterForInt(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
+                                               const LocalTensor<T>& tensor3Local,
+                                               const LocalTensor<float>& float32Tensor, const float scalarValue,
+                                               const uint32_t maxCastDataCount, const int64_t dataCount)
 {
     Mul(tensor2Local, tensor2Local, tensor3Local, dataCount);
     PipeBarrier<PIPE_V>();
@@ -48,10 +49,12 @@ __aicore__ void AddcMulScalarListAdapterForInt(
 }
 
 template <typename T>
-__aicore__ void ComputerPerCastForAddcMulScalarList(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<float>& float32Tensor, const float scalarValue, const uint32_t maxCastDataCount,
-    const uint32_t index, const int64_t dataCount)
+__aicore__ void ComputerPerCastForAddcMulScalarList(const LocalTensor<T>& tensor1Local,
+                                                    const LocalTensor<T>& tensor2Local,
+                                                    const LocalTensor<T>& tensor3Local,
+                                                    const LocalTensor<float>& float32Tensor, const float scalarValue,
+                                                    const uint32_t maxCastDataCount, const uint32_t index,
+                                                    const int64_t dataCount)
 {
     Cast(float32Tensor, tensor2Local[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
     PipeBarrier<PIPE_V>();
@@ -69,28 +72,26 @@ __aicore__ void ComputerPerCastForAddcMulScalarList(
 }
 
 template <typename T>
-__aicore__ void AddcMulScalarListAdapter(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<float>& float32Tensor, const float scalarValue, const uint32_t maxCastDataCount,
-    const int64_t dataCount)
+__aicore__ void AddcMulScalarListAdapter(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
+                                         const LocalTensor<T>& tensor3Local, const LocalTensor<float>& float32Tensor,
+                                         const float scalarValue, const uint32_t maxCastDataCount,
+                                         const int64_t dataCount)
 {
     uint32_t castTimes = dataCount / maxCastDataCount;
     uint32_t castTimesRemainder = dataCount % maxCastDataCount;
     for (uint32_t i = 0; i < castTimes; i++) {
-        ComputerPerCastForAddcMulScalarList<T>(
-            tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarValue, maxCastDataCount, i,
-            maxCastDataCount);
+        ComputerPerCastForAddcMulScalarList<T>(tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarValue,
+                                               maxCastDataCount, i, maxCastDataCount);
     }
     if (castTimesRemainder > 0) {
-        ComputerPerCastForAddcMulScalarList<T>(
-            tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarValue, maxCastDataCount, castTimes,
-            castTimesRemainder);
+        ComputerPerCastForAddcMulScalarList<T>(tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarValue,
+                                               maxCastDataCount, castTimes, castTimesRemainder);
     }
 }
 
-extern "C" __global__ __aicore__ void foreach_addcmul_scalar_list(
-    GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcmul_scalar_list(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3,
+                                                                  GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                                  GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

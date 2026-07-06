@@ -18,8 +18,7 @@
 #include "atvoss/reduce/reduce_tiling.h"
 
 using namespace Ops::Base;
-namespace optiling
-{
+namespace optiling {
 struct L2LossTilingKey {
     ReduceTilingKey ReduceTiling;
 };

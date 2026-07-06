@@ -33,23 +33,15 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class SyncBatchNormBackwardReduceTiling : public testing::Test
-{
+class SyncBatchNormBackwardReduceTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardReduceTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SyncBatchNormBackwardReduceTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardReduceTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SyncBatchNormBackwardReduceTiling TearDown" << std::endl; }
 };
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -97,7 +89,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp16_001)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -151,16 +143,16 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp16_002)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::StorageShape mean_Shape = {{1000,20}, {1000,20}};
-    gert::StorageShape sum_dy_shape = {{1000,20}, {1000,20}};
-    gert::StorageShape sum_dy_dx_pad_shape = {{1000,20}, {1000,20}};
-    gert::StorageShape invert_std_shape = {{1000,20}, {1000,20}};
+    gert::StorageShape mean_Shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape sum_dy_shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape sum_dy_dx_pad_shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape invert_std_shape = {{1000, 20}, {1000, 20}};
 
-    gert::StorageShape sum_dy_xum_shape = {{1000,20}, {1000,20}};
-    gert::StorageShape y_shape = {{1000,20}, {1000,20}};
+    gert::StorageShape sum_dy_xum_shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape y_shape = {{1000, 20}, {1000, 20}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -214,16 +206,16 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp16_003)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::StorageShape mean_Shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape sum_dy_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape sum_dy_dx_pad_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape invert_std_shape = {{100,20,30,10}, {100,20,30,10}};
+    gert::StorageShape mean_Shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape sum_dy_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape sum_dy_dx_pad_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape invert_std_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
 
-    gert::StorageShape sum_dy_xum_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape y_shape = {{100,20,30,10}, {100,20,30,10}};
+    gert::StorageShape sum_dy_xum_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape y_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -277,16 +269,16 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp16_004)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::StorageShape mean_Shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape sum_dy_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape sum_dy_dx_pad_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape invert_std_shape = {{100,20,30,10}, {100,20,30,10}};
+    gert::StorageShape mean_Shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape sum_dy_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape sum_dy_dx_pad_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape invert_std_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
 
-    gert::StorageShape sum_dy_xum_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape y_shape = {{100,20,30,10}, {100,20,30,10}};
+    gert::StorageShape sum_dy_xum_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape y_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -349,7 +341,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_bf16_001)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -412,7 +404,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp32_001)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -465,16 +457,16 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp32_002)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::StorageShape mean_Shape = {{1000,20}, {1000,20}};
-    gert::StorageShape sum_dy_shape = {{1000,20}, {1000,20}};
-    gert::StorageShape sum_dy_dx_pad_shape = {{1000,20}, {1000,20}};
-    gert::StorageShape invert_std_shape = {{1000,20}, {1000,20}};
+    gert::StorageShape mean_Shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape sum_dy_shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape sum_dy_dx_pad_shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape invert_std_shape = {{1000, 20}, {1000, 20}};
 
-    gert::StorageShape sum_dy_xum_shape = {{1000,20}, {1000,20}};
-    gert::StorageShape y_shape = {{1000,20}, {1000,20}};
+    gert::StorageShape sum_dy_xum_shape = {{1000, 20}, {1000, 20}};
+    gert::StorageShape y_shape = {{1000, 20}, {1000, 20}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -528,16 +520,16 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp32_003)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::StorageShape mean_Shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape sum_dy_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape sum_dy_dx_pad_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape invert_std_shape = {{100,20,30,10}, {100,20,30,10}};
+    gert::StorageShape mean_Shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape sum_dy_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape sum_dy_dx_pad_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape invert_std_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
 
-    gert::StorageShape sum_dy_xum_shape = {{100,20,30,10}, {100,20,30,10}};
-    gert::StorageShape y_shape = {{100,20,30,10}, {100,20,30,10}};
+    gert::StorageShape sum_dy_xum_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
+    gert::StorageShape y_shape = {{100, 20, 30, 10}, {100, 20, 30, 10}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -591,16 +583,16 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_fp32_004)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::StorageShape mean_Shape = {{100,20,30,10,2}, {100,20,30,10,2}};
-    gert::StorageShape sum_dy_shape = {{100,20,30,10,2}, {100,20,30,10,2}};
-    gert::StorageShape sum_dy_dx_pad_shape = {{100,20,30,10,2}, {100,20,30,10,2}};
-    gert::StorageShape invert_std_shape = {{100,20,30,10,2}, {100,20,30,10,2}};
+    gert::StorageShape mean_Shape = {{100, 20, 30, 10, 2}, {100, 20, 30, 10, 2}};
+    gert::StorageShape sum_dy_shape = {{100, 20, 30, 10, 2}, {100, 20, 30, 10, 2}};
+    gert::StorageShape sum_dy_dx_pad_shape = {{100, 20, 30, 10, 2}, {100, 20, 30, 10, 2}};
+    gert::StorageShape invert_std_shape = {{100, 20, 30, 10, 2}, {100, 20, 30, 10, 2}};
 
-    gert::StorageShape sum_dy_xum_shape = {{100,20,30,10,2}, {100,20,30,10,2}};
-    gert::StorageShape y_shape = {{100,20,30,10,2}, {100,20,30,10,2}};
+    gert::StorageShape sum_dy_xum_shape = {{100, 20, 30, 10, 2}, {100, 20, 30, 10, 2}};
+    gert::StorageShape y_shape = {{100, 20, 30, 10, 2}, {100, 20, 30, 10, 2}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -663,7 +655,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_shape_diff_001)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -721,7 +713,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_shape_diff_002)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -779,7 +771,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_dtype_diff_001)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -837,7 +829,7 @@ TEST_F(SyncBatchNormBackwardReduceTiling, test_tiling_dtype_diff_002)
     gert::StorageShape y_shape = {{1000}, {1000}};
 
     Ops::Base::ElewiseCompileInfo compile_info;
-    
+
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 

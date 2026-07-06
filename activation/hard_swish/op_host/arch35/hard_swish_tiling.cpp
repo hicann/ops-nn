@@ -1,17 +1,17 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /**
-* NOTE: Portions of this code were AI-generated and have been
-* technically reviewed for functional accuracy and security
-*/
+ * NOTE: Portions of this code were AI-generated and have been
+ * technically reviewed for functional accuracy and security
+ */
 
 /**
  * \file hard_swish_tiling.cpp
@@ -34,8 +34,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -102,32 +102,24 @@ static ge::graphStatus HardSwishTilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and dtype
     int64_t totalNum;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace size
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Fill TilingData
     HardSwishTilingData* tiling = context->GetTilingData<HardSwishTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardSwishTilingData), 0, sizeof(HardSwishTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardSwishTilingData), 0, sizeof(HardSwishTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Multi-core split
     tiling->totalNum = totalNum;
@@ -140,15 +132,15 @@ static ge::graphStatus HardSwishTilingFunc(gert::TilingContext* context)
     uint64_t tilingKey = 0;
 
     if (dataType == ge::DT_FLOAT) {
-        int64_t typeSize = static_cast<int64_t>(sizeof(float));  // 4
+        int64_t typeSize = static_cast<int64_t>(sizeof(float)); // 4
         tiling->ubFactor = FloorAlign(FloorDiv(ubCanUse / typeSize, BUFFER_NUM_FP32), ubBlockSize);
         tilingKey = GET_TPL_TILING_KEY(HARDSWISH_TPL_SCH_MODE_FP32);
     } else if (dataType == ge::DT_FLOAT16) {
-        int64_t typeSize = static_cast<int64_t>(sizeof(float));  // compute in fp32 = 4
+        int64_t typeSize = static_cast<int64_t>(sizeof(float)); // compute in fp32 = 4
         tiling->ubFactor = FloorAlign(FloorDiv(ubCanUse / typeSize, BUFFER_NUM_FP16), ubBlockSize);
         tilingKey = GET_TPL_TILING_KEY(HARDSWISH_TPL_SCH_MODE_FP16);
     } else if (dataType == ge::DT_BF16) {
-        int64_t typeSize = static_cast<int64_t>(sizeof(float));  // compute in fp32 = 4
+        int64_t typeSize = static_cast<int64_t>(sizeof(float)); // compute in fp32 = 4
         tiling->ubFactor = FloorAlign(FloorDiv(ubCanUse / typeSize, BUFFER_NUM_BF16), ubBlockSize);
         tilingKey = GET_TPL_TILING_KEY(HARDSWISH_TPL_SCH_MODE_BF16);
     } else {
@@ -157,8 +149,8 @@ static ge::graphStatus HardSwishTilingFunc(gert::TilingContext* context)
     }
 
     if (tiling->ubFactor <= 0) {
-        OP_LOGE(context, "HardSwish: ubFactor is %ld after FloorAlign, ubSize=%lu dtype=%d",
-                tiling->ubFactor, ubSize, static_cast<int>(dataType));
+        OP_LOGE(context, "HardSwish: ubFactor is %ld after FloorAlign, ubSize=%lu dtype=%d", tiling->ubFactor, ubSize,
+                static_cast<int>(dataType));
         return ge::GRAPH_FAILED;
     }
 
@@ -175,8 +167,6 @@ static ge::graphStatus TilingParseForHardSwish([[maybe_unused]] gert::TilingPars
 
 struct HardSwishCompileInfo {};
 
-IMPL_OP_OPTILING(HardSwish)
-    .Tiling(HardSwishTilingFunc)
-    .TilingParse<HardSwishCompileInfo>(TilingParseForHardSwish);
+IMPL_OP_OPTILING(HardSwish).Tiling(HardSwishTilingFunc).TilingParse<HardSwishCompileInfo>(TilingParseForHardSwish);
 
 } // namespace optiling

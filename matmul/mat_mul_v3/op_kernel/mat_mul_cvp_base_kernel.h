@@ -15,14 +15,12 @@
 #ifndef __OP_KERNEL_MATMUL_V3_CVP_BASE_KERNEL__H__
 #define __OP_KERNEL_MATMUL_V3_CVP_BASE_KERNEL__H__
 
-
 #include "mat_mul_base_block.h"
 #include "mat_mul_l1_full_load.h"
 #include "mat_mul_nd2nz.h"
 
 using namespace AscendC;
 using namespace matmul;
-
 
 namespace MatmulV3 {
 
@@ -32,9 +30,9 @@ const uint32_t PP_GM = 2;
 const uint16_t C_NOTIFY_V = 2;
 const uint16_t V_NOTIFY_C = 4;
 
-template<typename T>
-__aicore__ inline void CopyAImpl(const LocalTensor<int8_t> &aMatrix, const __gm__ void *gm, int row, int col,
-    int useM, int useK, const uint64_t tilingPtr, const uint64_t dataPtr)
+template <typename T>
+__aicore__ inline void CopyAImpl(const LocalTensor<int8_t>& aMatrix, const __gm__ void* gm, int row, int col, int useM,
+                                 int useK, const uint64_t tilingPtr, const uint64_t dataPtr)
 {
     MatmulTilingData* tilingDataPtr = reinterpret_cast<MatmulTilingData*>(tilingPtr);
     uint64_t c0Size;
@@ -65,7 +63,7 @@ __aicore__ inline void CopyAImpl(const LocalTensor<int8_t> &aMatrix, const __gm_
     }
     n_aligned = AlignUp(n, ALIGNED_H);
     d_aligned = AlignUp(d, c0Size);
-    src.SetGlobalBuffer((__gm__ T *)gm, n_aligned * d_aligned);
+    src.SetGlobalBuffer((__gm__ T*)gm, n_aligned * d_aligned);
     uint32_t srcStride = n_aligned - useN;
     uint64_t srcOffset = (int64_t)useRow * (int64_t)c0Size + (int64_t)useCol * (int64_t)n_aligned;
     if (col == 0 && row == 0) {
@@ -74,16 +72,17 @@ __aicore__ inline void CopyAImpl(const LocalTensor<int8_t> &aMatrix, const __gm_
     } else {
         procNum += useM * useK;
     }
-    DataCopy(dst, src[srcOffset], {static_cast<uint16_t>(useD / c0Size), static_cast<uint16_t>(useN), static_cast<uint16_t>(srcStride), 0});
+    DataCopy(dst, src[srcOffset],
+             {static_cast<uint16_t>(useD / c0Size), static_cast<uint16_t>(useN), static_cast<uint16_t>(srcStride), 0});
     if (procNum >= singleCoreM * singleCoreK) {
         CrossCoreSetFlag<0x2, PIPE_MTE2>(C_NOTIFY_V + pingpong_gm);
     }
     return;
 }
 
-template<typename T>
-__aicore__ inline void CopyBImpl(const LocalTensor<int8_t> &bMatrix, const __gm__ void *gm, int row, int col,
-    int useK, int useNn, const uint64_t tilingPtr, const uint64_t dataPtr)
+template <typename T>
+__aicore__ inline void CopyBImpl(const LocalTensor<int8_t>& bMatrix, const __gm__ void* gm, int row, int col, int useK,
+                                 int useNn, const uint64_t tilingPtr, const uint64_t dataPtr)
 {
     MatmulTilingData* tilingDataPtr = reinterpret_cast<MatmulTilingData*>(tilingPtr);
     uint64_t c0Size;
@@ -114,7 +113,7 @@ __aicore__ inline void CopyBImpl(const LocalTensor<int8_t> &bMatrix, const __gm_
     }
     n_aligned = AlignUp(n, ALIGNED_H);
     d_aligned = AlignUp(d, c0Size);
-    src.SetGlobalBuffer((__gm__ T *)gm, n_aligned * d_aligned);
+    src.SetGlobalBuffer((__gm__ T*)gm, n_aligned * d_aligned);
     uint32_t srcStride = n_aligned - useN;
     uint64_t srcOffset = (int64_t)useRow * (int64_t)c0Size + (int64_t)useCol * (int64_t)n_aligned;
     if (col == 0 && row == 0) {
@@ -123,15 +122,16 @@ __aicore__ inline void CopyBImpl(const LocalTensor<int8_t> &bMatrix, const __gm_
     } else {
         procNum += useNn * useK;
     }
-    DataCopy(dst, src[srcOffset], {static_cast<uint16_t>(useD / c0Size), static_cast<uint16_t>(useN), static_cast<uint16_t>(srcStride), 0});
+    DataCopy(dst, src[srcOffset],
+             {static_cast<uint16_t>(useD / c0Size), static_cast<uint16_t>(useN), static_cast<uint16_t>(srcStride), 0});
     if (procNum >= singleCoreN * singleCoreK) {
         CrossCoreSetFlag<0x2, PIPE_MTE2>(C_NOTIFY_V + pingpong_gm);
     }
     return;
 }
 
-__aicore__ inline void CopyA(const LocalTensor<int8_t> &aMatrix, const __gm__ void *gm, int row, int col,
-    int useM, int useK, const uint64_t tilingPtr, const uint64_t dataPtr)
+__aicore__ inline void CopyA(const LocalTensor<int8_t>& aMatrix, const __gm__ void* gm, int row, int col, int useM,
+                             int useK, const uint64_t tilingPtr, const uint64_t dataPtr)
 {
     MatmulTilingData* tilingDataPtr = reinterpret_cast<MatmulTilingData*>(tilingPtr);
     if (tilingDataPtr->matmulRunInfo.nd2nzA) {
@@ -150,8 +150,8 @@ __aicore__ inline void CopyA(const LocalTensor<int8_t> &aMatrix, const __gm__ vo
     ctx.isFirst = false;
 }
 
-__aicore__ inline void CopyB(const LocalTensor<int8_t> &bMatrix, const __gm__ void *gm, int row, int col,
-    int useK, int useN, const uint64_t tilingPtr, const uint64_t dataPtr)
+__aicore__ inline void CopyB(const LocalTensor<int8_t>& bMatrix, const __gm__ void* gm, int row, int col, int useK,
+                             int useN, const uint64_t tilingPtr, const uint64_t dataPtr)
 {
     MatmulTilingData* tilingDataPtr = reinterpret_cast<MatmulTilingData*>(tilingPtr);
     if (tilingDataPtr->matmulRunInfo.nd2nzB) {
@@ -169,19 +169,16 @@ __aicore__ inline void CopyB(const LocalTensor<int8_t> &bMatrix, const __gm__ vo
     ctx.isFirst = false;
 }
 
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulBaseBlock,
-    const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD, class MM_CB = MatmulCallBackFunc<nullptr, CopyA, CopyB>>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulBaseBlock,
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD, class MM_CB = MatmulCallBackFunc<nullptr, CopyA, CopyB>>
 class MatmulCvpBaseKernel : public MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB> {
 public:
-    __aicore__ inline MatmulCvpBaseKernel()
-    {}
+    __aicore__ inline MatmulCvpBaseKernel() {}
 
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR workspaceGM);
 
-    __aicore__ inline void Init(
-        GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
-        const void* tilingData, TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
+                                GM_ADDR workspaceGM, const void* tilingData, TPipe* pipe);
 
     __aicore__ inline void Process(uint64_t index = 0, uint8_t enAtomic = 0);
     __aicore__ inline void AicProcess(uint32_t pingpong_gm, uint8_t enAtomic);
@@ -199,11 +196,11 @@ protected:
     uint64_t oneBufferSize;
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
-__aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::Init(GM_ADDR aGM,
-    GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM, const void *tilingData,
-    TPipe *pipe)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
+__aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::Init(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
+    const void* tilingData, TPipe* pipe)
 {
     this->block_.template Init<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(tilingData);
     this->pipe_ = pipe;
@@ -219,17 +216,20 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     InitInputs(aGM, bGM, cGM, biasGM, workspaceGM);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::InitInputs(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR workspaceGM)
 {
-    this->aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM),
-        static_cast<uint64_t>(this->block_.matmulTilingData_->matmulTiling.M) * this->block_.matmulTilingData_->matmulTiling.Ka);
-    this->bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(bGM),
-        static_cast<uint64_t>(this->block_.matmulTilingData_->matmulTiling.Kb) * this->block_.matmulTilingData_->matmulTiling.N);
-    this->cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(cGM),
-        static_cast<uint64_t>(this->block_.matmulTilingData_->matmulTiling.M) * this->block_.matmulTilingData_->matmulTiling.N);
+    this->aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(aGM),
+                                   static_cast<uint64_t>(this->block_.matmulTilingData_->matmulTiling.M) *
+                                       this->block_.matmulTilingData_->matmulTiling.Ka);
+    this->bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ B_T*>(bGM),
+                                   static_cast<uint64_t>(this->block_.matmulTilingData_->matmulTiling.Kb) *
+                                       this->block_.matmulTilingData_->matmulTiling.N);
+    this->cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T*>(cGM),
+                                   static_cast<uint64_t>(this->block_.matmulTilingData_->matmulTiling.M) *
+                                       this->block_.matmulTilingData_->matmulTiling.N);
 
     uint64_t singleCoreM = this->block_.matmulTilingData_->matmulTiling.singleCoreM;
     uint64_t singleCoreN = this->block_.matmulTilingData_->matmulTiling.singleCoreN;
@@ -238,16 +238,17 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
 
     oneBufferSize = AlignUp((aNz ? singleCoreM : singleCoreN), ALIGNED_H) * AlignUp(singleCoreK, c0Size);
     wsBufferSize = oneBufferSize * PP_GM * usedCoreNum; // 开启double buffer
-    wsGlobal_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ A_T*>(workspaceGM) + GetCurrentBlockIdx() * oneBufferSize * PP_GM,
-        static_cast<uint64_t>(oneBufferSize * PP_GM));
+    wsGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(workspaceGM) + GetCurrentBlockIdx() * oneBufferSize * PP_GM,
+                              static_cast<uint64_t>(oneBufferSize * PP_GM));
 
-    this->biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT *>(biasGM), this->block_.matmulTilingData_->matmulTiling.N);
-    SetL2CacheEnable(this->block_.matmulTilingData_->l2cacheUseInfo, this->aGlobal_, this->bGlobal_, this->cGlobal_, this->biasGlobal_);
+    this->biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(biasGM),
+                                      this->block_.matmulTilingData_->matmulTiling.N);
+    SetL2CacheEnable(this->block_.matmulTilingData_->l2cacheUseInfo, this->aGlobal_, this->bGlobal_, this->cGlobal_,
+                     this->biasGlobal_);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::Process(
     uint64_t index, uint8_t enAtomic)
 {
@@ -294,8 +295,8 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     return;
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::AicProcess(
     uint32_t pingpong_gm, uint8_t enAtomic)
 {
@@ -303,7 +304,7 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
         return;
     }
     this->mm_.SetSingleShape(this->block_.params_.singleCoreM, this->block_.params_.singleCoreN,
-        this->block_.matmulTilingData_->matmulTiling.singleCoreK);
+                             this->block_.matmulTilingData_->matmulTiling.singleCoreK);
     uint64_t singleCoreTile;
     if (aNz) {
         this->mm_.SetTensorA(wsGlobal_[pingpong_gm * oneBufferSize], this->block_.params_.isTransposeA);
@@ -323,8 +324,8 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     return;
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::AivProcess(
     uint32_t pingpong_gm)
 {
@@ -338,13 +339,17 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     if (aNz) {
         curGlobal = this->aGlobal_;
         curOffset = this->block_.offset_.offsetA;
-        nCalcLen = this->block_.params_.isTransposeA ? this->block_.matmulTilingData_->matmulTiling.singleCoreK : this->block_.params_.singleCoreM;
-        dCalcLen = this->block_.params_.isTransposeA ? this->block_.params_.singleCoreM : this->block_.matmulTilingData_->matmulTiling.singleCoreK;
+        nCalcLen = this->block_.params_.isTransposeA ? this->block_.matmulTilingData_->matmulTiling.singleCoreK :
+                                                       this->block_.params_.singleCoreM;
+        dCalcLen = this->block_.params_.isTransposeA ? this->block_.params_.singleCoreM :
+                                                       this->block_.matmulTilingData_->matmulTiling.singleCoreK;
     } else {
         curGlobal = this->bGlobal_;
         curOffset = this->block_.offset_.offsetB;
-        nCalcLen = this->block_.params_.isTransposeB ? this->block_.params_.singleCoreN : this->block_.matmulTilingData_->matmulTiling.singleCoreK;
-        dCalcLen = this->block_.params_.isTransposeB ? this->block_.matmulTilingData_->matmulTiling.singleCoreK : this->block_.params_.singleCoreN;
+        nCalcLen = this->block_.params_.isTransposeB ? this->block_.params_.singleCoreN :
+                                                       this->block_.matmulTilingData_->matmulTiling.singleCoreK;
+        dCalcLen = this->block_.params_.isTransposeB ? this->block_.matmulTilingData_->matmulTiling.singleCoreK :
+                                                       this->block_.params_.singleCoreN;
     }
     CrossCoreWaitFlag(C_NOTIFY_V + pingpong_gm);
 #if defined(__DAV_C220_VEC__)
@@ -355,5 +360,5 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     CrossCoreSetFlag<0x2, PIPE_MTE3>(V_NOTIFY_C + pingpong_gm);
     return;
 }
-}  // namespace MatmulV3
+} // namespace MatmulV3
 #endif // MMV3_MATMUL_KERNEL_H

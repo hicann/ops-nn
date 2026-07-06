@@ -25,13 +25,14 @@ using namespace std;
 
 class l2_foreach_div_scalar_v2_test : public testing::Test {
 protected:
-  static void SetUpTestCase() { cout << "foreach_div_scalar_test SetUp" << endl; }
+    static void SetUpTestCase() { cout << "foreach_div_scalar_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "foreach_div_scalar_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "foreach_div_scalar_test TearDown" << endl; }
 };
 
 // dtype DOUBLE
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_double) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_double)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -47,7 +48,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_dou
 }
 
 // out and self different dtype
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_dtype_different) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_dtype_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -63,7 +65,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_dty
 }
 
 // dtype float16
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_fp16) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_fp16)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc((double)1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -79,7 +82,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_fp1
 }
 
 // dtype float32
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_fp32) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_fp32)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc((double)1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -95,7 +99,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_fp3
 }
 
 // out and self different shape
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_shape_different) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_shape_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 6}};
@@ -127,7 +132,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_sha
 }*/
 
 // private format - both self and out
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -143,7 +149,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_for
 }
 
 // private format - only self is private format
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format_invalid_self) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format_invalid_self)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -159,7 +166,8 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_for
 }
 
 // private format - only out is private format
-TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format_invalid_out) {
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format_invalid_out)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};

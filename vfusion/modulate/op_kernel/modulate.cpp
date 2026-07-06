@@ -46,20 +46,17 @@ protected:
 
         this->pipe->InitBuffer(this->QueueX, DOUBLE_BUFFER, this->ubLength * sizeof(T));
         this->pipe->InitBuffer(this->QueueY, DOUBLE_BUFFER, this->ubLength * sizeof(T));
-        if(this->parameterStatus != NO_SCALE) {
+        if (this->parameterStatus != NO_SCALE) {
             this->pipe->InitBuffer(this->QueueScale, 1, this->ubLength * sizeof(T));
         }
-        if(this->parameterStatus != NO_SHIFT) {
+        if (this->parameterStatus != NO_SHIFT) {
             this->pipe->InitBuffer(this->QueueShift, 1, this->ubLength * sizeof(T));
         }
         this->ubLength = std::is_same<T, bfloat16_t>::value ? this->ubLength / HALF_UBLENGTH : this->ubLength;
     }
 
 protected:
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return a < b ? a : b;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return a < b ? a : b; }
 
     __aicore__ inline int64_t GetNum()
     {
@@ -70,9 +67,9 @@ protected:
     {
         int64_t batchEndId = (this->frontLength * (GetBlockIdx() + 1) - 1) / this->inputL;
         if (GetBlockIdx() >= this->frontNum) {
-            batchEndId =
-                (this->frontLength * this->frontNum + this->tailLength * (GetBlockIdx() + 1 - this->frontNum) - 1) /
-                this->inputL;
+            batchEndId = (this->frontLength * this->frontNum + this->tailLength * (GetBlockIdx() + 1 - this->frontNum) -
+                          1) /
+                         this->inputL;
         }
         return batchEndId;
     }
@@ -87,8 +84,8 @@ protected:
         return secondFirstL;
     }
 
-    __aicore__ inline int64_t CalcOffsetForScaleShift(
-        int64_t BId, int64_t DId, int64_t DLength, int64_t BlockId, int64_t BlockLength)
+    __aicore__ inline int64_t CalcOffsetForScaleShift(int64_t BId, int64_t DId, int64_t DLength, int64_t BlockId,
+                                                      int64_t BlockLength)
     {
         int64_t offset = BId * this->inputD + DId * DLength + BlockId * BlockLength;
         if (this->useDTiling) {
@@ -102,8 +99,8 @@ protected:
         return offset;
     }
 
-    __aicore__ inline int64_t CalcOffset(
-        int64_t BId, int64_t LId, int64_t DId, int64_t DLength, int64_t BlockId, int64_t BlockLength)
+    __aicore__ inline int64_t CalcOffset(int64_t BId, int64_t LId, int64_t DId, int64_t DLength, int64_t BlockId,
+                                         int64_t BlockLength)
     {
         int64_t offset = BId * this->inputL * this->inputD + LId * this->inputD + DId * DLength + BlockId * BlockLength;
         if (this->useDTiling) {
@@ -118,7 +115,8 @@ protected:
         return offset;
     }
 
-    __aicore__ inline void CopyCommom(int64_t offset, int64_t opCopyLength, LocalTensor<T> &localData, GlobalTensor<T> &gmData)
+    __aicore__ inline void CopyCommom(int64_t offset, int64_t opCopyLength, LocalTensor<T>& localData,
+                                      GlobalTensor<T>& gmData)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(opCopyLength * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
@@ -129,8 +127,8 @@ protected:
         }
     }
 
-    __aicore__ inline void CopyScaleIn(
-        int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength, int64_t BlockLength)
+    __aicore__ inline void CopyScaleIn(int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength,
+                                       int64_t BlockLength)
     {
         LocalTensor<T> scaleLocal = QueueScale.template AllocTensor<T>();
         int64_t offset = CalcOffsetForScaleShift(BId, DId, DLength, BlockId, BlockLength);
@@ -138,8 +136,8 @@ protected:
         QueueScale.template EnQue(scaleLocal);
     }
 
-    __aicore__ inline void CopyShiftIn(
-        int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength, int64_t BlockLength)
+    __aicore__ inline void CopyShiftIn(int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength,
+                                       int64_t BlockLength)
     {
         LocalTensor<T> shiftLocal = QueueShift.template AllocTensor<T>();
         int64_t offset = CalcOffsetForScaleShift(BId, DId, DLength, BlockId, BlockLength);
@@ -150,8 +148,8 @@ protected:
     __aicore__ inline void CopyIn(int64_t offset, int64_t opCopyLength, int64_t handleL)
     {
         LocalTensor<T> xLocal = QueueX.template AllocTensor<T>();
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(handleL), static_cast<uint32_t>(opCopyLength * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(handleL), static_cast<uint32_t>(opCopyLength * sizeof(T)), 0,
+                                     0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         if constexpr (std::is_same<T, bfloat16_t>::value) {
             DataCopyPad(xLocal[this->ubLength], this->xGm[offset], copyParams, padParams);
@@ -164,16 +162,16 @@ protected:
     __aicore__ inline void CopyOut(int64_t offset, int64_t opCopyLength, int64_t handleL)
     {
         LocalTensor<T> yLocal = QueueY.template DeQue<T>();
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(handleL), static_cast<uint32_t>(opCopyLength * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(handleL), static_cast<uint32_t>(opCopyLength * sizeof(T)), 0,
+                                     0, 0};
         DataCopyPad(this->yGm[offset], yLocal, copyParams);
         QueueY.template FreeTensor(yLocal);
     }
 
-    __aicore__ inline void PreProcess(
-        LocalTensor<T>& scaleLocal, LocalTensor<T>& shiftLocal, LocalTensor<float>& scaleLocalFp32,
-        LocalTensor<float>& shiftLocalFp32, int64_t opCopyLength)
-    { 
+    __aicore__ inline void PreProcess(LocalTensor<T>& scaleLocal, LocalTensor<T>& shiftLocal,
+                                      LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& shiftLocalFp32,
+                                      int64_t opCopyLength)
+    {
         if constexpr (std::is_same<T, bfloat16_t>::value) {
             Cast(scaleLocalFp32, scaleLocal[this->ubLength], RoundMode::CAST_NONE, opCopyLength);
             PipeBarrier<PIPE_V>();
@@ -182,20 +180,20 @@ protected:
             PipeBarrier<PIPE_V>();
             Cast(shiftLocalFp32, shiftLocal[this->ubLength], RoundMode::CAST_NONE, opCopyLength);
             PipeBarrier<PIPE_V>();
-        }else {
+        } else {
             T oneValue = 1;
             Adds(scaleLocal, scaleLocal, oneValue, opCopyLength);
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void Compute(
-        int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength, int64_t BlockLength,
-        int64_t loopLStart, int64_t loopLEnd)
+    __aicore__ inline void Compute(int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength,
+                                   int64_t BlockLength, int64_t loopLStart, int64_t loopLEnd)
     {
         int64_t alignedLength = ALIGNED_SIZE / sizeof(T);
         this->alignedD = (opCopyLength + alignedLength - 1) & ~(alignedLength - 1);
-        bool isDSmall = (!this->useDTiling) && (DId == 0) && (opCopyLength * sizeof(T) < MIN_DLENGTH); // 判断一行的个数是否太小，太小则一次搬入多行
+        bool isDSmall = (!this->useDTiling) && (DId == 0) &&
+                        (opCopyLength * sizeof(T) < MIN_DLENGTH); // 判断一行的个数是否太小，太小则一次搬入多行
         int64_t handleL = isDSmall ? min(loopLEnd - loopLStart, this->ubLength / this->alignedD) : 1; // 一次处理的行数
         LocalTensor<T> scaleLocal = this->QueueScale.template DeQue<T>();
         LocalTensor<T> shiftLocal = this->QueueShift.template DeQue<T>();
@@ -236,13 +234,14 @@ protected:
         this->QueueShift.template FreeTensor(shiftLocal);
     }
 
-    __aicore__ inline void ComputeWithoutScale(
-        int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength, int64_t BlockLength,
-        int64_t loopLStart, int64_t loopLEnd)
+    __aicore__ inline void ComputeWithoutScale(int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength,
+                                               int64_t DLength, int64_t BlockLength, int64_t loopLStart,
+                                               int64_t loopLEnd)
     {
         int64_t alignedLength = ALIGNED_SIZE / sizeof(T);
         this->alignedD = (opCopyLength + alignedLength - 1) & ~(alignedLength - 1);
-        bool isDSmall = (!this->useDTiling) && (DId == 0) && (opCopyLength * sizeof(T) < MIN_DLENGTH); // 判断一行的个数是否太小，太小则一次搬入多行
+        bool isDSmall = (!this->useDTiling) && (DId == 0) &&
+                        (opCopyLength * sizeof(T) < MIN_DLENGTH); // 判断一行的个数是否太小，太小则一次搬入多行
         int64_t handleL = isDSmall ? min(loopLEnd - loopLStart, this->ubLength / this->alignedD) : 1; // 一次处理的行数
         LocalTensor<T> shiftLocal = this->QueueShift.template DeQue<T>();
         LocalTensor<float> shiftLocalFp32 = shiftLocal.template ReinterpretCast<float>();
@@ -279,13 +278,14 @@ protected:
         this->QueueShift.template FreeTensor(shiftLocal);
     }
 
-    __aicore__ inline void ComputeWithoutShift(
-        int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength, int64_t BlockLength,
-        int64_t loopLStart, int64_t loopLEnd)
+    __aicore__ inline void ComputeWithoutShift(int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength,
+                                               int64_t DLength, int64_t BlockLength, int64_t loopLStart,
+                                               int64_t loopLEnd)
     {
         int64_t alignedLength = ALIGNED_SIZE / sizeof(T);
         this->alignedD = (opCopyLength + alignedLength - 1) & ~(alignedLength - 1);
-        bool isDSmall = (!this->useDTiling) && (DId == 0) && (opCopyLength * sizeof(T) < MIN_DLENGTH); // 判断一行的个数是否太小，太小则一次搬入多行
+        bool isDSmall = (!this->useDTiling) && (DId == 0) &&
+                        (opCopyLength * sizeof(T) < MIN_DLENGTH); // 判断一行的个数是否太小，太小则一次搬入多行
         int64_t handleL = isDSmall ? min(loopLEnd - loopLStart, this->ubLength / this->alignedD) : 1; // 一次处理的行数
         LocalTensor<T> scaleLocal = this->QueueScale.template DeQue<T>();
         LocalTensor<float> scaleLocalFp32 = scaleLocal.template ReinterpretCast<float>();
@@ -295,7 +295,7 @@ protected:
             float oneValue = 1;
             Adds(scaleLocalFp32, scaleLocalFp32, oneValue, opCopyLength);
             PipeBarrier<PIPE_V>();
-        }else {
+        } else {
             T oneValue = 1;
             Adds(scaleLocal, scaleLocal, oneValue, opCopyLength);
             PipeBarrier<PIPE_V>();
@@ -329,9 +329,9 @@ protected:
         this->QueueScale.template FreeTensor(scaleLocal);
     }
 
-    __aicore__ inline void CopyAndCompute(
-        int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength, int64_t DLength, int64_t BlockLength,
-        int64_t loopLStart, int64_t loopLEnd, bool isTilingL)
+    __aicore__ inline void CopyAndCompute(int64_t BId, int64_t DId, int64_t BlockId, int64_t opCopyLength,
+                                          int64_t DLength, int64_t BlockLength, int64_t loopLStart, int64_t loopLEnd,
+                                          bool isTilingL)
     {
         switch (this->parameterStatus) {
             case SCALE_AND_SHIFT:
@@ -341,13 +341,13 @@ protected:
                 break;
             case NO_SCALE:
                 CopyShiftIn(BId, DId, BlockId, opCopyLength, DLength, BlockLength);
-                ComputeWithoutScale(
-                    isTilingL ? 0 : BId, DId, BlockId, opCopyLength, DLength, BlockLength, loopLStart, loopLEnd);
+                ComputeWithoutScale(isTilingL ? 0 : BId, DId, BlockId, opCopyLength, DLength, BlockLength, loopLStart,
+                                    loopLEnd);
                 break;
             case NO_SHIFT:
                 CopyScaleIn(BId, DId, BlockId, opCopyLength, DLength, BlockLength);
-                ComputeWithoutShift(
-                    isTilingL ? 0 : BId, DId, BlockId, opCopyLength, DLength, BlockLength, loopLStart, loopLEnd);
+                ComputeWithoutShift(isTilingL ? 0 : BId, DId, BlockId, opCopyLength, DLength, BlockLength, loopLStart,
+                                    loopLEnd);
                 break;
             default:
                 break;
@@ -393,15 +393,15 @@ public:
         int64_t currentLength = (blockIdx < this->frontNum) ? this->frontLength : this->tailLength;
         int64_t baseOffset;
         int64_t scaleShiftOffset;
-        if(blockIdx < this->frontNum) {
+        if (blockIdx < this->frontNum) {
             baseOffset = this->frontLength * this->inputL * this->inputD * blockIdx;
             scaleShiftOffset = this->frontLength * this->inputD * blockIdx;
-        }else {
+        } else {
             int64_t relativeIdx = blockIdx - this->frontNum;
             baseOffset = this->frontLength * this->inputL * this->inputD * this->frontNum +
-                        this->tailLength * this->inputL * this->inputD * relativeIdx;
+                         this->tailLength * this->inputL * this->inputD * relativeIdx;
             scaleShiftOffset = this->frontLength * this->inputD * this->frontNum +
-                        this->tailLength * this->inputD * relativeIdx;
+                               this->tailLength * this->inputD * relativeIdx;
         }
         int64_t baseBufferSize = currentLength * this->inputL * this->inputD;
         int64_t scaleShiftBufferSize = currentLength * this->inputD;
@@ -443,19 +443,18 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y)
     {
         int64_t blockIdx = GetBlockIdx();
-        int64_t currentLength; 
+        int64_t currentLength;
         int64_t baseOffset;
-        if(blockIdx < this->frontNum) {
+        if (blockIdx < this->frontNum) {
             currentLength = this->frontLength;
             baseOffset = this->frontLength * this->inputD * blockIdx;
             this->batchStartId = (this->frontLength * blockIdx) / this->inputL;
-        }else {
+        } else {
             currentLength = this->tailLength;
             int64_t relativeIdx = blockIdx - this->frontNum;
             baseOffset = this->frontLength * this->inputD * this->frontNum +
-                        this->tailLength * this->inputD * relativeIdx;
-            this->batchStartId = (this->frontLength * this->frontNum + 
-                                this->tailLength * relativeIdx) / this->inputL;
+                         this->tailLength * this->inputD * relativeIdx;
+            this->batchStartId = (this->frontLength * this->frontNum + this->tailLength * relativeIdx) / this->inputL;
         }
         int64_t bufferSize = currentLength * this->inputD;
         int64_t scaleShiftOffset = this->batchStartId * this->inputD;
@@ -517,13 +516,13 @@ public:
             if (dNum > this->ubLength) {
                 int64_t BlockNum = dNum / this->ubLength;
                 for (int64_t j = 0; j < BlockNum; ++j) {
-                    this->CopyAndCompute(
-                        i, GetBlockIdx(), j, this->ubLength, dNum, this->ubLength, 0, this->inputL, false);
+                    this->CopyAndCompute(i, GetBlockIdx(), j, this->ubLength, dNum, this->ubLength, 0, this->inputL,
+                                         false);
                 }
                 int64_t remainLength = dNum % this->ubLength;
                 if (remainLength != 0) {
-                    this->CopyAndCompute(
-                        i, GetBlockIdx(), BlockNum, remainLength, dNum, this->ubLength, 0, this->inputL, false);
+                    this->CopyAndCompute(i, GetBlockIdx(), BlockNum, remainLength, dNum, this->ubLength, 0,
+                                         this->inputL, false);
                 }
             } else {
                 this->CopyAndCompute(i, GetBlockIdx(), 0, dNum, dNum, 0, 0, this->inputL, false);
@@ -533,8 +532,8 @@ public:
 };
 } // namespace NormModulate
 
-extern "C" __global__ __aicore__ void modulate(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void modulate(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y, GM_ADDR workspace,
+                                               GM_ADDR tiling)
 {
     AscendC::TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);

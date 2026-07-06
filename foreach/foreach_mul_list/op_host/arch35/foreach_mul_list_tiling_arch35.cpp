@@ -52,9 +52,8 @@ static ge::graphStatus ForeachMulListTilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get tensor list info from x1
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
@@ -72,14 +71,11 @@ static ge::graphStatus ForeachMulListTilingFunc(gert::TilingContext* context)
     int64_t totalElements = 0;
     ForeachMulListTilingData* tiling = context->GetTilingData<ForeachMulListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachMulListTilingData), 0, sizeof(ForeachMulListTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachMulListTilingData), 0, sizeof(ForeachMulListTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        tensorNum > MAX_TENSOR_NUM,
-        OP_LOGE(context, "tensorNum should be less than or equal to 256"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM, OP_LOGE(context, "tensorNum should be less than or equal to 256"),
+                return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);

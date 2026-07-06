@@ -17,8 +17,7 @@
 
 #include "atvoss/reduce/reduce_tiling_data.h"
 
-namespace optiling
-{
+namespace optiling {
 struct LpNormV2TilingData {
     Ops::Base::ReduceOpTilingData reduceTiling;
     float epsilon = 0.0f;

@@ -24,7 +24,8 @@
 using namespace AscendC;
 
 extern "C" __global__ __aicore__ void sync_bn_training_update(GM_ADDR mean, GM_ADDR running_mean,
-    GM_ADDR running_mean_update, GM_ADDR workspace, GM_ADDR tiling)
+                                                              GM_ADDR running_mean_update, GM_ADDR workspace,
+                                                              GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SyncBNTrainingUpdateTilingData);
     GET_TILING_DATA(tilingData, tiling);

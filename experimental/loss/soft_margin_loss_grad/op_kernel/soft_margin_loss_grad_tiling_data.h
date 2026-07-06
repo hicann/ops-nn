@@ -27,4 +27,4 @@ struct SoftMarginLossGradTilingData {
     float cof;
 };
 
-#endif  // __SOFT_MARGIN_LOSS_GRAD_TILING_DATA_H__
+#endif // __SOFT_MARGIN_LOSS_GRAD_TILING_DATA_H__

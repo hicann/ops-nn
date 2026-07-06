@@ -54,13 +54,8 @@ public:
     DataCopyPadExtParams<A_T> padParamsA;
     DataCopyPadExtParams<B_T> padParamsB;
 
-    __aicore__ inline void Init(GM_ADDR aGM,
-                                GM_ADDR bGM,
-                                GM_ADDR cGM,
-                                GM_ADDR biasGM,
-                                GM_ADDR offsetWGM,
-                                GM_ADDR workspaceGM,
-                                const BatchMatmulTilingData* tilingData, TPipe* pipe)
+    __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
+                                GM_ADDR workspaceGM, const BatchMatmulTilingData* tilingData, TPipe* pipe)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         this->coreNumber = tilingData->vectorTilingInfo.coreNumber;
@@ -140,7 +135,7 @@ private:
 
     /**
      * @brief 复制并广播B向量: (1, dimSizeLast) -> (tensorSize, dimSizeLast)
-     * 
+     *
      * @param tensorSize 单核内矩阵行数
      * @param address 矩阵起始地址
      */
@@ -153,8 +148,8 @@ private:
 
         // Step 1: 一次性从GM拷贝所有B行到mulUb临时空间
         // B数据在GM中连续存储，每个batch一行(dimSizeLast个元素)
-        DataCopyExtParams copyParamsB{static_cast<uint16_t>(numBatches),
-                                       (uint32_t)(dimSizeLast * sizeof(B_T)), 0, 0, 0};
+        DataCopyExtParams copyParamsB{static_cast<uint16_t>(numBatches), (uint32_t)(dimSizeLast * sizeof(B_T)), 0, 0,
+                                      0};
         auto tempUb = mulUb.template ReinterpretCast<B_T>();
         DataCopyPad(tempUb, bGm[firstBatchIdx * bRowsPerBatch], copyParamsB, padParamsB);
         PipeBarrier<PIPE_ALL>();
@@ -163,12 +158,13 @@ private:
         // 负责广播每个batch的单行到bUb目标位置
         // BLOCK_BYTE_SIZE = 32
         constexpr uint32_t elementsPerBlock = BLOCK_BYTE_SIZE / sizeof(B_T);
-        for (int32_t i = 0; i < tensorSize; ) {
+        for (int32_t i = 0; i < tensorSize;) {
             uint64_t curAddress = address + i;
             uint64_t bBatchIdx = curAddress / dimSizeSecondLast;
             uint64_t batchEndRow = (bBatchIdx + 1) * dimSizeSecondLast;
-            int32_t batchCount = (tensorSize - i < static_cast<int32_t>(batchEndRow - address - i))
-                                 ? (tensorSize - i) : static_cast<int32_t>(batchEndRow - address - i);
+            int32_t batchCount = (tensorSize - i < static_cast<int32_t>(batchEndRow - address - i)) ?
+                                     (tensorSize - i) :
+                                     static_cast<int32_t>(batchEndRow - address - i);
             int32_t localBatchIdx = static_cast<int32_t>(bBatchIdx - firstBatchIdx);
 
             // 广播: 从tempUb[localBatchIdx行] 到 bUb[i行..i+batchCount-1行]
@@ -176,10 +172,10 @@ private:
             CopyRepeatParams copyRepeatParams;
             copyRepeatParams.srcStride = 0;
             copyRepeatParams.dstStride = 0;
-            copyRepeatParams.srcRepeatSize = 0;  // 源不前进
+            copyRepeatParams.srcRepeatSize = 0; // 源不前进
             copyRepeatParams.dstRepeatSize = alignedDimSizeLast / elementsPerBlock;
-            Copy(bUb[i * alignedDimSizeLast], tempUb[localBatchIdx * alignedDimSizeLast],
-                 mask, static_cast<uint8_t>(batchCount), copyRepeatParams);
+            Copy(bUb[i * alignedDimSizeLast], tempUb[localBatchIdx * alignedDimSizeLast], mask,
+                 static_cast<uint8_t>(batchCount), copyRepeatParams);
             i += batchCount;
         }
         PipeBarrier<PIPE_ALL>();
@@ -187,7 +183,7 @@ private:
 
     /**
      * @brief 矩阵乘法: vector核内进行逐元素相乘，然后沿dimSizeLast维度进行归一化计算reduce sum
-     * 
+     *
      * @param tensorSize 单核内矩阵行数
      * @param address 矩阵起始地址
      */
@@ -196,12 +192,11 @@ private:
         // 1. 逐元素相乘
         Mul(mulUb, aUb, bUb, tensorSize * alignedDimSizeLast);
         PipeBarrier<PIPE_ALL>();
-        uint32_t srcShape[2] = {static_cast<uint32_t>(tensorSize),
-            static_cast<uint32_t>(alignedDimSizeLast)};
-        
+        uint32_t srcShape[2] = {static_cast<uint32_t>(tensorSize), static_cast<uint32_t>(alignedDimSizeLast)};
+
         // 2. 沿dimSizeLast维度进行归一化计算reduce sum
-        ReduceSum<C_T, AscendC::Pattern::Reduce::AR, true>(cUb, mulUb,
-            sharedTmpUb.template ReinterpretCast<uint8_t>(), srcShape, true);
+        ReduceSum<C_T, AscendC::Pattern::Reduce::AR, true>(cUb, mulUb, sharedTmpUb.template ReinterpretCast<uint8_t>(),
+                                                           srcShape, true);
         PipeBarrier<PIPE_ALL>();
 
         DataCopyExtParams copyParamsC{1, (uint32_t)(tensorSize * sizeof(C_T)), 0, 0, 0};

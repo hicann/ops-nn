@@ -22,8 +22,8 @@
 
 using namespace std;
 
-extern "C" void adaptive_max_pool3d_grad(
-    GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" void adaptive_max_pool3d_grad(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace,
+                                         GM_ADDR tiling);
 
 struct AdaptiveMaxPool3DGradTestParam {
     string case_name;
@@ -47,18 +47,11 @@ struct AdaptiveMaxPool3DGradTestParam {
     AdaptiveMaxPool3DGradTilingData tiling;
 };
 
-class AdaptiveMaxPool3DGradTest : public testing::TestWithParam<AdaptiveMaxPool3DGradTestParam>
-{
+class AdaptiveMaxPool3DGradTest : public testing::TestWithParam<AdaptiveMaxPool3DGradTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3DGradTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveMaxPool3DGradTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3DGradTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveMaxPool3DGradTest TearDown" << std::endl; }
 };
 
 TEST_P(AdaptiveMaxPool3DGradTest, test_case_adaptive_max_pool3d_grad)
@@ -172,8 +165,7 @@ static AdaptiveMaxPool3DGradTestParam cases[] = {
      1,
      sizeof(float),
      102,
-     {1, 70, 70, 70, 3, 3, 3, 24, 24, 24, 1, 3, 3, 3, 1, 1, 1,  1, 1, 3, 3,
-      3, 1, 1, 1, 1, 1, 1, 196352, 1, 1, 1, 0}},
+     {1, 70, 70, 70, 3, 3, 3, 24, 24, 24, 1, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 196352, 1, 1, 1, 0}},
     {"test_case_adaptive_max_pool3d_grad_normal_overlap",
      1,
      1,
@@ -186,8 +178,6 @@ static AdaptiveMaxPool3DGradTestParam cases[] = {
      40,
      sizeof(float),
      100,
-     {1, 7, 7, 7, 3, 3, 3, 3, 3, 3, 1, 1, 1, 3, 64, 3, 3, 3, 1, 3, 3,
-      3, 1, 1, 1, 1, 1, 1, 196352, 0, 0, 0, 0}}
-};
+     {1, 7, 7, 7, 3, 3, 3, 3, 3, 3, 1, 1, 1, 3, 64, 3, 3, 3, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 196352, 0, 0, 0, 0}}};
 
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3DGrad, AdaptiveMaxPool3DGradTest, testing::ValuesIn(cases));

@@ -32,16 +32,12 @@ constexpr uint32_t TEMP_BUFFER_NUM_FOR_MIN_MAX = 2;
 constexpr uint32_t TEM_BUFFER_REMAIN = 32;
 constexpr int64_t DOUBLE_BUFFER = 2;
 
-class ForeachNonFiniteCheckAndUnscaleRegbaseTiling : public ForeachNonFiniteCheckAndUnscaleBaseClass
-{
+class ForeachNonFiniteCheckAndUnscaleRegbaseTiling : public ForeachNonFiniteCheckAndUnscaleBaseClass {
 public:
     explicit ForeachNonFiniteCheckAndUnscaleRegbaseTiling(gert::TilingContext* context)
-        : ForeachNonFiniteCheckAndUnscaleBaseClass(context) {};
+        : ForeachNonFiniteCheckAndUnscaleBaseClass(context){};
     ~ForeachNonFiniteCheckAndUnscaleRegbaseTiling() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachNonFiniteCheckAndUnscaleBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachNonFiniteCheckAndUnscaleBaseClass::Reset(context); }
 
 protected:
     bool IsCapable() override
@@ -108,7 +104,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
     OP_CHECK_IF(
         totalTensorCount_ > MAX_TENSOR_COUNT || totalTensorCount_ <= 0,
         OP_LOGE_FOR_INVALID_TENSORNUM(nodeName_.c_str(), "scaled_grads", totalTensorCount_,
-                                       ("within the range (0, " + std::to_string(MAX_TENSOR_COUNT) + "]").c_str()),
+                                      ("within the range (0, " + std::to_string(MAX_TENSOR_COUNT) + "]").c_str()),
         return ge::GRAPH_FAILED);
 
     // Get shape, dtype information, and the total number of data.
@@ -122,19 +118,19 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
         if (i == 0) {
             dataType_ = tempDtype;
             dataTypeSize_ = ge::GetSizeByDataType(dataType_);
-            OP_CHECK_IF(
-                dataTypeSize_ <= 0,
-                OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
-                    ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(),
-                    "The dtype size of scaled_grads must be greater than 0"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(dataTypeSize_ <= 0,
+                        OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
+                                                  ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(),
+                                                  "The dtype size of scaled_grads must be greater than 0"),
+                        return ge::GRAPH_FAILED);
             elementsPerBlock_ = blockSize_ / dataTypeSize_;
         } else if (tempDtype != dataType_) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_.c_str(), "scaled_grads",
-                ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                nodeName_.c_str(), "scaled_grads", ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
                 ("The dtypes of all tensors in the tensor list must be the same, expected " +
-                 ge::TypeUtils::DataTypeToSerialString(dataType_) +
-                 ".Currently, the dtype of scaled_grads[" + std::to_string(i) + "] is inconsistent with that of other tensors").c_str());
+                 ge::TypeUtils::DataTypeToSerialString(dataType_) + ".Currently, the dtype of scaled_grads[" +
+                 std::to_string(i) + "] is inconsistent with that of other tensors")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
         auto shapePtr = context_->GetDynamicInputShape(SCALE_GRADS_INDEX, i);
@@ -142,8 +138,9 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
         tensorDataCountList_[i] = shapePtr->GetStorageShape().GetShapeSize();
         totalDataCount_ += tensorDataCountList_[i];
         // Make a 32-byte alignment for each Tensor
-        tensorDataCountAlignedList_[i] =
-            Ops::Base::CeilDiv(tensorDataCountList_[i], static_cast<int64_t>(elementsPerBlock_)) * elementsPerBlock_;
+        tensorDataCountAlignedList_[i] = Ops::Base::CeilDiv(tensorDataCountList_[i],
+                                                            static_cast<int64_t>(elementsPerBlock_)) *
+                                         elementsPerBlock_;
         totalDataCountAligned_ += tensorDataCountAlignedList_[i];
     }
 
@@ -152,24 +149,21 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
         OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
         auto inputLength = inputShape->GetStorageShape().GetShapeSize();
         if (inputLength != 1 && j == totalTensorCount_) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                context_->GetNodeName(), "found_inf", std::to_string(inputLength).c_str(), "1");
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "found_inf", std::to_string(inputLength).c_str(),
+                                          "1");
             return ge::GRAPH_FAILED;
         }
 
         if (inputLength != 1 && j == allTensorCount - 1) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                context_->GetNodeName(), "inv_scale", std::to_string(inputLength).c_str(), "1");
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "inv_scale", std::to_string(inputLength).c_str(),
+                                          "1");
             return ge::GRAPH_FAILED;
         }
     }
     return CheckParams();
 }
 
-uint64_t ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetTilingKey() const
-{
-    return context_->GetTilingKey();
-}
+uint64_t ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetTilingKey() const { return context_->GetTilingKey(); }
 
 ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::RunBigKernelTiling()
 {
@@ -183,9 +177,8 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::RunBigKernelTiling
 
     uint32_t needCoreNum = std::min<uint32_t>(GetNeedCoreNum(platformInfo->GetCoreNum()), MAX_CORE_COUNT_REGBASE);
     OP_LOGD(nodeName_, "ubSizePlatForm:%lu, needCoreNum:%u", ubSizePlatForm, needCoreNum);
-    OP_CHECK_IF(
-        ubSizePlatForm == 0, OP_LOGE(nodeName_, "Param needCoreNum or ubSizePlatForm is zero."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSizePlatForm == 0, OP_LOGE(nodeName_, "Param needCoreNum or ubSizePlatForm is zero."),
+                return ge::GRAPH_FAILED);
 
     if (totalDataCount_ == 0) {
         needCoreNum = 1;
@@ -197,8 +190,8 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::RunBigKernelTiling
         AssignDataToEachCore(needCoreNum);
     }
 
-    OP_CHECK_IF(
-        DivideUbMemory(ubSizePlatForm) == false, OP_LOGE(nodeName_, "DivideUbMemory failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(DivideUbMemory(ubSizePlatForm) == false, OP_LOGE(nodeName_, "DivideUbMemory failed."),
+                return ge::GRAPH_FAILED);
     FillTilingData();
     context_->SetBlockDim(needCoreNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
@@ -219,33 +212,30 @@ void ForeachNonFiniteCheckAndUnscaleRegbaseTiling::InitTilingDataItems()
 
 ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::CheckParams() const
 {
-    OP_LOGD(
-        nodeName_, "dataType:%d, totalTensorCount:%hd, totalDataCountAligned:%ld.", static_cast<int32_t>(dataType_),
-        totalTensorCount_, totalDataCountAligned_);
-    OP_CHECK_IF(
-        dataType_ != ge::DT_FLOAT16 && dataType_ != ge::DT_BF16 && dataType_ != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
-            ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(), "float16, bfloat16 or float"),
-        return ge::GRAPH_FAILED);
+    OP_LOGD(nodeName_, "dataType:%d, totalTensorCount:%hd, totalDataCountAligned:%ld.", static_cast<int32_t>(dataType_),
+            totalTensorCount_, totalDataCountAligned_);
+    OP_CHECK_IF(dataType_ != ge::DT_FLOAT16 && dataType_ != ge::DT_BF16 && dataType_ != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
+                                          ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(),
+                                          "float16, bfloat16 or float"),
+                return ge::GRAPH_FAILED);
     auto flagDescPtr = context_->GetInputDesc(totalTensorCount_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, flagDescPtr);
     auto scaleDescPtr = context_->GetInputDesc(totalTensorCount_ + INV_SCALE_INDEX_OFFSET);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleDescPtr);
-    OP_CHECK_IF(
-        flagDescPtr->GetDataType() != ge::DT_FLOAT || scaleDescPtr->GetDataType() != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "found_inf and inv_scale",
-            (ge::TypeUtils::DataTypeToSerialString(flagDescPtr->GetDataType()) + " and " +
-             ge::TypeUtils::DataTypeToSerialString(scaleDescPtr->GetDataType())).c_str(),
-            "The dtypes of found_inf and inv_scale must be float"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(flagDescPtr->GetDataType() != ge::DT_FLOAT || scaleDescPtr->GetDataType() != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    nodeName_.c_str(), "found_inf and inv_scale",
+                    (ge::TypeUtils::DataTypeToSerialString(flagDescPtr->GetDataType()) + " and " +
+                     ge::TypeUtils::DataTypeToSerialString(scaleDescPtr->GetDataType()))
+                        .c_str(),
+                    "The dtypes of found_inf and inv_scale must be float"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetTilingKeyVal()
-{
-    return TILING_KEY_REGBASE;
-}
+uint64_t ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetTilingKeyVal() { return TILING_KEY_REGBASE; }
 
 uint32_t ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetNeedCoreNum(uint32_t coreNumPlatform)
 {
@@ -314,13 +304,13 @@ void ForeachNonFiniteCheckAndUnscaleRegbaseTiling::AssignDataToEachCore(int64_t 
 bool ForeachNonFiniteCheckAndUnscaleRegbaseTiling::DivideUbMemory(uint64_t ubSizePlatForm)
 {
     // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
-    uint32_t canUseUbSize =
-        uint32_t(ubSizePlatForm - tilingData_.GetDataSize() - TEM_BUFFER_REMAIN * TEMP_BUFFER_NUM_FOR_MIN_MAX) /
-        DOUBLE_BUFFER;
+    uint32_t canUseUbSize = uint32_t(ubSizePlatForm - tilingData_.GetDataSize() -
+                                     TEM_BUFFER_REMAIN * TEMP_BUFFER_NUM_FOR_MIN_MAX) /
+                            DOUBLE_BUFFER;
     canUseUbSize = canUseUbSize / blockSize_ * blockSize_;
     uint32_t coefficient = COEFFICIENT_OF_FLOAT;
-    uint32_t predictSGUbSize = uint32_t(
-        BYTE_REPEAT * dataTypeSize_ / (coefficient * BYTE_REPEAT * dataTypeSize_ + blockSize_ * 1.0) * canUseUbSize);
+    uint32_t predictSGUbSize = uint32_t(BYTE_REPEAT * dataTypeSize_ /
+                                        (coefficient * BYTE_REPEAT * dataTypeSize_ + blockSize_ * 1.0) * canUseUbSize);
     scaledGradsUbSize_ = predictSGUbSize / blockSize_ * blockSize_;
     reduceTempValUbSize_ = GetReduceRetValSize(scaledGradsUbSize_);
     if ((coefficient * scaledGradsUbSize_ + reduceTempValUbSize_) > canUseUbSize) {
@@ -338,8 +328,9 @@ uint32_t ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetReduceRetValSize(uint3
     uint8_t perRepeatCount = BYTE_REPEAT / DTYPE_SIZE_FLOAT;
     uint8_t perBlockCount = blockSize_ / DTYPE_SIZE_FLOAT;
     uint32_t iter1OutputCount = uint32_t(std::ceil(2.0 * srcDataCount / perRepeatCount));
-    uint32_t iter1AlignEnd =
-        Ops::Base::CeilDiv(static_cast<int64_t>(iter1OutputCount), static_cast<int64_t>(perBlockCount)) * perBlockCount;
+    uint32_t iter1AlignEnd = Ops::Base::CeilDiv(static_cast<int64_t>(iter1OutputCount),
+                                                static_cast<int64_t>(perBlockCount)) *
+                             perBlockCount;
     return iter1AlignEnd * DTYPE_SIZE_FLOAT;
 }
 

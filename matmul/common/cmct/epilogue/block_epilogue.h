@@ -123,8 +123,8 @@ public:
             // copy result from ub to gm
             TPipeSetWaitFlag<AscendC::HardEvent::V_MTE3>();
             AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(stageSize / blockShapeNAlign),
-                                         static_cast<uint32_t>(blockShapeN * sizeof(DataTypeOut)), 0,
-                                         static_cast<uint32_t>((N - blockShapeN) * sizeof(DataTypeOut)), 0};
+                                                  static_cast<uint32_t>(blockShapeN * sizeof(DataTypeOut)), 0,
+                                                  static_cast<uint32_t>((N - blockShapeN) * sizeof(DataTypeOut)), 0};
             AscendC::DataCopyPad<DataTypeOut>(outputGlobal_[offset], outputLocal_, copyParams);
             stageOffset += stageSize;
             loop++;
@@ -133,9 +133,9 @@ public:
 
     __aicore__ inline auto GetTensor(BlockShape const& blockShape)
     {
-        NDLayout inLayout =
-            AscendC::MakeLayout(AscendC::MakeShape(Get<0>(blockShape), AlignBlock<half>(Get<1>(blockShape))),
-                                AscendC::MakeStride(AlignBlock<half>(Get<1>(blockShape)), static_cast<int64_t>(1)));
+        NDLayout inLayout = AscendC::MakeLayout(
+            AscendC::MakeShape(Get<0>(blockShape), AlignBlock<half>(Get<1>(blockShape))),
+            AscendC::MakeStride(AlignBlock<half>(Get<1>(blockShape)), static_cast<int64_t>(1)));
         auto inTensorTrait = InTrait(inLayout);
         cLocal_.SetTensorTrait(inTensorTrait);
         return cLocal_;
@@ -173,4 +173,3 @@ public:
 } // namespace Gemm
 } // namespace Cmct
 #endif // EPILOGUE_BLOCK_EPILOGUE_H
-

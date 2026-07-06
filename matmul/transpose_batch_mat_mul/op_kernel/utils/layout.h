@@ -16,13 +16,6 @@
 #ifndef INCLUDE_LAYOUT_H
 #define INCLUDE_LAYOUT_H
 namespace PpMatMulNS {
-enum class DataFormat : uint32_t {
-    ND = 0,
-    NZ,
-    ZN,
-    ZZ,
-    NN,
-    VECTOR
-};
+enum class DataFormat : uint32_t { ND = 0, NZ, ZN, ZZ, NN, VECTOR };
 }
 #endif

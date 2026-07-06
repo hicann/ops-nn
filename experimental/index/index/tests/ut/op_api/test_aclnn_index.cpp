@@ -19,15 +19,9 @@ using namespace std;
 
 class TestAclnnIndex : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "aclnn_index_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "aclnn_index_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "aclnn_index_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "aclnn_index_test TearDown" << std::endl; }
 };
 
 TEST_F(TestAclnnIndex, l2_index_normal_fp32_int64_index)

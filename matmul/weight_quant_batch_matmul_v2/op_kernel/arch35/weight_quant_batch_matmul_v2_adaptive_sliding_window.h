@@ -62,12 +62,10 @@ constexpr MatmulConfig MM_CFG_PRELOAD = GetMDLConfig(false, false, 1, false, fal
 LOCAL_TEMPLATE_CLASS_PARAMS
 class WeightQuantBatchMatmulV2ASWKernel {
 public:
-    __aicore__ inline WeightQuantBatchMatmulV2ASWKernel()
-    {
-    }
+    __aicore__ inline WeightQuantBatchMatmulV2ASWKernel() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
                                 GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-                                const void *tilingData, TPipe *tPipe);
+                                const void* tilingData, TPipe* tPipe);
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
                                             GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y,
                                             GM_ADDR workspace);
@@ -79,7 +77,7 @@ protected:
     __aicore__ inline void SetMMParaAndCompute();
 
     uint32_t blockIdx_;
-    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams *tiling_;
+    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tiling_;
 
     GlobalTensor<xType> aGlobal_;
     GlobalTensor<wType> bGlobal_;
@@ -97,7 +95,7 @@ protected:
 LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, const void *tilingData, TPipe *tPipe)
+    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, const void* tilingData, TPipe* tPipe)
 {
     if ASCEND_IS_AIV {
         return;
@@ -116,16 +114,16 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PAR
 {
     block_.Init(tiling_, blockIdx_);
 
-    if constexpr (antiQuantType == QuantType::PER_TENSOR) {  // pertensor
-        block_.offset_.scaleScalar = *((__gm__ uint64_t *)antiquantScale);
+    if constexpr (antiQuantType == QuantType::PER_TENSOR) { // pertensor
+        block_.offset_.scaleScalar = *((__gm__ uint64_t*)antiquantScale);
     } else {
-        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t *)antiquantScale);
+        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t*)antiquantScale);
     }
 
     // update global buffer
-    aGlobal_.SetGlobalBuffer((__gm__ xType *)x);
-    bGlobal_.SetGlobalBuffer((__gm__ wType *)weight);
-    cGlobal_.SetGlobalBuffer((__gm__ yType *)y);
+    aGlobal_.SetGlobalBuffer((__gm__ xType*)x);
+    bGlobal_.SetGlobalBuffer((__gm__ wType*)weight);
+    cGlobal_.SetGlobalBuffer((__gm__ yType*)y);
     if (static_cast<bool>(tiling_->matmulTiling.isBias)) {
         biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
     }
@@ -209,7 +207,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PAR
 LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::SetMMParaAndCompute()
 {
-    if constexpr (antiQuantType == QuantType::PER_TENSOR) {  // pertensor
+    if constexpr (antiQuantType == QuantType::PER_TENSOR) { // pertensor
         mm_.SetQuantScalar(block_.offset_.scaleScalar);
     } else {
         mm_.SetQuantVector(scaleGlobal_[block_.offset_.offsetScale]);
@@ -223,5 +221,4 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PAR
     mm_.Iterate();
     mm_.GetTensorC(cGlobal_[block_.offset_.offsetC]);
 }
-}  // namespace WeightQuantBatchMatmulV2::Arch35
-
+} // namespace WeightQuantBatchMatmulV2::Arch35

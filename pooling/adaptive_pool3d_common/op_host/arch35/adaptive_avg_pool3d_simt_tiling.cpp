@@ -29,12 +29,9 @@
 
 using namespace ge;
 using namespace AdaptivePool3DTiling;
-namespace optiling{
-    
-bool AdaptiveAvgPool3DTilingSimt::IsCapable()
-{
-    return true;
-}
+namespace optiling {
+
+bool AdaptiveAvgPool3DTilingSimt::IsCapable() { return true; }
 
 void AdaptiveAvgPool3DTilingSimt::SetTilingData()
 {
@@ -57,15 +54,16 @@ void AdaptiveAvgPool3DTilingSimt::SetTilingData()
 
 ge::graphStatus AdaptiveAvgPool3DTilingSimt::DoOpTiling()
 {
-    OP_TILING_CHECK(
-        GetAndCheckDataFormat() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetDataFormatAttrInfo fail."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetAndCheckDataFormat() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetDataFormatAttrInfo fail."), return ge::GRAPH_FAILED);
     SetTilingData();
 
-    int64_t outputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
-    maxDivUseNum_ = std::max({tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim, tilingData_->wInDim * tilingData_->wOutDim, outputSize});
-    maxDivUseNum_ = std::max({maxDivUseNum_, tilingData_->nDim * tilingData_->cDim * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim});
+    int64_t outputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim *
+                         tilingData_->wOutDim;
+    maxDivUseNum_ = std::max({tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim,
+                              tilingData_->wInDim * tilingData_->wOutDim, outputSize});
+    maxDivUseNum_ = std::max({maxDivUseNum_, tilingData_->nDim * tilingData_->cDim * tilingData_->dInDim *
+                                                 tilingData_->hInDim * tilingData_->wInDim});
     int64_t threads = std::min(outputSize, MAX_THREAD_NUM);
     int64_t blockNum = Ops::Base::CeilDiv(outputSize, threads);
     blockNum = std::min(blockNum, static_cast<int64_t>(input_.coreNum));
@@ -75,7 +73,8 @@ ge::graphStatus AdaptiveAvgPool3DTilingSimt::DoOpTiling()
 
 uint64_t AdaptiveAvgPool3DTilingSimt::GetTilingKey() const
 {
-    uint64_t formatMode = input_.dataFormat == ge::Format::FORMAT_NDHWC ? TPL_DATA_FORMAT_MODE_0 : TPL_DATA_FORMAT_MODE_1;
+    uint64_t formatMode = input_.dataFormat == ge::Format::FORMAT_NDHWC ? TPL_DATA_FORMAT_MODE_0 :
+                                                                          TPL_DATA_FORMAT_MODE_1;
     uint64_t divMode = static_cast<uint64_t>(maxDivUseNum_) < MAX_INT32 ? TPL_INT32_UINT32 : TPL_INT64_UINT64;
     return GET_TPL_TILING_KEY(TPL_MODE_2, divMode, TPL_MULTI_MODE_0, formatMode);
 }
@@ -84,16 +83,14 @@ ge::graphStatus AdaptiveAvgPool3DTilingSimt::PostTiling()
 {
     int64_t ubSize = input_.ubSize - DCACHE_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize);
-    OP_TILING_CHECK((res != ge::GRAPH_SUCCESS),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (res != ge::GRAPH_SUCCESS),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool3DTilingSimt::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool3DTilingSimt::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 void AdaptiveAvgPool3DTilingSimt::DumpTilingInfo()
 {
@@ -109,4 +106,4 @@ void AdaptiveAvgPool3DTilingSimt::DumpTilingInfo()
     OP_LOGI(context_, "%s.", str.c_str());
 }
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3d, AdaptiveAvgPool3DTilingSimt, 2);
-}  // namespace optiling
+} // namespace optiling

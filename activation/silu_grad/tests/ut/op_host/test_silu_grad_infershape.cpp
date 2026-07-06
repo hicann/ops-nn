@@ -17,15 +17,9 @@
 
 class SiluGrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SiluGrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SiluGrad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SiluGrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SiluGrad TearDown" << std::endl; }
 };
 
 TEST_F(SiluGrad, siluGrad_test1)

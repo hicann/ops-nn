@@ -1,12 +1,12 @@
- /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file dequant_swiglu_quant_static_not_full.h
@@ -18,18 +18,18 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #if ASC_DEVKIT_MAJOR >= 9
-    #include "basic_api/kernel_vec_intf.h"
-    #include "utils/std/algorithm.h"
+#include "basic_api/kernel_vec_intf.h"
+#include "utils/std/algorithm.h"
 #else
-    #include "kernel_operator.h"
+#include "kernel_operator.h"
 #endif
 #include "dequant_swiglu_quant_common.h"
-
 
 namespace DequantSwigluQuantV35Ops {
 using namespace AscendC;
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 class DequantSwigluQuantStaticNotFull {
 public:
     static constexpr bool hasWeightScale_ = IsSameType<TXtype, int32_t>::value;
@@ -38,7 +38,8 @@ public:
     static constexpr bool hasQuantOffset_ = IsSameType<TQuantOffset, float>::value;
     static constexpr bool hasGroupIndex_ = IsSameType<TGroup, int64_t>::value || IsSameType<TGroup, int32_t>::value;
     // bias标记 bias可支持float，float16，bf16，int32
-    static constexpr bool hasBiasIndex_ = IsSameType<TBias, float>::value || IsSameType<TBias, half>::value || IsSameType<TBias, bfloat16_t>::value || IsSameType<TBias, int32_t>::value;
+    static constexpr bool hasBiasIndex_ = IsSameType<TBias, float>::value || IsSameType<TBias, half>::value ||
+                                          IsSameType<TBias, bfloat16_t>::value || IsSameType<TBias, int32_t>::value;
     // x数据类型为int32标记
     static constexpr bool ifXIntIndex_ = IsSameType<TXtype, int32_t>::value;
     // x数据类型为bf16标记
@@ -58,29 +59,37 @@ public:
     // y数据类型为hifloat8标记
     static constexpr bool ifYHiFloat8Index_ = IsSameType<TYtype, hifloat8_t>::value;
 
-    __aicore__ inline DequantSwigluQuantStaticNotFull(TPipe* pipe) {
-        pipe_ = pipe;
-    };
-    
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale,
-                                GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
+    __aicore__ inline DequantSwigluQuantStaticNotFull(TPipe* pipe) { pipe_ = pipe; };
+
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias,
+                                GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
                                 const DequantSwigluQuantV35BaseTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ProcessSingleRow(int64_t groupIdx, int64_t rowIdx);
     template <typename copyDtype>
-    __aicore__ inline void CopyIn2HPerRowForSwiGluV1(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t rowIdx, int64_t ubloop, int64_t processNum);
+    __aicore__ inline void CopyIn2HPerRowForSwiGluV1(LocalTensor<copyDtype> dstTensor,
+                                                     GlobalTensor<copyDtype> srcTensor, int64_t rowIdx, int64_t ubloop,
+                                                     int64_t processNum);
     template <typename copyDtype>
-    __aicore__ inline void CopyIn2HPerRowForSwiGluV2(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t rowIdx, int64_t ubloop, int64_t processNum);
+    __aicore__ inline void CopyIn2HPerRowForSwiGluV2(LocalTensor<copyDtype> dstTensor,
+                                                     GlobalTensor<copyDtype> srcTensor, int64_t rowIdx, int64_t ubloop,
+                                                     int64_t processNum);
     template <typename copyDtype>
-    __aicore__ inline void CopyIn2HPerGroupForSwiGluV1(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum);
+    __aicore__ inline void CopyIn2HPerGroupForSwiGluV1(LocalTensor<copyDtype> dstTensor,
+                                                       GlobalTensor<copyDtype> srcTensor, int64_t groupIdx,
+                                                       int64_t ubloop, int64_t processNum);
     template <typename copyDtype>
-    __aicore__ inline void CopyIn2HPerGroupForSwiGluV2(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum);
+    __aicore__ inline void CopyIn2HPerGroupForSwiGluV2(LocalTensor<copyDtype> dstTensor,
+                                                       GlobalTensor<copyDtype> srcTensor, int64_t groupIdx,
+                                                       int64_t ubloop, int64_t processNum);
     template <typename copyDtype>
-    __aicore__ inline void CopyInHPerGroup(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum);
+    __aicore__ inline void CopyInHPerGroup(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor,
+                                           int64_t groupIdx, int64_t ubloop, int64_t processNum);
     template <typename copyDtype>
-    __aicore__ inline void CopyInOnePerGroup(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum);
+    __aicore__ inline void CopyInOnePerGroup(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor,
+                                             int64_t groupIdx, int64_t ubloop, int64_t processNum);
 
 protected:
     /* global memory address */
@@ -125,10 +134,10 @@ protected:
     LocalTensor<float> biasLocal;
     __local_mem__ float* biasPtr;
     __local_mem__ float* bias2Ptr;
-    //quant_scale
+    // quant_scale
     LocalTensor<float> quantScaleLocal;
     __local_mem__ float* qScalePtr;
-    //quant_offset
+    // quant_offset
     LocalTensor<float> quantOffsetLocal;
     __local_mem__ float* qOffsetPtr;
 
@@ -164,8 +173,10 @@ protected:
     const DequantSwigluQuantV35BaseTilingData* tl_ = nullptr;
 };
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::Init(
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
+__aicore__ inline void
+DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::Init(
     GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale, GM_ADDR quantOffset,
     GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, const DequantSwigluQuantV35BaseTilingData* tilingData)
 {
@@ -227,8 +238,10 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     SetFloatOverflowModeForRegbase<TYtype>();
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::Process()
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
+__aicore__ inline void
+DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::Process()
 {
     groupOffset_ = 0;
     int64_t realGroupNums = 1;
@@ -249,16 +262,22 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
             realDimx_ = 0;
         }
         // group内的值累加超过inDimx会出现越界访问,tiling侧无法校验,通过groupOffset_ + rowIndex < tl_->inDimx保证
-        for (int64_t rowIndex = blockIdx_; rowIndex < realDimx_ && groupOffset_ + rowIndex < tl_->inDimx; rowIndex += tl_->usedCoreNum) {
+        for (int64_t rowIndex = blockIdx_; rowIndex < realDimx_ && groupOffset_ + rowIndex < tl_->inDimx;
+             rowIndex += tl_->usedCoreNum) {
             ProcessSingleRow(groupIndex, groupOffset_ + rowIndex);
         }
         groupOffset_ += realDimx_;
     }
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 template <typename copyDtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::CopyIn2HPerRowForSwiGluV1(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t rowIdx, int64_t ubloop, int64_t processNum)
+__aicore__ inline void
+DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                TYtype>::CopyIn2HPerRowForSwiGluV1(LocalTensor<copyDtype> dstTensor,
+                                                                   GlobalTensor<copyDtype> srcTensor, int64_t rowIdx,
+                                                                   int64_t ubloop, int64_t processNum)
 {
     int64_t rowOffsetFor2H = rowIdx * tl_->inDimy;
     int64_t actOffset = tl_->actRight * tl_->outDimy;
@@ -270,14 +289,21 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     dataCopyPerRowForSwiGluV1Params.srcStride = 0;
     dataCopyPerRowForSwiGluV1Params.dstStride = 0;
     // copy_in: (BS, H) 激活部分
-    DataCopyPad(dstTensor[0], srcTensor[rowOffsetFor2H + ubloop * tl_->UbFactorDimy + actOffset], dataCopyPerRowForSwiGluV1Params, padParams);
+    DataCopyPad(dstTensor[0], srcTensor[rowOffsetFor2H + ubloop * tl_->UbFactorDimy + actOffset],
+                dataCopyPerRowForSwiGluV1Params, padParams);
     // copy_in: (BS, H) 门控部分
-    DataCopyPad(dstTensor[tl_->UbFactorDimy], srcTensor[rowOffsetFor2H + ubloop * tl_->UbFactorDimy + gateOffset], dataCopyPerRowForSwiGluV1Params, padParams);
+    DataCopyPad(dstTensor[tl_->UbFactorDimy], srcTensor[rowOffsetFor2H + ubloop * tl_->UbFactorDimy + gateOffset],
+                dataCopyPerRowForSwiGluV1Params, padParams);
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 template <typename copyDtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::CopyIn2HPerRowForSwiGluV2(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t rowIdx, int64_t ubloop, int64_t processNum)
+__aicore__ inline void
+DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                TYtype>::CopyIn2HPerRowForSwiGluV2(LocalTensor<copyDtype> dstTensor,
+                                                                   GlobalTensor<copyDtype> srcTensor, int64_t rowIdx,
+                                                                   int64_t ubloop, int64_t processNum)
 {
     int64_t rowOffsetFor2H = rowIdx * tl_->inDimy;
     DataCopyParams dataCopy2HPerRowForSwiGluV2Params;
@@ -287,12 +313,19 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     dataCopy2HPerRowForSwiGluV2Params.srcStride = 0;
     dataCopy2HPerRowForSwiGluV2Params.dstStride = 0;
     // copy_in: (BS, 2H)
-    DataCopyPad(dstTensor[0], srcTensor[rowOffsetFor2H + ubloop * 2 * tl_->UbFactorDimy], dataCopy2HPerRowForSwiGluV2Params, padParams);
+    DataCopyPad(dstTensor[0], srcTensor[rowOffsetFor2H + ubloop * 2 * tl_->UbFactorDimy],
+                dataCopy2HPerRowForSwiGluV2Params, padParams);
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 template <typename copyDtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::CopyIn2HPerGroupForSwiGluV1(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum)
+__aicore__ inline void
+DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                TYtype>::CopyIn2HPerGroupForSwiGluV1(LocalTensor<copyDtype> dstTensor,
+                                                                     GlobalTensor<copyDtype> srcTensor,
+                                                                     int64_t groupIdx, int64_t ubloop,
+                                                                     int64_t processNum)
 {
     int64_t groupOffsetFor2H = groupIdx * tl_->inDimy;
     int64_t actOffset = tl_->actRight * tl_->outDimy;
@@ -305,14 +338,22 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     dataCopy2HPerGroupForSwiGluV1Params.srcStride = 0;
     dataCopy2HPerGroupForSwiGluV1Params.dstStride = 0;
     // copy_in: (G, H) 激活部分
-    DataCopyPad(dstTensor[0], srcTensor[groupOffsetFor2H + ubloop * tl_->UbFactorDimy + actOffset], dataCopy2HPerGroupForSwiGluV1Params, padParams);
+    DataCopyPad(dstTensor[0], srcTensor[groupOffsetFor2H + ubloop * tl_->UbFactorDimy + actOffset],
+                dataCopy2HPerGroupForSwiGluV1Params, padParams);
     // copy_in: (G, H) 门控部分
-    DataCopyPad(dstTensor[tl_->UbFactorDimy], srcTensor[groupOffsetFor2H + ubloop * tl_->UbFactorDimy + gateOffset], dataCopy2HPerGroupForSwiGluV1Params, padParams);
+    DataCopyPad(dstTensor[tl_->UbFactorDimy], srcTensor[groupOffsetFor2H + ubloop * tl_->UbFactorDimy + gateOffset],
+                dataCopy2HPerGroupForSwiGluV1Params, padParams);
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 template <typename copyDtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::CopyIn2HPerGroupForSwiGluV2(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum)
+__aicore__ inline void
+DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                TYtype>::CopyIn2HPerGroupForSwiGluV2(LocalTensor<copyDtype> dstTensor,
+                                                                     GlobalTensor<copyDtype> srcTensor,
+                                                                     int64_t groupIdx, int64_t ubloop,
+                                                                     int64_t processNum)
 {
     int64_t groupOffsetFor2H = groupIdx * tl_->inDimy;
 
@@ -323,12 +364,18 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     dataCopy2HPerGroupForSwiGluV2Params.srcStride = 0;
     dataCopy2HPerGroupForSwiGluV2Params.dstStride = 0;
     // copy_in: (BS, 2H)
-    DataCopyPad(dstTensor[0], srcTensor[groupOffsetFor2H + ubloop * 2 * tl_->UbFactorDimy], dataCopy2HPerGroupForSwiGluV2Params, padParams);
+    DataCopyPad(dstTensor[0], srcTensor[groupOffsetFor2H + ubloop * 2 * tl_->UbFactorDimy],
+                dataCopy2HPerGroupForSwiGluV2Params, padParams);
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 template <typename copyDtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::CopyInHPerGroup(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum)
+__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                                       TYtype>::CopyInHPerGroup(LocalTensor<copyDtype> dstTensor,
+                                                                                GlobalTensor<copyDtype> srcTensor,
+                                                                                int64_t groupIdx, int64_t ubloop,
+                                                                                int64_t processNum)
 {
     int64_t groupOffsetForH = groupIdx * tl_->outDimy;
 
@@ -342,9 +389,14 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     DataCopyPad(dstTensor[0], srcTensor[groupOffsetForH + ubloop * tl_->UbFactorDimy], dataCopyHPerGroup, padParams);
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
 template <typename copyDtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::CopyInOnePerGroup(LocalTensor<copyDtype> dstTensor, GlobalTensor<copyDtype> srcTensor, int64_t groupIdx, int64_t ubloop, int64_t processNum)
+__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                                       TYtype>::CopyInOnePerGroup(LocalTensor<copyDtype> dstTensor,
+                                                                                  GlobalTensor<copyDtype> srcTensor,
+                                                                                  int64_t groupIdx, int64_t ubloop,
+                                                                                  int64_t processNum)
 {
     DataCopyParams dataCopyOnePerGroup;
     DataCopyPadParams padParams{false, 0, 0, 0};
@@ -356,8 +408,10 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     DataCopyPad(dstTensor[0], srcTensor[groupIdx], dataCopyOnePerGroup, padParams);
 }
 
-template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>
-__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup, TYtype>::ProcessSingleRow(int64_t groupIdx, int64_t rowIdx)
+template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset,
+          typename TGroup, typename TYtype>
+__aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias, TQuantScale, TQuantOffset, TGroup,
+                                                       TYtype>::ProcessSingleRow(int64_t groupIdx, int64_t rowIdx)
 {
     // 如果当前核id超过了实际需要的核数，则说明处理完成了
     if (blockIdx_ >= realCoreDim_) {
@@ -490,28 +544,45 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         }
         // 将fp16/bf16统一cast到fp32类型，因此sizePerRepeat使用fp32计算
         constexpr uint32_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
-        uint32_t repeatTimesPerFactor = CeilDivision(processNum, sizePerRepeat); // 向上取整
+        uint32_t repeatTimesPerFactor = CeilDivision(processNum, sizePerRepeat);          // 向上取整
         uint32_t repeatTimesPerFactorForV2 = CeilDivision(processNum * 2, sizePerRepeat); // 向上取整
         // SwiGlu Mode不同，UB内数据排布不同，区分处理逻辑
         if (tl_->swiGluMode == 0) {
             // Dequant，根据x的数据类型选择Dequant分支
             if constexpr (ifXIntIndex_) {
                 if (ifBiasIntIndex_ || !hasBiasIndex_) {
-                    VF_CALL<Int32Dequant<TXtype, int32_t, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasInt32Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
-                    VF_CALL<Int32Dequant<TXtype, int32_t, hasBiasIndex_, hasActScale_>>(x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Int32Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
+                    VF_CALL<Int32Dequant<TXtype, int32_t, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasInt32Ptr, repeatTimesPerFactor, sizePerRepeat,
+                        processNum);
+                    VF_CALL<Int32Dequant<TXtype, int32_t, hasBiasIndex_, hasActScale_>>(
+                        x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Int32Ptr, repeatTimesPerFactor, sizePerRepeat,
+                        processNum);
                 } else if (ifBiasBfloat16Index_) {
-                    VF_CALL<Int32Dequant<TXtype, bfloat16_t, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasBf16Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
-                    VF_CALL<Int32Dequant<TXtype, bfloat16_t, hasBiasIndex_, hasActScale_>>(x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Bf16Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
+                    VF_CALL<Int32Dequant<TXtype, bfloat16_t, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasBf16Ptr, repeatTimesPerFactor, sizePerRepeat,
+                        processNum);
+                    VF_CALL<Int32Dequant<TXtype, bfloat16_t, hasBiasIndex_, hasActScale_>>(
+                        x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Bf16Ptr, repeatTimesPerFactor, sizePerRepeat,
+                        processNum);
                 } else if (ifBiasFloat16Index_) {
-                    VF_CALL<Int32Dequant<TXtype, half, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasFp16Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
-                    VF_CALL<Int32Dequant<TXtype, half, hasBiasIndex_, hasActScale_>>(x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Fp16Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
+                    VF_CALL<Int32Dequant<TXtype, half, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr,
+                                                                                     biasFp16Ptr, repeatTimesPerFactor,
+                                                                                     sizePerRepeat, processNum);
+                    VF_CALL<Int32Dequant<TXtype, half, hasBiasIndex_, hasActScale_>>(
+                        x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Fp16Ptr, repeatTimesPerFactor, sizePerRepeat,
+                        processNum);
                 } else if (ifBiasFloatIndex_) {
-                    VF_CALL<Int32Dequant<TXtype, float, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasPtr, repeatTimesPerFactor, sizePerRepeat, processNum);
-                    VF_CALL<Int32Dequant<TXtype, float, hasBiasIndex_, hasActScale_>>(x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
+                    VF_CALL<Int32Dequant<TXtype, float, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasPtr, repeatTimesPerFactor, sizePerRepeat, processNum);
+                    VF_CALL<Int32Dequant<TXtype, float, hasBiasIndex_, hasActScale_>>(
+                        x2Ptr, tmp2Ptr, wScale2Ptr, aScalePtr, bias2Ptr, repeatTimesPerFactor, sizePerRepeat,
+                        processNum);
                 }
             } else {
-                VF_CALL<FloatDequant<TXtype, ifXFloat16Index_, ifXBf16Index_>>(xPtr, tmpPtr, repeatTimesPerFactor, sizePerRepeat, processNum);
-                VF_CALL<FloatDequant<TXtype, ifXFloat16Index_, ifXBf16Index_>>(x2Ptr, tmp2Ptr, repeatTimesPerFactor, sizePerRepeat, processNum);
+                VF_CALL<FloatDequant<TXtype, ifXFloat16Index_, ifXBf16Index_>>(xPtr, tmpPtr, repeatTimesPerFactor,
+                                                                               sizePerRepeat, processNum);
+                VF_CALL<FloatDequant<TXtype, ifXFloat16Index_, ifXBf16Index_>>(x2Ptr, tmp2Ptr, repeatTimesPerFactor,
+                                                                               sizePerRepeat, processNum);
             }
             xQueue_.FreeTensor(xLocal);
             if constexpr (hasWeightScale_) {
@@ -537,25 +608,36 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
             }
             // SwiGlu with QuantScale
             if (ifQuantIsOne_) {
-                VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, true>>(tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy),
-                                                repeatTimesPerFactor, sizePerRepeat, processNum, ifQuantIsOne_);
+                VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, true>>(
+                    tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
+                    sizePerRepeat, processNum, ifQuantIsOne_);
             } else {
-                VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, false>>(tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy),
-                                                repeatTimesPerFactor, sizePerRepeat, processNum, ifQuantIsOne_);
+                VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, false>>(
+                    tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
+                    sizePerRepeat, processNum, ifQuantIsOne_);
             }
         } else {
             if constexpr (ifXIntIndex_) {
                 if (ifBiasIntIndex_ || !hasBiasIndex_) {
-                    VF_CALL<Int32Dequant<TXtype, int32_t, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasInt32Ptr, repeatTimesPerFactorForV2, sizePerRepeat, processNum * 2);
+                    VF_CALL<Int32Dequant<TXtype, int32_t, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasInt32Ptr, repeatTimesPerFactorForV2, sizePerRepeat,
+                        processNum * 2);
                 } else if (ifBiasBfloat16Index_) {
-                    VF_CALL<Int32Dequant<TXtype, bfloat16_t, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasBf16Ptr, repeatTimesPerFactorForV2, sizePerRepeat, processNum * 2);
+                    VF_CALL<Int32Dequant<TXtype, bfloat16_t, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasBf16Ptr, repeatTimesPerFactorForV2, sizePerRepeat,
+                        processNum * 2);
                 } else if (ifBiasFloat16Index_) {
-                    VF_CALL<Int32Dequant<TXtype, half, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasFp16Ptr, repeatTimesPerFactorForV2, sizePerRepeat, processNum * 2);
+                    VF_CALL<Int32Dequant<TXtype, half, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasFp16Ptr, repeatTimesPerFactorForV2, sizePerRepeat,
+                        processNum * 2);
                 } else if (ifBiasFloatIndex_) {
-                    VF_CALL<Int32Dequant<TXtype, float, hasBiasIndex_, hasActScale_>>(xPtr, tmpPtr, wScalePtr, aScalePtr, biasPtr, repeatTimesPerFactorForV2, sizePerRepeat, processNum * 2);
+                    VF_CALL<Int32Dequant<TXtype, float, hasBiasIndex_, hasActScale_>>(
+                        xPtr, tmpPtr, wScalePtr, aScalePtr, biasPtr, repeatTimesPerFactorForV2, sizePerRepeat,
+                        processNum * 2);
                 }
             } else {
-                VF_CALL<FloatDequant<TXtype, ifXFloat16Index_, ifXBf16Index_>>(xPtr, tmpPtr, repeatTimesPerFactorForV2, sizePerRepeat, processNum * 2);
+                VF_CALL<FloatDequant<TXtype, ifXFloat16Index_, ifXBf16Index_>>(xPtr, tmpPtr, repeatTimesPerFactorForV2,
+                                                                               sizePerRepeat, processNum * 2);
             }
             xQueue_.FreeTensor(xLocal);
             if constexpr (hasWeightScale_) {
@@ -581,11 +663,13 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
             }
             // SwiGluV2 with QuantScale
             if (ifQuantIsOne_) {
-                VF_CALL<SwigluV2SingleYWithQuantScale<hasQuantScale_, true>>(tmpPtr, qScalePtr, tmpPtr, processNum * 2, 0, 1, repeatTimesPerFactorForV2,
-                        sizePerRepeat, 0, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+                VF_CALL<SwigluV2SingleYWithQuantScale<hasQuantScale_, true>>(
+                    tmpPtr, qScalePtr, tmpPtr, processNum * 2, 0, 1, repeatTimesPerFactorForV2, sizePerRepeat, 0,
+                    ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
             } else {
-                VF_CALL<SwigluV2SingleYWithQuantScale<hasQuantScale_, false>>(tmpPtr, qScalePtr, tmpPtr, processNum * 2, 0, 1, repeatTimesPerFactorForV2,
-                        sizePerRepeat, 0, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+                VF_CALL<SwigluV2SingleYWithQuantScale<hasQuantScale_, false>>(
+                    tmpPtr, qScalePtr, tmpPtr, processNum * 2, 0, 1, repeatTimesPerFactorForV2, sizePerRepeat, 0,
+                    ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
             }
         }
         if constexpr (hasQuantScale_) {
@@ -599,11 +683,11 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         // static quant with QuantOffset
         if constexpr (hasQuantOffset_) {
             if (ifQuantIsOne_) {
-                VF_CALL<StaticQuantSingleY<hasQuantOffset_, true>>(tmpPtr, qOffsetPtr, tmpPtr,
-                                                        repeatTimesPerFactor, sizePerRepeat, processNum, ifQuantIsOne_);
+                VF_CALL<StaticQuantSingleY<hasQuantOffset_, true>>(tmpPtr, qOffsetPtr, tmpPtr, repeatTimesPerFactor,
+                                                                   sizePerRepeat, processNum, ifQuantIsOne_);
             } else {
-                VF_CALL<StaticQuantSingleY<hasQuantOffset_, false>>(tmpPtr, qOffsetPtr, tmpPtr,
-                                                        repeatTimesPerFactor, sizePerRepeat, processNum, ifQuantIsOne_);
+                VF_CALL<StaticQuantSingleY<hasQuantOffset_, false>>(tmpPtr, qOffsetPtr, tmpPtr, repeatTimesPerFactor,
+                                                                    sizePerRepeat, processNum, ifQuantIsOne_);
             }
         }
         if constexpr (hasQuantOffset_) {
@@ -616,8 +700,9 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         // fp4
         LocalTensor<uint8_t> yFp4Local = yLocal.template ReinterpretCast<uint8_t>();
         __local_mem__ uint8_t* yFp4Ptr = (__local_mem__ uint8_t*)yFp4Local.GetPhyAddr();
-        VF_CALL<CastY<TXtype, TYtype, ifYFloat8e4m3Index_, ifYFloat8e5m2Index_, ifYFloat4e2m1Index_, ifYFloat4e1m2Index_, ifYHiFloat8Index_>>(tmpPtr, yPtr,
-                    yFp4Ptr, processNum, 1, repeatTimesPerFactor, sizePerRepeat, tl_->roundMode, 1, 1, 1);
+        VF_CALL<CastY<TXtype, TYtype, ifYFloat8e4m3Index_, ifYFloat8e5m2Index_, ifYFloat4e2m1Index_,
+                      ifYFloat4e1m2Index_, ifYHiFloat8Index_>>(
+            tmpPtr, yPtr, yFp4Ptr, processNum, 1, repeatTimesPerFactor, sizePerRepeat, tl_->roundMode, 1, 1, 1);
         yQueue_.EnQue<TYtype>(yLocal);
         yLocal = yQueue_.DeQue<TYtype>();
 
@@ -641,5 +726,5 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         yQueue_.FreeTensor(yLocal);
     }
 }
-}
+} // namespace DequantSwigluQuantV35Ops
 #endif

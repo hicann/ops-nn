@@ -20,7 +20,6 @@
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct MSELossV2TilingDataTest {
     uint64_t coreNum = 0;
     uint64_t tailElems = 0;
@@ -40,6 +39,6 @@ inline void InitMSELossV2TilingData(uint8_t* tiling, MSELossV2TilingDataTest* co
 }
 
 #define GET_TILING_DATA(tilingData, tilingPointer) \
-    MSELossV2TilingDataTest tilingData;                \
+    MSELossV2TilingDataTest tilingData;            \
     InitMSELossV2TilingData(tilingPointer, &tilingData)
 #endif

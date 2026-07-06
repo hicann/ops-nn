@@ -19,10 +19,9 @@
 // #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct SquaredReluTilingData {
-  int32_t elementNum = 8;
-  uint32_t needCoreNum = 1;
+    int32_t elementNum = 8;
+    uint32_t needCoreNum = 1;
 };
 
 inline void ISquaredReluTilingData(uint8_t* tiling, SquaredReluTilingData* const_data)
@@ -30,7 +29,7 @@ inline void ISquaredReluTilingData(uint8_t* tiling, SquaredReluTilingData* const
     memcpy(const_data, tiling, sizeof(SquaredReluTilingData));
 }
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  SquaredReluTilingData tilingData;                           \
-  ISquaredReluTilingData(tilingPointer, &tilingData)
+#define GET_TILING_DATA(tilingData, tilingPointer) \
+    SquaredReluTilingData tilingData;              \
+    ISquaredReluTilingData(tilingPointer, &tilingData)
 #endif

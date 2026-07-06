@@ -19,7 +19,6 @@ constexpr uint64_t TILING_KEY_BIG_KERNEL_FLOAT = 310000;
 constexpr uint64_t TILING_KEY_BIG_KERNEL_HALF = 311000;
 constexpr uint64_t TILING_KEY_BIG_KERNEL_BF16 = 312000;
 
-
 namespace optiling {
 
 bool AdaptiveMaxPool3dBigPoolTiling::IsCapable()

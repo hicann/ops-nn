@@ -20,12 +20,10 @@
 namespace Ops {
 namespace NN {
 namespace Optiling {
-constexpr uint64_t RecursiveSum()
-{
-    return 0;
-}
+constexpr uint64_t RecursiveSum() { return 0; }
 
-template <typename T, typename... Args> constexpr uint64_t RecursiveSum(T templateId, Args... templateIds)
+template <typename T, typename... Args>
+constexpr uint64_t RecursiveSum(T templateId, Args... templateIds)
 {
     const int carryCoefficient = 10; //进位系数
     return static_cast<uint64_t>(templateId) + carryCoefficient * RecursiveSum(templateIds...);
@@ -46,7 +44,8 @@ template <typename T, typename... Args> constexpr uint64_t RecursiveSum(T templa
 //                                     SupportedDtype::FLOAT32, InputLayout::BSH, SparseCapability::SUPPORT_ALL)
 
 constexpr uint64_t TILINGKEYOFFSET = uint64_t(10000000000000000000UL); // 10^19
-template <typename... Args> constexpr uint64_t GET_TILINGKEY(Args... templateIds)
+template <typename... Args>
+constexpr uint64_t GET_TILINGKEY(Args... templateIds)
 {
     return TILINGKEYOFFSET + RecursiveSum(templateIds...);
 }
@@ -54,8 +53,8 @@ template <typename... Args> constexpr uint64_t GET_TILINGKEY(Args... templateIds
 // usage: get tilingKey from inputed types
 //     uint64_t tilingKey = TILINGKEY(S2, S1, N2, FLOAT32, BSND, ALL)
 
-#define TILINGKEY(ub2, ub1, block, dtype, layout, sparse)                                                              \
-    (GET_TILINGKEY(AxisEnum::ub2, AxisEnum::ub1, AxisEnum::block, DtypeEnum::dtype, LayoutEnum::layout,                \
+#define TILINGKEY(ub2, ub1, block, dtype, layout, sparse)                                               \
+    (GET_TILINGKEY(AxisEnum::ub2, AxisEnum::ub1, AxisEnum::block, DtypeEnum::dtype, LayoutEnum::layout, \
                    SparseEnum::sparse))
 
 } // namespace Optiling

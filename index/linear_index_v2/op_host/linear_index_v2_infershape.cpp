@@ -11,7 +11,7 @@
 /*!
  * \file linear_index_v2_infershape.cpp
  * \brief InferShape implementation for LinearIndexV2 operator
- * 
+ *
  * LinearIndexV2 converts multiple indices into a linear index.
  * Output shape is same as the first indices tensor shape.
  */
@@ -27,12 +27,12 @@ namespace ops {
 
 /**
  * @brief InferShape for LinearIndexV2
- * 
+ *
  * Input:
  *   - indices_list (DYNAMIC): multiple indices tensors
  *   - stride: stride tensor
  *   - value_size: value size tensor
- * 
+ *
  * Output:
  *   - index: linear index tensor, shape same as indices_list[0]
  */
@@ -57,11 +57,11 @@ static ge::graphStatus InferShapeForLinearIndexV2(gert::InferShapeContext* conte
         SetUnknownShape(1, *outShape);
         OP_LOGI(context->GetNodeName(), "End InferShapeForLinearIndexV2 (UNKNOWN SHAPE)");
         return ge::GRAPH_SUCCESS;
-    }  
+    }
     gert::Shape resultShape({indicesShape->GetShapeSize()});
     // Output shape is same as first indices tensor shape
     *outShape = resultShape;
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -78,4 +78,4 @@ static graphStatus InferDataTypeForLinearIndexV2(gert::InferDataTypeContext* con
 
 IMPL_OP_INFERSHAPE(LinearIndexV2).InferShape(InferShapeForLinearIndexV2).InferDataType(InferDataTypeForLinearIndexV2);
 
-}  // namespace ops
+} // namespace ops

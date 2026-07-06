@@ -42,50 +42,52 @@ constexpr uint32_t BUCKET_COUNTER_SIZE = 1;
 constexpr uint32_t BUCKET_FLAG_SIZE = 1;
 
 constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16 * 1024 * 1024;
-}  // namespace
+} // namespace
 
-ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
+ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable is begin");
-    const InitEmbeddingHashTableCompileInfo *compileInfo =
-        reinterpret_cast<const InitEmbeddingHashTableCompileInfo *>(context->GetCompileInfo());
+    const InitEmbeddingHashTableCompileInfo* compileInfo = reinterpret_cast<const InitEmbeddingHashTableCompileInfo*>(
+        context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     InitEmbeddingHashTableTilingData tiling;
 
-    auto *sampledValuesTensor = context->GetOptionalInputTensor(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
+    auto* sampledValuesTensor = context->GetOptionalInputTensor(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
     auto sampledValuesDescPtr = context->GetOptionalInputDesc(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
     if (sampledValuesTensor != nullptr) {
         OP_CHECK_IF((sampledValuesDescPtr != nullptr) && (sampledValuesDescPtr->GetDataType() != ge::DT_FLOAT),
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "sampled_values",
-                ge::TypeUtils::DataTypeToSerialString(sampledValuesDescPtr->GetDataType()).c_str(), "float32"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_DTYPE(
+                        context->GetNodeName(), "sampled_values",
+                        ge::TypeUtils::DataTypeToSerialString(sampledValuesDescPtr->GetDataType()).c_str(), "float32"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto const attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
-    auto *bucketSize = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_BUCKET_SIZE_IDX);
+    auto* bucketSize = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_BUCKET_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSize);
     OP_CHECK_IF(*bucketSize < 0,
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "bucket_size",
-            std::to_string(static_cast<int64_t>(*bucketSize)).c_str(), "greater than or equal to 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "bucket_size",
+                                          std::to_string(static_cast<int64_t>(*bucketSize)).c_str(),
+                                          "greater than or equal to 0"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable bucketSize : %ld", static_cast<int64_t>(*bucketSize));
 
-    auto *embeddingDim = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_EMBEDDING_DIM_IDX);
+    auto* embeddingDim = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_EMBEDDING_DIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDim);
     OP_CHECK_IF(*embeddingDim < 0,
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "embedding_dim",
-            std::to_string(static_cast<int64_t>(*embeddingDim)).c_str(),
-            "greater than or equal to 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "embedding_dim",
+                                          std::to_string(static_cast<int64_t>(*embeddingDim)).c_str(),
+                                          "greater than or equal to 0"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable embeddingDim : %ld", static_cast<int64_t>(*embeddingDim));
 
-    auto *initializerMode = attrs->GetAttrPointer<char>(ATTR_INITIALIZER_MODE_IDX);
+    auto* initializerMode = attrs->GetAttrPointer<char>(ATTR_INITIALIZER_MODE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, initializerMode);
     int64_t mode{0};
     float constValue{0};
-    auto *constantValue = attrs->GetAttrPointer<float>(ATTR_CONSTANT_VALUE_IDX);
+    auto* constantValue = attrs->GetAttrPointer<float>(ATTR_CONSTANT_VALUE_IDX);
     if (strcmp(initializerMode, "random") == 0) {
         mode = RANDOM_MODE;
         auto sampledValuesShapePtr = context->GetInputShape(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
@@ -93,18 +95,19 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
         auto sampledValuesShape = sampledValuesShapePtr->GetStorageShape();
         int64_t sampledValuesShapeSize = sampledValuesShape.GetShapeSize();
         OP_CHECK_IF(static_cast<int64_t>(*embeddingDim) * static_cast<int64_t>(*bucketSize) != sampledValuesShapeSize,
-            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "sampled_values",
-                std::to_string(sampledValuesShapeSize).c_str(),
-                ("InitEmbeddingHashTable in random mode, sampled_values shape should equal to bucketSize * embeddingDim, which is " +
-                 std::to_string(static_cast<int64_t>(*bucketSize) * static_cast<int64_t>(*embeddingDim))).c_str()),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(
+                        context->GetNodeName(), "sampled_values", std::to_string(sampledValuesShapeSize).c_str(),
+                        ("InitEmbeddingHashTable in random mode, sampled_values shape should equal to bucketSize * "
+                         "embeddingDim, which is " +
+                         std::to_string(static_cast<int64_t>(*bucketSize) * static_cast<int64_t>(*embeddingDim)))
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
     } else if (strcmp(initializerMode, "constant") == 0) {
         OP_CHECK_NULL_WITH_CONTEXT(context, constantValue);
         mode = CONSTANT_MODE;
         constValue = static_cast<float>(*constantValue);
     } else {
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "initializer_mode",
-            initializerMode, "random or constant");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "initializer_mode", initializerMode, "random or constant");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable mode : %ld", static_cast<int64_t>(mode));
@@ -129,25 +132,27 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
-    size_t *workspace = context->GetWorkspaceSizes(1);
+    size_t* workspace = context->GetWorkspaceSizes(1);
     workspace[0] = ASCENDC_TOOLS_WORKSPACE;
     OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable is end");
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4InitEmbeddingHashTable(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4InitEmbeddingHashTable(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<InitEmbeddingHashTableCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."),
+                return ge::GRAPH_FAILED);
     compileInfo->maxThread = GetSimtMaxThreadNum(context);
-    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The Thread num is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The Thread num is invalid."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 IMPL_OP_OPTILING(InitEmbeddingHashTable)
     .Tiling(Tiling4InitEmbeddingHashTable)
     .TilingParse<InitEmbeddingHashTableCompileInfo>(TilingPrepare4InitEmbeddingHashTable);
-}  // namespace optiling
+} // namespace optiling

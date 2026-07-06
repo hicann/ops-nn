@@ -18,11 +18,9 @@ namespace ops {
 
 class AvgPool : public OpDef {
 public:
-    const std::vector<ge::DataType> AvgPoolXDataType = {
-        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
-    const std::vector<ge::Format> AvgPoolXFormat = {
-        ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-    explicit AvgPool(const char *name) : OpDef(name)
+    const std::vector<ge::DataType> AvgPoolXDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    const std::vector<ge::Format> AvgPoolXFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+    explicit AvgPool(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -53,4 +51,4 @@ public:
 };
 
 OP_ADD(AvgPool);
-}  // namespace ops
+} // namespace ops

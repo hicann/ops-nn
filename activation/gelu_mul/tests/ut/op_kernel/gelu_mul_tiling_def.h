@@ -17,13 +17,12 @@
 
 #define __CCE_UT_TEST__
 
-
 struct GeluMulTilingData {
-  int32_t lastDimSize = 4;
-  int32_t batchSize = 2;
-  uint32_t needCoreNum = 1;
-  int32_t approximateMode = 0;
-  int32_t PPMaxCalNum = 6144;
+    int32_t lastDimSize = 4;
+    int32_t batchSize = 2;
+    uint32_t needCoreNum = 1;
+    int32_t approximateMode = 0;
+    int32_t PPMaxCalNum = 6144;
 };
 
 inline void IGeluMulTilingData(uint8_t* tiling, GeluMulTilingData* const_data)
@@ -31,7 +30,7 @@ inline void IGeluMulTilingData(uint8_t* tiling, GeluMulTilingData* const_data)
     memcpy(const_data, tiling, sizeof(GeluMulTilingData));
 }
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  GeluMulTilingData tilingData;                           \
-  IGeluMulTilingData(tilingPointer, &tilingData)
+#define GET_TILING_DATA(tilingData, tilingPointer) \
+    GeluMulTilingData tilingData;                  \
+    IGeluMulTilingData(tilingPointer, &tilingData)
 #endif

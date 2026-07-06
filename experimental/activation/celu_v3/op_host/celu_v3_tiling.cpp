@@ -35,8 +35,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -63,8 +63,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalElements,
-                                         ge::DataType& dataType, float& alphaVal)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalElements, ge::DataType& dataType,
+                                         float& alphaVal)
 {
     // Get input shape
     auto inputSelf = context->GetInputShape(0);
@@ -107,29 +107,25 @@ static ge::graphStatus CeluV3TilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape, attrs info
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT;
     float alphaVal = 0.0f;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalElements, dataType, alphaVal) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalElements, dataType, alphaVal) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace size
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Compute tiling parameters
     CeluV3TilingData* tiling = context->GetTilingData<CeluV3TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(CeluV3TilingData), 0, sizeof(CeluV3TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(CeluV3TilingData), 0, sizeof(CeluV3TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Determine element size for UB computation
     int64_t typeSize = sizeof(float); // 4 bytes
@@ -176,9 +172,7 @@ static ge::graphStatus CeluV3TilingFunc(gert::TilingContext* context)
         ubDivisor = 6;
     }
 
-    int64_t ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor),
-        ubBlockSize);
+    int64_t ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor), ubBlockSize);
 
     tiling->totalElements = totalElements;
     tiling->blockFactor = blockFactor;

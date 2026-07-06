@@ -35,16 +35,16 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 struct ConvTbcBackwardInput {
-    const aclTensor *self;
-    const aclTensor *input;
-    const aclTensor *weight;
-    const aclTensor *bias;
+    const aclTensor* self;
+    const aclTensor* input;
+    const aclTensor* weight;
+    const aclTensor* bias;
 };
 
 struct ConvTbcBackwardOutput {
-    const aclTensor *gradInput;
-    const aclTensor *gradWeight;
-    const aclTensor *gradBias;
+    const aclTensor* gradInput;
+    const aclTensor* gradWeight;
+    const aclTensor* gradBias;
 };
 
 struct ConvTbcBackwardParams {
@@ -54,98 +54,97 @@ struct ConvTbcBackwardParams {
 
 class ConvTbcBackwardChecker {
 public:
-ConvTbcBackwardChecker(const ConvTbcBackwardInput &inputTensor, const ConvTbcBackwardOutput &outputTensor,
-                       const ConvTbcBackwardParams &params, const NpuArch npuArch):
-                       inputTensor_(inputTensor),
-                       outputTensor_(outputTensor),
-                       params_(params),
-                       npuArch_(npuArch){}
+    ConvTbcBackwardChecker(const ConvTbcBackwardInput& inputTensor, const ConvTbcBackwardOutput& outputTensor,
+                           const ConvTbcBackwardParams& params, const NpuArch npuArch)
+        : inputTensor_(inputTensor), outputTensor_(outputTensor), params_(params), npuArch_(npuArch)
+    {}
+
 public:
-/**
- * @brief [self, input, weight, gradInput, gradWeight, gradBias] nullptr 约束
- *
- * 详细约束说明
- *
- * ```
- * 1. [self, input, weight, gradInput, gradWeight, gradBias] 均不能等于 nullptr
- * ```
- */
-inline bool CheckTbcNotNull();
-/**
- * @brief [self, input, weight, gradInput, gradWeight, gradBias] 的 Dtype约束
- *
- * 详细约束说明
- *
- * ```
- * 1. ?
- * ```
- */
-bool CheckTbcDtypeValid(const aclTensor *inputTensor) const;
-/**
- * @brief [bias] 的 Dtype 约束
- *
- * 详细约束说明：
- * ```
- * 1. [bias] in [DT_FLOAT, DT_FLOAT16, DT_BF16]
- * ```
- */
-bool CheckDtypeValidBf16Allowed(const aclTensor *inputTensor) const;
-/**
- * @brief [self, input, weight, gradInput, gradWeight] Format约束
- *
- * 详细约束说明
- *
- * ```
- * 1. [self, input, weight, gradInput, gradWeight] in [FORMAT_ND, FORMAT_NCL]
- * ```
- */
-bool CheckTbcFormat(const aclTensor *inputTensor, const string &tensorName) const;
-/**
- * @brief [bias, gradBias] Format约束
- *
- * 详细约束说明
- *
- * ```
- * 1. [bias, gradBias] in [FORMAT_ND]
- * ```
- */
-bool CheckTbcBiasFormat(const aclTensor *inputTensor, const string &tensorName) const;
-/**
- * @brief 输入输出shape约束
- *
- * 详细约束说明
- * ```
- * 约束1: 输入tensor的维度规则：[self, input, weight, bias] == [3, 3, 3, 1]
- * 约束2: 输出tensor的维度规则: [gradInput, gradWeight, gradBias] == [3, 3, 1]
- * 约束3: input[2] == weight[1]
- * 约束4: bias[0] == weight[2]
- * 约束5: pad >= 0
- * 约束6:
- * t = input[0] + 2*pad + 1 - weight[0]
- * b = input[1]
- * c0 = weight[2]
- * t >= 0 && self[0] == t && self[1] == b && self[2] == c0
- * 约束7:
- * input.shape == gradInput.shape &&
- * weight.shape == gradWeight.shape &&
- * bias.shape == gradBias.shape
- * ```
- */
-bool CheckTbcShape();
-/**
- * @brief [self, input, weight] 是否满足推导规则
- */
-bool CheckTbcCubeMathType();
-/**
- * @brief tbc参数校验
- */
-aclnnStatus CheckTbcParams();
+    /**
+     * @brief [self, input, weight, gradInput, gradWeight, gradBias] nullptr 约束
+     *
+     * 详细约束说明
+     *
+     * ```
+     * 1. [self, input, weight, gradInput, gradWeight, gradBias] 均不能等于 nullptr
+     * ```
+     */
+    inline bool CheckTbcNotNull();
+    /**
+     * @brief [self, input, weight, gradInput, gradWeight, gradBias] 的 Dtype约束
+     *
+     * 详细约束说明
+     *
+     * ```
+     * 1. ?
+     * ```
+     */
+    bool CheckTbcDtypeValid(const aclTensor* inputTensor) const;
+    /**
+     * @brief [bias] 的 Dtype 约束
+     *
+     * 详细约束说明：
+     * ```
+     * 1. [bias] in [DT_FLOAT, DT_FLOAT16, DT_BF16]
+     * ```
+     */
+    bool CheckDtypeValidBf16Allowed(const aclTensor* inputTensor) const;
+    /**
+     * @brief [self, input, weight, gradInput, gradWeight] Format约束
+     *
+     * 详细约束说明
+     *
+     * ```
+     * 1. [self, input, weight, gradInput, gradWeight] in [FORMAT_ND, FORMAT_NCL]
+     * ```
+     */
+    bool CheckTbcFormat(const aclTensor* inputTensor, const string& tensorName) const;
+    /**
+     * @brief [bias, gradBias] Format约束
+     *
+     * 详细约束说明
+     *
+     * ```
+     * 1. [bias, gradBias] in [FORMAT_ND]
+     * ```
+     */
+    bool CheckTbcBiasFormat(const aclTensor* inputTensor, const string& tensorName) const;
+    /**
+     * @brief 输入输出shape约束
+     *
+     * 详细约束说明
+     * ```
+     * 约束1: 输入tensor的维度规则：[self, input, weight, bias] == [3, 3, 3, 1]
+     * 约束2: 输出tensor的维度规则: [gradInput, gradWeight, gradBias] == [3, 3, 1]
+     * 约束3: input[2] == weight[1]
+     * 约束4: bias[0] == weight[2]
+     * 约束5: pad >= 0
+     * 约束6:
+     * t = input[0] + 2*pad + 1 - weight[0]
+     * b = input[1]
+     * c0 = weight[2]
+     * t >= 0 && self[0] == t && self[1] == b && self[2] == c0
+     * 约束7:
+     * input.shape == gradInput.shape &&
+     * weight.shape == gradWeight.shape &&
+     * bias.shape == gradBias.shape
+     * ```
+     */
+    bool CheckTbcShape();
+    /**
+     * @brief [self, input, weight] 是否满足推导规则
+     */
+    bool CheckTbcCubeMathType();
+    /**
+     * @brief tbc参数校验
+     */
+    aclnnStatus CheckTbcParams();
 
 private:
-const ConvTbcBackwardInput inputTensor_;
-const ConvTbcBackwardOutput outputTensor_;
-const ConvTbcBackwardParams params_;
-const NpuArch npuArch_;
+    const ConvTbcBackwardInput inputTensor_;
+    const ConvTbcBackwardOutput outputTensor_;
+    const ConvTbcBackwardParams params_;
+    const NpuArch npuArch_;
 };
 } // namespace Conv
 } // namespace NN

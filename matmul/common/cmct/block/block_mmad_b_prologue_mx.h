@@ -30,7 +30,6 @@
 
 namespace Cmct::Gemm::Block {
 using AscendC::BLOCK_CUBE;
-using AscendC::ONE_BLK_SIZE;
 using AscendC::CrossCoreSetFlag;
 using AscendC::CrossCoreWaitFlag;
 using AscendC::GlobalTensor;
@@ -39,6 +38,7 @@ using AscendC::IsSameType;
 using AscendC::LocalTensor;
 using AscendC::MakeCoord;
 using AscendC::MakeShape;
+using AscendC::ONE_BLK_SIZE;
 using AscendC::PipeBarrier;
 using AscendC::QuePosition;
 using AscendC::SetFlag;
@@ -47,12 +47,10 @@ using AscendC::TEventID;
 using AscendC::TPosition;
 using AscendC::WaitFlag;
 
-template <
-    class L1TileShape_, class L0TileShape_, class ATypeTuple_, class BType_, class CType_, class BiasType_,
-    class TileCopy_, class TileMmad_>
-class BlockMmad<
-    Cmct::Gemm::UbAntiquantWithScSc, L1TileShape_, L0TileShape_, ATypeTuple_, BType_, CType_, BiasType_, TileCopy_,
-    TileMmad_> {
+template <class L1TileShape_, class L0TileShape_, class ATypeTuple_, class BType_, class CType_, class BiasType_,
+          class TileCopy_, class TileMmad_>
+class BlockMmad<Cmct::Gemm::UbAntiquantWithScSc, L1TileShape_, L0TileShape_, ATypeTuple_, BType_, CType_, BiasType_,
+                TileCopy_, TileMmad_> {
 public:
     using L1TileShape = L1TileShape_;
     using L0TileShape = L0TileShape_;
@@ -103,9 +101,9 @@ public:
     };
 
     template <class TensorA, class TensorAScale, class TensorBScale, class TensorC, class Shape>
-    __aicore__ inline void operator()(
-        const TensorA& tensorA, const TensorAScale& scaleA, const TensorBScale& scaleB, const TensorC& tensorC,
-        const Shape& actualShape, [[maybe_unused]] const Params& params)
+    __aicore__ inline void operator()(const TensorA& tensorA, const TensorAScale& scaleA, const TensorBScale& scaleB,
+                                      const TensorC& tensorC, const Shape& actualShape,
+                                      [[maybe_unused]] const Params& params)
     {
         mL1Len_ = Get<0>(actualShape);
         nL1Len_ = Get<1>(actualShape);
@@ -115,8 +113,8 @@ public:
             kL1Offset_ = kLoopIdx * kL1Size_;
             kL1Len_ = Cmct::Gemm::Min(kSize_ - kL1Offset_, kL1Size_);
             WaitFlag<HardEvent::MTE1_MTE2>(eventIdsMte1ToMte2_[l1BufIdx_]);
-            auto tensorBlockA =
-                GetTile(tensorA, MakeCoord(0, kL1Offset_), MakeShape(mL1Len_, static_cast<uint64_t>(kL1Len_)));
+            auto tensorBlockA = GetTile(tensorA, MakeCoord(0, kL1Offset_),
+                                        MakeShape(mL1Len_, static_cast<uint64_t>(kL1Len_)));
             GetAL1(kLoopIdx, scaleA, tensorBlockA);
             GetBL1(kLoopIdx, scaleB);
             SetFlag<HardEvent::MTE2_MTE1>(0);
@@ -137,9 +135,9 @@ public:
         nSize_ = Get<1>(params.layoutC.GetShape());
         kL1Size_ = Get<2>(params.tileShapeL1); // 2 in order to obtain k
         auto nBL1Size = Get<1>(params.tileShapeL1);
-        kL0Size_ = Get<2>(params.tileShapeL0);                   // 2 in order to obtain k
-        bL1Size_ = nBL1Size * CeilAlign(Get<3>(params.tileShapeL1), K_ALIGN_SIZE);        // 3 in order to obtain kb
-        aL1Size_ = Get<0>(params.tileShapeL1) * CeilAlign(kL1Size_, K_ALIGN_SIZE);        // 0 in order to obtain m
+        kL0Size_ = Get<2>(params.tileShapeL0);                                     // 2 in order to obtain k
+        bL1Size_ = nBL1Size * CeilAlign(Get<3>(params.tileShapeL1), K_ALIGN_SIZE); // 3 in order to obtain kb
+        aL1Size_ = Get<0>(params.tileShapeL1) * CeilAlign(kL1Size_, K_ALIGN_SIZE); // 0 in order to obtain m
         scaleAL1Size_ = aL1Size_ * scaleFactor_ / GROUP_SIZE_32; // aL1Size is an integer multiple of 32
         scaleBL1Size_ = bL1Size_ * scaleFactor_ / GROUP_SIZE_32;
         cL0Tensor_ = LocalTensor<float>(AscendC::TPosition::CO1, 0, L0C_BUFFER_SIZE);
@@ -296,14 +294,9 @@ private:
             auto tensorBlockScaleA = GetTile(
                 scaleA, MakeCoord(0, kL1Offset_ / GROUP_SIZE_32),
                 MakeShape(mL1Len_, static_cast<uint64_t>(CeilDiv(kL1Len_, GROUP_SIZE_32))));
-            CopyScaleDn2Nz(
-                scaleABufIdx_ == 0 ? scaleAL1Buf0_ : scaleAL1Buf1_,
-                tensorBlockScaleA,
-                0,
-                CeilDiv(kL1Size_ * scaleFactor_, GROUP_SIZE_32),
-                mL1Len_,
-                scaleKAL1GroupNum,
-                scaleKGmGroupNum);
+            CopyScaleDn2Nz(scaleABufIdx_ == 0 ? scaleAL1Buf0_ : scaleAL1Buf1_, tensorBlockScaleA, 0,
+                           CeilDiv(kL1Size_ * scaleFactor_, GROUP_SIZE_32), mL1Len_, scaleKAL1GroupNum,
+                           scaleKGmGroupNum);
         }
         CopyND2NZ(l1BufIdx_, tensorA);
     }
@@ -383,18 +376,18 @@ private:
             bL1Tensor_ = bL1LocalBuf3_;
         }
         if (scaleABufIdx_ == IDX_0) {
-            scaleAL1Tensor_ =
-                scaleAL1Buf0_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) / C0_SIZE_MX_B8];
+            scaleAL1Tensor_ = scaleAL1Buf0_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) /
+                                            C0_SIZE_MX_B8];
         } else {
-            scaleAL1Tensor_ =
-                scaleAL1Buf1_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) / C0_SIZE_MX_B8];
+            scaleAL1Tensor_ = scaleAL1Buf1_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) /
+                                            C0_SIZE_MX_B8];
         }
         if (scaleBBufIdx_ == IDX_0) {
-            scaleBL1Tensor_ =
-                scaleBL1Buf0_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) / C0_SIZE_MX_B8];
+            scaleBL1Tensor_ = scaleBL1Buf0_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) /
+                                            C0_SIZE_MX_B8];
         } else {
-            scaleBL1Tensor_ =
-                scaleBL1Buf1_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) / C0_SIZE_MX_B8];
+            scaleBL1Tensor_ = scaleBL1Buf1_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) /
+                                            C0_SIZE_MX_B8];
         }
         if (hasBias_) {
             if (l1BufIdx_ == IDX_0) {
@@ -479,8 +472,8 @@ private:
     {
         AscendC::LoadData2DParamsV2 aL0Load2dParams;
         aL0Load2dParams.mStartPosition = 0;
-        aL0Load2dParams.kStartPosition =
-            CeilDiv(static_cast<uint64_t>(kL0Idx * kL0Size_ * sizeof(ElementA)), C0_SIZE_B8);
+        aL0Load2dParams.kStartPosition = CeilDiv(static_cast<uint64_t>(kL0Idx * kL0Size_ * sizeof(ElementA)),
+                                                 C0_SIZE_B8);
         aL0Load2dParams.mStep = CeilDiv(mL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
         aL0Load2dParams.kStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), C0_SIZE_B8);
         aL0Load2dParams.srcStride = CeilDiv(mL1AlignLen_ * C0_SIZE_B8, FRACTAL_SIZE);
@@ -489,10 +482,12 @@ private:
         aL0Load2dMx.xStartPosition = 0;
         aL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * kL0Size_, GROUP_SIZE_32 * C0_SIZE_MX_B8);
         aL0Load2dMx.xStep = CeilDiv(mL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
-        aL0Load2dMx.yStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
-        aL0Load2dMx.srcStride = CeilDiv(
-            static_cast<uint64_t>(kL1Size_ * scaleFactor_), static_cast<uint64_t>(GROUP_SIZE_32 * C0_SIZE_MX_B8));
-        aL0Load2dMx.dstStride = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        aL0Load2dMx.yStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)),
+                                    GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        aL0Load2dMx.srcStride = CeilDiv(static_cast<uint64_t>(kL1Size_ * scaleFactor_),
+                                        static_cast<uint64_t>(GROUP_SIZE_32 * C0_SIZE_MX_B8));
+        aL0Load2dMx.dstStride = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)),
+                                        GROUP_SIZE_32 * C0_SIZE_MX_B8);
         AscendC::LoadData(aL0Tensor, aL1Tensor_, scaleAL1Tensor_, aL0Load2dParams, aL0Load2dMx);
     }
 
@@ -500,8 +495,8 @@ private:
     {
         AscendC::LoadData2DParamsV2 bL0Load2dParams;
         bL0Load2dParams.mStartPosition = 0;
-        bL0Load2dParams.kStartPosition =
-            CeilDiv(static_cast<uint64_t>(kL0Idx * kL0Size_ * sizeof(ElementA)), C0_SIZE_B8);
+        bL0Load2dParams.kStartPosition = CeilDiv(static_cast<uint64_t>(kL0Idx * kL0Size_ * sizeof(ElementA)),
+                                                 C0_SIZE_B8);
         bL0Load2dParams.mStep = CeilDiv(nL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
         bL0Load2dParams.kStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), C0_SIZE_B8);
         bL0Load2dParams.srcStride = CeilDiv(nL1AlignLen_ * C0_SIZE_B8, FRACTAL_SIZE);
@@ -510,10 +505,12 @@ private:
         bL0Load2dMx.xStartPosition = 0;
         bL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * kL0Size_, GROUP_SIZE_32 * C0_SIZE_MX_B8);
         bL0Load2dMx.xStep = CeilDiv(nL0Len_, static_cast<uint64_t>(BLOCK_CUBE));
-        bL0Load2dMx.yStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
-        bL0Load2dMx.srcStride = CeilDiv(
-            static_cast<uint64_t>(kL1Size_ * scaleFactor_), static_cast<uint64_t>(GROUP_SIZE_32 * C0_SIZE_MX_B8));
-        bL0Load2dMx.dstStride = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)), GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        bL0Load2dMx.yStep = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)),
+                                    GROUP_SIZE_32 * C0_SIZE_MX_B8);
+        bL0Load2dMx.srcStride = CeilDiv(static_cast<uint64_t>(kL1Size_ * scaleFactor_),
+                                        static_cast<uint64_t>(GROUP_SIZE_32 * C0_SIZE_MX_B8));
+        bL0Load2dMx.dstStride = CeilDiv(static_cast<uint64_t>(CeilAlign(baseK, K_ALIGN_SIZE)),
+                                        GROUP_SIZE_32 * C0_SIZE_MX_B8);
         AscendC::LoadData(bL0Tensor, bL1Tensor_, scaleBL1Tensor_, bL0Load2dParams, bL0Load2dMx);
     }
 
@@ -537,19 +534,14 @@ private:
         scaleKBL1Size = CeilAlign(scaleKBL1Size, K_ALIGN_SIZE);
         int64_t scaleKBL1GroupNum = CeilDiv(scaleKBL1Size, GROUP_SIZE_32);
         int64_t scaleKBGmGroupNum = CeilDiv(CeilAlign(kSize_, K_ALIGN_SIZE), GROUP_SIZE_32);
-        CopyScaleDn2Nz(scaleBBufIdx_ == IDX_0 ? scaleBL1Buf0_ : scaleBL1Buf1_,
-            scaleB,
-            0,
-            CeilDiv(kL1Size_ * scaleFactor_, GROUP_SIZE_32),
-            nL1Len_,
-            scaleKBL1GroupNum,
-            scaleKBGmGroupNum);
+        CopyScaleDn2Nz(scaleBBufIdx_ == IDX_0 ? scaleBL1Buf0_ : scaleBL1Buf1_, scaleB, 0,
+                       CeilDiv(kL1Size_ * scaleFactor_, GROUP_SIZE_32), nL1Len_, scaleKBL1GroupNum, scaleKBGmGroupNum);
     }
 
     template <class TensorScale>
-    __aicore__ inline void CopyScaleDn2Nz(
-        const LocalTensor<ElementScale>& dst, const TensorScale& scale, [[maybe_unused]] const int row, const int col,
-        const int height, const int width, const int gScaleCol)
+    __aicore__ inline void CopyScaleDn2Nz(const LocalTensor<ElementScale>& dst, const TensorScale& scale,
+                                          [[maybe_unused]] const int row, const int col, const int height,
+                                          const int width, const int gScaleCol)
     {
         AscendC::Dn2NzParams dn2NzParams;
         dn2NzParams.dnNum = 1;

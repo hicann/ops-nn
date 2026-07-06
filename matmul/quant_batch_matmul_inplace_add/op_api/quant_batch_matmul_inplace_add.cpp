@@ -23,23 +23,21 @@ namespace l0op {
 
 OP_TYPE_REGISTER(QuantBatchMatmulInplaceAdd);
 
-aclTensor* QuantBatchMatmulInplaceAdd(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x2Scale, aclTensor* yRef, const aclTensor* x1ScaleOptional,  
-    bool transposeX1, bool transposeX2, int64_t groupSize, aclOpExecutor* executor)
+aclTensor* QuantBatchMatmulInplaceAdd(const aclTensor* x1, const aclTensor* x2, const aclTensor* x2Scale,
+                                      aclTensor* yRef, const aclTensor* x1ScaleOptional, bool transposeX1,
+                                      bool transposeX2, int64_t groupSize, aclOpExecutor* executor)
 {
     L0_DFX(QuantBatchMatmulInplaceAdd, x1, x2, x2Scale, yRef, x1ScaleOptional, transposeX1, transposeX2, groupSize);
 
-    auto ret = INFER_SHAPE(
-        QuantBatchMatmulInplaceAdd, OP_INPUT(x1, x2, x2Scale, yRef, x1ScaleOptional), OP_OUTPUT(yRef),
-        OP_ATTR(transposeX1, transposeX2, groupSize));
+    auto ret = INFER_SHAPE(QuantBatchMatmulInplaceAdd, OP_INPUT(x1, x2, x2Scale, yRef, x1ScaleOptional),
+                           OP_OUTPUT(yRef), OP_ATTR(transposeX1, transposeX2, groupSize));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
         return nullptr;
     }
 
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        QuantBatchMatmulInplaceAdd, OP_INPUT(x1, x2, x2Scale, yRef, x1ScaleOptional), OP_OUTPUT(yRef),
-        OP_ATTR(transposeX1, transposeX2, groupSize));
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantBatchMatmulInplaceAdd, OP_INPUT(x1, x2, x2Scale, yRef, x1ScaleOptional),
+                                      OP_OUTPUT(yRef), OP_ATTR(transposeX1, transposeX2, groupSize));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;

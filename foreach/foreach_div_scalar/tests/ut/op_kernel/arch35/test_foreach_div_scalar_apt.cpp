@@ -25,23 +25,19 @@
 #include "../../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_def.h"
 
 extern "C" __global__ __aicore__ void foreach_div_scalar(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
-                                                                                GM_ADDR tiling);
+                                                         GM_ADDR tiling);
 
 class foreach_div_scalar_apt_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_div_scalar_apt_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "foreach_div_scalar_apt_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_div_scalar_apt_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_div_scalar_apt_test TearDown\n" << std::endl; }
 };
 
-TEST_F(foreach_div_scalar_apt_test, test_case_float_1) {
+TEST_F(foreach_div_scalar_apt_test, test_case_float_1)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{18, 1}, {1, 1}, {1, 1}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_div_scalar/tests/ut/op_kernel/div_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_div_scalar/tests/ut/op_kernel/div_scalar_data ./");
     system("chmod -R 755 ./div_scalar_data/");
     system("cd ./div_scalar_data/ && python3 gen_data.py '{{18, 1}, {1, 1}, {1, 1}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -81,13 +77,14 @@ TEST_F(foreach_div_scalar_apt_test, test_case_float_1) {
     std::cout << "exit = " << ret << std::endl;
 }
 
-TEST_F(foreach_div_scalar_apt_test, test_case_float16_2) {
+TEST_F(foreach_div_scalar_apt_test, test_case_float16_2)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{1, 3, 3, 4, 2, 1, 4, 4}, {1, 3, 3, 4, 2, 1, 4, 4}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_div_scalar/tests/ut/op_kernel/div_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_div_scalar/tests/ut/op_kernel/div_scalar_data ./");
     system("chmod -R 755 ./div_scalar_data/");
-    system("cd ./div_scalar_data/ && python3 gen_data.py '{{1, 3, 3, 4, 2, 1, 4, 4}, {1, 3, 3, 4, 2, 1, 4, 4}}' 3 'float16'");
+    system("cd ./div_scalar_data/ && python3 gen_data.py '{{1, 3, 3, 4, 2, 1, 4, 4}, {1, 3, 3, 4, 2, 1, 4, 4}}' 3 "
+           "'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 2;
     size_t sysWorkspaceSize = 16 * 1024 * 1024;

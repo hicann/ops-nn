@@ -43,7 +43,7 @@ using namespace fusion;
 namespace ops {
 namespace {
 const std::string kPassName = "SortedSparseSegmentMeanGradFusionPass";
-const char *kSourceOpType = "SparseSegmentMeanGrad";
+const char* kSourceOpType = "SparseSegmentMeanGrad";
 
 // SparseSegmentMeanGrad IR input index
 const int64_t kSrcGradIndex = 0L;
@@ -73,9 +73,8 @@ inline bool IsRegbasePlatform()
 {
     PlatformInfo info;
     OptionalInfo optInfo;
-    OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS,
-        false, kPassName.c_str(), "Get platform_info failed.");
+    OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS, false,
+               kPassName.c_str(), "Get platform_info failed.");
     const std::string socVersion = info.str_info.short_soc_version;
     bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62CM12A");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbasePlatform);
@@ -83,40 +82,37 @@ inline bool IsRegbasePlatform()
 }
 
 // Build the SparseSegmentMeanGrad pattern node via CompliantNodeBuilder (no ES API for the source op).
-es::EsTensorHolder CreatePatternSource(es::EsGraphBuilder &graphBuilder, const std::string &nodeName,
-    const std::array<es::EsTensorHolder, kSrcInputNum> &inputs)
+es::EsTensorHolder CreatePatternSource(es::EsGraphBuilder& graphBuilder, const std::string& nodeName,
+                                       const std::array<es::EsTensorHolder, kSrcInputNum>& inputs)
 {
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto sourceNode = es::CompliantNodeBuilder(graph)
                           .OpType(kSourceOpType)
                           .Name(nodeName.c_str())
-                          .IrDefInputs({
-                              {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"segment_ids", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"output_dim0", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-                          })
+                          .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                        {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                        {"segment_ids", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                        {"output_dim0", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                           .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                           .Build();
 
     for (int64_t i = 0; i < kSrcInputNum; ++i) {
-        OP_LOGE_IF(
-            es::AddEdgeAndUpdatePeerDesc(*graph, *inputs[i].GetProducer(), inputs[i].GetProducerOutIndex(),
-                sourceNode, static_cast<int32_t>(i)) != GRAPH_SUCCESS,
-            es::EsTensorHolder(), kPassName.c_str(), "AddEdgeAndUpdatePeerDesc failed for input %ld.", i);
+        OP_LOGE_IF(es::AddEdgeAndUpdatePeerDesc(*graph, *inputs[i].GetProducer(), inputs[i].GetProducerOutIndex(),
+                                                sourceNode, static_cast<int32_t>(i)) != GRAPH_SUCCESS,
+                   es::EsTensorHolder(), kPassName.c_str(), "AddEdgeAndUpdatePeerDesc failed for input %ld.", i);
     }
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(sourceNode, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(sourceNode, 0);
     return es::EsTensorHolder(yHolder);
 }
 
 // Pass is registered at kAfterInferShape and the replacement contains an intermediate Sort node,
 // so the replacement graph shapes must be inferred explicitly.
-Status InferShape(const GraphUniqPtr &replaceGraph, const std::vector<SubgraphInput> &subgraphInputs)
+Status InferShape(const GraphUniqPtr& replaceGraph, const std::vector<SubgraphInput>& subgraphInputs)
 {
     OPS_LOG_D(kPassName.c_str(), "Begin infershape for replacement.");
     std::vector<Shape> inputShapes;
-    for (const auto &subgraphInput : subgraphInputs) {
+    for (const auto& subgraphInput : subgraphInputs) {
         auto matchNode = subgraphInput.GetAllInputs().at(0);
         TensorDesc tensorDesc;
         matchNode.node.GetInputDesc(matchNode.index, tensorDesc);
@@ -158,11 +154,11 @@ bool SortedSparseSegmentMeanGradFusionPass::MeetRequirements(const std::unique_p
 
     NodeIo sourceIo;
     OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureSource, sourceIo) != SUCCESS, false, kPassName.c_str(),
-        "Failed to get captured source tensor.");
+               "Failed to get captured source tensor.");
 
     TensorDesc gradDesc;
     OP_LOGE_IF(sourceIo.node.GetInputDesc(kSrcGradIndex, gradDesc) != SUCCESS, false, kPassName.c_str(),
-        "Failed to get grad input desc.");
+               "Failed to get grad input desc.");
     if (!IsSupportedGradDtype(gradDesc.GetDataType())) {
         OPS_LOG_D(kPassName.c_str(), "grad dtype %d is not supported.", gradDesc.GetDataType());
         return false;
@@ -178,7 +174,7 @@ std::unique_ptr<Graph> SortedSparseSegmentMeanGradFusionPass::Replacement(
 
     NodeIo sourceIo;
     OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureSource, sourceIo) != SUCCESS, nullptr, kPassName.c_str(),
-        "Failed to get captured source tensor.");
+               "Failed to get captured source tensor.");
     GNode sourceNode = sourceIo.node;
 
     std::vector<SubgraphInput> subgraphInputs;
@@ -190,30 +186,30 @@ std::unique_ptr<Graph> SortedSparseSegmentMeanGradFusionPass::Replacement(
     TensorDesc segmentIdsDesc;
     TensorDesc outputDim0Desc;
     OP_LOGE_IF(sourceNode.GetInputDesc(kSrcGradIndex, gradDesc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Failed to get grad input desc.");
+               "Failed to get grad input desc.");
     OP_LOGE_IF(sourceNode.GetInputDesc(kSrcIndicesIndex, indicesDesc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Failed to get indices input desc.");
+               "Failed to get indices input desc.");
     OP_LOGE_IF(sourceNode.GetInputDesc(kSrcSegmentIdsIndex, segmentIdsDesc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Failed to get segment_ids input desc.");
+               "Failed to get segment_ids input desc.");
     OP_LOGE_IF(sourceNode.GetInputDesc(kSrcOutputDim0Index, outputDim0Desc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Failed to get output_dim0 input desc.");
+               "Failed to get output_dim0 input desc.");
 
     TensorDesc outputDesc;
     OP_LOGE_IF(sourceNode.GetOutputDesc(0, outputDesc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Failed to get output desc.");
+               "Failed to get output desc.");
 
     // Sort.y2 dtype follows the indices dtype: int32 -> INT32, otherwise INT64. Same as the original pass.
     DataType y2Dtype = (indicesDesc.GetDataType() == DT_INT32) ? DT_INT32 : DT_INT64;
 
     auto graphBuilder = es::EsGraphBuilder("replacement");
     auto grad = graphBuilder.CreateInput(0, "x", gradDesc.GetDataType(), gradDesc.GetFormat(),
-        gradDesc.GetShape().GetDims());
+                                         gradDesc.GetShape().GetDims());
     auto indices = graphBuilder.CreateInput(1, "indices", indicesDesc.GetDataType(), indicesDesc.GetFormat(),
-        indicesDesc.GetShape().GetDims());
+                                            indicesDesc.GetShape().GetDims());
     auto segmentIds = graphBuilder.CreateInput(2, "segment_ids", segmentIdsDesc.GetDataType(),
-        segmentIdsDesc.GetFormat(), segmentIdsDesc.GetShape().GetDims());
+                                               segmentIdsDesc.GetFormat(), segmentIdsDesc.GetShape().GetDims());
     auto outputDim0 = graphBuilder.CreateInput(3, "output_dim0", outputDim0Desc.GetDataType(),
-        outputDim0Desc.GetFormat(), outputDim0Desc.GetShape().GetDims());
+                                               outputDim0Desc.GetFormat(), outputDim0Desc.GetShape().GetDims());
 
     // Step 1: Sort the indices, producing sorted_indices (y1) and pre_location_indices (y2).
     auto sortOut = es::Sort(indices, kSortAxis, kSortDescending, kSortStable, y2Dtype);

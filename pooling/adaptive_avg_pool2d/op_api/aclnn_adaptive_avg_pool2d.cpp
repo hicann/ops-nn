@@ -39,8 +39,8 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> dtypeSupportListOrigin = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> dtypeSupportListOrigin = {op::DataType::DT_FLOAT,
+                                                                           op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> dtypeSupportListAscend910B = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const int64_t leftMatrixIndex = 0;
@@ -114,9 +114,8 @@ static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
     // nc_dim index offset is 2
     for (uint64_t i = 0; i < outputDimNum - 2; i++) {
         if (outputShape.GetDim(i) != inputShape.GetDim(i)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Out_shape[%lu]: %ld should equal to input_shape[%lu]: %ld", i,
-                outputShape.GetDim(i), i, inputShape.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Out_shape[%lu]: %ld should equal to input_shape[%lu]: %ld", i,
+                    outputShape.GetDim(i), i, inputShape.GetDim(i));
             return false;
         }
     }
@@ -136,9 +135,8 @@ static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
 static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -155,17 +153,15 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 
     if ((self->GetStorageFormat() == Format::FORMAT_NCL && self->GetViewShape().GetDimNum() != chwShapeSize) ||
         (self->GetStorageFormat() == Format::FORMAT_NCHW && self->GetViewShape().GetDimNum() != nchwShapeSize)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "self is %zuD tensor but the format is [%s].", self->GetViewShape().GetDimNum(),
-            op::ToString(self->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self is %zuD tensor but the format is [%s].",
+                self->GetViewShape().GetDimNum(), op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
 
     if ((out->GetStorageFormat() == Format::FORMAT_NCL && out->GetViewShape().GetDimNum() != chwShapeSize) ||
         (out->GetStorageFormat() == Format::FORMAT_NCHW && out->GetViewShape().GetDimNum() != nchwShapeSize)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "out is %zuD tensor but the format is [%s].", out->GetViewShape().GetDimNum(),
-            op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out is %zuD tensor but the format is [%s].", out->GetViewShape().GetDimNum(),
+                op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -251,8 +247,8 @@ static aclnnStatus DoReduceMean(const aclTensor* self, aclTensor* out, aclOpExec
 }
 
 // InputSize不为[1, 1], AdaptiveAvgPool2D走融合算子流程，会拆分成多个算子进行实现
-static aclnnStatus DoAdaptiveAvgPool2D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus DoAdaptiveAvgPool2D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                       aclOpExecutor* executor)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto selfContiguous = l0op::Contiguous(self, executor);
@@ -316,8 +312,8 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     auto shapeResult = l0op::Shape_op(inputContiguous, executor);
     CHECK_RET(shapeResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    std::array<aclTensor*, assistMatrixNums> assistMatrixTensor =
-        l0op::AdaptiveAvgPool2dAssistMatrix(shapeResult, inputContiguous, outputSize, executor);
+    std::array<aclTensor*, assistMatrixNums> assistMatrixTensor = l0op::AdaptiveAvgPool2dAssistMatrix(
+        shapeResult, inputContiguous, outputSize, executor);
     CHECK_RET(assistMatrixTensor[leftMatrixIndex] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(assistMatrixTensor[rightMatrixIndex] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(assistMatrixTensor[mulMatrixIndex] != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -354,12 +350,12 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     auto rightMatrixCast = l0op::Cast(rightMatrixUnsqueeze, self->GetDataType(), executor);
     CHECK_RET(rightMatrixCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    leftMatrixBmmv2 =
-        Ops::NN::ExecBatchMatmulOp(inputContiguous, leftMatrixCast, inputContiguous, true, true, 1, executor);
+    leftMatrixBmmv2 = Ops::NN::ExecBatchMatmulOp(inputContiguous, leftMatrixCast, inputContiguous, true, true, 1,
+                                                 executor);
     CHECK_RET(leftMatrixBmmv2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    rightMatrixBmmv2 =
-        Ops::NN::ExecBatchMatmulOp(leftMatrixBmmv2, rightMatrixCast, inputContiguous, true, false, 1, executor);
+    rightMatrixBmmv2 = Ops::NN::ExecBatchMatmulOp(leftMatrixBmmv2, rightMatrixCast, inputContiguous, true, false, 1,
+                                                  executor);
     CHECK_RET(rightMatrixBmmv2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto mulMatrixCast = l0op::Cast(mulMatrixUnsqueeze, rightMatrixBmmv2->GetDataType(), executor);
@@ -378,8 +374,8 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
-static aclnnStatus DoFusionAdaptiveAvgPool2D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus DoFusionAdaptiveAvgPool2D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                             aclOpExecutor* executor)
 {
     int64_t hValue = (*outputSize)[0];
     int64_t wValue = (*outputSize)[1];
@@ -389,9 +385,8 @@ static aclnnStatus DoFusionAdaptiveAvgPool2D(
     return DoAdaptiveAvgPool2D(self, outputSize, out, executor);
 }
 
-aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAdaptiveAvgPool2d, DFX_IN(self, outputSize), DFX_OUT(out));
     // 固定写法，参数检查
@@ -417,8 +412,8 @@ aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAdaptiveAvgPool2d(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnAdaptiveAvgPool2d(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAdaptiveAvgPool2d);
     // 固定写法，调用框架能力，完成计算

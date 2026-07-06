@@ -54,11 +54,9 @@ inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape, const gert
     return inShape;
 }
 
-class RIGDavidTilingImpl
-{
+class RIGDavidTilingImpl {
 public:
-    explicit RIGDavidTilingImpl(gert::TilingContext* context) : context_(context)
-    {}
+    explicit RIGDavidTilingImpl(gert::TilingContext* context) : context_(context) {}
 
     ge::graphStatus Init(const RepeatInterleaveGradCompileInfo* compileInfo);
 
@@ -81,8 +79,8 @@ private:
 
     void PrintUbPara();
 
-    void MergeAxis(
-        const gert::Shape& xShape, const gert::Shape& yShape, const gert::Shape& repeatShape, int64_t xDimNum);
+    void MergeAxis(const gert::Shape& xShape, const gert::Shape& yShape, const gert::Shape& repeatShape,
+                   int64_t xDimNum);
 
 private:
     int32_t clSize_ = 0;
@@ -125,7 +123,7 @@ private:
     uint32_t templateNum_ = 0;
     gert::TilingContext* context_;
     size_t workspaceSizeExt_ = 0; // 额外的workspace，用于block切Repeat时使用
-}; // class RIGDavidTilingImpl
+};                                // class RIGDavidTilingImpl
 
 ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* compileInfo)
 {
@@ -134,8 +132,8 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     vRegSize_ = static_cast<int32_t>(compileInfo->vRegSize);
     ubSize_ = static_cast<int32_t>(compileInfo->ubSize);
     coreNum_ = static_cast<int32_t>(compileInfo->coreNum);
-    workspaceSizeExt_ = CeilAlign(static_cast<size_t>(coreNum_ * INT64_SIZE), 
-                                    static_cast<size_t>(SINGLE_CACHE_LINE_SIZE));
+    workspaceSizeExt_ = CeilAlign(static_cast<size_t>(coreNum_ * INT64_SIZE),
+                                  static_cast<size_t>(SINGLE_CACHE_LINE_SIZE));
 
     // 获取y_grad
     auto xStorage = context_->GetInputShape(INPUT_X_INDEX);
@@ -155,11 +153,10 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
 
     auto repeatShapeSize = repeatShape.GetShapeSize();
 
-    OP_CHECK_IF(
-        repeatShapeSize == 0L,
-        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "repeats",
-            std::to_string(repeatShapeSize).c_str(), "> 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(repeatShapeSize == 0L,
+                OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "repeats",
+                                              std::to_string(repeatShapeSize).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
 
     // 获取axis 如果axis为null，处理逻辑不同
     auto attrs = context_->GetAttrs();
@@ -172,22 +169,21 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     }
 
     int64_t xDimNum = xShape.GetDimNum();
-    OP_CHECK_IF(
-        xDimNum > MAX_YGRAD_DIM,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_grad",
-            (std::to_string(xDimNum) + "D, max 8D").c_str(), "the RIG reduce template only supports up to 8 dims"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDimNum > MAX_YGRAD_DIM,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_grad",
+                                                          (std::to_string(xDimNum) + "D, max 8D").c_str(),
+                                                          "the RIG reduce template only supports up to 8 dims"),
+                return ge::GRAPH_FAILED);
     if (!isAxisNone_ && axis_ < 0) {
         axis_ = axis_ + xDimNum;
     }
 
     // 校验axis是none时，输入的长度是否为1
-    OP_CHECK_IF(
-        (isAxisNone_ && xDimNum != 1),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_grad",
-            (std::to_string(xDimNum) + "D, expected 1D").c_str(),
-            "when axis is not set, y_grad must be 1-dimensional"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((isAxisNone_ && xDimNum != 1),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_grad",
+                                                          (std::to_string(xDimNum) + "D, expected 1D").c_str(),
+                                                          "when axis is not set, y_grad must be 1-dimensional"),
+                return ge::GRAPH_FAILED);
     // 合轴
     MergeAxis(xShape, yShape, repeatShape, xDimNum);
 
@@ -212,8 +208,8 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     return ge::GRAPH_SUCCESS;
 }
 
-void RIGDavidTilingImpl::MergeAxis(
-    const gert::Shape& xShape, const gert::Shape& yShape, const gert::Shape& repeatShape, int64_t xDimNum)
+void RIGDavidTilingImpl::MergeAxis(const gert::Shape& xShape, const gert::Shape& yShape, const gert::Shape& repeatShape,
+                                   int64_t xDimNum)
 {
     if (isAxisNone_) {
         lenM_ = 1;
@@ -286,9 +282,8 @@ void RIGDavidTilingImpl::TilingStrategy()
         DoBlockSplit(lenM_, coreNum_, mBlockPara_); // M.o M.i
 
         // repeat要按照128B切分
-        DoUbSplit(
-            repeatBlockPara_.blockTailFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
-            repeatLoopPara_.tailCoreUbPara); // repeat.o repeat.i
+        DoUbSplit(repeatBlockPara_.blockTailFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
+                  repeatLoopPara_.tailCoreUbPara); // repeat.o repeat.i
 
         if (lenN_ != 1) { // RA pattern
             nFactor_ = BASE_SPLIT_LENGTH;
@@ -300,10 +295,10 @@ void RIGDavidTilingImpl::TilingStrategy()
             DoUbSplit(mBlockPara_.blockFactor, BASE_SPLIT_LENGTH, mUbPara_.mainCoreUbPara);     // main M.i.o  M.i.i
             DoUbSplit(mBlockPara_.blockTailFactor, BASE_SPLIT_LENGTH, mUbPara_.tailCoreUbPara); // M.i.o  M.i.i
             rFactor_ = basicBlockSize_ / mUbPara_.mainCoreUbPara.ubFactor / dtSize_; // 使用主核主块计算rfactor
-            rFactor_ = FloorAlign(rFactor_, static_cast<int32_t>(blockSize_ / dtSize_)); // 避免Kernel向上对齐时超BufferSize
+            rFactor_ = FloorAlign(rFactor_,
+                                  static_cast<int32_t>(blockSize_ / dtSize_)); // 避免Kernel向上对齐时超BufferSize
             if (rFactor_ <= 1) {
-                OP_LOGE(context_->GetNodeName(), "RAxis in ub is too small (rFactor=%d), cannot calculate",
-                        rFactor_);
+                OP_LOGE(context_->GetNodeName(), "RAxis in ub is too small (rFactor=%d), cannot calculate", rFactor_);
                 return;
             }
             templateNum_ = RIG::BLOCK_SPLIT_M_N_1;
@@ -318,9 +313,8 @@ void RIGDavidTilingImpl::TilingStrategy()
             coreNumPerM_ = nBlockPara_.blockCount;
             DoBlockSplit(lenM_, lenM_, mBlockPara_); // M.o M.i
 
-            DoUbSplit(
-                repeatBlockPara_.blockTailFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
-                repeatLoopPara_.tailCoreUbPara); // repeat.o repeat.i
+            DoUbSplit(repeatBlockPara_.blockTailFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
+                      repeatLoopPara_.tailCoreUbPara); // repeat.o repeat.i
 
             nFactor_ = BASE_SPLIT_LENGTH;
             rFactor_ = basicBlockSize_ / nFactor_ / dtSize_;
@@ -356,12 +350,10 @@ void RIGDavidTilingImpl::TilingStrategyBlockSplitR()
     DoUbSplit(repeatBlockPara_.blockFactor, maxForR, repeatSumUbPara.mainCoreUbPara);
     DoUbSplit(repeatBlockPara_.blockTailFactor, maxForR, repeatSumUbPara.tailCoreUbPara);
     // R轴切UB（这里切UB才是真正做算子处理时的切分）,一次处理128B
-    DoUbSplit(
-        repeatBlockPara_.blockFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
-        repeatLoopPara_.mainCoreUbPara);
-    DoUbSplit(
-        repeatBlockPara_.blockTailFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
-        repeatLoopPara_.tailCoreUbPara);
+    DoUbSplit(repeatBlockPara_.blockFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
+              repeatLoopPara_.mainCoreUbPara);
+    DoUbSplit(repeatBlockPara_.blockTailFactor, static_cast<int64_t>(repeatBufferSize_ / rtSize_),
+              repeatLoopPara_.tailCoreUbPara);
     // N轴切UB，全载
     DoUbSplit(nBlockPara_.blockTailFactor, nBlockPara_.blockTailFactor, nUbPara_.tailCoreUbPara);
 
@@ -383,8 +375,8 @@ void RIGDavidTilingImpl::DoBlockSplit(int64_t splitLen, int32_t coreNum, RIGBloc
     }
     blockPara.blockFactor = CeilDiv(splitLen, static_cast<int64_t>(coreNum));
     blockPara.blockCount = CeilDiv(splitLen, blockPara.blockFactor);
-    blockPara.blockTailFactor =
-        (splitLen % blockPara.blockFactor == 0) ? blockPara.blockFactor : splitLen % blockPara.blockFactor;
+    blockPara.blockTailFactor = (splitLen % blockPara.blockFactor == 0) ? blockPara.blockFactor :
+                                                                          splitLen % blockPara.blockFactor;
 }
 
 // UbParaUnit -> UbParaUnit
@@ -430,12 +422,11 @@ void RIGDavidTilingImpl::FillTilingData(gert::TilingContext* context)
 
 void RIGDavidTilingImpl::PrintTilingData()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "tilingData is templateNum:%u, realCoreNum:%d, lenM:%ld, lenR:%ld, lenN:%ld, lenP:%ld, lenRepeat:%ld,\
+    OP_LOGI(context_->GetNodeName(),
+            "tilingData is templateNum:%u, realCoreNum:%d, lenM:%ld, lenR:%ld, lenN:%ld, lenP:%ld, lenRepeat:%ld,\
         repeatBufferSize:%d, repeatSumBufferSize_:%d, rFactor:%d, basicBlockSize:%d, ubSize_:%d, coreNumPerM:%d",
-        templateNum_, realCoreNum_, lenM_, lenR_, lenN_, lenP_, lenRepeat_, repeatBufferSize_, repeatSumBufferSize_,
-        rFactor_, basicBlockSize_, ubSize_, coreNumPerM_);
+            templateNum_, realCoreNum_, lenM_, lenR_, lenN_, lenP_, lenRepeat_, repeatBufferSize_, repeatSumBufferSize_,
+            rFactor_, basicBlockSize_, ubSize_, coreNumPerM_);
 
     PrintBlockPara();
     PrintUbPara();
@@ -443,33 +434,31 @@ void RIGDavidTilingImpl::PrintTilingData()
 
 void RIGDavidTilingImpl::PrintBlockPara()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "tilingData is mBlockPara:%d %ld %ld, repeatBlockPara:%d %ld %ld, nBlockPara:%d %ld %ld",
-        mBlockPara_.blockCount, mBlockPara_.blockFactor, mBlockPara_.blockTailFactor, repeatBlockPara_.blockCount,
-        repeatBlockPara_.blockFactor, repeatBlockPara_.blockTailFactor, nBlockPara_.blockCount, nBlockPara_.blockFactor,
-        nBlockPara_.blockTailFactor);
+    OP_LOGI(context_->GetNodeName(),
+            "tilingData is mBlockPara:%d %ld %ld, repeatBlockPara:%d %ld %ld, nBlockPara:%d %ld %ld",
+            mBlockPara_.blockCount, mBlockPara_.blockFactor, mBlockPara_.blockTailFactor, repeatBlockPara_.blockCount,
+            repeatBlockPara_.blockFactor, repeatBlockPara_.blockTailFactor, nBlockPara_.blockCount,
+            nBlockPara_.blockFactor, nBlockPara_.blockTailFactor);
 }
 
 void RIGDavidTilingImpl::PrintUbPara()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "tilingData is mUbPara:%d %d %d %d %d %d, repeatUbPara:%d %d %d %d %d %d, nUbPara:%d %d %d %d %d %d, "
-        "repeatLoopPara:%d %d %d %d %d %d, repeatSumUbPara:%d %d %d %d %d %d",
-        mUbPara_.mainCoreUbPara.ubCount, mUbPara_.mainCoreUbPara.ubFactor, mUbPara_.mainCoreUbPara.ubTailFactor,
-        mUbPara_.tailCoreUbPara.ubCount, mUbPara_.tailCoreUbPara.ubFactor, mUbPara_.tailCoreUbPara.ubTailFactor,
-        repeatUbPara_.mainCoreUbPara.ubCount, repeatUbPara_.mainCoreUbPara.ubFactor,
-        repeatUbPara_.mainCoreUbPara.ubTailFactor, repeatUbPara_.tailCoreUbPara.ubCount,
-        repeatUbPara_.tailCoreUbPara.ubFactor, repeatUbPara_.tailCoreUbPara.ubTailFactor,
-        nUbPara_.mainCoreUbPara.ubCount, nUbPara_.mainCoreUbPara.ubFactor, nUbPara_.mainCoreUbPara.ubTailFactor,
-        nUbPara_.tailCoreUbPara.ubCount, nUbPara_.tailCoreUbPara.ubFactor, nUbPara_.tailCoreUbPara.ubTailFactor,
-        repeatLoopPara_.mainCoreUbPara.ubCount, repeatLoopPara_.mainCoreUbPara.ubFactor,
-        repeatLoopPara_.mainCoreUbPara.ubTailFactor, repeatLoopPara_.tailCoreUbPara.ubCount,
-        repeatLoopPara_.tailCoreUbPara.ubFactor, repeatLoopPara_.tailCoreUbPara.ubTailFactor,
-        repeatSumUbPara.mainCoreUbPara.ubCount, repeatSumUbPara.mainCoreUbPara.ubFactor,
-        repeatSumUbPara.mainCoreUbPara.ubTailFactor, repeatSumUbPara.tailCoreUbPara.ubCount,
-        repeatSumUbPara.tailCoreUbPara.ubFactor, repeatSumUbPara.tailCoreUbPara.ubTailFactor);
+    OP_LOGI(context_->GetNodeName(),
+            "tilingData is mUbPara:%d %d %d %d %d %d, repeatUbPara:%d %d %d %d %d %d, nUbPara:%d %d %d %d %d %d, "
+            "repeatLoopPara:%d %d %d %d %d %d, repeatSumUbPara:%d %d %d %d %d %d",
+            mUbPara_.mainCoreUbPara.ubCount, mUbPara_.mainCoreUbPara.ubFactor, mUbPara_.mainCoreUbPara.ubTailFactor,
+            mUbPara_.tailCoreUbPara.ubCount, mUbPara_.tailCoreUbPara.ubFactor, mUbPara_.tailCoreUbPara.ubTailFactor,
+            repeatUbPara_.mainCoreUbPara.ubCount, repeatUbPara_.mainCoreUbPara.ubFactor,
+            repeatUbPara_.mainCoreUbPara.ubTailFactor, repeatUbPara_.tailCoreUbPara.ubCount,
+            repeatUbPara_.tailCoreUbPara.ubFactor, repeatUbPara_.tailCoreUbPara.ubTailFactor,
+            nUbPara_.mainCoreUbPara.ubCount, nUbPara_.mainCoreUbPara.ubFactor, nUbPara_.mainCoreUbPara.ubTailFactor,
+            nUbPara_.tailCoreUbPara.ubCount, nUbPara_.tailCoreUbPara.ubFactor, nUbPara_.tailCoreUbPara.ubTailFactor,
+            repeatLoopPara_.mainCoreUbPara.ubCount, repeatLoopPara_.mainCoreUbPara.ubFactor,
+            repeatLoopPara_.mainCoreUbPara.ubTailFactor, repeatLoopPara_.tailCoreUbPara.ubCount,
+            repeatLoopPara_.tailCoreUbPara.ubFactor, repeatLoopPara_.tailCoreUbPara.ubTailFactor,
+            repeatSumUbPara.mainCoreUbPara.ubCount, repeatSumUbPara.mainCoreUbPara.ubFactor,
+            repeatSumUbPara.mainCoreUbPara.ubTailFactor, repeatSumUbPara.tailCoreUbPara.ubCount,
+            repeatSumUbPara.tailCoreUbPara.ubFactor, repeatSumUbPara.tailCoreUbPara.ubTailFactor);
 }
 
 static ge::graphStatus TilingGetCompileInfo(gert::TilingContext* context, RepeatInterleaveGradCompileInfo* compileInfo)
@@ -481,36 +470,31 @@ static ge::graphStatus TilingGetCompileInfo(gert::TilingContext* context, Repeat
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
 
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0),
-        OP_LOGE(context, "GetHardwareInfo failed: coreNum is %ld.", compileInfo->coreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+                OP_LOGE(context, "GetHardwareInfo failed: coreNum is %ld.", compileInfo->coreNum),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(
-        (compileInfo->ubSize <= 0L),
-        OP_LOGE(context, "GetHardwareInfo failed: ubSize is %ld.", compileInfo->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0L),
+                OP_LOGE(context, "GetHardwareInfo failed: ubSize is %ld.", compileInfo->ubSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->clSize = GetCacheLineSize(context);
-    OP_CHECK_IF(
-        (compileInfo->clSize <= 0U),
-        OP_LOGE(context, "GetHardwareInfo failed: clSize is %u.", compileInfo->clSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->clSize <= 0U),
+                OP_LOGE(context, "GetHardwareInfo failed: clSize is %u.", compileInfo->clSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->blockSize = GetUbBlockSize(context);
-    OP_CHECK_IF(
-        (compileInfo->blockSize <= 0),
-        OP_LOGE(context, "GetHardwareInfo failed: blockSize is %ld.", compileInfo->blockSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->blockSize <= 0),
+                OP_LOGE(context, "GetHardwareInfo failed: blockSize is %ld.", compileInfo->blockSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = GetVRegSize(context);
-    OP_CHECK_IF(
-        (compileInfo->vRegSize <= 0U),
-        OP_LOGE(context, "GetHardwareInfo failed: vRegSize is %u.", compileInfo->vRegSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vRegSize <= 0U),
+                OP_LOGE(context, "GetHardwareInfo failed: vRegSize is %u.", compileInfo->vRegSize),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "Exit TilingPrepare4CumsumAscendc.");
     return ge::GRAPH_SUCCESS;

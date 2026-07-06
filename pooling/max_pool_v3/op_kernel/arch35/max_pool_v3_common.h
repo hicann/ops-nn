@@ -14,7 +14,7 @@
  */
 #ifndef MAX_POOL_V3_COMMON_H_
 #define MAX_POOL_V3_COMMON_H_
-#if ASC_DEVKIT_MAJOR >=9
+#if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_vec_intf.h"
 #else
 #include "kernel_operator.h"
@@ -101,9 +101,8 @@ template <typename T>
 struct VciTypeGet {
     using type = typename std::conditional<
         IsSame<T, uint32_t>::value, int32_t,
-        typename std::conditional<
-            IsSame<T, uint16_t>::value, int16_t,
-            typename std::conditional<IsSame<T, uint64_t>::value, int64_t, T>::type>::type>::type;
+        typename std::conditional<IsSame<T, uint16_t>::value, int16_t,
+                                  typename std::conditional<IsSame<T, uint64_t>::value, int64_t, T>::type>::type>::type;
 };
 
 template <typename T>
@@ -111,8 +110,8 @@ struct IndexTypeGet {
     using type = typename std::conditional<sizeof(T) == B8 || sizeof(T) == B16, uint16_t, uint32_t>::type;
 };
 
-constexpr MicroAPI::CastTrait castTraitB82B16 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr MicroAPI::CastTrait castTraitB82B16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                 MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 constexpr AscendC::MicroAPI::CastTrait castTraitB162B8 = {
     AscendC::MicroAPI::RegLayout::ZERO,
     AscendC::MicroAPI::SatMode::NO_SAT,
@@ -121,8 +120,8 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB162B8 = {
 };
 
 template <typename T>
-__aicore__ inline void StoreElement(
-    const __local_mem__ void* output, MicroAPI::RegTensor<T>& src, uint32_t offset, uint32_t element)
+__aicore__ inline void StoreElement(const __local_mem__ void* output, MicroAPI::RegTensor<T>& src, uint32_t offset,
+                                    uint32_t element)
 {
     MicroAPI::UnalignReg u0;
     auto dstAddr = (__local_mem__ T*)(output) + offset;
@@ -186,8 +185,8 @@ template <typename T>
 __aicore__ inline void CustomDuplicate(__local_mem__ T* dstAddr, uint32_t calNum, uint16_t loop)
 {
     uint32_t sreg = calNum;
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT v0;
     if constexpr (IsSame<T, bfloat16_t>::value) {
         MicroAPI::Duplicate((MicroAPI::RegTensor<uint16_t>&)v0, BFLOAT16_NEG_INF);
@@ -212,21 +211,21 @@ __aicore__ inline void CustomDuplicate(__local_mem__ T* dstAddr, uint32_t calNum
 }
 
 template <typename T>
-__aicore__ inline void CustomCopy(
-    const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr, uint32_t srcBatchStride, uint32_t srcRowStride,
-    uint32_t dstBatchStride, uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset, uint16_t batch,
-    uint16_t rows, uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm)
+__aicore__ inline void CustomCopy(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
+                                  uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
+                                  uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset, uint16_t batch,
+                                  uint16_t rows, uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm)
 {
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT v0;
     MicroAPI::UnalignReg u0;
 
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t j = 0; j < rows; j++) {
             __local_mem__ T* curSrcAddr = (__local_mem__ T*)srcAddr + i * srcBatchStride + j * srcRowStride;
-            __local_mem__ T* curDstAddr =
-                (__local_mem__ T*)dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
+            __local_mem__ T* curDstAddr = (__local_mem__ T*)dstAddr + i * dstBatchStride +
+                                          (j + dstRowOffset) * dstRowStride + dstColOffset;
             for (uint16_t k = 0; k < loopCols; k++) {
                 MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
                 MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
@@ -239,14 +238,15 @@ __aicore__ inline void CustomCopy(
 }
 
 template <typename T, typename U>
-__aicore__ inline void CustomCopyByScatterSingleRow(
-    const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr, uint16_t srcBatchStride, uint16_t srcRowStride,
-    uint16_t dstBatchStride, uint16_t dstRowStride, uint16_t dstRowOffset, uint16_t dstColOffset, uint16_t batch,
-    uint16_t rows, uint16_t loopCols, uint16_t cols, uint16_t repeatElm)
+__aicore__ inline void CustomCopyByScatterSingleRow(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
+                                                    uint16_t srcBatchStride, uint16_t srcRowStride,
+                                                    uint16_t dstBatchStride, uint16_t dstRowStride,
+                                                    uint16_t dstRowOffset, uint16_t dstColOffset, uint16_t batch,
+                                                    uint16_t rows, uint16_t loopCols, uint16_t cols, uint16_t repeatElm)
 {
     using M = typename GetGatherType<T>::type;
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT v0;
     MicroAPI::RegTensor<U> sIndex;
     MicroAPI::MaskReg preg;
@@ -278,14 +278,15 @@ __aicore__ inline void CustomCopyByScatterSingleRow(
 }
 
 template <typename T, typename U>
-__aicore__ inline void CustomCopyByScatterMultiRows(
-    const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr, MicroAPI::RegTensor<U> index,
-    uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstRowStride, uint32_t dstOffset,
-    uint16_t batch, uint16_t loopRows, uint32_t repeatElm, uint32_t tailElm)
+__aicore__ inline void CustomCopyByScatterMultiRows(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
+                                                    MicroAPI::RegTensor<U> index, uint32_t srcBatchStride,
+                                                    uint32_t srcRowStride, uint32_t dstBatchStride,
+                                                    uint32_t dstRowStride, uint32_t dstOffset, uint16_t batch,
+                                                    uint16_t loopRows, uint32_t repeatElm, uint32_t tailElm)
 {
     using M = typename GetGatherType<T>::type;
-    using RegDstT = typename std::conditional<
-        sizeof(M) == B64, MicroAPI::RegTensor<M, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<M>>::type;
+    using RegDstT = typename std::conditional<sizeof(M) == B64, MicroAPI::RegTensor<M, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<M>>::type;
     RegDstT vd1;
     MicroAPI::RegTensor<U> v1, v2, v3, v4;
     MicroAPI::RegTensor<U> gIndex;
@@ -330,9 +331,8 @@ __aicore__ inline void CustomCopyByScatterMultiRows(
 }
 
 template <typename T, typename U, typename RegDstT>
-__aicore__ inline void MaxPoolImpl(
-    RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, U rowStrideInub,
-    MicroAPI::MaskReg& pMask, uint16_t channels = 1)
+__aicore__ inline void MaxPoolImpl(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH,
+                                   uint16_t kW, U rowStrideInub, MicroAPI::MaskReg& pMask, uint16_t channels = 1)
 {
     using gatherType = typename GetGatherType<T>::type;
     MicroAPI::RegTensor<gatherType> vd0;
@@ -363,12 +363,11 @@ __aicore__ inline void MaxPoolImpl(
 }
 
 template <typename T, typename U>
-__aicore__ inline void MaxPoolSingleChannel(
-    __local_mem__ T* dstLocalAddr, __local_mem__ T* srcLocalAddr, uint16_t kH, uint16_t kW, U rowStrideInub,
-    uint16_t alignChannels, uint16_t repeatElms)
+__aicore__ inline void MaxPoolSingleChannel(__local_mem__ T* dstLocalAddr, __local_mem__ T* srcLocalAddr, uint16_t kH,
+                                            uint16_t kW, U rowStrideInub, uint16_t alignChannels, uint16_t repeatElms)
 {
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT res;
     RegDstT vd0;
     uint32_t num = repeatElms;
@@ -405,13 +404,13 @@ __aicore__ inline void MaxPoolSingleChannel(
 }
 
 template <typename T, typename U>
-__aicore__ inline void MaxPoolSplitW(
-    __local_mem__ T* dstLocalAddr, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW,
-    uint16_t loopH, uint16_t loopW, U oneLoopStrideH, U oneLoopStrideW, U rowStrideInub, uint16_t oneLoopElements,
-    uint16_t tailLoopElements, uint16_t channels = 1)
+__aicore__ inline void MaxPoolSplitW(__local_mem__ T* dstLocalAddr, __local_mem__ T* srcAddr,
+                                     MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, uint16_t loopH,
+                                     uint16_t loopW, U oneLoopStrideH, U oneLoopStrideW, U rowStrideInub,
+                                     uint16_t oneLoopElements, uint16_t tailLoopElements, uint16_t channels = 1)
 {
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT res;
     MicroAPI::RegTensor<U> v0;
     MicroAPI::RegTensor<U> v1;
@@ -439,13 +438,13 @@ __aicore__ inline void MaxPoolSplitW(
 }
 
 template <typename T, typename U>
-__aicore__ inline void MaxPoolSplitH(
-    __local_mem__ T* dstLocalAddr, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW,
-    uint16_t loopN, uint16_t loopH, U oneChannelElements, U rowStrideInub, U oneLoopStride, uint16_t oneLoopElements,
-    uint16_t tailLoopElements, uint16_t channels = 1)
+__aicore__ inline void MaxPoolSplitH(__local_mem__ T* dstLocalAddr, __local_mem__ T* srcAddr,
+                                     MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, uint16_t loopN,
+                                     uint16_t loopH, U oneChannelElements, U rowStrideInub, U oneLoopStride,
+                                     uint16_t oneLoopElements, uint16_t tailLoopElements, uint16_t channels = 1)
 {
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT res;
     MicroAPI::RegTensor<U> v1;
     MicroAPI::RegTensor<U> v2;
@@ -472,13 +471,13 @@ __aicore__ inline void MaxPoolSplitH(
 }
 
 template <typename T, typename U>
-__aicore__ inline void MaxPoolSplitBatch(
-    __local_mem__ T* dstLocalAddr, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW,
-    uint16_t loopN, U rowStrideInub, U oneLoopStride, uint16_t oneLoopElements, uint16_t tailLoopElements,
-    uint16_t channels = 1)
+__aicore__ inline void MaxPoolSplitBatch(__local_mem__ T* dstLocalAddr, __local_mem__ T* srcAddr,
+                                         MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, uint16_t loopN,
+                                         U rowStrideInub, U oneLoopStride, uint16_t oneLoopElements,
+                                         uint16_t tailLoopElements, uint16_t channels = 1)
 {
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     RegDstT res;
     MicroAPI::RegTensor<U> v1;
     MicroAPI::UnalignReg u0;
@@ -499,9 +498,9 @@ __aicore__ inline void MaxPoolSplitBatch(
 }
 
 template <typename U>
-__aicore__ inline void GenGatherIndexMultiBatch(
-    uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElemtsIn, uint32_t wIn, uint32_t hStride, uint32_t wStride,
-    LocalTensor<U>& indexLocal)
+__aicore__ inline void GenGatherIndexMultiBatch(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElemtsIn,
+                                                uint32_t wIn, uint32_t hStride, uint32_t wStride,
+                                                LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
 
@@ -558,8 +557,8 @@ __aicore__ inline void GenGatherIndexMultiBatch(
 }
 
 template <typename U>
-__aicore__ inline void GenGatherIndexMultiRow(
-    uint32_t wFactorOut, uint32_t wIn, uint32_t hStride, uint32_t wStride, LocalTensor<U>& indexLocal)
+__aicore__ inline void GenGatherIndexMultiRow(uint32_t wFactorOut, uint32_t wIn, uint32_t hStride, uint32_t wStride,
+                                              LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
 
@@ -690,8 +689,8 @@ __aicore__ inline void GenScatterIndex(uint32_t wIn, uint32_t wInDst, LocalTenso
 }
 
 template <typename U, bool SingleRow>
-__aicore__ inline void NHWCGenScatterIndex(
-    uint32_t wIn, uint32_t wInDstElms, uint32_t channels, LocalTensor<U>& indexLocal)
+__aicore__ inline void NHWCGenScatterIndex(uint32_t wIn, uint32_t wInDstElms, uint32_t channels,
+                                           LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __VEC_SCOPE__
@@ -735,8 +734,8 @@ __aicore__ inline void NHWCGenScatterIndex(
             MicroAPI::Mul(vd8, vd1, v3, p0);
             MicroAPI::Sub(vd9, v0, vd8, p0); // i mod channels
 
-            MicroAPI::Add(
-                vd10, vd9, vd7, p0); // (i / channels / win * winDst + i / channels mod win) * channels + i mod channels
+            MicroAPI::Add(vd10, vd9, vd7,
+                          p0); // (i / channels / win * winDst + i / channels mod win) * channels + i mod channels
             MicroAPI::DataCopy(dstAddr, vd10, p0);
         }
     }
@@ -777,9 +776,8 @@ __aicore__ inline void NHWCGenGatherIndexSingleRow(uint32_t wStride, uint32_t ch
 }
 
 template <typename U>
-__aicore__ inline void NHWCGenGatherIndexMultiRow(
-    uint32_t wFactorOut, uint32_t wInElms, uint32_t hStride, uint32_t wStride, uint32_t channels,
-    LocalTensor<U>& indexLocal)
+__aicore__ inline void NHWCGenGatherIndexMultiRow(uint32_t wFactorOut, uint32_t wInElms, uint32_t hStride,
+                                                  uint32_t wStride, uint32_t channels, LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
 
@@ -838,9 +836,9 @@ __aicore__ inline void NHWCGenGatherIndexMultiRow(
 }
 
 template <typename U>
-__aicore__ inline void NHWCGenGatherIndexMultiBatch(
-    uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms, uint32_t hStride, uint32_t wStride,
-    uint32_t channels, LocalTensor<U>& indexLocal)
+__aicore__ inline void NHWCGenGatherIndexMultiBatch(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn,
+                                                    uint32_t wInElms, uint32_t hStride, uint32_t wStride,
+                                                    uint32_t channels, LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
 
@@ -896,8 +894,8 @@ __aicore__ inline void NHWCGenGatherIndexMultiBatch(
         MicroAPI::Mul(vd12, vd12, v4, p0);  // hwoffset / channels % wfout * wstride
         MicroAPI::Mul(vd12, vd12, v5, p0);  // (hwoffset / channels % wfout * wstride) * channels
 
-        MicroAPI::Add(
-            vd14, vd12, vd8, p0); // hwoffset / channels / wfout * hstride + hwoffset / channels % wfout * wstride
+        MicroAPI::Add(vd14, vd12, vd8,
+                      p0); // hwoffset / channels / wfout * hstride + hwoffset / channels % wfout * wstride
         MicroAPI::Add(vd14, vd14, vd2, p0); // (hwoffset / channels / wfout * hstride + hwoffset / channels / wfout *
                                             // wstride) * channels + i / (rows * cols * channels) * batchElemtsIn
 
@@ -953,8 +951,8 @@ __aicore__ inline void ReduceMaxAll(RegDstT& res, RegDstT& src, MicroAPI::MaskRe
 }
 
 template <bool MaskMergeMode, typename T, typename U, typename RegDstT>
-__aicore__ inline void MaxWithGather(
-    RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
+__aicore__ inline void MaxWithGather(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                     MicroAPI::MaskReg& mask)
 {
     RegDstT vd1;
     if constexpr (sizeof(T) == 1) {
@@ -1004,8 +1002,8 @@ __aicore__ inline void LoadIndex(__local_mem__ U* indexAddr, MicroAPI::RegTensor
 }
 
 template <uint16_t REG_NUM, uint16_t IDX, typename U, typename T, typename RegDstT>
-__aicore__ inline void ComputeMaxWithGather(
-    RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
+__aicore__ inline void ComputeMaxWithGather(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                            MicroAPI::MaskReg& mask)
 {
     if constexpr (REG_NUM > IDX) {
         MaxWithGather<false>(res, srcAddr, index, mask);
@@ -1013,8 +1011,8 @@ __aicore__ inline void ComputeMaxWithGather(
 }
 
 template <typename T, typename U, typename RegDstT>
-__aicore__ inline void GatherCommon(
-    RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
+__aicore__ inline void GatherCommon(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                    MicroAPI::MaskReg& mask)
 {
     if constexpr (sizeof(T) == 1) {
         using gatherType = typename GetGatherType<T>::type;
@@ -1027,15 +1025,16 @@ __aicore__ inline void GatherCommon(
 }
 
 template <typename T, typename U, uint16_t REG_NUM>
-__aicore__ inline void MaxPoolSingleKernelCommon(
-    __local_mem__ T* dstLocalAddr, __local_mem__ T* xLocalAddr, __local_mem__ U* indexAddr, uint16_t loopN,
-    uint16_t loopH, uint16_t loopW, U oneChannelElements, U oneLoopStrideH, U oneLoopStrideW, uint16_t tailLoopElements)
+__aicore__ inline void MaxPoolSingleKernelCommon(__local_mem__ T* dstLocalAddr, __local_mem__ T* xLocalAddr,
+                                                 __local_mem__ U* indexAddr, uint16_t loopN, uint16_t loopH,
+                                                 uint16_t loopW, U oneChannelElements, U oneLoopStrideH,
+                                                 U oneLoopStrideW, uint16_t tailLoopElements)
 {
     if constexpr (sizeof(T) == sizeof(int64_t) && REG_NUM > INT64_MAXREGNUM) {
         return;
     }
-    using RegDstT = typename std::conditional<
-        sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>, MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
+                                              MicroAPI::RegTensor<T>>::type;
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> index[SIXTEEN];

@@ -40,15 +40,13 @@ using Ops::NN::Optiling::TilingRegistry;
 
 namespace rms_norm_dynamic_mx_quant {
 
-enum class ComputeMode : uint64_t
-{
+enum class ComputeMode : uint64_t {
     FULL_LOAD = 0,
     RECOMPUTE = 1,
     REDUCE_EMPTY = 2,
 };
 
-enum class OptimizeMode : uint64_t
-{
+enum class OptimizeMode : uint64_t {
     NORMAL = 0,
     OPTIMIZE = 1,
 };
@@ -79,8 +77,7 @@ private:
 
 } // namespace rms_norm_dynamic_mx_quant
 
-enum class RoundModeList
-{
+enum class RoundModeList {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -124,8 +121,8 @@ constexpr int32_t TEMPLATE_RECOMPUTE_PRIORITY = 200;
 // ============== Dtype Support ==============
 const std::set<ge::DataType> X_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
 const std::set<ge::DataType> GAMMA_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
-const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN,
+                                                    ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> MXSCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
@@ -156,42 +153,20 @@ std::string Shape2String(const T& shape)
 // ============== Base Class ==============
 class RmsNormDynamicMxQuantTilingBase : virtual public TilingBaseClass {
 public:
-    explicit RmsNormDynamicMxQuantTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit RmsNormDynamicMxQuantTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
     ~RmsNormDynamicMxQuantTilingBase() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
 
 protected:
-    bool IsCapable() override
-    {
-        return false;
-    }
+    bool IsCapable() override { return false; }
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    }
-    ge::graphStatus GetWorkspaceSize() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
+    uint64_t GetTilingKey() const override { return 0; }
+    ge::graphStatus GetWorkspaceSize() override { return ge::GRAPH_SUCCESS; }
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }
 
     ge::graphStatus CheckDtype();
     ge::graphStatus GetAttr();

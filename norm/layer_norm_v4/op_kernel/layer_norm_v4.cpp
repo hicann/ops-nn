@@ -58,53 +58,55 @@ using namespace LayerNormV4;
         op.Process();                                                                    \
     } while (0)
 
-#define INVOKE_LAYER_NORM_V4_GENERAL_IMPL(Tfm, Tweight)                               \
-    do {                                                                                  \
-        TPipe pipe;                                                                          \
-        using TileCopy = NormTile::TileCopy;                                                                          \
-        using SubBlock = NormSubBlock::SubBlockLayerNormCopyInX<TileCopy>;                        \
-        using SelfSubBlock = NormSubBlock::SubBlockEmpty;                        \
+#define INVOKE_LAYER_NORM_V4_GENERAL_IMPL(Tfm, Tweight)                                                      \
+    do {                                                                                                     \
+        TPipe pipe;                                                                                          \
+        using TileCopy = NormTile::TileCopy;                                                                 \
+        using SubBlock = NormSubBlock::SubBlockLayerNormCopyInX<TileCopy>;                                   \
+        using SelfSubBlock = NormSubBlock::SubBlockEmpty;                                                    \
         using CopyInBlock = NormBlock::BlockLayerNormCopyInX<SubBlock, SelfSubBlock>;                        \
-        using TileCopyOut = NormTile::TileCopyOut;                        \
-        using SubBlockOut = NormSubBlock::SubBlockLayerNormCopyOut<TileCopyOut>;                        \
-        using CopyOutBlock = NormBlock::BlockLayerNormCopyOut<SubBlockOut, SelfSubBlock>;                        \
-        using Kernel = NormKernel::KernelLayerNormBasic<CopyInBlock, CopyInBlock, CopyInBlock, CopyOutBlock, CopyOutBlock, CopyOutBlock, Tfm, Tweight>;  \
-        typename Kernel::Arguments arguments{x, normalized_shape, gamma, beta, y, mean, rstd, workspace, tiling, &pipe};    \
-        Kernel kernel;                        \
-        kernel.ToUnderlyingArguments(arguments);                        \
-        kernel();                        \
+        using TileCopyOut = NormTile::TileCopyOut;                                                           \
+        using SubBlockOut = NormSubBlock::SubBlockLayerNormCopyOut<TileCopyOut>;                             \
+        using CopyOutBlock = NormBlock::BlockLayerNormCopyOut<SubBlockOut, SelfSubBlock>;                    \
+        using Kernel = NormKernel::KernelLayerNormBasic<CopyInBlock, CopyInBlock, CopyInBlock, CopyOutBlock, \
+                                                        CopyOutBlock, CopyOutBlock, Tfm, Tweight>;           \
+        typename Kernel::Arguments arguments{                                                                \
+            x, normalized_shape, gamma, beta, y, mean, rstd, workspace, tiling, &pipe};                      \
+        Kernel kernel;                                                                                       \
+        kernel.ToUnderlyingArguments(arguments);                                                             \
+        kernel();                                                                                            \
     } while (0)
 
 #define INVOKE_LAYER_NORM_V4_ALIGN_IMPL(Tfm, Tweight)                                 \
-    do {                                                                                  \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormV4MergeNTilingData, tilingData, tiling);  \
-        LayerNormCustomAlign<Tfm, Tweight> op;                                            \
-        auto t = &tilingData;                                                             \
-        op.Init(x, gamma, beta, y, mean, rstd, workspace, t);                             \
-        op.Process();                                                                     \
+    do {                                                                              \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormV4MergeNTilingData, tilingData, tiling); \
+        LayerNormCustomAlign<Tfm, Tweight> op;                                        \
+        auto t = &tilingData;                                                         \
+        op.Init(x, gamma, beta, y, mean, rstd, workspace, t);                         \
+        op.Process();                                                                 \
     } while (0)
 
-#define INVOKE_LAYER_NORM_V4_ALIGN_LIMIT_IMPL(Tfm, Tweight)                                 \
-    do {                                                                                  \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormV4MergeNTilingData, tilingData, tiling);  \
-        LayerNormCustomAlignLimit<Tfm, Tweight> op;                                            \
-        auto t = &tilingData;                                                             \
-        op.Init(x, gamma, beta, y, mean, rstd, workspace, t);                             \
-        op.Process();                                                                     \
+#define INVOKE_LAYER_NORM_V4_ALIGN_LIMIT_IMPL(Tfm, Tweight)                           \
+    do {                                                                              \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormV4MergeNTilingData, tilingData, tiling); \
+        LayerNormCustomAlignLimit<Tfm, Tweight> op;                                   \
+        auto t = &tilingData;                                                         \
+        op.Init(x, gamma, beta, y, mean, rstd, workspace, t);                         \
+        op.Process();                                                                 \
     } while (0)
 
-#define INVOKE_LAYER_NORM_V4_ONE_IMPL(Tfm, Tweight)                                 \
-    do {                                                                                  \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormV4MergeNTilingData, tilingData, tiling);  \
-        LayerNormCustomOne<Tfm, Tweight> op;                                            \
-        auto t = &tilingData;                                                             \
-        op.Init(x, gamma, beta, y, mean, rstd, workspace, t);                             \
-        op.Process();                                                                     \
+#define INVOKE_LAYER_NORM_V4_ONE_IMPL(Tfm, Tweight)                                   \
+    do {                                                                              \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormV4MergeNTilingData, tilingData, tiling); \
+        LayerNormCustomOne<Tfm, Tweight> op;                                          \
+        auto t = &tilingData;                                                         \
+        op.Init(x, gamma, beta, y, mean, rstd, workspace, t);                         \
+        op.Process();                                                                 \
     } while (0)
 
-extern "C" __global__ __aicore__ void layer_norm_v4(
-    GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void layer_norm_v4(GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta,
+                                                    GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

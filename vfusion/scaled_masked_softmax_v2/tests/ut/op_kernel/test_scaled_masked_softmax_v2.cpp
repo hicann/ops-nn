@@ -24,8 +24,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void scaled_masked_softmax_v2(
-    GM_ADDR x, GM_ADDR mask, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void scaled_masked_softmax_v2(GM_ADDR x, GM_ADDR mask, GM_ADDR y, GM_ADDR workspace,
+                                                               GM_ADDR tiling);
 
 class scaled_masked_softmax_v2_test : public testing::Test {
 protected:
@@ -61,9 +61,8 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    kernel_ut::SetupTestEnvironment(
-        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
-        "scaled_masked_softmax_v2_data");
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
     kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "32", "32", "128", "1", "32", "half"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -150,9 +149,8 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastC)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    kernel_ut::SetupTestEnvironment(
-        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
-        "scaled_masked_softmax_v2_data");
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
     kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "32", "32", "128", "1", "1", "half"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -239,9 +237,8 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastN)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    kernel_ut::SetupTestEnvironment(
-        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
-        "scaled_masked_softmax_v2_data");
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
     kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"32", "1", "32", "128", "1", "1", "half"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -328,9 +325,8 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastNC)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    kernel_ut::SetupTestEnvironment(
-        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
-        "scaled_masked_softmax_v2_data");
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
     kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"4", "4", "32", "128", "1", "1", "half"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -417,9 +413,8 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    kernel_ut::SetupTestEnvironment(
-        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
-        "scaled_masked_softmax_v2_data");
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
     kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "32", "32", "512", "1", "32", "float32"});
 
     string path = kernel_ut::GetTestWorkDir();

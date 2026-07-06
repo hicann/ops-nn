@@ -46,27 +46,27 @@ template <typename T>
 __simt_callee__ inline T LogFunc(T x);
 
 template <>
-__simt_callee__ inline float LogFunc<float>(float x) {
+__simt_callee__ inline float LogFunc<float>(float x)
+{
     return logf(x);
 }
 
 template <>
-__simt_callee__ inline half LogFunc<half>(half x) {
+__simt_callee__ inline half LogFunc<half>(half x)
+{
     return hlog(x);
 }
 
 template <>
-__simt_callee__ inline bfloat16_t LogFunc<bfloat16_t>(bfloat16_t x) {
+__simt_callee__ inline bfloat16_t LogFunc<bfloat16_t>(bfloat16_t x)
+{
     return hlog(x);
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachLogSimt(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachLogSimt(int32_t tensorCount,
+                                                                             __gm__ int64_t* tensorElements,
+                                                                             GM_ADDR xList, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -77,11 +77,8 @@ inline void OpForeachLogSimt(
         __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
         __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            blockIdx.x * blockDim.x +
-            threadIdx.x);
-        uint64_t stride = static_cast<uint64_t>(
-            blockDim.x * gridDim.x);
+        uint64_t tid = static_cast<uint64_t>(blockIdx.x * blockDim.x + threadIdx.x);
+        uint64_t stride = static_cast<uint64_t>(blockDim.x * gridDim.x);
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             T val = xData[idx];
@@ -91,23 +88,15 @@ inline void OpForeachLogSimt(
 }
 
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y,
-    const __gm__ ForeachLogTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const __gm__ ForeachLogTilingData* tilingGm)
 {
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachLogTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachLogTilingData*>(tilingGm)) +
         offsetof(ForeachLogTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
-    asc_vf_call<OpForeachLogSimt<T>>(
-        dim3(THREAD_NUM),
-        tensorCount,
-        elemCounts,
-        x,
-        y);
+    asc_vf_call<OpForeachLogSimt<T>>(dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
 }
 
 } // namespace NsForeachLog

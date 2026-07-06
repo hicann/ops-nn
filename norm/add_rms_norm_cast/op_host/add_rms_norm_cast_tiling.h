@@ -109,16 +109,17 @@ struct AddRmsNormCastRegbaseTilingParams {
 
 class AddRmsNormCastRegbaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AddRmsNormCastRegbaseTiling(gert::TilingContext* tilingContext) :
-        Ops::NN::Optiling::TilingBaseClass(tilingContext) {}
-    ~AddRmsNormCastRegbaseTiling() override = default;  
+    explicit AddRmsNormCastRegbaseTiling(gert::TilingContext* tilingContext)
+        : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    {}
+    ~AddRmsNormCastRegbaseTiling() override = default;
 
     const string nodeName = "AddRmsNormCastRegbase";
     AddRmsNormCastRegbaseTilingData tilingData;
     AddRmsNormCastRegbaseTilingParams tilingParams;
 
-    ge::graphStatus CheckDtypeVaild(
-        ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
+    ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList,
+                                    string srcName);
     bool CheckShapeNull();
     bool CheckInputShapeDim();
     bool CheckInputShapeValue();

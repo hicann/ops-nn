@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file aclnn_index_add_v2.h
  * \brief
  */
@@ -25,11 +25,14 @@ extern "C" {
 /**
  * @brief aclnnIndexAddV2的第一段接口，根据具体的计算流程，计算workspace大小。该接口暂不对外开放，仅供PTA调用。
  * @domain aclnn_ops_infer
- * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、INT32、FLOAT16、DOUBLE、INT16、INT8、UINT8、INT64、BOOL、BFLOAT16，
+ * @param [in] self: npu
+ * device侧的aclTensor，数据类型支持FLOAT、INT32、FLOAT16、DOUBLE、INT16、INT8、UINT8、INT64、BOOL、BFLOAT16，
  * 支持非连续的Tensor，数据格式支持ND，数据维度不支持8维以上。
  * @param [in] dim: host侧的整数，数据类型支持INT64。
- * @param [in] index: npu device侧的aclTensor，数据类型支持INT64、INT32，支持非连续的Tensor，数据格式支持ND，数据维度仅支持1维。
- * @param [in] source: npu device侧的aclTensor，数据类型支持与self一致，支持非连续的Tensor，数据格式支持ND，shape除了dim轴其他轴需要与self相同。
+ * @param [in] index: npu
+ * device侧的aclTensor，数据类型支持INT64、INT32，支持非连续的Tensor，数据格式支持ND，数据维度仅支持1维。
+ * @param [in] source: npu
+ * device侧的aclTensor，数据类型支持与self一致，支持非连续的Tensor，数据格式支持ND，shape除了dim轴其他轴需要与self相同。
  * @param [in] alpha: host侧的aclScalar，数据类型与self一致。
  * @param [in] mode: host侧的整数，数据类型支持INT64。
  * @param [in] out: npu device侧的aclTensor，shape需要与self的shape一致，数据类型需要和self一致。
@@ -38,8 +41,9 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnIndexAddV2GetWorkspaceSize(const aclTensor* self, const int64_t dim, const aclTensor* index,
-                                                      const aclTensor* source, const aclScalar* alpha, int64_t mode, aclTensor* out,
-                                                      uint64_t* workspaceSize, aclOpExecutor** executor);
+                                                      const aclTensor* source, const aclScalar* alpha, int64_t mode,
+                                                      aclTensor* out, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor);
 
 /**
  * @brief aclnnIndexAddV2的第二段接口，用于执行计算。
@@ -50,7 +54,7 @@ ACLNN_API aclnnStatus aclnnIndexAddV2GetWorkspaceSize(const aclTensor* self, con
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnIndexAddV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                    aclrtStream stream);
+                                      aclrtStream stream);
 
 #ifdef __cplusplus
 }

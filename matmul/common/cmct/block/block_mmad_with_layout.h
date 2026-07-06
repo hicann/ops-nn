@@ -24,47 +24,39 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 /**
-* @class BlockMmadWithLayout
-* @brief The intermediate of Block matrix multiplication class
-*
-* Inheriting from BlockMmadBase, encapsulates and adapts common functions for Layout representation
-*/
-template <
-    class Derived,
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType,
-    class TileCopy
->
+ * @class BlockMmadWithLayout
+ * @brief The intermediate of Block matrix multiplication class
+ *
+ * Inheriting from BlockMmadBase, encapsulates and adapts common functions for Layout representation
+ */
+template <class Derived, class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType,
+          class BiasType, class TileCopy>
 class BlockMmadWithLayout
     : public BlockMmadBase<Derived, DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy> {
 public:
     using Base = BlockMmadBase<Derived, DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
 
-    __aicore__ ~BlockMmadWithLayout()
-    {
-        End();
-    }
+    __aicore__ ~BlockMmadWithLayout() { End(); }
 
     /**
-    * @brief Initialize the matrix multiplication object
-    */
+     * @brief Initialize the matrix multiplication object
+     */
     __aicore__ inline void Init()
     {
         this->AsDerived().matmul_.Init((TCubeTiling*)(nullptr), (AscendC::TPipe*)(nullptr));
     }
 
     /**
-    * @brief IterateAll function to perform matrix multiplication iteration
-    * @param [out] CTensor: destination tensor type
-    * @param [in] ATensor: matrix A source tensor type
-    * @param [in] BTensor: matrix B source tensor type
-    * @param [in] Shape: shape type
-    * @param [out] c: destination tensor
-    * @param [in] a: matrix A source tensor
-    * @param [in] b: matrix B source tensor
-    * @param [in] actualShape: actual shape
-    */
+     * @brief IterateAll function to perform matrix multiplication iteration
+     * @param [out] CTensor: destination tensor type
+     * @param [in] ATensor: matrix A source tensor type
+     * @param [in] BTensor: matrix B source tensor type
+     * @param [in] Shape: shape type
+     * @param [out] c: destination tensor
+     * @param [in] a: matrix A source tensor
+     * @param [in] b: matrix B source tensor
+     * @param [in] actualShape: actual shape
+     */
     template <class CTensor, class ATensor, class BTensor, class Shape>
     __aicore__ inline void IterateAll(CTensor& c, const ATensor& a, const BTensor& b, const Shape& actualShape)
     {
@@ -78,7 +70,8 @@ public:
 
         SetOrgShape(c, a, b);
 
-        this->AsDerived().matmul_.SetSingleShape(Get<MNK_M>(actualShape), Get<MNK_N>(actualShape), Get<MNK_K>(actualShape));
+        this->AsDerived().matmul_.SetSingleShape(Get<MNK_M>(actualShape), Get<MNK_N>(actualShape),
+                                                 Get<MNK_K>(actualShape));
         this->AsDerived().matmul_.IterateAll(cTensor);
 
         if constexpr (AscendC::is_global_tensor_v<CTensor>) {
@@ -90,25 +83,22 @@ public:
 
 private:
     /**
-    * @brief End the matrix multiplication operation
-    */
-    __aicore__ inline void End()
-    {
-        this->AsDerived().matmul_.End();
-    }
+     * @brief End the matrix multiplication operation
+     */
+    __aicore__ inline void End() { this->AsDerived().matmul_.End(); }
 
     /**
-    * @brief Set the original shape of the matrix
-    *
-    * Calculate and set the original shape of matrix c based on matrixs a and b
-    *
-    * @param [in] CTensor: the destination tensor type
-    * @param [in] ATensor: the source tensor A type
-    * @param [in] BTensor: the source tensor B type
-    * @param [in] c: the destination tensor
-    * @param [in] a: the source tensor A
-    * @param [in] b: the source tensor B
-    */
+     * @brief Set the original shape of the matrix
+     *
+     * Calculate and set the original shape of matrix c based on matrixs a and b
+     *
+     * @param [in] CTensor: the destination tensor type
+     * @param [in] ATensor: the source tensor A type
+     * @param [in] BTensor: the source tensor B type
+     * @param [in] c: the destination tensor
+     * @param [in] a: the source tensor A
+     * @param [in] b: the source tensor B
+     */
     template <class CTensor, class ATensor, class BTensor>
     __aicore__ inline void SetOrgShape(CTensor& c, const ATensor& a, const BTensor& b)
     {
@@ -156,4 +146,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

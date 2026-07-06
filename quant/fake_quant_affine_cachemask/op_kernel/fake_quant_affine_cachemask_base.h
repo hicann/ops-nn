@@ -24,11 +24,9 @@ using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2;
 
 template <typename yType>
-class FakeQuantAffineCachemaskBase
-{
+class FakeQuantAffineCachemaskBase {
 public:
-    __aicore__ inline FakeQuantAffineCachemaskBase()
-    {}
+    __aicore__ inline FakeQuantAffineCachemaskBase() {}
     __aicore__ inline void BaseMemberDataInit(const FakeQuantAffineCachemaskTilingData* tilingData)
     {
         loopNum = tilingData->loopNum;
@@ -68,11 +66,13 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void CommonBufferGet(
-        TBuf<QuePosition::VECCALC>& infBuf, TBuf<QuePosition::VECCALC>& zeroBuf, TBuf<QuePosition::VECCALC>& oneBuf,
-        TBuf<QuePosition::VECCALC>& quantMinQueueBuf, TBuf<QuePosition::VECCALC>& quantMaxQueueBuf,
-        LocalTensor<T>& infTensor, LocalTensor<T>& zeroTensor, LocalTensor<T>& oneTensor,
-        LocalTensor<T>& quantMinTensor, LocalTensor<T>& quantMaxTensor, uint32_t coreLength)
+    __aicore__ inline void CommonBufferGet(TBuf<QuePosition::VECCALC>& infBuf, TBuf<QuePosition::VECCALC>& zeroBuf,
+                                           TBuf<QuePosition::VECCALC>& oneBuf,
+                                           TBuf<QuePosition::VECCALC>& quantMinQueueBuf,
+                                           TBuf<QuePosition::VECCALC>& quantMaxQueueBuf, LocalTensor<T>& infTensor,
+                                           LocalTensor<T>& zeroTensor, LocalTensor<T>& oneTensor,
+                                           LocalTensor<T>& quantMinTensor, LocalTensor<T>& quantMaxTensor,
+                                           uint32_t coreLength)
     {
         quantMinTensor = quantMinQueueBuf.Get<T>();
         quantMaxTensor = quantMaxQueueBuf.Get<T>();
@@ -88,9 +88,8 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void CommonCopyIn(
-        TQue<QuePosition::VECIN, BUFFER_NUM>& inQueueData, GlobalTensor<T>& xGm, int64_t calcOffset,
-        uint32_t coreLength)
+    __aicore__ inline void CommonCopyIn(TQue<QuePosition::VECIN, BUFFER_NUM>& inQueueData, GlobalTensor<T>& xGm,
+                                        int64_t calcOffset, uint32_t coreLength)
     {
         // alloc tensor from queue memory
         LocalTensor<T> xLocal = inQueueData.AllocTensor<T>();
@@ -105,9 +104,9 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void CommonCopyOut(
-        TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueueOut, TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueueMask,
-        GlobalTensor<T>& yGm, GlobalTensor<uint8_t>& maskGm, int64_t calcOffset, uint32_t coreLength)
+    __aicore__ inline void CommonCopyOut(TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueueOut,
+                                         TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueueMask, GlobalTensor<T>& yGm,
+                                         GlobalTensor<uint8_t>& maskGm, int64_t calcOffset, uint32_t coreLength)
     {
         // deque output tensor from VECOUT queue
         LocalTensor<T> yLocal = outQueueOut.DeQue<T>();

@@ -21,8 +21,8 @@ namespace optiling {
 
 class InplaceIndexFillTilingSimtDenseIndices : public InplaceIndexFillTilingSimt {
 public:
-    explicit InplaceIndexFillTilingSimtDenseIndices(gert::TilingContext* context)
-        : InplaceIndexFillTilingSimt(context) {}
+    explicit InplaceIndexFillTilingSimtDenseIndices(gert::TilingContext* context) : InplaceIndexFillTilingSimt(context)
+    {}
     ~InplaceIndexFillTilingSimtDenseIndices() {}
 
 protected:

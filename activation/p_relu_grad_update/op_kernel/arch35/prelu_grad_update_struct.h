@@ -18,12 +18,9 @@
 
 #include "atvoss/broadcast/broadcast_base_struct.h"
 
-
 // 算子自定义的tiling key字段
 ASCENDC_TPL_ARGS_DECL(PReluGradUpdate, BRC_TEMP_SCH_MODE_KEY_DECL(schMode));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(BRC_TEMP_SCH_MODE_KEY_SEL(schMode))
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(BRC_TEMP_SCH_MODE_KEY_SEL(schMode)));
 
 #endif // PRELU_GRAD_UPDATE_STRUCT_H

@@ -23,9 +23,7 @@
 #include "arch35/shrink.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void shrink(
-    GM_ADDR self, GM_ADDR out,
-    [[maybe_unused]] GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void shrink(GM_ADDR self, GM_ADDR out, [[maybe_unused]] GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ShrinkTilingData);
     GET_TILING_DATA_WITH_STRUCT(ShrinkTilingData, tilingData, tiling);

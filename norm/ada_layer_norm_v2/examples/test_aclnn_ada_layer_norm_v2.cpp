@@ -14,18 +14,19 @@
 #include "aclnnop/aclnn_ada_layer_norm_v2.h"
 
 #define CHECK_RET(cond, return_expr) \
-  do {                               \
-    if (!(cond)) {                   \
-      return_expr;                   \
-    }                                \
-  } while (0)
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
+    } while (0)
 
-#define LOG_PRINT(message, ...)     \
-  do {                              \
-    printf(message, ##__VA_ARGS__); \
-  } while (0)
+#define LOG_PRINT(message, ...)         \
+    do {                                \
+        printf(message, ##__VA_ARGS__); \
+    } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shape_size = 1;
     for (auto i : shape) {
         shape_size *= i;
@@ -33,7 +34,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
     return shape_size;
 }
 
-int Init(int32_t deviceId, aclrtStream* stream) {
+int Init(int32_t deviceId, aclrtStream* stream)
+{
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
@@ -46,7 +48,8 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -63,12 +66,13 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, ACL_FORMAT_ND,
-                              shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, ACL_FORMAT_ND, shape.data(),
+                              shape.size(), *deviceAddr);
     return 0;
 }
 
-int main() {
+int main()
+{
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
@@ -139,8 +143,10 @@ int main() {
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnAdaLayerNormV2第一段接口
-    ret = aclnnAdaLayerNormV2GetWorkspaceSize(x, scale, shift, weight, bias, epsilon, out, mean, rstd, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAdaLayerNormV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnAdaLayerNormV2GetWorkspaceSize(x, scale, shift, weight, bias, epsilon, out, mean, rstd, &workspaceSize,
+                                              &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAdaLayerNormV2GetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {

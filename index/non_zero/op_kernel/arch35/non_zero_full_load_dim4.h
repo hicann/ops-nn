@@ -30,8 +30,8 @@ public:
 };
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroFullLoadDim4<T1, T2, TILING_KEY>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, const NonZeroTilingData* tilingData)
+__aicore__ inline void NonZeroFullLoadDim4<T1, T2, TILING_KEY>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape,
+                                                                     const NonZeroTilingData* tilingData)
 {
     this->InitBase(x, y, outShape, tilingData);
 }

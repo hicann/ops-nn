@@ -35,10 +35,10 @@ constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 
 // values support datatype
 static const std::unordered_map<ge::DataType, int64_t> SUPPORT_VALUES_DATA_TYPE{
-    { ge::DataType::DT_FLOAT, 4 },
+    {ge::DataType::DT_FLOAT, 4},
 };
 
-ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
+ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext* context)
 {
     const auto* compileInfo = reinterpret_cast<const EmbeddingHashTableExportCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -58,14 +58,12 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSizes);
     int64_t bucketSizesShapeVal = bucketSizes->GetStorageShape().GetShapeSize();
     if (!(tableHandlesShapeVal == tableSizesShapeVal && tableSizesShapeVal == embeddingDimsShapeVal &&
-        embeddingDimsShapeVal == bucketSizesShapeVal)) {
-        std::string shapeSizeMsg = std::to_string(tableHandlesShapeVal) + ", " +
-            std::to_string(tableSizesShapeVal) + ", " +
-            std::to_string(embeddingDimsShapeVal) + ", " +
-            std::to_string(bucketSizesShapeVal);
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(),
-            "table_handles, table_sizes, embedding_dims and bucket_sizes",
-            shapeSizeMsg.c_str(),
+          embeddingDimsShapeVal == bucketSizesShapeVal)) {
+        std::string shapeSizeMsg = std::to_string(tableHandlesShapeVal) + ", " + std::to_string(tableSizesShapeVal) +
+                                   ", " + std::to_string(embeddingDimsShapeVal) + ", " +
+                                   std::to_string(bucketSizesShapeVal);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context->GetNodeName(), "table_handles, table_sizes, embedding_dims and bucket_sizes", shapeSizeMsg.c_str(),
             "The shape sizes of table_handles, table_sizes, embedding_dims and bucket_sizes must be the same");
         return ge::GRAPH_FAILED;
     }
@@ -78,7 +76,7 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
 
     auto const attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const char *exportMode = attrs->GetAttrPointer<char>(0);
+    const char* exportMode = attrs->GetAttrPointer<char>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, exportMode);
     if (strncmp(exportMode, "new", sizeof("new") / sizeof(char)) == 0) {
         tiling.set_exportMode(1);
@@ -86,7 +84,7 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
         tiling.set_exportMode(0);
     }
 
-    const uint8_t *filteredExportFlag = attrs->GetAttrPointer<uint8_t>(1);
+    const uint8_t* filteredExportFlag = attrs->GetAttrPointer<uint8_t>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, filteredExportFlag);
     tiling.set_filteredExportFlag(*filteredExportFlag);
 
@@ -96,7 +94,7 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
-    size_t *workspace = context->GetWorkspaceSizes(1);
+    size_t* workspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspace);
 
     int64_t coreSyncWorkspace = maxCoreNum * 8;
@@ -104,7 +102,7 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepareForEmbeddingHashTableExport(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareForEmbeddingHashTableExport(gert::TilingParseContext* context)
 {
     // 获取platformInfo
     auto platformInfo = context->GetPlatformInfo();
@@ -118,14 +116,13 @@ static ge::graphStatus TilingPrepareForEmbeddingHashTableExport(gert::TilingPars
     // 设置maxThread和coreNum
     compileInfo->maxThreadNum = GetSimtMaxThreadNum(context);
     OP_CHECK_IF((compileInfo->maxThreadNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get thread num."),
-                 return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
     compileInfo->coreNumAiv = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->coreNumAiv <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-                 return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
-
 
 IMPL_OP_OPTILING(EmbeddingHashTableExport)
     .Tiling(TilingForEmbeddingHashTableExport)

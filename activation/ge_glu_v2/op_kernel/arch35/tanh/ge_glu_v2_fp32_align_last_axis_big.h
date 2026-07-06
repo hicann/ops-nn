@@ -21,12 +21,11 @@ namespace GeGluV2 {
 using namespace AscendC;
 
 template <typename T>
-class GeGluV2Fp32AlignLastAxisBig : public GeGluV2Base<T>
-{
+class GeGluV2Fp32AlignLastAxisBig : public GeGluV2Base<T> {
 public:
     __aicore__ inline GeGluV2Fp32AlignLastAxisBig(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, const GeGluV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                const GeGluV2TilingData* tilingData);
     __aicore__ inline void Process();
 
     constexpr static int32_t bufferNum = 2;
@@ -51,8 +50,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, const GeGluV2TilingData* tilingData)
+__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                                            const GeGluV2TilingData* tilingData)
 {
     this->BaseInit(x, y, gelu, tilingData, true);
     pipe.InitBuffer(inQueueX1, bufferNum, bufferSize * sizeof(T));
@@ -77,8 +76,8 @@ template <typename T>
 __aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::ProcessPerCore()
 {
     // process core
-    int64_t actualLoopNum =
-        (this->m_tilingData.loopNum + this->m_tilingData.realCoreNum - 1) / this->m_tilingData.realCoreNum;
+    int64_t actualLoopNum = (this->m_tilingData.loopNum + this->m_tilingData.realCoreNum - 1) /
+                            this->m_tilingData.realCoreNum;
     int64_t tailLoopIdx = this->m_tilingData.loopNum % this->m_tilingData.realCoreNum;
 
     for (int64_t idx = 0; idx < actualLoopNum; idx++) {
@@ -109,8 +108,8 @@ __aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::ProcessPerCore()
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyInX(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
+__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyInX(const int64_t& idx_x, const int64_t& idx_y,
+                                                               const int64_t& length)
 {
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
@@ -140,8 +139,8 @@ __aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::ComputeGeluAndMul(const i
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyOutGelu(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
+__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyOutGelu(const int64_t& idx_x, const int64_t& idx_y,
+                                                                   const int64_t& length)
 {
     LocalTensor<T> outLocalGelu = outQueueGelu.DeQue<T>();
     this->CopyOutGeluBaseLastBig(idx_x, idx_y, length, outLocalGelu);
@@ -149,8 +148,8 @@ __aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyOutGelu(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyOutMul(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
+__aicore__ inline void GeGluV2Fp32AlignLastAxisBig<T>::CopyOutMul(const int64_t& idx_x, const int64_t& idx_y,
+                                                                  const int64_t& length)
 {
     LocalTensor<T> outLocalMul = outQueueMul.DeQue<T>();
     this->CopyOutMulBaseLastBig(idx_x, idx_y, length, outLocalMul);

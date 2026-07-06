@@ -18,11 +18,11 @@
 
 #include "opdev/op_executor.h"
 namespace l0op {
-const aclTensor *IndexFillD(const aclTensor *self, const aclTensor *assist1, const aclTensor *assist2,
-                            int64_t dim, aclOpExecutor *executor);
+const aclTensor* IndexFillD(const aclTensor* self, const aclTensor* assist1, const aclTensor* assist2, int64_t dim,
+                            aclOpExecutor* executor);
 
-const aclTensor *IndexFill(const aclTensor *self, const aclTensor *indices, const aclTensor *value,
-                            int64_t dim, aclOpExecutor *executor);
-}
+const aclTensor* IndexFill(const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim,
+                           aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_INDEXFILL_OP_H_

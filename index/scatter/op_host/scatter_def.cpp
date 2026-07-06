@@ -20,62 +20,37 @@ namespace ops {
 static const int64_t AXIS_DEFAULT = 0;
 
 static const std::vector<ge::DataType> varDataType = {
-    ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT32,
-    ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT32,
-    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8,
-    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8
-};
+    ge::DT_INT8,          ge::DT_UINT8,       ge::DT_FLOAT16,       ge::DT_BF16,        ge::DT_FLOAT,
+    ge::DT_INT32,         ge::DT_INT8,        ge::DT_UINT8,         ge::DT_FLOAT16,     ge::DT_BF16,
+    ge::DT_FLOAT,         ge::DT_INT32,       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8};
 
 static const std::vector<ge::DataType> indicesDataType = {
     ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
     ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64
-};
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 
 static const std::vector<ge::DataType> updatesDataType = {
-    ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT32,
-    ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT32,
-    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8,
-    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8
-};
+    ge::DT_INT8,          ge::DT_UINT8,       ge::DT_FLOAT16,       ge::DT_BF16,        ge::DT_FLOAT,
+    ge::DT_INT32,         ge::DT_INT8,        ge::DT_UINT8,         ge::DT_FLOAT16,     ge::DT_BF16,
+    ge::DT_FLOAT,         ge::DT_INT32,       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8};
 
 static const std::vector<ge::Format> format = {
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class Scatter : public OpDef {
 public:
-    explicit Scatter(const char* name) : OpDef(name) {
-        this->Input("var")
-            .ParamType(REQUIRED)
-            .DataType(varDataType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Input("indices")
-            .ParamType(REQUIRED)
-            .DataType(indicesDataType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Input("updates")
-            .ParamType(REQUIRED)
-            .DataType(updatesDataType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Output("var")
-            .ParamType(REQUIRED)
-            .DataType(varDataType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Attr("reduce")
-            .AttrType(REQUIRED)
-            .String("update");
-        this->Attr("axis")
-            .AttrType(OPTIONAL)
-            .Int(AXIS_DEFAULT);
+    explicit Scatter(const char* name) : OpDef(name)
+    {
+        this->Input("var").ParamType(REQUIRED).DataType(varDataType).Format(format).UnknownShapeFormat(format);
+        this->Input("indices").ParamType(REQUIRED).DataType(indicesDataType).Format(format).UnknownShapeFormat(format);
+        this->Input("updates").ParamType(REQUIRED).DataType(updatesDataType).Format(format).UnknownShapeFormat(format);
+        this->Output("var").ParamType(REQUIRED).DataType(varDataType).Format(format).UnknownShapeFormat(format);
+        this->Attr("reduce").AttrType(REQUIRED).String("update");
+        this->Attr("axis").AttrType(OPTIONAL).Int(AXIS_DEFAULT);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
@@ -90,4 +65,4 @@ public:
 };
 
 OP_ADD(Scatter);
-}  // namespace ops
+} // namespace ops

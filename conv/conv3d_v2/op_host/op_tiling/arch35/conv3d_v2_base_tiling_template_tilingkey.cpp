@@ -12,7 +12,7 @@
  * \file conv3d_v2_base_tiling_template_tilingkey.cpp
  * \brief
  */
- 
+
 #include "conv3d_v2_base_tiling_template_tilingkey.h"
 
 namespace optiling {
@@ -56,8 +56,7 @@ uint64_t Conv3dV2BaseTilingKey::GetFmpTilingVal()
     }
 
     return FMP_OTHER;
-}    
-
+}
 
 uint64_t Conv3dV2BaseTilingKey::GetFmpTilingValMMode(const bool kAL1FullloadFlag)
 {
@@ -82,8 +81,7 @@ uint64_t Conv3dV2BaseTilingKey::GetFmpTilingValHWMode(const bool kAL1FullloadFla
     hoL1FullloadFlag = tilingData_.singleCoreHo <= tilingData_.hoL1;
     if (tilingData_.singleCoreWo <= tilingData_.woL1 &&
         !(CeilDiv(tilingData_.singleCoreWo, tilingData_.woL0) > 1 &&
-        tilingData_.singleCoreWo % convOpsConstParams_.m0 > 0 &&
-        tilingData_.hoL0 > 1)) {
+          tilingData_.singleCoreWo % convOpsConstParams_.m0 > 0 && tilingData_.hoL0 > 1)) {
         woL1FullloadFlag = true;
     }
     hoL0FullloadFlag = tilingData_.hoL1 == tilingData_.hoL0;
@@ -119,7 +117,7 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
     if (kBL1FullloadFlag && nBL1FullloadFlag) {
         return FULLLOAD_BL1;
     }
- 
+
     if (!kBL1FullloadFlag && tilingData_.nL0 == singleCoreNSize) {
         return ONLY_N_FULLLOAD_BL1_BL0;
     }
@@ -183,5 +181,5 @@ void Conv3dV2BaseTilingKey::GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPar
     tilingKeyPara.bigKernel = static_cast<uint64_t>(flagInfo_.isKernelSplit);
     ReSetTilingKeyPara(tilingKeyPara);
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

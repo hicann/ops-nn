@@ -20,57 +20,77 @@
 
 using namespace std;
 
-class l2RmsNormQuantV2Test : public testing::Test
-{
+class l2RmsNormQuantV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2RmsNormQuantV2Test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2RmsNormQuantV2Test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2RmsNormQuantV2Test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2RmsNormQuantV2Test TearDown" << endl; }
 };
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_001)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510); 
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto gammaDesc = TensorDesc({64,}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto betaDesc = TensorDesc({64,}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto scaleDesc = TensorDesc({64,}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto offserDesc = TensorDesc({64,}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto offserDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
     auto yDesc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
 
     double eps = 1e-5;
-    auto ut = OP_API_UT(
-        aclnnRmsNormQuant,
-        INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
-        OUTPUT(yDesc));
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
+                        OUTPUT(yDesc));
 
     uint64_t workSpace = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workSpace);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_002)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510); 
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto gammaDesc = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto betaDesc = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto scaleDesc = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto offserDesc = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto offserDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
     auto yDesc = TensorDesc({8, 8}, ACL_INT32, ACL_FORMAT_ND);
 
     double eps = 1e-5;
-    auto ut = OP_API_UT(
-        aclnnRmsNormQuant,
-        INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
-        OUTPUT(yDesc));
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
+                        OUTPUT(yDesc));
 
     uint64_t workSpace = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workSpace);
@@ -79,19 +99,33 @@ TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_002)
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_003)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510); 
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto gammaDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto betaDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto scaleDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto offserDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto offserDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto yDesc = TensorDesc({1, 8}, ACL_INT8, ACL_FORMAT_ND);
 
     double eps = 1e-5;
-    auto ut = OP_API_UT(
-        aclnnRmsNormQuant,
-        INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
-        OUTPUT(yDesc));
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
+                        OUTPUT(yDesc));
 
     uint64_t workSpace = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workSpace);
@@ -100,23 +134,35 @@ TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_003)
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_004)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510); 
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto gammaDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto betaDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto scaleDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto offserDesc = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto offserDesc = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto yDesc = TensorDesc({8, 66}, ACL_INT4, ACL_FORMAT_ND);
 
     double eps = 1e-5;
-    auto ut = OP_API_UT(
-        aclnnRmsNormQuant,
-        INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
-        OUTPUT(yDesc));
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offserDesc, eps),
+                        OUTPUT(yDesc));
 
     uint64_t workSpace = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workSpace);
     EXPECT_NE(aclRet, ACL_SUCCESS);
 }
-
-

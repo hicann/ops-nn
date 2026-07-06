@@ -295,16 +295,14 @@ TEST_F(Conv2DV2RuntimeInferShape, SupportedQuantConv2dv2)
                       .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}
-                      })
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -324,16 +322,14 @@ TEST_F(Conv2DV2RuntimeInferShape, SupportedQuantConv2dv2InvalidRoundMode)
                       .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("round")}
-                      })
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("round")}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -353,16 +349,14 @@ TEST_F(Conv2DV2RuntimeInferShape, SupportedQuantConv2dv2ValidRoundModeHif8)
                       .NodeInputTd(0, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("hybrid")}
-                      })
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("hybrid")}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -382,16 +376,14 @@ TEST_F(Conv2DV2RuntimeInferShape, SupportedQuantConv2dv2InvalidRoundModeHif8)
                       .NodeInputTd(0, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}
-                      })
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -415,16 +407,14 @@ TEST_F(Conv2DV2RuntimeInferShape, UnSupportedQuantConv2dv2Offset)
                       .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(4, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}
-                      })
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}})
                       .InputShapes({&xShape, &wShape, &ndShape, &ndShape, &ndShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -649,7 +639,6 @@ TEST_F(Conv2DV2RuntimeInferShape, Conv2dv2_Format_NCHW_Fmap_Cin_Zero)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
-
 
 TEST_F(Conv2DV2RuntimeInferShape, Conv2dv2_Format_NCHW_Fmap_Hin_Zero)
 {
@@ -999,7 +988,6 @@ TEST_F(Conv2DV2RuntimeInferShape, Conv2dv2_Format_NCHW_Fmap_N_Zero_Hif8)
     gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Ops::Base::ToString(*output), "[0, 16, 16, 16]");
 }
-
 
 TEST_F(Conv2DV2RuntimeInferShape, SupportedConv2dv2NHWCFp16)
 {

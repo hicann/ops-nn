@@ -30,8 +30,8 @@
 // Kernel 侧辅助函数（int64_t* 版本, 无 std::vector）
 // ============================================================
 
-__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail,
-    int64_t& start, int64_t& end)
+__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail, int64_t& start,
+                                    int64_t& end)
 {
     if (core_id < cores_tail) {
         start = core_id * (tiles_main + 1);
@@ -42,18 +42,18 @@ __aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t
     }
 }
 
-__aicore__ inline int64_t GetUBSplitRange(
-    int64_t a_o_off, int64_t a_o, int64_t a_i, int64_t a_i_tail)
+__aicore__ inline int64_t GetUBSplitRange(int64_t a_o_off, int64_t a_o, int64_t a_i, int64_t a_i_tail)
 {
     return (a_o_off == a_o - 1) ? a_i_tail : a_i;
 }
 
-__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape,
-    int64_t rank, int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
+__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape, int64_t rank,
+                                            int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
 {
     for (int64_t d = 0; d < rank; d++)
         eff_coord[d] = 0;
-    if (a_o <= 0) return false;        // 除0保护：a_o 非法直接返回
+    if (a_o <= 0)
+        return false; // 除0保护：a_o 非法直接返回
     int64_t a_o_off = flat % a_o;
     int64_t outer = flat / a_o;
     for (int64_t d = split_axis - 1; d >= 0; d--) {
@@ -64,8 +64,7 @@ __aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro
     return true;
 }
 
-__aicore__ inline int64_t CalcInputOffset(
-    const int64_t* eff_coord, const int64_t* strides, int64_t rank)
+__aicore__ inline int64_t CalcInputOffset(const int64_t* eff_coord, const int64_t* strides, int64_t rank)
 {
     int64_t offset = 0;
     for (int64_t d = 0; d < rank; d++)
@@ -73,8 +72,8 @@ __aicore__ inline int64_t CalcInputOffset(
     return offset;
 }
 
-__aicore__ inline int64_t CalcOutputTransferCount(
-    const int64_t* normal_shape, int64_t rank, int64_t split_axis, int64_t a_i_seg)
+__aicore__ inline int64_t CalcOutputTransferCount(const int64_t* normal_shape, int64_t rank, int64_t split_axis,
+                                                  int64_t a_i_seg)
 {
     int64_t split_elems = (normal_shape[split_axis] == 1) ? 1 : a_i_seg;
     int64_t inner_elems = 1;
@@ -87,26 +86,25 @@ template <typename T, int64_t RANK>
 class SmlgKernel {
     static constexpr int64_t ND = (RANK <= kMaxNdDma) ? RANK : kMaxNdDma;
     // fp16/bf16 需中间提升 fp32（Exp/Div 无 bf16/fp16 安全语义），fp32 直算
-    static constexpr bool kHalf = AscendC::IsSameType<T, half>::value ||
-                                  AscendC::IsSameType<T, bfloat16_t>::value;
+    static constexpr bool kHalf = AscendC::IsSameType<T, half>::value || AscendC::IsSameType<T, bfloat16_t>::value;
     // TBuf 槽位布局：[BG=0, BX=1, BY=2, BXY=3, BTMP=4] 为公共槽，
     // fp16/bf16 扩位 Cast 专用 fp32 槽从 kFp32SlotBase 起连续 3 个
-    static constexpr int kSlotGrad   = 0;
-    static constexpr int kSlotX      = 1;
-    static constexpr int kSlotY      = 2;
-    static constexpr int kSlotXY     = 3;
-    static constexpr int kSlotTmp    = 4;
+    static constexpr int kSlotGrad = 0;
+    static constexpr int kSlotX = 1;
+    static constexpr int kSlotY = 2;
+    static constexpr int kSlotXY = 3;
+    static constexpr int kSlotTmp = 4;
     static constexpr int kFp32SlotBase = kSlotTmp + 1;
 
     AscendC::TPipe pipe_;
     const SoftMarginLossGradTilingData<RANK>* td_;
-    AscendC::GlobalTensor<T> gmIn_[kMaxInputSlots];   // [0]=x(self), [1]=y(target), [2]=grad(gradOutput)
+    AscendC::GlobalTensor<T> gmIn_[kMaxInputSlots]; // [0]=x(self), [1]=y(target), [2]=grad(gradOutput)
     AscendC::GlobalTensor<T> gmOut_[kMaxOutputSlots];
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes];
     AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots];
     int64_t nddmaOuterIters_[kMaxInputSlots];
     int64_t nddma_dims_;
-    float   cof_;
+    float cof_;
 
 public:
     __aicore__ inline void Init(GM_ADDR inputs[kMaxInputSlots], GM_ADDR outputs[kMaxOutputSlots],
@@ -120,8 +118,7 @@ public:
         for (int i = 0; i < kPhysNodes; i++)
             pipe_.InitBuffer(buf_[i], td_->per_buf_bytes);
 
-        cof_ = (td_->cof_is_mean && td_->total_num > 0)
-               ? (kPosOne / static_cast<float>(td_->total_num)) : kPosOne;
+        cof_ = (td_->cof_is_mean && td_->total_num > 0) ? (kPosOne / static_cast<float>(td_->total_num)) : kPosOne;
 
         const int64_t* dstShape = td_->max_bro_shape;
         int64_t k = td_->split.axis;
@@ -130,20 +127,20 @@ public:
             int64_t inner = 1;
             int64_t nd = 0;
             for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {
-                nddmaParams_[inp].loopInfo.loopSize[nd]      = (d == k) ? 0 : dstShape[d];
+                nddmaParams_[inp].loopInfo.loopSize[nd] = (d == k) ? 0 : dstShape[d];
                 nddmaParams_[inp].loopInfo.loopSrcStride[nd] = td_->input_strides[inp][d];
                 nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd]    = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd]    = 0;
+                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
                 inner *= (d == k) ? td_->split.a_i : dstShape[d];
                 nd++;
             }
             for (; nd < ND; nd++) {
-                nddmaParams_[inp].loopInfo.loopSize[nd]      = 1;
+                nddmaParams_[inp].loopInfo.loopSize[nd] = 1;
                 nddmaParams_[inp].loopInfo.loopSrcStride[nd] = 0;
                 nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd]    = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd]    = 0;
+                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
             }
             nddmaOuterIters_[inp] = 1;
             for (int64_t d = k; d < RANK - nddma_dims_; d++)
@@ -153,20 +150,15 @@ public:
 
     __aicore__ inline void Process()
     {
-        int32_t evMTE2toV    = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
-        int32_t evVtoMTE2    = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
-        int32_t evVtoMTE3    = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
-        int32_t evMTE3toMTE2 = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+        int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+        int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
+        int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+        int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
 
         int64_t start, end;
-        GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main,
-                     td_->multicore.cores_tail, start, end);
+        GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main, td_->multicore.cores_tail, start, end);
 
-        constexpr int X = 0, Y = 1, GRAD = 2;   // 输入槽（与 OpDef self/target/grad_output 顺序一致）
+        constexpr int X = 0, Y = 1, GRAD = 2; // 输入槽（与 OpDef self/target/grad_output 顺序一致）
         constexpr int OUT0 = 0;
         constexpr int BG = kSlotGrad, BX = kSlotX, BY = kSlotY, BXY = kSlotXY, BTMP = kSlotTmp;
 
@@ -176,18 +168,19 @@ public:
 
         int64_t coord[RANK] = {};
         for (int64_t flat = start; flat < end; flat++) {
-            int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o,
-                                              td_->split.a_i, td_->split.a_i_tail);
+            int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o, td_->split.a_i,
+                                              td_->split.a_i_tail);
             int64_t count = a_i_seg * inner_count;
-            FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK,
-                                 td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
+            FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK, td_->split.axis, td_->split.a_i, td_->split.a_o,
+                                 coord);
 
-            if (flat != start) AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+            if (flat != start)
+                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
 
             // S1: CopyInBrc grad/x/y → BG/BX/BY
             CopyInBrc(coord, GRAD, BG, a_i_seg);
-            CopyInBrc(coord, X,    BX, a_i_seg);
-            CopyInBrc(coord, Y,    BY, a_i_seg);
+            CopyInBrc(coord, X, BX, a_i_seg);
+            CopyInBrc(coord, Y, BY, a_i_seg);
             AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
 
@@ -215,31 +208,31 @@ private:
         if constexpr (kHalf) {
             // bf16/fp16 源驻留 BG/BX/BY；扩位 Cast 写独立 fp32 槽，禁止 in-place 自覆盖
             constexpr int FG = kFp32SlotBase, FX = kFp32SlotBase + 1, FY = kFp32SlotBase + 2;
-            AscendC::LocalTensor<float> g  = buf_[FG].Get<float>();
-            AscendC::LocalTensor<float> x  = buf_[FX].Get<float>();
-            AscendC::LocalTensor<float> y  = buf_[FY].Get<float>();
+            AscendC::LocalTensor<float> g = buf_[FG].Get<float>();
+            AscendC::LocalTensor<float> x = buf_[FX].Get<float>();
+            AscendC::LocalTensor<float> y = buf_[FY].Get<float>();
             AscendC::LocalTensor<float> xy = buf_[BXY].Get<float>();
-            AscendC::LocalTensor<float> e  = buf_[BTMP].Get<float>();
+            AscendC::LocalTensor<float> e = buf_[BTMP].Get<float>();
             AscendC::Cast(g, buf_[BG].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             AscendC::Cast(x, buf_[BX].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             AscendC::Cast(y, buf_[BY].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             // 字面形：(-y*exp(-xy))/(1+exp(-xy))，对齐 golden 溢出语义（exp 上溢→inf/inf=NaN）
-            AscendC::Mul(xy, x, y, count);            // xy
-            AscendC::Muls(xy, xy, kNegOne, count);    // -xy
-            AscendC::Exp(e, xy, count);               // exp(-xy)
-            AscendC::Muls(y, y, kNegOne, count);      // -y
-            AscendC::Mul(x, y, e, count);             // -y*exp(-xy)
-            AscendC::Adds(e, e, kPosOne, count);      // 1+exp(-xy)
-            AscendC::Div(x, x, e, count);             // (-y*exp(-xy))/(1+exp(-xy))
-            AscendC::Mul(x, x, g, count);             // * grad
-            AscendC::Muls(x, x, cof_, count);         // * cof
+            AscendC::Mul(xy, x, y, count);         // xy
+            AscendC::Muls(xy, xy, kNegOne, count); // -xy
+            AscendC::Exp(e, xy, count);            // exp(-xy)
+            AscendC::Muls(y, y, kNegOne, count);   // -y
+            AscendC::Mul(x, y, e, count);          // -y*exp(-xy)
+            AscendC::Adds(e, e, kPosOne, count);   // 1+exp(-xy)
+            AscendC::Div(x, x, e, count);          // (-y*exp(-xy))/(1+exp(-xy))
+            AscendC::Mul(x, x, g, count);          // * grad
+            AscendC::Muls(x, x, cof_, count);      // * cof
             AscendC::Cast(buf_[BG].Get<T>(), x, AscendC::RoundMode::CAST_RINT, count);
         } else {
-            AscendC::LocalTensor<float> g  = buf_[BG].Get<float>();
-            AscendC::LocalTensor<float> x  = buf_[BX].Get<float>();
-            AscendC::LocalTensor<float> y  = buf_[BY].Get<float>();
+            AscendC::LocalTensor<float> g = buf_[BG].Get<float>();
+            AscendC::LocalTensor<float> x = buf_[BX].Get<float>();
+            AscendC::LocalTensor<float> y = buf_[BY].Get<float>();
             AscendC::LocalTensor<float> xy = buf_[BXY].Get<float>();
-            AscendC::LocalTensor<float> e  = buf_[BTMP].Get<float>();
+            AscendC::LocalTensor<float> e = buf_[BTMP].Get<float>();
             // 字面形：(-y*exp(-xy))/(1+exp(-xy))，对齐 golden 溢出语义（exp 上溢→inf/inf=NaN）
             AscendC::Mul(xy, x, y, count);
             AscendC::Muls(xy, xy, kNegOne, count);
@@ -249,12 +242,11 @@ private:
             AscendC::Adds(e, e, kPosOne, count);
             AscendC::Div(x, x, e, count);
             AscendC::Mul(x, x, g, count);
-            AscendC::Muls(g, x, cof_, count);   // 结果写回 BG
+            AscendC::Muls(g, x, cof_, count); // 结果写回 BG
         }
     }
 
-    __aicore__ inline void CopyInBrc(
-        const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg)
+    __aicore__ inline void CopyInBrc(const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg)
     {
         int64_t k = td_->split.axis;
         int64_t off = CalcInputOffset(coord, td_->input_strides[inputIdx], RANK);
@@ -264,17 +256,17 @@ private:
         int64_t k_nd = RANK - 1 - k;
         int64_t inner = 1;
         for (int64_t nd = 0; nd < ND; nd++) {
-            if (nd == k_nd) params.loopInfo.loopSize[nd] = a_i_seg;
+            if (nd == k_nd)
+                params.loopInfo.loopSize[nd] = a_i_seg;
             params.loopInfo.loopDstStride[nd] = inner;
             inner *= params.loopInfo.loopSize[nd];
         }
 
-        static constexpr AscendC::NdDmaConfig cfg = { false, AscendC::NdDmaConfig::unsetPad,
-                                                       AscendC::NdDmaConfig::unsetPad, false };
+        static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad,
+                                                     AscendC::NdDmaConfig::unsetPad, false};
 
         if constexpr (RANK <= kMaxNdDma) {
-            AscendC::DataCopy<T, ND, cfg>(
-                buf_[slot].Get<T>(), gmIn_[inputIdx][off], params);
+            AscendC::DataCopy<T, ND, cfg>(buf_[slot].Get<T>(), gmIn_[inputIdx][off], params);
         } else {
             AscendC::LocalTensor<T> buf = buf_[slot].Get<T>();
             int64_t elem_base = off;
@@ -285,23 +277,20 @@ private:
                     elem_adj += (tmp % sz) * td_->input_strides[inputIdx][d];
                     tmp /= sz;
                 }
-                AscendC::DataCopy<T, ND, cfg>(
-                    buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
+                AscendC::DataCopy<T, ND, cfg>(buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
             }
         }
     }
 
-    __aicore__ inline void CopyOutOne(
-        const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
+    __aicore__ inline void CopyOutOne(const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
     {
         int64_t off = CalcInputOffset(coord, td_->output_strides[outputIdx], RANK);
-        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK,
-                                              td_->split.axis, a_i_seg);
+        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK, td_->split.axis, a_i_seg);
         AscendC::DataCopyExtParams extParams;
         extParams.blockCount = 1;
-        extParams.blockLen   = cnt * sizeof(T);
-        extParams.srcStride  = 0;
-        extParams.dstStride  = 0;
+        extParams.blockLen = cnt * sizeof(T);
+        extParams.srcStride = 0;
+        extParams.dstStride = 0;
         AscendC::DataCopyPad(gmOut_[outputIdx][off], buf_[slot].Get<T>(), extParams);
     }
 };

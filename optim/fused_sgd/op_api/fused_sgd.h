@@ -19,18 +19,9 @@
 
 namespace l0op {
 std::tuple<const aclTensorList*, const aclTensorList*, const aclTensorList*> FusedSgd(
-    const aclTensorList* paramsRef,
-    const aclTensorList* gradsRef,
-    const aclTensorList* momentumBufferListOptionalRef,
-    const aclTensor* gradScaleOptional,
-    float weightDecay,
-    float momentum,
-    float lr,
-    float dampening,
-    bool nesterov,
-    bool maximize,
-    bool isFirstStep,
-    aclOpExecutor *executor);
+    const aclTensorList* paramsRef, const aclTensorList* gradsRef, const aclTensorList* momentumBufferListOptionalRef,
+    const aclTensor* gradScaleOptional, float weightDecay, float momentum, float lr, float dampening, bool nesterov,
+    bool maximize, bool isFirstStep, aclOpExecutor* executor);
 }
 
 #endif

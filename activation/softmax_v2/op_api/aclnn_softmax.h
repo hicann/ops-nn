@@ -32,4 +32,4 @@ ACLNN_API aclnnStatus aclnnSoftmax(void* workspace, uint64_t workspaceSize, aclO
 #ifdef __cplusplus
 }
 #endif
-#endif  // OP_API_OP_API_INC_LEVEL2_OP_ACLNN_SOFTMAX_H_
+#endif // OP_API_OP_API_INC_LEVEL2_OP_ACLNN_SOFTMAX_H_

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file ctc_loss_v2_grad_def.cpp
  * \brief ctc_loss_v2_grad_def
@@ -58,9 +58,7 @@ public:
         this->Attr("reduction").AttrType(OPTIONAL).String("mean");
         this->Attr("zero_infinity").AttrType(OPTIONAL).Bool(false);
         OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        aicoreConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

@@ -47,10 +47,10 @@ constexpr uint32_t kBlockF32 = kBlockBytes / sizeof(float); // = 8
 
 // UB 内一根轴的描述（innermost-first 排列）
 struct UBAxisDesc {
-    int32_t gmIdx;      // 该轴在 tilingdata.axisShape / axisStride 中的下标
-    int64_t ubSize;     // 该轴在 UB 中的有效长度（split 轴为 aLen/rLen，其它为整根 axisShape）
+    int32_t gmIdx;  // 该轴在 tilingdata.axisShape / axisStride 中的下标
+    int64_t ubSize; // 该轴在 UB 中的有效长度（split 轴为 aLen/rLen，其它为整根 axisShape）
     int64_t paddedSize; // 该轴在 UB 中的占位长度（含 LastA/LastR 行宽 CeilAlign / split 轴 rUbFactor·aUbFactor[Align]）
-    int64_t gmStride;   // 该轴在 GM 上的 stride（元素，来自 axisStride）
+    int64_t gmStride; // 该轴在 GM 上的 stride（元素，来自 axisStride）
 };
 
 template <typename DType, bool isTailR>
@@ -96,8 +96,8 @@ private:
 
     // ─── CopyIn ───
     __aicore__ inline int32_t BuildUBAxes(int64_t aLen, int64_t rLen, UBAxisDesc out[]);
-    __aicore__ inline void DoCopyInTile(
-        int64_t baseGmOff, int64_t aLen, int64_t rLen, AscendC::LocalTensor<D_T>& preInLocal);
+    __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLen,
+                                        AscendC::LocalTensor<D_T>& preInLocal);
 
     // ─── VF ───
     __aicore__ inline void CastSquareVf(AscendC::LocalTensor<D_T>& preIn, uint32_t slot);
@@ -253,8 +253,8 @@ __aicore__ inline int64_t EuclideanNormKernel<DType, isTailR>::RLenOfChunk(int64
 
 // rIdx → 多维 (外层 R axis indices, rSplit 上的 chunk idx)；返回外层 R 贡献的 GM 偏移
 template <typename DType, bool isTailR>
-__aicore__ inline int64_t EuclideanNormKernel<DType, isTailR>::UnravelOuterR(
-    int64_t rIdx, int64_t& rChunkIdxOut, int64_t& rLenOut) const
+__aicore__ inline int64_t EuclideanNormKernel<DType, isTailR>::UnravelOuterR(int64_t rIdx, int64_t& rChunkIdxOut,
+                                                                             int64_t& rLenOut) const
 {
     const int64_t rChunksOnSplit = (axisShape_[rSplit_] + rUbFactor_ - 1) / rUbFactor_;
     rChunkIdxOut = rIdx % rChunksOnSplit;
@@ -277,8 +277,8 @@ __aicore__ inline int64_t EuclideanNormKernel<DType, isTailR>::UnravelOuterR(
 // Init
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Init(
-    GM_ADDR x, GM_ADDR y, const EuclideanNormTilingData* td)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Init(GM_ADDR x, GM_ADDR y,
+                                                                 const EuclideanNormTilingData* td)
 {
     axisNum_ = td->axisNum;
     for (int32_t i = 0; i < MAX_PATTERN_RANK; ++i) {
@@ -586,8 +586,8 @@ __aicore__ inline int32_t EuclideanNormKernel<DType, isTailR>::BuildUBAxes(int64
 //   - host for 同样按 ubStride[k] 步进
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(
-    int64_t baseGmOff, int64_t aLen, int64_t rLen, AscendC::LocalTensor<D_T>& preInLocal)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLen,
+                                                                         AscendC::LocalTensor<D_T>& preInLocal)
 {
     UBAxisDesc ubAxes[MAX_PATTERN_RANK];
     const int32_t K = BuildUBAxes(aLen, rLen, ubAxes);
@@ -614,15 +614,15 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(
     }
     DataCopyPadExtParams<D_T> padParams{true, 0, rPad, static_cast<D_T>(0)};
 
-    const int64_t copyPadBytes =
-        (static_cast<int64_t>(extParams.blockLen) + kBlockBytes - 1) / kBlockBytes * kBlockBytes;
+    const int64_t copyPadBytes = (static_cast<int64_t>(extParams.blockLen) + kBlockBytes - 1) / kBlockBytes *
+                                 kBlockBytes;
     const int64_t target0Bytes = ubAxes[0].paddedSize * dtBytes;
     extParams.dstStride = static_cast<uint32_t>((target0Bytes - copyPadBytes) / static_cast<int64_t>(kBlockBytes));
 
     if (K >= 2) {
         extParams.blockCount = static_cast<uint16_t>(ubAxes[1].ubSize);
-        extParams.srcStride =
-            static_cast<uint32_t>(ubAxes[1].gmStride * dtBytes - static_cast<int64_t>(extParams.blockLen));
+        extParams.srcStride = static_cast<uint32_t>(ubAxes[1].gmStride * dtBytes -
+                                                    static_cast<int64_t>(extParams.blockLen));
     } else {
         extParams.blockCount = 1;
         extParams.srcStride = 0;
@@ -682,8 +682,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(
 // CastSquareVf：Load → (Cast→fp32) → Square → Store(tmpBuf[slot])
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::CastSquareVf(
-    AscendC::LocalTensor<D_T>& preIn, uint32_t slot)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::CastSquareVf(AscendC::LocalTensor<D_T>& preIn,
+                                                                         uint32_t slot)
 {
     auto tmpAll = tmpBuf_.Get<float>();
     auto tmpSlot = tmpAll[static_cast<int32_t>(slot) * static_cast<int32_t>(tmpSlotElems_)];
@@ -692,8 +692,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::CastSquareVf(
     __ubuf__ float* dstPtr = reinterpret_cast<__ubuf__ float*>(tmpSlot.GetPhyAddr());
 
     // 整个 UB tile 元素数（按 padded 占用 —— rUbFactorAlign 覆盖 rSplit==lastR 时的 burst tail pad）
-    const uint32_t totalElems =
-        static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_ * rUbFactorAlign_ * innerRProdAlign_);
+    const uint32_t totalElems = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_ * rUbFactorAlign_ *
+                                                      innerRProdAlign_);
     const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
 
     __VEC_SCOPE__
@@ -779,8 +779,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ClearChunkExtensionV
                 int32_t aOff = static_cast<int32_t>(a) * static_cast<int32_t>(aStride);
                 uint32_t remaining = extLanes;
                 for (uint16_t r = 0; r < static_cast<uint16_t>(repPerA); ++r) {
-                    int32_t off =
-                        aOff + static_cast<int32_t>(extStart) + static_cast<int32_t>(r) * static_cast<int32_t>(kRepF32);
+                    int32_t off = aOff + static_cast<int32_t>(extStart) +
+                                  static_cast<int32_t>(r) * static_cast<int32_t>(kRepF32);
                     auto mask = AscendC::Reg::UpdateMask<float>(remaining);
                     AscendC::Reg::StoreAlign(base + off, idReg, mask);
                 }
@@ -818,8 +818,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::MergeTmpBufVf()
     __ubuf__ float* p0 = reinterpret_cast<__ubuf__ float*>(tmpAll.GetPhyAddr());
     __ubuf__ float* p1 = p0 + tmpSlotElems_;
 
-    const uint32_t totalElems =
-        static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_ * rUbFactorAlign_ * innerRProdAlign_);
+    const uint32_t totalElems = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_ * rUbFactorAlign_ *
+                                                      innerRProdAlign_);
     const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
 
     __VEC_SCOPE__
@@ -854,17 +854,17 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ReduceRPattern()
     auto dst = tmpAll[static_cast<int32_t>(tmpSlotElems_)];
 
     const uint32_t aBundle = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_);
-    const uint32_t rBundle =
-        static_cast<uint32_t>(rUbFactorAlign_ * innerRProdAlign_); // padded（ReduceSum srcInnerPad=true 要求）
+    const uint32_t rBundle = static_cast<uint32_t>(rUbFactorAlign_ *
+                                                   innerRProdAlign_); // padded（ReduceSum srcInnerPad=true 要求）
 
     if constexpr (isTailR) {
         uint32_t srcShape[2] = {aBundle, rBundle};
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, /*isReuseSource=*/true>(
-            dst, src, srcShape, /*srcInnerPad=*/true);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, /*isReuseSource=*/true>(dst, src, srcShape,
+                                                                                        /*srcInnerPad=*/true);
     } else {
         uint32_t srcShape[2] = {rBundle, aBundle};
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, /*isReuseSource=*/true>(
-            dst, src, srcShape, /*srcInnerPad=*/true);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, /*isReuseSource=*/true>(dst, src, srcShape,
+                                                                                        /*srcInnerPad=*/true);
     }
 }
 
@@ -900,8 +900,8 @@ template <typename DType, bool isTailR>
 __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCachingVf(uint16_t cacheID)
 {
     auto tmpAll = tmpBuf_.Get<float>();
-    __ubuf__ float* srcPtr =
-        reinterpret_cast<__ubuf__ float*>(tmpAll[static_cast<int32_t>(tmpSlotElems_)].GetPhyAddr());
+    __ubuf__ float* srcPtr = reinterpret_cast<__ubuf__ float*>(
+        tmpAll[static_cast<int32_t>(tmpSlotElems_)].GetPhyAddr());
     __ubuf__ float* cachePtr = reinterpret_cast<__ubuf__ float*>(cacheBuf_.Get<float>().GetPhyAddr());
 
     const uint32_t laneN = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_);
@@ -1018,8 +1018,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::PostElewiseAndCopyOu
 //            ──(VF Sqrt+Cast)→ outBuf ──(MTE3 CopyOut)→ yGm_
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::InitGroup(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const EuclideanNormTilingData* td)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::InitGroup(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                                      const EuclideanNormTilingData* td)
 {
     Init(x, y, td); // 复用 normal 全套 UB/字段初始化
     wsGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace));
@@ -1117,8 +1117,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ProcessGroup()
 //             二者相加 = 该 R chunk 的首个元素在 xGm_ 中的完整 GM 地址
 // ────────────────────────────────────────────────────────────────────────────
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoOneAChunkGroup(
-    int64_t outerGmOff, int64_t aLen, int64_t rStart, int64_t rEnd)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoOneAChunkGroup(int64_t outerGmOff, int64_t aLen,
+                                                                             int64_t rStart, int64_t rEnd)
 {
     int64_t rCount = rEnd - rStart;
     if (rCount <= 0) {
@@ -1196,8 +1196,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoOneAChunkGroup(
 // 源数据: cache 树根在 cacheBuf(VECCALC) 中，VF 已写完，MTE3 直接读，PipeV→MTE3 fence 保证可见
 // ────────────────────────────────────────────────────────────────────────────
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1OutputToWorkspace(
-    int64_t wsColOff, int64_t aLen, int64_t rChunkIdx, int64_t rCount)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1OutputToWorkspace(int64_t wsColOff, int64_t aLen,
+                                                                                    int64_t rChunkIdx, int64_t rCount)
 {
     // ── cache 树根地址 ──
     // cache 树每层 levelStride 个 fp32，共 cacheCount 层，根在第 cacheCount-1 层
@@ -1313,7 +1313,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
         int64_t a_off = aSplitChunkIdx * aUbFactorP2; // workspace 列偏移（fp32 元素）
         int64_t a_len = aUbFactorP2;
         if (a_off + a_len > aTotal_) {
-            a_len = aTotal_ - a_off;                                    // 尾 chunk 兜底
+            a_len = aTotal_ - a_off; // 尾 chunk 兜底
         }
         int64_t a_len_ub = ((a_len + BS_FP32 - 1) / BS_FP32) * BS_FP32; // CeilAlign，preIn 行宽
 
@@ -1330,8 +1330,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
             ext.blockCount = static_cast<uint16_t>(rGroupCnt_);
             // srcStride: workspace 行间 stride - blockLen = 下一行首与当前行尾的字节 gap
             //   workspace 每行 aTotal_ 个 fp32，gap = aTotal_*4 - a_len*4
-            ext.srcStride = static_cast<uint32_t>(
-                aTotal_ * static_cast<int64_t>(sizeof(float)) - static_cast<int64_t>(ext.blockLen));
+            ext.srcStride = static_cast<uint32_t>(aTotal_ * static_cast<int64_t>(sizeof(float)) -
+                                                  static_cast<int64_t>(ext.blockLen));
             // dstStride=0: UB 内行间紧密排列，每行占 a_len_ub fp32，无额外 gap
             ext.dstStride = 0;
 
@@ -1382,8 +1382,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
                     } else if constexpr (kIsB16) {
                         AscendC::Reg::RegTensor<D_T> b16Reg;
                         AscendC::Reg::Cast<D_T, float, kCastTraitFromFp32>(b16Reg, f32Reg, mask);
-                        AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(
-                            dstPtr + off, b16Reg, mask);
+                        AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstPtr + off, b16Reg,
+                                                                                              mask);
                     } else { // int32
                         AscendC::Reg::RegTensor<int32_t> iReg;
                         AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32>(iReg, f32Reg, mask);

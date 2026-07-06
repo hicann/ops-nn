@@ -22,18 +22,11 @@
 using namespace op;
 using namespace std;
 
-class l2_geglu_backward_test : public testing::Test
-{
+class l2_geglu_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "geglu_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "geglu_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "geglu_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "geglu_backward_test TearDown" << std::endl; }
 };
 
 // 正常场景_FLOAT16_ND_SHAPE1
@@ -46,8 +39,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE1)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2, 920, 256}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     // uint64_t workspaceSize = 0;
@@ -70,9 +63,9 @@ TEST_F(l2_geglu_backward_test, ascend910B2_normal_FLOAT16_ND_SHAPE1)
 
     bool activateLefts[2] = {true, false};
     for (auto activateLeft : activateLefts) {
-        auto ut = OP_API_UT(
-            aclnnGeGluV3Backward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc, activateLeft),
-            OUTPUT(gradInputDesc));
+        auto ut = OP_API_UT(aclnnGeGluV3Backward,
+                            INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc, activateLeft),
+                            OUTPUT(gradInputDesc));
 
         // only test GetWorkspaceSize
         uint64_t workspaceSize = 0;
@@ -94,8 +87,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE2)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2, 230, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     // uint64_t workspaceSize = 0;
@@ -116,8 +109,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE3)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2, 50, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     // uint64_t workspaceSize = 0;
@@ -138,8 +131,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE4)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2, 10, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     // uint64_t workspaceSize = 0;
@@ -160,8 +153,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_empty_tensor)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -182,8 +175,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradOutput_nullptr)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -201,8 +194,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_self_nullptr)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -220,8 +213,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gelu_nullptr)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -239,8 +232,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradInput_nullptr)
     int64_t approximateDesc = 1;
     auto gradInputDesc = nullptr;
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -258,8 +251,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_INT32)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -277,8 +270,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradOutput_self_dtype_
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -296,8 +289,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradOutput_gelu_dtype_
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -315,8 +308,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradOutput_gradInput_d
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -334,8 +327,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradOutput_gelu_shape_
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -353,8 +346,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_self_gradInput_shape_u
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({5}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -372,8 +365,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_dim_error)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -391,8 +384,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_gradOutput_self_shape_
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -410,8 +403,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_abnormal_CheckAttributeValue)
     int64_t approximateDesc = 2;
     auto gradInputDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -429,8 +422,8 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_uncontiguous)
     int64_t approximateDesc = 1;
     auto gradInputDesc = TensorDesc({2, 8}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {8, 2});
 
-    auto ut = OP_API_UT(
-        aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnGeGluBackward, INPUT(gradOutputDesc, selfDesc, geluDesc, dimDesc, approximateDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;

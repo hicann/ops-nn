@@ -17,9 +17,7 @@
 using namespace Ops::Base;
 
 namespace ops {
-static ge::graphStatus InferShape4EluGrad(gert::InferShapeContext* context) {
-  return InferShape4Broadcast(context);
-}
+static ge::graphStatus InferShape4EluGrad(gert::InferShapeContext* context) { return InferShape4Broadcast(context); }
 
 IMPL_OP_INFERSHAPE(EluGrad).InferShape(InferShape4EluGrad);
-}  // namespace ops
+} // namespace ops

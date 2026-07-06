@@ -51,9 +51,8 @@ struct GroupNormSiluQuantCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-enum class GroupNormSiluQuantTilingKey : int64_t
-{
-    TILINGKEY_HIGH_PERF_B16 = 1031,         // high performance and dtype is b16
+enum class GroupNormSiluQuantTilingKey : int64_t {
+    TILINGKEY_HIGH_PERF_B16 = 1031, // high performance and dtype is b16
 };
 } // namespace optiling
 #endif // __OP_HOST_GROUP_NORM_SILU_QUANT_TILING_H__

@@ -31,7 +31,7 @@ namespace ge {
 * - Other dimensions maintain the same shape as x.
 
 * @par Attributes:
-* @li axis: An optional int, specifying the dequantization axis. 
+* @li axis: An optional int, specifying the dequantization axis.
 * Defaults to -1.
 * @li dst_type: An optional int, specifying the dtype of output y. Target data type enum value:
 * - 0: DT_FLOAT32
@@ -54,4 +54,4 @@ REG_OP(AntiMxQuant)
     .OP_END_FACTORY_REG(AntiMxQuant)
 } // namespace ge
 
-#endif  // QUANTIZE_ANTI_DYNAMIC_MX_QUANT_PROTO_H
+#endif // QUANTIZE_ANTI_DYNAMIC_MX_QUANT_PROTO_H

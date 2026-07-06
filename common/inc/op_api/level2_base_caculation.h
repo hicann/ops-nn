@@ -20,7 +20,6 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/level2_base.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,8 +85,8 @@ static inline bool CheckSocVersionIsSupportBf16Activation(void)
            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
-static inline bool CheckDtypeValidActivation(
-    const aclTensor* self, const aclTensor* out, const std::initializer_list<op::DataType>& supportList)
+static inline bool CheckDtypeValidActivation(const aclTensor* self, const aclTensor* out,
+                                             const std::initializer_list<op::DataType>& supportList)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
@@ -95,16 +94,15 @@ static inline bool CheckDtypeValidActivation(
     bool bf16flag = CheckSocVersionIsSupportBf16Activation();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!bf16flag && self->GetDataType() == op::DataType::DT_BF16) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Self dtype %s is unsupported by the current SOC version [%s].",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(socVersion).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s is unsupported by the current SOC version [%s].",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(socVersion).GetString());
         return false;
     }
     return true;
 }
 
-static inline const aclTensor* ReshapeLongTensorActivation(
-    const aclTensor* x, aclOpExecutor* executor, int originalDimSize, aclIntArray* valuePerm = nullptr)
+static inline const aclTensor* ReshapeLongTensorActivation(const aclTensor* x, aclOpExecutor* executor,
+                                                           int originalDimSize, aclIntArray* valuePerm = nullptr)
 {
     int64_t dimSize = x->GetViewShape().GetDimNum();
     if (static_cast<int64_t>(originalDimSize) == dimSize && dimSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
@@ -115,8 +113,9 @@ static inline const aclTensor* ReshapeLongTensorActivation(
     return reshapeSelf;
 }
 
-static inline const aclTensor* ReshapeSelfValueGetActivation(
-    const aclTensor* self, size_t dimSize, const aclTensor* selfContiguous, UniqueExecutor& uniqueExecutor)
+static inline const aclTensor* ReshapeSelfValueGetActivation(const aclTensor* self, size_t dimSize,
+                                                             const aclTensor* selfContiguous,
+                                                             UniqueExecutor& uniqueExecutor)
 {
     auto reshapeSelf = selfContiguous;
     auto shapeOri = self->GetViewShape();
@@ -169,8 +168,8 @@ static inline uint64_t GetPosDimWithStd(int64_t dim, int64_t selfdimNum)
     return dim >= 0 ? dim : dim + selfdimNum;
 }
 
-static inline void ExpectShapeInferWithDimMask(
-    const op::Shape& selfShape, const aclIntArray* dim, bool keepDim, op::Shape& expectShape)
+static inline void ExpectShapeInferWithDimMask(const op::Shape& selfShape, const aclIntArray* dim, bool keepDim,
+                                               op::Shape& expectShape)
 {
     bitset<MAX_MASK_LEN64> dimMask = bitset<MAX_MASK_LEN64>();
 

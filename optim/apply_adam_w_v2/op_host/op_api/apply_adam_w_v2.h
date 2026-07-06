@@ -13,10 +13,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-void ApplyAdamWV2(
-    aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* maxGradNormOptionalRef, const aclTensor* grad,
-    const aclTensor* step, float lr, float beta1, float beta2, float weightDecay, float eps, bool amsgrad,
-    bool maximize, aclOpExecutor* executor);
+void ApplyAdamWV2(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* maxGradNormOptionalRef,
+                  const aclTensor* grad, const aclTensor* step, float lr, float beta1, float beta2, float weightDecay,
+                  float eps, bool amsgrad, bool maximize, aclOpExecutor* executor);
 }
 
 #endif

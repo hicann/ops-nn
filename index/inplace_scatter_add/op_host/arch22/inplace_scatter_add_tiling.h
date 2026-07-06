@@ -19,22 +19,22 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(InplaceScatterAddTilingData)
-  TILING_DATA_FIELD_DEF(uint32_t, M);
-  TILING_DATA_FIELD_DEF(uint32_t, N);
-  TILING_DATA_FIELD_DEF(uint32_t, K);
-  TILING_DATA_FIELD_DEF(uint32_t, NAligned);
-  TILING_DATA_FIELD_DEF(uint32_t, frontCoreNum);
-  TILING_DATA_FIELD_DEF(uint32_t, tailCoreNum);
-  TILING_DATA_FIELD_DEF(uint32_t, frontCoreIndicesNum);
-  TILING_DATA_FIELD_DEF(uint32_t, tailCoreIndicesNum);
-  TILING_DATA_FIELD_DEF(uint32_t, ubSize);
+TILING_DATA_FIELD_DEF(uint32_t, M);
+TILING_DATA_FIELD_DEF(uint32_t, N);
+TILING_DATA_FIELD_DEF(uint32_t, K);
+TILING_DATA_FIELD_DEF(uint32_t, NAligned);
+TILING_DATA_FIELD_DEF(uint32_t, frontCoreNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailCoreNum);
+TILING_DATA_FIELD_DEF(uint32_t, frontCoreIndicesNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailCoreIndicesNum);
+TILING_DATA_FIELD_DEF(uint32_t, ubSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(InplaceScatterAdd, InplaceScatterAddTilingData)
 
 struct InplaceScatterAddCompileInfo {
-  int32_t totalCoreNum = 0;
-  uint64_t ubSizePlatForm = 0;
+    int32_t totalCoreNum = 0;
+    uint64_t ubSizePlatForm = 0;
 };
-}
+} // namespace optiling
 #endif

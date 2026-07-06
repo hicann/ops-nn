@@ -22,7 +22,7 @@ constexpr uint8_t SYNC_MODE2 = 2;
 constexpr uint8_t SYNC_MODE4 = 4;
 constexpr uint8_t DST_DTYPE_BYTES = 4;
 constexpr uint8_t ONE_BLK_SHIFT_SIZE = 5;
-constexpr uint32_t VECTOR_UB_SIZE_HALF = AscendC::TOTAL_UB_SIZE >> 1;   // UB大小的一半
+constexpr uint32_t VECTOR_UB_SIZE_HALF = AscendC::TOTAL_UB_SIZE >> 1; // UB大小的一半
 constexpr uint32_t FLOAT_SHIFT_SIZE = 2;
 constexpr uint32_t CUT_FOUR = 4;
 constexpr uint32_t RELATED_CORE_NUM = 2;
@@ -52,12 +52,9 @@ struct CutDeterMinisticMNSize {
     bool isNTail = false;
 };
 
-static __aicore__ inline bool IsDivisible2(const uint64_t a)
-{
-    return a == ((a >> 1) << 1);
-}
+static __aicore__ inline bool IsDivisible2(const uint64_t a) { return a == ((a >> 1) << 1); }
 
-static __aicore__ inline void DivTwoNumersInHalf(uint64_t &a, uint64_t &b)
+static __aicore__ inline void DivTwoNumersInHalf(uint64_t& a, uint64_t& b)
 {
     // 能对半切就切，不能就切大的数
     if (IsDivisible2(b)) {
@@ -75,7 +72,7 @@ static __aicore__ inline void DivTwoNumersInHalf(uint64_t &a, uint64_t &b)
 }
 
 template <class Intf>
-static __aicore__ inline void CalcL0cParams(Intf *self, bool tailCinExist)
+static __aicore__ inline void CalcL0cParams(Intf* self, bool tailCinExist)
 {
     bool isNLoop = (self->ctx.lastNIdx_ != self->ctx.curNIdx_);
     // 若cin有尾块，在cin循环开始时对其进行赋值初始化
@@ -95,7 +92,7 @@ static __aicore__ inline void CalcL0cParams(Intf *self, bool tailCinExist)
 }
 
 template <class Intf>
-static __aicore__ inline void GatherDepthwise(Intf *self, uint32_t hwkLength, uint32_t srcSize, uint32_t strideHwk)
+static __aicore__ inline void GatherDepthwise(Intf* self, uint32_t hwkLength, uint32_t srcSize, uint32_t strideHwk)
 {
     uint16_t vLoop = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
     uint16_t loopSize = DivCeil(hwkLength, vLoop);
@@ -104,9 +101,9 @@ static __aicore__ inline void GatherDepthwise(Intf *self, uint32_t hwkLength, ui
     uint32_t coutCin0 = self->ctx.baseUseM_ * BLOCK_CUBE;
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto indexPtr = (__ubuf__ uint32_t *)indexBuf[0].GetPhyAddr();
-    auto srcPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[0].GetPhyAddr();
-    auto dstPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
+    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
 
     CreateVecIndex(indexBuf[0], (int32_t)0, indexLength); // 从0依次递增到indexLength
     PipeBarrier<PIPE_V>();
@@ -149,7 +146,7 @@ static __aicore__ inline void GatherDepthwise(Intf *self, uint32_t hwkLength, ui
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2GmDepthwise(Intf *self, const GlobalTensor<typename Intf::DstT> &output)
+static __aicore__ inline void Rearrange2GmDepthwise(Intf* self, const GlobalTensor<typename Intf::DstT>& output)
 {
     LoopModeParams loopParams;
     DataCopyExtParams ub2GmParams;
@@ -187,19 +184,19 @@ static __aicore__ inline void Rearrange2GmDepthwise(Intf *self, const GlobalTens
 
     SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
 
-    ub2GmParams.blockLen = nValue * DST_DTYPE_BYTES; // len
+    ub2GmParams.blockLen = nValue * DST_DTYPE_BYTES;     // len
     ub2GmParams.blockCount = self->ctx.curSingleCoreDk_; // num
-    ub2GmParams.srcStride = 0; // compact mode ignore srcstride
+    ub2GmParams.srcStride = 0;                           // compact mode ignore srcstride
     ub2GmParams.dstStride = 0;
 
-    DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstGmOffset],
-        self->ctx.vecOutBuf_[srcSize], ub2GmParams);
+    DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstGmOffset], self->ctx.vecOutBuf_[srcSize],
+                                                           ub2GmParams);
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
 }
 
 template <class Intf>
-static __aicore__ inline void NormalGroupDataCopyPadDkEqOne(Intf *self,
-    const GlobalTensor<typename Intf::DstT> &output, uint32_t srcStride, uint32_t coutNum)
+static __aicore__ inline void NormalGroupDataCopyPadDkEqOne(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                            uint32_t srcStride, uint32_t coutNum)
 {
     uint32_t srcSize = self->ctx.baseUseN_ * coutNum;
     uint32_t coutPerGroup = self->ctx.tiling_->cout / self->ctx.tiling_->group;
@@ -208,9 +205,9 @@ static __aicore__ inline void NormalGroupDataCopyPadDkEqOne(Intf *self,
     LoopModeParams loopParams;
     loopParams.loop2Size = 1;
     loopParams.loop1Size = self->ctx.baseUseM_ / coutPerGroup;
-    loopParams.loop1SrcStride =
-        (baseCin * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ * coutPerGroup +
-        cinPerGroup * self->ctx.hwK_) * DST_DTYPE_BYTES;
+    loopParams.loop1SrcStride = (baseCin * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ * coutPerGroup +
+                                 cinPerGroup * self->ctx.hwK_) *
+                                DST_DTYPE_BYTES;
     loopParams.loop1DstStride = self->ctx.hwK_ * DST_DTYPE_BYTES * cinPerGroup * coutPerGroup;
 
     loopParams.loop2SrcStride = loopParams.loop1SrcStride;
@@ -219,7 +216,7 @@ static __aicore__ inline void NormalGroupDataCopyPadDkEqOne(Intf *self,
     SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
 
     DataCopyExtParams ub2GmParams;
-    constexpr uint8_t ALIGN_BYTE = 32; // UB 32Byte对齐
+    constexpr uint8_t ALIGN_BYTE = 32;                                     // UB 32Byte对齐
     ub2GmParams.blockLen = self->ctx.hwK_ * DST_DTYPE_BYTES * cinPerGroup; // len:byte
     ub2GmParams.blockCount = coutPerGroup;
     ub2GmParams.srcStride = (baseCin - cinPerGroup) * self->ctx.hwK_ * DST_DTYPE_BYTES / ALIGN_BYTE;
@@ -229,8 +226,8 @@ static __aicore__ inline void NormalGroupDataCopyPadDkEqOne(Intf *self,
 }
 
 template <class Intf>
-static __aicore__ inline void NormalGroupDataCopyPad(Intf *self,
-    const GlobalTensor<typename Intf::DstT> &output, uint32_t srcStride, uint32_t coutNum)
+static __aicore__ inline void NormalGroupDataCopyPad(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                     uint32_t srcStride, uint32_t coutNum)
 {
     uint32_t coutPerGroup = self->ctx.tiling_->cout / self->ctx.tiling_->group;
     uint32_t cinPerGroup = self->ctx.tiling_->cin / self->ctx.tiling_->group;
@@ -240,8 +237,9 @@ static __aicore__ inline void NormalGroupDataCopyPad(Intf *self,
     LoopModeParams loopParams;
     loopParams.loop2Size = self->ctx.baseUseM_ / coutPerGroup;
     loopParams.loop1Size = coutPerGroup;
-    loopParams.loop2SrcStride =
-        (baseCin * self->ctx.curSingleCoreDk_ * srcStride * coutPerGroup + cinPerGroup * srcStride) * DST_DTYPE_BYTES;
+    loopParams.loop2SrcStride = (baseCin * self->ctx.curSingleCoreDk_ * srcStride * coutPerGroup +
+                                 cinPerGroup * srcStride) *
+                                DST_DTYPE_BYTES;
     loopParams.loop2DstStride = self->ctx.dhwK_ * DST_DTYPE_BYTES * cinPerGroup * coutPerGroup;
 
     loopParams.loop1SrcStride = baseCin * self->ctx.curSingleCoreDk_ * srcStride * DST_DTYPE_BYTES;
@@ -250,10 +248,10 @@ static __aicore__ inline void NormalGroupDataCopyPad(Intf *self,
     SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
 
     DataCopyExtParams ub2GmParams;
-    constexpr uint8_t ALIGN_BYTE = 32; // UB 32Byte对齐
+    constexpr uint8_t ALIGN_BYTE = 32;                                                    // UB 32Byte对齐
     ub2GmParams.blockLen = self->ctx.hwK_ * DST_DTYPE_BYTES * self->ctx.curSingleCoreDk_; // len:byte
     ub2GmParams.blockCount = cinPerGroup;
-    ub2GmParams.srcStride = (srcStride - self->ctx.hwK_) * DST_DTYPE_BYTES * self->ctx.curSingleCoreDk_/ ALIGN_BYTE;
+    ub2GmParams.srcStride = (srcStride - self->ctx.hwK_) * DST_DTYPE_BYTES * self->ctx.curSingleCoreDk_ / ALIGN_BYTE;
     // GM单位：byte
     ub2GmParams.dstStride = (self->ctx.tiling_->dk - self->ctx.curSingleCoreDk_) * self->ctx.hwK_ * DST_DTYPE_BYTES;
     DataCopyPad<typename Intf::DstT>(output[0], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
@@ -261,22 +259,22 @@ static __aicore__ inline void NormalGroupDataCopyPad(Intf *self,
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2GmScatter(Intf *self, uint32_t srcStride,
-    uint16_t loopSize, uint16_t indexLength, uint32_t coutNum)
+static __aicore__ inline void Rearrange2GmScatter(Intf* self, uint32_t srcStride, uint16_t loopSize,
+                                                  uint16_t indexLength, uint32_t coutNum)
 {
     uint32_t baseCin = Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_);
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto indexPtr = (__ubuf__ uint32_t *)indexBuf[0].GetPhyAddr();
-    auto srcPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
+    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
     uint32_t srcSize = self->ctx.baseUseN_ * coutNum;
-    auto dstPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
 
     bool enableVecRegWidthMin = (indexLength < BLOCK_CUBE);
     uint32_t sreg = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
     uint8_t sregU8 = sreg > BLOCK_CUBE ? sreg : BLOCK_CUBE;
     uint16_t iterCin = baseCin / indexLength;
-    uint16_t iterCout = Ceil(coutNum , loopSize);
+    uint16_t iterCout = Ceil(coutNum, loopSize);
     uint32_t coutDstStride = baseCin * loopSize * srcStride;
     uint32_t hwkSrcStride = coutNum * BLOCK_CUBE;
     uint32_t cinSrcStride = hwkSrcStride * self->ctx.hwK_;
@@ -317,8 +315,8 @@ static __aicore__ inline void Rearrange2GmScatter(Intf *self, uint32_t srcStride
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2GmNormalGroup(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, bool isCoutNumAligned)
+static __aicore__ inline void Rearrange2GmNormalGroup(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                      bool isCoutNumAligned)
 {
     uint16_t vLoop = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
     uint16_t loopSize = DivCeil(vLoop, BLOCK_CUBE);
@@ -349,7 +347,8 @@ static __aicore__ inline void Rearrange2GmNormalGroup(
     }
     // group重排有两个通路，NO_STREAMK: l0c2ub, STREAMK: gm2ub
     // l0c2ub时候，coutNum是16对齐的，而gm2ub时候coutNum和baseUseM一致
-    uint32_t coutNum = isCoutNumAligned ? ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE : self->ctx.baseUseM_;
+    uint32_t coutNum = isCoutNumAligned ? ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE :
+                                          self->ctx.baseUseM_;
     Rearrange2GmScatter(self, srcStride, loopSize, indexLength, coutNum);
 
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -364,8 +363,8 @@ static __aicore__ inline void Rearrange2GmNormalGroup(
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-    uint8_t enAtomic = 0, bool isCoutNumAligned = 1)
+static __aicore__ inline void Rearrange2Gm(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                           uint8_t enAtomic = 0, bool isCoutNumAligned = 1)
 {
     if ASCEND_IS_AIC {
         return;
@@ -381,7 +380,8 @@ static __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typena
     self->ctx.vecOutBuf_ = self->ctx.vecBuf_.template Get<typename Intf::DstT>();
     if (self->ctx.tiling_->group != self->ctx.tiling_->cin || self->ctx.tiling_->group != self->ctx.tiling_->cout) {
         Rearrange2GmNormalGroup(self, output, isCoutNumAligned);
-    } else if (self->ctx.tiling_->group == self->ctx.tiling_->cin && self->ctx.tiling_->group == self->ctx.tiling_->cout) {
+    } else if (self->ctx.tiling_->group == self->ctx.tiling_->cin &&
+               self->ctx.tiling_->group == self->ctx.tiling_->cout) {
         Rearrange2GmDepthwise(self, output);
     }
 
@@ -391,12 +391,14 @@ static __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typena
 }
 
 template <class Intf>
-static __aicore__ inline void DataCopyPadBaseNUndivided(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-    const uint32_t srcStride, const CutDeterMinisticMNSize &cutMNSize)
+static __aicore__ inline void DataCopyPadBaseNUndivided(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                        const uint32_t srcStride,
+                                                        const CutDeterMinisticMNSize& cutMNSize)
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     uint64_t wkCnt = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) < self->ctx.hwK_ ?
-        ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) : self->ctx.hwK_;
+                         ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) :
+                         self->ctx.hwK_;
     LoopModeParams loopParams;
     DataCopyExtParams ub2GmParams;
     loopParams.loop2Size = 1;
@@ -407,24 +409,27 @@ static __aicore__ inline void DataCopyPadBaseNUndivided(Intf *self, const Global
     ub2GmParams.dstStride = (self->ctx.dhwK_ - 1) * DST_DTYPE_BYTES;
     for (uint64_t j = 0; j < srcStride; j++) {
         uint64_t totalHwk = wkCnt * self->ctx.curNIdx_ + j;
-        uint64_t tailNSize = self->ctx.singleShapeCin_ - cutMNSize.usedNSize / self->ctx.hwK_ - j / self->ctx.hwK_ * BLOCK_CUBE;
+        uint64_t tailNSize = self->ctx.singleShapeCin_ - cutMNSize.usedNSize / self->ctx.hwK_ -
+                             j / self->ctx.hwK_ * BLOCK_CUBE;
         ub2GmParams.blockCount = (tailNSize > BLOCK_CUBE) ? BLOCK_CUBE : tailNSize;
         uint64_t srcOffset = j * BLOCK_CUBE;
-        uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
-                        self->ctx.dhwK_ * self->ctx.tiling_->cin1G +
-                        (totalHwk / self->ctx.hwK_) * (self->ctx.dhwK_ * BLOCK_CUBE) +
-                        totalHwk % self->ctx.hwK_ + static_cast<uint64_t>(cutMNSize.usedNSize) * self->ctx.tiling_->dk;
+        uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
+                              static_cast<uint64_t>(cutMNSize.usedMSize)) *
+                                 self->ctx.dhwK_ * self->ctx.tiling_->cin1G +
+                             (totalHwk / self->ctx.hwK_) * (self->ctx.dhwK_ * BLOCK_CUBE) + totalHwk % self->ctx.hwK_ +
+                             static_cast<uint64_t>(cutMNSize.usedNSize) * self->ctx.tiling_->dk;
         SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
-        DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset], self->ctx.vecOutBuf_[srcSize + srcOffset],
-            ub2GmParams);
+        DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset],
+                                                               self->ctx.vecOutBuf_[srcSize + srcOffset], ub2GmParams);
         ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
     }
 }
 
 template <class Intf>
-static __aicore__ inline void DataCopyPadBaseNUndividedForNDHWC(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, const uint32_t srcStride,
-    const CutDeterMinisticMNSize& cutMNSize)
+static __aicore__ inline void DataCopyPadBaseNUndividedForNDHWC(Intf* self,
+                                                                const GlobalTensor<typename Intf::DstT>& output,
+                                                                const uint32_t srcStride,
+                                                                const CutDeterMinisticMNSize& cutMNSize)
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     uint64_t wkCnt = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) < self->ctx.hwK_ ?
@@ -451,15 +456,16 @@ static __aicore__ inline void DataCopyPadBaseNUndividedForNDHWC(
 }
 
 template <class Intf>
-static __aicore__ inline void DataCopyPadDkEqOne(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-    const CutDeterMinisticMNSize &cutMNSize, const uint64_t baseCin)
+static __aicore__ inline void DataCopyPadDkEqOne(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                 const CutDeterMinisticMNSize& cutMNSize, const uint64_t baseCin)
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     DataCopyExtParams ub2GmParams;
-    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
-                        self->ctx.dhwK_ * self->ctx.tiling_->cin1G +
-                        static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN +
-                        static_cast<uint64_t>(cutMNSize.usedNSize);
+    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
+                          static_cast<uint64_t>(cutMNSize.usedMSize)) *
+                             self->ctx.dhwK_ * self->ctx.tiling_->cin1G +
+                         static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN +
+                         static_cast<uint64_t>(cutMNSize.usedNSize);
     if (cutMNSize.isNTail) {
         uint64_t tailNSize = (self->ctx.singleShapeCin_ * self->ctx.hwK_ - cutMNSize.usedNSize);
         ub2GmParams.srcStride = ((cutMNSize.curNSize - tailNSize) * DST_DTYPE_BYTES) >> ONE_BLK_SHIFT_SIZE;
@@ -468,7 +474,7 @@ static __aicore__ inline void DataCopyPadDkEqOne(Intf *self, const GlobalTensor<
     } else {
         ub2GmParams.srcStride = 0;
         ub2GmParams.blockLen = cutMNSize.curNSize * DST_DTYPE_BYTES;
-        uint64_t shapeCin = self->ctx.singleShapeCin_ < baseCin ?  self->ctx.singleShapeCin_ : baseCin;
+        uint64_t shapeCin = self->ctx.singleShapeCin_ < baseCin ? self->ctx.singleShapeCin_ : baseCin;
         ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - shapeCin) * self->ctx.hwK_ * DST_DTYPE_BYTES;
     }
     ub2GmParams.blockCount = cutMNSize.curMSize;
@@ -476,18 +482,19 @@ static __aicore__ inline void DataCopyPadDkEqOne(Intf *self, const GlobalTensor<
 }
 
 template <class Intf>
-static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-    const CutDeterMinisticMNSize &cutMNSize, const uint64_t srcStride)
+static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                         const CutDeterMinisticMNSize& cutMNSize,
+                                                         const uint64_t srcStride)
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     uint64_t wkCnt = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) < self->ctx.hwK_ ?
                          ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) :
                          self->ctx.hwK_;
-    uint64_t dstOffset =
-        (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
-         static_cast<uint64_t>(cutMNSize.usedMSize)) +
-        static_cast<uint64_t>(self->ctx.curNIdx_) * wkCnt * self->ctx.tiling_->cin1G * self->ctx.tiling_->cout +
-        static_cast<uint64_t>(cutMNSize.usedNSize) / srcStride * self->ctx.tiling_->cout;
+    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
+                          static_cast<uint64_t>(cutMNSize.usedMSize)) +
+                         static_cast<uint64_t>(self->ctx.curNIdx_) * wkCnt * self->ctx.tiling_->cin1G *
+                             self->ctx.tiling_->cout +
+                         static_cast<uint64_t>(cutMNSize.usedNSize) / srcStride * self->ctx.tiling_->cout;
     LoopModeParams loopParams;
     loopParams.loop2Size = 1;
     loopParams.loop1Size = srcStride;
@@ -507,15 +514,15 @@ static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf *self, const Globa
     }
     ub2GmParams.blockCount = tailN;
     SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
-    DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(
-        output[dstOffset], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
+    DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset], self->ctx.vecOutBuf_[srcSize],
+                                                           ub2GmParams);
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
 }
 
 template <class Intf>
-static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, const CutDeterMinisticMNSize& cutMNSize,
-    const uint64_t baseCin)
+static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                         const CutDeterMinisticMNSize& cutMNSize,
+                                                         const uint64_t baseCin)
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     DataCopyExtParams ub2GmParams;
@@ -539,8 +546,8 @@ static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(
 }
 
 template <class Intf>
-static __aicore__ inline void CreateIndexBuf4BaseNUndivided(Intf *self, const uint32_t srcStride,
-    const uint64_t baseCin)
+static __aicore__ inline void CreateIndexBuf4BaseNUndivided(Intf* self, const uint32_t srcStride,
+                                                            const uint64_t baseCin)
 {
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
@@ -556,16 +563,17 @@ static __aicore__ inline void CreateIndexBuf4BaseNUndivided(Intf *self, const ui
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf *self, const uint32_t srcStride,
-    const GlobalTensor<typename Intf::DstT> &output, const CutDeterMinisticMNSize &cutMNSize)
+static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf* self, const uint32_t srcStride,
+                                                                const GlobalTensor<typename Intf::DstT>& output,
+                                                                const CutDeterMinisticMNSize& cutMNSize)
 {
     uint64_t coutNum = cutMNSize.curMSize;
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto srcPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[0].GetPhyAddr();
-    auto indexPtr = (__ubuf__ uint32_t *)indexBuf[0].GetPhyAddr();
+    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
     uint64_t srcSize = cutMNSize.curNSize * coutNum;
-    auto dstPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
     uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
     constexpr uint8_t SREG_PROC_NUM = 64;
     uint32_t sreg = 64; // 64: reg处理的数目
@@ -606,14 +614,14 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf *self, cons
     WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
     if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
         DataCopyPadBaseNUndivided(self, output, srcStride, cutMNSize);
-    } else  {
+    } else {
         DataCopyPadBaseNUndividedForNDHWC(self, output, srcStride, cutMNSize);
     }
 }
 
 template <class Intf>
-static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf *self, const uint32_t mulStride,
-    const uint64_t addStride)
+static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf* self, const uint32_t mulStride,
+                                                          const uint64_t addStride)
 {
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
@@ -631,9 +639,9 @@ static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf *self, const uint
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(
-    Intf* self, const uint32_t srcStride, const GlobalTensor<typename Intf::DstT>& output,
-    const CutDeterMinisticMNSize& cutMNSize)
+static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(Intf* self, const uint32_t srcStride,
+                                                               const GlobalTensor<typename Intf::DstT>& output,
+                                                               const CutDeterMinisticMNSize& cutMNSize)
 {
     uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, self->ctx.hwK_); // Cin1*Cin0
     uint64_t coutNum = cutMNSize.curMSize;
@@ -650,11 +658,11 @@ static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(
     uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
 
     CreateIndexBuf4BaseNUndivided(self, self->ctx.hwK_, baseCin);
-    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);  
-    uint16_t iterCout = Ceil(coutNum, C0_PER_REG); 
+    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);
+    uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
     uint16_t iterHkWk = static_cast<uint16_t>(self->ctx.hwK_);
     uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
-    uint16_t cinSrcStride = hkWkSrcStride * self->ctx.hwK_;                         
+    uint16_t cinSrcStride = hkWkSrcStride * self->ctx.hwK_;
     uint16_t coutDstStride = C0_PER_REG * cutMNSize.curNSize;
     uint16_t hkWkDstStride = baseCin;
 
@@ -670,12 +678,14 @@ static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(
             for (uint16_t hkWkIndex = 0; hkWkIndex < iterHkWk; hkWkIndex++) {
                 uint16_t coutIndex = 0;
                 for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
+                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
+                                         cinIndex * cinSrcStride;
                     uint32_t dstOffset = coutIndex * coutDstStride + cinIndex * BLOCK_CUBE + hkWkIndex * hkWkDstStride;
                     MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
                     MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
                 }
-                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
+                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
+                                         cinIndex * cinSrcStride;
                 uint32_t dstOffsetTail = coutIndex * coutDstStride + cinIndex * BLOCK_CUBE + hkWkIndex * hkWkDstStride;
                 MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
                 MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
@@ -690,9 +700,9 @@ static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(
 }
 
 template <class Intf>
-static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(
-    Intf* self, const uint32_t srcStride, const GlobalTensor<typename Intf::DstT>& output,
-    const CutDeterMinisticMNSize& cutMNSize)
+static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(Intf* self, const uint32_t srcStride,
+                                                               const GlobalTensor<typename Intf::DstT>& output,
+                                                               const CutDeterMinisticMNSize& cutMNSize)
 {
     uint64_t coutNum = cutMNSize.curMSize;
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
@@ -711,7 +721,7 @@ static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(
     uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
 
     CreateIndexBuf4BaseNDivided(self, coutNum, 1);
-    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE); 
+    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);
     uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
     uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
     uint16_t cinSrcStride = hkWkSrcStride * srcStride;
@@ -728,13 +738,17 @@ static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(
             for (uint16_t hkWkIndex = 0; hkWkIndex < static_cast<uint16_t>(srcStride); hkWkIndex++) {
                 uint16_t coutIndex = 0;
                 for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
-                    uint32_t dstOffset = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) + coutIndex * C0_PER_REG;
+                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
+                                         cinIndex * cinSrcStride;
+                    uint32_t dstOffset = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) +
+                                         coutIndex * C0_PER_REG;
                     MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
                     MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
                 }
-                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
-                uint32_t dstOffsetTail = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) + coutIndex * C0_PER_REG;
+                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
+                                         cinIndex * cinSrcStride;
+                uint32_t dstOffsetTail = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) +
+                                         coutIndex * C0_PER_REG;
                 MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
                 MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
             }
@@ -746,19 +760,20 @@ static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(
     WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
     DataCopyPadDkEqOneForDHWCN(self, output, cutMNSize, srcStride);
 }
-                
+
 template <class Intf>
-static __aicore__ inline void Rearrange2GmScatterDeter(Intf *self, const uint32_t srcStride,
-    const GlobalTensor<typename Intf::DstT> &output, const CutDeterMinisticMNSize &cutMNSize)
+static __aicore__ inline void Rearrange2GmScatterDeter(Intf* self, const uint32_t srcStride,
+                                                       const GlobalTensor<typename Intf::DstT>& output,
+                                                       const CutDeterMinisticMNSize& cutMNSize)
 {
     uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, self->ctx.hwK_);
     uint64_t coutNum = cutMNSize.curMSize;
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto indexPtr = (__ubuf__ uint32_t *)indexBuf[0].GetPhyAddr();
-    auto srcPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
+    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
     uint64_t srcSize = cutMNSize.curNSize * coutNum;
-    auto dstPtr = (__ubuf__ typename Intf::DstT *)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
     uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
     uint32_t sreg = 64; // 64: reg处理的数目
     constexpr uint8_t SREG_PROC_NUM = 64;
@@ -787,13 +802,13 @@ static __aicore__ inline void Rearrange2GmScatterDeter(Intf *self, const uint32_
                 uint16_t coutIndex = 0;
                 for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
                     uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                        cinIndex * cinSrcStride;
+                                         cinIndex * cinSrcStride;
                     uint32_t dstOffset = coutIndex * coutDstStride + hkWkIndex + cinIndex * cinDstStride;
                     MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
                     MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
                 }
                 uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                    cinIndex * cinSrcStride;
+                                         cinIndex * cinSrcStride;
                 uint32_t dstOffsetTail = coutIndex * coutDstStride + hkWkIndex + cinIndex * cinDstStride;
                 MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
                 MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
@@ -808,8 +823,8 @@ static __aicore__ inline void Rearrange2GmScatterDeter(Intf *self, const uint32_
 }
 
 template <class Intf>
-static __aicore__ inline void UBRearrange2Gm(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-                                        const DeterMinisticShape &deterShape)
+static __aicore__ inline void UBRearrange2Gm(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                             const DeterMinisticShape& deterShape)
 {
     SetAtomicNone();
     CutDeterMinisticMNSize cutMNSize;
@@ -829,9 +844,9 @@ static __aicore__ inline void UBRearrange2Gm(Intf *self, const GlobalTensor<type
         uint32_t srcStride = hwNum;
         if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::DHWCN) {
             Rearrange2GmScatterDeterForDHWCN(self, srcStride, output, cutMNSize);
-        } else {//NCDHW or NDHWC
+        } else { // NCDHW or NDHWC
             Rearrange2GmScatterBaseNUndivided(self, srcStride, output, cutMNSize);
-        } 
+        }
     } else {
         uint32_t srcStride = self->ctx.hwK_;
         if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
@@ -857,10 +872,10 @@ static __aicore__ inline void BarrierVector()
 }
 
 template <class Intf>
-static __aicore__ inline void GetCutShape(Intf *self, DeterMinisticShape &deterShape)
+static __aicore__ inline void GetCutShape(Intf* self, DeterMinisticShape& deterShape)
 {
-    uint64_t splitedCin1 = ShiftCeilM0(Ceil(
-        Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_), BLOCK_CUBE);
+    uint64_t splitedCin1 = ShiftCeilM0(Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_),
+                                       BLOCK_CUBE);
     uint64_t splitedCout1 = ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE);
     // 扩维场景在host侧已经保证的数据不超UBsize，因此不需要对数据做切分
     if constexpr (!Intf::conv3ddwConfig.groupEnlarge) {
@@ -897,11 +912,11 @@ static __aicore__ inline void GetCutShape(Intf *self, DeterMinisticShape &deterS
 }
 
 template <class Intf>
-static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf *self, LocalTensor<typename Intf::L0cT> &l0c,
-    const GlobalTensor<typename Intf::DstT> &output)
+static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf* self, LocalTensor<typename Intf::L0cT>& l0c,
+                                                                const GlobalTensor<typename Intf::DstT>& output)
 {
-    uint64_t splitedCin1 =
-        ShiftCeilM0(Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_), BLOCK_CUBE);
+    uint64_t splitedCin1 = ShiftCeilM0(Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_),
+                                       BLOCK_CUBE);
     uint64_t splitedCout1 = ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE);
     // 扩维场景在host侧已经保证的数据不超UBsize，因此不需要对数据做切分
     if constexpr (!Intf::conv3ddwConfig.groupEnlarge) {
@@ -914,8 +929,8 @@ static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf *self, Loca
 #endif
     }
 
-    uint64_t cutNSize =
-        ShiftMulM0(static_cast<uint64_t>(splitedCin1) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_, BLOCK_CUBE);
+    uint64_t cutNSize = ShiftMulM0(static_cast<uint64_t>(splitedCin1) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_,
+                                   BLOCK_CUBE);
 
     cutNSize = self->ctx.baseUseN_ < cutNSize ? self->ctx.baseUseN_ : cutNSize;
     uint64_t cutMSize = ShiftMulM0(splitedCout1, BLOCK_CUBE);
@@ -944,8 +959,8 @@ static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf *self, Loca
 }
 
 template <class Intf>
-static __aicore__ inline void DeterministicUb2Gm(Intf *self, const GlobalTensor<typename Intf::DstT> &userGm,
-    DeterMinisticShape &deterShape)
+static __aicore__ inline void DeterministicUb2Gm(Intf* self, const GlobalTensor<typename Intf::DstT>& userGm,
+                                                 DeterMinisticShape& deterShape)
 {
     DataCopyExtParams ub2GmParams;
     ub2GmParams.srcStride = 0;
@@ -960,17 +975,17 @@ static __aicore__ inline void DeterministicUb2Gm(Intf *self, const GlobalTensor<
 }
 
 template <class Intf>
-static __aicore__ inline void DeterministicUb2GmNoPingPong(Intf *self, const GlobalTensor<typename Intf::DstT> &userGm,
-    DeterMinisticShape &deterShape)
+static __aicore__ inline void DeterministicUb2GmNoPingPong(Intf* self, const GlobalTensor<typename Intf::DstT>& userGm,
+                                                           DeterMinisticShape& deterShape)
 {
     DataCopyExtParams ub2GmParams;
     ub2GmParams.srcStride = 0;
     ub2GmParams.dstStride = 0;
     ub2GmParams.blockCount = 1;
-    ub2GmParams.blockLen =  deterShape.mnSize[self->ctx.subCoreInx_ + RELATED_CORE_NUM] * sizeof(typename Intf::DstT);
+    ub2GmParams.blockLen = deterShape.mnSize[self->ctx.subCoreInx_ + RELATED_CORE_NUM] * sizeof(typename Intf::DstT);
 
     auto vecMiddleBuf = self->ctx.vecBuf_.template GetWithOffset<float>(VECTOR_UB_SIZE_HALF >> FLOAT_SHIFT_SIZE,
-        VECTOR_UB_SIZE_HALF);
+                                                                        VECTOR_UB_SIZE_HALF);
     DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(userGm, vecMiddleBuf, ub2GmParams);
 }
 
@@ -980,20 +995,21 @@ static __aicore__ inline bool IsAddTreeLoopEnd(const uint64_t coreAddCnt, const 
 }
 
 template <class Intf>
-static __aicore__ inline bool GetIsLastPieceOut(Intf *self, const uint64_t coreAddCnt, const uint64_t coreRelatedIndexTotal)
+static __aicore__ inline bool GetIsLastPieceOut(Intf* self, const uint64_t coreAddCnt,
+                                                const uint64_t coreRelatedIndexTotal)
 {
     return coreAddCnt == 1 && self->ctx.tiling_->cl0Pbuffer == 1 && (self->ctx.deterAddCoreNum_ & 1) != 0 &&
-        self->ctx.deterAddCoreNum_ == coreRelatedIndexTotal - self->ctx.coreStartIndexTotal_;
+           self->ctx.deterAddCoreNum_ == coreRelatedIndexTotal - self->ctx.coreStartIndexTotal_;
 }
 
 template <class Intf>
-static __aicore__ inline bool GetLoopEndFlag(Intf *self, const uint64_t coreAddCnt)
+static __aicore__ inline bool GetLoopEndFlag(Intf* self, const uint64_t coreAddCnt)
 {
     // 1、二叉树计算中是输出核，需要提前退出累加过程
     // 2、累加核数量为奇数时，最后一个核只需要提前输出一次，提前退出累加过程
     uint64_t doublecoreAddCnt = (coreAddCnt << 1);
     bool isLastCoreOdd = (self->ctx.deterAddCoreIndex_ == self->ctx.deterAddCoreNum_ - 1) &&
-        (self->ctx.deterAddCoreNum_ & 1) != 0;
+                         (self->ctx.deterAddCoreNum_ & 1) != 0;
     if (((self->ctx.deterAddCoreIndex_ >> 1) % doublecoreAddCnt > 0) || isLastCoreOdd) {
         return true;
     }
@@ -1006,8 +1022,8 @@ static __aicore__ inline bool GetLoopEndFlag(Intf *self, const uint64_t coreAddC
 }
 
 template <class Intf>
-static __aicore__ inline uint64_t GetRdGmAddr(Intf *self, const uint64_t coreRelatedIndexTotal,
-    DeterMinisticShape &deterShape)
+static __aicore__ inline uint64_t GetRdGmAddr(Intf* self, const uint64_t coreRelatedIndexTotal,
+                                              DeterMinisticShape& deterShape)
 {
     uint64_t cubeUserGmSize = GetBlockNum() * CUBE_WORKSPACE; // cube输出gm总大小
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
@@ -1016,18 +1032,16 @@ static __aicore__ inline uint64_t GetRdGmAddr(Intf *self, const uint64_t coreRel
     uint64_t addCoreRdGmAddr = 0;
     if ((coreRelatedIndexTotal - self->ctx.coreStartIndexTotal_ == self->ctx.deterAddCoreNum_ - 1) &&
         (self->ctx.deterAddCoreNum_ & 1) != 0) { // 最后一个奇数核需要从CUBE_WORKSPACE搬入
-        addCoreRdGmAddr = coreRelatedIndexTotal * CUBE_WORKSPACE +
-            deterShape.addrOffset[self->ctx.subCoreInx_];
+        addCoreRdGmAddr = coreRelatedIndexTotal * CUBE_WORKSPACE + deterShape.addrOffset[self->ctx.subCoreInx_];
     } else {
-        addCoreRdGmAddr =
-            cubeUserGmSize + ((coreRelatedIndexTotal << 1) + self->ctx.subCoreInx_) * HALF_CUBE_WORKSPACE;
+        addCoreRdGmAddr = cubeUserGmSize + ((coreRelatedIndexTotal << 1) + self->ctx.subCoreInx_) * HALF_CUBE_WORKSPACE;
     }
     return addCoreRdGmAddr;
 #endif
 }
 
 template <class Intf>
-static __aicore__ inline uint64_t GetStGmAddr(Intf *self, const uint64_t cubeUserGmSize)
+static __aicore__ inline uint64_t GetStGmAddr(Intf* self, const uint64_t cubeUserGmSize)
 {
     uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_; // 当前核的索引
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
@@ -1036,6 +1050,6 @@ static __aicore__ inline uint64_t GetStGmAddr(Intf *self, const uint64_t cubeUse
     return cubeUserGmSize + ((coreIndexTotal << 1) + self->ctx.subCoreInx_) * HALF_CUBE_WORKSPACE;
 #endif
 }
-}  // namespace ConvolutionBackpropFunc
+} // namespace ConvolutionBackpropFunc
 
 #endif

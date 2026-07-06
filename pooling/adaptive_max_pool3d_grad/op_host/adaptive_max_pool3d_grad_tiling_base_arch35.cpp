@@ -39,18 +39,14 @@ bool AdaptiveMaxPool3dGradTilingBaseV35::CheckInputShape()
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     size_t gradDimNum = gradShape->GetStorageShape().GetDimNum();
 
-    OP_CHECK_IF(
-        (xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM),
-        OP_LOGE(context_->GetNodeName(),
-                "Input dim num should equal = %lu, actual is xDim: %lu, gradDim: %lu.",
-                NCDHW_DIM_NUM, xDimNum, gradDimNum),
-        return false);
+    OP_CHECK_IF((xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM),
+                OP_LOGE(context_->GetNodeName(), "Input dim num should equal = %lu, actual is xDim: %lu, gradDim: %lu.",
+                        NCDHW_DIM_NUM, xDimNum, gradDimNum),
+                return false);
 
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_CHECK_IF(
-            xShape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE(context_->GetNodeName(), "Input x shape can not be 0."),
-            return false);
+        OP_CHECK_IF(xShape->GetStorageShape().GetDim(i) == 0,
+                    OP_LOGE(context_->GetNodeName(), "Input x shape can not be 0."), return false);
     }
 
     for (size_t i = 0; i < NC_DIM_NUM; i++) {
@@ -58,9 +54,8 @@ bool AdaptiveMaxPool3dGradTilingBaseV35::CheckInputShape()
         uint64_t gradDimValue = gradShape->GetStorageShape().GetDim(i);
         OP_CHECK_IF(
             (gradDimValue != xDimValue),
-            OP_LOGE(context_->GetNodeName(),
-                    "Input dim check invalid, grad[%lu] is %lu, x[%lu] is %lu, not equal.",
-                    i, gradDimValue, i, xDimValue),
+            OP_LOGE(context_->GetNodeName(), "Input dim check invalid, grad[%lu] is %lu, x[%lu] is %lu, not equal.", i,
+                    gradDimValue, i, xDimValue),
             return false);
     }
 
@@ -76,18 +71,15 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::CheckInputDtype()
     auto gradDataType = context_->GetInputDesc(GRAD_INDEX_V35)->GetDataType();
     auto argmaxDataType = context_->GetInputDesc(ARGMAX_INDEX_V35)->GetDataType();
 
-    OP_CHECK_IF(
-        xDataType != gradDataType,
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not equal grad data type."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not fp32/fp16/bf16."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (argmaxDataType != ge::DT_INT32) && (argmaxDataType != ge::DT_INT64),
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, argmax data type not int32/int64."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDataType != gradDataType,
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not equal grad data type."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, x data type not fp32/fp16/bf16."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((argmaxDataType != ge::DT_INT32) && (argmaxDataType != ge::DT_INT64),
+                OP_LOGE(context_->GetNodeName(), "Data type invalid, argmax data type not int32/int64."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -142,42 +134,28 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::GetShapeAttrsInfo()
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin.");
 
     OP_LOGD(context_->GetNodeName(), "Enter AdaptiveMaxPool3dGradTilingBaseV35 GetShapeAttrsInfo.");
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputDtype(),
-                OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShape(),
-                OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
+    OP_CHECK_IF(!CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(),
-                OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
                 return ge::GRAPH_FAILED);
     SetOtherInputParams();
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdaptiveMaxPool3dGradTilingBaseV35::IsCapable()
-{
-    return false;
-}
+bool AdaptiveMaxPool3dGradTilingBaseV35::IsCapable() { return false; }
 
-ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr =
-            static_cast<const AdaptiveMaxPool3dGradCompileInfoV35*>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr,
-                    OP_LOGE(context_->GetNodeName(), "compile info is null"),
+        auto compileInfoPtr = static_cast<const AdaptiveMaxPool3dGradCompileInfoV35*>(context_->GetCompileInfo());
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                     return ge::GRAPH_FAILED);
         coreNum_ = compileInfoPtr->coreNum;
         ubSize_ = compileInfoPtr->ubSizePlatForm;
@@ -190,9 +168,7 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::GetPlatformInfo()
         ubSize_ = static_cast<int64_t>(ubSizePlatform);
     }
 
-    OP_CHECK_IF(coreNum_ == 0,
-                OP_LOGE(context_->GetNodeName(), "coreNum is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum_ == 0, OP_LOGE(context_->GetNodeName(), "coreNum is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -205,13 +181,7 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdaptiveMaxPool3dGradTilingBaseV35::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t AdaptiveMaxPool3dGradTilingBaseV35::GetTilingKey() const { return 0; }
 } // namespace optiling

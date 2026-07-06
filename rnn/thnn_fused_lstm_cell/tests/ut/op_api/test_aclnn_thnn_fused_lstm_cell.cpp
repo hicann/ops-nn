@@ -25,15 +25,9 @@ using namespace std;
 
 class l2_thnn_fused_lstm_cell_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_thnn_fused_lstm_cell_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_thnn_fused_lstm_cell_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_thnn_fused_lstm_cell_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_thnn_fused_lstm_cell_test TearDown" << std::endl; }
 };
 
 // 正常input场景
@@ -54,11 +48,8 @@ TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_normal_float)
     auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
     auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnThnnFusedLstmCell,
-        INPUT(
-            inputGates, hiddenGates, cx, inputBias, hiddenBias),
-        OUTPUT(hy, cy, storage));
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

@@ -28,8 +28,8 @@ using namespace ForeachNorm;
  */
 
 template <typename T>
-__aicore__ inline void ForeachNormImpl(
-    GM_ADDR inputs, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe, uint8_t modelCode)
+__aicore__ inline void ForeachNormImpl(GM_ADDR inputs, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe,
+                                       uint8_t modelCode)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachReduceTilingDataRegbase, tiling_data_in, tiling);
     const ForeachReduceTilingDataRegbase* __restrict tilingData = &tiling_data_in;
@@ -48,8 +48,8 @@ __aicore__ inline void ForeachNormImpl(
     }
 }
 
-extern "C" __global__ __aicore__ void foreach_norm(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_norm(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace,
+                                                   GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

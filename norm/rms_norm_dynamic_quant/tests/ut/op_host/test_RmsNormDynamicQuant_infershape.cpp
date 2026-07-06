@@ -23,15 +23,9 @@ using namespace ge;
 
 class RmsNormDynamicQuantInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RmsNormDynamicQuantInfershapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RmsNormDynamicQuantInfershapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RmsNormDynamicQuantInfershapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RmsNormDynamicQuantInfershapeTest TearDown" << std::endl; }
 };
 
 // ============================================================================

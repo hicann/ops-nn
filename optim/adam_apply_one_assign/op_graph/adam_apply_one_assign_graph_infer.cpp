@@ -9,7 +9,7 @@
  */
 /*!
  * \file adam_apply_one_assign_graph_infer.cpp
- * \brief 
+ * \brief
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"

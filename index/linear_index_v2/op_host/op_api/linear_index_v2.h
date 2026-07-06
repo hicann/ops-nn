@@ -18,8 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* LinearIndexV2(
-    const aclTensorList* indicesList, const aclTensor* stride, const aclTensor* valueSize, aclOpExecutor* executor);
+const aclTensor* LinearIndexV2(const aclTensorList* indicesList, const aclTensor* stride, const aclTensor* valueSize,
+                               aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_LINEAR_INDEX_V2_H_

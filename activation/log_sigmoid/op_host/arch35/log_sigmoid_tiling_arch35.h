@@ -23,8 +23,7 @@
 namespace optiling {
 using namespace Ops::Base;
 
-class LogSigmoidTiling
-{
+class LogSigmoidTiling {
 public:
     explicit LogSigmoidTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();

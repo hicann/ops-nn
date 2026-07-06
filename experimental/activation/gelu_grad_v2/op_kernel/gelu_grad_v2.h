@@ -32,8 +32,10 @@ class KernelGeluGradV2 {
 public:
     __aicore__ inline KernelGeluGradV2(){};
 
-    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                uint64_t finalBigTileNum, uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum,
+                                uint64_t bufferOpen);
     __aicore__ inline void Process();
 
 private:
@@ -56,8 +58,11 @@ private:
 };
 
 template <typename TYPE_DY>
-__aicore__ inline void KernelGeluGradV2<TYPE_DY>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen)
+__aicore__ inline void KernelGeluGradV2<TYPE_DY>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum,
+                                                       uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
+                                                       uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                                       uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                                       uint64_t tailBlockNum, uint64_t bufferOpen)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -78,14 +83,14 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Init(GM_ADDR dy, GM_ADDR x, GM
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    xGm.SetGlobalBuffer((__gm__ TYPE_DY *)x + globalBufferIndex, this->coreDataNum);
-    dyGm.SetGlobalBuffer((__gm__ TYPE_DY *)dy + globalBufferIndex, this->coreDataNum);
-    zGm.SetGlobalBuffer((__gm__ TYPE_DY *)z + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_DY*)x + globalBufferIndex, this->coreDataNum);
+    dyGm.SetGlobalBuffer((__gm__ TYPE_DY*)dy + globalBufferIndex, this->coreDataNum);
+    zGm.SetGlobalBuffer((__gm__ TYPE_DY*)z + globalBufferIndex, this->coreDataNum);
 
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_DY));
     pipe.InitBuffer(inQueueDY, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_DY));
     pipe.InitBuffer(outQueueZ, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_DY));
-    
+
     pipe.InitBuffer(tmpQueue0, this->tileDataNum * sizeof(float));
     pipe.InitBuffer(tmpQueue1, this->tileDataNum * sizeof(float));
     if constexpr (!std::is_same_v<TYPE_DY, float>) {
@@ -122,8 +127,10 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Compute(int32_t progress)
         AscendC::LocalTensor<float> zLocal = outQueueZ.AllocTensor<float>();
         AscendC::LocalTensor<float> tmp0Local = tmpQueue0.AllocTensor<float>();
         AscendC::LocalTensor<float> tmp1Local = tmpQueue1.AllocTensor<float>();
-        AscendC::ShiftRight(tmp0Local.ReinterpretCast<uint32_t>(), xLocal.ReinterpretCast<uint32_t>(), static_cast<uint32_t>(31), this->processDataNum);
-        AscendC::Cast(tmp0Local, tmp0Local.ReinterpretCast<int32_t>(), AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::ShiftRight(tmp0Local.ReinterpretCast<uint32_t>(), xLocal.ReinterpretCast<uint32_t>(),
+                            static_cast<uint32_t>(31), this->processDataNum);
+        AscendC::Cast(tmp0Local, tmp0Local.ReinterpretCast<int32_t>(), AscendC::RoundMode::CAST_NONE,
+                      this->processDataNum);
         AscendC::Adds(tmp0Local, tmp0Local, static_cast<float>(-0.5), this->processDataNum);
 
         AscendC::Abs(xLocal, xLocal, this->processDataNum);
@@ -138,7 +145,7 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Compute(int32_t progress)
         AscendC::Adds(zLocal, zLocal, static_cast<float>(-4.474629239730099), this->processDataNum);
         AscendC::Mul(zLocal, zLocal, xLocal, this->processDataNum);
         AscendC::Adds(zLocal, zLocal, static_cast<float>(30.9817411426), this->processDataNum);
-        
+
         AscendC::Adds(tmp1Local, xLocal, static_cast<float>(7.79950327625), this->processDataNum);
         AscendC::Mul(tmp1Local, tmp1Local, xLocal, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp1Local, static_cast<float>(26.6304065815), this->processDataNum);
@@ -146,12 +153,12 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Compute(int32_t progress)
         AscendC::Adds(tmp1Local, tmp1Local, static_cast<float>(44.965039885), this->processDataNum);
         AscendC::Mul(tmp1Local, tmp1Local, xLocal, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp1Local, static_cast<float>(30.9817411527), this->processDataNum);
-        
+
         AscendC::Div(zLocal, zLocal, tmp1Local, this->processDataNum);
         AscendC::Mul(xLocal, xLocal, xLocal, this->processDataNum);
         AscendC::Muls(xLocal, xLocal, static_cast<float>(-0.5), this->processDataNum);
         AscendC::Exp(xLocal, xLocal, this->processDataNum);
-        AscendC::Mul(zLocal, zLocal, xLocal,  this->processDataNum);
+        AscendC::Mul(zLocal, zLocal, xLocal, this->processDataNum);
 
         AscendC::Mul(zLocal, tmp0Local, zLocal, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp0Local, static_cast<float>(-0.5), this->processDataNum);
@@ -167,13 +174,15 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Compute(int32_t progress)
         AscendC::LocalTensor<TYPE_DY> zLocal = outQueueZ.AllocTensor<TYPE_DY>();
         AscendC::LocalTensor<float> tmp0Local = tmpQueue0.AllocTensor<float>();
         AscendC::LocalTensor<float> tmp1Local = tmpQueue1.AllocTensor<float>();
-        
+
         AscendC::LocalTensor<float> tmp2Local = tmpQueue2.AllocTensor<float>();
         AscendC::LocalTensor<float> tmp3Local = tmpQueue3.AllocTensor<float>();
 
         AscendC::Cast(tmp2Local, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::ShiftRight(tmp0Local.ReinterpretCast<uint32_t>(), tmp2Local.ReinterpretCast<uint32_t>(), static_cast<uint32_t>(31), this->processDataNum);
-        AscendC::Cast(tmp0Local, tmp0Local.ReinterpretCast<int32_t>(), AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::ShiftRight(tmp0Local.ReinterpretCast<uint32_t>(), tmp2Local.ReinterpretCast<uint32_t>(),
+                            static_cast<uint32_t>(31), this->processDataNum);
+        AscendC::Cast(tmp0Local, tmp0Local.ReinterpretCast<int32_t>(), AscendC::RoundMode::CAST_NONE,
+                      this->processDataNum);
         AscendC::Adds(tmp0Local, tmp0Local, static_cast<float>(-0.5), this->processDataNum);
 
         AscendC::Abs(tmp2Local, tmp2Local, this->processDataNum);
@@ -188,7 +197,7 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Compute(int32_t progress)
         AscendC::Adds(tmp3Local, tmp3Local, static_cast<float>(-4.474629239730099), this->processDataNum);
         AscendC::Mul(tmp3Local, tmp3Local, tmp2Local, this->processDataNum);
         AscendC::Adds(tmp3Local, tmp3Local, static_cast<float>(30.9817411426), this->processDataNum);
-        
+
         AscendC::Adds(tmp1Local, tmp2Local, static_cast<float>(7.79950327625), this->processDataNum);
         AscendC::Mul(tmp1Local, tmp1Local, tmp2Local, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp1Local, static_cast<float>(26.6304065815), this->processDataNum);
@@ -196,12 +205,12 @@ __aicore__ inline void KernelGeluGradV2<TYPE_DY>::Compute(int32_t progress)
         AscendC::Adds(tmp1Local, tmp1Local, static_cast<float>(44.965039885), this->processDataNum);
         AscendC::Mul(tmp1Local, tmp1Local, tmp2Local, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp1Local, static_cast<float>(30.9817411527), this->processDataNum);
-        
+
         AscendC::Div(tmp3Local, tmp3Local, tmp1Local, this->processDataNum);
         AscendC::Mul(tmp2Local, tmp2Local, tmp2Local, this->processDataNum);
         AscendC::Muls(tmp2Local, tmp2Local, static_cast<float>(-0.5), this->processDataNum);
         AscendC::Exp(tmp2Local, tmp2Local, this->processDataNum);
-        AscendC::Mul(tmp3Local, tmp3Local, tmp2Local,  this->processDataNum);
+        AscendC::Mul(tmp3Local, tmp3Local, tmp2Local, this->processDataNum);
 
         AscendC::Mul(tmp3Local, tmp0Local, tmp3Local, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp0Local, static_cast<float>(-0.5), this->processDataNum);
@@ -249,8 +258,10 @@ class KernelGeluGradV2Tanh {
 public:
     __aicore__ inline KernelGeluGradV2Tanh(){};
 
-    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                uint64_t finalBigTileNum, uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum,
+                                uint64_t bufferOpen);
     __aicore__ inline void Process();
 
 private:
@@ -273,8 +284,11 @@ private:
 };
 
 template <typename TYPE_DY>
-__aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen)
+__aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR z, uint64_t smallCoreDataNum,
+                                                           uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
+                                                           uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                                           uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                                           uint64_t tailBlockNum, uint64_t bufferOpen)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -295,14 +309,14 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Init(GM_ADDR dy, GM_ADDR x
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    xGm.SetGlobalBuffer((__gm__ TYPE_DY *)x + globalBufferIndex, this->coreDataNum);
-    dyGm.SetGlobalBuffer((__gm__ TYPE_DY *)dy + globalBufferIndex, this->coreDataNum);
-    zGm.SetGlobalBuffer((__gm__ TYPE_DY *)z + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_DY*)x + globalBufferIndex, this->coreDataNum);
+    dyGm.SetGlobalBuffer((__gm__ TYPE_DY*)dy + globalBufferIndex, this->coreDataNum);
+    zGm.SetGlobalBuffer((__gm__ TYPE_DY*)z + globalBufferIndex, this->coreDataNum);
 
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_DY));
     pipe.InitBuffer(inQueueDY, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_DY));
     pipe.InitBuffer(outQueueZ, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_DY));
-    
+
     pipe.InitBuffer(tmpQueue0, this->tileDataNum * sizeof(float));
     pipe.InitBuffer(tmpQueue1, this->tileDataNum * sizeof(float));
     if constexpr (std::is_same_v<TYPE_DY, float>) {
@@ -354,7 +368,7 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Compute(int32_t progress)
         AscendC::Exp(zLocal, zLocal, this->processDataNum);
 
         AscendC::Adds(tmp1Local, zLocal, static_cast<float>(1.0), this->processDataNum);
-        AscendC::Duplicate(tmp2Local,  static_cast<float>(1.0), this->processDataNum);
+        AscendC::Duplicate(tmp2Local, static_cast<float>(1.0), this->processDataNum);
         AscendC::Div(tmp1Local, tmp2Local, tmp1Local, this->processDataNum);
         AscendC::Mul(zLocal, zLocal, tmp1Local, this->processDataNum);
 
@@ -365,13 +379,18 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Compute(int32_t progress)
         AscendC::Mul(zLocal, zLocal, tmp0Local, this->processDataNum);
         AscendC::Mul(zLocal, zLocal, tmp1Local, this->processDataNum);
         AscendC::Compare(maskLocal, zLocal, zLocal, AscendC::CMPMODE::EQ, this->processDataNum);
-        AscendC::Duplicate(tmp2Local[0].ReinterpretCast<half>(),  static_cast<half>(1.0), this->processDataNum);
-        AscendC::Select(tmp2Local[0].ReinterpretCast<half>(), maskLocal, tmp2Local[0].ReinterpretCast<half>(), static_cast<half>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
-        AscendC::Cast(tmp0Local[0].ReinterpretCast<int8_t>(), tmp2Local[0].ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Cast(tmp2Local[0].ReinterpretCast<half>(), tmp0Local[0].ReinterpretCast<int8_t>(), AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Duplicate(tmp0Local[0].ReinterpretCast<half>(),  static_cast<half>(0.0), this->processDataNum);
-        AscendC::Compare(maskLocal, tmp2Local[0].ReinterpretCast<half>(), tmp0Local[0].ReinterpretCast<half>(), AscendC::CMPMODE::GT, this->processDataNum);
-        AscendC::Select(zLocal, maskLocal, zLocal, static_cast<float>(0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Duplicate(tmp2Local[0].ReinterpretCast<half>(), static_cast<half>(1.0), this->processDataNum);
+        AscendC::Select(tmp2Local[0].ReinterpretCast<half>(), maskLocal, tmp2Local[0].ReinterpretCast<half>(),
+                        static_cast<half>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Cast(tmp0Local[0].ReinterpretCast<int8_t>(), tmp2Local[0].ReinterpretCast<half>(),
+                      AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::Cast(tmp2Local[0].ReinterpretCast<half>(), tmp0Local[0].ReinterpretCast<int8_t>(),
+                      AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::Duplicate(tmp0Local[0].ReinterpretCast<half>(), static_cast<half>(0.0), this->processDataNum);
+        AscendC::Compare(maskLocal, tmp2Local[0].ReinterpretCast<half>(), tmp0Local[0].ReinterpretCast<half>(),
+                         AscendC::CMPMODE::GT, this->processDataNum);
+        AscendC::Select(zLocal, maskLocal, zLocal, static_cast<float>(0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                        this->processDataNum);
         AscendC::Add(zLocal, zLocal, tmp1Local, this->processDataNum);
         AscendC::Mul(zLocal, zLocal, dyLocal, this->processDataNum);
 
@@ -388,7 +407,7 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Compute(int32_t progress)
         AscendC::LocalTensor<float> tmp3Local = tmpQueue3.AllocTensor<float>();
         AscendC::LocalTensor<float> tmp4Local = tmpQueue4.AllocTensor<float>();
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
-        
+
         AscendC::Cast(tmp3Local, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
 
         AscendC::Mul(tmp0Local, tmp3Local, tmp3Local, this->processDataNum);
@@ -398,7 +417,7 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Compute(int32_t progress)
         AscendC::Exp(tmp4Local, tmp4Local, this->processDataNum);
 
         AscendC::Adds(tmp1Local, tmp4Local, static_cast<float>(1.0), this->processDataNum);
-        AscendC::Duplicate(tmp2Local,  static_cast<float>(1.0), this->processDataNum);
+        AscendC::Duplicate(tmp2Local, static_cast<float>(1.0), this->processDataNum);
         AscendC::Div(tmp1Local, tmp2Local, tmp1Local, this->processDataNum);
         AscendC::Mul(tmp4Local, tmp4Local, tmp1Local, this->processDataNum);
 
@@ -409,13 +428,18 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Compute(int32_t progress)
         AscendC::Mul(tmp4Local, tmp4Local, tmp0Local, this->processDataNum);
         AscendC::Mul(tmp4Local, tmp4Local, tmp1Local, this->processDataNum);
         AscendC::Compare(maskLocal, tmp4Local, tmp4Local, AscendC::CMPMODE::EQ, this->processDataNum);
-        AscendC::Duplicate(tmp0Local[0].ReinterpretCast<half>(),  static_cast<half>(1.0), this->processDataNum);
-        AscendC::Select(tmp0Local[0].ReinterpretCast<half>(), maskLocal, tmp0Local[0].ReinterpretCast<half>(), static_cast<half>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
-        AscendC::Cast(tmp2Local[0].ReinterpretCast<int8_t>(), tmp0Local[0].ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Cast(tmp0Local[0].ReinterpretCast<half>(), tmp2Local[0].ReinterpretCast<int8_t>(), AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Duplicate(tmp2Local[0].ReinterpretCast<half>(),  static_cast<half>(0.0), this->processDataNum);
-        AscendC::Compare(maskLocal, tmp0Local[0].ReinterpretCast<half>(), tmp2Local[0].ReinterpretCast<half>(), AscendC::CMPMODE::GT, this->processDataNum);
-        AscendC::Select(tmp4Local, maskLocal, tmp4Local, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Duplicate(tmp0Local[0].ReinterpretCast<half>(), static_cast<half>(1.0), this->processDataNum);
+        AscendC::Select(tmp0Local[0].ReinterpretCast<half>(), maskLocal, tmp0Local[0].ReinterpretCast<half>(),
+                        static_cast<half>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Cast(tmp2Local[0].ReinterpretCast<int8_t>(), tmp0Local[0].ReinterpretCast<half>(),
+                      AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::Cast(tmp0Local[0].ReinterpretCast<half>(), tmp2Local[0].ReinterpretCast<int8_t>(),
+                      AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::Duplicate(tmp2Local[0].ReinterpretCast<half>(), static_cast<half>(0.0), this->processDataNum);
+        AscendC::Compare(maskLocal, tmp0Local[0].ReinterpretCast<half>(), tmp2Local[0].ReinterpretCast<half>(),
+                         AscendC::CMPMODE::GT, this->processDataNum);
+        AscendC::Select(tmp4Local, maskLocal, tmp4Local, static_cast<float>(0.0),
+                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
         AscendC::Add(tmp4Local, tmp4Local, tmp1Local, this->processDataNum);
         AscendC::Cast(tmp3Local, dyLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Mul(tmp4Local, tmp4Local, tmp3Local, this->processDataNum);
@@ -446,6 +470,6 @@ __aicore__ inline void KernelGeluGradV2Tanh<TYPE_DY>::Process()
     CopyOut(loopCount - 1);
 }
 
-}
+} // namespace NsGeluGradV2Tanh
 
 #endif // GELU_GRAD_V2_H

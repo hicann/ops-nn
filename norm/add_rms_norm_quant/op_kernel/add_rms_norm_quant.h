@@ -22,14 +22,10 @@ using namespace AddRmsNormQuantBase;
 template <typename TX, typename TScale, typename TOffset, bool RN, bool A, bool PT>
 class KernelAddRmsNormQuant {
 public:
-    __aicore__ inline KernelAddRmsNormQuant(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1,
-        GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
-        const AddRMSNormQuantTilingData* tilingData)
+    __aicore__ inline KernelAddRmsNormQuant(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR res_out, const AddRMSNormQuantTilingData* tilingData)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tilingData->numRow;
@@ -75,7 +71,8 @@ public:
         initOptionalParams(scales2, zero_points1, zero_points2, beta, res_out);
     }
 
-    __aicore__ inline void initOptionalParams(GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR res_out)
+    __aicore__ inline void initOptionalParams(GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
+                                              GM_ADDR res_out)
     {
         if (hasBeta) {
             betaGm.SetGlobalBuffer((__gm__ TX*)beta, numCol);
@@ -122,8 +119,8 @@ public:
         }
     }
 
-    __aicore__ inline void computeBefore(
-        uint32_t iO, uint32_t calcRowNum, LocalTensor<TX>& gammaLocal, LocalTensor<TX>& betaLocal = nullptr)
+    __aicore__ inline void computeBefore(uint32_t iO, uint32_t calcRowNum, LocalTensor<TX>& gammaLocal,
+                                         LocalTensor<TX>& betaLocal = nullptr)
     {
         for (uint32_t iI = 0; iI < calcRowNum; iI++) {
             uint32_t gmBias = (iO * rowFactor + iI) * numCol;
@@ -161,11 +158,11 @@ private:
             PipeBarrier<PIPE_V>();
             Add(x1Fp32Local, x1Fp32Local, x2_fp32, numCol);
             PipeBarrier<PIPE_V>();
-            #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
             Cast(xLocal, x1Fp32Local, RoundMode::CAST_NONE, numCol);
-            #else
+#else
             Cast(xLocal, x1Fp32Local, RoundMode::CAST_RINT, numCol);
-            #endif
+#endif
             PipeBarrier<PIPE_V>();
             // 有beta的bf16场景，做一个x-> bf16 -> fp32的转换
             if (hasBeta && !PT) {
@@ -206,13 +203,13 @@ private:
         AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints1Buf, zeroPoints1Gm, numCol, ubFactor, hasZeroPoints1);
         if (hasScales2) {
             AddRmsNormQuantBase::CopyInScales<TScale>(scales2Buf, scales2Gm, numCol, ubFactor);
-            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(
-                zeroPoints2Buf, zeroPoints2Gm, numCol, ubFactor, hasZeroPoints2);
+            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints2Buf, zeroPoints2Gm, numCol, ubFactor,
+                                                           hasZeroPoints2);
         }
     }
 
-    __aicore__ inline void Compute(
-        uint32_t inner_progress, LocalTensor<TX> gammaLocal, uint32_t gmBias, LocalTensor<TX> betaLocal=nullptr)
+    __aicore__ inline void Compute(uint32_t inner_progress, LocalTensor<TX> gammaLocal, uint32_t gmBias,
+                                   LocalTensor<TX> betaLocal = nullptr)
     {
         LocalTensor<float> xFp32Local = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
@@ -249,9 +246,9 @@ private:
         ComputePart2(gammaLocal, gmBias, xFp32Local, sqx, betaLocal);
     }
 
-    __aicore__ inline void ComputePart2(
-        LocalTensor<TX> gammaLocal, uint32_t gmBias, LocalTensor<float> xFp32Local, LocalTensor<float> sqx,
-        LocalTensor<TX> betaLocal=nullptr) {
+    __aicore__ inline void ComputePart2(LocalTensor<TX> gammaLocal, uint32_t gmBias, LocalTensor<float> xFp32Local,
+                                        LocalTensor<float> sqx, LocalTensor<TX> betaLocal = nullptr)
+    {
         if constexpr (is_same<TX, half>::value && !PT) {
             LocalTensor<half> xFp16Cast = sqxBuf.Get<half>();
             Cast(xFp16Cast, xFp32Local, RoundMode::CAST_NONE, numCol);
@@ -268,11 +265,11 @@ private:
         }
         if constexpr (RN) {
             LocalTensor<TX> rnLocal = outQueueY1.AllocTensor<TX>();
-            #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
             Cast(rnLocal, xFp32Local, RoundMode::CAST_NONE, numCol);
-            #else
+#else
             Cast(rnLocal, xFp32Local, RoundMode::CAST_RINT, numCol);
-            #endif
+#endif
             outQueueY1.EnQue(rnLocal);
             auto rnOut = outQueueY1.DeQue<TX>();
             DataCopyCustom<TX>(resOutGm[gmBias], rnOut, numCol);

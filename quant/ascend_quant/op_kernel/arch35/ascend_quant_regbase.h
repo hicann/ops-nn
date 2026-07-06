@@ -53,13 +53,12 @@ private:
 template <typename yDtype>
 __aicore__ inline void SetFloatOverflowModeForRegbase()
 {
-  #if (__NPU_ARCH__ == 3510)
-      if constexpr (
-          IsSameType<yDtype, hifloat8_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value 
-          || IsSameType<yDtype, fp8_e4m3fn_t>::value) {
-          AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
-      }
-  #endif
+#if (__NPU_ARCH__ == 3510)
+    if constexpr (IsSameType<yDtype, hifloat8_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value ||
+                  IsSameType<yDtype, fp8_e4m3fn_t>::value) {
+        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+    }
+#endif
 }
 
 template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
@@ -101,7 +100,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
 }
 
 template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyXAndCompute(int64_t dataCount, int64_t xOffset)
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyXAndCompute(int64_t dataCount,
+                                                                                                 int64_t xOffset)
 {
     CopyInX(dataCount, xOffset);
     Compute(dataCount);
@@ -109,7 +109,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
 }
 
 template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyInX(int64_t xLen, int64_t xInOffset)
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyInX(int64_t xLen,
+                                                                                         int64_t xInOffset)
 {
     LocalTensor<T> xLocal = inQueueX_.AllocTensor<T>();
     DataCopyExtParams copyParams;
@@ -146,8 +147,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
 
         AscendC::MicroAPI::RegTensor<float> vregTmp1;
         AscendC::MicroAPI::MaskReg mask;
-        AscendC::MicroAPI::MaskReg mask4Int4 =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+        AscendC::MicroAPI::MaskReg
+            mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
 
         mask = AscendC::MicroAPI::CreateMask<float>();
         uint32_t count = dataCount;
@@ -157,12 +158,12 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
             // ld and cast for x
             if constexpr (IsSameType<T, float>::value) {
                 // fp32
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregFloatX, xLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatX,
+                                                                                           xLocalAddr + i * VL);
             } else if constexpr (IsSameType<T, half>::value) {
                 // fp16
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregX, xLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX,
+                                                                                                xLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<float, half, AscendQuantBase<T, U, RoundMode>::CAST_TRAIT_HALF_TO_FP32>(
                     vregFloatX, vregX, mask);
             }
@@ -179,20 +180,20 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
                 // hifp8
                 AscendC::MicroAPI::Cast<U, float, AscendQuantBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_HIFP8>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
                 // fp8_e5m2
                 AscendC::MicroAPI::Cast<U, float, AscendQuantBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_FP8E5M2>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
                 // fp8_e4m3
                 AscendC::MicroAPI::Cast<U, float, AscendQuantBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_FP8E4M3>(
                     vregY, vregFloatY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, int8_t>::value) {
                 // int8
                 AscendC::MicroAPI::Cast<int16_t, float, AscendQuantBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_INT16>(
@@ -201,8 +202,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
                     vregHalfY, vregInt16Y, mask);
                 AscendC::MicroAPI::Cast<int8_t, half, AscendQuantBase<T, U, RoundMode>::CAST_TRAIT_HALF_TO_INT8>(
                     vregY, vregHalfY, mask);
-                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    outLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL,
+                                                                                             vregY, mask);
             } else if constexpr (IsSameType<U, int4b_t>::value) {
                 AscendC::MicroAPI::RegTensor<int16_t> vregInt16Y;
                 AscendC::MicroAPI::RegTensor<uint16_t> vregTmp1Y;
@@ -226,7 +227,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>:
 }
 
 template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyOutY(int64_t yLen, int64_t yOutOffset)
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyOutY(int64_t yLen,
+                                                                                          int64_t yOutOffset)
 {
     if constexpr (IsSameType<U, int4b_t>::value) {
         yOutOffset = yOutOffset >> 1;

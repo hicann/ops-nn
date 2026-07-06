@@ -18,74 +18,74 @@
 #include "tiling/tiling_api.h"
 
 namespace optiling {
-    BEGIN_TILING_DATA_DEF(ThnnFusedLstmCellGradTilingData)
-        TILING_DATA_FIELD_DEF(int64_t, ubSize);
-        // rnn input tiling
-        TILING_DATA_FIELD_DEF(int64_t, batch);
-        TILING_DATA_FIELD_DEF(int64_t, hiddenSize);
+BEGIN_TILING_DATA_DEF(ThnnFusedLstmCellGradTilingData)
+TILING_DATA_FIELD_DEF(int64_t, ubSize);
+// rnn input tiling
+TILING_DATA_FIELD_DEF(int64_t, batch);
+TILING_DATA_FIELD_DEF(int64_t, hiddenSize);
 
-        // vector block params
-        TILING_DATA_FIELD_DEF(int64_t, singleCoreM);
-        TILING_DATA_FIELD_DEF(int64_t, singleCoreMTail);
-        TILING_DATA_FIELD_DEF(int64_t, singleCoreN);
-        TILING_DATA_FIELD_DEF(int64_t, singleCoreNTail);
-        TILING_DATA_FIELD_DEF(int64_t, baseN);
-        TILING_DATA_FIELD_DEF(int64_t, baseM);
-        TILING_DATA_FIELD_DEF(int64_t, mCnt);
-        TILING_DATA_FIELD_DEF(int64_t, nCnt);
+// vector block params
+TILING_DATA_FIELD_DEF(int64_t, singleCoreM);
+TILING_DATA_FIELD_DEF(int64_t, singleCoreMTail);
+TILING_DATA_FIELD_DEF(int64_t, singleCoreN);
+TILING_DATA_FIELD_DEF(int64_t, singleCoreNTail);
+TILING_DATA_FIELD_DEF(int64_t, baseN);
+TILING_DATA_FIELD_DEF(int64_t, baseM);
+TILING_DATA_FIELD_DEF(int64_t, mCnt);
+TILING_DATA_FIELD_DEF(int64_t, nCnt);
 
-        // reduce block params
-        TILING_DATA_FIELD_DEF(int64_t, singleCoreReduceN);
-        TILING_DATA_FIELD_DEF(int64_t, singleCoreReduceNTail);
-        TILING_DATA_FIELD_DEF(int64_t, baseReduceN);
-        TILING_DATA_FIELD_DEF(int64_t, nReduceCnt);
-        TILING_DATA_FIELD_DEF(int64_t, maxReduceNumOnce);
-        TILING_DATA_FIELD_DEF(int64_t, reduceBlockSize);
+// reduce block params
+TILING_DATA_FIELD_DEF(int64_t, singleCoreReduceN);
+TILING_DATA_FIELD_DEF(int64_t, singleCoreReduceNTail);
+TILING_DATA_FIELD_DEF(int64_t, baseReduceN);
+TILING_DATA_FIELD_DEF(int64_t, nReduceCnt);
+TILING_DATA_FIELD_DEF(int64_t, maxReduceNumOnce);
+TILING_DATA_FIELD_DEF(int64_t, reduceBlockSize);
 
-        // rnn attr
-        TILING_DATA_FIELD_DEF(int64_t, isBias);
-    END_TILING_DATA_DEF;
-    REGISTER_TILING_DATA_CLASS(ThnnFusedLstmCellGrad, ThnnFusedLstmCellGradTilingData)
+// rnn attr
+TILING_DATA_FIELD_DEF(int64_t, isBias);
+END_TILING_DATA_DEF;
+REGISTER_TILING_DATA_CLASS(ThnnFusedLstmCellGrad, ThnnFusedLstmCellGradTilingData)
 
-    struct ThnnFusedLstmCellGradTilingParams {
-        // include 2 matmul tiling
-      int64_t tilingKey{0};
-      int64_t usedCoreNum{0};
+struct ThnnFusedLstmCellGradTilingParams {
+    // include 2 matmul tiling
+    int64_t tilingKey{0};
+    int64_t usedCoreNum{0};
 
-      // rnn input tiling
-      int64_t batch{0};
-      int64_t hiddenSize{0};
+    // rnn input tiling
+    int64_t batch{0};
+    int64_t hiddenSize{0};
 
-      // tmp
-      int64_t ubSize{0};
-      int64_t sysAivCoreNum{0};
+    // tmp
+    int64_t ubSize{0};
+    int64_t sysAivCoreNum{0};
 
-      // vector block params
-      int64_t singleCoreM{0};
-      int64_t singleCoreMTail{0};
-      int64_t singleCoreN{0};
-      int64_t singleCoreNTail{0};
-      int64_t baseN{0};
-      int64_t baseM{0};
-      int64_t mCnt{0};
-      int64_t nCnt{0};
+    // vector block params
+    int64_t singleCoreM{0};
+    int64_t singleCoreMTail{0};
+    int64_t singleCoreN{0};
+    int64_t singleCoreNTail{0};
+    int64_t baseN{0};
+    int64_t baseM{0};
+    int64_t mCnt{0};
+    int64_t nCnt{0};
 
-      // reduce block params
-      int64_t singleCoreReduceN{0};
-      int64_t singleCoreReduceNTail{0};
-      int64_t baseReduceN{0};
-      int64_t nReduceCnt{0};
-      int64_t maxReduceNumOnce{0};
-      int64_t reduceBlockSize{0};
-      
-      // attr
-      int64_t isBias{0};
-    };
+    // reduce block params
+    int64_t singleCoreReduceN{0};
+    int64_t singleCoreReduceNTail{0};
+    int64_t baseReduceN{0};
+    int64_t nReduceCnt{0};
+    int64_t maxReduceNumOnce{0};
+    int64_t reduceBlockSize{0};
 
-    struct ThnnFusedLstmCellGradCompileInfo {
-        uint32_t aicCoreNum{0};
-        int64_t sysWorkspaceSize{0};
-        int64_t ubSizePlatForm{0};
-    };
-}
+    // attr
+    int64_t isBias{0};
+};
+
+struct ThnnFusedLstmCellGradCompileInfo {
+    uint32_t aicCoreNum{0};
+    int64_t sysWorkspaceSize{0};
+    int64_t ubSizePlatForm{0};
+};
+} // namespace optiling
 #endif

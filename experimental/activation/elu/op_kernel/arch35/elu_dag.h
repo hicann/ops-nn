@@ -29,8 +29,8 @@ constexpr int ELU_ATTR_INPUT_SCALE_INDEX = 2;
 namespace EluDag1 {
 template <class T>
 struct EluCustom : public Vec::ElemwiseQuaternaryOP<T, T, float, float, float> {
-    __aicore__ inline EluCustom(
-        LocalTensor<T>& dst, LocalTensor<T>& src, float alpha, float scale, float inputScale, uint32_t count)
+    __aicore__ inline EluCustom(LocalTensor<T>& dst, LocalTensor<T>& src, float alpha, float scale, float inputScale,
+                                uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);
@@ -78,9 +78,9 @@ struct EluDag {
     using OpCopyIn0 = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
     using OpCopyIn0Cast = Bind<Vec::Cast<T, U, 0>, OpCopyIn0>;
 
-    using OpResult = Bind<
-        EluDag1::EluCustom<T>, OpCopyIn0Cast, Placeholder::Var<float, ELU_ATTR_ALPHA_INDEX>,
-        Placeholder::Var<float, ELU_ATTR_SCALE_INDEX>, Placeholder::Var<float, ELU_ATTR_INPUT_SCALE_INDEX>>;
+    using OpResult = Bind<EluDag1::EluCustom<T>, OpCopyIn0Cast, Placeholder::Var<float, ELU_ATTR_ALPHA_INDEX>,
+                          Placeholder::Var<float, ELU_ATTR_SCALE_INDEX>,
+                          Placeholder::Var<float, ELU_ATTR_INPUT_SCALE_INDEX>>;
 
     using OpResultCast = Bind<Vec::Cast<U, T, 1>, OpResult>;
     using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpResultCast>;

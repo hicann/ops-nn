@@ -32,7 +32,7 @@ using namespace Ops::Base;
 template <typename U, typename T = float>
 struct KDTLGLogTargetTrue {
     constexpr static int CAST_MODE_RINT = 1;
-    using OpCopyGrad = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;  // gradOutput
+    using OpCopyGrad = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;   // gradOutput
     using OpCopySelf = Bind<Vec::CopyInBrc<U>, Placeholder::In1<U>>;   // self
     using OpCopyTarget = Bind<Vec::CopyInBrc<U>, Placeholder::In2<U>>; // target
 
@@ -42,30 +42,37 @@ struct KDTLGLogTargetTrue {
     using OpCopyTargetCast = Bind<Vec::Cast<T, U, 0>, OpCopyTarget>;
 
     // 提前应用reduction缩放因子（防溢出）
-    using OpGradWithReduction = Bind<Vec::Muls<T>, OpCopyGradCast, Placeholder::Var<T,0>>;  // gradOutput * reduction_factor
+    using OpGradWithReduction = Bind<Vec::Muls<T>, OpCopyGradCast,
+                                     Placeholder::Var<T, 0>>; // gradOutput * reduction_factor
 
-    // log_target=True时: gradTarget = gradOutput * reduction_factor * (target - self) * exp(target) + gradOutput * reduction_factor * exp(target)
-    using OpTargetExp = Bind<Vec::Exp<T>, OpCopyTargetCast>;           // exp(target)
-    using OpTargetSubSelf = Bind<Vec::Sub<T>, OpCopyTargetCast, OpCopySelfCast>;  // target - self
-    using OpGradMulDiff = Bind<Vec::Mul<T>, OpGradWithReduction, OpTargetSubSelf>;    //  gradOutput * reduction_factor * (target - self)
-    using OpGradMulDiffMulExp = Bind<Vec::Mul<T>, OpGradMulDiff, OpTargetExp>;  // gradOutput * reduction_factor * (target - self) * exp(target)
-    using OpGradMulExp = Bind<Vec::Mul<T>, OpGradWithReduction, OpTargetExp>;     // gradOutput * reduction_factor * exp(target)
-    using OpCustom = Bind<Vec::Add<T>, OpGradMulDiffMulExp, OpGradMulExp>;    //  gradOutput * reduction_factor * (target - self) * exp(target) + gradOutput * reduction_factor * exp(target)
+    // log_target=True时: gradTarget = gradOutput * reduction_factor * (target - self) * exp(target) + gradOutput *
+    // reduction_factor * exp(target)
+    using OpTargetExp = Bind<Vec::Exp<T>, OpCopyTargetCast>;                     // exp(target)
+    using OpTargetSubSelf = Bind<Vec::Sub<T>, OpCopyTargetCast, OpCopySelfCast>; // target - self
+    using OpGradMulDiff = Bind<Vec::Mul<T>, OpGradWithReduction,
+                               OpTargetSubSelf>; //  gradOutput * reduction_factor * (target - self)
+    using OpGradMulDiffMulExp = Bind<Vec::Mul<T>, OpGradMulDiff,
+                                     OpTargetExp>; // gradOutput * reduction_factor * (target - self) * exp(target)
+    using OpGradMulExp = Bind<Vec::Mul<T>, OpGradWithReduction,
+                              OpTargetExp>; // gradOutput * reduction_factor * exp(target)
+    using OpCustom = Bind<Vec::Add<T>, OpGradMulDiffMulExp,
+                          OpGradMulExp>; //  gradOutput * reduction_factor * (target - self) * exp(target) + gradOutput
+                                         //  * reduction_factor * exp(target)
 
     // 转换回输出类型
     using OpRes = Bind<Vec::Cast<U, T, CAST_MODE_RINT>, OpCustom>;
-    
+
     using OpCopyYOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpRes>;
-    
+
     using Outputs = Elems<OpCopyYOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
 template <typename U, typename T = float>
-struct  KDTLGLogTargetFalse {
+struct KDTLGLogTargetFalse {
     constexpr static int CAST_MODE_RINT = 1;
-    using OpCopyGrad = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;  // gradOutput
+    using OpCopyGrad = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;   // gradOutput
     using OpCopySelf = Bind<Vec::CopyInBrc<U>, Placeholder::In1<U>>;   // self
     using OpCopyTarget = Bind<Vec::CopyInBrc<U>, Placeholder::In2<U>>; // target
 
@@ -75,26 +82,29 @@ struct  KDTLGLogTargetFalse {
     using OpCopyTargetCast = Bind<Vec::Cast<T, U, 0>, OpCopyTarget>;
 
     // 提前应用reduction缩放因子（防溢出）
-    using OpGradWithReduction = Bind<Vec::Muls<T>, OpCopyGradCast, Placeholder::Var<T,0>>;  // gradOutput * reduction_factor
+    using OpGradWithReduction = Bind<Vec::Muls<T>, OpCopyGradCast,
+                                     Placeholder::Var<T, 0>>; // gradOutput * reduction_factor
 
     // log_target=False时: gradTarget = gradOutput * log(target) - gradOutput * self + gradOutput * target / target
-    using OpGradMulSelf = Bind<Vec::Mul<T>, OpGradWithReduction, OpCopySelfCast>;   // gradOutput * self
-    using OpTargetLog = Bind<Vec::Log<T>, OpCopyTargetCast>;           // log(target)
-    using OpXLogy = Bind<Vec::Mul<T>, OpGradWithReduction, OpTargetLog>;   // gradOutput * log(target) 
-    using OpLogSubGrad = Bind<Vec::Sub<T>, OpXLogy, OpGradMulSelf>;  // gradOutput * log(target) - gradOutput * self
-    using OpGradMulTarget = Bind<Vec::Mul<T>, OpGradWithReduction, OpCopyTargetCast>;   // gradOutput * target
-    using OpGradMulTargetDivTarget = Bind<Vec::Div<T>, OpGradMulTarget, OpCopyTargetCast>;   // gradOutput * target / target
-    using OpCustom = Bind<Vec::Add<T>, OpLogSubGrad, OpGradMulTargetDivTarget>;  // gradOutput * log(target) - gradOutput * self + gradOutput * target / target
+    using OpGradMulSelf = Bind<Vec::Mul<T>, OpGradWithReduction, OpCopySelfCast>; // gradOutput * self
+    using OpTargetLog = Bind<Vec::Log<T>, OpCopyTargetCast>;                      // log(target)
+    using OpXLogy = Bind<Vec::Mul<T>, OpGradWithReduction, OpTargetLog>;          // gradOutput * log(target)
+    using OpLogSubGrad = Bind<Vec::Sub<T>, OpXLogy, OpGradMulSelf>; // gradOutput * log(target) - gradOutput * self
+    using OpGradMulTarget = Bind<Vec::Mul<T>, OpGradWithReduction, OpCopyTargetCast>; // gradOutput * target
+    using OpGradMulTargetDivTarget = Bind<Vec::Div<T>, OpGradMulTarget,
+                                          OpCopyTargetCast>;                    // gradOutput * target / target
+    using OpCustom = Bind<Vec::Add<T>, OpLogSubGrad, OpGradMulTargetDivTarget>; // gradOutput * log(target) - gradOutput
+                                                                                // * self + gradOutput * target / target
 
     // 转换回输出类型
     using OpRes = Bind<Vec::Cast<U, T, CAST_MODE_RINT>, OpCustom>;
 
     using OpCopyYOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpRes>;
-    
+
     using Outputs = Elems<OpCopyYOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
 } // namespace KlDivTargetLossGrad
-#endif //ASCENDC_KL_DIV_TARGET_LOSS_GRAD_DAG_H
+#endif // ASCENDC_KL_DIV_TARGET_LOSS_GRAD_DAG_H

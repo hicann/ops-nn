@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file gelu_grad_tiling.cpp
@@ -25,8 +25,7 @@ using namespace AscendC;
 
 namespace optiling {
 
-struct GeluGradCompileInfo {
-};
+struct GeluGradCompileInfo {};
 
 const uint64_t BUFFER_NUM = 2;
 
@@ -45,15 +44,15 @@ static ge::graphStatus GeluGradTilingFunc(gert::TilingContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     auto coreNum = ascendcPlatform.GetCoreNum();
     auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion != platform_ascendc::SocVersion::ASCEND910B && socVersion != platform_ascendc::SocVersion::ASCEND310B && context->GetInputDesc(0)->GetDataType() == ge::DT_BF16)
-    {
+    if (socVersion != platform_ascendc::SocVersion::ASCEND910B &&
+        socVersion != platform_ascendc::SocVersion::ASCEND310B &&
+        context->GetInputDesc(0)->GetDataType() == ge::DT_BF16) {
         OP_LOGE(context, "socVersion error.");
         return ge::GRAPH_FAILED;
     }
     uint64_t versionNum = 0; // 型号标识，决定计算方式
     context->SetTilingKey(0);
-    if (socVersion == platform_ascendc::SocVersion::ASCEND310B)
-    {
+    if (socVersion == platform_ascendc::SocVersion::ASCEND310B) {
         versionNum = 1;
         context->SetTilingKey(1);
     }
@@ -73,22 +72,19 @@ static ge::graphStatus GeluGradTilingFunc(gert::TilingContext* context)
     uint64_t inputBytes = inputLength / inputNum;
 
     uint64_t ubDataNumber = 16;
-    if(typeLength == 4)
-    {
+    if (typeLength == 4) {
         ubDataNumber = 8 + versionNum;
     }
-    uint64_t tileBlockNum = (ubSize / blockSize ) / ubDataNumber;
+    uint64_t tileBlockNum = (ubSize / blockSize) / ubDataNumber;
     uint64_t tileDataNum = (tileBlockNum * blockSize) / inputBytes;
 
     uint64_t inputLengthAlgin32 = (((inputLength + blockSize - 1) / blockSize) * blockSize);
-    if(tileDataNum >= inputNum)
-    {
-        coreNum=1;
-    }
-    else
-    {
-        // There is at least 32B of data on each core, satisfying several settings for several cores. The maximum number of cores is the actual number of cores
-        coreNum = (coreNum <  inputLengthAlgin32 / blockSize) ? coreNum : inputLengthAlgin32 / blockSize;
+    if (tileDataNum >= inputNum) {
+        coreNum = 1;
+    } else {
+        // There is at least 32B of data on each core, satisfying several settings for several cores. The maximum number
+        // of cores is the actual number of cores
+        coreNum = (coreNum < inputLengthAlgin32 / blockSize) ? coreNum : inputLengthAlgin32 / blockSize;
     }
     OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(inputBytes == 0, OP_LOGE(context, "inputBytes is 0"), return ge::GRAPH_FAILED);
@@ -129,7 +125,7 @@ static ge::graphStatus GeluGradTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(coreNum);
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }

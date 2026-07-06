@@ -63,14 +63,7 @@ constexpr int64_t TWO_END_AXIS = 2;
 
 constexpr int64_t WORKSPACE_BUFFER = 20L * 1024L * 1024L;
 
-enum class InputDataType : int64_t
-{
-    HALF_HALF = 1,
-    HALF_FLOAT = 2,
-    FLOAT_FLOAT = 3,
-    BF16_BF16 = 4,
-    BF16_FLOAT = 5
-};
+enum class InputDataType : int64_t { HALF_HALF = 1, HALF_FLOAT = 2, FLOAT_FLOAT = 3, BF16_BF16 = 4, BF16_FLOAT = 5 };
 
 // 公共方法区
 template <class T>

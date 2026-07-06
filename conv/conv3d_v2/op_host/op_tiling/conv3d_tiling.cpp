@@ -25,31 +25,25 @@ using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
 
-CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTiling,
-    static_cast<int32_t>(NpuArch::DAV_2201), 0);
+CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTiling, static_cast<int32_t>(NpuArch::DAV_2201), 0);
 
 static ge::graphStatus Conv3DV2TilingFunc(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(context == nullptr,
-                    CUBE_INNER_ERR_REPORT("Conv3DV2", "context is null"),
-    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("Conv3DV2", "context is null"), return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeType(), "Begin process Conv3DV2TilingFunc");
     return ConvTilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus TilingPrepareForConv3DV2(gert::TilingParseContext *context) {
-    OP_TILING_CHECK(context == nullptr,
-                    CUBE_INNER_ERR_REPORT("Conv3DV2", "context is null"),
-    return ge::GRAPH_FAILED);
+static ge::graphStatus TilingPrepareForConv3DV2(gert::TilingParseContext* context)
+{
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("Conv3DV2", "context is null"), return ge::GRAPH_FAILED);
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
-    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
+                    return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<optiling::Conv3DTilingParseInfo>();
-    OP_TILING_CHECK(compileInfoPtr == nullptr,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfoPtr is null"),
-    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfoPtr is null"),
+                    return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     platformInfo->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersion);
     compileInfoPtr->aicoreNum = ascendcPlatform.GetCoreNumAic();
@@ -66,20 +60,14 @@ static ge::graphStatus TilingPrepareForConv3DV2(gert::TilingParseContext *contex
             " l1Size:%lu, l2Size:%lu, coreNum:%u, "
             "l0aSize:%lu, l0bSize:%lu, l0cSize:%lu, "
             "l2Rate:%lu, btSize:%lu",
-            compileInfoPtr->socVersion.c_str(),
-            compileInfoPtr->l1Size,
-            compileInfoPtr->l2Size,
-            compileInfoPtr->aicoreNum,
-            compileInfoPtr->l0aSize,
-            compileInfoPtr->l0bSize,
-            compileInfoPtr->l0cSize,
-            compileInfoPtr->l2Rate,
-            compileInfoPtr->btSize);
+            compileInfoPtr->socVersion.c_str(), compileInfoPtr->l1Size, compileInfoPtr->l2Size,
+            compileInfoPtr->aicoreNum, compileInfoPtr->l0aSize, compileInfoPtr->l0bSize, compileInfoPtr->l0cSize,
+            compileInfoPtr->l2Rate, compileInfoPtr->btSize);
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(Conv3DV2)
-.Tiling(Conv3DV2TilingFunc)
-.TilingParse<optiling::Conv3DTilingParseInfo>(TilingPrepareForConv3DV2);
+    .Tiling(Conv3DV2TilingFunc)
+    .TilingParse<optiling::Conv3DTilingParseInfo>(TilingPrepareForConv3DV2);
 
 } // namespace optiling

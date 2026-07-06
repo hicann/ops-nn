@@ -42,18 +42,15 @@ int64_t DIM_FOUR = 4;
 int8_t g_useFP16 = 2;
 
 static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16,
-    op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_UINT16, op::DataType::DT_UINT32, op::DataType::DT_UINT64
-};
+    op::DataType::DT_FLOAT16, op::DataType::DT_INT16,  op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_UINT16,  op::DataType::DT_UINT32, op::DataType::DT_UINT64};
 
 static const std::initializer_list<op::DataType> DAV_2201_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
-    op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_UINT16, op::DataType::DT_UINT32, op::DataType::DT_UINT64
-};
+    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,  op::DataType::DT_INT16,  op::DataType::DT_INT32,
+    op::DataType::DT_INT64,   op::DataType::DT_UINT16, op::DataType::DT_UINT32, op::DataType::DT_UINT64};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series()) {
         return DAV_2201_DTYPE_SUPPORT_LIST;
@@ -63,41 +60,48 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
 }
 
 // define 回调函数类型
-using callback =
-    aclnnStatus (*)(const aclTensorList *tensors, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor);
+using callback = aclnnStatus (*)(const aclTensorList* tensors, aclTensor* output, uint64_t* workspaceSize,
+                                 aclOpExecutor** executor);
 
-struct EinsumCallBack{
+struct EinsumCallBack {
     std::string equation;
     callback einsumFunc;
 };
 
-aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList *tensors, const aclTensor *output) {
-    auto const &tensor0Shape = (*tensors)[0]->GetViewShape();
-    auto const &tensor1Shape = (*tensors)[1]->GetViewShape();
-    auto const &outputShape = output->GetViewShape();
+aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList* tensors, const aclTensor* output)
+{
+    auto const& tensor0Shape = (*tensors)[0]->GetViewShape();
+    auto const& tensor1Shape = (*tensors)[1]->GetViewShape();
+    auto const& outputShape = output->GetViewShape();
     if (tensor0Shape.GetDim(DIM_ZERO) != tensor1Shape.GetDim(DIM_ZERO)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim0 [%ld] and tensor1 shape dim0 [%ld] should be same", tensor0Shape.GetDim(DIM_ZERO), tensor1Shape.GetDim(DIM_ZERO));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim0 [%ld] and tensor1 shape dim0 [%ld] should be same",
+                tensor0Shape.GetDim(DIM_ZERO), tensor1Shape.GetDim(DIM_ZERO));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (tensor0Shape.GetDim(DIM_ONE) != tensor1Shape.GetDim(DIM_ONE)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim1 [%ld] and tensor1 shape dim1 [%ld] should be same", tensor0Shape.GetDim(DIM_ONE), tensor1Shape.GetDim(DIM_ONE));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim1 [%ld] and tensor1 shape dim1 [%ld] should be same",
+                tensor0Shape.GetDim(DIM_ONE), tensor1Shape.GetDim(DIM_ONE));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (tensor0Shape.GetDim(DIM_TWO) != tensor1Shape.GetDim(DIM_TWO)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim2 [%ld] and tensor1 shape dim2 [%ld] should be same", tensor0Shape.GetDim(DIM_TWO), tensor1Shape.GetDim(DIM_TWO));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim2 [%ld] and tensor1 shape dim2 [%ld] should be same",
+                tensor0Shape.GetDim(DIM_TWO), tensor1Shape.GetDim(DIM_TWO));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (tensor0Shape.GetDim(DIM_THREE) != tensor1Shape.GetDim(DIM_FOUR)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim3 [%ld] and tensor1 shape dim4 [%ld] should be same", tensor0Shape.GetDim(DIM_THREE), tensor1Shape.GetDim(DIM_FOUR));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim3 [%ld] and tensor1 shape dim4 [%ld] should be same",
+                tensor0Shape.GetDim(DIM_THREE), tensor1Shape.GetDim(DIM_FOUR));
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (outputShape.GetDim(DIM_ZERO) != tensor0Shape.GetDim(DIM_ZERO)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape dim0 [%ld] and tensor0 shape dim0 [%ld] should be same", outputShape.GetDim(DIM_ZERO), tensor0Shape.GetDim(DIM_ZERO));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape dim0 [%ld] and tensor0 shape dim0 [%ld] should be same",
+                outputShape.GetDim(DIM_ZERO), tensor0Shape.GetDim(DIM_ZERO));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (outputShape.GetDim(DIM_ONE) != tensor0Shape.GetDim(DIM_ONE)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape dim1 [%ld] and tensor0 shape dim1 [%ld] should be same", outputShape.GetDim(DIM_ONE), tensor0Shape.GetDim(DIM_ONE));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape dim1 [%ld] and tensor0 shape dim1 [%ld] should be same",
+                outputShape.GetDim(DIM_ONE), tensor0Shape.GetDim(DIM_ONE));
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -115,7 +119,9 @@ aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList *tensors, const aclTensor *
 }
 
 // Einsum 具体实现
-aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor){
+aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList* tensors, aclTensor* output, uint64_t* workspaceSize,
+                                  aclOpExecutor** executor)
+{
     // 固定写法，创建OpExecutor
     CHECK_RET((*tensors)[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET((*tensors)[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -123,8 +129,10 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    OP_CHECK_WRONG_DIMENSION((*tensors)[0], 4, return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第1个Tensor的dimNum为4
-    OP_CHECK_WRONG_DIMENSION((*tensors)[1], 5, return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为5
+    OP_CHECK_WRONG_DIMENSION((*tensors)[0], 4,
+                             return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第1个Tensor的dimNum为4
+    OP_CHECK_WRONG_DIMENSION((*tensors)[1], 5,
+                             return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为5
     OP_CHECK_WRONG_DIMENSION(output, 4, return ACLNN_ERR_PARAM_INVALID); // 校验Tensor output的dimNum为4
 
     auto ret = CheckABCDxABCED2ABCE(tensors, output);
@@ -137,20 +145,20 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     CHECK_RET(tensor0Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(tensor1Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor *tensor0Cast = tensor0Contigous;
-    const aclTensor *tensor1Cast = tensor1Contigous;
-    const aclTensor *outputCast = output;
+    const aclTensor* tensor0Cast = tensor0Contigous;
+    const aclTensor* tensor1Cast = tensor1Contigous;
+    const aclTensor* outputCast = output;
 
     auto inputDtype = (*tensors)[0]->GetDataType();
     if (inputDtype != op::DataType::DT_FLOAT && inputDtype != op::DataType::DT_FLOAT16) {
-      tensor0Cast = l0op::Cast(tensor0Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
-      CHECK_RET(tensor0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-      tensor1Cast = l0op::Cast(tensor1Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
-      CHECK_RET(tensor1Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-      auto outputContigous = l0op::Contiguous(output, uniqueExecutor.get());
-      CHECK_RET(outputContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-      outputCast = l0op::Cast(outputContigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
-      CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        tensor0Cast = l0op::Cast(tensor0Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        CHECK_RET(tensor0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        tensor1Cast = l0op::Cast(tensor1Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        CHECK_RET(tensor1Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto outputContigous = l0op::Contiguous(output, uniqueExecutor.get());
+        CHECK_RET(outputContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        outputCast = l0op::Cast(outputContigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto expandA = l0op::UnsqueezeNd(tensor0Cast, DIM_FOUR, uniqueExecutor.get());
     CHECK_RET(expandA != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -159,7 +167,7 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto castResult = l0op::Cast(matmulOut, inputDtype, uniqueExecutor.get());
     CHECK_RET(castResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    const aclTensor *result = l0op::SqueezeNd(castResult, DIM_FOUR, uniqueExecutor.get());
+    const aclTensor* result = l0op::SqueezeNd(castResult, DIM_FOUR, uniqueExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 固定写法，将计算结果拷贝到输出 output output可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(result, output, uniqueExecutor.get());
@@ -171,7 +179,9 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus HandleAxB2AB(const aclTensorList *tensors, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor){
+aclnnStatus HandleAxB2AB(const aclTensorList* tensors, aclTensor* output, uint64_t* workspaceSize,
+                         aclOpExecutor** executor)
+{
     // 固定写法，创建OpExecutor
     CHECK_RET((*tensors)[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET((*tensors)[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -179,8 +189,10 @@ aclnnStatus HandleAxB2AB(const aclTensorList *tensors, aclTensor *output, uint64
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    OP_CHECK_WRONG_DIMENSION((*tensors)[0], 1, return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第1个Tensor的dimNum为1
-    OP_CHECK_WRONG_DIMENSION((*tensors)[1], 1, return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为1
+    OP_CHECK_WRONG_DIMENSION((*tensors)[0], 1,
+                             return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第1个Tensor的dimNum为1
+    OP_CHECK_WRONG_DIMENSION((*tensors)[1], 1,
+                             return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为1
     OP_CHECK_WRONG_DIMENSION(output, 2, return ACLNN_ERR_PARAM_INVALID); // 校验Tensor output的dimNum为2
 
     auto tensor0Contigous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
@@ -203,12 +215,10 @@ aclnnStatus HandleAxB2AB(const aclTensorList *tensors, aclTensor *output, uint64
 }
 
 static EinsumCallBack g_einsumFuncTable[] = {
-    {"abcd,abced->abce", HandleABCDxABCED2ABCE},
-    {"a,b->ab", HandleAxB2AB},
-    {"", nullptr}
-};
+    {"abcd,abced->abce", HandleABCDxABCED2ABCE}, {"a,b->ab", HandleAxB2AB}, {"", nullptr}};
 
-static int FindEinsumFunc(const std::string &equ) {
+static int FindEinsumFunc(const std::string& equ)
+{
     for (int i = 0; g_einsumFuncTable[i].equation != ""; ++i) {
         if (equ == g_einsumFuncTable[i].equation) {
             return i;
@@ -218,7 +228,8 @@ static int FindEinsumFunc(const std::string &equ) {
 }
 
 // 校验空指针
-static bool CheckNotNull(const aclTensorList *tensors, aclTensor *output, const char *equation) {
+static bool CheckNotNull(const aclTensorList* tensors, aclTensor* output, const char* equation)
+{
     OP_CHECK_NULL(tensors, return false);
     for (uint64_t i = 0; i < tensors->Size(); i++) {
         OP_CHECK_NULL((*tensors)[i], return false);
@@ -232,39 +243,42 @@ static bool CheckNotNull(const aclTensorList *tensors, aclTensor *output, const 
 }
 
 // 检查输入和输出的数据类型是否在算子的支持列表内
-static inline bool CheckDtypeValid(const aclTensorList *tensors, const aclTensor* out) {
+static inline bool CheckDtypeValid(const aclTensorList* tensors, const aclTensor* out)
+{
     const auto& dtypeSupportList = GetDtypeSupportList();
     for (uint64_t i = 0; i < tensors->Size(); i++) {
         OP_CHECK_DTYPE_NOT_SUPPORT((*tensors)[i], dtypeSupportList, return false);
         if ((*tensors)[i]->GetStorageFormat() != Format::FORMAT_ND) {
-	    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "format should be ND, but is [%s].",
-	        op::ToString((*tensors)[i]->GetStorageFormat()).GetString());
-	    return false;
-	}
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "format should be ND, but is [%s].",
+                    op::ToString((*tensors)[i]->GetStorageFormat()).GetString());
+            return false;
+        }
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeSupportList, return false);
     return true;
 }
 
 // 统一 equation 的命名
-static void EquationUnification(std::string &equation) {
-  OP_LOGD("original equation: [%s]", equation.c_str());
-  std::unordered_map<char, char> normalize_map;
-  size_t indice = 0;
-  for (auto &dim_shape : equation) {
-    if (isalpha(dim_shape)) {
-        if (normalize_map.find(dim_shape) == normalize_map.end()) {
-            normalize_map[dim_shape] = static_cast<char>(static_cast<unsigned char>('a') + indice);
-            indice++;
+static void EquationUnification(std::string& equation)
+{
+    OP_LOGD("original equation: [%s]", equation.c_str());
+    std::unordered_map<char, char> normalize_map;
+    size_t indice = 0;
+    for (auto& dim_shape : equation) {
+        if (isalpha(dim_shape)) {
+            if (normalize_map.find(dim_shape) == normalize_map.end()) {
+                normalize_map[dim_shape] = static_cast<char>(static_cast<unsigned char>('a') + indice);
+                indice++;
+            }
+            dim_shape = normalize_map[dim_shape];
         }
-      dim_shape = normalize_map[dim_shape];
     }
-  }
-  OP_LOGD("reordered equation: [%s]", equation.c_str());
+    OP_LOGD("reordered equation: [%s]", equation.c_str());
 }
 
 // CheckTensorValid
-static inline bool CheckTensorValid(const aclTensorList *tensors, const aclTensor* output) {
+static inline bool CheckTensorValid(const aclTensorList* tensors, const aclTensor* output)
+{
     if (tensors->Size() != 2) { // 校验tensorList中包含2个Tensor
         OP_LOGD("invalid tensor number [%ld], should be 2", tensors->Size());
         return false;
@@ -281,7 +295,8 @@ static inline bool CheckTensorValid(const aclTensorList *tensors, const aclTenso
 }
 
 // 入参校验总入口
-static aclnnStatus CheckParams(const aclTensorList *tensors, aclTensor *output, const char *equation) {
+static aclnnStatus CheckParams(const aclTensorList* tensors, aclTensor* output, const char* equation)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(tensors, output, equation), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -292,9 +307,11 @@ static aclnnStatus CheckParams(const aclTensorList *tensors, aclTensor *output, 
     CHECK_RET(CheckTensorValid(tensors, output), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
-}
+} // namespace
 // aclnnEinsum 第一段接口
-aclnnStatus aclnnEinsumGetWorkspaceSize(const aclTensorList *tensors, const char *equation, aclTensor *output, uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnEinsumGetWorkspaceSize(const aclTensorList* tensors, const char* equation, aclTensor* output,
+                                        uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnEinsum, DFX_IN(tensors, equation), DFX_OUT(output));
 
     auto ret = CheckParams(tensors, output, equation);
@@ -312,7 +329,8 @@ aclnnStatus aclnnEinsumGetWorkspaceSize(const aclTensorList *tensors, const char
 }
 
 // aclnnEinsum 第二段接口
-aclnnStatus aclnnEinsum(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
+aclnnStatus aclnnEinsum(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnEinsum);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

@@ -42,10 +42,9 @@ static const int64_t RESERVED_UB_SIZE = 4 * BLOCK_SIZE;
 static const int64_t WORK_SPACE_SIZE = 32;
 static const int64_t NUM_ONE = 1;
 
-class ScatterListTiling
-{
+class ScatterListTiling {
 public:
-    explicit ScatterListTiling(gert::TilingContext* tilingContext) : context(tilingContext) {};
+    explicit ScatterListTiling(gert::TilingContext* tilingContext) : context(tilingContext){};
     ge::graphStatus GetPlatformData();
     ge::graphStatus GetVarTensorNum();
     ge::graphStatus GetVarAndUpdateData();
@@ -56,8 +55,8 @@ public:
     ge::graphStatus GetOtherData();
     ge::graphStatus CalculateParams();
     ge::graphStatus GetOtherDataNeg1();
-    ge::graphStatus GetDataNeg(
-        const int64_t& maxUbSize, const int64_t& preCoreBatchUbSize, const int64_t& updateSizeMore);
+    ge::graphStatus GetDataNeg(const int64_t& maxUbSize, const int64_t& preCoreBatchUbSize,
+                               const int64_t& updateSizeMore);
     ge::graphStatus GetOtherDataNeg2();
     ge::graphStatus GetRSBSEData();
     ge::graphStatus GetRLBSEData();
@@ -138,7 +137,8 @@ ge::graphStatus ScatterListTiling::GetPlatformData()
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     platform_ascendc::SocVersion socVersion = ascendcPlatform.GetSocVersion();
-    supportMovePad = (socVersion == platform_ascendc::SocVersion::ASCEND910B || Ops::NN::OpTiling::IsRegbaseSocVersion(context));
+    supportMovePad = (socVersion == platform_ascendc::SocVersion::ASCEND910B ||
+                      Ops::NN::OpTiling::IsRegbaseSocVersion(context));
     isAscend910 = (socVersion == platform_ascendc::SocVersion::ASCEND910);
 
     totalCoreNum = ascendcPlatform.GetCoreNumAiv();
@@ -165,9 +165,8 @@ ge::graphStatus ScatterListTiling::GetVarTensorNum()
         auto varTensorShape2Ptr = context->GetDynamicInputShape(VAR_INDEX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, varTensorShape2Ptr);
         auto varTensorShape2 = varTensorShape2Ptr->GetStorageShape();
-        OP_CHECK_IF(
-            varTensorShape2 != varTensorShape, OP_LOGE(context, "all var tensor shape should be equal"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(varTensorShape2 != varTensorShape, OP_LOGE(context, "all var tensor shape should be equal"),
+                    return ge::GRAPH_FAILED);
     }
     indiceIndex = varTensorNum;
     updatesIndex = varTensorNum + 1;
@@ -177,31 +176,30 @@ ge::graphStatus ScatterListTiling::GetVarTensorNum()
 ge::graphStatus ScatterListTiling::ReShape(const gert::Shape& updatesShape, const gert::Shape& varTensorShape)
 {
     for (int64_t i = 0; i < updatesDims; ++i) {
-        OP_CHECK_IF(
-            updatesShape.GetDim(i) <= 0, OP_LOGE(context, "updates can't be empty tensor"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(updatesShape.GetDim(i) <= 0, OP_LOGE(context, "updates can't be empty tensor"),
+                    return ge::GRAPH_FAILED);
         updateShape.push_back(updatesShape.GetDim(i));
         if (i < (updatesDims - 1)) {
-            OP_CHECK_IF(
-                varTensorShape.GetDim(i) <= 0, OP_LOGE(context, "var tensor can't be empty tensor"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(varTensorShape.GetDim(i) <= 0, OP_LOGE(context, "var tensor can't be empty tensor"),
+                        return ge::GRAPH_FAILED);
             varShape.push_back(varTensorShape.GetDim(i));
         }
     }
     isNeg1 = (newAxis == (updatesDims - 1));
     dim2Count = updatesShape.GetDim(newAxis);
     varDim2Count = varTensorShape.GetDim(newAxis - 1);
-    dim1Count =
-        std::accumulate(updateShape.begin() + 1, updateShape.begin() + newAxis, NUM_ONE, std::multiplies<int64_t>());
-    varDim1Count =
-        std::accumulate(varShape.begin(), varShape.begin() + newAxis - 1, NUM_ONE, std::multiplies<int64_t>());
-    dim3Count =
-        std::accumulate(updateShape.begin() + newAxis + 1, updateShape.end(), NUM_ONE, std::multiplies<int64_t>());
+    dim1Count = std::accumulate(updateShape.begin() + 1, updateShape.begin() + newAxis, NUM_ONE,
+                                std::multiplies<int64_t>());
+    varDim1Count = std::accumulate(varShape.begin(), varShape.begin() + newAxis - 1, NUM_ONE,
+                                   std::multiplies<int64_t>());
+    dim3Count = std::accumulate(updateShape.begin() + newAxis + 1, updateShape.end(), NUM_ONE,
+                                std::multiplies<int64_t>());
     varDim3Count = std::accumulate(varShape.begin() + newAxis, varShape.end(), NUM_ONE, std::multiplies<int64_t>());
 
-    OP_CHECK_IF(
-        varDim1Count != dim1Count, OP_LOGE(context, "var shape1 must be equal update shape1"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varDim3Count != dim3Count, OP_LOGE(context, "var shape3 must be equal update shape3"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDim1Count != dim1Count, OP_LOGE(context, "var shape1 must be equal update shape1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDim3Count != dim3Count, OP_LOGE(context, "var shape3 must be equal update shape3"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(dim2Count > varDim2Count, OP_LOGE(context, "update shape2 must < var shape2"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -219,17 +217,15 @@ ge::graphStatus ScatterListTiling::GetVarAndUpdateData()
     updatesDims = updatesShape.GetDimNum();
     dim0Count = updatesShape.GetDim(DIM_0);
     OP_CHECK_IF(updatesDims < 2, OP_LOGE(context, "The dimension of updates must >= 2"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varTensorNum != dim0Count, OP_LOGE(context, "The tensor num of var must equal to update first dim"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varTensorNum != dim0Count, OP_LOGE(context, "The tensor num of var must equal to update first dim"),
+                return ge::GRAPH_FAILED);
     const int64_t* axis = context->GetAttrs()->GetAttrPointer<int64_t>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, axis);
     newAxis = *axis;
     newAxis = newAxis < 0 ? (updatesDims + newAxis) : newAxis;
     OP_CHECK_IF((newAxis <= 0 || newAxis >= updatesDims), OP_LOGE(context, "axis is error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ReShape(updatesShape, varTensorShape) != ge::GRAPH_SUCCESS, OP_LOGE(context, "get var and update failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ReShape(updatesShape, varTensorShape) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "get var and update failed"), return ge::GRAPH_FAILED);
     auto varTensorDescPtr = context->GetDynamicInputDesc(VAR_INDEX, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varTensorDescPtr);
     auto varTensorDtype = varTensorDescPtr->GetDataType();
@@ -237,13 +233,11 @@ ge::graphStatus ScatterListTiling::GetVarAndUpdateData()
     OP_CHECK_NULL_WITH_CONTEXT(context, updatesDescPtr);
     updatesDtype = updatesDescPtr->GetDataType();
     updatesDtypeSize = ge::GetSizeByDataType(updatesDtype);
-    OP_CHECK_IF(
-        updatesDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", updatesDtypeSize),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varTensorDtype != updatesDtype,
-        OP_LOGE(context, "The dtype of all elements of var should be euqal to the dtype of updates"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(updatesDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", updatesDtypeSize),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varTensorDtype != updatesDtype,
+                OP_LOGE(context, "The dtype of all elements of var should be euqal to the dtype of updates"),
+                return ge::GRAPH_FAILED);
     updatesOneBlock = BLOCK_SIZE / updatesDtypeSize;
     dim3CountAlign = Ops::Base::CeilAlign(dim3Count, updatesOneBlock);
     return ge::GRAPH_SUCCESS;
@@ -255,28 +249,24 @@ ge::graphStatus ScatterListTiling::GetIndiceData()
     OP_CHECK_NULL_WITH_CONTEXT(context, indiceShapePtr);
     auto indiceShape = indiceShapePtr->GetStorageShape();
     indiceDims = indiceShape.GetDimNum();
-    OP_CHECK_IF(
-        indiceDims != DIM_1 && indiceDims != DIM_2, OP_LOGE(context, "The dimension of indice only support 1 or 2 now"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indiceDims != DIM_1 && indiceDims != DIM_2,
+                OP_LOGE(context, "The dimension of indice only support 1 or 2 now"), return ge::GRAPH_FAILED);
     auto indiceDim0 = indiceShape.GetDim(DIM_0);
-    OP_CHECK_IF(
-        indiceDim0 != dim0Count,
-        OP_LOGE(context, "The first dim of indice should be euqal to the first dim of updates"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indiceDim0 != dim0Count,
+                OP_LOGE(context, "The first dim of indice should be euqal to the first dim of updates"),
+                return ge::GRAPH_FAILED);
     indiceCount = dim0Count;
     if (indiceDims == DIM_2) {
-        OP_CHECK_IF(
-            indiceShape.GetDim(DIM_1) != DOUBLE_SIZE, OP_LOGE(context, "The second dim of indice should be 2"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(indiceShape.GetDim(DIM_1) != DOUBLE_SIZE, OP_LOGE(context, "The second dim of indice should be 2"),
+                    return ge::GRAPH_FAILED);
         indiceCount = indiceCount * DOUBLE_SIZE;
     }
     auto indiceDescPtr = context->GetInputDesc(indiceIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, indiceDescPtr);
     auto indiceDtype = indiceDescPtr->GetDataType();
     int64_t indiceDtypeSize = ge::GetSizeByDataType(indiceDtype);
-    OP_CHECK_IF(
-        indiceDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", indiceDtypeSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indiceDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", indiceDtypeSize),
+                return ge::GRAPH_FAILED);
     indiceOneBlock = BLOCK_SIZE / indiceDtypeSize;
     indiceCount = Ops::Base::CeilAlign(indiceCount, indiceOneBlock);
     indiceUbSize = indiceCount * indiceDtypeSize;
@@ -295,20 +285,19 @@ ge::graphStatus ScatterListTiling::GetMaskData()
     OP_CHECK_NULL_WITH_CONTEXT(context, maskShapePtr);
     auto maskShape = maskShapePtr->GetStorageShape();
     auto maskDims = maskShape.GetDimNum();
-    OP_CHECK_IF(
-        maskDims != DIM_1, OP_LOGE(context, "The dimension of mask only support 1 now"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maskDims != DIM_1, OP_LOGE(context, "The dimension of mask only support 1 now"),
+                return ge::GRAPH_FAILED);
     auto maskDim0 = maskShape.GetDim(DIM_0);
-    OP_CHECK_IF(
-        maskDim0 != dim0Count, OP_LOGE(context, "The first dim of mask must be euqal to the first dim of updates"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maskDim0 != dim0Count,
+                OP_LOGE(context, "The first dim of mask must be euqal to the first dim of updates"),
+                return ge::GRAPH_FAILED);
     maskCount = dim0Count;
     auto maskDescPtr = context->GetOptionalInputDesc(MASK_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, maskDescPtr);
     auto maskDtype = maskDescPtr->GetDataType();
     int64_t maskDtypeSize = ge::GetSizeByDataType(maskDtype);
-    OP_CHECK_IF(
-        maskDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", maskDtypeSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maskDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", maskDtypeSize),
+                return ge::GRAPH_FAILED);
     auto maskOneBlock = BLOCK_SIZE / maskDtypeSize;
     maskCount = Ops::Base::CeilAlign(maskCount, maskOneBlock);
     maskUbSize = maskCount * maskDtypeSize;
@@ -379,8 +368,8 @@ ge::graphStatus ScatterListTiling::CalculateParams()
         dim2Count = updateShape[1];
     } else {
         dim1Count = updateShape[1];
-        dim2Count =
-            std::accumulate(updateShape.begin() + DIM_2, updateShape.end() - 1, NUM_ONE, std::multiplies<int64_t>());
+        dim2Count = std::accumulate(updateShape.begin() + DIM_2, updateShape.end() - 1, NUM_ONE,
+                                    std::multiplies<int64_t>());
     }
     varDim1Count = dim1Count;
     varDim2Count = dim2Count;
@@ -394,8 +383,8 @@ ge::graphStatus ScatterListTiling::CalculateParams()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterListTiling::GetDataNeg(
-    const int64_t& maxUbSize, const int64_t& preCoreBatchUbSize, const int64_t& updateSizeMore)
+ge::graphStatus ScatterListTiling::GetDataNeg(const int64_t& maxUbSize, const int64_t& preCoreBatchUbSize,
+                                              const int64_t& updateSizeMore)
 {
     bool isAlign = (varDim3Count % updatesOneBlock == 0);
     bool isAlignDim2 = (dim2Count % updatesOneBlock == 0);
@@ -414,8 +403,8 @@ ge::graphStatus ScatterListTiling::GetDataNeg(
     }
     if (isAlign && dimIsOne && (updatesDtypeSize != INT64_SIZE) && (!istransMore)) {
         tilingKey = static_cast<int64_t>(ScatterListTilingKey::TILINGKEY_TLARGE); // ub < c*e
-        eachPreLoopEle =
-            ((maxUbSize / updatesDtypeSize) / (DIM_2 * updatesOneBlock + 1)) / updatesOneBlock * updatesOneBlock;
+        eachPreLoopEle = ((maxUbSize / updatesDtypeSize) / (DIM_2 * updatesOneBlock + 1)) / updatesOneBlock *
+                         updatesOneBlock;
         eachPreLoopEle = (eachPreLoopEle / REPEAT_NUM) * REPEAT_NUM;
 
         eachPreLoopEle = updatesDtypeSize != 1 ? eachPreLoopEle : (eachPreLoopEle / BLOCK_SIZE) * BLOCK_SIZE;
@@ -570,8 +559,8 @@ bool ScatterListTiling::ChooseGetOtherData() const
 ge::graphStatus ScatterListTiling::GetOtherData()
 {
     const char* reduce = context->GetAttrs()->GetAttrPointer<char>(0);
-    OP_CHECK_IF(
-        strcmp(reduce, "update") != 0, OP_LOGE(context, "reduce only support update now"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(strcmp(reduce, "update") != 0, OP_LOGE(context, "reduce only support update now"),
+                return ge::GRAPH_FAILED);
 
     if (ChooseGetOtherData()) {
         CalculateParams();
@@ -599,28 +588,27 @@ ge::graphStatus ScatterListTiling::GetOtherData()
 
 void ScatterListTiling::PrintTilingData()
 {
-    OP_LOGI(
-        context,
-        "ScatterList tilingData is dim0Count:%ld, dim1Count:%ld, varDim2Count:%ld, dim2Count:%ld, dim3Count:%ld, "
-        "dim3CountAlign:%ld, updatesOneBlock:%ld, indiceDims:%ld, indiceCount:%ld, indiceUbSize:%ld, "
-        "maskCount:%ld, maskUbSize:%ld, srcBatchStride:%ld, srcBatchStrideAlign:%ld, dstBatchStride:%ld, "
-        "useCoreNum:%ld, preCoreBatchNum:%ld, lastCoreBatchNum:%ld, eachLoopNum:%ld, eachPreLoopEle:%ld, "
-        "eachLastLoopEle:%ld, eachLastLoopEleAlign:%ld, updatesCount:%ld, updatesUbSize:%ld, dataUbSize:%ld, "
-        "transposeUbSize:%ld, transRepeatTimes:%ld, transRepeatTimesTail:%ld, updateDim23Align:%ld, "
-        "preCoreUpdateDim23:%ld, varDim3Stride:%ld, varDim3Count:%ld, dim3CountSize:%ld, eachLastSize:%ld, "
-        "tilingKey:%ld",
-        tilingData.get_dim0Count(), tilingData.get_dim1Count(), tilingData.get_varDim2Count(),
-        tilingData.get_dim2Count(), tilingData.get_dim3Count(), tilingData.get_dim3CountAlign(),
-        tilingData.get_updatesOneBlock(), tilingData.get_indiceDims(), tilingData.get_indiceCount(),
-        tilingData.get_indiceUbSize(), tilingData.get_maskCount(), tilingData.get_maskUbSize(),
-        tilingData.get_srcBatchStride(), tilingData.get_srcBatchStrideAlign(), tilingData.get_dstBatchStride(),
-        tilingData.get_useCoreNum(), tilingData.get_preCoreBatchNum(), tilingData.get_lastCoreBatchNum(),
-        tilingData.get_eachLoopNum(), tilingData.get_eachPreLoopEle(), tilingData.get_eachLastLoopEle(),
-        tilingData.get_eachLastLoopEleAlign(), tilingData.get_updatesCount(), tilingData.get_updatesUbSize(),
-        tilingData.get_dataUbSize(), tilingData.get_transposeUbSize(), tilingData.get_transRepeatTimes(),
-        tilingData.get_transRepeatTimesTail(), tilingData.get_updateDim23Align(), tilingData.get_preCoreUpdateDim23(),
-        tilingData.get_varDim3Stride(), tilingData.get_varDim3Count(), tilingData.get_dim3CountSize(),
-        tilingData.get_eachLastSize(), tilingData.get_tilingKey());
+    OP_LOGI(context,
+            "ScatterList tilingData is dim0Count:%ld, dim1Count:%ld, varDim2Count:%ld, dim2Count:%ld, dim3Count:%ld, "
+            "dim3CountAlign:%ld, updatesOneBlock:%ld, indiceDims:%ld, indiceCount:%ld, indiceUbSize:%ld, "
+            "maskCount:%ld, maskUbSize:%ld, srcBatchStride:%ld, srcBatchStrideAlign:%ld, dstBatchStride:%ld, "
+            "useCoreNum:%ld, preCoreBatchNum:%ld, lastCoreBatchNum:%ld, eachLoopNum:%ld, eachPreLoopEle:%ld, "
+            "eachLastLoopEle:%ld, eachLastLoopEleAlign:%ld, updatesCount:%ld, updatesUbSize:%ld, dataUbSize:%ld, "
+            "transposeUbSize:%ld, transRepeatTimes:%ld, transRepeatTimesTail:%ld, updateDim23Align:%ld, "
+            "preCoreUpdateDim23:%ld, varDim3Stride:%ld, varDim3Count:%ld, dim3CountSize:%ld, eachLastSize:%ld, "
+            "tilingKey:%ld",
+            tilingData.get_dim0Count(), tilingData.get_dim1Count(), tilingData.get_varDim2Count(),
+            tilingData.get_dim2Count(), tilingData.get_dim3Count(), tilingData.get_dim3CountAlign(),
+            tilingData.get_updatesOneBlock(), tilingData.get_indiceDims(), tilingData.get_indiceCount(),
+            tilingData.get_indiceUbSize(), tilingData.get_maskCount(), tilingData.get_maskUbSize(),
+            tilingData.get_srcBatchStride(), tilingData.get_srcBatchStrideAlign(), tilingData.get_dstBatchStride(),
+            tilingData.get_useCoreNum(), tilingData.get_preCoreBatchNum(), tilingData.get_lastCoreBatchNum(),
+            tilingData.get_eachLoopNum(), tilingData.get_eachPreLoopEle(), tilingData.get_eachLastLoopEle(),
+            tilingData.get_eachLastLoopEleAlign(), tilingData.get_updatesCount(), tilingData.get_updatesUbSize(),
+            tilingData.get_dataUbSize(), tilingData.get_transposeUbSize(), tilingData.get_transRepeatTimes(),
+            tilingData.get_transRepeatTimesTail(), tilingData.get_updateDim23Align(),
+            tilingData.get_preCoreUpdateDim23(), tilingData.get_varDim3Stride(), tilingData.get_varDim3Count(),
+            tilingData.get_dim3CountSize(), tilingData.get_eachLastSize(), tilingData.get_tilingKey());
     return;
 }
 

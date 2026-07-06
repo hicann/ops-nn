@@ -20,94 +20,98 @@ using namespace op;
 using namespace std;
 
 class l2_group_norm_silu_quant_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { cout << "group_norm_silu_quant_test SetUp" << endl; }
+protected:
+    static void SetUpTestCase() { cout << "group_norm_silu_quant_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "group_norm_silu_quant_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "group_norm_silu_quant_test TearDown" << endl; }
 };
 
-TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_float16_perchannel) {
-  auto self_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto gamma_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto beta_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto quantScale_desc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
-  const int64_t group = 1;
-  const double eps = 0.00001;
-  const bool activateSilu = true;
-  auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
-  auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_float16_perchannel)
+{
+    auto self_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gamma_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto beta_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto quantScale_desc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    const int64_t group = 1;
+    const double eps = 0.00001;
+    const bool activateSilu = true;
+    auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
+    auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
-                      INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
-                      OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
+                        INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_bfloat16_perchannel) {
-  auto self_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
-  auto gamma_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
-  auto beta_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScale_desc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
-  const int64_t group = 1;
-  const double eps = 0.00001;
-  const bool activateSilu = true;
+TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_bfloat16_perchannel)
+{
+    auto self_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
+    auto gamma_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
+    auto beta_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScale_desc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    const int64_t group = 1;
+    const double eps = 0.00001;
+    const bool activateSilu = true;
 
-  auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
-  auto mean_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
-  auto rstd_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
+    auto mean_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
+    auto rstd_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
-                      INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
-                      OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
+                        INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_float16_pertensor) {
-  auto self_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto gamma_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto beta_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto quantScale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-  const int64_t group = 1;
-  const double eps = 0.00001;
-  const bool activateSilu = true;
-  auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
-  auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_float16_pertensor)
+{
+    auto self_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gamma_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto beta_desc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto quantScale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    const int64_t group = 1;
+    const double eps = 0.00001;
+    const bool activateSilu = true;
+    auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
+    auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
-                      INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
-                      OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
+                        INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_bfloat16_pertensor) {
-  auto self_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
-  auto gamma_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
-  auto beta_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-  const int64_t group = 1;
-  const double eps = 0.00001;
-  const bool activateSilu = true;
+TEST_F(l2_group_norm_silu_quant_test, ascend910B2_case_bfloat16_pertensor)
+{
+    auto self_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
+    auto gamma_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
+    auto beta_desc = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    const int64_t group = 1;
+    const double eps = 0.00001;
+    const bool activateSilu = true;
 
-  auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
-  auto mean_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
-  auto rstd_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 3, 4}, ACL_INT8, ACL_FORMAT_ND);
+    auto mean_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
+    auto rstd_out_desc = TensorDesc({2, 1}, ACL_BF16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
-                      INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
-                      OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNormSiluQuant,
+                        INPUT(self_desc, gamma_desc, beta_desc, quantScale_desc, group, eps, activateSilu),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

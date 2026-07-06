@@ -19,8 +19,7 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 struct RenormTilingData {
     ReduceOpTilingData reduceTiling;
     float epsilon;

@@ -16,7 +16,6 @@
 #include "register/op_def_registry.h"
 #include "swi_glu_quant_tiling_utils.h"
 
-
 namespace optiling {
 constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t L2_CACHE_LINE_SIZE = 512; // pack unit in cache 512B
@@ -24,12 +23,11 @@ constexpr uint32_t L2_CACHE_LINE_SIZE = 512; // pack unit in cache 512B
 constexpr uint32_t SINGLE_UB_SIZE = 25;
 constexpr uint32_t BATCH_MODE = 1;
 
-static std::map<const ge::DataType, const uint32_t> x_dTypeLen = { { ge::DT_FLOAT16, 2 },
-    { ge::DT_BF16, 2 },
-    { ge::DT_FLOAT, 4 } };
+static std::map<const ge::DataType, const uint32_t> x_dTypeLen = {
+    {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}, {ge::DT_FLOAT, 4}};
 
-inline static ge::graphStatus SetTilingDataForSwiGluQuant(gert::TilingContext *context,
-    SwiGluQuantTilingData &tilingData)
+inline static ge::graphStatus SetTilingDataForSwiGluQuant(gert::TilingContext* context,
+                                                          SwiGluQuantTilingData& tilingData)
 {
     OP_LOGD(context, "SetTilingDataForSwiGluQuant start.");
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
@@ -38,8 +36,7 @@ inline static ge::graphStatus SetTilingDataForSwiGluQuant(gert::TilingContext *c
     return ge::GRAPH_SUCCESS;
 }
 
-
-ge::graphStatus GetCompileInfo(gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo)
+ge::graphStatus GetCompileInfo(gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo)
 {
     OP_LOGD(context, "GetCompileInfo start.");
     auto platformInfo = context->GetPlatformInfo();
@@ -59,9 +56,8 @@ ge::graphStatus GetCompileInfo(gert::TilingContext *context, SwiGluQuantCompileI
     return ge::GRAPH_SUCCESS;
 }
 
-
-ge::graphStatus GetTillingData(gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo,
-    SwiGluQuantTilingParam &tilingParam, SwiGluQuantTilingData &tilingData)
+ge::graphStatus GetTillingData(gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo,
+                               SwiGluQuantTilingParam& tilingParam, SwiGluQuantTilingData& tilingData)
 {
     OP_LOGD(context, "GetTillingData start.");
     if (CheckOpParams(context, compileInfo) != ge::GRAPH_SUCCESS) {
@@ -91,8 +87,7 @@ ge::graphStatus GetTillingData(gert::TilingContext *context, SwiGluQuantCompileI
     return ge::GRAPH_SUCCESS;
 }
 
-
-static ge::graphStatus Tiling4SwiGluQuant(gert::TilingContext *context)
+static ge::graphStatus Tiling4SwiGluQuant(gert::TilingContext* context)
 {
     OP_LOGD(context, "Tiling4SwiGluQuant start.");
     context->SetScheduleMode(BATCH_MODE);
@@ -107,7 +102,7 @@ static ge::graphStatus Tiling4SwiGluQuant(gert::TilingContext *context)
     SetTilingDataForSwiGluQuant(context, tilingData);
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
-    size_t *workspaces = context->GetWorkspaceSizes(1);
+    size_t* workspaces = context->GetWorkspaceSizes(1);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     workspaces[0] = sysWorkspaceSize + tilingData.get_realCoreNum() * BLOCK_SIZE;
@@ -115,13 +110,11 @@ static ge::graphStatus Tiling4SwiGluQuant(gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-
-static ge::graphStatus TilingPrepare4SwiGluQuant(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4SwiGluQuant(gert::TilingParseContext* context)
 {
     OP_LOGD(context, "TilingPrepare4SwiGluQuant start and end.");
     return ge::GRAPH_SUCCESS;
 }
-
 
 IMPL_OP_OPTILING(SwiGluQuant).Tiling(Tiling4SwiGluQuant).TilingParse<CoreCompileInfo>(TilingPrepare4SwiGluQuant);
 } // namespace optiling

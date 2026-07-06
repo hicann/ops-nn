@@ -34,23 +34,17 @@ struct TestTilingData {
     int64_t roundMode;
 };
 
-extern "C" __global__ __aicore__ void quant_max(GM_ADDR x, GM_ADDR scale, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void quant_max(GM_ADDR x, GM_ADDR scale, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace,
+                                                GM_ADDR tiling);
 
-class quant_max_test : public testing::Test
-{
+class quant_max_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "quant_max_test SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "quant_max_test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "quant_max_test SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "quant_max_test TearDown" << std::endl; }
 };
 
 // Helper function to generate test data
-template<typename T>
+template <typename T>
 void GenerateInputData(void* buffer, size_t size, float minValue = -1.0f, float maxValue = 1.0f)
 {
     T* data = static_cast<T*>(buffer);
@@ -67,7 +61,7 @@ void GenerateInputData(void* buffer, size_t size, float minValue = -1.0f, float 
     }
 }
 
-template<typename T>
+template <typename T>
 float ComputeAmax(const T* data, size_t count)
 {
     float amax = 0.0f;
@@ -92,7 +86,7 @@ TEST_F(quant_max_test, test_fp32_to_fp8_e5m2_1d)
 {
     size_t elementCount = 4096;
     size_t xSize = elementCount * sizeof(float);
-    size_t ySize = elementCount * sizeof(uint8_t);  // FP8
+    size_t ySize = elementCount * sizeof(uint8_t); // FP8
     size_t amaxSize = sizeof(float);
     size_t scaleSize = sizeof(float);
 
@@ -121,7 +115,7 @@ TEST_F(quant_max_test, test_fp32_to_fp8_e5m2_1d)
     tilingData.blockFactor = elementCount;
     tilingData.blockTailFactor = 0;
     tilingData.baseLen = 1;
-    tilingData.roundMode = 0;  // Rint
+    tilingData.roundMode = 0; // Rint
     memcpy(tiling, &tilingData, tilingSize);
 
     ICPU_SET_TILING_KEY(0);
@@ -318,7 +312,7 @@ TEST_F(quant_max_test, test_round_mode)
     tilingData.blockFactor = elementCount;
     tilingData.blockTailFactor = 0;
     tilingData.baseLen = 1;
-    tilingData.roundMode = 1;  // Round mode
+    tilingData.roundMode = 1; // Round mode
     memcpy(tiling, &tilingData, tilingSize);
 
     ICPU_SET_TILING_KEY(1);

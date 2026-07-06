@@ -26,13 +26,12 @@ constexpr uint64_t KERNEL_TEMPLATE_TYPE_PPMATMUL = 3;
 constexpr uint64_t PPMATMUL_PRIORITY_M = 1024;
 constexpr uint64_t PPMATMUL_WORKSPACE_SIZE = 24 * 1024 * 1024;
 constexpr uint64_t NO_BATCH_DIM_SUM = 2;
-}  // namespace
+} // namespace
 
 namespace optiling {
 
-PpMatmulInt8Tiling::PpMatmulInt8Tiling(gert::TilingContext *context)
-    : QuantBatchMatmulV3TilingBase(context, false),
-      tilingData_(tilingDataSelf_)
+PpMatmulInt8Tiling::PpMatmulInt8Tiling(gert::TilingContext* context)
+    : QuantBatchMatmulV3TilingBase(context, false), tilingData_(tilingDataSelf_)
 {
     Reset();
 }
@@ -47,10 +46,7 @@ void PpMatmulInt8Tiling::Reset()
     }
 }
 
-ge::graphStatus PpMatmulInt8Tiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PpMatmulInt8Tiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus PpMatmulInt8Tiling::GetShapeAttrsInfo()
 {
@@ -68,8 +64,7 @@ bool PpMatmulInt8Tiling::IsCapable()
     auto inputBShape = context_->GetInputShape(1)->GetOriginShape();
     uint32_t N = inputBShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
     OP_TILING_CHECK((K == 1 || N == 1),
-        OP_LOGI(inputParams_.opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."),
-        return false);
+                    OP_LOGI(inputParams_.opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."), return false);
     auto biasShape = GetBiasShape(GetBiasIdx());
     auto attrs = context_->GetAttrs();
     if (attrs) {
@@ -98,18 +93,15 @@ ge::graphStatus PpMatmulInt8Tiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus PpMatmulInt8Tiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PpMatmulInt8Tiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 uint64_t PpMatmulInt8Tiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(1, KERNEL_TEMPLATE_TYPE_PPMATMUL, 0, 0);  // 13
+    return GET_TPL_TILING_KEY(1, KERNEL_TEMPLATE_TYPE_PPMATMUL, 0, 0); // 13
 }
 
 ge::graphStatus PpMatmulInt8Tiling::GetWorkspaceSize()
 {
-    workspaceSize_ = static_cast<size_t>(PPMATMUL_WORKSPACE_SIZE);  // 24M same as ppmatmul tiling
+    workspaceSize_ = static_cast<size_t>(PPMATMUL_WORKSPACE_SIZE); // 24M same as ppmatmul tiling
     return ge::GRAPH_SUCCESS;
 }
 
@@ -138,17 +130,17 @@ ge::graphStatus PpMatmulInt8Tiling::PostTiling()
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.", tilingDataSize_),
         return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           static_cast<void *>(&tilingData_), tilingDataSize_);
+                           static_cast<void*>(&tilingData_), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
     }
     context_->SetBlockDim(ppMatmulDefaultTilingData_.blockDim);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
-    size_t *workspaces = context_->GetWorkspaceSizes(1);  // set workspace
+    size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

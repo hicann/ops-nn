@@ -30,7 +30,8 @@ template <typename T, typename U, uint64_t RoundMode>
 class GroupedQuantMaxRegbase : public GroupedQuantMaxBase<T, U, RoundMode> {
 public:
     __aicore__ inline GroupedQuantMaxRegbase(const GroupedQuantMaxTilingData* tilingData) : tilingData_(tilingData){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax,
+                                GM_ADDR workspace);
     __aicore__ inline void Process();
     __aicore__ inline void MergeAmax();
 
@@ -46,7 +47,7 @@ private:
     constexpr static int64_t WS_RESERVE = 1024 * 1024;
     constexpr static int64_t ALIGN_BYTES = 32;
     constexpr static int64_t VF_BYTES = platform::GetVRegSize();
-    constexpr static int64_t FLOAT_ALIGN_ELEM = ALIGN_BYTES / sizeof(float);  // 8
+    constexpr static int64_t FLOAT_ALIGN_ELEM = ALIGN_BYTES / sizeof(float); // 8
 
     TPipe pipe_;
     TQue<QuePosition::VECIN, bufferNum_> inQueueX_;
@@ -80,8 +81,8 @@ private:
 };
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Init(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace)
+__aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Init(GM_ADDR x, GM_ADDR scale, GM_ADDR groupList,
+                                                                     GM_ADDR y, GM_ADDR amax, GM_ADDR workspace)
 {
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
     coreIdx_ = GetBlockIdx();
@@ -95,7 +96,8 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Init(
     groupListGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(groupList));
     yGm_.SetGlobalBuffer(reinterpret_cast<__gm__ U*>(y));
     amaxGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(amax));
-    coreGroupMaxGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + WS_RESERVE), numGroups_ * totalCoreNum_);
+    coreGroupMaxGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + WS_RESERVE),
+                                    numGroups_ * totalCoreNum_);
 
     pipe_.InitBuffer(inQueueX_, bufferNum_, tilingData_->ubFactor * sizeof(T));
     pipe_.InitBuffer(outQueueY_, bufferNum_, tilingData_->ubFactor * sizeof(U));
@@ -103,8 +105,11 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Init(
     pipe_.InitBuffer(groupListBuf_, numGroups_ * sizeof(int64_t));
     pipe_.InitBuffer(maxBuf_, numGroups_ * sizeof(float));
     pipe_.InitBuffer(zeroBuf_, numGroups_ * sizeof(float));
-    pipe_.InitBuffer(inQueueGroupMax_, Num_1, ((numGroups_ + FLOAT_ALIGN_ELEM - 1) / FLOAT_ALIGN_ELEM * FLOAT_ALIGN_ELEM) * totalCoreNum_ * sizeof(float));
-    pipe_.InitBuffer(outQueueAmax_, Num_1, ((numGroups_ + FLOAT_ALIGN_ELEM - 1) / FLOAT_ALIGN_ELEM * FLOAT_ALIGN_ELEM) * sizeof(T));
+    pipe_.InitBuffer(
+        inQueueGroupMax_, Num_1,
+        ((numGroups_ + FLOAT_ALIGN_ELEM - 1) / FLOAT_ALIGN_ELEM * FLOAT_ALIGN_ELEM) * totalCoreNum_ * sizeof(float));
+    pipe_.InitBuffer(outQueueAmax_, Num_1,
+                     ((numGroups_ + FLOAT_ALIGN_ELEM - 1) / FLOAT_ALIGN_ELEM * FLOAT_ALIGN_ELEM) * sizeof(T));
 
     scaleLocal = scaleBuf_.Get<float>();
     groupListLocal = groupListBuf_.Get<int64_t>();
@@ -122,7 +127,7 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Init(
     int32_t eventIDMTE2ToV = GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V);
     SetFlag<AscendC::HardEvent::MTE2_V>(eventIDMTE2ToV);
     WaitFlag<AscendC::HardEvent::MTE2_V>(eventIDMTE2ToV);
- 
+
     Duplicate<float>(zeroLocal, 0.0f, numGroups_);
 
     int32_t eventIDMTE3ToV = GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3);
@@ -196,14 +201,14 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Process()
     int32_t eventIDVToS = GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_S);
     SetFlag<AscendC::HardEvent::V_S>(eventIDVToS);
     WaitFlag<AscendC::HardEvent::V_S>(eventIDVToS);
-    
+
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(numGroups_ * sizeof(float)), 0, 0, 0};
     DataCopyPad<float>(coreGroupMaxGm_[coreIdx_ * numGroups_], maxLocal, copyParams);
 }
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::CopyXAndCompute(
-    int64_t dataCount, int64_t offset, int64_t groupIndex)
+__aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::CopyXAndCompute(int64_t dataCount, int64_t offset,
+                                                                                int64_t groupIndex)
 {
     CopyInX(dataCount, offset);
     Compute(dataCount, groupIndex);
@@ -262,13 +267,15 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Compute(int64_t 
                 AscendC::Reg::Cast<float, half, GroupedQuantMaxBase<T, U, RoundMode>::CAST_TRAIT_HALF_TO_FP32>(
                     vregFloatX, vregX, mask);
             } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xLocalAddr + i * VL_);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX,
+                                                                                             xLocalAddr + i * VL_);
                 AscendC::Reg::Cast<float, bfloat16_t, GroupedQuantMaxBase<T, U, RoundMode>::CAST_TRAIT_BF16_TO_FP32>(
                     vregFloatX, vregX, mask);
             }
 
             AscendC::Reg::Abs<float>(vregFloatAbsT, vregFloatX, mask);
-            AscendC::Reg::Max<float, AscendC::Reg::MaskMergeMode::MERGING>(vregTileMaxFp32, vregTileMaxFp32, vregFloatAbsT, mask);
+            AscendC::Reg::Max<float, AscendC::Reg::MaskMergeMode::MERGING>(vregTileMaxFp32, vregTileMaxFp32,
+                                                                           vregFloatAbsT, mask);
             AscendC::Reg::Mul(vregFloatY, vregFloatX, vregS, mask);
 
             if constexpr (IsSameType<U, hifloat8_t>::value) {
@@ -287,13 +294,13 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::Compute(int64_t 
         }
 
         AscendC::Reg::Reduce<Reg::ReduceType::MAX>(vregTileMaxFp32, vregTileMaxFp32, maskAll);
-        AscendC::Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)maxAddr + groupIndex), vregTileMaxFp32, maskOne);
+        AscendC::Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            ((__local_mem__ float*)maxAddr + groupIndex), vregTileMaxFp32, maskOne);
     }
 
     inQueueX_.FreeTensor(xLocal);
     outQueueY_.EnQue(outLocal);
 }
-
 
 template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::CopyOutY(int64_t yLen, int64_t yOutOffset)
@@ -315,7 +322,8 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::MergeAmax()
     LocalTensor<T> amaxLocal = outQueueAmax_.AllocTensor<T>();
 
     uint8_t padNum = (numGroups_ % FLOAT_ALIGN_ELEM == 0) ? 0 : FLOAT_ALIGN_ELEM - (numGroups_ % FLOAT_ALIGN_ELEM);
-    DataCopyExtParams copyParams{static_cast<uint16_t>(totalCoreNum_), static_cast<uint32_t>(numGroups_ * sizeof(float)), 0, 0, 0};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(totalCoreNum_),
+                                 static_cast<uint32_t>(numGroups_ * sizeof(float)), 0, 0, 0};
     DataCopyPad(groupMaxLocal, coreGroupMaxGm_, copyParams, {true, 0, padNum, 0});
 
     inQueueGroupMax_.EnQue(groupMaxLocal);
@@ -324,7 +332,7 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::MergeAmax()
     __local_mem__ float* groupMaxLocalAddr = (__local_mem__ float*)groupMaxLocal.GetPhyAddr();
     __local_mem__ T* amaxLocalAddr = (__local_mem__ T*)amaxLocal.GetPhyAddr();
 
-        __VEC_SCOPE__
+    __VEC_SCOPE__
     {
         AscendC::Reg::RegTensor<float> vregFloatMax;
         AscendC::Reg::RegTensor<float> vregFloatTmp;
@@ -342,13 +350,17 @@ __aicore__ inline void GroupedQuantMaxRegbase<T, U, RoundMode>::MergeAmax()
             mask = AscendC::Reg::UpdateMask<float>(count);
             AscendC::Reg::Duplicate<float>(vregFloatMax, 0.0f, mask);
             for (uint16_t j = 0; j < totalCoreNumLoop_; ++j) {
-                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatTmp, groupMaxLocalAddr + i * VL_ + j * numGroupsAlign32_);
-                AscendC::Reg::Max<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregFloatMax, vregFloatMax, vregFloatTmp, mask);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
+                    vregFloatTmp, groupMaxLocalAddr + i * VL_ + j * numGroupsAlign32_);
+                AscendC::Reg::Max<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregFloatMax, vregFloatMax, vregFloatTmp,
+                                                                               mask);
             }
 
             if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
-                AscendC::Reg::Cast<T, float, GroupedQuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_X_DETYPE>(vregFloatOutAmax, vregFloatMax, maskU8);
-                AscendC::Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(amaxLocalAddr + i * VL_, vregFloatOutAmax, mask);
+                AscendC::Reg::Cast<T, float, GroupedQuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_X_DETYPE>(
+                    vregFloatOutAmax, vregFloatMax, maskU8);
+                AscendC::Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(amaxLocalAddr + i * VL_, vregFloatOutAmax,
+                                                                           mask);
             } else if constexpr (IsSameType<T, float>::value) {
                 AscendC::Reg::StoreAlign<T>(amaxLocalAddr + i * VL_, vregFloatMax, mask);
             }

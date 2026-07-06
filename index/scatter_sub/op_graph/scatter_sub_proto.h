@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_SCATTER_SUB_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_SCATTER_SUB_H_
 
@@ -15,7 +15,6 @@
 #include "graph/operator.h"
 
 namespace ge {
-
 
 /**
 * @brief Subs sparse "updates" to a variable reference.
@@ -40,7 +39,10 @@ namespace ge {
 * Compatible with the TensorFlow operator ScatterSub.
 */
 
-#define SCATTER_SUB_SUPPORT_TYPES {DT_FLOAT16,DT_FLOAT,DT_INT32,DT_INT8,DT_UINT8,DT_BF16}
+#define SCATTER_SUB_SUPPORT_TYPES                                  \
+    {                                                              \
+        DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16 \
+    }
 REG_OP(ScatterSub)
     .INPUT(var, TensorType(SCATTER_SUB_SUPPORT_TYPES))
     .INPUT(indices, TensorType::IndexNumberType())
@@ -49,6 +51,6 @@ REG_OP(ScatterSub)
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterSub)
 
-}
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_SUB_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_SUB_H_

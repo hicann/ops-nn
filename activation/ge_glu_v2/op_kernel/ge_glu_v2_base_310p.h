@@ -44,26 +44,24 @@ public:
 
 protected:
     __aicore__ inline void BaseInit310P(GM_ADDR workspace);
-    __aicore__ inline void CopyInX(
-        const int64_t& index, const int64_t& blockCount, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2);
-    __aicore__ inline void ComputeGeluBaseErf(
-        LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut, LocalTensor<float>& x1,
-        LocalTensor<float>& x_pow, const int64_t& length);
-    __aicore__ inline void CopyOutBase(
-        const int64_t& index, const int64_t& length, const int64_t& group, LocalTensor<T>& outLocal,
-        GlobalTensor<T>& outGm, LocalTensor<T>& tmpLocal, int64_t flag);
-    __aicore__ inline void CopyInXAlignLastBigWithoutPad(
-        const int64_t& idxX, const int64_t& idxY, const int64_t& blockLen, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2,
-        const int64_t& delta);
-    __aicore__ inline void CopyOutGeluBaseLastBigWithoutPad(
-        const int64_t& idxX, const int64_t& idxY, const int64_t& blockLen, LocalTensor<T>& outLocal,
-        const int64_t& delta);
-    __aicore__ inline void CopyOutMulBaseLastBigWithoutPad(
-        const int64_t& idxX, const int64_t& idxY, const int64_t& blockLen, LocalTensor<T>& outLocal,
-        const int64_t& delta);
-    __aicore__ inline void CopyNew(
-        int64_t saveToWsNum, const int64_t& group, LocalTensor<T>& outLocal, GlobalTensor<T>& outGm, int64_t flag,
-        bool needTransWorkspace);
+    __aicore__ inline void CopyInX(const int64_t& index, const int64_t& blockCount, LocalTensor<T>& ubX1,
+                                   LocalTensor<T>& ubX2);
+    __aicore__ inline void ComputeGeluBaseErf(LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut,
+                                              LocalTensor<float>& x1, LocalTensor<float>& x_pow, const int64_t& length);
+    __aicore__ inline void CopyOutBase(const int64_t& index, const int64_t& length, const int64_t& group,
+                                       LocalTensor<T>& outLocal, GlobalTensor<T>& outGm, LocalTensor<T>& tmpLocal,
+                                       int64_t flag);
+    __aicore__ inline void CopyInXAlignLastBigWithoutPad(const int64_t& idxX, const int64_t& idxY,
+                                                         const int64_t& blockLen, LocalTensor<T>& ubX1,
+                                                         LocalTensor<T>& ubX2, const int64_t& delta);
+    __aicore__ inline void CopyOutGeluBaseLastBigWithoutPad(const int64_t& idxX, const int64_t& idxY,
+                                                            const int64_t& blockLen, LocalTensor<T>& outLocal,
+                                                            const int64_t& delta);
+    __aicore__ inline void CopyOutMulBaseLastBigWithoutPad(const int64_t& idxX, const int64_t& idxY,
+                                                           const int64_t& blockLen, LocalTensor<T>& outLocal,
+                                                           const int64_t& delta);
+    __aicore__ inline void CopyNew(int64_t saveToWsNum, const int64_t& group, LocalTensor<T>& outLocal,
+                                   GlobalTensor<T>& outGm, int64_t flag, bool needTransWorkspace);
 
 protected:
     uint64_t m_rightPadNum;
@@ -99,9 +97,8 @@ __aicore__ inline void GeGluV2Base310P<T>::BaseInit310P(GM_ADDR workspace)
             gmSizePerCore = this->m_tilingData.tailLoopNum * this->m_tilingData.group * this->m_tilingData.splitSize +
                             this->m_tilingData.lastTailGroup * this->m_tilingData.splitSize;
         }
-        tailTmpWsSelf.SetGlobalBuffer(
-            reinterpret_cast<__gm__ T*>(workspace + this->blockIdx * BYTE_ONE_BLOCK * 4),
-            this->m_tilingData.blockSize * 4); // 扩大两倍，分别给两个输出
+        tailTmpWsSelf.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(workspace + this->blockIdx * BYTE_ONE_BLOCK * 4),
+                                      this->m_tilingData.blockSize * 4); // 扩大两倍，分别给两个输出
         m_splitSizeAlign = (this->m_tilingData.splitSize + this->m_tilingData.blockSize - 1) /
                            this->m_tilingData.blockSize * this->m_tilingData.blockSize;
         m_rightPadNum = m_splitSizeAlign - this->m_tilingData.splitSize;
@@ -112,8 +109,8 @@ __aicore__ inline void GeGluV2Base310P<T>::BaseInit310P(GM_ADDR workspace)
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::CopyInX(
-    const int64_t& index, const int64_t& group, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2)
+__aicore__ inline void GeGluV2Base310P<T>::CopyInX(const int64_t& index, const int64_t& group, LocalTensor<T>& ubX1,
+                                                   LocalTensor<T>& ubX2)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = group;
@@ -137,53 +134,47 @@ __aicore__ inline void GeGluV2Base310P<T>::CopyInX(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::CopyNew(
-    int64_t saveToWsNum, const int64_t& group, LocalTensor<T>& outLocal, GlobalTensor<T>& outGm, int64_t flag,
-    bool needTransWorkspace)
+__aicore__ inline void GeGluV2Base310P<T>::CopyNew(int64_t saveToWsNum, const int64_t& group, LocalTensor<T>& outLocal,
+                                                   GlobalTensor<T>& outGm, int64_t flag, bool needTransWorkspace)
 {
     for (int64_t idx = 0; idx < group; ++idx) {
         if (idx >= (group - saveToWsNum) && needTransWorkspace) {
             // 只有一个核或者最后一个核处理时，直接覆盖后面的地址即可
             if (this->m_tilingData.realCoreNum == 1 || m_isLastCore) {
-                DataCopy(
-                    outGm[curLoopDstAddr + idx * this->m_tilingData.splitSize], outLocal[idx * m_splitSizeAlign],
-                    m_splitSizeAlign);
+                DataCopy(outGm[curLoopDstAddr + idx * this->m_tilingData.splitSize], outLocal[idx * m_splitSizeAlign],
+                         m_splitSizeAlign);
                 PipeBarrier<PIPE_MTE3>();
             } else if (this->m_tilingData.splitSize < this->m_tilingData.blockSize) {
                 if (idx != group - 1) {
                     continue;
                 } // 最后一行统一处理
-                uint64_t numOneBlock =
-                    (this->m_tilingData.blockSize + this->m_tilingData.splitSize - 1) / this->m_tilingData.splitSize;
+                uint64_t numOneBlock = (this->m_tilingData.blockSize + this->m_tilingData.splitSize - 1) /
+                                       this->m_tilingData.splitSize;
                 tailBlock = numOneBlock * this->m_tilingData.splitSize % this->m_tilingData.blockSize;
                 for (int64_t i = 0; i < numOneBlock; i++) {
-                    DataCopy(
-                        tailTmpWsSelf[flag * this->m_tilingData.blockSize * 2 + i * this->m_tilingData.splitSize],
-                        outLocal[(idx - numOneBlock + 1 + i) * m_splitSizeAlign], m_splitSizeAlign);
+                    DataCopy(tailTmpWsSelf[flag * this->m_tilingData.blockSize * 2 + i * this->m_tilingData.splitSize],
+                             outLocal[(idx - numOneBlock + 1 + i) * m_splitSizeAlign], m_splitSizeAlign);
                     PipeBarrier<PIPE_MTE3>();
                 }
             } else {
-                DataCopy(
-                    outGm[curLoopDstAddr + idx * this->m_tilingData.splitSize], outLocal[idx * m_splitSizeAlign],
-                    alignLength); // 向下对齐拷贝
-                DataCopy(
-                    tailTmpWsSelf[flag * this->m_tilingData.blockSize * 2],
-                    outLocal[idx * m_splitSizeAlign + alignLength - this->m_tilingData.blockSize],
-                    this->m_tilingData.blockSize * 2); // 向下对齐拷贝
+                DataCopy(outGm[curLoopDstAddr + idx * this->m_tilingData.splitSize], outLocal[idx * m_splitSizeAlign],
+                         alignLength); // 向下对齐拷贝
+                DataCopy(tailTmpWsSelf[flag * this->m_tilingData.blockSize * 2],
+                         outLocal[idx * m_splitSizeAlign + alignLength - this->m_tilingData.blockSize],
+                         this->m_tilingData.blockSize * 2); // 向下对齐拷贝
             }
         } else {
-            DataCopy(
-                outGm[curLoopDstAddr + idx * this->m_tilingData.splitSize], outLocal[idx * m_splitSizeAlign],
-                m_splitSizeAlign);
+            DataCopy(outGm[curLoopDstAddr + idx * this->m_tilingData.splitSize], outLocal[idx * m_splitSizeAlign],
+                     m_splitSizeAlign);
             PipeBarrier<PIPE_MTE3>();
         }
     }
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::CopyOutBase(
-    const int64_t& index, const int64_t& length, const int64_t& group, LocalTensor<T>& outLocal, GlobalTensor<T>& outGm,
-    LocalTensor<T>& tmpLocal, int64_t flag)
+__aicore__ inline void GeGluV2Base310P<T>::CopyOutBase(const int64_t& index, const int64_t& length,
+                                                       const int64_t& group, LocalTensor<T>& outLocal,
+                                                       GlobalTensor<T>& outGm, LocalTensor<T>& tmpLocal, int64_t flag)
 {
     curLoopDstAddr = this->gmDYOffset + index * this->one_process_out_stride;
     if (m_isSplitSizeAlign) {
@@ -207,24 +198,22 @@ __aicore__ inline void GeGluV2Base310P<T>::CopyOutBase(
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID3);
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID3);
 
-            DataCopy(
-                tmpLocal, tailTmpWsSelf[flag * this->m_tilingData.blockSize * 2 + tailBlock],
-                this->m_tilingData.blockSize);
+            DataCopy(tmpLocal, tailTmpWsSelf[flag * this->m_tilingData.blockSize * 2 + tailBlock],
+                     this->m_tilingData.blockSize);
 
             SetFlag<HardEvent::MTE2_MTE3>(EVENT_ID3);
             WaitFlag<HardEvent::MTE2_MTE3>(EVENT_ID3);
 
-            DataCopy(
-                outGm[curLoopDstAddr + group * this->m_tilingData.splitSize - this->m_tilingData.blockSize], tmpLocal,
-                this->m_tilingData.blockSize);
+            DataCopy(outGm[curLoopDstAddr + group * this->m_tilingData.splitSize - this->m_tilingData.blockSize],
+                     tmpLocal, this->m_tilingData.blockSize);
         }
     }
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::CopyInXAlignLastBigWithoutPad(
-    const int64_t& idxX, const int64_t& idxY, const int64_t& blockLen, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2,
-    const int64_t& delta)
+__aicore__ inline void GeGluV2Base310P<T>::CopyInXAlignLastBigWithoutPad(const int64_t& idxX, const int64_t& idxY,
+                                                                         const int64_t& blockLen, LocalTensor<T>& ubX1,
+                                                                         LocalTensor<T>& ubX2, const int64_t& delta)
 {
     DataCopyParams copyParams{};
     copyParams.blockCount = 1;
@@ -239,8 +228,10 @@ __aicore__ inline void GeGluV2Base310P<T>::CopyInXAlignLastBigWithoutPad(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::CopyOutMulBaseLastBigWithoutPad(
-    const int64_t& idxX, const int64_t& idxY, const int64_t& blockLen, LocalTensor<T>& outLocal, const int64_t& delta)
+__aicore__ inline void GeGluV2Base310P<T>::CopyOutMulBaseLastBigWithoutPad(const int64_t& idxX, const int64_t& idxY,
+                                                                           const int64_t& blockLen,
+                                                                           LocalTensor<T>& outLocal,
+                                                                           const int64_t& delta)
 {
     DataCopyParams copyParams{};
     copyParams.blockCount = 1;
@@ -251,8 +242,10 @@ __aicore__ inline void GeGluV2Base310P<T>::CopyOutMulBaseLastBigWithoutPad(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::CopyOutGeluBaseLastBigWithoutPad(
-    const int64_t& idxX, const int64_t& idxY, const int64_t& blockLen, LocalTensor<T>& outLocal, const int64_t& delta)
+__aicore__ inline void GeGluV2Base310P<T>::CopyOutGeluBaseLastBigWithoutPad(const int64_t& idxX, const int64_t& idxY,
+                                                                            const int64_t& blockLen,
+                                                                            LocalTensor<T>& outLocal,
+                                                                            const int64_t& delta)
 {
     DataCopyParams copyParams{};
     copyParams.blockCount = 1;
@@ -263,9 +256,9 @@ __aicore__ inline void GeGluV2Base310P<T>::CopyOutGeluBaseLastBigWithoutPad(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base310P<T>::ComputeGeluBaseErf(
-    LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut, LocalTensor<float>& x1, LocalTensor<float>& xPow,
-    const int64_t& length)
+__aicore__ inline void GeGluV2Base310P<T>::ComputeGeluBaseErf(LocalTensor<float>& ubx2_fp32,
+                                                              LocalTensor<float>& computeOut, LocalTensor<float>& x1,
+                                                              LocalTensor<float>& xPow, const int64_t& length)
 {
     Mins(x1, ubx2_fp32, ERF_THRESHOLD, length);
 

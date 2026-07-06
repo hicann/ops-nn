@@ -26,11 +26,10 @@ template <typename T>
 using ImplictOutputOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const int32_t&);
 
 template <typename T, typename P, ImplictOutputOp<P>* op, uint8_t paramsCount>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& dataLocal, LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& dataLocal, LocalTensor<float>& float32Tensor,
+                                   uint32_t maxCastDataCount, int64_t dataCount)
     {
         op(dataLocal, dataLocal, dataCount);
     }
@@ -38,12 +37,10 @@ public:
 
 #if __CCE_AICORE__ >= 220
 template <ImplictOutputOp<float>* op, uint8_t paramsCount>
-class InnerComputer<bfloat16_t, float, op, paramsCount>
-{
+class InnerComputer<bfloat16_t, float, op, paramsCount> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& dataLocal, LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount,
-        int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& dataLocal, LocalTensor<float>& float32Tensor,
+                                   uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
@@ -58,9 +55,8 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<bfloat16_t>& dataLocal, LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount,
-        uint32_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& dataLocal, LocalTensor<float>& float32Tensor,
+                                          uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -74,16 +70,13 @@ private:
 };
 #endif
 
-template <
-    typename T, typename P, ImplictOutputOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT>
-class ForeachImplictOutput
-    : public KernelForeachUnary<
-          T, ForeachImplictOutput<T, P, op, bufferNum, paramsCount>, bufferNum, paramsCount, false>
-{
+template <typename T, typename P, ImplictOutputOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT>
+class ForeachImplictOutput : public KernelForeachUnary<T, ForeachImplictOutput<T, P, op, bufferNum, paramsCount>,
+                                                       bufferNum, paramsCount, false> {
 public:
-    using Base =
-        KernelForeachUnary<T, ForeachImplictOutput<T, P, op, bufferNum, paramsCount>, bufferNum, paramsCount, false>;
+    using Base = KernelForeachUnary<T, ForeachImplictOutput<T, P, op, bufferNum, paramsCount>, bufferNum, paramsCount,
+                                    false>;
     using Operator = ImplictOutputOp<P>;
 
     __aicore__ inline ForeachImplictOutput() : Base(*this){};
@@ -91,8 +84,8 @@ public:
     using Base::Process;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
         InnerComputer<T, P, op, paramsCount> computer;
@@ -115,22 +108,15 @@ private:
         Base::dataQueue.FreeTensor(dataLocal);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
-    {}
+    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder) {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
-    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
-    {}
+    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart) {}
 
     friend Base;
 };

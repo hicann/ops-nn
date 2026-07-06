@@ -28,15 +28,9 @@ using namespace ge;
 
 class ErfinvTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ErfinvTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ErfinvTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ErfinvTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ErfinvTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -51,9 +45,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void DoTilingTest(
-    gert::StorageShape& input_shape, gert::StorageShape& output_shape, ge::DataType input_dataType,
-    ge::DataType output_dataType, ge::graphStatus expect_status, int expect_tilingKey, string& expect_tiling_data)
+static void DoTilingTest(gert::StorageShape& input_shape, gert::StorageShape& output_shape, ge::DataType input_dataType,
+                         ge::DataType output_dataType, ge::graphStatus expect_status, int expect_tilingKey,
+                         string& expect_tiling_data)
 {
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
@@ -83,20 +77,20 @@ static void DoTilingTest(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(1, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -166,8 +160,8 @@ TEST_F(ErfinvTilingTest, test_erfinv_failed_diff_shape_04)
     gert::StorageShape output_shape = {{2, 1024}, {2, 1024}};
     int expect_tilingKey = 0;
     string expect_tiling_data = "";
-    DoTilingTest(
-        input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+    DoTilingTest(input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey,
+                 expect_tiling_data);
 }
 
 TEST_F(ErfinvTilingTest, test_erfinv_failed_diff_dtype_05)

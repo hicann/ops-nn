@@ -21,23 +21,20 @@
 using namespace MultiAddRmsNormDynQnt;
 
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
-class KernelMultiAddRmsNormDynamicQuantNormal : public KernelMultiAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM>
-{
+class KernelMultiAddRmsNormDynamicQuantNormal
+    : public KernelMultiAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelMultiAddRmsNormDynamicQuantNormal(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelMultiAddRmsNormDynamicQuantNormal(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
-        GM_ADDR y, GM_ADDR outScale1, GM_ADDR outScale2, GM_ADDR workspace,
-        const MultiAddRmsNormDynamicQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR y1,
+                                GM_ADDR y2, GM_ADDR x, GM_ADDR y, GM_ADDR outScale1, GM_ADDR outScale2,
+                                GM_ADDR workspace, const MultiAddRmsNormDynamicQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2);
         this->InitOutGlobalTensors(y1, y2, x, y, outScale1, outScale2);
-        this->numRowsAligned = (this->rowStep + MultiAddRNDQ::ELEM_PER_BLK_FP32 - 1) / MultiAddRNDQ::ELEM_PER_BLK_FP32 * MultiAddRNDQ::ELEM_PER_BLK_FP32;
+        this->numRowsAligned = (this->rowStep + MultiAddRNDQ::ELEM_PER_BLK_FP32 - 1) / MultiAddRNDQ::ELEM_PER_BLK_FP32 *
+                               MultiAddRNDQ::ELEM_PER_BLK_FP32;
         this->ubAligned = (this->numLastDimAligned - this->numLastDim) >= ELEM_PER_BLK_FP16;
         /*
           UB = 3 * this->rowStep * alignedCol * sizeof(T)
@@ -111,8 +108,8 @@ private:
         // 2. 将x1剩余的tensor相加
         for (int32_t i = 1; i < this->x1Num; ++i) {
             SetWaitFlag<HardEvent::V_MTE2>(HardEvent::V_MTE2);
-            DataCopyEx(
-                x1x2LocalIn[elementCount], this->x1GmList[i][gmOffset], this->numLastDim, rowCount, this->ubAligned);
+            DataCopyEx(x1x2LocalIn[elementCount], this->x1GmList[i][gmOffset], this->numLastDim, rowCount,
+                       this->ubAligned);
             SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
             auto xiLocal = x1x2LocalIn[elementCount];
             Cast(yLocalFp32, xiLocal, RoundMode::CAST_NONE, elementCount);
@@ -178,15 +175,14 @@ private:
         // reduce#1 for mean
         for (int32_t rid = 0; rid < nums; ++rid) {
             auto roundOffset = rid * this->numLastDimAligned;
-            float squareSumTemp =
-                ReduceSumHalfInterval(yLocalFp32[roundOffset], this->numLastDim); // aveLocalTemp <-- E(x**2)
+            float squareSumTemp = ReduceSumHalfInterval(yLocalFp32[roundOffset],
+                                                        this->numLastDim); // aveLocalTemp <-- E(x**2)
             float rstdLocalTemp = 1 / sqrt(squareSumTemp * this->aveNum + this->eps);
             event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
             SetFlag<HardEvent::S_V>(eventSV);
             WaitFlag<HardEvent::S_V>(eventSV);
-            Muls(
-                xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp,
-                this->numLastDim); // xLocalFp32 <- x * rstd
+            Muls(xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp,
+                 this->numLastDim); // xLocalFp32 <- x * rstd
         }
         PipeBarrier<PIPE_V>();
 
@@ -248,12 +244,10 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            elementCount);
-        Cast(
-            xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            elementCount);
+        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
+        Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
         PipeBarrier<PIPE_V>();
         Cast(outQuant01, yLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
         Cast(outQuant02, xLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
@@ -279,9 +273,8 @@ private:
         outRowsQue.FreeTensor(outY12);
     }
 
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, uint32_t size,
-        int32_t nums)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                       LocalTensor<float>& scaleTensor, uint32_t size, int32_t nums)
     {
         float maxTemp;
         float scaleTemp;
@@ -294,7 +287,7 @@ private:
             eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
             SetFlag<HardEvent::V_S>(eventVS);
             WaitFlag<HardEvent::V_S>(eventVS);
-            
+
             maxTemp = tmpTensor[rid * this->numLastDimAligned].GetValue(0); // Reduce
             scaleTemp = SafeDiv(DYNAMIC_QUANT_DIVIDEND, maxTemp);
             scaleTensor.SetValue(rid, 1 / scaleTemp);

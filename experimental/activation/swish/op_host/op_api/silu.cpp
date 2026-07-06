@@ -20,16 +20,18 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(Swish);
 
-static const aclTensor *SwishAiCore(const aclTensor *x, aclTensor *y, float scale, aclOpExecutor *executor) {
-  L0_DFX(SwishAiCore, x, y);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Swish, OP_INPUT(x), OP_OUTPUT(y), OP_ATTR(scale));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SwishAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return y;
+static const aclTensor* SwishAiCore(const aclTensor* x, aclTensor* y, float scale, aclOpExecutor* executor)
+{
+    L0_DFX(SwishAiCore, x, y);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Swish, OP_INPUT(x), OP_OUTPUT(y), OP_ATTR(scale));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SwishAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return y;
 }
 
-const aclTensor *Swish(const aclTensor *x, float scale, aclOpExecutor *executor) {
-  auto out = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
-  return SwishAiCore(x, out, scale, executor);
+const aclTensor* Swish(const aclTensor* x, float scale, aclOpExecutor* executor)
+{
+    auto out = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
+    return SwishAiCore(x, out, scale, executor);
 }
-}  // namespace l0op
+} // namespace l0op

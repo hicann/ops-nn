@@ -17,7 +17,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"
 #include "hard_swish_grad_v2_tiling_def.h"
-#include "log/log.h" 
+#include "log/log.h"
 
 namespace optiling {
 constexpr int64_t UB_DIVIDE_NUM_EACH_CORE = 10;
@@ -38,7 +38,8 @@ private:
     int64_t inputShapeSize = 0;
     int64_t elementNumEachCore = 0;
 
-    inline uint32_t CeilA2B(const int64_t a, const int64_t b) {
+    inline uint32_t CeilA2B(const int64_t a, const int64_t b)
+    {
         if (b != 0) {
             return (a + b - 1) / b;
         } else {
@@ -46,7 +47,8 @@ private:
         }
     }
 
-    int32_t GetNeedCoreNum(const int32_t coreNumPlatform) {
+    int32_t GetNeedCoreNum(const int32_t coreNumPlatform)
+    {
         int32_t needCoreNum = CeilA2B(inputShapeSize, elementNumEachCore);
         if (needCoreNum == 0) {
             needCoreNum = 1;
@@ -59,14 +61,15 @@ private:
     }
 };
 
-ge::graphStatus HardSwishGradV2Tiling::RunBigKernelTiling() {
+ge::graphStatus HardSwishGradV2Tiling::RunBigKernelTiling()
+{
     // 获取输入矩阵
     auto srcTensor = tilingContext->GetInputTensor(0);
     if (srcTensor == nullptr) {
         OP_LOGE(tilingContext, "HardSwishGradV2Tiling srcTensor nullptr");
         return ge::GRAPH_FAILED;
     }
-    
+
     // 获取数据类型
     auto temp = tilingContext->GetInputDesc(0);
     if (temp == nullptr) {
@@ -86,8 +89,9 @@ ge::graphStatus HardSwishGradV2Tiling::RunBigKernelTiling() {
 
     uint64_t ubSize = 196608;
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    elementNumEachCore = ubSize / UB_DIVIDE_NUM_EACH_CORE / sizeof(float)/ UB_MEMORY_ALIGN * UB_MEMORY_ALIGN;
-    OP_LOGD(tilingContext, "HardSwishGradV2Tiling GetCoreMemSize ubSize = %d, elementNumEachCore = %d", ubSize, elementNumEachCore);
+    elementNumEachCore = ubSize / UB_DIVIDE_NUM_EACH_CORE / sizeof(float) / UB_MEMORY_ALIGN * UB_MEMORY_ALIGN;
+    OP_LOGD(tilingContext, "HardSwishGradV2Tiling GetCoreMemSize ubSize = %d, elementNumEachCore = %d", ubSize,
+            elementNumEachCore);
     if (ubSize <= 0 || elementNumEachCore <= 0) {
         OP_LOGE(tilingContext, "HardSwishGradV2Tiling GetCoreMemSize ubSize error");
         return ge::GRAPH_FAILED;
@@ -106,16 +110,18 @@ ge::graphStatus HardSwishGradV2Tiling::RunBigKernelTiling() {
     tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
                             tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
-    
+
     tilingContext->SetBlockDim(needCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4HardSwishGradV2Tiling([[maybe_unused]] gert::TilingParseContext* context) {
+static ge::graphStatus TilingPrepare4HardSwishGradV2Tiling([[maybe_unused]] gert::TilingParseContext* context)
+{
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingHardSwishGradV2Tiling(gert::TilingContext* context) {
+static ge::graphStatus TilingHardSwishGradV2Tiling(gert::TilingContext* context)
+{
     HardSwishGradV2Tiling tilingObject(context);
     return tilingObject.RunBigKernelTiling();
 }

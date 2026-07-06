@@ -39,9 +39,8 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
     reduceShape->SetDimNum(xDimNum - gammaDimNum);
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         reduceShape->SetDim(i, xShape->GetDim(i));
-        OP_LOGI(
-            "InferShape4RmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i,
-            reduceShape->GetDim(i));
+        OP_LOGI("InferShape4RmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i,
+                reduceShape->GetDim(i));
     }
     return true;
 }
@@ -72,11 +71,11 @@ static ge::graphStatus InferShape4RmsNormDynamicQuant(gert::InferShapeContext* c
 
     auto ret = InferReduceShape(xShape, gammaShape, outScaleShape);
     if (!ret) {
-        std::string shapeDimMsg = std::to_string(gammaShape->GetDimNum()) +
-            " and " + std::to_string(xShape->GetDimNum());
+        std::string shapeDimMsg = std::to_string(gammaShape->GetDimNum()) + " and " +
+                                  std::to_string(xShape->GetDimNum());
         std::string reasonMsg = "The shape dim of input gamma cannot be greater than that of input x";
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x",
-            shapeDimMsg.c_str(), reasonMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", shapeDimMsg.c_str(),
+                                                  reasonMsg.c_str());
         return GRAPH_FAILED;
     }
     OP_LOGI(context, "End to do InferShape4RmsNormDynamicQuant");

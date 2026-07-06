@@ -21,14 +21,10 @@ using namespace op;
 using namespace ut_util;
 
 class BroadcastGradientArgsOpUT : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "BroadcastGradientArgs Proto Test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "BroadcastGradientArgs Proto Test SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "BroadcastGradientArgs Proto Test TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "BroadcastGradientArgs Proto Test TearDown" << std::endl; }
 };
 
 // TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_zero_shape) {
@@ -57,41 +53,49 @@ class BroadcastGradientArgsOpUT : public testing::Test {
 //   EXPECT_EQ(output0_desc2.GetShape().GetDims(), expected_y2_shape);
 // }
 
+TEST_F(BroadcastGradientArgsOpUT, rt2_shaperange_test)
+{
+    gert::Shape x1_in_min{
+        2,
+    };
+    gert::Shape x1_in_max{
+        2,
+    };
+    gert::Shape x2_in_min{
+        5,
+    };
+    gert::Shape x2_in_max{
+        5,
+    };
+    gert::Shape null1{};
+    gert::Shape null2{};
 
-TEST_F(BroadcastGradientArgsOpUT, rt2_shaperange_test) {
-  gert::Shape x1_in_min{2,};
-  gert::Shape x1_in_max{2,};
-  gert::Shape x2_in_min{5,};
-  gert::Shape x2_in_max{5,};
-  gert::Shape null1{};
-  gert::Shape null2{};
+    gert::Range<gert::Shape> x1_range(&x1_in_min, &x1_in_max);
+    gert::Range<gert::Shape> x2_range(&x2_in_min, &x2_in_max);
+    gert::Range<gert::Shape> out_shape_range(&null1, &null2);
 
-  gert::Range<gert::Shape> x1_range(&x1_in_min, &x1_in_max);
-  gert::Range<gert::Shape> x2_range(&x2_in_min, &x2_in_max);
-  gert::Range<gert::Shape> out_shape_range(&null1, &null2);
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs"), nullptr);
+    auto shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape_range;
+    ASSERT_NE(shape_range_func, nullptr);
 
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs"), nullptr);
-  auto shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape_range;
-  ASSERT_NE(shape_range_func, nullptr);
+    auto context_holder = gert::InferShapeRangeContextFaker()
+                              .IrInputNum(2)
+                              .NodeIoNum(2, 2)
+                              .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .InputShapeRanges({&x1_range, &x2_range})
+                              .OutputShapeRanges({&out_shape_range, &out_shape_range})
+                              .Build();
 
-  auto context_holder = gert::InferShapeRangeContextFaker()
-                            .IrInputNum(2)
-                            .NodeIoNum(2, 2)
-                            .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .InputShapeRanges({&x1_range, &x2_range})
-                            .OutputShapeRanges({&out_shape_range, &out_shape_range})
-                            .Build();
+    auto context = context_holder.GetContext<gert::InferShapeRangeContext>();
+    EXPECT_EQ(shape_range_func(context), ge::GRAPH_SUCCESS);
 
-  auto context = context_holder.GetContext<gert::InferShapeRangeContext>();
-  EXPECT_EQ(shape_range_func(context), ge::GRAPH_SUCCESS);
-
-  EXPECT_EQ(context->GetOutputShapeRange(0)->GetMin()->GetDim(0), 0);
-  EXPECT_EQ(context->GetOutputShapeRange(1)->GetMin()->GetDim(0), 0);
-  EXPECT_EQ(context->GetOutputShapeRange(0)->GetMax()->GetDim(0), 5);
-  EXPECT_EQ(context->GetOutputShapeRange(1)->GetMax()->GetDim(0), 5);
+    EXPECT_EQ(context->GetOutputShapeRange(0)->GetMin()->GetDim(0), 0);
+    EXPECT_EQ(context->GetOutputShapeRange(1)->GetMin()->GetDim(0), 0);
+    EXPECT_EQ(context->GetOutputShapeRange(0)->GetMax()->GetDim(0), 5);
+    EXPECT_EQ(context->GetOutputShapeRange(1)->GetMax()->GetDim(0), 5);
 }
 
 TEST_F(BroadcastGradientArgsOpUT, rt2_dtype_test)
@@ -103,7 +107,7 @@ TEST_F(BroadcastGradientArgsOpUT, rt2_dtype_test)
         ge::DataType output_ref = ge::DT_INT64;
         auto context_holder = gert::InferDataTypeContextFaker()
                                   .NodeIoNum(2, 2)
-                                  .IrInstanceNum({1,1})
+                                  .IrInstanceNum({1, 1})
                                   .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)

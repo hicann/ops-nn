@@ -20,8 +20,7 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 struct BinaryCrossEntropyTilingData {
     ReduceOpTilingData reduceTiling;
     EleBaseTilingData eleBaseTiling;

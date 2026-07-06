@@ -26,22 +26,16 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fake_quant_with_min_max_args(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fake_quant_with_min_max_args(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                                   GM_ADDR tiling);
 
 class FakeQuantWithMinMaxArgsTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "FakeQuantWithMinMaxArgsTest SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "FakeQuantWithMinMaxArgsTest TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "FakeQuantWithMinMaxArgsTest SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "FakeQuantWithMinMaxArgsTest TearDown\n" << endl; }
 };
 
- static void FillTiling(FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin, int64_t totalLen, int64_t numCore)
+static void FillTiling(FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin, int64_t totalLen, int64_t numCore)
 {
     tilingDatafromBin->totalLen = totalLen;
     tilingDatafromBin->numCore = numCore;
@@ -66,14 +60,16 @@ static float ForwardGolden(float x, const FakeQuantWithMinMaxArgsTilingData& t)
         return x;
     }
     float c = x;
-    if (c > t.nudgedMax) c = t.nudgedMax;
-    if (c < t.nudgedMin) c = t.nudgedMin;
+    if (c > t.nudgedMax)
+        c = t.nudgedMax;
+    if (c < t.nudgedMin)
+        c = t.nudgedMin;
     float scaled = (c - t.nudgedMin) * t.scaleInv + (0.5f - t.quantZero);
     float q = std::floor(scaled);
     return q * t.scale;
 }
 
- TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_default)
+TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_default)
 {
     int64_t totalLen = 1024 * 256;
     uint32_t blockDim = 2;
@@ -213,8 +209,8 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_default_with_assert)
                     "intrinsics (Reg::* / __VEC_SCOPE__); assertions can only "
                     "run on real NPU hardware. Test body kept for hardware runs.";
 
-    int64_t totalLen = 32;          // 8-aligned, small
-    uint32_t blockDim = 1;          // single block simplifies golden mapping
+    int64_t totalLen = 32; // 8-aligned, small
+    uint32_t blockDim = 1; // single block simplifies golden mapping
     size_t inputXSize = totalLen * sizeof(float);
     size_t outputYSize = totalLen * sizeof(float);
     size_t tiling_data_size = sizeof(FakeQuantWithMinMaxArgsTilingData);
@@ -225,19 +221,18 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_default_with_assert)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin =
-        reinterpret_cast<FakeQuantWithMinMaxArgsTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
 
     // Fill x with known values; remaining slots filled with arbitrary in-range
     // values that exercise the rounding path.
     float* xFloat = reinterpret_cast<float*>(xBuf);
     std::vector<float> seeds = {
-        0.0f, 1.0f, -1.0f, 2.5f, -3.7f, 5.999f, -5.999f,         // in-range
-        7.5f, 12.0f, 1.0e30f,                                    // > nudgedMax
-        -7.5f, -12.0f, -1.0e30f,                                 // < nudgedMin
-        std::nanf(""), -std::nanf(""),                           // NaN
-        6.0f, -6.0f,                                             // boundary
+        0.0f,          1.0f,           -1.0f,    2.5f, -3.7f, 5.999f, -5.999f, // in-range
+        7.5f,          12.0f,          1.0e30f,                                // > nudgedMax
+        -7.5f,         -12.0f,         -1.0e30f,                               // < nudgedMin
+        std::nanf(""), -std::nanf(""),                                         // NaN
+        6.0f,          -6.0f,                                                  // boundary
     };
     for (int64_t i = 0; i < totalLen; ++i) {
         xFloat[i] = (i < (int64_t)seeds.size()) ? seeds[i] : (float)(i % 13) * 0.37f - 2.0f;
@@ -257,8 +252,7 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_default_with_assert)
         if (std::isnan(xi)) {
             EXPECT_TRUE(std::isnan(got)) << "idx=" << i << " expected NaN passthrough";
         } else {
-            EXPECT_NEAR(got, gold, 1e-5f)
-                << "idx=" << i << " x=" << xi << " gold=" << gold << " got=" << got;
+            EXPECT_NEAR(got, gold, 1e-5f) << "idx=" << i << " x=" << xi << " gold=" << gold << " got=" << got;
         }
     }
 
@@ -276,7 +270,7 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_narrow_range_with_ass
                     "intrinsics (Reg::* / __VEC_SCOPE__); assertions can only "
                     "run on real NPU hardware. Test body kept for hardware runs.";
 
-    int64_t totalLen = 64;          // 8-aligned, small
+    int64_t totalLen = 64; // 8-aligned, small
     uint32_t blockDim = 1;
     size_t inputXSize = totalLen * sizeof(float);
     size_t outputYSize = totalLen * sizeof(float);
@@ -288,8 +282,7 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_narrow_range_with_ass
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin =
-        reinterpret_cast<FakeQuantWithMinMaxArgsTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
     // narrow-range overrides
     tilingDatafromBin->nudgedMin = -6.0f + 12.0f / 255.0f;
@@ -302,11 +295,16 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_narrow_range_with_ass
     for (int64_t i = 0; i < totalLen; ++i) {
         // Spread values across the range, plus push some outside.
         float v;
-        if (i == 0) v = std::nanf("");
-        else if (i == 1) v = 1.0e20f;
-        else if (i == 2) v = -1.0e20f;
-        else if (i == 3) v = 0.0f;
-        else v = -7.0f + 0.21875f * (float)i;
+        if (i == 0)
+            v = std::nanf("");
+        else if (i == 1)
+            v = 1.0e20f;
+        else if (i == 2)
+            v = -1.0e20f;
+        else if (i == 3)
+            v = 0.0f;
+        else
+            v = -7.0f + 0.21875f * (float)i;
         xFloat[i] = v;
     }
 
@@ -324,8 +322,7 @@ TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_compute_narrow_range_with_ass
         if (std::isnan(xi)) {
             EXPECT_TRUE(std::isnan(got)) << "idx=" << i << " expected NaN passthrough";
         } else {
-            EXPECT_NEAR(got, gold, 1e-5f)
-                << "idx=" << i << " x=" << xi << " gold=" << gold << " got=" << got;
+            EXPECT_NEAR(got, gold, 1e-5f) << "idx=" << i << " x=" << xi << " gold=" << gold << " got=" << got;
         }
     }
 

@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file quant_batch_matmul_v4_pergroup.h
  * \brief
  */
@@ -23,10 +23,9 @@ template <typename xType, typename wType, typename biasType, typename scaleType,
 class QuantBatchMatmulV4Pergroup : public QuantBatchMatmulV4Common {
 public:
     __aicore__ inline QuantBatchMatmulV4Pergroup(){};
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-        GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y, GM_ADDR workspace,
-        const QuantBatchMatmulV3TilingData* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
+                                GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y,
+                                GM_ADDR workspace, const QuantBatchMatmulV3TilingData* tilingData, TPipe* tPipe)
     {
         commonInit(tPipe, &(tilingData->matmulTiling));
         groupSizeK_ = tilingData->params.groupSizeK;
@@ -249,9 +248,8 @@ private:
         // X1Scale [AivM_] // 32B align
         uint32_t offset = offset_.offsetPertoken + subBlockIdx_ * maxAivM_;
         WaitFlag<HardEvent::V_MTE2>(eX1Scale_);
-        DataCopyPad(
-            X1Scale, x1ScaleGlobal_[offset], {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivM * sizeof(float)), 0, 0, 0},
-            {false, 0, 0, 0});
+        DataCopyPad(X1Scale, x1ScaleGlobal_[offset],
+                    {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivM * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX1Scale_);
     }
 
@@ -261,9 +259,8 @@ private:
         // x2ScaleGlobal_ [nKgroups_, n]
         uint32_t offset = kidx * block_.matmulTilingData_->N + offset_.offsetScale;
         WaitFlag<HardEvent::V_MTE2>(eX2Scale_);
-        DataCopyPad(
-            X2Scale, x2ScaleGlobal_[offset], {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(float)), 0, 0, 0},
-            {false, 0, 0, 0});
+        DataCopyPad(X2Scale, x2ScaleGlobal_[offset],
+                    {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX2Scale_);
     }
 
@@ -273,9 +270,8 @@ private:
         // x2SOffset_ [nKgroups_, n]
         WaitFlag<HardEvent::V_MTE2>(eX2Offset_);
         uint32_t offset = kidx * block_.matmulTilingData_->N + offset_.offsetScale;
-        DataCopyPad(
-            X2OffsetFP16, x2OffsetGlobal_[offset],
-            {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(half)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(X2OffsetFP16, x2OffsetGlobal_[offset],
+                    {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(half)), 0, 0, 0}, {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX2Offset_);
     }
 
@@ -315,7 +311,7 @@ private:
         constexpr int32_t BROADCAST_DIM = 2;
         constexpr int32_t BROADCAST_AXIS = 1;
         Broadcast<float, BROADCAST_DIM, BROADCAST_AXIS, false>(X1BCast, X1RowSum, dstShape_, srcShape_,
-            sharedTmpBuffer);
+                                                               sharedTmpBuffer);
         PipeBarrier<PIPE_V>();
         int32_t resN = curAivN;
         uint8_t repeatStride = CeilDiv(curAivN, ALIGN_UNIT_8);
@@ -325,15 +321,13 @@ private:
             PipeBarrier<PIPE_V>();
         }
         while (resN >= NUM_ELEMENTS_PER_ITER) {
-            Mul<float, false>(
-                X1BCastMulX2Offset[curAivN - resN], X2Offset[curAivN - resN], X1BCast[curAivN - resN], 0UL, curAivM,
-                {1, 1, 1, repeatStride, 0, repeatStride});
+            Mul<float, false>(X1BCastMulX2Offset[curAivN - resN], X2Offset[curAivN - resN], X1BCast[curAivN - resN],
+                              0UL, curAivM, {1, 1, 1, repeatStride, 0, repeatStride});
             resN = resN - NUM_ELEMENTS_PER_ITER;
         }
         if (resN > 0) {
-            Mul<float, true>(
-                X1BCastMulX2Offset[curAivN - resN], X2Offset[curAivN - resN], X1BCast[curAivN - resN], resN, curAivM,
-                {1, 1, 1, repeatStride, 0, repeatStride});
+            Mul<float, true>(X1BCastMulX2Offset[curAivN - resN], X2Offset[curAivN - resN], X1BCast[curAivN - resN],
+                             resN, curAivM, {1, 1, 1, repeatStride, 0, repeatStride});
         }
         PipeBarrier<PIPE_V>();
     }
@@ -346,9 +340,8 @@ private:
         X2OffsetProcess(curAivM, curAivN, kidx, midx);
         uint8_t src0RepeatStride = CONTINUOUS_PROCESS_STRIDE;
         uint8_t src1RepeatStride = CONTINUOUS_PROCESS_STRIDE;
-        Sub<float, false>(
-            mmOutFp32, mmOutFp32, X1BCastMulX2Offset, 0UL, FOLD4 * curAivM,
-            {1, 1, 1, dstRepeatStride, src0RepeatStride, src1RepeatStride});
+        Sub<float, false>(mmOutFp32, mmOutFp32, X1BCastMulX2Offset, 0UL, FOLD4 * curAivM,
+                          {1, 1, 1, dstRepeatStride, src0RepeatStride, src1RepeatStride});
         PipeBarrier<PIPE_V>();
 
         if (midx == 0) {
@@ -396,9 +389,8 @@ private:
         Cast(dequantOut, dequantAccu, RoundMode::CAST_RINT, curAivM * curAivN);
         SetFlag<HardEvent::V_MTE3>(EVENT_ID7);
         uint64_t stride = DATA_BLOCK / sizeof(yType);
-        DataCopyParams copyParams{
-            uint16_t(curAivM), uint16_t(curAivN / stride), // * sizeof(bfloat16) / 32B
-            0, uint16_t((block_.matmulTilingData_->N - curAivN) / stride)};
+        DataCopyParams copyParams{uint16_t(curAivM), uint16_t(curAivN / stride), // * sizeof(bfloat16) / 32B
+                                  0, uint16_t((block_.matmulTilingData_->N - curAivN) / stride)};
         uint64_t offset = offset_.offsetC;
         offset += subBlockIdx_ * maxAivM_ * block_.matmulTilingData_->N;
         WaitFlag<HardEvent::V_MTE3>(EVENT_ID7);
@@ -437,8 +429,8 @@ private:
             // INT8: 1 byte per element
             nd2nzParamsA.srcDValue = block_.matmulTilingData_->Ka;
             nd2nzParamsA.dValue = stepka_ * groupSizeK_;
-            DataCopy(
-                aL1_.template ReinterpretCast<int8_t>(), x1Global_[offset_.offsetA + kidx * groupSizeK_], nd2nzParamsA);
+            DataCopy(aL1_.template ReinterpretCast<int8_t>(), x1Global_[offset_.offsetA + kidx * groupSizeK_],
+                     nd2nzParamsA);
             SetFlag<HardEvent::MTE2_MTE1>(eAL1_21_);
             WaitFlag<HardEvent::MTE2_MTE1>(eAL1_21_);
         }
@@ -454,8 +446,8 @@ private:
             // INT8: 1 byte per element
             nd2nzParamsB.srcDValue = block_.matmulTilingData_->Ka;
             nd2nzParamsB.dValue = stepkb_ * groupSizeK_;
-            DataCopy(
-                bL1_.template ReinterpretCast<int8_t>(), x2Global_[offset_.offsetB + kidx * groupSizeK_], nd2nzParamsB);
+            DataCopy(bL1_.template ReinterpretCast<int8_t>(), x2Global_[offset_.offsetB + kidx * groupSizeK_],
+                     nd2nzParamsB);
             SetFlag<HardEvent::MTE2_MTE1>(eBL1_21_);
             WaitFlag<HardEvent::MTE2_MTE1>(eBL1_21_);
         }
@@ -535,7 +527,7 @@ private:
             if ASCEND_IS_AIV {
                 if (aivM > 0) {
                     WaitFlag<HardEvent::MTE3_V>(EVENT_ID7);
-                    Duplicate(dequantAccu, float(0), aivM* ubCalcN_);
+                    Duplicate(dequantAccu, float(0), aivM * ubCalcN_);
                     PipeBarrier<PIPE_V>();
                     CopyInX1Scale(aivM);
                 }
@@ -560,4 +552,3 @@ private:
 };
 
 } // namespace AscendC
-

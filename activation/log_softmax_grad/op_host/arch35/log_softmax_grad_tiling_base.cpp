@@ -16,8 +16,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "log_softmax_grad_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::Base;
 ge::graphStatus LogSoftmaxGradTilingBase::GetAndCheckDtypes()
 {
@@ -38,15 +37,14 @@ ge::graphStatus LogSoftmaxGradTilingBase::GetAndCheckDtypes()
     yDtype_ = yDesc->GetDataType();
     if ((gradDtype != yDtype_) || (xDtype_ != yDtype_)) {
         std::string dtypeMsg = ToString(gradDtype) + ", " + ToString(xDtype_) + " and " + ToString(yDtype_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "grad, x and y", dtypeMsg.c_str(),
-            "The dtypes of input grad, input x and output y must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grad, x and y", dtypeMsg.c_str(),
+                                               "The dtypes of input grad, input x and output y must be the same");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF((xDtype_ != ge::DT_FLOAT16) && (xDtype_ != ge::DT_FLOAT) && (xDtype_ != ge::DT_BF16),
-                    OP_LOGE_FOR_INVALID_DTYPE(
-                        context_->GetNodeName(), "x", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (xDtype_ != ge::DT_FLOAT16) && (xDtype_ != ge::DT_FLOAT) && (xDtype_ != ge::DT_BF16),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
+        return ge::GRAPH_FAILED);
 
     xDtypeSize_ = xDtype_ == ge::DT_FLOAT ? FLOAT32_BYTES : FLOAT16_BYTES;
     yDtypeSize_ = xDtypeSize_;
@@ -57,6 +55,6 @@ ge::graphStatus LogSoftmaxGradTilingBase::GetAndCheckDtypes()
 // 复用SoftmaxGrad的tiling解析
 IMPL_OP_OPTILING(LogSoftmaxGrad)
     .Tiling(TilingForSoftmaxGrad)
-    .TilingParse<SoftmaxGradCompileInfo>(TilingPrepareForSoftmaxGrad);  
+    .TilingParse<SoftmaxGradCompileInfo>(TilingPrepareForSoftmaxGrad);
 
-}  // namespace optiling
+} // namespace optiling

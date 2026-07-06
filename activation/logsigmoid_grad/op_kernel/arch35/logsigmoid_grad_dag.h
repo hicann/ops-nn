@@ -23,16 +23,16 @@ namespace LogSigmoidGradOp {
 using namespace AscendC;
 using namespace Ops::Base;
 #ifdef __CCE_AICORE__
-constexpr static MicroAPI::CastTrait castTrait0 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-constexpr static MicroAPI::CastTrait castTrait1 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+constexpr static MicroAPI::CastTrait castTrait0 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                   MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr static MicroAPI::CastTrait castTrait1 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                   MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 #endif
 
 template <class T>
 struct LogSigmoidGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
-    __aicore__ inline LogSigmoidGradCustom(
-        LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1, uint32_t count)
+    __aicore__ inline LogSigmoidGradCustom(LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1,
+                                           uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(float);

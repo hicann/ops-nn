@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file gemma_rms_norm.cpp
  * \brief
@@ -26,8 +25,8 @@ using namespace AscendC;
         op.Process();                            \
     } while (0)
 
-extern "C" __global__ __aicore__ void gemma_rms_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void gemma_rms_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd,
+                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);

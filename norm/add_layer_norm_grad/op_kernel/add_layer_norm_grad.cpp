@@ -31,9 +31,10 @@ using namespace AddLayerNormGrad;
  * @return PdGamma: shape [H]
  * @return PdBeta: shape [H]
  ****************************************************************************** */
-extern "C" __global__ __aicore__ void add_layer_norm_grad(
-    GM_ADDR dy, GM_ADDR x_1, GM_ADDR x_2, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR dsum, GM_ADDR d_x,
-    GM_ADDR d_gamma, GM_ADDR d_beta, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_layer_norm_grad(GM_ADDR dy, GM_ADDR x_1, GM_ADDR x_2, GM_ADDR rstd,
+                                                          GM_ADDR mean, GM_ADDR gamma, GM_ADDR dsum, GM_ADDR d_x,
+                                                          GM_ADDR d_gamma, GM_ADDR d_beta, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
 {
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
     GET_TILING_DATA(tiling_data, tiling);
@@ -88,11 +89,11 @@ extern "C" __global__ __aicore__ void add_layer_norm_grad(
 }
 
 #ifndef __CCE_KT_TEST__
-void add_layer_norm_grad_do(
-    uint32_t numBlocks, void* l2ctrl, void* stream, uint8_t* dy, uint8_t* x1, uint8_t* x2, uint8_t* rstd, uint8_t* mean,
-    uint8_t* gamma, uint8_t* dsum, uint8_t* d_x, uint8_t* d_gamma, uint8_t* d_beta, uint8_t* workspace, uint8_t* tiling)
+void add_layer_norm_grad_do(uint32_t numBlocks, void* l2ctrl, void* stream, uint8_t* dy, uint8_t* x1, uint8_t* x2,
+                            uint8_t* rstd, uint8_t* mean, uint8_t* gamma, uint8_t* dsum, uint8_t* d_x, uint8_t* d_gamma,
+                            uint8_t* d_beta, uint8_t* workspace, uint8_t* tiling)
 {
-    add_layer_norm_grad<<<numBlocks, l2ctrl, stream>>>(
-        dy, x1, x2, rstd, mean, gamma, dsum, d_x, d_gamma, d_beta, workspace, tiling);
+    add_layer_norm_grad<<<numBlocks, l2ctrl, stream>>>(dy, x1, x2, rstd, mean, gamma, dsum, d_x, d_gamma, d_beta,
+                                                       workspace, tiling);
 }
 #endif

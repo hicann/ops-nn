@@ -53,11 +53,10 @@ protected:
     }
 };
 
-static GraphPtr BuildIndexByTensorGraph(const std::string& graphName,
-                                        const std::vector<int64_t>& xDims, DataType xDtype, Format xFormat,
+static GraphPtr BuildIndexByTensorGraph(const std::string& graphName, const std::vector<int64_t>& xDims,
+                                        DataType xDtype, Format xFormat,
                                         const std::vector<std::vector<int64_t>>& indicesDims,
-                                        const std::vector<int64_t>& indicesMask,
-                                        const std::vector<int64_t>& yDims)
+                                        const std::vector<int64_t>& indicesMask, const std::vector<int64_t>& yDims)
 {
     es::EsGraphBuilder graphBuilder(graphName.c_str());
     auto graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
@@ -67,25 +66,19 @@ static GraphPtr BuildIndexByTensorGraph(const std::string& graphName,
     std::vector<es::EsTensorHolder> rIndices;
     for (size_t i = 0; i < indicesDims.size(); i++) {
         std::string idxName = "indices" + std::to_string(i);
-        auto rIdx = graphBuilder.CreateInput(static_cast<int64_t>(i + 1), idxName.c_str(),
-                                             DT_INT64, FORMAT_ND, indicesDims[i]);
+        auto rIdx = graphBuilder.CreateInput(static_cast<int64_t>(i + 1), idxName.c_str(), DT_INT64, FORMAT_ND,
+                                             indicesDims[i]);
         rIndices.push_back(rIdx);
     }
 
     auto ibtBuilder = es::CompliantNodeBuilder(graphPtr);
     ibtBuilder.OpType("IndexByTensor")
         .Name("IndexByTensor")
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"indices", es::CompliantNodeBuilder::kEsIrInputDynamic, ""}
-        })
-        .IrDefOutputs({
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .IrDefAttrs({
-            {"indices_mask", es::CompliantNodeBuilder::kEsAttrRequired, "ListInt",
-             es::CreateFrom(indicesMask)}
-        })
+        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                      {"indices", es::CompliantNodeBuilder::kEsIrInputDynamic, ""}})
+        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+        .IrDefAttrs(
+            {{"indices_mask", es::CompliantNodeBuilder::kEsAttrRequired, "ListInt", es::CreateFrom(indicesMask)}})
         .InstanceDynamicInputNum("indices", static_cast<int32_t>(indicesDims.size()));
 
     auto ibtNode = ibtBuilder.Build();
@@ -95,8 +88,7 @@ static GraphPtr BuildIndexByTensorGraph(const std::string& graphName,
 
     for (size_t i = 0; i < rIndices.size(); i++) {
         auto idxDataNode = rIndices[i].GetProducer();
-        es::AddEdgeAndUpdatePeerDesc(*graphPtr, *idxDataNode, 0, ibtNode,
-                                     static_cast<int32_t>(1 + i));
+        es::AddEdgeAndUpdatePeerDesc(*graphPtr, *idxDataNode, 0, ibtNode, static_cast<int32_t>(1 + i));
     }
 
     TensorDesc xDesc(Shape(xDims), xFormat, xDtype);
@@ -127,8 +119,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionTwoIndicesSuccess)
     std::vector<int64_t> indicesMask{0, 1, 1};
     std::vector<int64_t> dimsY{2, 3, 2, 5};
 
-    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_fusion_test1", dimsX, DT_FLOAT, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_fusion_test1", dimsX, DT_FLOAT, FORMAT_ND, indicesDims,
+                                             indicesMask, dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;
@@ -153,8 +145,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionOneIndexSuccess)
     std::vector<int64_t> indicesMask{1};
     std::vector<int64_t> dimsY{8, 1024, 128};
 
-    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_fusion_test2", dimsX, DT_FLOAT, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_fusion_test2", dimsX, DT_FLOAT, FORMAT_ND, indicesDims,
+                                             indicesMask, dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;
@@ -179,8 +171,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionDynamicShapeFail)
     std::vector<int64_t> indicesMask{0, 1};
     std::vector<int64_t> dimsY{2, 3, 2, 5};
 
-    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_dynamic_test", dimsX, DT_FLOAT, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_dynamic_test", dimsX, DT_FLOAT, FORMAT_ND, indicesDims,
+                                             indicesMask, dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;
@@ -195,8 +187,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionFloat16Success)
     std::vector<int64_t> indicesMask{0, 1, 1};
     std::vector<int64_t> dimsY{2, 3, 2, 5};
 
-    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_fp16_test", dimsX, DT_FLOAT16, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("indexbytensor_fp16_test", dimsX, DT_FLOAT16, FORMAT_ND, indicesDims,
+                                             indicesMask, dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;
@@ -221,8 +213,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionZeroIndicesFail)
     std::vector<int64_t> indicesMask{0, 1};
     std::vector<int64_t> dimsY{2, 3, 4, 5};
 
-    GraphPtr graph = BuildIndexByTensorGraph("zero_indices_test", dimsX, DT_FLOAT, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("zero_indices_test", dimsX, DT_FLOAT, FORMAT_ND, indicesDims, indicesMask,
+                                             dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;
@@ -237,8 +229,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionOutputShapeAndParam
     std::vector<int64_t> indicesMask{0, 1, 1};
     std::vector<int64_t> dimsY{2, 3, 2, 5};
 
-    GraphPtr graph = BuildIndexByTensorGraph("shape_and_params_verify", dimsX, DT_FLOAT, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("shape_and_params_verify", dimsX, DT_FLOAT, FORMAT_ND, indicesDims,
+                                             indicesMask, dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;
@@ -290,8 +282,8 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionOneIndexOutputShape
     std::vector<int64_t> indicesMask{1};
     std::vector<int64_t> dimsY{8, 1024, 128};
 
-    GraphPtr graph = BuildIndexByTensorGraph("one_index_shape_verify", dimsX, DT_FLOAT, FORMAT_ND,
-                                             indicesDims, indicesMask, dimsY);
+    GraphPtr graph = BuildIndexByTensorGraph("one_index_shape_verify", dimsX, DT_FLOAT, FORMAT_ND, indicesDims,
+                                             indicesMask, dimsY);
 
     CustomPassContext passContext;
     ops::IndexByTensorStaticFusionPass pass;

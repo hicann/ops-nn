@@ -27,19 +27,13 @@ namespace AdaptiveMaxPool3dGradOp {
 #define TPL_INT64 2
 
 ASCENDC_TPL_ARGS_DECL(AdaptiveMaxPool3DGrad,
-    ASCENDC_TPL_UINT_DECL(
-        TEMPLATE_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TPL_SIMT_KERNEL),
-    ASCENDC_TPL_DTYPE_DECL(INDEX_DTYPE, TPL_INT32, TPL_INT64)
-);
+                      ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TPL_SIMT_KERNEL),
+                      ASCENDC_TPL_DTYPE_DECL(INDEX_DTYPE, TPL_INT32, TPL_INT64));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-        ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SIMT_KERNEL),
-        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
-        ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveMaxPool3dGradTilingDataV35)
-    )
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SIMT_KERNEL),
+                                     ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
+                                     ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveMaxPool3dGradTilingDataV35)));
 
 struct AdaptiveMaxPool3dGradTilingDataV35 {
     int64_t nDim = 0;
@@ -54,6 +48,6 @@ struct AdaptiveMaxPool3dGradTilingDataV35 {
     int64_t deterministicFlag = 0;
 };
 
-}  // namespace AdaptiveMaxPool3dGradOp
+} // namespace AdaptiveMaxPool3dGradOp
 
-#endif  // ADAPTIVE_MAX_POOL3D_GRAD_STRUCT_H_
+#endif // ADAPTIVE_MAX_POOL3D_GRAD_STRUCT_H_

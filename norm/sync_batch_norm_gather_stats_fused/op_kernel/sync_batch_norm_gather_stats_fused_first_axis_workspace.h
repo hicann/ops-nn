@@ -30,10 +30,11 @@ class SyncBatchNormGatherStatsFusedFirstAxisWorkspace {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedFirstAxisWorkspace(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar, GM_ADDR meanAllOut,
-        GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut, GM_ADDR workspace,
-        const SyncBatchNormGatherStatsFusedTilingDataFirstAxisWorkspace* tilingData, TPipe& pipeIn)
+    __aicore__ inline void Init(GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar,
+                                GM_ADDR meanAllOut, GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut,
+                                GM_ADDR workspace,
+                                const SyncBatchNormGatherStatsFusedTilingDataFirstAxisWorkspace* tilingData,
+                                TPipe& pipeIn)
     {
         pipe = pipeIn;
         nLength = tilingData->nLength;
@@ -55,8 +56,8 @@ public:
         meanAllResultworkspaceGM.SetGlobalBuffer((__gm__ float*)workspace, cAlign);
         varAllResultworkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + cAlign, cAlign);
         workspaceGMOri.SetGlobalBuffer((__gm__ float*)workspace + 2 * cAlign, wsLenPerBlock * blockNum);
-        countsReduceWorkspace.SetGlobalBuffer(
-            (__gm__ float*)workspace + (2 + blockNum * WORKSPACE_NUM) * cAlign, GetBlockNum());
+        countsReduceWorkspace.SetGlobalBuffer((__gm__ float*)workspace + (2 + blockNum * WORKSPACE_NUM) * cAlign,
+                                              GetBlockNum());
         InitOutput<float>(countsReduceWorkspace[GetBlockIdx()], 1, 0.0f);
 
         if (GetBlockIdx() < tilingData->blockNum) {
@@ -290,18 +291,16 @@ public:
     __aicore__ inline void ComputeGlobalMeanDterministicFun()
     {
         SyncBatchNormGatherStatsFusedDeterminsticCompute<T> op;
-        op.initBuffer2(
-            pipe, meanAllResultworkspaceGM, meanAllOutGm, runningMeanGm, runningMeanOutGm, workspaceGMOri,
-            WORKSPACE_NUM, momentum);
+        op.initBuffer2(pipe, meanAllResultworkspaceGM, meanAllOutGm, runningMeanGm, runningMeanOutGm, workspaceGMOri,
+                       WORKSPACE_NUM, momentum);
         op.MeanAllDeterministicWithRunningMeanUpdate(cAlign, blockNum, cLength);
     }
 
     __aicore__ inline void ComputeGlobalInvstdWithRunningVarFun()
     {
         SyncBatchNormGatherStatsFusedRunningCompute<T> op;
-        op.initBuffer(
-            pipe, runningVarOutGm, invstdAllOutGm, runningVarGm, varAllResultworkspaceGM, countsSumScalar, momentum,
-            eps, 1);
+        op.initBuffer(pipe, runningVarOutGm, invstdAllOutGm, runningVarGm, varAllResultworkspaceGM, countsSumScalar,
+                      momentum, eps, 1);
         op.FinalComputeProcess(cAlign, 1, cLength);
     }
 

@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file batch_matmul_v3_k_equal_zero_tiling.cc
  * \brief
@@ -48,14 +47,12 @@ ge::graphStatus BatchMatMulV3KEqZeroTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchMatMulV3KEqZeroTiling::GetNumBlocks() const
-{
-    return compileInfo_.aivNum;
-}
+uint64_t BatchMatMulV3KEqZeroTiling::GetNumBlocks() const { return compileInfo_.aivNum; }
 
 uint64_t BatchMatMulV3KEqZeroTiling::GetTilingKey() const
 {
-    return BatchMatMulV3TilingKey().SetTrans(false, false)
+    return BatchMatMulV3TilingKey()
+        .SetTrans(false, false)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
         .SetModel(MatMulV3Model::K_EQUAL_ZERO)
@@ -68,5 +65,5 @@ ge::graphStatus BatchMatMulV3KEqZeroTiling::GetTilingData(TilingResult& tiling) 
 {
     return GetTilingDataImpl<MatMulV3KEqZeroBasicTilingData>(tiling);
 }
-}
-}
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

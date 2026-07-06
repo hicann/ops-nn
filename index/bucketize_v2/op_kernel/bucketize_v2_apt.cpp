@@ -15,11 +15,10 @@
 using namespace AscendC;
 
 template <uint64_t TEMPLATE_MODE, bool BOUNDARY_MODE>
-__global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y,
-                                                GM_ADDR workspace, GM_ADDR tiling) 
+__global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY); 
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(BucketizeV2TilingData);
     if constexpr (TEMPLATE_MODE == TPL_MODE_FULL_LOAD && BOUNDARY_MODE == TPL_MODE_NO_RIGHT) {
         GET_TILING_DATA_WITH_STRUCT(BucketizeV2FullLoadTilingData, tilingDataIn, tiling);
@@ -35,11 +34,11 @@ __global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y
         GET_TILING_DATA_WITH_STRUCT(BucketizeV2CascadeTilingData, tilingDataIn, tiling);
         BucketizeV2::BucketizeV2Cascade<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, false> op(&pipe);
         op.Init(x, boundaries, y, &tilingDataIn);
-        op.Process();        
+        op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_CASCADE && BOUNDARY_MODE == TPL_MODE_RIGHT) {
         GET_TILING_DATA_WITH_STRUCT(BucketizeV2CascadeTilingData, tilingDataIn, tiling);
         BucketizeV2::BucketizeV2Cascade<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, true> op(&pipe);
         op.Init(x, boundaries, y, &tilingDataIn);
-        op.Process();       
+        op.Process();
     }
 }

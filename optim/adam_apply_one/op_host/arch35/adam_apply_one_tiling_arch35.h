@@ -30,8 +30,7 @@ struct AdamApplyOneCompileInfo {
 
 class AdamApplyOneTiling : public TilingBaseClass {
 public:
-    explicit AdamApplyOneTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit AdamApplyOneTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

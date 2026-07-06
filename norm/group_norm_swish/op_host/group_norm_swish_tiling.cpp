@@ -55,10 +55,7 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
     }
 }
 
-inline static int64_t CeilInt(int64_t value, int64_t factor)
-{
-    return CeilDiv(value, factor) * factor;
-}
+inline static int64_t CeilInt(int64_t value, int64_t factor) { return CeilDiv(value, factor) * factor; }
 
 void PrintTilingData(gert::TilingContext* context, GroupNormSwishTilingData& tilingData)
 {
@@ -90,65 +87,51 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     auto inputX = context->GetInputDesc(INPUT_IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     auto xDtype = inputX->GetDataType();
-    OP_CHECK_IF(
-        (xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_FLOAT && xDtype != ge::DT_BF16),
-        OP_LOGE(context, "xDtype should be FP16/BF16/FP32, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_FLOAT && xDtype != ge::DT_BF16),
+                OP_LOGE(context, "xDtype should be FP16/BF16/FP32, please check."), return ge::GRAPH_FAILED);
     auto xShapePtr = context->GetInputShape(INPUT_IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
     uint64_t xDims = xShape.GetDimNum();
-    OP_CHECK_IF(
-        (xDims < X_SHAPE_MIN_LEN),
-        OP_LOGE(context, "inputDims can't be smaller than 2."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDims < X_SHAPE_MIN_LEN), OP_LOGE(context, "inputDims can't be smaller than 2."),
+                return ge::GRAPH_FAILED);
     uint64_t channel = xShape.GetDim(DIM_1);
     // check gamma and beta
     auto gammaShapePtr = context->GetInputShape(INPUT_IDX_GAMMA);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShapePtr);
     auto gammaShape = gammaShapePtr->GetStorageShape();
     uint64_t gammaSizes = gammaShape.GetDim(DIM_0);
-    OP_CHECK_IF(
-        (gammaShape.GetDimNum() != 1 || gammaSizes != channel),
-        OP_LOGE(
-            context,
-            "The shape of gamma must be"
-            " the same as channel, currently is %lu.",
-            gammaSizes),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((gammaShape.GetDimNum() != 1 || gammaSizes != channel),
+                OP_LOGE(context,
+                        "The shape of gamma must be"
+                        " the same as channel, currently is %lu.",
+                        gammaSizes),
+                return ge::GRAPH_FAILED);
     auto betaShapePtr = context->GetInputShape(INPUT_IDX_BETA);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaShapePtr);
     auto betaShape = betaShapePtr->GetStorageShape();
     uint64_t betaSizes = betaShape.GetDim(DIM_0);
-    OP_CHECK_IF(
-        (betaShape.GetDimNum() != 1 || betaSizes != channel),
-        OP_LOGE(
-            context,
-            "The shape of beta must be"
-            " the same as channel, currently is %lu.",
-            betaSizes),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((betaShape.GetDimNum() != 1 || betaSizes != channel),
+                OP_LOGE(context,
+                        "The shape of beta must be"
+                        " the same as channel, currently is %lu.",
+                        betaSizes),
+                return ge::GRAPH_FAILED);
     auto gammaDtypePtr = context->GetInputDesc(INPUT_IDX_GAMMA);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaDtypePtr);
     auto gammaDtype = gammaDtypePtr->GetDataType();
     auto betaDtypePtr = context->GetInputDesc(INPUT_IDX_BETA);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaDtypePtr);
     auto betaDtype = betaDtypePtr->GetDataType();
-    OP_CHECK_IF(
-        (gammaDtype != betaDtype),
-        OP_LOGE(
-            context,
-            "The dtype of gamma and beta must"
-            " be consistent."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((gammaDtype != betaDtype),
+                OP_LOGE(context, "The dtype of gamma and beta must"
+                                 " be consistent."),
+                return ge::GRAPH_FAILED);
     if (xDtype == ge::DT_FLOAT) {
-        OP_CHECK_IF(
-            (gammaDtype != xDtype),
-            OP_LOGE(
-                context,
-                "The dtype of x is float32, gamma and beta must"
-                " be consistent."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((gammaDtype != xDtype),
+                    OP_LOGE(context, "The dtype of x is float32, gamma and beta must"
+                                     " be consistent."),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -161,13 +144,9 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* context)
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(ATTR_IDX_NUM_GROUPS);
-    OP_CHECK_IF(
-        (*numGroups <= 0), OP_LOGE(context, "numGroups must be bigger than 0."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (channel % *numGroups != 0),
-        OP_LOGE(context, "channel must be integer multiples of numGroups."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((*numGroups <= 0), OP_LOGE(context, "numGroups must be bigger than 0."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((channel % *numGroups != 0), OP_LOGE(context, "channel must be integer multiples of numGroups."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -276,9 +255,8 @@ static ge::graphStatus Tiling4GroupNormSwish(gert::TilingContext* context)
     GroupNormSwishTilingData tilingData;
     tilingData.set_totalCoreNum(ascendcPlatform.GetCoreNumAiv());
     OP_LOGD(context, "Get total core num:%d", tilingData.get_totalCoreNum());
-    OP_CHECK_IF(
-        (tilingData.get_totalCoreNum() <= 0),
-        OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingData.get_totalCoreNum() <= 0), OP_LOGE(context, "Failed to get core num."),
+                return ge::GRAPH_FAILED);
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     OP_LOGD(context, "Get total ub size:%lu", static_cast<int64_t>(ubSizePlatForm));
@@ -286,12 +264,10 @@ static ge::graphStatus Tiling4GroupNormSwish(gert::TilingContext* context)
 
     OP_LOGD(context, "Start running Tiling4GroupNormSwish.");
     // check input && attrs params
-    OP_CHECK_IF(
-        (CheckInputParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "InputParams is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CheckAttrParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "AttrParams is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckInputParams(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "InputParams is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckAttrParams(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "AttrParams is invalid."),
+                return ge::GRAPH_FAILED);
     // set TilingData
 
     SetAttrParams(context, tilingData);
@@ -316,7 +292,7 @@ static ge::graphStatus Tiling4GroupNormSwish(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4GroupNormSwish(gert::TilingParseContext* context)
 {
-    if(context == nullptr) {
+    if (context == nullptr) {
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

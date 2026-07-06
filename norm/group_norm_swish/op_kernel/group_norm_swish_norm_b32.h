@@ -22,13 +22,11 @@ namespace GroupNormSwish {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class GroupNormSwishNormB32 : public GroupNormSwishBase<T1, T2>
-{
+class GroupNormSwishNormB32 : public GroupNormSwishBase<T1, T2> {
 public:
     __aicore__ inline GroupNormSwishNormB32(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-        const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
@@ -38,9 +36,9 @@ private:
     __aicore__ inline void ComputeNormHW(const int64_t groupNum);
     __aicore__ inline void ComputeMeanAndRstd(const int64_t groupId);
     __aicore__ inline void ComputeSumTwoPass(const int64_t num, const int64_t index);
-    __aicore__ inline void ComputeSmallHWInner(
-        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const float mean, const float rstd,
-        const int64_t dBegin, const int64_t dNum);
+    __aicore__ inline void ComputeSmallHWInner(const LocalTensor<float>& gammaLocal,
+                                               const LocalTensor<float>& betaLocal, const float mean, const float rstd,
+                                               const int64_t dBegin, const int64_t dNum);
     __aicore__ inline void ComputeNormHWInner(const float scale, const float bias, const int64_t calcNum);
 
 private:
@@ -50,13 +48,13 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishNormB32<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void GroupNormSwishNormB32<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y,
+                                                           GM_ADDR mean, GM_ADDR rstd,
+                                                           const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
 {
     GroupNormSwishBase<T1, T2>::InitGlobal(x, gamma, beta, y, mean, rstd, tilingData, pipeIn);
-    GroupNormSwishBase<T1, T2>::InitLocalB32(
-        this->tiling->shapeCAlign, this->tiling->groupPerCoreAlign, this->tiling->loopTimesAlign * 2);
+    GroupNormSwishBase<T1, T2>::InitLocalB32(this->tiling->shapeCAlign, this->tiling->groupPerCoreAlign,
+                                             this->tiling->loopTimesAlign * 2);
 }
 
 template <typename T1, typename T2>
@@ -118,8 +116,8 @@ __aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeSmallHW(const int64
             xOffset += loopDNum * this->tiling->hwNum;
         }
         this->CopyInX(xOffset, loopDTail * this->tiling->hwNum);
-        ComputeSmallHWInner(
-            gammaLocal, betaLocal, mean, rstd, channelIdGlobal + this->tiling->shapeD - loopDTail, loopDTail);
+        ComputeSmallHWInner(gammaLocal, betaLocal, mean, rstd, channelIdGlobal + this->tiling->shapeD - loopDTail,
+                            loopDTail);
         this->CopyOutY(xOffset, loopDTail * this->tiling->hwNum);
     }
     this->inQueueGamma.template FreeTensor(gammaLocal);
@@ -205,9 +203,10 @@ __aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeSumTwoPass(const in
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeSmallHWInner(
-    const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const float mean, const float rstd,
-    const int64_t dBegin, const int64_t dNum)
+__aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeSmallHWInner(const LocalTensor<float>& gammaLocal,
+                                                                          const LocalTensor<float>& betaLocal,
+                                                                          const float mean, const float rstd,
+                                                                          const int64_t dBegin, const int64_t dNum)
 {
     int64_t calcNum = dNum * this->tiling->hwNum;
     LocalTensor<T1> xUb = this->inQueueX.template DeQue<T1>();
@@ -241,8 +240,8 @@ __aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeSmallHWInner(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeNormHWInner(
-    const float scale, const float bias, const int64_t calcNum)
+__aicore__ inline void GroupNormSwishNormB32<T1, T2>::ComputeNormHWInner(const float scale, const float bias,
+                                                                         const int64_t calcNum)
 {
     LocalTensor<T1> xUb = this->inQueueX.template DeQue<T1>();
     LocalTensor<T1> yUb = this->outQueueY.template AllocTensor<T1>();

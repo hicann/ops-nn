@@ -12,7 +12,7 @@
  * \file dual_level_quant_batch_matmul_cube_compute.h
  * \brief
  */
- 
+
 #pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
@@ -47,26 +47,26 @@ DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
 class DualLevelQuantBatchMatmulCubeCompute {
 public:
     __aicore__ inline DualLevelQuantBatchMatmulCubeCompute(){};
-    __aicore__ inline void Init(
-        __gm__ xType* x, __gm__ wType* weight, __gm__ xScaleType* xScale, __gm__ wScaleType* wScale);
-    __aicore__ inline void CopyGmToL1(
-        const DualLevelQbmmBasicBlockOffsetParams& blockParams, L0CopyAndCalcParams& l0Params);
-    __aicore__ inline void LaunchMatmul(
-        uint64_t mL1Offset, uint64_t nL1Offset, uint64_t kL1Offset, uint64_t kScaleL1Offset,
-        const LocalTensor<cType>& cTmpUb, const L0CopyAndCalcParams& l0Params, const FixL0CToDstParams& fixpParams);
+    __aicore__ inline void Init(__gm__ xType* x, __gm__ wType* weight, __gm__ xScaleType* xScale,
+                                __gm__ wScaleType* wScale);
+    __aicore__ inline void CopyGmToL1(const DualLevelQbmmBasicBlockOffsetParams& blockParams,
+                                      L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void LaunchMatmul(uint64_t mL1Offset, uint64_t nL1Offset, uint64_t kL1Offset,
+                                        uint64_t kScaleL1Offset, const LocalTensor<cType>& cTmpUb,
+                                        const L0CopyAndCalcParams& l0Params, const FixL0CToDstParams& fixpParams);
     __aicore__ inline void WaitMte1ToMte2(const DualLevelQbmmBasicBlockOffsetParams& blockParams);
     __aicore__ inline void SetMte1ToMte2(const DualLevelQbmmBasicBlockOffsetParams& blockParams);
     __aicore__ inline void EndSync();
 
 private:
-    __aicore__ inline void DataCopyAGmToL1(
-        const DualLevelQbmmBasicBlockOffsetParams& blockParams, const L0CopyAndCalcParams& l0Params);
-    __aicore__ inline void DataCopyBGmToL1(
-        const DualLevelQbmmBasicBlockOffsetParams& blockParams, const L0CopyAndCalcParams& l0Params);
-    __aicore__ inline void DataCopyScaleGmToL1(
-        const DualLevelQbmmBasicBlockOffsetParams& blockParams, const L0CopyAndCalcParams& l0Params);
-    __aicore__ inline void ConfigScaleDn2NzParams(
-        uint64_t rowNum, uint64_t scaleKGmGroupNum, uint64_t scaleKL1GroupNum, Dn2NzParams& dn2NzParams);
+    __aicore__ inline void DataCopyAGmToL1(const DualLevelQbmmBasicBlockOffsetParams& blockParams,
+                                           const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void DataCopyBGmToL1(const DualLevelQbmmBasicBlockOffsetParams& blockParams,
+                                           const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void DataCopyScaleGmToL1(const DualLevelQbmmBasicBlockOffsetParams& blockParams,
+                                               const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void ConfigScaleDn2NzParams(uint64_t rowNum, uint64_t scaleKGmGroupNum, uint64_t scaleKL1GroupNum,
+                                                  Dn2NzParams& dn2NzParams);
 
     static constexpr uint64_t C0_SIZE = GetC0Size<wType>();
     static constexpr uint64_t B8_IN_B16_NUM = 2;
@@ -111,8 +111,8 @@ private:
 };
 
 DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::Init(
-    __gm__ xType* x, __gm__ wType* weight, __gm__ xScaleType* xScale, __gm__ wScaleType* wScale)
+__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::Init(__gm__ xType* x, __gm__ wType* weight, __gm__ xScaleType* xScale,
+                                                       __gm__ wScaleType* wScale)
 {
     xGm_.SetGlobalBuffer(x);
     weightGm_.SetGlobalBuffer(weight);
@@ -130,8 +130,8 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::Init(
 }
 
 DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::CopyGmToL1(
-    const DualLevelQbmmBasicBlockOffsetParams& blockParams, L0CopyAndCalcParams& l0Params)
+__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::CopyGmToL1(const DualLevelQbmmBasicBlockOffsetParams& blockParams,
+                                                             L0CopyAndCalcParams& l0Params)
 {
     if (blockParams.kGmOffset % blockParams.level1ScaleKL1Size == 0) {
         l0Params.scaleKL1Size = blockParams.kGmOffset + blockParams.level1ScaleKL1Size > blockParams.kSize ?
@@ -160,9 +160,8 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::DataCopyAGmToL1(
     nd2nzParams.dstNzNStride = 1;
     nd2nzParams.dstNzMatrixStride = 0;
 
-    DataCopy(
-        aL1_[(l1Mte2Idx_ % DOUBLE_BUFFER_NUM) * A_B4_L1_BUFFER_OFFSET_ELEM],
-        xGm_[blockParams.mGmOffset * blockParams.kSize + blockParams.kGmOffset], nd2nzParams);
+    DataCopy(aL1_[(l1Mte2Idx_ % DOUBLE_BUFFER_NUM) * A_B4_L1_BUFFER_OFFSET_ELEM],
+             xGm_[blockParams.mGmOffset * blockParams.kSize + blockParams.kGmOffset], nd2nzParams);
 }
 
 DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
@@ -190,26 +189,25 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::DataCopyScaleGmToL1(
 
     Dn2NzParams aScaleDn2NzParams;
     ConfigScaleDn2NzParams(l0Params.mL1Size, scaleKGmGroupNum, scaleKL1GroupNum, aScaleDn2NzParams);
-    uint64_t aScaleGmOffset =
-        (blockParams.mGmOffset * scaleKGmGroupNum + blockParams.kGmOffset / MX_GROUPSIZE) / B8_IN_B16_NUM;
-    DataCopy(
-        aScaleL1_[(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * A_SCALE_B8_L1_BUFFER_OFFSET_ELEM]
-            .template ReinterpretCast<half>(),
-        xScaleGm_[aScaleGmOffset], aScaleDn2NzParams);
+    uint64_t aScaleGmOffset = (blockParams.mGmOffset * scaleKGmGroupNum + blockParams.kGmOffset / MX_GROUPSIZE) /
+                              B8_IN_B16_NUM;
+    DataCopy(aScaleL1_[(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * A_SCALE_B8_L1_BUFFER_OFFSET_ELEM]
+                 .template ReinterpretCast<half>(),
+             xScaleGm_[aScaleGmOffset], aScaleDn2NzParams);
 
     Dn2NzParams bScaleDn2NzParams;
     ConfigScaleDn2NzParams(l0Params.nL1Size, scaleKGmGroupNum, scaleKL1GroupNum, bScaleDn2NzParams);
-    uint64_t bScaleGmOffset =
-        (blockParams.nGmOffset * scaleKGmGroupNum + blockParams.kGmOffset / MX_GROUPSIZE) / B8_IN_B16_NUM;
-    DataCopy(
-        bScaleL1_[(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * B_SCALE_B8_L1_BUFFER_OFFSET_ELEM]
-            .template ReinterpretCast<half>(),
-        wScaleGm_[bScaleGmOffset], bScaleDn2NzParams);
+    uint64_t bScaleGmOffset = (blockParams.nGmOffset * scaleKGmGroupNum + blockParams.kGmOffset / MX_GROUPSIZE) /
+                              B8_IN_B16_NUM;
+    DataCopy(bScaleL1_[(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * B_SCALE_B8_L1_BUFFER_OFFSET_ELEM]
+                 .template ReinterpretCast<half>(),
+             wScaleGm_[bScaleGmOffset], bScaleDn2NzParams);
 }
 
 DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::ConfigScaleDn2NzParams(
-    uint64_t rowNum, uint64_t scaleKGmGroupNum, uint64_t scaleKL1GroupNum, Dn2NzParams& dn2NzParams)
+__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::ConfigScaleDn2NzParams(uint64_t rowNum, uint64_t scaleKGmGroupNum,
+                                                                         uint64_t scaleKL1GroupNum,
+                                                                         Dn2NzParams& dn2NzParams)
 {
     dn2NzParams.dnNum = 1;
     dn2NzParams.dValue = rowNum; // 矩阵的行数，即待搬运的mxScaleA的m或mxScaleB的n
@@ -224,9 +222,11 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::ConfigScaleDn2NzParams(
 }
 
 DLQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::LaunchMatmul(
-    uint64_t mL1Offset, uint64_t nL1Offset, uint64_t kL1Offset, uint64_t kScaleL1Offset,
-    const LocalTensor<cType>& cTmpUb, const L0CopyAndCalcParams& l0Params, const FixL0CToDstParams& fixpParams)
+__aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::LaunchMatmul(uint64_t mL1Offset, uint64_t nL1Offset,
+                                                               uint64_t kL1Offset, uint64_t kScaleL1Offset,
+                                                               const LocalTensor<cType>& cTmpUb,
+                                                               const L0CopyAndCalcParams& l0Params,
+                                                               const FixL0CToDstParams& fixpParams)
 {
     LocalTensor<xType> aL0Tensor = aL0_[(l0BufIdx_ % L0AB_BUFFER_NUM) * L0AB_B4_OFFSET_ELEM];
     LocalTensor<wType> bL0Tensor = bL0_[(l0BufIdx_ % L0AB_BUFFER_NUM) * L0AB_B4_OFFSET_ELEM];
@@ -234,21 +234,17 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::LaunchMatmul(
     WaitFlag<HardEvent::M_MTE1>(EVENT_M_MTE1_ID + l0BufIdx_ % L0AB_BUFFER_NUM);
     LoadAAndScaleL1ToL0<xType, xType, xScaleType>(
         aL0Tensor,
-        aL1_
-            [(l1Mte2Idx_ % DOUBLE_BUFFER_NUM) * A_B4_L1_BUFFER_OFFSET_ELEM + mL1Offset * C0_SIZE +
+        aL1_[(l1Mte2Idx_ % DOUBLE_BUFFER_NUM) * A_B4_L1_BUFFER_OFFSET_ELEM + mL1Offset * C0_SIZE +
              kL1Offset * Ops::Base::CeilAlign(l0Params.mL1Size, static_cast<uint64_t>(BLOCK_CUBE))],
-        aScaleL1_
-            [(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * A_SCALE_B8_L1_BUFFER_OFFSET_ELEM +
-             mL1Offset * l0Params.scaleKL1Size / MX_GROUPSIZE + kScaleL1Offset / MX_GROUPSIZE * BLOCK_CUBE],
+        aScaleL1_[(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * A_SCALE_B8_L1_BUFFER_OFFSET_ELEM +
+                  mL1Offset * l0Params.scaleKL1Size / MX_GROUPSIZE + kScaleL1Offset / MX_GROUPSIZE * BLOCK_CUBE],
         l0Params);
     LoadBAndScaleL1ToL0<wType, wType, wScaleType>(
         bL0Tensor,
-        bL1_
-            [(l1Mte2Idx_ % DOUBLE_BUFFER_NUM) * B_B4_L1_BUFFER_OFFSET_ELEM + nL1Offset * C0_SIZE +
+        bL1_[(l1Mte2Idx_ % DOUBLE_BUFFER_NUM) * B_B4_L1_BUFFER_OFFSET_ELEM + nL1Offset * C0_SIZE +
              kL1Offset * Ops::Base::CeilAlign(l0Params.nL1Size, static_cast<uint64_t>(BLOCK_CUBE))],
-        bScaleL1_
-            [(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * B_SCALE_B8_L1_BUFFER_OFFSET_ELEM +
-             nL1Offset * l0Params.scaleKL1Size / MX_GROUPSIZE + kScaleL1Offset / MX_GROUPSIZE * BLOCK_CUBE],
+        bScaleL1_[(scaleMte2Idx_ % DOUBLE_BUFFER_NUM) * B_SCALE_B8_L1_BUFFER_OFFSET_ELEM +
+                  nL1Offset * l0Params.scaleKL1Size / MX_GROUPSIZE + kScaleL1Offset / MX_GROUPSIZE * BLOCK_CUBE],
         l0Params);
     SetFlag<HardEvent::MTE1_M>(EVENT_MTE1_M_ID);
     WaitFlag<HardEvent::MTE1_M>(EVENT_MTE1_M_ID);
@@ -293,4 +289,3 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::EndSync()
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

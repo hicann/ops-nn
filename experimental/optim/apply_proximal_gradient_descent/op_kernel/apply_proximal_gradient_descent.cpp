@@ -27,9 +27,9 @@
 #include "apply_proximal_gradient_descent.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void apply_proximal_gradient_descent(
-    GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2, GM_ADDR delta,
-    GM_ADDR varOut, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_proximal_gradient_descent(GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2,
+                                                           GM_ADDR delta, GM_ADDR varOut, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyProximalGradientDescentTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyProximalGradientDescentTilingData, tilingData, tiling);

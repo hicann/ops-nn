@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_tan_proto.h"
 
-class ForeachTanTest : public testing::Test
-{
+class ForeachTanTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachTan SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachTan SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachTan TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachTan TearDown" << std::endl; }
 };
 
 TEST_F(ForeachTanTest, infer_shape_known_success)

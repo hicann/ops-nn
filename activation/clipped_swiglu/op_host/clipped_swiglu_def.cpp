@@ -26,21 +26,13 @@ class ClippedSwiglu : public OpDef {
 public:
     explicit ClippedSwiglu(const char* name) : OpDef(name)
     {
-        this->Input("x")
-            .ParamType(REQUIRED)
-            .DataType(xDtype)
-            .Format(xFormat)
-            .UnknownShapeFormat(xFormat);
+        this->Input("x").ParamType(REQUIRED).DataType(xDtype).Format(xFormat).UnknownShapeFormat(xFormat);
         this->Input("group_index")
             .ParamType(OPTIONAL)
             .DataType(groupIndexDtype)
             .Format(xFormat)
             .UnknownShapeFormat(xFormat);
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(xDtype)
-            .Format(xFormat)
-            .UnknownShapeFormat(xFormat);
+        this->Output("y").ParamType(REQUIRED).DataType(xDtype).Format(xFormat).UnknownShapeFormat(xFormat);
         this->Attr("dim").AttrType(OPTIONAL).Int(-1);
         this->Attr("alpha").AttrType(OPTIONAL).Float(DEFAULT_ALPHA);
         this->Attr("limit").AttrType(OPTIONAL).Float(DEFAULT_LIMIT);
@@ -63,11 +55,7 @@ public:
             .Format(xFormat)
             .UnknownShapeFormat(xFormat)
             .AutoContiguous();
-        regbaseConfig.Output("y")
-            .ParamType(REQUIRED)
-            .DataType(xDtype)
-            .Format(xFormat)
-            .UnknownShapeFormat(xFormat);
+        regbaseConfig.Output("y").ParamType(REQUIRED).DataType(xDtype).Format(xFormat).UnknownShapeFormat(xFormat);
         regbaseConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)

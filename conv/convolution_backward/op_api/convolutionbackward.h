@@ -17,171 +17,172 @@ const int CONV2DINPUTDIM = 4;
 const int CONV3DINPUTDIM = 5;
 
 struct ConvBackpropParams {
-  const aclTensor *input;
-  const aclTensor *weight;
-  const aclTensor *outBackprop;
-  const aclIntArray *stride;
-  const aclIntArray *padding;
-  const aclIntArray *dilation;
-  int groups;
+    const aclTensor* input;
+    const aclTensor* weight;
+    const aclTensor* outBackprop;
+    const aclIntArray* stride;
+    const aclIntArray* padding;
+    const aclIntArray* dilation;
+    int groups;
 };
 
 struct ConvolutionBackwardInputTensor {
-  const aclTensor *gradOutput;
-  const aclTensor *input;
-  const aclTensor *weight;
+    const aclTensor* gradOutput;
+    const aclTensor* input;
+    const aclTensor* weight;
 };
 
 struct ConvolutionBackwardParams {
-  const aclIntArray *biasSizes;
-  const aclIntArray *stride;
-  const aclIntArray *padding;
-  const aclIntArray *dilation;
-  const bool transposed;
-  const aclIntArray *outputPadding;
-  const int groups;
-  const aclBoolArray *outputMask;
-  const int8_t cubeMathType;
+    const aclIntArray* biasSizes;
+    const aclIntArray* stride;
+    const aclIntArray* padding;
+    const aclIntArray* dilation;
+    const bool transposed;
+    const aclIntArray* outputPadding;
+    const int groups;
+    const aclBoolArray* outputMask;
+    const int8_t cubeMathType;
 };
 
 // Check if need to swap D and H dimensions for Conv3D backward
-bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor &inputTensor,
-                                 const ConvolutionBackwardParams &params);
+bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor& inputTensor,
+                                 const ConvolutionBackwardParams& params);
 
 struct tagAdaptParam {
-  aclIntArray *adaptStride {0};
-  aclIntArray *adaptDilation {0};
-  aclIntArray *adaptPad {0};
+    aclIntArray* adaptStride{0};
+    aclIntArray* adaptDilation{0};
+    aclIntArray* adaptPad{0};
 };
 using AdaptParam = struct tagAdaptParam;
 // Conv2dBackpropInput
 // 5HD->FZ with Fp16
-const aclTensor *Conv2DBackpropInputFp162Fp16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropInputFp162Fp16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor);
 // 1971 5HD->FZ with Fp32
-const aclTensor *Conv2DBackpropInputFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropInputFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor);
 // 1971 5HD->FZ with Hf32
-const aclTensor *Conv2DBackpropInputHf32(const aclTensor *input, const aclTensor *weight, const aclTensor *outBackprop,
-                                         const aclIntArray *stride, const aclIntArray *padding,
-                                         const aclIntArray *dilation, int groups, aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropInputHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                         const aclIntArray* stride, const aclIntArray* padding,
+                                         const aclIntArray* dilation, int groups, aclOpExecutor* executor);
 // 1971 5HD->FZ with Bf16
-const aclTensor *Conv2DBackpropInputBf162Bf16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropInputBf162Bf16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor);
 // 1971 5HD->FZ with input dataType and Hf32Flag.
-const aclTensor *Conv2DBackpropInput(const aclTensor *input, const aclTensor *weight,
-                                     const aclTensor *outBackprop, const aclIntArray *stride,
-                                     const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                     aclOpExecutor *executor, bool useHf32Flag, op::DataType dataType);
+const aclTensor* Conv2DBackpropInput(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                                     int groups, aclOpExecutor* executor, bool useHf32Flag, op::DataType dataType);
 // Conv2dBackpropFilter
 // 5HD->FZ with Fp16
-const aclTensor *Conv2DBackpropFilterFp162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropFilterFp162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor);
 
 // 1971 5HD->FZ with Fp32
-const aclTensor *Conv2DBackpropFilterFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropFilterFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor);
 // 1971 5HD->FZ with Hf32
-const aclTensor *Conv2DBackpropFilterHf32(const aclTensor *input, const aclTensor *weight, const aclTensor *outBackprop,
-                                          const aclIntArray *stride, const aclIntArray *padding,
-                                          const aclIntArray *dilation, int groups, aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropFilterHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                          const aclIntArray* stride, const aclIntArray* padding,
+                                          const aclIntArray* dilation, int groups, aclOpExecutor* executor);
 // 1971 5HD->FZ with Bf16
-const aclTensor *Conv2DBackpropFilterBf162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor);
+const aclTensor* Conv2DBackpropFilterBf162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor);
 
 // Conv3dBackpropFilter
 // 6HD->FZ_3D with Fp16
-const aclTensor *Conv3DBackpropFilterFp162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor);
+const aclTensor* Conv3DBackpropFilterFp162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor);
 
 // 1971 6HD->FZ_3D with Fp32
-const aclTensor *Conv3DBackpropFilterFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor);
+const aclTensor* Conv3DBackpropFilterFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor);
 
 // 1971 6HD->FZ_3D with Bf16
-const aclTensor *Conv3DBackpropFilterBf162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor);
+const aclTensor* Conv3DBackpropFilterBf162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor);
 
 // 1971 6HD->FZ_3D with Hf32
-const aclTensor *Conv3DBackpropFilterHf32(const aclTensor *input, const aclTensor *weight, const aclTensor *outBackprop,
-                                          const aclIntArray *stride, const aclIntArray *padding,
-                                          const aclIntArray *dilation, int groups, aclOpExecutor *executor);
+const aclTensor* Conv3DBackpropFilterHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                          const aclIntArray* stride, const aclIntArray* padding,
+                                          const aclIntArray* dilation, int groups, aclOpExecutor* executor);
 
 // Conv3dBackpropInput
 // 6HD->FZ with Fp16
-const aclTensor *Conv3DBackpropInputFp162Fp16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor, AdaptParam *adptParams);
+const aclTensor* Conv3DBackpropInputFp162Fp16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor, AdaptParam* adptParams);
 
 // Ascend950: adapt Tensor between 3D and 2D. Other platform will return directly.
-const aclTensor *AdapterTensor(const aclTensor *tensor, aclOpExecutor *executor, size_t inputDim, size_t targetDim);
+const aclTensor* AdapterTensor(const aclTensor* tensor, aclOpExecutor* executor, size_t inputDim, size_t targetDim);
 
 // 1971 6HD->FZ with Fp32
-const aclTensor *Conv3DBackpropInputFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor, AdaptParam *adptParams);
+const aclTensor* Conv3DBackpropInputFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor, AdaptParam* adptParams);
 // 1971 6HD->FZ with Hf32
-const aclTensor *Conv3DBackpropInputHf32(const aclTensor *input, const aclTensor *weight, const aclTensor *outBackprop,
-                                         const aclIntArray *stride, const aclIntArray *padding,
-                                         const aclIntArray *dilation, int groups, aclOpExecutor *executor, AdaptParam *adptParams);
+const aclTensor* Conv3DBackpropInputHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                         const aclIntArray* stride, const aclIntArray* padding,
+                                         const aclIntArray* dilation, int groups, aclOpExecutor* executor,
+                                         AdaptParam* adptParams);
 // 1971 6HD->FZ with Bf16
-const aclTensor *Conv3DBackpropInputBf162Bf16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor, AdaptParam *adptParams);
+const aclTensor* Conv3DBackpropInputBf162Bf16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor, AdaptParam* adptParams);
 // Conv3dBackpropFilter
 // 1971 6HD->FZ_3D with Bf16/FP16
 // 1982 5HD->FZ_3D with Bf16/FP16
 
-const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTensor, ConvolutionBackwardParams &params,
-                                      aclOpExecutor *executor, bool use_hf32);
+const aclTensor* Conv3DBackpropFilter(ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardParams& params,
+                                      aclOpExecutor* executor, bool use_hf32);
 // Conv3dBackpropInput
 // 1971 6HD->FZ with Bf16/FP16
 // 91 5HD->FZ with Bf16/FP16
-const aclTensor *Conv3DBackpropInput(ConvolutionBackwardInputTensor &inputTensor, ConvolutionBackwardParams &params,
-                                     aclOpExecutor *executor, bool use_hf32, AdaptParam *adptParams);
-bool IsConv3DBackpropInputV2(const ConvBackpropParams &params);
+const aclTensor* Conv3DBackpropInput(ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardParams& params,
+                                     aclOpExecutor* executor, bool use_hf32, AdaptParam* adptParams);
+bool IsConv3DBackpropInputV2(const ConvBackpropParams& params);
 
-bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params);
+bool IsConv3DBackpropFilterV2(const ConvBackpropParams& params);
 
-bool IsInputTransdataWhiteListCase(const ConvBackpropParams &params);
+bool IsInputTransdataWhiteListCase(const ConvBackpropParams& params);
 
-bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams &params);
+bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams& params);
 
-bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams &params);
+bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams& params);
 
-bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams &params);
+bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams& params);
 
-bool CheckN2HEnable(const aclTensor *weight, const aclTensor *&output,
-                           aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6, int groups);
+bool CheckN2HEnable(const aclTensor* weight, const aclTensor*& output, aclIntArray* stride5, aclIntArray* dilation5,
+                    aclIntArray* pad6, int groups);
 
-bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input, const aclIntArray *stride5, int groups);
+bool CheckWeightPreTransposeEnable(const aclTensor* weight, const aclTensor* input, const aclIntArray* stride5,
+                                   int groups);
 
-aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop, AdaptParam *adptParams, aclOpExecutor *executor);
+aclnnStatus N2HOptimize(const aclTensor*& weight, const aclTensor*& outBackprop, AdaptParam* adptParams,
+                        aclOpExecutor* executor);
 
-void GetConv3DBackpropAdapterParam(const aclTensor *input, const aclIntArray *stride,
-                                          const aclIntArray *padding, const aclIntArray *dilation,
-                                          aclOpExecutor *executor, AdaptParam *params);
-}  // namespace l0op
+void GetConv3DBackpropAdapterParam(const aclTensor* input, const aclIntArray* stride, const aclIntArray* padding,
+                                   const aclIntArray* dilation, aclOpExecutor* executor, AdaptParam* params);
+} // namespace l0op
 
-#endif  // OP_API_OP_API_COMMON_INC_LEVEL0_OP_CONVOLUTIONBACKWARD_OP_H_
+#endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_CONVOLUTIONBACKWARD_OP_H_

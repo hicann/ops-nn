@@ -122,10 +122,7 @@ ge::graphStatus ForeachBaseClass::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ForeachBaseClass::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ForeachBaseClass::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus ForeachBaseClass::GetWorkspaceSize()
 {

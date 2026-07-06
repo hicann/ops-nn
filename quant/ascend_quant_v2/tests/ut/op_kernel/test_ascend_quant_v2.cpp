@@ -21,19 +21,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void ascend_quant_v2(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ascend_quant_v2(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                                      GM_ADDR workspace, GM_ADDR tiling);
 
 class ascend_quant_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ascend_quant_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ascend_quant_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ascend_quant_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ascend_quant_v2_test TearDown\n" << endl; }
 };
 
 // // test float16
@@ -103,11 +97,11 @@ TEST_F(ascend_quant_v2_test, test_case_2)
     uint32_t blockDim = 16;
 
     AscendQuantV2TilingData* tilingDatafromBin = reinterpret_cast<AscendQuantV2TilingData*>(tiling);
-    
+
     tilingDatafromBin->E = 1;
     tilingDatafromBin->K = 256;
     tilingDatafromBin->N = 256;
-    tilingDatafromBin->needCoreNum =   16;
+    tilingDatafromBin->needCoreNum = 16;
 
     ICPU_SET_TILING_KEY(3);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

@@ -74,9 +74,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请Device侧内存
@@ -94,16 +93,14 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensorWeight(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensorWeight(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                          aclDataType dataType, aclTensor** tensor)
 {
     auto size = static_cast<uint64_t>(GetShapeSize(shape));
 
@@ -129,9 +126,8 @@ int CreateAclTensorWeight(
     storageShape.push_back(GetShapeSize(shape));
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, storageShape.data(),
-        storageShape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              storageShape.data(), storageShape.size(), *deviceAddr);
     return 0;
 }
 
@@ -187,7 +183,8 @@ int main()
     uint64_t transWorkspaceSize = 0;
     aclOpExecutor* transExecutor = nullptr;
     ret = aclnnTransMatmulWeightGetWorkspaceSize(x2, &transWorkspaceSize, &transExecutor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeightGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeightGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* transWorkspaceAddr = nullptr;
@@ -206,7 +203,9 @@ int main()
     ret = aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(
         x1, x2, (const aclTensor*)nullptr, (const aclTensor*)nullptr, permX1, permX2, permY, cubeMathType,
         batchSplitFactor, out, &tbmmWorkspaceSize, &tbmmExecutor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS,
+              LOG_PRINT("aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* tbmmWorkspaceAddr = nullptr;
@@ -226,11 +225,10 @@ int main()
     // 6. 获取输出的值，将Device侧内存上的结果拷贝至Host侧
     auto size = GetShapeSize(outShape);
     std::vector<uint16_t> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    
+
     // 打印结果（将uint16_t转换为float显示）
     int64_t max_print_size = 8;
     for (int64_t i = 0; i < max_print_size; i++) {
@@ -250,14 +248,14 @@ int main()
     aclrtFree(x1DeviceAddr);
     aclrtFree(x2DeviceAddr);
     aclrtFree(outDeviceAddr);
-    
+
     if (transWorkspaceSize > 0) {
         aclrtFree(transWorkspaceAddr);
     }
     if (tbmmWorkspaceSize > 0) {
         aclrtFree(tbmmWorkspaceAddr);
     }
-    
+
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

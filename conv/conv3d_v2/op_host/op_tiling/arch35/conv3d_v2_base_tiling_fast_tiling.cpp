@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv3d_v2_base_tiling_fast_tiling.cpp
  * \brief
  */
 #include "conv3d_v2_base_tiling.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv3dBaseTilingV2::Conv3DInfoInitAndCheck()
@@ -132,30 +132,21 @@ void Conv3dBaseTilingV2::NumBlocksDecision()
     if (flagInfo_.mSplitModeFlag) { // M split mode
         numBlocksRes = convBase_.NumBlocksDecisionMsplitMode();
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: get tiling from Mmode formulaic algorithm, belongs to fast_tiling.",
-            paramInfo_.nodeType.c_str());
+                "%s AscendC: get tiling from Mmode formulaic algorithm, belongs to fast_tiling.",
+                paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-            paramInfo_.nodeType.c_str(),
-            numBlocksRes.batchDim,
-            numBlocksRes.mDim,
-            numBlocksRes.nDim,
-            numBlocksRes.doDim,
-            numBlocksRes.groupDim,
-            numBlocksRes.minCost);
+                "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
+                paramInfo_.nodeType.c_str(), numBlocksRes.batchDim, numBlocksRes.mDim, numBlocksRes.nDim,
+                numBlocksRes.doDim, numBlocksRes.groupDim, numBlocksRes.minCost);
     } else { // HW split mode
         numBlocksRes = convBase_.NumBlocksDecisionHWsplitMode();
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: get tiling from HWmode formulaic algorithm, belongs to fast_tiling.",
-            paramInfo_.nodeType.c_str());
+                "%s AscendC: get tiling from HWmode formulaic algorithm, belongs to fast_tiling.",
+                paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
-            "Conv3D AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-            numBlocksRes.batchDim,
-            numBlocksRes.hoDim,
-            numBlocksRes.nDim,
-            numBlocksRes.doDim,
-            numBlocksRes.groupDim,
-            numBlocksRes.minCost);
+                "Conv3D AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
+                numBlocksRes.batchDim, numBlocksRes.hoDim, numBlocksRes.nDim, numBlocksRes.doDim, numBlocksRes.groupDim,
+                numBlocksRes.minCost);
     }
 }
 
@@ -175,23 +166,18 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3dApiTiling()
                                static_cast<int64_t>(attrInfo_.strideD));
     conv3dApiTiling_.SetGroups(static_cast<int32_t>(attrInfo_.groups));
 
-    conv3dApiTiling_.SetWeightType(TPosition::GM, formatMap[descInfo_.weightFormat],
-                                   dtypeMap[descInfo_.weightDtype]);
-    conv3dApiTiling_.SetFmapType(TPosition::GM, formatMap[descInfo_.fMapFormat],
-                                 dtypeMap[descInfo_.fMapDtype]);
-    conv3dApiTiling_.SetOutputType(TPosition::CO1, formatMap[descInfo_.outFormat],
-                                   dtypeMap[descInfo_.outDtype]);
+    conv3dApiTiling_.SetWeightType(TPosition::GM, formatMap[descInfo_.weightFormat], dtypeMap[descInfo_.weightDtype]);
+    conv3dApiTiling_.SetFmapType(TPosition::GM, formatMap[descInfo_.fMapFormat], dtypeMap[descInfo_.fMapDtype]);
+    conv3dApiTiling_.SetOutputType(TPosition::CO1, formatMap[descInfo_.outFormat], dtypeMap[descInfo_.outDtype]);
     if (flagInfo_.quantFlag || flagInfo_.isConv3dDequant) {
-        conv3dApiTiling_.SetScaleType(TPosition::GM, formatMap[descInfo_.scaleFormat],
-                                     dtypeMap[descInfo_.scaleDtype]);
+        conv3dApiTiling_.SetScaleType(TPosition::GM, formatMap[descInfo_.scaleFormat], dtypeMap[descInfo_.scaleDtype]);
     }
     conv3dApiTiling_.SetFixpipeParams(fixpipeInfo_);
     conv3dApiTiling_.SetOffsetx(static_cast<int8_t>(attrInfo_.offsetx));
     conv3dApiTiling_.SetRoundMode(static_cast<int8_t>(attrInfo_.roundMode));
     conv3dApiTiling_.SetNodeType(paramInfo_.nodeType);
     if (flagInfo_.hasBias) {
-        conv3dApiTiling_.SetBiasType(TPosition::GM, formatMap[descInfo_.biasFormat],
-                                     dtypeMap[descInfo_.biasDtype]);
+        conv3dApiTiling_.SetBiasType(TPosition::GM, formatMap[descInfo_.biasFormat], dtypeMap[descInfo_.biasDtype]);
     }
 
     if (conv3dApiTiling_.GetTiling(tilingData_) == -1) {
@@ -210,27 +196,30 @@ void Conv3dBaseTilingV2::Conv3dOpTilingSetShape()
                                      static_cast<int64_t>(shapeInfo_.hi), static_cast<int64_t>(shapeInfo_.wi));
 
     uint64_t singleCoreCi = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.ciPerGroup : optGroupInfo_.cinOpt) : shapeInfo_.ci;                          
+                                (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.ciPerGroup :
+                                                                                            optGroupInfo_.cinOpt) :
+                                shapeInfo_.ci;
     conv3dApiTiling_.SetSingleWeightShape(static_cast<int64_t>(singleCoreCi), static_cast<int64_t>(shapeInfo_.kd),
                                           static_cast<int64_t>(shapeInfo_.kh), static_cast<int64_t>(shapeInfo_.kw));
 
-    uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ? (flagInfo_.convGroupType ==
-        ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
+    uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup :
+                                                                                     optGroupInfo_.coutOpt) :
+                         shapeInfo_.co;
     int64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams_.n0), numBlocksRes.nDim),
-                           convOpsConstParams_.n0);
+                                      convOpsConstParams_.n0);
     int64_t singleCoreDo = ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim);
     int64_t singleCoreBatch = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim);
     int64_t singleCoreHo = 0;
     int64_t singleCoreMo = 0;
     if (flagInfo_.mSplitModeFlag) {
-        singleCoreMo =
-            ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0), numBlocksRes.mDim);
+        singleCoreMo = ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0),
+                                   numBlocksRes.mDim);
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreBatch);
     } else {
         singleCoreHo = ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim);
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo,
-            static_cast<int64_t>(shapeInfo_.wo), singleCoreBatch);
+                                              static_cast<int64_t>(shapeInfo_.wo), singleCoreBatch);
     }
 
     uint64_t singleGroups = 0;
@@ -259,5 +248,5 @@ void Conv3dBaseTilingV2::Conv3dOpTilingSetShape()
        << ", hf32TransMode: " << static_cast<uint32_t>(hf32TransMode);
     OP_LOGD(context_->GetNodeName(), "%s", ss.str().c_str());
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

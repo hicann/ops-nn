@@ -25,65 +25,69 @@ using namespace AscendC;
 template <typename T>
 class MaskedSoftmaxWithRelPosBiasONES2 {
 public:
-  __aicore__ inline MaskedSoftmaxWithRelPosBiasONES2(
-      const MaskedSoftmaxWithRelPosBiasTilingData* __restrict__ MaskedSoftmaxWithRelPosBiasONES2TilingData)
-          : tilingData(MaskedSoftmaxWithRelPosBiasONES2TilingData){};
-  __aicore__ inline void Init(GM_ADDR x, GM_ADDR attenMask, GM_ADDR bias, GM_ADDR y) {
-    if (GetBlockIdx() < tilingData->tailStartCoreIdx) {
-      offset = GetBlockIdx() * tilingData->singleCoreSize;
-      batchSize = tilingData->singleCoreSize;
-    } else {
-      offset = GetBlockIdx() * (tilingData->singleCoreSize - 1) + tilingData->tailStartCoreIdx;
-      batchSize = tilingData->singleCoreSize - 1;
+    __aicore__ inline MaskedSoftmaxWithRelPosBiasONES2(
+        const MaskedSoftmaxWithRelPosBiasTilingData* __restrict__ MaskedSoftmaxWithRelPosBiasONES2TilingData)
+        : tilingData(MaskedSoftmaxWithRelPosBiasONES2TilingData){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR attenMask, GM_ADDR bias, GM_ADDR y)
+    {
+        if (GetBlockIdx() < tilingData->tailStartCoreIdx) {
+            offset = GetBlockIdx() * tilingData->singleCoreSize;
+            batchSize = tilingData->singleCoreSize;
+        } else {
+            offset = GetBlockIdx() * (tilingData->singleCoreSize - 1) + tilingData->tailStartCoreIdx;
+            batchSize = tilingData->singleCoreSize - 1;
+        }
+
+        typeSize = sizeof(T);
+        stackNum = tilingData->stackNum; // 65535 is for DataCopyParams
+        loopCount = batchSize / stackNum;
+        loopTailSize = batchSize - batchSize / stackNum * stackNum;
+
+        yGm.SetGlobalBuffer((__gm__ T*)y + offset, batchSize);
+        pipe.InitBuffer(vecOutQueue, 1, (stackNum * typeSize / 32 + 1) * 32); // 32 is for aligned
     }
 
-    typeSize = sizeof(T);
-    stackNum = tilingData->stackNum;  // 65535 is for DataCopyParams
-    loopCount = batchSize / stackNum;
-    loopTailSize = batchSize - batchSize / stackNum * stackNum;
-
-    yGm.SetGlobalBuffer((__gm__ T*)y + offset, batchSize);
-    pipe.InitBuffer(vecOutQueue, 1, (stackNum * typeSize / 32 + 1) * 32); // 32 is for aligned
-  }
-
-  __aicore__ inline void Process() {
-    for (uint32_t i = 0; i < loopCount; i++) {
-      Compute(i, stackNum);
-      CopyOut(i, stackNum);
+    __aicore__ inline void Process()
+    {
+        for (uint32_t i = 0; i < loopCount; i++) {
+            Compute(i, stackNum);
+            CopyOut(i, stackNum);
+        }
+        if (loopTailSize > 0) {
+            Compute(loopCount, loopTailSize);
+            CopyOut(loopCount, loopTailSize);
+        }
     }
-    if (loopTailSize > 0) {
-      Compute(loopCount, loopTailSize);
-      CopyOut(loopCount, loopTailSize);
-    }
-  }
 
 private:
-  __aicore__ inline void Compute(int32_t i, uint32_t num) {
-    LocalTensor<T> yLocal = vecOutQueue.AllocTensor<T>();
+    __aicore__ inline void Compute(int32_t i, uint32_t num)
+    {
+        LocalTensor<T> yLocal = vecOutQueue.AllocTensor<T>();
 
-    T scalar = 1.0;
-    Duplicate<T>(yLocal, scalar, num);
+        T scalar = 1.0;
+        Duplicate<T>(yLocal, scalar, num);
 
-    vecOutQueue.EnQue<T>(yLocal);
-  }
+        vecOutQueue.EnQue<T>(yLocal);
+    }
 
-  __aicore__ inline void CopyOut(int32_t i, uint32_t num) {
-    LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
-    DataCopyParams copyParamsLast{(uint16_t)(1), (uint16_t)(num * typeSize), (uint16_t)(0), (uint16_t)(0)};
+    __aicore__ inline void CopyOut(int32_t i, uint32_t num)
+    {
+        LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
+        DataCopyParams copyParamsLast{(uint16_t)(1), (uint16_t)(num * typeSize), (uint16_t)(0), (uint16_t)(0)};
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-    DataCopyPad(yGm[static_cast<int64_t>(i) * stackNum], yLocal, copyParamsLast);
+        DataCopyPad(yGm[static_cast<int64_t>(i) * stackNum], yLocal, copyParamsLast);
 #endif
-    vecOutQueue.FreeTensor(yLocal);
-  }
+        vecOutQueue.FreeTensor(yLocal);
+    }
 
 private:
-  TPipe pipe;
-  TQue<QuePosition::VECOUT, 1> vecOutQueue;
-  uint32_t offset, batchSize;
-  uint32_t stackNum, loopCount, loopTailSize, typeSize;
-  GlobalTensor<T> yGm;
-  const MaskedSoftmaxWithRelPosBiasTilingData* __restrict__ tilingData;
+    TPipe pipe;
+    TQue<QuePosition::VECOUT, 1> vecOutQueue;
+    uint32_t offset, batchSize;
+    uint32_t stackNum, loopCount, loopTailSize, typeSize;
+    GlobalTensor<T> yGm;
+    const MaskedSoftmaxWithRelPosBiasTilingData* __restrict__ tilingData;
 };
 
-}
+} // namespace MaskedSoftmaxWithRelPosBias
 #endif

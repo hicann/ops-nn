@@ -31,11 +31,8 @@ namespace NsFakeQuantPerChannel {
 // fp32 → int32, 向负无穷舍入（TF floor 语义）
 // 来源：Cast-45.md 表 3「浮点转整数」`float → int32` 行
 static constexpr AscendC::Reg::CastTrait kCastFp32ToInt32Floor = {
-    AscendC::Reg::RegLayout::UNKNOWN,       // 表 3 规定 float→int32 = UNKNOWN
-    AscendC::Reg::SatMode::NO_SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_FLOOR
-};
+    AscendC::Reg::RegLayout::UNKNOWN, // 表 3 规定 float→int32 = UNKNOWN
+    AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_FLOOR};
 
 // int32 → fp32, round 选 CAST_NONE
 // 来源：Cast-45.md 表 5「整数转浮点」`int32 → float` 行 +
@@ -44,12 +41,11 @@ static constexpr AscendC::Reg::CastTrait kCastFp32ToInt32Floor = {
 //       特殊处理：当 roundMode==CAST_NONE 时自动转 CAST_RINT，避免 static_assert 失败。
 //       使用 CAST_NONE 是与 SDK 兼容的写法，等价于 round-to-nearest)
 static constexpr AscendC::Reg::CastTrait kCastInt32ToFp32 = {
-    AscendC::Reg::RegLayout::UNKNOWN,       // 表 5 规定 int32→float = UNKNOWN
-    AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_NONE           // 触发 SDK 的 conditionNoneToRint 路径
+    AscendC::Reg::RegLayout::UNKNOWN, // 表 5 规定 int32→float = UNKNOWN
+    AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_NONE // 触发 SDK 的 conditionNoneToRint 路径
 };
 
-}  // namespace NsFakeQuantPerChannel
+} // namespace NsFakeQuantPerChannel
 
-#endif  // _FAKE_QUANT_WITH_MIN_MAX_VARS_PER_CHANNEL_BASE_H_
+#endif // _FAKE_QUANT_WITH_MIN_MAX_VARS_PER_CHANNEL_BASE_H_

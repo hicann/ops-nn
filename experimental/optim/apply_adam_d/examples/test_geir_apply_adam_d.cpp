@@ -54,25 +54,25 @@ using std::vector;
 string GetTime();
 int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, float value);
 
-#define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape)                                             \
-    vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                              \
-    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                    \
-    TensorDesc placeholder##intputIndex##_desc =                                                                \
-        TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, intputDtype);                        \
-    placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                           \
-    placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                                       \
-    Tensor tensor_placeholder##intputIndex;                                                                     \
-    ret = GenOnesDataFloat32(                                                                                   \
-        placeholder##intputIndex##_shape, tensor_placeholder##intputIndex, placeholder##intputIndex##_desc, 2); \
-    if (ret != SUCCESS) {                                                                                       \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                          \
-        return FAILED;                                                                                          \
-    }                                                                                                           \
-    placeholder##intputIndex.update_input_desc_x(placeholder##intputIndex##_desc);                              \
-    placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);                             \
-    input.push_back(tensor_placeholder##intputIndex);                                                           \
-    graph.AddOp(placeholder##intputIndex);                                                                      \
-    applyAdamD1.set_input_##intputName(placeholder##intputIndex);                                               \
+#define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape)                                                 \
+    vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
+    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                        \
+    TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
+                                                            intputDtype);                                           \
+    placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
+    placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                                           \
+    Tensor tensor_placeholder##intputIndex;                                                                         \
+    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                     \
+                             placeholder##intputIndex##_desc, 2);                                                   \
+    if (ret != SUCCESS) {                                                                                           \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
+        return FAILED;                                                                                              \
+    }                                                                                                               \
+    placeholder##intputIndex.update_input_desc_x(placeholder##intputIndex##_desc);                                  \
+    placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);                                 \
+    input.push_back(tensor_placeholder##intputIndex);                                                               \
+    graph.AddOp(placeholder##intputIndex);                                                                          \
+    applyAdamD1.set_input_##intputName(placeholder##intputIndex);                                                   \
     inputs.push_back(placeholder##intputIndex)
 
 #define ADD_INPUT_ATTR(attrName, attrValue) applyAdamD1.set_attr_##attrName(attrValue)
@@ -150,9 +150,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 }
 
 // 构造 ApplyAdamD 单算子图：10 输入 / 3 输出 / 2 属性（OpType=ApplyAdamD）。
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
     auto applyAdamD1 = op::ApplyAdamD("applyAdamD1");

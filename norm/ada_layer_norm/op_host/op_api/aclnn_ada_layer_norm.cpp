@@ -27,8 +27,8 @@ namespace {
 static constexpr int32_t MIN_X_DIM = 2;
 static constexpr int32_t MAX_X_DIM = 8;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
 static bool CheckNotNull(l0op::AdaLayerNormInputTensor& inputTensor, l0op::AdaLayerNormOutputTensor& outputTensor)
 {
@@ -71,9 +71,8 @@ static bool CheckDtypeValid(l0op::AdaLayerNormInputTensor& inputTensor, l0op::Ad
 static bool CheckShape(l0op::AdaLayerNormInputTensor& inputTensor, l0op::AdaLayerNormOutputTensor& outputTensor)
 {
     int64_t xDim = inputTensor.x->GetViewShape().GetDimNum();
-    OP_CHECK(
-        xDim >= MIN_X_DIM && xDim <= MAX_X_DIM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be between 2 and 8."), return false);
+    OP_CHECK(xDim >= MIN_X_DIM && xDim <= MAX_X_DIM,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be between 2 and 8."), return false);
 
     op::Shape xShape = inputTensor.x->GetViewShape();
     int64_t B = 1;
@@ -132,14 +131,16 @@ static aclnnStatus CheckParams(l0op::AdaLayerNormInputTensor& inputTensor, l0op:
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus AdaLayerNormCalculate(
-    l0op::AdaLayerNormInputTensor& inputTensor, l0op::AdaLayerNormOutputTensor& outputTensor, double epsilon, aclOpExecutor* executor)
+static aclnnStatus AdaLayerNormCalculate(l0op::AdaLayerNormInputTensor& inputTensor,
+                                         l0op::AdaLayerNormOutputTensor& outputTensor, double epsilon,
+                                         aclOpExecutor* executor)
 {
     // 如果非连续，需要转连续
     inputTensor.x = l0op::Contiguous(inputTensor.x, executor);
     inputTensor.scale = l0op::Contiguous(inputTensor.scale, executor);
     inputTensor.shift = l0op::Contiguous(inputTensor.shift, executor);
-    CHECK_RET(inputTensor.x != nullptr && inputTensor.scale != nullptr && inputTensor.shift != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(inputTensor.x != nullptr && inputTensor.scale != nullptr && inputTensor.shift != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
     if (inputTensor.weightOptional != nullptr) {
         inputTensor.weightOptional = l0op::Contiguous(inputTensor.weightOptional, executor);
         CHECK_RET(inputTensor.weightOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -157,9 +158,10 @@ static aclnnStatus AdaLayerNormCalculate(
 }
 }; // namespace
 
-aclnnStatus aclnnAdaLayerNormGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, double epsilon, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAdaLayerNormGetWorkspaceSize(const aclTensor* x, const aclTensor* scale, const aclTensor* shift,
+                                              const aclTensor* weightOptional, const aclTensor* biasOptional,
+                                              double epsilon, aclTensor* out, uint64_t* workspaceSize,
+                                              aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAdaLayerNorm, DFX_IN(x, scale, shift, weightOptional, biasOptional, epsilon), DFX_OUT(out));
     // 固定写法，创建OpExecutor

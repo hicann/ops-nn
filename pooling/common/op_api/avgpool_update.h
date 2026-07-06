@@ -13,9 +13,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *AvgPoolUpdate5Hd(const aclTensor *x1, const aclTensor *x2, const aclIntArray *ksize,
-    const aclIntArray *strides, const char *paddingMode, const aclIntArray *pads, const char *dataFormat,
-    const bool ceilMode, const bool exclusive, aclOpExecutor *executor);
+const aclTensor* AvgPoolUpdate5Hd(const aclTensor* x1, const aclTensor* x2, const aclIntArray* ksize,
+                                  const aclIntArray* strides, const char* paddingMode, const aclIntArray* pads,
+                                  const char* dataFormat, const bool ceilMode, const bool exclusive,
+                                  aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_AVGPOOL_UPDATE_OP_H_

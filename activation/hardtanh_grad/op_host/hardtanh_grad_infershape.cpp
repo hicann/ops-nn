@@ -12,7 +12,6 @@
 #include "infershape_elewise_util.h"
 
 using namespace ge;
-namespace ops
-{
-    IMPL_OP_INFERSHAPE(HardtanhGrad).InferShape(Ops::Base::InferShape4Elewise);
-}  // namespace ops
+namespace ops {
+IMPL_OP_INFERSHAPE(HardtanhGrad).InferShape(Ops::Base::InferShape4Elewise);
+} // namespace ops

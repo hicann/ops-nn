@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -55,7 +55,6 @@ bool TransposeQuantBatchMatMulAswTiling::IsCapable()
     return true;
 }
 
-
 void TransposeQuantBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
 {
     auto attrs = context_->GetAttrs();
@@ -92,16 +91,22 @@ void TransposeQuantBatchMatMulAswTiling::CalL1Tiling()
     }
     uint64_t baseASize = runInfo_.baseM * runInfo_.baseK * args_.aDtypeSize;
     uint64_t baseBSize = runInfo_.baseN * runInfo_.baseK * args_.bDtypeSize;
-    bool isMXFP8 =
-        IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX));
+    bool isMXFP8 = IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX),
+                                  context_->GetOptionalInputDesc(SCALE_X2_IDX));
     uint64_t baseScaleASize = !isMXFP8 ?
-        0 :
-        ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE) *
-        runInfo_.baseM * ge::GetSizeByDataType(context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
+                                  0 :
+                                  ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE),
+                                                 MXFP_MULTI_BASE_SIZE) *
+                                      runInfo_.baseM *
+                                      ge::GetSizeByDataType(
+                                          context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
     uint64_t baseScaleBSize = !isMXFP8 ?
-        0 :
-        ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE) *
-        runInfo_.baseN * ge::GetSizeByDataType(context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
+                                  0 :
+                                  ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE),
+                                                 MXFP_MULTI_BASE_SIZE) *
+                                      runInfo_.baseN *
+                                      ge::GetSizeByDataType(
+                                          context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
     uint64_t baseL1Size = baseASize + baseBSize + baseScaleASize + baseScaleBSize;
     uint64_t depthInit = GetDepthA1B1(leftL1Size, baseL1Size, 1UL);
     uint64_t leftL1SizeByDepthInit = leftL1Size - depthInit * (baseL1Size);
@@ -130,10 +135,10 @@ void TransposeQuantBatchMatMulAswTiling::CalScaleFactors(uint64_t baseASize, uin
 
     // 计算scaleFactorA, scaleFactorB
     // 来自K轴的约束
-    uint32_t scaleFactorAMax =
-        std::min(static_cast<uint32_t>(ops::FloorDiv(MTE2_MIN_LOAD_SIZE_V100, baseScaleASize)), SCALER_FACTOR_MAX);
-    uint32_t scaleFactorBMax =
-        std::min(static_cast<uint32_t>(ops::FloorDiv(MTE2_MIN_LOAD_SIZE_V100, baseScaleBSize)), SCALER_FACTOR_MAX);
+    uint32_t scaleFactorAMax = std::min(static_cast<uint32_t>(ops::FloorDiv(MTE2_MIN_LOAD_SIZE_V100, baseScaleASize)),
+                                        SCALER_FACTOR_MAX);
+    uint32_t scaleFactorBMax = std::min(static_cast<uint32_t>(ops::FloorDiv(MTE2_MIN_LOAD_SIZE_V100, baseScaleBSize)),
+                                        SCALER_FACTOR_MAX);
     uint32_t scaleFactorA = static_cast<uint32_t>(args_.kValue) / (runInfo_.stepKa * runInfo_.baseK);
     uint32_t scaleFactorB = static_cast<uint32_t>(args_.kValue) / (runInfo_.stepKb * runInfo_.baseK);
     scaleFactorA_ = std::max(SCALER_FACTOR_MIN, scaleFactorA);
@@ -142,10 +147,10 @@ void TransposeQuantBatchMatMulAswTiling::CalScaleFactors(uint64_t baseASize, uin
     scaleFactorB_ = std::min(scaleFactorBMax, scaleFactorB);
 
     // 来自L1 size 的约束
-    uint64_t leftL1sie =
-        compileInfo_.l1Size - (runInfo_.depthA1 * baseASize + runInfo_.depthB1 * baseBSize + baseBiasSize);
-    uint32_t scaleInit =
-        static_cast<uint32_t>(leftL1sie / (runInfo_.depthA1 * baseScaleASize + runInfo_.depthB1 * baseScaleBSize));
+    uint64_t leftL1sie = compileInfo_.l1Size -
+                         (runInfo_.depthA1 * baseASize + runInfo_.depthB1 * baseBSize + baseBiasSize);
+    uint32_t scaleInit = static_cast<uint32_t>(leftL1sie /
+                                               (runInfo_.depthA1 * baseScaleASize + runInfo_.depthB1 * baseScaleBSize));
     if (scaleFactorA_ <= scaleInit && scaleFactorB_ > scaleInit) {
         leftL1sie -= (static_cast<uint64_t>(scaleFactorA_) * runInfo_.depthA1 * baseScaleASize);
         scaleFactorB_ = std::min(static_cast<uint32_t>(leftL1sie / (runInfo_.depthB1 * baseScaleBSize)), scaleFactorB_);
@@ -155,10 +160,10 @@ void TransposeQuantBatchMatMulAswTiling::CalScaleFactors(uint64_t baseASize, uin
     } else if (scaleFactorA_ > scaleInit && scaleFactorB_ > scaleInit) {
         leftL1sie -= (static_cast<uint64_t>(scaleInit) * runInfo_.depthB1 * baseScaleBSize +
                       static_cast<uint64_t>(scaleInit) * runInfo_.depthA1 * baseScaleASize);
-        uint32_t scaleASec =
-            std::min(static_cast<uint32_t>(leftL1sie / (runInfo_.depthA1 * baseScaleASize)), scaleFactorA_ - scaleInit);
-        uint32_t scaleBSec =
-            std::min(static_cast<uint32_t>(leftL1sie / (runInfo_.depthB1 * baseScaleBSize)), scaleFactorB_ - scaleInit);
+        uint32_t scaleASec = std::min(static_cast<uint32_t>(leftL1sie / (runInfo_.depthA1 * baseScaleASize)),
+                                      scaleFactorA_ - scaleInit);
+        uint32_t scaleBSec = std::min(static_cast<uint32_t>(leftL1sie / (runInfo_.depthB1 * baseScaleBSize)),
+                                      scaleFactorB_ - scaleInit);
         scaleFactorA_ = scaleASec >= scaleBSec ? (scaleASec + scaleInit) : scaleInit;
         scaleFactorB_ = scaleASec < scaleBSec ? (scaleBSec + scaleInit) : scaleInit;
     }
@@ -166,8 +171,8 @@ void TransposeQuantBatchMatMulAswTiling::CalScaleFactors(uint64_t baseASize, uin
 
 void TransposeQuantBatchMatMulAswTiling::CalStepKs()
 {
-    runInfo_.stepKa = std::max(runInfo_.depthA1 / DB_SIZE , 1UL);
-    runInfo_.stepKb = std::max(runInfo_.depthB1 / DB_SIZE , 1UL);
+    runInfo_.stepKa = std::max(runInfo_.depthA1 / DB_SIZE, 1UL);
+    runInfo_.stepKb = std::max(runInfo_.depthB1 / DB_SIZE, 1UL);
 
     if (static_cast<uint64_t>(runInfo_.stepKa * runInfo_.baseK) > args_.kValue) {
         runInfo_.stepKa = ops::CeilDiv(args_.kValue, static_cast<uint64_t>(runInfo_.baseK));
@@ -183,10 +188,8 @@ void TransposeQuantBatchMatMulAswTiling::CalStepKs()
     if (runInfo_.stepKb > runInfo_.stepKa) {
         runInfo_.stepKb = ops::FloorAlign(runInfo_.stepKb, runInfo_.stepKa);
     }
-    runInfo_.stepKa =
-        std::min(runInfo_.stepKa, static_cast<uint64_t>(4)); // 限制stepKa最大为4, 防止issue queue阻塞
-    runInfo_.stepKb =
-        std::min(runInfo_.stepKb, static_cast<uint64_t>(4)); // 限制stepKb最大为4, 防止issue queue阻塞
+    runInfo_.stepKa = std::min(runInfo_.stepKa, static_cast<uint64_t>(4)); // 限制stepKa最大为4, 防止issue queue阻塞
+    runInfo_.stepKb = std::min(runInfo_.stepKb, static_cast<uint64_t>(4)); // 限制stepKb最大为4, 防止issue queue阻塞
     runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
     runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
 }
@@ -225,10 +228,7 @@ uint64_t TransposeQuantBatchMatMulAswTiling::GetTilingKey() const
                               static_cast<uint64_t>(batchSplitMode_), static_cast<uint64_t>(precisionMode_));
 }
 
-uint64_t TransposeQuantBatchMatMulAswTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t TransposeQuantBatchMatMulAswTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus TransposeQuantBatchMatMulAswTiling::GetTilingData(TilingResult& tiling) const
 {
@@ -240,15 +240,15 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::GetTilingDataProcess(BatchMa
     ge::graphStatus ret = MatMulV3BaseTiling::GetTilingDataProcess(tilingData);
     auto x1Scale = context_->GetOptionalInputDesc(SCALE_X1_IDX);
     if (IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
-        tilingData.matMulTilingData.tCubeTiling.mxTypePara =
-            (SCALER_FACTOR_MIN << SCALER_FACTOR_N_BIT) + (SCALER_FACTOR_MIN << SCALER_FACTOR_M_BIT);
+        tilingData.matMulTilingData.tCubeTiling.mxTypePara = (SCALER_FACTOR_MIN << SCALER_FACTOR_N_BIT) +
+                                                             (SCALER_FACTOR_MIN << SCALER_FACTOR_M_BIT);
         if (scaleFactorA_ >= SCALER_FACTOR_MIN && scaleFactorA_ <= SCALER_FACTOR_MAX &&
             scaleFactorB_ >= SCALER_FACTOR_MIN && scaleFactorB_ <= SCALER_FACTOR_MAX) {
-            tilingData.matMulTilingData.tCubeTiling.mxTypePara +=
-                (scaleFactorB_ << SCALER_FACTOR_B_BIT) + scaleFactorA_;
+            tilingData.matMulTilingData.tCubeTiling.mxTypePara += (scaleFactorB_ << SCALER_FACTOR_B_BIT) +
+                                                                  scaleFactorA_;
         } else {
-            tilingData.matMulTilingData.tCubeTiling.mxTypePara +=
-                (SCALER_FACTOR_DEFAULT << SCALER_FACTOR_B_BIT) + SCALER_FACTOR_DEFAULT;
+            tilingData.matMulTilingData.tCubeTiling.mxTypePara += (SCALER_FACTOR_DEFAULT << SCALER_FACTOR_B_BIT) +
+                                                                  SCALER_FACTOR_DEFAULT;
         }
     }
     tilingData.batchSplitFactor = batchSplitFactor_;

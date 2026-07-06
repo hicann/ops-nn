@@ -21,5 +21,5 @@ struct ApplyGradientDescentTilingData {
     EleBaseTilingData baseTiling;
 };
 
-}
+} // namespace ApplyGradientDescentNs
 #endif // APPLY_GRADIENT_DESCENT_TILING_STRUCT_H

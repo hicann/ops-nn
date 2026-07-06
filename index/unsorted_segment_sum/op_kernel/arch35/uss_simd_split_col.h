@@ -26,8 +26,7 @@ using namespace AscendC;
 constexpr uint32_t SPLIT_COL_DB_BUF = 2;
 
 template <typename X_T, typename IDS_T>
-class USSKernelSimdSplitCol
-{
+class USSKernelSimdSplitCol {
 public:
     __aicore__ inline USSKernelSimdSplitCol(const UnsortedSegmentSumSimdSplitColTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
@@ -53,8 +52,8 @@ __aicore__ inline void USSKernelSimdSplitCol<X_T, IDS_T>::Init(GM_ADDR x, GM_ADD
     yGm_.SetGlobalBuffer((__gm__ X_T*)(output));
 
     pipe_->InitBuffer(xQue_, SPLIT_COL_DB_BUF, td_->baseS * td_->baseA * sizeof(X_T));
-    pipe_->InitBuffer(
-        idsQue_, SPLIT_COL_DB_BUF, Ops::Base::CeilAlign(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
+    pipe_->InitBuffer(idsQue_, SPLIT_COL_DB_BUF,
+                      Ops::Base::CeilAlign(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
     pipe_->InitBuffer(yQue_, 1, td_->outputOuterDim * td_->baseA * sizeof(X_T));
 }
 
@@ -72,7 +71,8 @@ __aicore__ inline void USSKernelSimdSplitCol<X_T, IDS_T>::Process()
 
     for (uint64_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
         uint64_t cols = (aLoop == aLoopNum - 1) ? (curCoreCols - aLoop * td_->baseA) : td_->baseA;
-        uint64_t colsAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) / sizeof(X_T);
+        uint64_t colsAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) /
+                             sizeof(X_T);
 
         LocalTensor<X_T> yLocal = yQue_.AllocTensor<X_T>();
         Duplicate(yLocal, static_cast<X_T>(0), td_->outputOuterDim * colsAlign);

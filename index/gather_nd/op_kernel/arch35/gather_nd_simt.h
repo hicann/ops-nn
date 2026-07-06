@@ -19,8 +19,7 @@
 #include "../inc/platform.h"
 
 #include "simt_api/asc_simt.h"
-namespace GatherNd
-{
+namespace GatherNd {
 using namespace AscendC;
 
 constexpr uint64_t TOTAL_DIGITS = 64;
@@ -41,7 +40,7 @@ constexpr uint32_t THREAD_DIMS = 1024;
 #endif
 
 template <typename T1>
-__simt_callee__ __aicore__ inline void SetOutOfBoundValue(__ubuf__ T1 *dstTensor, const uint32_t idx)
+__simt_callee__ __aicore__ inline void SetOutOfBoundValue(__ubuf__ T1* dstTensor, const uint32_t idx)
 {
     if constexpr (IsSameType<T1, int4>::value) {
         dstTensor[idx] = (int4){defaultZero[0], defaultZero[1], defaultZero[2], defaultZero[3]};
@@ -51,10 +50,11 @@ __simt_callee__ __aicore__ inline void SetOutOfBoundValue(__ubuf__ T1 *dstTensor
 }
 
 template <typename T1, typename T2, typename T3, const bool NIS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIMS) inline void SimtDim(
-    __ubuf__ T1 *dstTensor, __ubuf__ T2 *src1Tensor, __ubuf__ T3* inputShape, __gm__ T1 *src2Tensor, 
-    const T3 curSize, const T3 curBegin, const T3 indicesRank, const T3 lastDimSize, const uint32_t rank,
-    const T3 shift, const T3 m)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIMS) inline void SimtDim(__ubuf__ T1* dstTensor, __ubuf__ T2* src1Tensor,
+                                                                     __ubuf__ T3* inputShape, __gm__ T1* src2Tensor,
+                                                                     const T3 curSize, const T3 curBegin,
+                                                                     const T3 indicesRank, const T3 lastDimSize,
+                                                                     const uint32_t rank, const T3 shift, const T3 m)
 {
     for (T3 idx = threadIdx.x; idx < curSize; idx += blockDim.x) {
         bool idxOutOfBound = false;
@@ -111,8 +111,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIMS) inline void SimtDim(
 }
 
 template <typename T1, typename T2, typename T3, const bool NIS>
-class GatherNdSimt
-{
+class GatherNdSimt {
 public:
     __aicore__ inline GatherNdSimt(){};
 
@@ -221,8 +220,8 @@ __aicore__ inline void GatherNdSimt<T1, T2, T3, NIS>::Process()
     GetUintDivMagicAndShift(m, shift, gatherSize);
 
     T3 beginIdx = cBlockIdx * blockFactor * ubFactor;
-    T3 endIdx =
-        (cBlockIdx + 1) * blockFactor * ubFactor < outputSize ? (cBlockIdx + 1) * blockFactor * ubFactor : outputSize;
+    T3 endIdx = (cBlockIdx + 1) * blockFactor * ubFactor < outputSize ? (cBlockIdx + 1) * blockFactor * ubFactor :
+                                                                        outputSize;
     AscendC::LocalTensor<T3> xInShape = inShapeBuf.Get<T3>();
     for (uint32_t i = 0; i < MAX_INPUT_RANK; i++) {
         xInShape.SetValue(i, (T3)(tilingData->xShape[i]));
@@ -243,12 +242,10 @@ __aicore__ inline void GatherNdSimt<T1, T2, T3, NIS>::Process()
         vecInQue.DeQue<T2>();
         LocalTensor<T1> outputBuffer = vecOutQue.AllocTensor<T1>();
 
-        asc_vf_call<SimtDim<T1, T2, T3, NIS>>(dim3(static_cast<uint32_t>(THREAD_DIMS)),
-                                                (__ubuf__ T1*)outputBuffer.GetPhyAddr(),
-                                                (__ubuf__ T2*)indicesBuffer.GetPhyAddr(),
-                                                (__ubuf__ T3*)xInShape.GetPhyAddr(),
-                                                (__gm__ T1*)xGm.GetPhyAddr(),
-                                                curSize, curBegin, indicesRank, gatherSize, rank, shift, m);
+        asc_vf_call<SimtDim<T1, T2, T3, NIS>>(
+            dim3(static_cast<uint32_t>(THREAD_DIMS)), (__ubuf__ T1*)outputBuffer.GetPhyAddr(),
+            (__ubuf__ T2*)indicesBuffer.GetPhyAddr(), (__ubuf__ T3*)xInShape.GetPhyAddr(), (__gm__ T1*)xGm.GetPhyAddr(),
+            curSize, curBegin, indicesRank, gatherSize, rank, shift, m);
         vecInQue.FreeTensor(indicesBuffer);
         vecOutQue.EnQue(outputBuffer);
         vecOutQue.DeQue<T1>();
@@ -258,6 +255,6 @@ __aicore__ inline void GatherNdSimt<T1, T2, T3, NIS>::Process()
         vecOutQue.FreeTensor(outputBuffer);
     }
 }
-}  // namespace GatherNd
+} // namespace GatherNd
 
-#endif  // ASCENDC_GATHER_ND_GATHER_ND_SIMT_H_
+#endif // ASCENDC_GATHER_ND_GATHER_ND_SIMT_H_

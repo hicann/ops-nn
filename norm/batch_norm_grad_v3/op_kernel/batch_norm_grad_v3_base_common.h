@@ -28,89 +28,80 @@ using namespace AscendC;
         if ((r0ForLoopNum < N_LENGTH) && (L_LENGTH < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM))) {                         \
             uint8_t repStride = L_LENGTH / B32_BLOCK_ALIGN_NUM;                                                        \
             for (int64_t i = 0; i < r0ForLoopNum; i++) {                                                               \
-                FUNC_IMPL(                                                                                             \
-                    (RESP_TENSOR)[i * ELEM_PER_REP_FP32], (CAL_0_TENSOR)[i * ELEM_PER_REP_FP32],                       \
-                    (CAL_1_TENSOR)[i * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, N_LENGTH,                                \
-                    {1, 1, 1, repStride, repStride, repStride});                                                       \
+                FUNC_IMPL((RESP_TENSOR)[i * ELEM_PER_REP_FP32], (CAL_0_TENSOR)[i * ELEM_PER_REP_FP32],                 \
+                          (CAL_1_TENSOR)[i * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, N_LENGTH,                          \
+                          {1, 1, 1, repStride, repStride, repStride});                                                 \
             }                                                                                                          \
             if (r0ForRemainNum > 0) {                                                                                  \
                 int64_t repeatForLoopNum = N_LENGTH / UINT8_MAX_NUM;                                                   \
                 for (int64_t i = 0; i < repeatForLoopNum; i++) {                                                       \
-                    FUNC_IMPL(                                                                                         \
-                        (RESP_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * L_LENGTH],                \
-                        (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * L_LENGTH],               \
-                        (CAL_1_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * L_LENGTH],               \
-                        r0ForRemainNum, UINT8_MAX_NUM, {1, 1, 1, repStride, repStride, repStride});                    \
+                    FUNC_IMPL((RESP_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * L_LENGTH],          \
+                              (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * L_LENGTH],         \
+                              (CAL_1_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * L_LENGTH],         \
+                              r0ForRemainNum, UINT8_MAX_NUM, {1, 1, 1, repStride, repStride, repStride});              \
                 }                                                                                                      \
                 if ((N_LENGTH % UINT8_MAX_NUM) > 0) {                                                                  \
                     FUNC_IMPL(                                                                                         \
                         (RESP_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * L_LENGTH], \
-                        (CAL_0_TENSOR)                                                                                 \
-                            [r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * L_LENGTH],          \
-                        (CAL_1_TENSOR)                                                                                 \
-                            [r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * L_LENGTH],          \
+                        (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 +                                              \
+                                       repeatForLoopNum * UINT8_MAX_NUM * L_LENGTH],                                   \
+                        (CAL_1_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 +                                              \
+                                       repeatForLoopNum * UINT8_MAX_NUM * L_LENGTH],                                   \
                         r0ForRemainNum, (N_LENGTH % UINT8_MAX_NUM), {1, 1, 1, repStride, repStride, repStride});       \
                 }                                                                                                      \
             }                                                                                                          \
         } else {                                                                                                       \
             for (int64_t i = 0; i < N_LENGTH; i++) {                                                                   \
-                FUNC_IMPL(                                                                                             \
-                    (RESP_TENSOR)[L_LENGTH * i], (CAL_0_TENSOR)[L_LENGTH * i], (CAL_1_TENSOR)[L_LENGTH * i],           \
-                    L_LENGTH);                                                                                         \
+                FUNC_IMPL((RESP_TENSOR)[L_LENGTH * i], (CAL_0_TENSOR)[L_LENGTH * i], (CAL_1_TENSOR)[L_LENGTH * i],     \
+                          L_LENGTH);                                                                                   \
             }                                                                                                          \
         }                                                                                                              \
         PipeBarrier<PIPE_V>();                                                                                         \
     } while (0)
 
-#define CALC_TWO_TENSOR_REPEAT(FUNC_IMPL, SCALAR_FUNC_IMPL, CAL_0_TENSOR, CAL_1_TENSOR, FUNC_TYPE, FUNC_NAME)     \
-    do {                                                                                                          \
-        int64_t bAlignLength = this->b1DimAlign * this->b0Dim;                                                    \
-        int64_t r0ForLoopNum = bAlignLength / ELEM_PER_REP_FP32;                                                  \
-        int64_t r0ForRemainNum = bAlignLength % ELEM_PER_REP_FP32;                                                \
-        if ((r0ForLoopNum < this->cBlockLength) && (bAlignLength < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM))) {      \
-            uint8_t repStride = bAlignLength / B32_BLOCK_ALIGN_NUM;                                               \
-            for (int64_t i = 0; i < r0ForLoopNum; i++) {                                                          \
-                FUNC_IMPL(                                                                                        \
-                    (CAL_0_TENSOR)[i * ELEM_PER_REP_FP32], (CAL_0_TENSOR)[i * ELEM_PER_REP_FP32], CAL_1_TENSOR,   \
-                    ELEM_PER_REP_FP32, this->cBlockLength, {1, 1, 0, repStride, repStride, 1});                   \
-            }                                                                                                     \
-            if (r0ForRemainNum > 0) {                                                                             \
-                int64_t repeatForLoopNum = this->cBlockLength / UINT8_MAX_NUM;                                    \
-                for (int64_t i = 0; i < repeatForLoopNum; i++) {                                                  \
-                    FUNC_IMPL(                                                                                    \
-                        (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * bAlignLength],      \
-                        (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * bAlignLength],      \
-                        (CAL_1_TENSOR)[i * UINT8_MAX_NUM * 8], r0ForRemainNum, UINT8_MAX_NUM,                     \
-                        {1, 1, 0, repStride, repStride, 1});                                                      \
-                }                                                                                                 \
-                if ((this->cBlockLength % UINT8_MAX_NUM) > 0) {                                                   \
-                    FUNC_IMPL(                                                                                    \
-                        (CAL_0_TENSOR)                                                                            \
-                            [r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * bAlignLength], \
-                        (CAL_0_TENSOR)                                                                            \
-                            [r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * bAlignLength], \
-                        (CAL_1_TENSOR)[repeatForLoopNum * UINT8_MAX_NUM * 8], r0ForRemainNum,                     \
-                        (this->cBlockLength % UINT8_MAX_NUM), {1, 1, 0, repStride, repStride, 1});                \
-                }                                                                                                 \
-            }                                                                                                     \
-        } else {                                                                                                  \
-            for (int64_t i = 0; i < this->cBlockLength; i++) {                                                    \
-                if ((int64_t)(FUNC_TYPE) == -1) {                                                                 \
-                    SCALAR_FUNC_IMPL(                                                                             \
-                        (CAL_0_TENSOR)[bAlignLength * i], (CAL_0_TENSOR)[bAlignLength * i],                       \
-                        -1 * (CAL_1_TENSOR).GetValue(i * 8), bAlignLength);                                       \
-                } else if ((int64_t)(FUNC_TYPE) == -2) {                                                          \
-                    SCALAR_FUNC_IMPL(                                                                             \
-                        (CAL_0_TENSOR)[bAlignLength * i], (CAL_0_TENSOR)[bAlignLength * i],                       \
-                        1 / (CAL_1_TENSOR).GetValue(i * 8), bAlignLength);                                        \
-                } else {                                                                                          \
-                    SCALAR_FUNC_IMPL(                                                                             \
-                        (CAL_0_TENSOR)[bAlignLength * i], (CAL_0_TENSOR)[bAlignLength * i],                       \
-                        (CAL_1_TENSOR).GetValue(i * 8), bAlignLength);                                            \
-                }                                                                                                 \
-            }                                                                                                     \
-        }                                                                                                         \
-        PipeBarrier<PIPE_V>();                                                                                    \
+#define CALC_TWO_TENSOR_REPEAT(FUNC_IMPL, SCALAR_FUNC_IMPL, CAL_0_TENSOR, CAL_1_TENSOR, FUNC_TYPE, FUNC_NAME)         \
+    do {                                                                                                              \
+        int64_t bAlignLength = this->b1DimAlign * this->b0Dim;                                                        \
+        int64_t r0ForLoopNum = bAlignLength / ELEM_PER_REP_FP32;                                                      \
+        int64_t r0ForRemainNum = bAlignLength % ELEM_PER_REP_FP32;                                                    \
+        if ((r0ForLoopNum < this->cBlockLength) && (bAlignLength < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM))) {          \
+            uint8_t repStride = bAlignLength / B32_BLOCK_ALIGN_NUM;                                                   \
+            for (int64_t i = 0; i < r0ForLoopNum; i++) {                                                              \
+                FUNC_IMPL((CAL_0_TENSOR)[i * ELEM_PER_REP_FP32], (CAL_0_TENSOR)[i * ELEM_PER_REP_FP32], CAL_1_TENSOR, \
+                          ELEM_PER_REP_FP32, this->cBlockLength, {1, 1, 0, repStride, repStride, 1});                 \
+            }                                                                                                         \
+            if (r0ForRemainNum > 0) {                                                                                 \
+                int64_t repeatForLoopNum = this->cBlockLength / UINT8_MAX_NUM;                                        \
+                for (int64_t i = 0; i < repeatForLoopNum; i++) {                                                      \
+                    FUNC_IMPL((CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * bAlignLength],    \
+                              (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * bAlignLength],    \
+                              (CAL_1_TENSOR)[i * UINT8_MAX_NUM * 8], r0ForRemainNum, UINT8_MAX_NUM,                   \
+                              {1, 1, 0, repStride, repStride, 1});                                                    \
+                }                                                                                                     \
+                if ((this->cBlockLength % UINT8_MAX_NUM) > 0) {                                                       \
+                    FUNC_IMPL((CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 +                                       \
+                                             repeatForLoopNum * UINT8_MAX_NUM * bAlignLength],                        \
+                              (CAL_0_TENSOR)[r0ForLoopNum * ELEM_PER_REP_FP32 +                                       \
+                                             repeatForLoopNum * UINT8_MAX_NUM * bAlignLength],                        \
+                              (CAL_1_TENSOR)[repeatForLoopNum * UINT8_MAX_NUM * 8], r0ForRemainNum,                   \
+                              (this->cBlockLength % UINT8_MAX_NUM), {1, 1, 0, repStride, repStride, 1});              \
+                }                                                                                                     \
+            }                                                                                                         \
+        } else {                                                                                                      \
+            for (int64_t i = 0; i < this->cBlockLength; i++) {                                                        \
+                if ((int64_t)(FUNC_TYPE) == -1) {                                                                     \
+                    SCALAR_FUNC_IMPL((CAL_0_TENSOR)[bAlignLength * i], (CAL_0_TENSOR)[bAlignLength * i],              \
+                                     -1 * (CAL_1_TENSOR).GetValue(i * 8), bAlignLength);                              \
+                } else if ((int64_t)(FUNC_TYPE) == -2) {                                                              \
+                    SCALAR_FUNC_IMPL((CAL_0_TENSOR)[bAlignLength * i], (CAL_0_TENSOR)[bAlignLength * i],              \
+                                     1 / (CAL_1_TENSOR).GetValue(i * 8), bAlignLength);                               \
+                } else {                                                                                              \
+                    SCALAR_FUNC_IMPL((CAL_0_TENSOR)[bAlignLength * i], (CAL_0_TENSOR)[bAlignLength * i],              \
+                                     (CAL_1_TENSOR).GetValue(i * 8), bAlignLength);                                   \
+                }                                                                                                     \
+            }                                                                                                         \
+        }                                                                                                             \
+        PipeBarrier<PIPE_V>();                                                                                        \
     } while (0)
 
 constexpr uint32_t ONE = 1;
@@ -137,12 +128,11 @@ struct WeightMeanVarStruct {
     LocalTensor<float> meanBrcbTensor;
     LocalTensor<float> varBrcbTensor;
 
-    __aicore__ inline WeightMeanVarStruct()
-    {}
+    __aicore__ inline WeightMeanVarStruct() {}
 
-    __aicore__ inline WeightMeanVarStruct(
-        LocalTensor<float>& weightTensor, LocalTensor<float>& meanTensor, LocalTensor<float>& varTensor,
-        LocalTensor<float>& weightBrcbTensor, LocalTensor<float>& meanBrcbTensor, LocalTensor<float>& varBrcbTensor)
+    __aicore__ inline WeightMeanVarStruct(LocalTensor<float>& weightTensor, LocalTensor<float>& meanTensor,
+                                          LocalTensor<float>& varTensor, LocalTensor<float>& weightBrcbTensor,
+                                          LocalTensor<float>& meanBrcbTensor, LocalTensor<float>& varBrcbTensor)
         : weightTensor(weightTensor),
           meanTensor(meanTensor),
           varTensor(varTensor),
@@ -163,12 +153,10 @@ struct GMStruct {
     GM_ADDR dBias;
     GM_ADDR usrWorkspace;
 
-    __aicore__ inline GMStruct()
-    {}
+    __aicore__ inline GMStruct() {}
 
-    __aicore__ inline GMStruct(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR mean, GM_ADDR var, GM_ADDR dx, GM_ADDR dWeight, GM_ADDR dBias,
-        GM_ADDR usrWorkspace)
+    __aicore__ inline GMStruct(GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR mean, GM_ADDR var, GM_ADDR dx,
+                               GM_ADDR dWeight, GM_ADDR dBias, GM_ADDR usrWorkspace)
         : dy(dy),
           x(x),
           weight(weight),
@@ -197,15 +185,9 @@ __aicore__ inline uint32_t CeilDiv(uint32_t x, uint32_t y)
     return 0;
 }
 
-__aicore__ inline uint32_t RoundUpOneBlock(uint32_t x)
-{
-    return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-}
+__aicore__ inline uint32_t RoundUpOneBlock(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-__aicore__ inline uint32_t RoundUpTwoBlock(uint32_t x)
-{
-    return (x + TWO_BLK_SIZE - 1) / TWO_BLK_SIZE * TWO_BLK_SIZE;
-}
+__aicore__ inline uint32_t RoundUpTwoBlock(uint32_t x) { return (x + TWO_BLK_SIZE - 1) / TWO_BLK_SIZE * TWO_BLK_SIZE; }
 
 template <typename T>
 __aicore__ inline int64_t GetAlignValue(int64_t value)
@@ -218,11 +200,12 @@ __aicore__ inline int64_t GetAlignValue(int64_t value)
 }
 
 template <typename T>
-__aicore__ inline void LoadOneTensor(
-    GlobalTensor<T> input, LocalTensor<float> dst, DataCopyExtParams& dataCopyExtParams,
-    DataCopyPadExtParams<T>& dataCopyPadExtParams, uint32_t number)
+__aicore__ inline void LoadOneTensor(GlobalTensor<T> input, LocalTensor<float> dst,
+                                     DataCopyExtParams& dataCopyExtParams,
+                                     DataCopyPadExtParams<T>& dataCopyPadExtParams, uint32_t number)
 {
-    PipeBarrier<PIPE_MTE2>();;
+    PipeBarrier<PIPE_MTE2>();
+    ;
     if constexpr (IsSameType<T, float>::value) {
         DataCopyPad(dst, input, dataCopyExtParams, dataCopyPadExtParams);
     } else {
@@ -236,8 +219,8 @@ __aicore__ inline void LoadOneTensor(
 }
 
 template <typename T>
-__aicore__ inline void StoreOneTensor(
-    GlobalTensor<T> output, LocalTensor<float> src, DataCopyExtParams dataCopyExtParams, uint32_t offset)
+__aicore__ inline void StoreOneTensor(GlobalTensor<T> output, LocalTensor<float> src,
+                                      DataCopyExtParams dataCopyExtParams, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         TPipeSetWaitFlag<HardEvent::V_MTE3>();
@@ -251,8 +234,7 @@ __aicore__ inline void StoreOneTensor(
     TPipeSetWaitFlag<HardEvent::MTE3_V>();
 }
 
-enum BNGV3SplitMode : int
-{
+enum BNGV3SplitMode : int {
     R0_SPLIT_MODE = 0,
     R1_SPLIT_MODE = 1,
 };
@@ -260,8 +242,7 @@ enum BNGV3SplitMode : int
 template <typename T1, typename T2, typename T3>
 class BatchNormGradV3Base {
 public:
-    __aicore__ inline BatchNormGradV3Base()
-    {}
+    __aicore__ inline BatchNormGradV3Base() {}
 
 protected:
     int64_t b1Dim;
@@ -317,9 +298,9 @@ protected:
     /**
      * shape[nLength, length]累加到[nLength]
      */
-    __aicore__ inline void DoNormalReduce(
-        LocalTensor<float> inputTensor, LocalTensor<float> reduceTensor, LocalTensor<float> outputTensor,
-        int64_t nLength, int64_t length, int64_t lengthAlign)
+    __aicore__ inline void DoNormalReduce(LocalTensor<float> inputTensor, LocalTensor<float> reduceTensor,
+                                          LocalTensor<float> outputTensor, int64_t nLength, int64_t length,
+                                          int64_t lengthAlign)
     {
         int64_t tmpLength = length;
         int64_t offset = 0;
@@ -332,9 +313,8 @@ protected:
         // 3. 否则，逐行使用ReduceSum累加。
         // 由于开发时间问题，直接走3中逻辑
         for (int64_t i = 0; i < nLength; i++) {
-            ReduceSum(
-                reduceTensor[i * B32_BLOCK_ALIGN_NUM], inputTensor[i * lengthAlign], reduceTensor[i * lengthAlign],
-                length);
+            ReduceSum(reduceTensor[i * B32_BLOCK_ALIGN_NUM], inputTensor[i * lengthAlign],
+                      reduceTensor[i * lengthAlign], length);
         }
         TPipeSetWaitFlag<HardEvent::V_S>();
         for (int64_t i = 0; i < nLength; i++) {
@@ -346,9 +326,8 @@ protected:
     /**
      * shape[nLength, length]累加到[length]
      */
-    __aicore__ inline void DoNormalReduce2(
-        LocalTensor<float> inputTensor, LocalTensor<float> reduceTensor, LocalTensor<float> outputTensor,
-        int64_t nLength, int64_t length)
+    __aicore__ inline void DoNormalReduce2(LocalTensor<float> inputTensor, LocalTensor<float> reduceTensor,
+                                           LocalTensor<float> outputTensor, int64_t nLength, int64_t length)
     {
         int64_t tmpLength = 0;
         if (nLength > 1) {

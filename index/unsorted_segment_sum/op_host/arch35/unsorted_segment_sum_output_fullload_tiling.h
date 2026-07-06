@@ -31,13 +31,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_4000, UnsortedSegmentSumOutFlTilingData);
 
-class UnsortedSegmentSumOutFlTiling : public UnsortedSegmentSumBaseTiling
-{
+class UnsortedSegmentSumOutFlTiling : public UnsortedSegmentSumBaseTiling {
 public:
-    explicit UnsortedSegmentSumOutFlTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
-    {}
-    ~UnsortedSegmentSumOutFlTiling() override
-    {}
+    explicit UnsortedSegmentSumOutFlTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context) {}
+    ~UnsortedSegmentSumOutFlTiling() override {}
+
 private:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -48,10 +46,11 @@ private:
     bool isSupportDtype();
     bool isSupportSize();
     ge::graphStatus UbAddBranch();
+
 private:
-    uint64_t maxIndexNum_ {0};
-    uint64_t oneCoreUbLoopTimes_ {0};
-    uint64_t rowNumUb_ {0};
+    uint64_t maxIndexNum_{0};
+    uint64_t oneCoreUbLoopTimes_{0};
+    uint64_t rowNumUb_{0};
     UnsortedSegmentSumOutFlTilingData tilingData_;
 };
 } // namespace optiling

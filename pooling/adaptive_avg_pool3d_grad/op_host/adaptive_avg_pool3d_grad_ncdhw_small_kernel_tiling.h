@@ -32,7 +32,7 @@ constexpr int64_t UB_RESVERVED_SIZE = 2048;
 constexpr int64_t UB_TEMP_BUFF_SIZE = 256 * 10;
 constexpr int64_t T3_INT64 = 10;
 constexpr int64_t DOUBLE_BUFFER = 2;
-constexpr int64_t THRESHOLD= 2;
+constexpr int64_t THRESHOLD = 2;
 constexpr int64_t WORKSPACE_SIZE = 16 * 1024 * 1024;
 constexpr int64_t ALIGN_NUM = 32;
 constexpr int64_t MAX_INT32 = 2147483647;
@@ -96,11 +96,10 @@ public:
         : AdaptiveAvgPool3dGradTilingBaseV35(context)
     {}
 
-    ~AdaptiveAvgPool3dGradTilingSmallKernel() override
-    {}
-    
-    AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35* tilingData =
-        context_->GetTilingData<AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35>();
+    ~AdaptiveAvgPool3dGradTilingSmallKernel() override {}
+
+    AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35* tilingData = context_->GetTilingData<
+        AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35>();
 
 protected:
     ge::graphStatus DoOpTiling() override;
@@ -125,7 +124,7 @@ protected:
     void PrintSplitData() const;
     void SplitUnalignDHW();
     void DynamicAdjustmentDWH();
-    
+
 public:
     int64_t gradInputN;
     int64_t gradInputC;

@@ -45,29 +45,29 @@
 
 namespace NsSelu {
 
-using AscendC::TPipe;
-using AscendC::TQue;
-using AscendC::TBuf;
-using AscendC::QuePosition;
+using AscendC::Add;
+using AscendC::Adds;
+using AscendC::Cast;
+using AscendC::DataCopyPad;
+using AscendC::DataCopyParams;
+using AscendC::Exp;
+using AscendC::GetBlockIdx;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
-using AscendC::DataCopyParams;
-using AscendC::DataCopyPad;
-using AscendC::RoundMode;
-using AscendC::GetBlockIdx;
-using AscendC::Muls;
-using AscendC::Exp;
-using AscendC::Adds;
-using AscendC::Mins;
 using AscendC::Maxs;
-using AscendC::Add;
-using AscendC::Cast;
+using AscendC::Mins;
+using AscendC::Muls;
+using AscendC::QuePosition;
+using AscendC::RoundMode;
+using AscendC::TBuf;
+using AscendC::TPipe;
+using AscendC::TQue;
 
 // SELU fixed constants
 constexpr float ALPHA_F32 = 1.6732632423543772848170429916717f;
 constexpr float SCALE_F32 = 1.0507009873554804934193349852946f;
-constexpr half  ALPHA_F16 = half(1.6732632423543772848170429916717);
-constexpr half  SCALE_F16 = half(1.0507009873554804934193349852946);
+constexpr half ALPHA_F16 = half(1.6732632423543772848170429916717);
+constexpr half SCALE_F16 = half(1.0507009873554804934193349852946);
 
 // Compute type trait: maps T -> compute type size
 // float -> float(4), half -> half(2), bfloat16_t -> float(4),
@@ -76,11 +76,26 @@ template <typename T>
 struct ComputeTypeTraits {
     static constexpr int64_t size = sizeof(float); // default
 };
-template <> struct ComputeTypeTraits<float>      { static constexpr int64_t size = sizeof(float); };
-template <> struct ComputeTypeTraits<half>       { static constexpr int64_t size = sizeof(half); };
-template <> struct ComputeTypeTraits<bfloat16_t> { static constexpr int64_t size = sizeof(float); };
-template <> struct ComputeTypeTraits<int32_t>    { static constexpr int64_t size = sizeof(float); };
-template <> struct ComputeTypeTraits<int8_t>     { static constexpr int64_t size = sizeof(float); };
+template <>
+struct ComputeTypeTraits<float> {
+    static constexpr int64_t size = sizeof(float);
+};
+template <>
+struct ComputeTypeTraits<half> {
+    static constexpr int64_t size = sizeof(half);
+};
+template <>
+struct ComputeTypeTraits<bfloat16_t> {
+    static constexpr int64_t size = sizeof(float);
+};
+template <>
+struct ComputeTypeTraits<int32_t> {
+    static constexpr int64_t size = sizeof(float);
+};
+template <>
+struct ComputeTypeTraits<int8_t> {
+    static constexpr int64_t size = sizeof(float);
+};
 
 template <typename T>
 class Selu {
@@ -96,26 +111,20 @@ private:
     __aicore__ inline void CopyOut(int64_t gmOffset, int64_t currentNum);
 
     // float32 direct computation
-    __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat,
-                                           LocalTensor<float>& yFloat,
-                                           int64_t alignedNum);
+    __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat, int64_t alignedNum);
     // float16 direct computation
-    __aicore__ inline void ComputeFloat16(LocalTensor<half>& xHalf,
-                                           LocalTensor<half>& yHalf,
-                                           int64_t alignedNum);
+    __aicore__ inline void ComputeFloat16(LocalTensor<half>& xHalf, LocalTensor<half>& yHalf, int64_t alignedNum);
     // bf16/int32/int8 path: cast to fp32, compute, cast back
     template <typename SrcT>
-    __aicore__ inline void ComputeCastFp32(LocalTensor<SrcT>& xLocal,
-                                            LocalTensor<SrcT>& yLocal,
-                                            int64_t currentNum,
-                                            int64_t alignedNum);
+    __aicore__ inline void ComputeCastFp32(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal, int64_t currentNum,
+                                           int64_t alignedNum);
 
 private:
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> inputQueue;
     TQue<QuePosition::VECOUT, 1> outputQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf1_;  // exp/cast intermediate
-    TBuf<QuePosition::VECCALC> tmpBuf2_;  // max(0,x)/calc workspace
+    TBuf<QuePosition::VECCALC> tmpBuf1_; // exp/cast intermediate
+    TBuf<QuePosition::VECCALC> tmpBuf2_; // max(0,x)/calc workspace
 
     GlobalTensor<T> xGM_;
     GlobalTensor<T> yGM_;
@@ -195,54 +204,51 @@ __aicore__ inline void Selu<T>::CopyOut(int64_t gmOffset, int64_t currentNum)
 // ComputeFloat32 - FP32 direct computation
 // =============================================================================
 template <typename T>
-__aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat,
-                                                   LocalTensor<float>& yFloat,
-                                                   int64_t alignedNum)
+__aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat,
+                                               int64_t alignedNum)
 {
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();
 
     // Step 1: compute alpha * (exp(min(x, 0)) - 1) -> tmp1
     // Clamp exp input to <= 0 to prevent overflow (SELU only uses exp in x<=0 region)
-    Mins(tmp1, xFloat, 0.0f, alignedNum);     // tmp1 = min(x, 0)
-    Exp(tmp1, tmp1, alignedNum);               // tmp1 = exp(min(x, 0)), value in (0, 1]
-    Adds(tmp1, tmp1, -1.0f, alignedNum);       // tmp1 = exp(min(x, 0)) - 1
-    Muls(tmp1, tmp1, ALPHA_F32, alignedNum);   // tmp1 = alpha * (exp(min(x, 0)) - 1)
-    Mins(tmp1, tmp1, 0.0f, alignedNum);        // tmp1 = min(0, alpha*(exp(...)-1))
+    Mins(tmp1, xFloat, 0.0f, alignedNum);    // tmp1 = min(x, 0)
+    Exp(tmp1, tmp1, alignedNum);             // tmp1 = exp(min(x, 0)), value in (0, 1]
+    Adds(tmp1, tmp1, -1.0f, alignedNum);     // tmp1 = exp(min(x, 0)) - 1
+    Muls(tmp1, tmp1, ALPHA_F32, alignedNum); // tmp1 = alpha * (exp(min(x, 0)) - 1)
+    Mins(tmp1, tmp1, 0.0f, alignedNum);      // tmp1 = min(0, alpha*(exp(...)-1))
 
     // Step 2: compute max(0, x) -> tmp2
-    Maxs(tmp2, xFloat, 0.0f, alignedNum);      // tmp2 = max(0, x)
+    Maxs(tmp2, xFloat, 0.0f, alignedNum); // tmp2 = max(0, x)
 
     // Step 3: merge and multiply by scale
-    Add(yFloat, tmp2, tmp1, alignedNum);             // y = max(0,x) + min(0,...)
-    Muls(yFloat, yFloat, SCALE_F32, alignedNum);     // y = scale * y
+    Add(yFloat, tmp2, tmp1, alignedNum);         // y = max(0,x) + min(0,...)
+    Muls(yFloat, yFloat, SCALE_F32, alignedNum); // y = scale * y
 }
 
 // =============================================================================
 // ComputeFloat16 - FP16 direct computation
 // =============================================================================
 template <typename T>
-__aicore__ inline void Selu<T>::ComputeFloat16(LocalTensor<half>& xHalf,
-                                                   LocalTensor<half>& yHalf,
-                                                   int64_t alignedNum)
+__aicore__ inline void Selu<T>::ComputeFloat16(LocalTensor<half>& xHalf, LocalTensor<half>& yHalf, int64_t alignedNum)
 {
     LocalTensor<half> tmp1 = tmpBuf1_.template Get<half>();
     LocalTensor<half> tmp2 = tmpBuf2_.template Get<half>();
 
     // Step 1: compute alpha * (exp(min(x, 0)) - 1) -> tmp1
     // Clamp exp input to <= 0 to prevent overflow
-    Mins(tmp1, xHalf, half(0.0), alignedNum);       // tmp1 = min(x, 0)
-    Exp(tmp1, tmp1, alignedNum);                     // tmp1 = exp(min(x, 0))
-    Adds(tmp1, tmp1, half(-1.0), alignedNum);        // tmp1 = exp(min(x, 0)) - 1
-    Muls(tmp1, tmp1, ALPHA_F16, alignedNum);         // tmp1 = alpha * (exp(...) - 1)
-    Mins(tmp1, tmp1, half(0.0), alignedNum);         // tmp1 = min(0, ...)
+    Mins(tmp1, xHalf, half(0.0), alignedNum); // tmp1 = min(x, 0)
+    Exp(tmp1, tmp1, alignedNum);              // tmp1 = exp(min(x, 0))
+    Adds(tmp1, tmp1, half(-1.0), alignedNum); // tmp1 = exp(min(x, 0)) - 1
+    Muls(tmp1, tmp1, ALPHA_F16, alignedNum);  // tmp1 = alpha * (exp(...) - 1)
+    Mins(tmp1, tmp1, half(0.0), alignedNum);  // tmp1 = min(0, ...)
 
     // Step 2: compute max(0, x) -> tmp2
-    Maxs(tmp2, xHalf, half(0.0), alignedNum);        // tmp2 = max(0, x)
+    Maxs(tmp2, xHalf, half(0.0), alignedNum); // tmp2 = max(0, x)
 
     // Step 3: merge and multiply by scale
-    Add(yHalf, tmp2, tmp1, alignedNum);              // y = max(0,x) + min(0,...)
-    Muls(yHalf, yHalf, SCALE_F16, alignedNum);       // y = scale * y
+    Add(yHalf, tmp2, tmp1, alignedNum);        // y = max(0,x) + min(0,...)
+    Muls(yHalf, yHalf, SCALE_F16, alignedNum); // y = scale * y
 }
 
 // =============================================================================
@@ -250,10 +256,8 @@ __aicore__ inline void Selu<T>::ComputeFloat16(LocalTensor<half>& xHalf,
 // =============================================================================
 template <typename T>
 template <typename SrcT>
-__aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal,
-                                                    LocalTensor<SrcT>& yLocal,
-                                                    int64_t currentNum,
-                                                    int64_t alignedNum)
+__aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal,
+                                                int64_t currentNum, int64_t alignedNum)
 {
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();

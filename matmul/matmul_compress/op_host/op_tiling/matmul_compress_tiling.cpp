@@ -24,28 +24,25 @@ namespace optiling {
 
 static ge::graphStatus MatmulCompressTilingFunc(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(
-        context == nullptr, CUBE_INNER_ERR_REPORT("MatmulCompress", "context is null"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatmulCompress", "context is null"),
+                    return ge::GRAPH_FAILED);
     auto ret = MatmulCompressTilingBase(context).DoTiling();
-    OP_TILING_CHECK(
-        ret == ge::GRAPH_FAILED, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "do tiling failed!"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == ge::GRAPH_FAILED, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "do tiling failed!"),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingPrepareForMatmulCompress(gert::TilingParseContext* context)
 {
-    OP_TILING_CHECK(
-        context == nullptr, CUBE_INNER_ERR_REPORT("MatmulCompress", "context is null"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatmulCompress", "context is null"),
+                    return ge::GRAPH_FAILED);
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_TILING_CHECK(
-        platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
+                    return ge::GRAPH_FAILED);
 
     auto hardwareInfoPtr = context->GetCompiledInfo<optiling::pp_matmul::HardwareInfo>();
-    OP_TILING_CHECK(
-        hardwareInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "hardwareInfoPtr is null"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(hardwareInfoPtr == nullptr,
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "hardwareInfoPtr is null"), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     hardwareInfoPtr->coreNum = ascendcPlatform.GetCoreNumAic();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, hardwareInfoPtr->l2Size);
@@ -54,13 +51,12 @@ static ge::graphStatus TilingPrepareForMatmulCompress(gert::TilingParseContext* 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, hardwareInfoPtr->l0bSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, hardwareInfoPtr->l0cSize);
 
-    OP_LOGI(
-        context->GetNodeName(),
-        "parse hardware info success coreNum:%lu, l2Size:%lu, l1Size:%lu, l0aSize:%lu, l0bSize:%lu, \
+    OP_LOGI(context->GetNodeName(),
+            "parse hardware info success coreNum:%lu, l2Size:%lu, l1Size:%lu, l0aSize:%lu, l0bSize:%lu, \
             l0cSize:%lu, hbmBandWidth:%lu, l2BandWidth:%lu",
-        hardwareInfoPtr->coreNum, hardwareInfoPtr->l2Size, hardwareInfoPtr->l1Size, hardwareInfoPtr->l0aSize,
-        hardwareInfoPtr->l0bSize, hardwareInfoPtr->l0cSize, hardwareInfoPtr->hbmBandWidth,
-        hardwareInfoPtr->l2BandWidth);
+            hardwareInfoPtr->coreNum, hardwareInfoPtr->l2Size, hardwareInfoPtr->l1Size, hardwareInfoPtr->l0aSize,
+            hardwareInfoPtr->l0bSize, hardwareInfoPtr->l0cSize, hardwareInfoPtr->hbmBandWidth,
+            hardwareInfoPtr->l2BandWidth);
     return ge::GRAPH_SUCCESS;
 }
 

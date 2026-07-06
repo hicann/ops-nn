@@ -13,15 +13,15 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 struct MultiScaleDeformableAttentionGradTilingData {
-  uint64_t batchSize = 0;
-  uint64_t numKeys = 0;
-  uint64_t numHeads = 0;
-  uint64_t embedDims = 0;
-  uint64_t numLevels = 0;
-  uint64_t numQueries = 0;
-  uint64_t numPoints = 0;
-  uint64_t maxUbNum = 0;
-  uint64_t coreNum = 0;
+    uint64_t batchSize = 0;
+    uint64_t numKeys = 0;
+    uint64_t numHeads = 0;
+    uint64_t embedDims = 0;
+    uint64_t numLevels = 0;
+    uint64_t numQueries = 0;
+    uint64_t numPoints = 0;
+    uint64_t maxUbNum = 0;
+    uint64_t coreNum = 0;
 };
 
 #define DTYPE_X int64_t
@@ -32,23 +32,23 @@ struct MultiScaleDeformableAttentionGradTilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-  __ubuf__ tilingStruct* tilingDataPointer =                                \
-      reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-  CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
+    CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                  \
-  MultiScaleDeformableAttentionGradTilingData tilingData;                                         \
-  INIT_TILING_DATA(MultiScaleDeformableAttentionGradTilingData, tilingDataPointer, tilingPointer);\
-  (tilingData).batchSize = tilingDataPointer->batchSize;                            \
-  (tilingData).numKeys = tilingDataPointer->numKeys;                                \
-  (tilingData).numHeads = tilingDataPointer->numHeads;                              \
-  (tilingData).embedDims = tilingDataPointer->embedDims;                            \
-  (tilingData).numLevels = tilingDataPointer->numLevels;                            \
-  (tilingData).numQueries = tilingDataPointer->numQueries;                          \
-  (tilingData).numPoints = tilingDataPointer->numPoints;                            \
-  (tilingData).maxUbNum = tilingDataPointer->maxUbNum;                            \
-  (tilingData).coreNum = tilingDataPointer->coreNum;
+#define GET_TILING_DATA(tilingData, tilingPointer)                                                   \
+    MultiScaleDeformableAttentionGradTilingData tilingData;                                          \
+    INIT_TILING_DATA(MultiScaleDeformableAttentionGradTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).batchSize = tilingDataPointer->batchSize;                                           \
+    (tilingData).numKeys = tilingDataPointer->numKeys;                                               \
+    (tilingData).numHeads = tilingDataPointer->numHeads;                                             \
+    (tilingData).embedDims = tilingDataPointer->embedDims;                                           \
+    (tilingData).numLevels = tilingDataPointer->numLevels;                                           \
+    (tilingData).numQueries = tilingDataPointer->numQueries;                                         \
+    (tilingData).numPoints = tilingDataPointer->numPoints;                                           \
+    (tilingData).maxUbNum = tilingDataPointer->maxUbNum;                                             \
+    (tilingData).coreNum = tilingDataPointer->coreNum;
 #endif

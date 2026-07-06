@@ -27,8 +27,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 constexpr uint64_t LNG_TEMPLATE_KEY_WEIGHT = 100;
 constexpr uint64_t LNG_DETERMINISTIC_KEY_WEIGHT = 10;
 constexpr uint64_t B32_BLOCK_ALIGN_NUM = 8;
@@ -65,7 +64,7 @@ TILING_DATA_FIELD_DEF(int64_t, wholeBufferBytes);
 TILING_DATA_FIELD_DEF(int64_t, lastRBufferBytes);
 TILING_DATA_FIELD_DEF(int64_t, nlastRBufferBytes);
 TILING_DATA_FIELD_DEF(int64_t, lastBrcbBufferBytes);
-TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferBytes);//每个block计算batch数的scale行
+TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferBytes); //每个block计算batch数的scale行
 TILING_DATA_FIELD_DEF(int64_t, wholeBufferElemNums);
 TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferElemNums);
 END_TILING_DATA_DEF;
@@ -180,12 +179,7 @@ enum class LNGDtypeKey : int {
     BFLOAT16_FLOAT = 5
 };
 
-enum class LNGTemplateKey : int {
-    COMMON = 1,
-    MERGE_BS_COMMON = 2,
-    WORKSPACE = 3,
-    MERGE_BS_WORKSPACE = 4
-};
+enum class LNGTemplateKey : int { COMMON = 1, MERGE_BS_COMMON = 2, WORKSPACE = 3, MERGE_BS_WORKSPACE = 4 };
 
 struct ParamsAdaLayerNormGrad {
     uint32_t coreNum = 0;
@@ -228,12 +222,9 @@ struct AdaLayerNormGradCompileInfo {
     bool isRegBase = false;
 };
 
-class AdaLayerNormGradTilingBase : public Ops::NN::Optiling::TilingBaseClass
-{
+class AdaLayerNormGradTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AdaLayerNormGradTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {
-    }
+    explicit AdaLayerNormGradTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
     ~AdaLayerNormGradTilingBase() override = default;
     ParamsAdaLayerNormGrad commonParams;
 
@@ -250,12 +241,10 @@ protected:
     int64_t GetCacheID(const int64_t idx);
 };
 
-class AdaLayerNormGradMergeBSWorkspaceTiling : public AdaLayerNormGradTilingBase
-{
+class AdaLayerNormGradMergeBSWorkspaceTiling : public AdaLayerNormGradTilingBase {
 public:
     explicit AdaLayerNormGradMergeBSWorkspaceTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context)
-    {
-    }
+    {}
     ~AdaLayerNormGradMergeBSWorkspaceTiling() override = default;
     AdaLayerNormGradTilingDataMergeBSWorkspace td_;
 
@@ -267,12 +256,9 @@ protected:
     uint64_t GetTilingKey() const override;
 };
 
-class AdaLayerNormGradWorkspaceTiling : public AdaLayerNormGradTilingBase
-{
+class AdaLayerNormGradWorkspaceTiling : public AdaLayerNormGradTilingBase {
 public:
-    explicit AdaLayerNormGradWorkspaceTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context)
-    {
-    }
+    explicit AdaLayerNormGradWorkspaceTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context) {}
     ~AdaLayerNormGradWorkspaceTiling() override = default;
     AdaLayerNormGradTilingDataWorkspace td_;
 
@@ -284,12 +270,9 @@ protected:
     uint64_t GetTilingKey() const override;
 };
 
-class AdaLayerNormGradMergeBSCommonTiling : public AdaLayerNormGradTilingBase
-{
+class AdaLayerNormGradMergeBSCommonTiling : public AdaLayerNormGradTilingBase {
 public:
-    explicit AdaLayerNormGradMergeBSCommonTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context)
-    {
-    }
+    explicit AdaLayerNormGradMergeBSCommonTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context) {}
     ~AdaLayerNormGradMergeBSCommonTiling() override = default;
     AdaLayerNormGradTilingDataMergeBSCommon td_;
 
@@ -314,12 +297,9 @@ private:
     int64_t colAlignM_{-1};
 };
 
-class AdaLayerNormGradCommonTiling : public AdaLayerNormGradTilingBase
-{
+class AdaLayerNormGradCommonTiling : public AdaLayerNormGradTilingBase {
 public:
-    explicit AdaLayerNormGradCommonTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context)
-    {
-    }
+    explicit AdaLayerNormGradCommonTiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context) {}
     ~AdaLayerNormGradCommonTiling() override = default;
     AdaLayerNormGradTilingDataCommon td_;
 
@@ -343,10 +323,9 @@ private:
     int64_t colAlignM_{-1};
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-namespace ops
-{
+namespace ops {
 template <typename T>
 inline auto CeilAlign(T num1, T num2) -> T
 {
@@ -370,5 +349,5 @@ inline auto CeilDiv(T num1, T num2) -> T
 {
     return Ops::Base::CeilDiv(num1, num2);
 }
-}  // namespace ops
-#endif  // ADA_LAYER_NORM_GRAD_TILING_H
+} // namespace ops
+#endif // ADA_LAYER_NORM_GRAD_TILING_H

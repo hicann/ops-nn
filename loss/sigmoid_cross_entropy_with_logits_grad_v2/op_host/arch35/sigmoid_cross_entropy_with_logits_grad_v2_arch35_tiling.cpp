@@ -74,60 +74,50 @@ ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::GetDtype()
     auto targetDesc = context_->GetInputDesc(INPUT_TARGET);
     OP_CHECK_NULL_WITH_CONTEXT(context_, targetDesc);
     ge::DataType targetDtype = targetDesc->GetDataType();
-    OP_CHECK_IF(
-        dtype_ != targetDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "the dtype of target %s should be same with predicted %s.",
-            ge::TypeUtils::DataTypeToAscendString(targetDtype).GetString(),
-            ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtype_ != targetDtype,
+                OP_LOGE(context_->GetNodeName(), "the dtype of target %s should be same with predicted %s.",
+                        ge::TypeUtils::DataTypeToAscendString(targetDtype).GetString(),
+                        ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
+                return ge::GRAPH_FAILED);
 
     auto doutDesc = context_->GetInputDesc(INPUT_DOUT);
     OP_CHECK_NULL_WITH_CONTEXT(context_, doutDesc);
     ge::DataType doutDtype = doutDesc->GetDataType();
-    OP_CHECK_IF(
-        dtype_ != doutDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "the dtype of dout %s should be same with predicted %s.",
-            ge::TypeUtils::DataTypeToAscendString(doutDtype).GetString(),
-            ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtype_ != doutDtype,
+                OP_LOGE(context_->GetNodeName(), "the dtype of dout %s should be same with predicted %s.",
+                        ge::TypeUtils::DataTypeToAscendString(doutDtype).GetString(),
+                        ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
+                return ge::GRAPH_FAILED);
 
     auto weightDesc = context_->GetOptionalInputDesc(INPUT_WEIGHT);
     if (weightDesc != nullptr) {
         hasWeight_ = true;
         ge::DataType weightDtype = weightDesc->GetDataType();
-        OP_CHECK_IF(
-            dtype_ != weightDtype,
-            OP_LOGE(
-                context_->GetNodeName(), "the dtype of weight %s should be same with predicted %s.",
-                ge::TypeUtils::DataTypeToAscendString(weightDtype).GetString(),
-                ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(dtype_ != weightDtype,
+                    OP_LOGE(context_->GetNodeName(), "the dtype of weight %s should be same with predicted %s.",
+                            ge::TypeUtils::DataTypeToAscendString(weightDtype).GetString(),
+                            ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
+                    return ge::GRAPH_FAILED);
     }
     auto posWeightDesc = context_->GetOptionalInputDesc(INPUT_POS_WEIGHT);
     if (posWeightDesc != nullptr) {
         hasPosWeight_ = true;
         ge::DataType posWeightDtype = posWeightDesc->GetDataType();
-        OP_CHECK_IF(
-            dtype_ != posWeightDtype,
-            OP_LOGE(
-                context_->GetNodeName(), "the dtype of weight %s should be same with predicted %s.",
-                ge::TypeUtils::DataTypeToAscendString(posWeightDtype).GetString(),
-                ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(dtype_ != posWeightDtype,
+                    OP_LOGE(context_->GetNodeName(), "the dtype of weight %s should be same with predicted %s.",
+                            ge::TypeUtils::DataTypeToAscendString(posWeightDtype).GetString(),
+                            ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
+                    return ge::GRAPH_FAILED);
     }
 
     auto gradientDesc = context_->GetOutputDesc(OUTPUT_GRADIENT);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradientDesc);
     ge::DataType gradientDtype = gradientDesc->GetDataType();
-    OP_CHECK_IF(
-        dtype_ != gradientDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "the dtype of dout %s should be same with predicted %s.",
-            ge::TypeUtils::DataTypeToAscendString(gradientDtype).GetString(),
-            ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtype_ != gradientDtype,
+                OP_LOGE(context_->GetNodeName(), "the dtype of dout %s should be same with predicted %s.",
+                        ge::TypeUtils::DataTypeToAscendString(gradientDtype).GetString(),
+                        ge::TypeUtils::DataTypeToAscendString(dtype_).GetString()),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -177,15 +167,9 @@ ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
-bool SigmoidCrossEntropyWithLogitsGradV2Tiling::IsCapable()
-{
-    return true;
-}
+bool SigmoidCrossEntropyWithLogitsGradV2Tiling::IsCapable() { return true; }
 
 ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::DoOpTiling()
 {
@@ -202,27 +186,16 @@ ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::DoOpTiling()
     return ret;
 }
 
-ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t SigmoidCrossEntropyWithLogitsGradV2Tiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t SigmoidCrossEntropyWithLogitsGradV2Tiling::GetTilingKey() const { return tilingKey_; }
 
-static ge::graphStatus ParseForSigmoidCrossEntropyWithLogitsGradV2(gert::TilingParseContext* context) {
+static ge::graphStatus ParseForSigmoidCrossEntropyWithLogitsGradV2(gert::TilingParseContext* context)
+{
     OP_LOGD(context->GetNodeName(), "begin to get compile info for SigmoidCrossEntropyWithLogitsGradV2.");
 
     auto compile_info = GetCompileInfoPtr<SigmoidCrossEntropyWithLogitsGradV2CompileInfo>(context);

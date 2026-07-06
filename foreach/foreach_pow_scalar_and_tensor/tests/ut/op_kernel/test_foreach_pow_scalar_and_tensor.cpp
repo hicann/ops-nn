@@ -23,28 +23,20 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_pow_scalar_and_tensor(
-    GM_ADDR scalar, GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_pow_scalar_and_tensor(GM_ADDR scalar, GM_ADDR inputs, GM_ADDR outputs,
+                                                                    GM_ADDR workspace, GM_ADDR tiling);
 
-class foreach_pow_scalar_and_tensor_test : public testing::Test
-{
+class foreach_pow_scalar_and_tensor_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_pow_scalar_and_tensor_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_pow_scalar_and_tensor_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_pow_scalar_and_tensor_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_pow_scalar_and_tensor_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_pow_scalar_and_tensor_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_pow_scalar_and_tensor/tests/ut/op_kernel/pow_scalar_and_tensor_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_pow_scalar_and_tensor/tests/ut/op_kernel/pow_scalar_and_tensor_data ./");
     system("chmod -R 755 ./pow_scalar_and_tensor_data/");
     system("cd ./pow_scalar_and_tensor_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -55,8 +47,8 @@ TEST_F(foreach_pow_scalar_and_tensor_test, test_case_float_1)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     optiling::ForeachCommonTiling tilingFuncObj;
-    tilingFuncObj.Init(
-        shapeInfos, 1, optiling::FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE); // shape info, dataType, the tiling code
+    tilingFuncObj.Init(shapeInfos, 1,
+                       optiling::FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE); // shape info, dataType, the tiling code
     tilingFuncObj.RunBigKernelTiling(blockDim);
     tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
 
@@ -80,9 +72,8 @@ TEST_F(foreach_pow_scalar_and_tensor_test, test_case_float_1)
 TEST_F(foreach_pow_scalar_and_tensor_test, test_case_float16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_pow_scalar_and_tensor/tests/ut/op_kernel/pow_scalar_and_tensor_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_pow_scalar_and_tensor/tests/ut/op_kernel/pow_scalar_and_tensor_data ./");
     system("chmod -R 755 ./pow_scalar_and_tensor_data/");
     system("cd ./pow_scalar_and_tensor_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -117,11 +108,11 @@ TEST_F(foreach_pow_scalar_and_tensor_test, test_case_float16_2)
 TEST_F(foreach_pow_scalar_and_tensor_test, test_case_blofat16_4)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_pow_scalar_and_tensor/tests/ut/op_kernel/pow_scalar_and_tensor_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_pow_scalar_and_tensor/tests/ut/op_kernel/pow_scalar_and_tensor_data ./");
     system("chmod -R 755 ./pow_scalar_and_tensor_data/");
-    system("cd ./pow_scalar_and_tensor_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
+    system(
+        "cd ./pow_scalar_and_tensor_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 4;
     size_t sysWorkspaceSize = 16 * 1024 * 1024;

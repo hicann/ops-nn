@@ -27,21 +27,14 @@ namespace Conv3dFunc {
 template <class Intf, typename DataTypeT>
 class LoadBiasL1WithPointWiseTools {
 public:
-    __aicore__ inline LoadBiasL1WithPointWiseTools()
-    {}
+    __aicore__ inline LoadBiasL1WithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
-    __aicore__ inline void SetN(uint64_t n)
-    {
-        currentNL0_ = n;
-    }
+    __aicore__ inline void SetN(uint64_t n) { currentNL0_ = n; }
 
-    __aicore__ inline void LoadChannelWiseL1(const LocalTensor<DataTypeT> &tensorL1,
-                                                const GlobalTensor<DataTypeT> &tensorGm)
+    __aicore__ inline void LoadChannelWiseL1(const LocalTensor<DataTypeT>& tensorL1,
+                                             const GlobalTensor<DataTypeT>& tensorGm)
     {
         PreProcess();
         uint64_t srcDValue = AlignB(currentNL0_, BLOCK_L0_M);
@@ -62,7 +55,8 @@ private:
     __aicore__ inline void PreProcess()
     {
         tensorGmOffset = self_->ctx.biasFullLoadFlag ? 0 :
-            self_->ctx.nBL1Iter * self_->ctx.conv3dTiling->nBL1 + self_->ctx.nBL0Iter * self_->ctx.conv3dTiling->nL0;
+                                                       self_->ctx.nBL1Iter * self_->ctx.conv3dTiling->nBL1 +
+                                                           self_->ctx.nBL0Iter * self_->ctx.conv3dTiling->nL0;
         currentNL0_ = self_->ctx.biasFullLoadFlag ? self_->ctx.singleCoreCo : currentNL0_;
         ASC_OP_LOGD("[LoadBiasL1WithPointWise] tensorGmOffset %d currentNL0_ %d \n", tensorGmOffset, currentNL0_);
     }
@@ -77,13 +71,12 @@ private:
         nd2NzParams.dstNzC0Stride = 1;
         nd2NzParams.dstNzNStride = 1;
         nd2NzParams.dstNzMatrixStride = 1;
-        ASC_OP_LOGD("[LoadBiasL1WithPointWise] nd2NzParams.nValue %d nd2NzParams.srcDValue %d.\n",
-            nd2NzParams.nValue,
-            nd2NzParams.srcDValue);
+        ASC_OP_LOGD("[LoadBiasL1WithPointWise] nd2NzParams.nValue %d nd2NzParams.srcDValue %d.\n", nd2NzParams.nValue,
+                    nd2NzParams.srcDValue);
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t tensorGmOffset = 0;
     uint64_t currentNL0_ = 0;
     Nd2NzParams nd2NzParams;
@@ -92,10 +85,9 @@ private:
 template <class Intf>
 class LoadBiasL0WithBroadcastTools {
 public:
-    __aicore__ inline LoadBiasL0WithBroadcastTools()
-    {}
+    __aicore__ inline LoadBiasL0WithBroadcastTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         tilingNBL1_ = self_->ctx.conv3dTiling->nBL1;
@@ -125,15 +117,15 @@ public:
     }
 
 private:
-    __aicore__ inline void SetLoadData2DParams(LoadData2DParams &loadData2dParams, const uint64_t &repeatTimes)
+    __aicore__ inline void SetLoadData2DParams(LoadData2DParams& loadData2dParams, const uint64_t& repeatTimes)
     {
         loadData2dParams.repeatTimes = repeatTimes;
         loadData2dParams.srcStride = 1;
         ASC_OP_LOGD("[LoadBiasL0WithBroadcast] loadData2dParams.repeatTimes %d.\n", loadData2dParams.repeatTimes);
     }
 
-    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<typename Intf::BiasT> &initConstValueParams,
-        const uint64_t repeatTimes, const uint64_t blockNum)
+    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<typename Intf::BiasT>& initConstValueParams,
+                                                   const uint64_t repeatTimes, const uint64_t blockNum)
     {
         initConstValueParams.repeatTimes = repeatTimes;
         initConstValueParams.blockNum = blockNum;
@@ -141,12 +133,11 @@ private:
         initConstValueParams.initValue = 1;
         ASC_OP_LOGD(
             "[LoadBiasL0WithBroadcast] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
-            initConstValueParams.repeatTimes,
-            initConstValueParams.blockNum);
+            initConstValueParams.repeatTimes, initConstValueParams.blockNum);
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t tilingNBL1_ = 0;
     uint64_t currentML0_ = 0;
     uint64_t currentNL0_ = 0;
@@ -155,10 +146,9 @@ private:
 template <class Intf>
 class MMadWithPointWiseTools {
 public:
-    __aicore__ inline MMadWithPointWiseTools ()
-    {}
+    __aicore__ inline MMadWithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf * self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         // for pointwise, kL0Tail is real tail. we need to align kL0Tail to mmad
@@ -185,14 +175,10 @@ public:
         ASC_OP_LOGD(
             "[MMadWithPointWise] mmadParams.cmatrixInitVal %d, mmadParams.cmatrixSource %d, mmadParams.isBias %d, "
             "mmadParams.k %d, mmadParams.n %d, mmadParams.m %d.\n",
-            mmadParams.cmatrixInitVal,
-            mmadParams.cmatrixSource,
-            mmadParams.isBias,
-            mmadParams.k,
-            mmadParams.n,
+            mmadParams.cmatrixInitVal, mmadParams.cmatrixSource, mmadParams.isBias, mmadParams.k, mmadParams.n,
             mmadParams.m);
-        Mmad<typename Intf::L0cT, typename Intf::L0cT, typename Intf::L0cT>(
-            self_->ctx.cl0, self_->ctx.al0BiasB, self_->ctx.bl0BiasB, mmadParams);
+        Mmad<typename Intf::L0cT, typename Intf::L0cT, typename Intf::L0cT>(self_->ctx.cl0, self_->ctx.al0BiasB,
+                                                                            self_->ctx.bl0BiasB, mmadParams);
     }
 
     __aicore__ inline void Mad()
@@ -222,17 +208,14 @@ public:
         ASC_OP_LOGD(
             "[MMadWithPointWise] mmadParams.cmatrixInitVal %d, mmadParams.cmatrixSource %d, mmadParams.isBias %d, "
             "mmadParams.k %d, mmadParams.n %d, mmadParams.m %d.\n",
-            mmadParams.cmatrixInitVal,
-            mmadParams.cmatrixSource,
-            mmadParams.isBias,
-            mmadParams.k,
-            mmadParams.n,
+            mmadParams.cmatrixInitVal, mmadParams.cmatrixSource, mmadParams.isBias, mmadParams.k, mmadParams.n,
             mmadParams.m);
-        Mmad<typename Intf::L0cT, typename Intf::WeightT, typename Intf::FmapT>(
-            self_->ctx.cl0, self_->ctx.bl0, self_->ctx.al0, mmadParams);
+        Mmad<typename Intf::L0cT, typename Intf::WeightT, typename Intf::FmapT>(self_->ctx.cl0, self_->ctx.bl0,
+                                                                                self_->ctx.al0, mmadParams);
     }
+
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t currentML0_ = 0;
     uint64_t currentNL0_ = 0;
     uint64_t alignKL0Tail = 0;
@@ -241,10 +224,9 @@ private:
 template <class Intf>
 class CopyOutWithPointWiseTools {
 public:
-    __aicore__ inline CopyOutWithPointWiseTools()
-    {}
+    __aicore__ inline CopyOutWithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         tilingNBL1_ = self_->ctx.conv3dTiling->nBL1;
@@ -258,7 +240,7 @@ public:
         currentNL0_ = n;
     }
 
-    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsV220 &intriParams)
+    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsV220& intriParams)
     {
         if (self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter && self_->ctx.nBL0Iter == self_->ctx.maxNL0Iter) {
             intriParams.mSize = self_->ctx.singleCoreCo - self_->ctx.nBL1Iter * self_->ctx.conv3dTiling->nBL1 -
@@ -271,7 +253,8 @@ public:
 
         if (self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter && self_->ctx.mAL0Iter == self_->ctx.maxML0Iter) {
             intriParams.nSize = self_->ctx.singleCoreM - self_->ctx.mAL1Iter * self_->ctx.conv3dTiling->mAL1 -
-                                self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0;;
+                                self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0;
+            ;
         } else {
             intriParams.nSize = self_->ctx.conv3dTiling->mL0;
         }
@@ -282,51 +265,45 @@ public:
 
         ASC_OP_LOGD("[CopyOutWithPointWise] intriParams.nSize %d, intriParams.mSize %d, intriParams.srcStride %d, "
                     "intriParams.dstStride %d, intriParams.quantPre %d, intriParams.reluEn %d.\n",
-            intriParams.nSize,
-            intriParams.mSize,
-            intriParams.srcStride,
-            intriParams.dstStride,
-            intriParams.quantPre,
-            intriParams.reluEn);
+                    intriParams.nSize, intriParams.mSize, intriParams.srcStride, intriParams.dstStride,
+                    intriParams.quantPre, intriParams.reluEn);
     }
 
-    __aicore__ inline void CopyOut(const GlobalTensor<typename Intf::OutputT> &output)
+    __aicore__ inline void CopyOut(const GlobalTensor<typename Intf::OutputT>& output)
     {
         FixpipeParamsV220 intriParams;
         SetFixpipeIntriParams(intriParams);
         uint64_t offset = CalcFixpipeOffset();
         ASC_OP_LOGD("[CopyOutWithPointWise] offset %d.\n", offset);
         if constexpr (!(AscendC::IsSameType<typename Intf::L0cT, int32_t>::value &&
-                AscendC::IsSameType<typename Intf::OutputT, bfloat16_t>::value)) {
-            Fixpipe<typename Intf::OutputT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[offset], self_->ctx.cl0, intriParams);
+                        AscendC::IsSameType<typename Intf::OutputT, bfloat16_t>::value)) {
+            Fixpipe<typename Intf::OutputT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[offset], self_->ctx.cl0,
+                                                                                intriParams);
         }
     }
 
-    __aicore__ inline void CopyOut2Workspace(const GlobalTensor<typename Intf::L0cT> &output)
+    __aicore__ inline void CopyOut2Workspace(const GlobalTensor<typename Intf::L0cT>& output)
     {
         // impl for pointwise
     }
 
-    __aicore__ inline void CopyUBOut(const GlobalTensor<typename Intf::OutputT> &output, uint32_t mIter,
-                                     uint32_t nIter, uint32_t m, uint32_t n, const LocalTensor<typename Intf::OutputT> &ubout)
+    __aicore__ inline void CopyUBOut(const GlobalTensor<typename Intf::OutputT>& output, uint32_t mIter, uint32_t nIter,
+                                     uint32_t m, uint32_t n, const LocalTensor<typename Intf::OutputT>& ubout)
     {
         // impl for pointwise
     }
 
-    __aicore__ inline void GetL0CSize(uint64_t &mSize, uint64_t &nSize)
+    __aicore__ inline void GetL0CSize(uint64_t& mSize, uint64_t& nSize)
     {
         // impl for pointwise
     }
 
-    __aicore__ inline void GetCurNSize(uint64_t &nCurSize)
+    __aicore__ inline void GetCurNSize(uint64_t& nCurSize)
     {
         // impl for pointwise
     }
 
-    __aicore__ inline uint64_t GetChannelOffset(uint64_t noffset)
-    {
-        return 0;
-    }
+    __aicore__ inline uint64_t GetChannelOffset(uint64_t noffset) { return 0; }
 
 private:
     __aicore__ inline uint64_t CalcFixpipeOffset()
@@ -334,8 +311,9 @@ private:
         uint64_t offsetM = tilingMAL1_ * self_->ctx.mAL1Iter + self_->ctx.conv3dTiling->mL0 * self_->ctx.mAL0Iter;
         // 当前每次只出一个dout
         uint64_t offsetDout = self_->ctx.dOutIter;
-        return (tilingNBL1_ * self_->ctx.nBL1Iter  + self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter) *
-                self_->ctx.orgDo * valueHoWo_ + offsetDout * valueHoWo_ + offsetM;
+        return (tilingNBL1_ * self_->ctx.nBL1Iter + self_->ctx.conv3dTiling->nL0 * self_->ctx.nBL0Iter) *
+                   self_->ctx.orgDo * valueHoWo_ +
+               offsetDout * valueHoWo_ + offsetM;
     }
 
     __aicore__ inline QuantMode_t GetQuantPre()
@@ -359,7 +337,7 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t tilingNBL1_ = 0;
     uint64_t tilingMAL1_ = 0;
     uint64_t valueHoWo_ = 0;
@@ -367,6 +345,6 @@ private:
     uint64_t currentNL0_ = 0;
 };
 
-};  // namespace Conv3dFunc
+}; // namespace Conv3dFunc
 
-#endif  // __CONV3D_POINTWISE_SUB_API_H__
+#endif // __CONV3D_POINTWISE_SUB_API_H__

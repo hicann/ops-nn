@@ -35,8 +35,8 @@ using namespace fusion;
 namespace ops {
 namespace {
 const std::string kPassName = "AInplaceUpdateFusionPass";
-const char *kInplaceUpdateType = "InplaceUpdate";
-const char *kNotSupportSoc = "Ascend310";
+const char* kInplaceUpdateType = "InplaceUpdate";
+const char* kNotSupportSoc = "Ascend310";
 const int64_t kCaptureInplaceUpdate = 0L;
 const int32_t kInplaceUpdateInputNum = 3;
 
@@ -44,8 +44,8 @@ const int32_t kInplaceUpdateInputNum = 3;
 bool IsSupportedDataDtype(const DataType dtype)
 {
     static const std::initializer_list<DataType> kSupportedDataDtypes = {
-        DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_INT64, DT_UINT32, DT_UINT64,
-        DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0};
+        DT_FLOAT16, DT_FLOAT,  DT_INT32,  DT_INT8,        DT_UINT8,         DT_BF16,
+        DT_INT64,   DT_UINT32, DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0};
     return std::find(kSupportedDataDtypes.begin(), kSupportedDataDtypes.end(), dtype) != kSupportedDataDtypes.end();
 }
 
@@ -76,7 +76,7 @@ bool IsSupportSoc()
 }
 
 void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,
-    std::vector<DataType>& inputDtypes, std::vector<Format>& inputFormats)
+                   std::vector<DataType>& inputDtypes, std::vector<Format>& inputFormats)
 {
     for (const auto& subgraphInput : subgraphInputs) {
         auto matchNode = subgraphInput.GetAllInputs().at(0);
@@ -113,34 +113,29 @@ Status InferShape(const std::unique_ptr<Graph>& replaceGraph, const std::vector<
 // InplaceUpdate has no ES API, build the pattern node via CompliantNodeBuilder.
 // IR: InplaceUpdate(x, indices, v) -> y
 es::EsTensorHolder CreatePatternInplaceUpdate(es::EsGraphBuilder& graphBuilder, const es::EsTensorHolder& x,
-    const es::EsTensorHolder& indices, const es::EsTensorHolder& v)
+                                              const es::EsTensorHolder& indices, const es::EsTensorHolder& v)
 {
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto inplaceUpdate = es::CompliantNodeBuilder(graph)
                              .OpType(kInplaceUpdateType)
                              .Name((std::string(kInplaceUpdateType) + "Pattern").c_str())
-                             .IrDefInputs({
-                                 {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                 {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                 {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-                             })
+                             .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                              .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                              .Build();
 
-    OP_LOGE_IF(
-        es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), inplaceUpdate, 0) !=
-            GRAPH_SUCCESS,
-        es::EsTensorHolder(), kPassName.c_str(), "AddEdge for InplaceUpdate input x failed.");
-    OP_LOGE_IF(
-        es::AddEdgeAndUpdatePeerDesc(*graph, *indices.GetProducer(), indices.GetProducerOutIndex(), inplaceUpdate, 1) !=
-            GRAPH_SUCCESS,
-        es::EsTensorHolder(), kPassName.c_str(), "AddEdge for InplaceUpdate input indices failed.");
-    OP_LOGE_IF(
-        es::AddEdgeAndUpdatePeerDesc(*graph, *v.GetProducer(), v.GetProducerOutIndex(), inplaceUpdate, 2) !=
-            GRAPH_SUCCESS,
-        es::EsTensorHolder(), kPassName.c_str(), "AddEdge for InplaceUpdate input v failed.");
+    OP_LOGE_IF(es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), inplaceUpdate, 0) !=
+                   GRAPH_SUCCESS,
+               es::EsTensorHolder(), kPassName.c_str(), "AddEdge for InplaceUpdate input x failed.");
+    OP_LOGE_IF(es::AddEdgeAndUpdatePeerDesc(*graph, *indices.GetProducer(), indices.GetProducerOutIndex(),
+                                            inplaceUpdate, 1) != GRAPH_SUCCESS,
+               es::EsTensorHolder(), kPassName.c_str(), "AddEdge for InplaceUpdate input indices failed.");
+    OP_LOGE_IF(es::AddEdgeAndUpdatePeerDesc(*graph, *v.GetProducer(), v.GetProducerOutIndex(), inplaceUpdate, 2) !=
+                   GRAPH_SUCCESS,
+               es::EsTensorHolder(), kPassName.c_str(), "AddEdge for InplaceUpdate input v failed.");
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(inplaceUpdate, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(inplaceUpdate, 0);
     return es::EsTensorHolder(yHolder);
 }
 } // namespace
@@ -176,7 +171,7 @@ bool AInplaceUpdateFusionPass::MeetRequirements(const std::unique_ptr<MatchResul
     aclsysGetVersionNum("ge_compiler", &geCompilerVersion);
     if (geCompilerVersion < 90000000) {
         OPS_LOG_D(kPassName.c_str(), "ge_compiler runtime %d < 90000000, skip fusion (overall-silent).",
-            geCompilerVersion);
+                  geCompilerVersion);
         return false;
     }
 
@@ -187,7 +182,7 @@ bool AInplaceUpdateFusionPass::MeetRequirements(const std::unique_ptr<MatchResul
 
     NodeIo inplaceUpdateIo;
     OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureInplaceUpdate, inplaceUpdateIo) != SUCCESS, false,
-        kPassName.c_str(), "Failed to get captured InplaceUpdate node.");
+               kPassName.c_str(), "Failed to get captured InplaceUpdate node.");
     GNode sourceNode = inplaceUpdateIo.node;
 
     AscendString nodeType;
@@ -200,22 +195,22 @@ bool AInplaceUpdateFusionPass::MeetRequirements(const std::unique_ptr<MatchResul
     // The fused ScatterUpdate must support the dtypes of var(x)/indices/updates(v).
     if (sourceNode.GetInputsSize() != static_cast<size_t>(kInplaceUpdateInputNum)) {
         OPS_LOG_D(kPassName.c_str(), "InplaceUpdate input num %zu is not %d, skip.", sourceNode.GetInputsSize(),
-            kInplaceUpdateInputNum);
+                  kInplaceUpdateInputNum);
         return false;
     }
 
     TensorDesc xDesc;
     OP_LOGE_IF(sourceNode.GetInputDesc(0, xDesc) != SUCCESS, false, kPassName.c_str(), "Get input x desc failed.");
     TensorDesc indicesDesc;
-    OP_LOGE_IF(
-        sourceNode.GetInputDesc(1, indicesDesc) != SUCCESS, false, kPassName.c_str(), "Get input indices desc failed.");
+    OP_LOGE_IF(sourceNode.GetInputDesc(1, indicesDesc) != SUCCESS, false, kPassName.c_str(),
+               "Get input indices desc failed.");
     TensorDesc vDesc;
     OP_LOGE_IF(sourceNode.GetInputDesc(2, vDesc) != SUCCESS, false, kPassName.c_str(), "Get input v desc failed.");
 
     if (!IsSupportedDataDtype(xDesc.GetDataType()) || !IsSupportedDataDtype(vDesc.GetDataType()) ||
         !IsSupportedIndicesDtype(indicesDesc.GetDataType())) {
         OPS_LOG_D(kPassName.c_str(), "ScatterUpdate does not support input dtype (x:%d, indices:%d, v:%d), skip.",
-            xDesc.GetDataType(), indicesDesc.GetDataType(), vDesc.GetDataType());
+                  xDesc.GetDataType(), indicesDesc.GetDataType(), vDesc.GetDataType());
         return false;
     }
 
@@ -235,25 +230,25 @@ std::unique_ptr<Graph> AInplaceUpdateFusionPass::Replacement(const std::unique_p
     std::vector<Format> inputFormats;
     GetInputsInfo(subgraphInputs, inputShapes, inputDtypes, inputFormats);
     OP_LOGE_IF(inputShapes.size() != static_cast<size_t>(kInplaceUpdateInputNum), nullptr, kPassName.c_str(),
-        "Replacement got %zu boundary inputs, expect %d.", inputShapes.size(), kInplaceUpdateInputNum);
+               "Replacement got %zu boundary inputs, expect %d.", inputShapes.size(), kInplaceUpdateInputNum);
 
     NodeIo inplaceUpdateIo;
     OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureInplaceUpdate, inplaceUpdateIo) != SUCCESS, nullptr,
-        kPassName.c_str(), "Failed to get captured InplaceUpdate node in Replacement.");
+               kPassName.c_str(), "Failed to get captured InplaceUpdate node in Replacement.");
     GNode sourceNode = inplaceUpdateIo.node;
 
     TensorDesc outputDesc;
     OP_LOGE_IF(sourceNode.GetOutputDesc(0, outputDesc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Get InplaceUpdate output desc failed.");
+               "Get InplaceUpdate output desc failed.");
 
     auto replaceGraphBuilder = es::EsGraphBuilder("replacement");
     auto repX = replaceGraphBuilder.CreateInput(0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
-    auto repIndices =
-        replaceGraphBuilder.CreateInput(1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
-    auto repUpdates =
-        replaceGraphBuilder.CreateInput(2, "updates", inputDtypes[2], inputFormats[2], inputShapes[2].GetDims());
+    auto repIndices = replaceGraphBuilder.CreateInput(1, "indices", inputDtypes[1], inputFormats[1],
+                                                      inputShapes[1].GetDims());
+    auto repUpdates = replaceGraphBuilder.CreateInput(2, "updates", inputDtypes[2], inputFormats[2],
+                                                      inputShapes[2].GetDims());
 
-    auto *graph = replaceGraphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = replaceGraphBuilder.GetCGraphBuilder()->GetGraph();
 
     // TensorMove is a math op with no ES API in this op_graph build, build it via CompliantNodeBuilder.
     GNode tensorMoveNode = es::CompliantNodeBuilder(graph)
@@ -312,11 +307,11 @@ CustomPassStage GetInplaceUpdateFusionPassStage()
     int32_t version = 0;
     aclsysGetVersionNum("ge_compiler", &version);
     if (version >= 90000000) {
-        return CustomPassStage::kCompatibleInherited;  // expected stage on 9.x runtime
+        return CustomPassStage::kCompatibleInherited; // expected stage on 9.x runtime
     }
-    return CustomPassStage::kBeforeInferShape;  // old stage on 8.5.0 runtime, used for no-op
+    return CustomPassStage::kBeforeInferShape; // old stage on 8.5.0 runtime, used for no-op
 }
-}  // namespace
+} // namespace
 REG_FUSION_PASS(AInplaceUpdateFusionPass).Stage(GetInplaceUpdateFusionPassStage());
 #else
 // 8.5.0 compile: kCompatibleInherited enum does not exist, register to the 8.5.0 stage

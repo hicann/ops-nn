@@ -36,18 +36,11 @@
 using namespace std;
 using namespace ge;
 
-class EmbeddingTiling : public testing::Test
-{
+class EmbeddingTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingTiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -104,14 +97,14 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_1)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -188,14 +181,14 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_2)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -270,14 +263,14 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_3)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -353,14 +346,14 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_4)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    
+
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -409,17 +402,21 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_4)
 
 TEST_F(EmbeddingTiling, embedding_simt_tiling_5)
 {
-    gert::StorageShape params_shape = {{2163, 164}, {3547320,}};
-    gert::StorageShape indices_shape = {{160, 400}, {80000,}};
+    gert::StorageShape params_shape = {{2163, 164},
+                                       {
+                                           3547320,
+                                       }};
+    gert::StorageShape indices_shape = {{160, 400},
+                                        {
+                                            80000,
+                                        }};
     gert::Stride xStride_({1640, 1});
-    gert::Stride indicesStride_ ({500, 1});
+    gert::Stride indicesStride_({500, 1});
 
-    gert::TensorV2 params_tensor(
-    params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost, ge::DT_INT8, nullptr,
-    nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-    indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr,
-    nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_INT8, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{160, 400, 164}, {160, 400, 164}});
     std::vector<void*> output_shapes_ref(1);
@@ -439,12 +436,12 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_5)
                           })";
     optiling::EmbeddingCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -452,7 +449,7 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_5)
     map<string, string> soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
-    // compile info 
+    // compile info
     std::string op_type("Embedding");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -532,12 +529,12 @@ TEST_F(EmbeddingTiling, simt_invalid_x_dtype)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -605,12 +602,12 @@ TEST_F(EmbeddingTiling, simt_invalid_indices_dtype)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -654,17 +651,21 @@ TEST_F(EmbeddingTiling, simt_invalid_indices_dtype)
 // EmbeddingNoContiguousTiling::CheckInAndOutDtype - OP_LOGE_FOR_INVALID_DTYPE for x (line 144)
 TEST_F(EmbeddingTiling, no_contiguous_invalid_x_dtype)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_STRING, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_STRING, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 2048}, {10, 50, 2048}});
     std::vector<void*> output_shapes_ref(1);
@@ -682,12 +683,12 @@ TEST_F(EmbeddingTiling, no_contiguous_invalid_x_dtype)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -738,17 +739,21 @@ TEST_F(EmbeddingTiling, no_contiguous_invalid_x_dtype)
 // EmbeddingNoContiguousTiling::CheckInAndOutDtype - OP_LOGE_FOR_INVALID_DTYPE for indices (line 154)
 TEST_F(EmbeddingTiling, no_contiguous_invalid_indices_dtype)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 2048}, {10, 50, 2048}});
     std::vector<void*> output_shapes_ref(1);
@@ -766,12 +771,12 @@ TEST_F(EmbeddingTiling, no_contiguous_invalid_indices_dtype)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -822,17 +827,21 @@ TEST_F(EmbeddingTiling, no_contiguous_invalid_indices_dtype)
 // EmbeddingNoContiguousTiling::CheckInAndOutDtype - OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON for x/y (line 165)
 TEST_F(EmbeddingTiling, no_contiguous_y_dtype_mismatch)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 2048}, {10, 50, 2048}});
     std::vector<void*> output_shapes_ref(1);
@@ -850,12 +859,12 @@ TEST_F(EmbeddingTiling, no_contiguous_y_dtype_mismatch)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -906,19 +915,26 @@ TEST_F(EmbeddingTiling, no_contiguous_y_dtype_mismatch)
 // EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIM for y (line 186)
 TEST_F(EmbeddingTiling, no_contiguous_invalid_y_shapedim)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
-    std::vector<gert::StorageShape> output_shapes(1, {{10, 50}, {500,}});
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 50},
+                                                      {
+                                                          500,
+                                                      }});
     std::vector<void*> output_shapes_ref(1);
     for (size_t i = 0; i < output_shapes.size(); ++i) {
         output_shapes_ref[i] = &output_shapes[i];
@@ -934,12 +950,12 @@ TEST_F(EmbeddingTiling, no_contiguous_invalid_y_shapedim)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -990,17 +1006,21 @@ TEST_F(EmbeddingTiling, no_contiguous_invalid_y_shapedim)
 // EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for indices/y dim0 (line 204)
 TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim0_mismatch)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{20, 50, 2048}, {20, 50, 2048}});
     std::vector<void*> output_shapes_ref(1);
@@ -1018,12 +1038,12 @@ TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim0_mismatch)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1074,17 +1094,21 @@ TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim0_mismatch)
 // EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for indices/y dim1 (line 212)
 TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim1_mismatch)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{10, 30, 2048}, {10, 30, 2048}});
     std::vector<void*> output_shapes_ref(1);
@@ -1102,12 +1126,12 @@ TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim1_mismatch)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1155,20 +1179,25 @@ TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim1_mismatch)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-// EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for y dim2 vs x dim1 (line 220)
+// EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for y dim2 vs x dim1 (line
+// 220)
 TEST_F(EmbeddingTiling, no_contiguous_y_dim2_x_dim1_mismatch)
 {
-    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
-    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::StorageShape params_shape = {{100, 2048},
+                                       {
+                                           204800,
+                                       }};
+    gert::StorageShape indices_shape = {{10, 50},
+                                        {
+                                            500,
+                                        }};
     gert::Stride xStride_({4096, 1});
     gert::Stride indicesStride_({100, 1});
 
-    gert::TensorV2 params_tensor(
-        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
-    gert::TensorV2 indices_tensor(
-        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
-        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+    gert::TensorV2 params_tensor(params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                  gert::TensorPlacement::kOnHost, ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
 
     std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 100}, {10, 50, 100}});
     std::vector<void*> output_shapes_ref(1);
@@ -1186,12 +1215,12 @@ TEST_F(EmbeddingTiling, no_contiguous_y_dim2_x_dim1_mismatch)
                           "CORE_NUM": 64}
                           })";
     optiling::EmbeddingCompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;

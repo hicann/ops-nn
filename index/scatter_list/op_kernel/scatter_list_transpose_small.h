@@ -22,30 +22,28 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListTransposeSmall : public ScatterListBase<T1>
-{
+class ScatterListTransposeSmall : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListTransposeSmall(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void CopyIn(const uint64_t& CoreBatchNum);
     __aicore__ inline void CopyOut(const uint64_t& CoreBatchNum);
-    __aicore__ inline void CopyOutTransSmall(
-        LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-        const uint64_t& srcGmOffset, const uint64_t& dstGmOffset);
-    __aicore__ inline void TransposeB2(
-        LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-        const uint64_t& srcGmOffset, const uint64_t& dstGmOffset);
-    __aicore__ inline void TransposeB4(
-        LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-        const uint64_t& srcGmOffset, const uint64_t& dstGmOffset);
-    __aicore__ inline void TransposeB1(
-        LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-        const uint64_t& srcGmOffset, const uint64_t& dstGmOffset);
+    __aicore__ inline void CopyOutTransSmall(LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize,
+                                             LocalTensor<T1>& updatesUb, const uint64_t& srcGmOffset,
+                                             const uint64_t& dstGmOffset);
+    __aicore__ inline void TransposeB2(LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize,
+                                       LocalTensor<T1>& updatesUb, const uint64_t& srcGmOffset,
+                                       const uint64_t& dstGmOffset);
+    __aicore__ inline void TransposeB4(LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize,
+                                       LocalTensor<T1>& updatesUb, const uint64_t& srcGmOffset,
+                                       const uint64_t& dstGmOffset);
+    __aicore__ inline void TransposeB1(LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize,
+                                       LocalTensor<T1>& updatesUb, const uint64_t& srcGmOffset,
+                                       const uint64_t& dstGmOffset);
     constexpr static int32_t bufferNum = 1;
 
 private:
@@ -68,9 +66,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListTransposeSmall<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListTransposeSmall<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates,
+                                                               GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
+                                                               const ScatterListTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     indiceGm.SetGlobalBuffer((__gm__ T2*)indice);
@@ -111,8 +109,8 @@ __aicore__ inline void ScatterListTransposeSmall<T1, T2>::CopyIn(const uint64_t&
     LocalTensor<T2> indiceUb = indiceInQueue.AllocTensor<T2>();
     LocalTensor<T1> updatesUb = updatesInQueue.AllocTensor<T1>();
     DataCopy(indiceUb, indiceGm, m_tilingData.indiceCount);
-    DataCopy(
-        updatesUb, updatesGm[blockIdx * m_tilingData.preCoreUpdateDim23], CoreBatchNum * m_tilingData.srcBatchStride);
+    DataCopy(updatesUb, updatesGm[blockIdx * m_tilingData.preCoreUpdateDim23],
+             CoreBatchNum * m_tilingData.srcBatchStride);
     if (!maskIsNull) {
         LocalTensor<uint8_t> maskUb = maskInQueue.AllocTensor<uint8_t>();
         DataCopy(maskUb, maskGm, m_tilingData.maskCount);
@@ -123,9 +121,11 @@ __aicore__ inline void ScatterListTransposeSmall<T1, T2>::CopyIn(const uint64_t&
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListTransposeSmall<T1, T2>::CopyOutTransSmall(
-    LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-    const uint64_t& srcGmOffset, const uint64_t& dstGmOffset)
+__aicore__ inline void ScatterListTransposeSmall<T1, T2>::CopyOutTransSmall(LocalTensor<T1>& dataUbSize,
+                                                                            LocalTensor<T1>& transposeUbSize,
+                                                                            LocalTensor<T1>& updatesUb,
+                                                                            const uint64_t& srcGmOffset,
+                                                                            const uint64_t& dstGmOffset)
 {
     if (sizeof(T1) == 2) {
         TransposeB2(dataUbSize, transposeUbSize, updatesUb, srcGmOffset, dstGmOffset);
@@ -137,9 +137,11 @@ __aicore__ inline void ScatterListTransposeSmall<T1, T2>::CopyOutTransSmall(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB2(
-    LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-    const uint64_t& srcGmOffset, const uint64_t& dstGmOffset)
+__aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB2(LocalTensor<T1>& dataUbSize,
+                                                                      LocalTensor<T1>& transposeUbSize,
+                                                                      LocalTensor<T1>& updatesUb,
+                                                                      const uint64_t& srcGmOffset,
+                                                                      const uint64_t& dstGmOffset)
 {
     TransposeParams params;
     TransposeParams paramsBack;
@@ -172,9 +174,11 @@ __aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB2(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB4(
-    LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-    const uint64_t& srcGmOffset, const uint64_t& dstGmOffset)
+__aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB4(LocalTensor<T1>& dataUbSize,
+                                                                      LocalTensor<T1>& transposeUbSize,
+                                                                      LocalTensor<T1>& updatesUb,
+                                                                      const uint64_t& srcGmOffset,
+                                                                      const uint64_t& dstGmOffset)
 {
     TransposeParams params;
     TransposeParams paramsBack;
@@ -208,9 +212,11 @@ __aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB4(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB1(
-    LocalTensor<T1>& dataUbSize, LocalTensor<T1>& transposeUbSize, LocalTensor<T1>& updatesUb,
-    const uint64_t& srcGmOffset, const uint64_t& dstGmOffset)
+__aicore__ inline void ScatterListTransposeSmall<T1, T2>::TransposeB1(LocalTensor<T1>& dataUbSize,
+                                                                      LocalTensor<T1>& transposeUbSize,
+                                                                      LocalTensor<T1>& updatesUb,
+                                                                      const uint64_t& srcGmOffset,
+                                                                      const uint64_t& dstGmOffset)
 {
     TransposeParams params;
     TransposeParams paramsBack;

@@ -19,10 +19,10 @@ using namespace ge;
 
 namespace ops {
 
-static ge::graphStatus InferShapeWeightQuantBatchMatmulExperiment(gert::InferShapeContext *context)
+static ge::graphStatus InferShapeWeightQuantBatchMatmulExperiment(gert::InferShapeContext* context)
 {
     return GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(WeightQuantBatchMatmulExperiment).InferShape(InferShapeWeightQuantBatchMatmulExperiment);
-}  // namespace ops
+} // namespace ops

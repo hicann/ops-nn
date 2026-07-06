@@ -23,8 +23,7 @@
 #include "arch35/euclidean_norm_empty.h"
 
 template <bool templateType, bool isEmptyTensor, bool isTailR>
-__global__ __aicore__ void euclidean_norm(GM_ADDR x, GM_ADDR axes, GM_ADDR y,
-                                          GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void euclidean_norm(GM_ADDR x, GM_ADDR axes, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EuclideanNormTilingData);
     GET_TILING_DATA_WITH_STRUCT(EuclideanNormTilingData, tilingData, tiling);

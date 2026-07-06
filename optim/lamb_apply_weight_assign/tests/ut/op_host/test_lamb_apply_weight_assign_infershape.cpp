@@ -74,4 +74,3 @@ TEST_F(LambApplyWeightAssignProtoTest, lamb_apply_weight_assign_case_fp16_4d)
     auto od0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Ops::Base::ToString(*od0), Ops::Base::ToString(expShape));
 }
-

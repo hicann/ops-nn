@@ -31,13 +31,9 @@
 using namespace std;
 
 class gemm_v2_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "gemm_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "gemm_v2_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "gemm_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "gemm_v2_test TearDown\n" << endl; }
 };
 
 struct HcclCombinOpParam {
@@ -47,7 +43,8 @@ struct HcclCombinOpParam {
     uint32_t rankDim;
 };
 
-TEST_F(gemm_v2_test, gemm_v2_test_1) {
+TEST_F(gemm_v2_test, gemm_v2_test_1)
+{
     // {{16, 16}, {16, 16}}
     AscendC::SetKernelMode(KernelMode::AIC_MODE);
 
@@ -65,16 +62,16 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
     size_t tilingSize = sizeof(MatmulTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *aGM = (uint8_t *)AscendC::GmAlloc(shape_a);
-    uint8_t *bGM = (uint8_t *)AscendC::GmAlloc(shape_b);
-    uint8_t *ref_c = (uint8_t *)AscendC::GmAlloc(shape_c);
-    uint8_t *alphaGM = (uint8_t *)AscendC::GmAlloc(shape_alpha);
-    uint8_t *betaGM = (uint8_t *)AscendC::GmAlloc(shape_alpha);
+    uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shape_a);
+    uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shape_b);
+    uint8_t* ref_c = (uint8_t*)AscendC::GmAlloc(shape_c);
+    uint8_t* alphaGM = (uint8_t*)AscendC::GmAlloc(shape_alpha);
+    uint8_t* betaGM = (uint8_t*)AscendC::GmAlloc(shape_alpha);
 
-    uint8_t *biasGM = nullptr;
-    uint8_t *offsetWGM = nullptr;
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(shape_output);
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+    uint8_t* biasGM = nullptr;
+    uint8_t* offsetWGM = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(shape_output);
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
 
     memset(aGM, 0, shape_a);
     memset(bGM, 0, shape_b);
@@ -86,7 +83,7 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
     system("cd ./gemm_v2_data/ && rm -rf ./*bin");
     system("cd ./gemm_v2_data/ && python3 gen_data.py 16 16 16");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/gemm_v2_data/shape_a.bin", shape_a, aGM, shape_a);
     ReadFile(path + "/gemm_v2_data/shape_b.bin", shape_b, bGM, shape_b);
@@ -95,7 +92,7 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
     *alphaGM = 1;
     *betaGM = 1;
 
-    MatmulTilingData *tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
+    MatmulTilingData* tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
     tiling_data->matmulTiling.usedCoreNum = 1;
     tiling_data->matmulTiling.M = 16;
     tiling_data->matmulTiling.N = 16;
@@ -142,8 +139,8 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
     tiling_data->tileL2cacheTiling.nTileBlock = 1;
     tiling_data->tileL2cacheTiling.calOrder = 0;
 
-    auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR alpha, GM_ADDR beta, GM_ADDR ref_c,
-                        GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
+    auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR alpha, GM_ADDR beta, GM_ADDR ref_c, GM_ADDR cGM,
+                      GM_ADDR workspaceGM, GM_ADDR tilingGM) {
         ::gemm_v2<0, 0, 0, 1, 0, 0>(aGM, bGM, alpha, beta, ref_c, cGM, workspaceGM, tilingGM);
     };
     ICPU_RUN_KF(wrapper, 1, aGM, bGM, alphaGM, betaGM, ref_c, output, workspace, tiling);

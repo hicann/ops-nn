@@ -65,11 +65,9 @@ class ApplyAdadelta {
 public:
     __aicore__ inline ApplyAdadelta() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update,
-        GM_ADDR lr, GM_ADDR rho, GM_ADDR epsilon,
-        GM_ADDR grad, GM_ADDR var_out,
-        const ApplyAdadeltaTilingData* tiling_data);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update, GM_ADDR lr, GM_ADDR rho,
+                                GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out,
+                                const ApplyAdadeltaTilingData* tiling_data);
 
     __aicore__ inline void Process();
 
@@ -132,8 +130,8 @@ private:
 // fp32 elements (3 UB blocks, one per scalar). Each scalar lands at a
 // disjoint offset so the three reads do not collide.
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::load_scalars_from_gm(
-    GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR epsAddr)
+__aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::load_scalars_from_gm(GM_ADDR lrAddr, GM_ADDR rhoAddr,
+                                                                           GM_ADDR epsAddr)
 {
     // Cast the GM pointers to GlobalTensor<T> (one element each).
     lr_gm.SetGlobalBuffer((__gm__ T*)lrAddr, 1);
@@ -142,13 +140,13 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::load_scalars_from_gm(
 
     // Three 32B-aligned slots in scalar_buf (8 fp32 elements per slot).
     LocalTensor<float> scratchF = scalar_buf.Get<float>();
-    LocalTensor<float> slotLr  = scratchF[0 * SCALAR_ALIGN_ELEMS];
+    LocalTensor<float> slotLr = scratchF[0 * SCALAR_ALIGN_ELEMS];
     LocalTensor<float> slotRho = scratchF[1 * SCALAR_ALIGN_ELEMS];
     LocalTensor<float> slotEps = scratchF[2 * SCALAR_ALIGN_ELEMS];
 
     DataCopyExtParams cpScalar;
     cpScalar.blockCount = 1;
-    cpScalar.blockLen = sizeof(T);   // 1 element in bytes
+    cpScalar.blockLen = sizeof(T); // 1 element in bytes
     cpScalar.srcStride = 0;
     cpScalar.dstStride = 0;
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -161,13 +159,13 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::load_scalars_from_gm(
         // same regardless of view type — we use a half view onto the same
         // base UB and write 8 half elements into it, then Cast to fp32.
         LocalTensor<T> scratchH = scalar_buf.Get<T>();
-        LocalTensor<T> hLr  = scratchH[0 * SCALAR_ALIGN_ELEMS * 2];  // each fp32 slot == 2 fp16 slots
+        LocalTensor<T> hLr = scratchH[0 * SCALAR_ALIGN_ELEMS * 2]; // each fp32 slot == 2 fp16 slots
         LocalTensor<T> hRho = scratchH[1 * SCALAR_ALIGN_ELEMS * 2];
         LocalTensor<T> hEps = scratchH[2 * SCALAR_ALIGN_ELEMS * 2];
 
         // Read 1 fp16 element into each slot (auto-padded by DataCopyPad).
-        DataCopyPad(hLr,  lr_gm,      cpScalar, padParams);
-        DataCopyPad(hRho, rho_gm,     cpScalar, padParams);
+        DataCopyPad(hLr, lr_gm, cpScalar, padParams);
+        DataCopyPad(hRho, rho_gm, cpScalar, padParams);
         DataCopyPad(hEps, epsilon_gm, cpScalar, padParams);
 
         // Synchronize DataCopyPad (MTE2) -> Vector. PipeBarrier is the
@@ -177,14 +175,14 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::load_scalars_from_gm(
 
         // Cast 1 element from fp16 to fp32. Use CAST_NONE per docs:
         // half->float is exact and does not need a round mode.
-        Cast(slotLr,  hLr,  RoundMode::CAST_NONE, 1);
+        Cast(slotLr, hLr, RoundMode::CAST_NONE, 1);
         Cast(slotRho, hRho, RoundMode::CAST_NONE, 1);
         Cast(slotEps, hEps, RoundMode::CAST_NONE, 1);
         PipeBarrier<PIPE_ALL>();
     } else {
         // fp32 path: DataCopyPad directly into the fp32 slots.
-        DataCopyPad(slotLr,  lr_gm,      cpScalar, padParams);
-        DataCopyPad(slotRho, rho_gm,     cpScalar, padParams);
+        DataCopyPad(slotLr, lr_gm, cpScalar, padParams);
+        DataCopyPad(slotRho, rho_gm, cpScalar, padParams);
         DataCopyPad(slotEps, epsilon_gm, cpScalar, padParams);
         PipeBarrier<PIPE_ALL>();
     }
@@ -192,18 +190,17 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::load_scalars_from_gm(
     // Materialize as plain float scalars. GetValue(0) reads element [0]
     // of the LocalTensor, which is exactly where DataCopyPad landed the
     // 1-element payload.
-    lr_  = slotLr.GetValue(0);
+    lr_ = slotLr.GetValue(0);
     rho_ = slotRho.GetValue(0);
     eps_ = slotEps.GetValue(0);
     one_minus_rho_ = 1.0f - rho_;
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Init(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update,
-    GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR epsilonAddr,
-    GM_ADDR grad, GM_ADDR var_out,
-    const ApplyAdadeltaTilingData* tiling_data)
+__aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Init(GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update,
+                                                           GM_ADDR lrAddr, GM_ADDR rhoAddr, GM_ADDR epsilonAddr,
+                                                           GM_ADDR grad, GM_ADDR var_out,
+                                                           const ApplyAdadeltaTilingData* tiling_data)
 {
     // Compute per-core element range
     int64_t remain = tiling_data->totalNum - tiling_data->blockFactor * GetBlockIdx();
@@ -229,12 +226,12 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Init(
 
     // Initialize temporary buffers based on dtype path
     if constexpr (IS_FP16) {
-        pipe.InitBuffer(fp32_var_buf,          ub_length_ * sizeof(float));
-        pipe.InitBuffer(fp32_accum_buf,        ub_length_ * sizeof(float));
+        pipe.InitBuffer(fp32_var_buf, ub_length_ * sizeof(float));
+        pipe.InitBuffer(fp32_accum_buf, ub_length_ * sizeof(float));
         pipe.InitBuffer(fp32_accum_update_buf, ub_length_ * sizeof(float));
-        pipe.InitBuffer(fp32_grad_buf,         ub_length_ * sizeof(float));
-        pipe.InitBuffer(tmp_buf1,             ub_length_ * sizeof(float));
-        pipe.InitBuffer(tmp_buf2,             ub_length_ * sizeof(float));
+        pipe.InitBuffer(fp32_grad_buf, ub_length_ * sizeof(float));
+        pipe.InitBuffer(tmp_buf1, ub_length_ * sizeof(float));
+        pipe.InitBuffer(tmp_buf2, ub_length_ * sizeof(float));
     } else {
         pipe.InitBuffer(tmp_buf1, ub_length_ * sizeof(float));
         pipe.InitBuffer(tmp_buf2, ub_length_ * sizeof(float));
@@ -293,15 +290,15 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Compute(int64_t current_nu
 
     if constexpr (IS_FP16) {
         // FP16 path: Cast up to fp32 -> compute -> Cast down to fp16
-        LocalTensor<float> vF  = fp32_var_buf.Get<float>();
-        LocalTensor<float> aF  = fp32_accum_buf.Get<float>();
+        LocalTensor<float> vF = fp32_var_buf.Get<float>();
+        LocalTensor<float> aF = fp32_accum_buf.Get<float>();
         LocalTensor<float> auF = fp32_accum_update_buf.Get<float>();
-        LocalTensor<float> gF  = fp32_grad_buf.Get<float>();
+        LocalTensor<float> gF = fp32_grad_buf.Get<float>();
 
-        Cast(vF,  v,  RoundMode::CAST_NONE, current_num);
-        Cast(aF,  a,  RoundMode::CAST_NONE, current_num);
+        Cast(vF, v, RoundMode::CAST_NONE, current_num);
+        Cast(aF, a, RoundMode::CAST_NONE, current_num);
         Cast(auF, au, RoundMode::CAST_NONE, current_num);
-        Cast(gF,  g,  RoundMode::CAST_NONE, current_num);
+        Cast(gF, g, RoundMode::CAST_NONE, current_num);
 
         // Step1: accum_new = accum * rho + grad^2 * (1 - rho)
         Mul(tmp1, gF, gF, current_num);
@@ -327,8 +324,8 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Compute(int64_t current_nu
         Muls(auF, auF, rho_, current_num);
         Add(auF, auF, tmp2, current_num);
 
-        Cast(v_out,  vF,  RoundMode::CAST_RINT, current_num);
-        Cast(a_out,  aF,  RoundMode::CAST_RINT, current_num);
+        Cast(v_out, vF, RoundMode::CAST_RINT, current_num);
+        Cast(a_out, aF, RoundMode::CAST_RINT, current_num);
         Cast(au_out, auF, RoundMode::CAST_RINT, current_num);
     } else {
         // FP32 path: T == float; operate directly on inputs / outputs.

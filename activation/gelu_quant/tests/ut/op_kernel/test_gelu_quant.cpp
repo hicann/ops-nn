@@ -22,21 +22,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void gelu_quant(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR workspace,
-    GM_ADDR tiling_data);
+extern "C" __global__ __aicore__ void gelu_quant(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y,
+                                                 GM_ADDR out_scale, GM_ADDR workspace, GM_ADDR tiling_data);
 
-class gelu_quant_test : public testing::Test
-{
+class gelu_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "gelu_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "gelu_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "gelu_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "gelu_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(gelu_quant_test, test_case_gelu_quant_0)
@@ -81,33 +73,28 @@ TEST_F(gelu_quant_test, test_case_gelu_quant_0)
 
     ICPU_SET_TILING_KEY(1001);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1002);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1003);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1004);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1005);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x_input);
     AscendC::GmFree(scale_input);
@@ -159,33 +146,28 @@ TEST_F(gelu_quant_test, test_case_gelu_quant_1)
 
     ICPU_SET_TILING_KEY(1011);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1012);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1013);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1014);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1015);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x_input);
     AscendC::GmFree(scale_input);
@@ -237,33 +219,28 @@ TEST_F(gelu_quant_test, test_case_gelu_quant_2)
 
     ICPU_SET_TILING_KEY(1021);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1022);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1023);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1024);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1025);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x_input);
     AscendC::GmFree(scale_input);
@@ -315,33 +292,28 @@ TEST_F(gelu_quant_test, test_case_gelu_quant_3)
 
     ICPU_SET_TILING_KEY(1031);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1032);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1033);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1034);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1035);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x_input);
     AscendC::GmFree(scale_input);
@@ -394,33 +366,28 @@ TEST_F(gelu_quant_test, test_case_gelu_quant_4)
 
     ICPU_SET_TILING_KEY(1041);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1042);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1043);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1044);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1045);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(gelu_quant, blockDim, x_input, scale_input, offset_input, y, scale_out, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x_input);
     AscendC::GmFree(scale_input);

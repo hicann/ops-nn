@@ -26,18 +26,18 @@ template <typename T, typename U, const bool ISTAIL>
 class DynamicMxQuantNotTailAxisOptimize : public DynamicMxQuantBase<T, U, ISTAIL> {
 public:
     __aicore__ inline DynamicMxQuantNotTailAxisOptimize(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace,
+                                const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void SplitPreAxisCompute(int64_t ubFactor, int64_t blockSizeIdx);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, const int64_t calcMode>
-    __aicore__ inline void ComputeOcp(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeOcp(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                      __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeCuBLAS(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
 
 private:
     TBuf<QuePosition::VECCALC> maxExpBuf_;
@@ -53,8 +53,9 @@ private:
 };
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                                                             GM_ADDR workspace,
+                                                                             const DynamicMxQuantTilingData* tilingData)
 {
     this->BaseInit(x, y, mxScale, workspace, tilingData);
     if (this->blockIdx_ >= this->usedCoreNum_) {
@@ -120,8 +121,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::Process(
 }
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::SplitPreAxisCompute(
-    int64_t ubFactor, int64_t blockSizeIdx)
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::SplitPreAxisCompute(int64_t ubFactor,
+                                                                                            int64_t blockSizeIdx)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -136,36 +137,36 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::SplitPre
         offset += blockCount * this->postAxisSize_;
         if (calcMode_ == MODE_ZERO) {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, MODE_ZERO>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, MODE_ZERO>(this->postAxisSize_, blockCount,
+                                                                                   xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, MODE_ZERO>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, MODE_ZERO>(this->postAxisSize_, blockCount,
+                                                                                    xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, MODE_ZERO>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, MODE_ZERO>(this->postAxisSize_, blockCount,
+                                                                                    xAddr, mxScaleAddr, yAddr);
             }
         } else if (calcMode_ == MODE_TWO) {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, MODE_TWO>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, MODE_TWO>(this->postAxisSize_, blockCount,
+                                                                                  xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, MODE_TWO>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, MODE_TWO>(this->postAxisSize_, blockCount,
+                                                                                   xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, MODE_TWO>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, MODE_TWO>(this->postAxisSize_, blockCount,
+                                                                                   xAddr, mxScaleAddr, yAddr);
             }
         } else {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                           mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             }
         }
     }
@@ -179,15 +180,15 @@ template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeCuBLAS(
     int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
 {
-    static constexpr Reg::CastTrait castTraitZero = {
-        Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
     uint16_t rowsSingleLoop = 0;
     if (blockCount < static_cast<int64_t>(vfLen) / dataLen) {
         rowsSingleLoop = static_cast<uint16_t>(blockCount);
     } else {
         rowsSingleLoop = static_cast<uint16_t>(static_cast<int64_t>(vfLen) / dataLen);
-    } // 单次处理能处理的行数
+    }                                                                             // 单次处理能处理的行数
     uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen); // 单次处理长度
     uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);   // 循环数
     uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;   // 尾循环处理的行数
@@ -195,10 +196,9 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         rowsTailLoop = rowsSingleLoop;
     }
     uint16_t dataLenTailLoop = rowsTailLoop * static_cast<uint16_t>(dataLen); // 尾循环处理的长度
-    uint16_t loopSize = static_cast<uint16_t>(
-        DIGIT_SIXTY_THREE -
-        AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(rowsSingleLoop))); // 求最大指数行的二分次数
-    uint16_t rows = 1 << loopSize;                                               // 最接近rowsSingleLoop的2次方数
+    uint16_t loopSize = static_cast<uint16_t>(DIGIT_SIXTY_THREE - AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(
+                                                                      rowsSingleLoop))); // 求最大指数行的二分次数
+    uint16_t rows = 1 << loopSize; // 最接近rowsSingleLoop的2次方数
     uint16_t expOffset = rows * static_cast<uint16_t>(dataLen);
 
     LocalTensor<calcTypeInt> maxExpTensor = maxExpBuf_.Get<calcTypeInt>();
@@ -288,8 +288,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         mask32 = Reg::UpdateMask<uint32_t>(maskNum);
         if constexpr (IsSame<T, bfloat16_t>::value) {
             Reg::Interleave(xMaxReg, zeroReg, xMaxReg, zeroReg);
-            Reg::Cast<float, T, castTraitZero>(
-                (Reg::RegTensor<float>&)xFP32MaxReg, (Reg::RegTensor<T>&)xMaxReg, mask16);
+            Reg::Cast<float, T, castTraitZero>((Reg::RegTensor<float>&)xFP32MaxReg, (Reg::RegTensor<T>&)xMaxReg,
+                                               mask16);
             Reg::Mul((Reg::RegTensor<float>&)xFP32MaxReg, (Reg::RegTensor<float>&)xFP32MaxReg, dstTypeMaxReg, mask32);
         } else {
             Reg::Mul((Reg::RegTensor<float>&)xFP32MaxReg, (Reg::RegTensor<float>&)xMaxReg, dstTypeMaxReg, mask32);
@@ -351,8 +351,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
 }
 template <typename T, typename U, const bool ISTAIL>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, const int64_t calcMode>
-__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeOcp(
-    int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeOcp(int64_t dataLen, int64_t blockCount,
+                                                                                   __ubuf__ T* xAddr,
+                                                                                   __ubuf__ uint8_t* mxScaleAddr,
+                                                                                   __ubuf__ uint8_t* yAddr)
 {
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
     uint16_t rowsSingleLoop = 0;
@@ -360,7 +362,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         rowsSingleLoop = static_cast<uint16_t>(blockCount);
     } else {
         rowsSingleLoop = static_cast<uint16_t>(static_cast<int64_t>(vfLen) / dataLen);
-    } // 单次处理能处理的行数
+    }                                                                             // 单次处理能处理的行数
     uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen); // 单次处理长度
     uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);   // 循环数
     uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;   // 尾循环处理的行数
@@ -368,10 +370,9 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         rowsTailLoop = rowsSingleLoop;
     }
     uint16_t dataLenTailLoop = rowsTailLoop * static_cast<uint16_t>(dataLen); // 尾循环处理的长度
-    uint16_t loopSize = static_cast<uint16_t>(
-        DIGIT_SIXTY_THREE -
-        AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(rowsSingleLoop))); // 求最大指数行的二分次数
-    uint16_t rows = 1 << loopSize;                                               // 最接近rowsSingleLoop的2次方数
+    uint16_t loopSize = static_cast<uint16_t>(DIGIT_SIXTY_THREE - AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(
+                                                                      rowsSingleLoop))); // 求最大指数行的二分次数
+    uint16_t rows = 1 << loopSize; // 最接近rowsSingleLoop的2次方数
     uint16_t expOffset = rows * static_cast<uint16_t>(dataLen);
 
     LocalTensor<calcTypeInt> maxExpTensor = maxExpBuf_.Get<calcTypeInt>();

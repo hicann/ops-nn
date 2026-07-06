@@ -17,7 +17,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
- #include "../inc/platform.h"
+#include "../inc/platform.h"
 #include "simt_api/asc_simt.h"
 
 namespace Embedding {
@@ -26,8 +26,7 @@ constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 2048;
 constexpr int64_t ONE_BLOCK_SIZE = platform::GetUbBlockSize();
 
 template <typename X_T, typename INDICES_T, typename COM_T>
-class EmbeddingKernelNoContiguous
-{
+class EmbeddingKernelNoContiguous {
 public:
     __aicore__ inline EmbeddingKernelNoContiguous(const EmbeddingNoContiguousTilingData* tiling, TPipe* pipe)
         : tilingData_(tiling), pipe_(pipe){};
@@ -88,8 +87,8 @@ __aicore__ inline void EmbeddingKernelNoContiguous<X_T, INDICES_T, COM_T>::Init(
     indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)indices);
     yGm_.SetGlobalBuffer((__gm__ X_T*)y);
 
-    currentCoreElements_ =
-        GetBlockIdx() != (tilingData_->needCoreNum - 1) ? tilingData_->perCoreElements : tilingData_->lastCoreElements;
+    currentCoreElements_ = GetBlockIdx() != (tilingData_->needCoreNum - 1) ? tilingData_->perCoreElements :
+                                                                             tilingData_->lastCoreElements;
     yIndexStart_ = GetBlockIdx() * tilingData_->perCoreElements;
     COM_T yIndexEnd = yIndexStart_ + currentCoreElements_ - 1;
     indicesStart_ = yIndexStart_ / tilingData_->innerSize;
@@ -114,14 +113,13 @@ __aicore__ inline void EmbeddingKernelNoContiguous<X_T, INDICES_T, COM_T>::Proce
     LocalTensor<INDICES_T> idsLocal = idsBuf_.Get<INDICES_T>();
 
     asc_vf_call<ComputeSimt<X_T, INDICES_T, COM_T>>(
-        dim3(tilingData_->threadNum), (__gm__ X_T*)(xGm_.GetPhyAddr()),
-        (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()), (__ubuf__ INDICES_T*)(idsLocal.GetPhyAddr()),
-        (__gm__ X_T*)(yGm_.GetPhyAddr()), yIndexStart_, currentCoreElements_, indicesStart_, curIndicesNum_,
-        static_cast<COM_T>(m0), static_cast<COM_T>(shift0), static_cast<COM_T>(m1), static_cast<COM_T>(shift1),
-        static_cast<COM_T>(tilingData_->indicesDim1Size), static_cast<COM_T>(tilingData_->indicesDim0Stride),
-        static_cast<COM_T>(tilingData_->indicesDim1Stride), static_cast<COM_T>(tilingData_->gatherSize),
-        static_cast<COM_T>(tilingData_->innerSize), static_cast<COM_T>(tilingData_->xDim0Stride),
-        static_cast<COM_T>(tilingData_->xDim1Stride));
+        dim3(tilingData_->threadNum), (__gm__ X_T*)(xGm_.GetPhyAddr()), (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()),
+        (__ubuf__ INDICES_T*)(idsLocal.GetPhyAddr()), (__gm__ X_T*)(yGm_.GetPhyAddr()), yIndexStart_,
+        currentCoreElements_, indicesStart_, curIndicesNum_, static_cast<COM_T>(m0), static_cast<COM_T>(shift0),
+        static_cast<COM_T>(m1), static_cast<COM_T>(shift1), static_cast<COM_T>(tilingData_->indicesDim1Size),
+        static_cast<COM_T>(tilingData_->indicesDim0Stride), static_cast<COM_T>(tilingData_->indicesDim1Stride),
+        static_cast<COM_T>(tilingData_->gatherSize), static_cast<COM_T>(tilingData_->innerSize),
+        static_cast<COM_T>(tilingData_->xDim0Stride), static_cast<COM_T>(tilingData_->xDim1Stride));
 }
 } // namespace Embedding
 #endif // EMBEDDING_NO_CONTIGUOUS_H

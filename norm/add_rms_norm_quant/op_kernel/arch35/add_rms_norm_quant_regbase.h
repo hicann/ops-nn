@@ -21,7 +21,7 @@ namespace AddRmsNormQuant {
 
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 class KernelAddRmsNormQuantRegbase {
-#define HAS_BETA (((TILING_KEY % 1000)/100) == 1)
+#define HAS_BETA (((TILING_KEY % 1000) / 100) == 1)
 #define HAS_RESOUT ((TILING_KEY / 1000) == 2)
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_ZEROPOINTS1 ((INPUT_KEY >> 2) % 2 == 1)
@@ -29,15 +29,11 @@ class KernelAddRmsNormQuantRegbase {
 #define HAS_ZEROPOINTS2 (INPUT_KEY % 2 == 1)
 #define HAS_Y2 (HAS_SCALE2 || HAS_ZEROPOINTS2)
 public:
-    __aicore__ inline KernelAddRmsNormQuantRegbase(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormQuantRegbase(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
-        const AddRmsNormQuantRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR res_out, const AddRmsNormQuantRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -71,20 +67,20 @@ public:
         reduceBufAlign_ = CeilAlign(reduceBufLen, B32_BLOCK_NUM);
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                      GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                      GM_ADDR x, GM_ADDR res_out)
     {
         SetQuantGlobalBuffers<T_X, T_Y, T_SCALES, T_ZEROPOINTS, TILING_KEY>(
-            x1Gm_, x2Gm_, gammaGm_, betaGm_, scales1Gm_, scales2Gm_, zeroPoints1Gm_, zeroPoints2Gm_,
-            y1Gm_, y2Gm_, xGm_, resOutGm_, x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x, res_out,
-            blockIdx_, mPerCore_, mCore_, numN_);
-        
+            x1Gm_, x2Gm_, gammaGm_, betaGm_, scales1Gm_, scales2Gm_, zeroPoints1Gm_, zeroPoints2Gm_, y1Gm_, y2Gm_, xGm_,
+            resOutGm_, x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x, res_out, blockIdx_,
+            mPerCore_, mCore_, numN_);
+
         uint64_t ubFactorRstd = CeilAlign(baseM_, B32_BLOCK_NUM);
         InitQuantPipeBuffers<T_X, T_Y, T_SCALES, T_ZEROPOINTS, TILING_KEY, HAS_RESOUT>(
-            pipe_, inQueueX1_, inQueueX2_, outQueueX_, inQueueGamma_, inQueueBeta_, inQueueScales1_,
-            inQueueScales2_, inQueueZeroPoints1_, inQueueZeroPoints2_, outQueueY1_, outQueueY2_, outQueueResOut_,
-            rstdBuf_, xOutFp32Buf_, reduceBuf_, baseNReduceAlign_, baseNDtypeAlign_, baseNB8Align_, numN_, reduceBufAlign_);
+            pipe_, inQueueX1_, inQueueX2_, outQueueX_, inQueueGamma_, inQueueBeta_, inQueueScales1_, inQueueScales2_,
+            inQueueZeroPoints1_, inQueueZeroPoints2_, outQueueY1_, outQueueY2_, outQueueResOut_, rstdBuf_, xOutFp32Buf_,
+            reduceBuf_, baseNReduceAlign_, baseNDtypeAlign_, baseNB8Align_, numN_, reduceBufAlign_);
     }
 
     __aicore__ inline void Process()
@@ -117,8 +113,8 @@ public:
 
                 CopyInX(inQueueX1_, x1Gm_, gmOffset, numN_, 0, baseNDtypeAlign_ - numN_);
                 CopyInX(inQueueX2_, x2Gm_, gmOffset, numN_, 0, baseNDtypeAlign_ - numN_);
-                Compute(
-                    mInnerIdx, gmOffset, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, scales2Local, zeroPoints2Local);
+                Compute(mInnerIdx, gmOffset, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, scales2Local,
+                        zeroPoints2Local);
                 CopyOutY(y1Gm_, outQueueY1_, gmOffset, numN_);
                 if constexpr (HAS_Y2) {
                     CopyOutY(y2Gm_, outQueueY2_, gmOffset, numN_);
@@ -181,10 +177,10 @@ private:
         }
     }
 
-    __aicore__ inline void Compute(
-        uint64_t mInnerIdx, uint64_t gmOffset, LocalTensor<T_X>& gammaLocal, LocalTensor<T_X>& betaLocal,
-        LocalTensor<T_SCALES>& scales1Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
-        LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints2Local)
+    __aicore__ inline void Compute(uint64_t mInnerIdx, uint64_t gmOffset, LocalTensor<T_X>& gammaLocal,
+                                   LocalTensor<T_X>& betaLocal, LocalTensor<T_SCALES>& scales1Local,
+                                   LocalTensor<T_ZEROPOINTS>& zeroPoints1Local, LocalTensor<T_SCALES>& scales2Local,
+                                   LocalTensor<T_ZEROPOINTS>& zeroPoints2Local)
     {
         LocalTensor<T_X> x1Local = inQueueX1_.DeQue<T_X>();
         LocalTensor<T_X> x2Local = inQueueX2_.DeQue<T_X>();
@@ -203,9 +199,9 @@ private:
         if constexpr (HAS_RESOUT) {
             xOutFp32Local = xOutFp32Buf_.Get<float>();
         }
-        NormCommon::ReduceSumRstd<T_X, true, HAS_RESOUT, true>(
-            rstdLocal, xOutLocal, xOutFp32Local, x1Local, x2Local, reduceLocal, mInnerIdx, baseNReduceAlign_, powerSplit_,
-            avgFactor_, epsilon_);
+        NormCommon::ReduceSumRstd<T_X, true, HAS_RESOUT, true>(rstdLocal, xOutLocal, xOutFp32Local, x1Local, x2Local,
+                                                               reduceLocal, mInnerIdx, baseNReduceAlign_, powerSplit_,
+                                                               avgFactor_, epsilon_);
         outQueueX_.EnQue<T_X>(xOutLocal);
 
         LocalTensor<T_X> resOutLocal;
@@ -233,17 +229,21 @@ private:
         SetOverflowMode<T_Y>(0);
         if (divMode_) {
             ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, true, HAS_RESOUT, !HAS_RESOUT>(
-                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mInnerIdx, baseNDtypeAlign_, resOutAddr, xOutFp32Addr, x2Addr);
+                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mInnerIdx,
+                baseNDtypeAlign_, resOutAddr, xOutFp32Addr, x2Addr);
             if constexpr (HAS_Y2) {
-                ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, true, false, !HAS_RESOUT>(
-                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mInnerIdx, baseNDtypeAlign_, nullptr, xOutFp32Addr, x2Addr);
+                ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, true, false,
+                         !HAS_RESOUT>(y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local,
+                                      zeroPoints2Local, mInnerIdx, baseNDtypeAlign_, nullptr, xOutFp32Addr, x2Addr);
             }
         } else {
             ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, false, HAS_RESOUT, !HAS_RESOUT>(
-                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mInnerIdx, baseNDtypeAlign_, resOutAddr, xOutFp32Addr, x2Addr);
+                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mInnerIdx,
+                baseNDtypeAlign_, resOutAddr, xOutFp32Addr, x2Addr);
             if constexpr (HAS_Y2) {
-                ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, false, false, !HAS_RESOUT>(
-                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mInnerIdx, baseNDtypeAlign_, nullptr, xOutFp32Addr, x2Addr);
+                ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, false, false,
+                         !HAS_RESOUT>(y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local,
+                                      zeroPoints2Local, mInnerIdx, baseNDtypeAlign_, nullptr, xOutFp32Addr, x2Addr);
             }
         }
         SetOverflowMode<T_Y>(oriOverflowMode_);

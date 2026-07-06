@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_sign_proto.h"
 
-class ForeachSign : public testing::Test
-{
+class ForeachSign : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSign SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSign SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSign TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSign TearDown" << std::endl; }
 };
 
 TEST_F(ForeachSign, infer_shape_known_success)
@@ -68,7 +61,7 @@ TEST_F(ForeachSign, infer_shape_known_success)
     ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
 
     auto output_shape_0 = context->GetOutputShape(0);
-    EXPECT_NE(output_shape_0, nullptr);                     // 检查输出指针是否为空
+    EXPECT_NE(output_shape_0, nullptr);                        // 检查输出指针是否为空
     EXPECT_EQ(Ops::Base::ToString(*output_shape_0), "[2, 2]"); // 修改期望输出形状
 
     auto output_shape_1 = context->GetOutputShape(1);

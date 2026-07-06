@@ -62,4 +62,4 @@ ACLNN_API aclnnStatus aclnnMultiScaleDeformableAttentionGrad(void* workspace, ui
 }
 #endif
 
-#endif  // OP_API_INC_MULTI_SCALE_DEFORMABLE_ATTENTION_GRAD_H_
+#endif // OP_API_INC_MULTI_SCALE_DEFORMABLE_ATTENTION_GRAD_H_

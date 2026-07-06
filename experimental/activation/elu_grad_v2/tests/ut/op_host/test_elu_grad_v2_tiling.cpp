@@ -47,14 +47,22 @@ struct EluGradV2TilingCompileInfo {};
 gert::StorageShape MakeStorageShape(const vector<int64_t>& shape)
 {
     switch (shape.size()) {
-        case 0: return gert::StorageShape({}, {});
-        case 1: return gert::StorageShape({shape[0]}, {shape[0]});
-        case 2: return gert::StorageShape({shape[0], shape[1]}, {shape[0], shape[1]});
-        case 3: return gert::StorageShape({shape[0], shape[1], shape[2]}, {shape[0], shape[1], shape[2]});
-        case 4: return gert::StorageShape({shape[0], shape[1], shape[2], shape[3]}, {shape[0], shape[1], shape[2], shape[3]});
-        case 5: return gert::StorageShape({shape[0], shape[1], shape[2], shape[3], shape[4]},
-                                          {shape[0], shape[1], shape[2], shape[3], shape[4]});
-        default: return gert::StorageShape({}, {});
+        case 0:
+            return gert::StorageShape({}, {});
+        case 1:
+            return gert::StorageShape({shape[0]}, {shape[0]});
+        case 2:
+            return gert::StorageShape({shape[0], shape[1]}, {shape[0], shape[1]});
+        case 3:
+            return gert::StorageShape({shape[0], shape[1], shape[2]}, {shape[0], shape[1], shape[2]});
+        case 4:
+            return gert::StorageShape({shape[0], shape[1], shape[2], shape[3]},
+                                      {shape[0], shape[1], shape[2], shape[3]});
+        case 5:
+            return gert::StorageShape({shape[0], shape[1], shape[2], shape[3], shape[4]},
+                                      {shape[0], shape[1], shape[2], shape[3], shape[4]});
+        default:
+            return gert::StorageShape({}, {});
     }
 }
 
@@ -102,7 +110,8 @@ void RunTilingCase(const TilingCase& param)
 
     auto kernelHolder = gert::KernelRunContextFaker()
                             .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
                             .Outputs({&compileInfo})
                             .Build();
     auto* parseContext = kernelHolder.GetContext<gert::TilingParseContext>();
@@ -129,12 +138,10 @@ void RunTilingCase(const TilingCase& param)
                       .NodeInputTd(0, param.inputType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, param.inputType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, param.outputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({
-                          {"alpha", Ops::NN::AnyValue::CreateFrom<float>(param.alpha)},
-                          {"scale", Ops::NN::AnyValue::CreateFrom<float>(param.scale)},
-                          {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(param.inputScale)},
-                          {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(param.isResult)}
-                      })
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(param.alpha)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(param.scale)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(param.inputScale)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(param.isResult)}})
                       .TilingData(tilingData.get())
                       .Workspace(wsSize)
                       .Build();
@@ -167,19 +174,13 @@ void RunTilingCase(const TilingCase& param)
         EXPECT_GT(tilingDataPtr->tileDataNum, 0U) << param.name;
     }
 }
-}  // namespace
+} // namespace
 
 class EluGradV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EluGradV2TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EluGradV2TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EluGradV2TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EluGradV2TilingTest TearDown" << std::endl; }
 };
 
 TEST_F(EluGradV2TilingTest, elu_grad_v2_float32_exp_success)

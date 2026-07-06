@@ -31,18 +31,15 @@ namespace l0op {
 OP_TYPE_REGISTER(RmsNormQuant);
 OP_TYPE_REGISTER(RmsNormQuantV2);
 
-const aclTensor* RmsNormQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* offset,
-    double epsilon, int32_t dstType, aclOpExecutor* executor)
+const aclTensor* RmsNormQuant(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
+                              const aclTensor* offset, double epsilon, int32_t dstType, aclOpExecutor* executor)
 {
     L0_DFX(RmsNormQuant, x, gamma, beta, scale, offset, epsilon, dstType);
 
     auto y = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        RmsNormQuant, OP_INPUT(x, gamma, beta, scale, offset), OP_OUTPUT(y),
-        OP_ATTR(static_cast<float>(epsilon), false, false, dstType));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RmsNormQuant, OP_INPUT(x, gamma, beta, scale, offset), OP_OUTPUT(y),
+                                           OP_ATTR(static_cast<float>(epsilon), false, false, dstType));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RmsNormQuant ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
@@ -50,14 +47,13 @@ const aclTensor* RmsNormQuant(
     return y;
 }
 
-const std::array<aclTensor*, 2> RmsNormQuantV2(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* scales1, const aclTensor* scales2Optional,
-    const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, const aclTensor* betaOptional,
-    double epsilon, bool divMode, int32_t dstType, aclOpExecutor* executor)
+const std::array<aclTensor*, 2> RmsNormQuantV2(const aclTensor* x, const aclTensor* gamma, const aclTensor* scales1,
+                                               const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional,
+                                               const aclTensor* zeroPoints2Optional, const aclTensor* betaOptional,
+                                               double epsilon, bool divMode, int32_t dstType, aclOpExecutor* executor)
 {
-    L0_DFX(
-        RmsNormQuantV2, x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional,
-        epsilon, divMode, dstType);
+    L0_DFX(RmsNormQuantV2, x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional,
+           epsilon, divMode, dstType);
 
     aclTensor* y1 = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
     aclTensor* y2 = y1;

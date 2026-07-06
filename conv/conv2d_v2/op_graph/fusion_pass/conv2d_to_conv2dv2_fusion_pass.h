@@ -25,34 +25,28 @@ namespace Conv {
 namespace Conv2dToConv2dV2Fusion {
 const std::string FUSION_NAME = "Conv2dToConv2dV2FusionPass";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
-    {"Ascend950", NpuArch::DAV_3510},
-    {"MC62", NpuArch::DAV_5102}
-};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"MC62", NpuArch::DAV_5102}};
 
 // Fmap Filter Output Bias
 const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_DAV_3510 = {
     {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
     {ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
-    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT}
-};
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT}};
 
 // Fmap Filter Output Bias
 const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_DAV_5102 = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
-    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32}
-};
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32}};
 } // namespace Conv2dToConv2dV2Fusion
 
 class __attribute__((visibility("default"))) Conv2dToConv2dV2FusionPass : public ge::fusion::DecomposePass {
 public:
-    explicit Conv2dToConv2dV2FusionPass(const std::vector<ge::AscendString> &opTypes)
-        : DecomposePass(opTypes) {}
+    explicit Conv2dToConv2dV2FusionPass(const std::vector<ge::AscendString>& opTypes) : DecomposePass(opTypes) {}
 
 protected:
-    bool MeetRequirements(const ge::GNode &convNode) override;
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
+    bool MeetRequirements(const ge::GNode& convNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
 
 private:
     void InitMember();

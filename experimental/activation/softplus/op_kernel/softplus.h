@@ -34,8 +34,10 @@ class KernelSoftplus {
 public:
     __aicore__ inline KernelSoftplus(){};
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                uint64_t finalBigTileNum, uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum,
+                                uint64_t bufferOpen);
     __aicore__ inline void Process();
 
 private:
@@ -58,8 +60,11 @@ private:
 };
 
 template <typename TYPE_X>
-__aicore__ inline void KernelSoftplus<TYPE_X>::Init(GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen)
+__aicore__ inline void KernelSoftplus<TYPE_X>::Init(GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum,
+                                                    uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
+                                                    uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                                    uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                                    uint64_t tailBlockNum, uint64_t bufferOpen)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -80,8 +85,8 @@ __aicore__ inline void KernelSoftplus<TYPE_X>::Init(GM_ADDR x, GM_ADDR y, uint64
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    xGm.SetGlobalBuffer((__gm__ TYPE_X *)x + globalBufferIndex, this->coreDataNum);
-    yGm.SetGlobalBuffer((__gm__ TYPE_X *)y + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_X*)y + globalBufferIndex, this->coreDataNum);
 
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));
     pipe.InitBuffer(outQueueY, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));
@@ -114,7 +119,7 @@ template <typename TYPE_X>
 __aicore__ inline void KernelSoftplus<TYPE_X>::Compute(int32_t progress)
 {
     if constexpr (std::is_same_v<TYPE_X, float>) {
-        //float32
+        // float32
         AscendC::LocalTensor<float> xLocal = inQueueX.DeQue<float>();
         AscendC::LocalTensor<float> yLocal = outQueueY.AllocTensor<float>();
         AscendC::LocalTensor<float> tmp0Local = tmpQueue0.AllocTensor<float>();

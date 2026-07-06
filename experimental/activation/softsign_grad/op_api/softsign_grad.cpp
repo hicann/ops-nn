@@ -32,9 +32,8 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SoftsignGrad);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                              DataType::DT_BF16};
 
 static bool IsAiCoreSupport(const aclTensor* gradients, const aclTensor* features)
 {
@@ -49,20 +48,13 @@ static bool SoftsignGradInferShape(const op::Shape& gradShape, op::Shape& outSha
     return true;
 }
 
-static const aclTensor* SoftsignGradAiCore(
-    const aclTensor* gradients,
-    const aclTensor* features,
-    const aclTensor* out,
-    aclOpExecutor* executor)
+static const aclTensor* SoftsignGradAiCore(const aclTensor* gradients, const aclTensor* features, const aclTensor* out,
+                                           aclOpExecutor* executor)
 {
     L0_DFX(SoftsignGradAiCore, gradients, features, out);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftsignGrad,
-        OP_INPUT(gradients, features), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftsignGradAiCore failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftsignGrad, OP_INPUT(gradients, features), OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftsignGradAiCore failed."), return nullptr);
     return out;
 }
 
@@ -75,10 +67,7 @@ static const aclTensor* SoftsignGradAiCore(
  * 3. AllocTensor - 分配输出 Tensor
  * 4. SoftsignGradAiCore - 调用 Kernel
  */
-const aclTensor* SoftsignGrad(
-    const aclTensor* gradients,
-    const aclTensor* features,
-    aclOpExecutor* executor)
+const aclTensor* SoftsignGrad(const aclTensor* gradients, const aclTensor* features, aclOpExecutor* executor)
 {
     Shape outShape;
     const aclTensor* out = nullptr;
@@ -92,8 +81,7 @@ const aclTensor* SoftsignGrad(
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "SoftsignGrad not supported: dtype gradients=%d, features=%d. "
                 "Supported: FLOAT16, FLOAT, BF16.",
-                static_cast<int>(gradients->GetDataType()),
-                static_cast<int>(features->GetDataType()));
+                static_cast<int>(gradients->GetDataType()), static_cast<int>(features->GetDataType()));
         return nullptr;
     }
 

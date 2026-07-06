@@ -81,21 +81,18 @@ private:
 };
 
 template <bool bTrans, CubeFormat bFormat>
-__aicore__ inline void TransposeQuantBatchMatMulAswBlock::Init(
-    const BatchMatMulV3TilingData* tilingData, uint32_t blockIdx)
+__aicore__ inline void TransposeQuantBatchMatMulAswBlock::Init(const BatchMatMulV3TilingData* tilingData,
+                                                               uint32_t blockIdx)
 {
     blockIdx_ = blockIdx;
     tilingData_ = tilingData;
-    params_.mCnt = CeilDiv(
-        static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.M),
-        static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM));
-    params_.nCnt = CeilDiv(
-        static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N),
-        static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseN));
+    params_.mCnt = CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.M),
+                           static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseM));
+    params_.nCnt = CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N),
+                           static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.baseN));
     params_.totalCnt = params_.mCnt * params_.nCnt * tilingData_->cBatchDimAll;
-    params_.round = CeilDiv(
-        static_cast<uint64_t>(params_.totalCnt),
-        static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.usedCoreNum));
+    params_.round = CeilDiv(static_cast<uint64_t>(params_.totalCnt),
+                            static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.usedCoreNum));
     params_.mCoreNum = AscendC::Std::min(WINDOW_LEN, params_.mCnt);
     params_.mainRow = params_.mCnt / params_.mCoreNum - 1UL;
     params_.mTailCoreNum = params_.mCnt - params_.mCoreNum * params_.mainRow;
@@ -106,15 +103,16 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::Init(
     GetSizeC0<int8_t>(c0Size_);
     if constexpr (bFormat == CubeFormat::NZ) {
         if constexpr (bTrans) {
-            alignedOriN_ =
-                MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N), ALIGNED_H) * ALIGNED_H;
-            alignedKbSize_ =
-                MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Kb), c0Size_) * c0Size_;
+            alignedOriN_ = MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N), ALIGNED_H) *
+                           ALIGNED_H;
+            alignedKbSize_ = MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Kb), c0Size_) *
+                             c0Size_;
         } else {
-            alignedOriN_ =
-                MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N), c0Size_) * c0Size_;
-            alignedKbSize_ =
-                MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Kb), ALIGNED_H) * ALIGNED_H;
+            alignedOriN_ = MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.N), c0Size_) *
+                           c0Size_;
+            alignedKbSize_ = MMV3DivCeil(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Kb),
+                                         ALIGNED_H) *
+                             ALIGNED_H;
         }
     }
     offset_.offsetBias = 0UL;
@@ -141,10 +139,10 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::UpdateBasicIndex(uint6
 
 __aicore__ inline void TransposeQuantBatchMatMulAswBlock::UpdateBlockParams()
 {
-    params_.singleCoreM =
-        params_.mIndex != (params_.mCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseM : params_.mBaseTail;
-    params_.singleCoreN =
-        params_.nIndex != (params_.nCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseN : params_.nBaseTail;
+    params_.singleCoreM = params_.mIndex != (params_.mCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseM :
+                                                                   params_.mBaseTail;
+    params_.singleCoreN = params_.nIndex != (params_.nCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseN :
+                                                                   params_.nBaseTail;
 }
 template <bool bTrans, CubeFormat bFormat, int8_t precisionMode>
 __aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset(bool isMxType)
@@ -159,25 +157,25 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset(bool isMx
     } else {
         uint64_t offsetBBatch = offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N *
                                 tilingData_->matMulTilingData.tCubeTiling.Kb;
-        offset_.offsetB =
-            bTrans ? offsetBBatch + nOffset * tilingData_->matMulTilingData.tCubeTiling.Kb : offsetBBatch + nOffset;
+        offset_.offsetB = bTrans ? offsetBBatch + nOffset * tilingData_->matMulTilingData.tCubeTiling.Kb :
+                                   offsetBBatch + nOffset;
     }
     offset_.offsetC = mOffset * tilingData_->cBatchDimAll * tilingData_->matMulTilingData.tCubeTiling.N +
                       offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N + nOffset;
     if (isMxType) {
         int32_t pertokenScaleK = MXFP_MULTI_BASE_SIZE;
         int32_t scaleK = MXFP_MULTI_BASE_SIZE;
-        pertokenScaleK *=
-            CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE);
+        pertokenScaleK *= CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka),
+                                  MXFP_DIVISOR_SIZE);
         if constexpr (bTrans) {
             scaleK *= CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE);
         }
-        offset_.offsetPerTokenScale =
-            mOffset * tilingData_->cBatchDimAll * pertokenScaleK + offset_.batchOffset * pertokenScaleK;
-        offset_.offsetScale =
-            offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N * MXFP_MULTI_BASE_SIZE *
-                CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE) +
-            nOffset * scaleK;
+        offset_.offsetPerTokenScale = mOffset * tilingData_->cBatchDimAll * pertokenScaleK +
+                                      offset_.batchOffset * pertokenScaleK;
+        offset_.offsetScale = offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N * MXFP_MULTI_BASE_SIZE *
+                                  CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka),
+                                          MXFP_DIVISOR_SIZE) +
+                              nOffset * scaleK;
     } else if constexpr (precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
         offset_.offsetScale = nOffset;
     } else {

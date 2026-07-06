@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -22,27 +22,26 @@ template <typename T, typename PD_GAMMA_TYPE>
 class LayerNormGradRecomputeGammaBeta : public LayerNormGradBase {
 public:
     __aicore__ inline LayerNormGradRecomputeGammaBeta() : LayerNormGradBase(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR pdGamma, GM_ADDR pdBeta, GM_ADDR workspace,
-        const LayerNormGradTilingDataRecompute* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR pdGamma, GM_ADDR pdBeta,
+                                GM_ADDR workspace, const LayerNormGradTilingDataRecompute* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void DoTiling();
     __aicore__ inline void Prologue();
     __aicore__ inline void Epilogue(const int64_t offset, const int64_t extent);
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessFoldBlock(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessSummation(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
+    __aicore__ inline void ProcessMainBlock(const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
+    __aicore__ inline void ProcessFoldBlock(const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
+    __aicore__ inline void ProcessSummation(const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
 
 private:
-    __aicore__ inline void ComputeGamma(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-        const LocalTensor<float>& varTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
-        const int64_t colSize);
+    __aicore__ inline void ComputeGamma(const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor,
+                                        const LocalTensor<float>& xTensor, const LocalTensor<float>& varTensor,
+                                        const LocalTensor<float>& meanTensor, const int64_t rowSize,
+                                        const int64_t colSize);
 
 private:
     const LayerNormGradTilingDataRecompute* __restrict td_;
@@ -83,30 +82,29 @@ template <typename T, typename U>
 class LayerNormGradRecomputeBackward : public LayerNormGradBase {
 public:
     __aicore__ inline LayerNormGradRecomputeBackward() : LayerNormGradBase(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR workspace,
-        const LayerNormGradTilingDataRecompute* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX,
+                                GM_ADDR workspace, const LayerNormGradTilingDataRecompute* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void Prologue(const int64_t mi, const int64_t mfactor);
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessFoldBlock(
-        const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessSummation(
-        const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
+    __aicore__ inline void ProcessMainBlock(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
+    __aicore__ inline void ProcessFoldBlock(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
+    __aicore__ inline void ProcessSummation(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
     __aicore__ inline void ProcessX(const int64_t mi, const int64_t ni, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ComputeDx(
-        const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-        const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor,
-        const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& varTensor, const int64_t rowSize,
-        const int64_t colSize, const int64_t stride);
+    __aicore__ inline void ComputeDx(const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor,
+                                     const LocalTensor<float>& xTensor, const LocalTensor<float>& gammaTensor,
+                                     const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
+                                     const LocalTensor<float>& varTensor, const int64_t rowSize, const int64_t colSize,
+                                     const int64_t stride);
     __aicore__ inline void Epilogue();
 
 private:
     const LayerNormGradTilingDataRecompute* __restrict td_;
-    
+
     int64_t Mloop = 0;
     int64_t Mtail = 0;
 

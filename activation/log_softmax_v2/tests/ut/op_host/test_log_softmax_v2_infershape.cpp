@@ -18,17 +18,14 @@
 using namespace ge;
 
 class log_softmax_v2 : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "log_softmax_v2 SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "log_softmax_v2 SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "log_softmax_v2 TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "log_softmax_v2 TearDown" << std::endl; }
 };
 
-TEST_F(log_softmax_v2, infer_axis_type_test_01) {
+TEST_F(log_softmax_v2, infer_axis_type_test_01)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;

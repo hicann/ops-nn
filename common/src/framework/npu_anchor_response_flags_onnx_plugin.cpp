@@ -13,43 +13,44 @@
 namespace domi {
 // Required attr judge
 static const int REQ_ATTR_NUM = 1;
-static Status ParseParamsNpuAnchorResponseFlags(const Message* op_src, ge::Operator& op_dest) {
-  const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-  std::vector<int> v_featmap_size = {};
-  std::vector<int> v_strides = {};
-  int num_base_anchors = 0;
-  // The initialization of required attribute count
-  int req_attr_num = 0;
-  for (auto attr : node->attribute()) {
-    if (attr.name() == "featmap_sizes" && attr.type() == ge::onnx::AttributeProto::INTS) {
-      int num = attr.ints_size();
-      for (int i = 0; i < num; ++i) {
-        v_featmap_size.push_back(attr.ints(i));
-      }
-    } else if (attr.name() == "strides" && attr.type() == ge::onnx::AttributeProto::INTS) {
-      int num = attr.ints_size();
-      for (int i = 0; i < num; ++i) {
-        v_strides.push_back(attr.ints(i));
-      }
-    } else if (attr.name() == "num_base_anchors" && attr.type() == ge::onnx::AttributeProto::INT) {
-      num_base_anchors = attr.i();
-      op_dest.SetAttr("num_base_anchors", num_base_anchors);
-      ++req_attr_num;
+static Status ParseParamsNpuAnchorResponseFlags(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
+    std::vector<int> v_featmap_size = {};
+    std::vector<int> v_strides = {};
+    int num_base_anchors = 0;
+    // The initialization of required attribute count
+    int req_attr_num = 0;
+    for (auto attr : node->attribute()) {
+        if (attr.name() == "featmap_sizes" && attr.type() == ge::onnx::AttributeProto::INTS) {
+            int num = attr.ints_size();
+            for (int i = 0; i < num; ++i) {
+                v_featmap_size.push_back(attr.ints(i));
+            }
+        } else if (attr.name() == "strides" && attr.type() == ge::onnx::AttributeProto::INTS) {
+            int num = attr.ints_size();
+            for (int i = 0; i < num; ++i) {
+                v_strides.push_back(attr.ints(i));
+            }
+        } else if (attr.name() == "num_base_anchors" && attr.type() == ge::onnx::AttributeProto::INT) {
+            num_base_anchors = attr.i();
+            op_dest.SetAttr("num_base_anchors", num_base_anchors);
+            ++req_attr_num;
+        }
+    }
 
-  if (v_featmap_size.empty() || v_strides.empty() || req_attr_num != REQ_ATTR_NUM) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Node must have attr featmap_size, strides, num_base_anchors");
-    return FAILED;
-  }
+    if (v_featmap_size.empty() || v_strides.empty() || req_attr_num != REQ_ATTR_NUM) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Node must have attr featmap_size, strides, num_base_anchors");
+        return FAILED;
+    }
 
-  op_dest.SetAttr("featmap_size", v_featmap_size);
-  op_dest.SetAttr("strides", v_strides);
-  return SUCCESS;
+    op_dest.SetAttr("featmap_size", v_featmap_size);
+    op_dest.SetAttr("strides", v_strides);
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("AnchorResponseFlags")
@@ -65,4 +66,4 @@ REGISTER_CUSTOM_OP("AnchorResponseFlags")
                    ge::AscendString("ai.onnx::18::NPUAnchorResponseFlags")})
     .ParseParamsFn(ParseParamsNpuAnchorResponseFlags)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

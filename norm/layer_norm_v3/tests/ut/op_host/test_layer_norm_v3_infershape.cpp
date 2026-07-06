@@ -24,15 +24,9 @@
 
 class LayerNormV3InfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LayerNormV3Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LayerNormV3Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LayerNormV3Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LayerNormV3Test TearDown" << std::endl; }
 };
 
 TEST_F(LayerNormV3InfershapeTest, layer_norm_v3_infershape_test_1)

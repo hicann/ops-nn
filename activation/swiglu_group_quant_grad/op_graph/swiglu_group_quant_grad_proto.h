@@ -25,7 +25,7 @@ namespace ge {
 * @li grad_y: Gradient input tensor. Must be one of the following types: float32,float16,bfloat16, has format ND.
 * @li x: Forward pass input tensor. Must be one of the following types: float32,float16,bfloat16, has format ND.
 * @li weight: Optional tensor. topk weight tensor. Type is float32, has format ND.
-* @li y_origin: Optional tensor. Forward pass output before quantization. 
+* @li y_origin: Optional tensor. Forward pass output before quantization.
         Must be one of the following types: float32,float16,bfloat16, has format ND.
 * @li group_index: Optional tensor. Group index tensor for dynamic quantization. Type is int64, has format ND.
 
@@ -47,6 +47,6 @@ REG_OP(SwigluGroupQuantGrad)
     .OUTPUT(grad_weight, TensorType({DT_FLOAT}))
     .ATTR(clamp_limit, Float, -1.0f)
     .OP_END_FACTORY_REG(SwigluGroupQuantGrad)
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_QUANT_SWIGLU_GROUP_QUANT_GRAD_PROTO_H_
+#endif // OPS_QUANT_SWIGLU_GROUP_QUANT_GRAD_PROTO_H_

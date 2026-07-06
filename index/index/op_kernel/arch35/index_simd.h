@@ -33,13 +33,12 @@ template <typename INDICES_T>
 class IndexSimd {
 public:
     __aicore__ inline IndexSimd(){};
-    __aicore__ inline void Init(
-        GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-        const IndexSimdTilingData* tilingData, GM_ADDR value = nullptr);
+    __aicore__ inline void Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
+                                GM_ADDR indices, const IndexSimdTilingData* tilingData, GM_ADDR value = nullptr);
     __aicore__ inline void Process();
     template <typename T>
-    __aicore__ inline void CopyIn(
-        LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst, uint32_t copyLen);
+    __aicore__ inline void CopyIn(LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst,
+                                  uint32_t copyLen);
     __aicore__ inline void GetIndices(uint64_t idx, uint64_t endIdx);
     __aicore__ inline INDICES_T GetIndexForI(int64_t indexOffset, int64_t idx);
     __aicore__ inline int64_t GetSelfIndex(uint64_t (&shapeI)[8], uint64_t endIdx);
@@ -72,9 +71,9 @@ private:
 };
 
 template <typename INDICES_T>
-__aicore__ inline void IndexSimd<INDICES_T>::Init(
-    GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-    const IndexSimdTilingData* tilingData, GM_ADDR value)
+__aicore__ inline void IndexSimd<INDICES_T>::Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes,
+                                                  GM_ADDR indexedStrides, GM_ADDR indices,
+                                                  const IndexSimdTilingData* tilingData, GM_ADDR value)
 {
     tilingData_ = tilingData;
     blockIdx_ = static_cast<int32_t>(GetBlockIdx());
@@ -101,8 +100,8 @@ __aicore__ inline void IndexSimd<INDICES_T>::Init(
 
 template <typename INDICES_T>
 template <typename T>
-__aicore__ inline void IndexSimd<INDICES_T>::CopyIn(
-    LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst, uint32_t copyLen)
+__aicore__ inline void IndexSimd<INDICES_T>::CopyIn(LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset,
+                                                    uint32_t nBurst, uint32_t copyLen)
 {
     DataCopyPadExtParams<T> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -259,15 +258,13 @@ __aicore__ inline void IndexSimd<INDICES_T>::NoSplitColProcess(int64_t colsAlign
                     int32_t backStep = (xIndex == preIdx0) ? backOffset0 :
                                        (xIndex == preIdx1) ? backOffset1 :
                                                              backOffset2;
-                    Copy(
-                        xLocal[j * colsAlign], xLocal[backStep],
-                        tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] *
-                            tilingData_->inputDtypeSize);
+                    Copy(xLocal[j * colsAlign], xLocal[backStep],
+                         tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] *
+                             tilingData_->inputDtypeSize);
                 } else {
-                    CopyIn(
-                        xLocal[j * colsAlign], xGm_, offset, 1,
-                        tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] *
-                            tilingData_->inputDtypeSize);
+                    CopyIn(xLocal[j * colsAlign], xGm_, offset, 1,
+                           tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] *
+                               tilingData_->inputDtypeSize);
                     preIdx2 = preIdx1;
                     preIdx1 = preIdx0;
                     preIdx0 = xIndex;
@@ -297,9 +294,9 @@ __aicore__ inline void IndexSimd<INDICES_T>::SplitColProcess(int64_t colsAlign)
     uint64_t shapeI[8]{};
     SetShapeI(shapeI, yEnd);
     uint64_t indiceEndIdx = GetIndicesEndIdx(shapeI);
-    int64_t loopSize =
-        (tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] + tilingData_->maxElement - 1) /
-        tilingData_->maxElement;
+    int64_t loopSize = (tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] + tilingData_->maxElement -
+                        1) /
+                       tilingData_->maxElement;
     for (int64_t i = 0; i < currentCoreElements_; i++) {
         int64_t yIdx = yStart + i;
         for (int32_t id = 0; id < 8; id++) {
@@ -337,10 +334,10 @@ __aicore__ inline void IndexSimd<INDICES_T>::Process()
         return;
     }
     int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize());
-    int64_t colsAlign =
-        (tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] * tilingData_->inputDtypeSize +
-         ubBlockSize - 1) /
-        ubBlockSize * ubBlockSize;
+    int64_t colsAlign = (tilingData_->mergeOutputShape[tilingData_->mergeOutputShapeDim - 1] *
+                             tilingData_->inputDtypeSize +
+                         ubBlockSize - 1) /
+                        ubBlockSize * ubBlockSize;
     if (colsAlign <= tilingData_->maxElement * tilingData_->inputDtypeSize) {
         NoSplitColProcess(colsAlign);
     } else {

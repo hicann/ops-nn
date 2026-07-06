@@ -29,11 +29,12 @@ const int CEIL_POS = 4;
 const int WS_SYS_SIZE = 16 * 1024 * 1024;
 static const gert::Shape g_vec_1_shape = {1};
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetPlatformInfo()
@@ -41,9 +42,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = reinterpret_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                    return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
 
         ubSize = compileInfoPtr->ubSize;
@@ -55,9 +55,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetPlatformInfo()
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
         ubSize = ubSizePlatform;
     }
-    OP_CHECK_IF(
-        coreNum == 0, OP_LOGE(context_->GetNodeName(), "coreNum is 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context_->GetNodeName(), "coreNum is 0"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -69,7 +67,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
     if (inputShape.GetDimNum() != NCDHW_DIMS) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(),
-            std::to_string(NCDHW_DIMS).c_str());
+                                     std::to_string(NCDHW_DIMS).c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -77,9 +75,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
-            "BFLOAT16, FLOAT16 or FLOAT32");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                  "BFLOAT16, FLOAT16 or FLOAT32");
         return ge::GRAPH_FAILED;
     }
 
@@ -93,7 +90,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
     if (indicesShape != outShape) {
         std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indicesShape and outShape", shapeMsg.c_str(),
-            "The shape of indices must be the same as the shape of out");
+                                               "The shape of indices must be the same as the shape of out");
         return ge::GRAPH_FAILED;
     }
 
@@ -106,61 +103,48 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
         h_dim++;
         w_dim++;
     }
-    inputData.inputShape = {
-        uint64_t(inputShape.GetDim(d_dim)), uint64_t(inputShape.GetDim(h_dim)), uint64_t(inputShape.GetDim(w_dim))};
-    inputData.outShape = {
-        uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)), uint64_t(outShape.GetDim(w_dim))};
+    inputData.inputShape = {uint64_t(inputShape.GetDim(d_dim)), uint64_t(inputShape.GetDim(h_dim)),
+                            uint64_t(inputShape.GetDim(w_dim))};
+    inputData.outShape = {uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)),
+                          uint64_t(outShape.GetDim(w_dim))};
 
     auto runtimeAttrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
 
     const gert::TypedContinuousVector<int64_t>* kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
-    inputData.kernelSize = {
-        static_cast<uint64_t>(kernelSize->GetData()[D_DIM]), static_cast<uint64_t>(kernelSize->GetData()[H_DIM]),
-        static_cast<uint64_t>(kernelSize->GetData()[W_DIM])};
+    inputData.kernelSize = {static_cast<uint64_t>(kernelSize->GetData()[D_DIM]),
+                            static_cast<uint64_t>(kernelSize->GetData()[H_DIM]),
+                            static_cast<uint64_t>(kernelSize->GetData()[W_DIM])};
 
     const gert::TypedContinuousVector<int64_t>* stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, stride);
-    inputData.stride = {
-        static_cast<uint64_t>(stride->GetData()[D_DIM]), static_cast<uint64_t>(stride->GetData()[H_DIM]),
-        static_cast<uint64_t>(stride->GetData()[W_DIM])};
+    inputData.stride = {static_cast<uint64_t>(stride->GetData()[D_DIM]),
+                        static_cast<uint64_t>(stride->GetData()[H_DIM]),
+                        static_cast<uint64_t>(stride->GetData()[W_DIM])};
 
     const gert::TypedContinuousVector<int64_t>* padding = runtimeAttrs->GetListInt(PADDING_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, padding);
-    inputData.pad = {
-        static_cast<uint64_t>(padding->GetData()[D_DIM]), static_cast<uint64_t>(padding->GetData()[H_DIM]),
-        static_cast<uint64_t>(padding->GetData()[W_DIM])};
+    inputData.pad = {static_cast<uint64_t>(padding->GetData()[D_DIM]), static_cast<uint64_t>(padding->GetData()[H_DIM]),
+                     static_cast<uint64_t>(padding->GetData()[W_DIM])};
 
     const gert::TypedContinuousVector<int64_t>* dilation = runtimeAttrs->GetListInt(DILATION_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dilation);
-    inputData.dilation = {
-        static_cast<uint64_t>(dilation->GetData()[D_DIM]), static_cast<uint64_t>(dilation->GetData()[H_DIM]),
-        static_cast<uint64_t>(dilation->GetData()[W_DIM])};
+    inputData.dilation = {static_cast<uint64_t>(dilation->GetData()[D_DIM]),
+                          static_cast<uint64_t>(dilation->GetData()[H_DIM]),
+                          static_cast<uint64_t>(dilation->GetData()[W_DIM])};
 
     inputData.ceilMode = *runtimeAttrs->GetAttrPointer<bool>(CEIL_POS);
     return ge::GRAPH_SUCCESS;
 }
 
-bool MaxPool3DWithArgmaxV2BaseTiling::IsCapable()
-{
-    return true;
-}
+bool MaxPool3DWithArgmaxV2BaseTiling::IsCapable() { return true; }
 
-ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t MaxPool3DWithArgmaxV2BaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t MaxPool3DWithArgmaxV2BaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetWorkspaceSize()
 {
@@ -172,8 +156,5 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 } // namespace optiling

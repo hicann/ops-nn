@@ -14,15 +14,14 @@
  */
 #include "smooth_l1_loss_v2.h"
 
-enum class SmoothL1LossV2TilingKey : uint32_t
-{
+enum class SmoothL1LossV2TilingKey : uint32_t {
     TILING_KEY_EXAMPLE_FLOAT = 0,
     TILING_KEY_EXAMPLE_OTHER = 1,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void smooth_l1_loss_v2(
-    GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void smooth_l1_loss_v2(GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace,
+                                             GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SmoothL1LossV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SmoothL1LossV2TilingData, tilingData, tiling);

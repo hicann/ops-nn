@@ -32,15 +32,9 @@ using namespace ge;
 
 class PReluTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "PReluTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "PReluTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "PReluTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "PReluTilingTest TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -56,9 +50,9 @@ static string to_string(void* buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType xDtype, ge::DataType weightDtype, ge::DataType yDtype, gert::StorageShape& xShape,
-    gert::StorageShape& weightShape, gert::StorageShape& yShape, ge::graphStatus expectStatus = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType xDtype, ge::DataType weightDtype, ge::DataType yDtype,
+                            gert::StorageShape& xShape, gert::StorageShape& weightShape, gert::StorageShape& yShape,
+                            ge::graphStatus expectStatus = ge::GRAPH_SUCCESS)
 {
     std::string compile_info_string = R"({
         "hardware_info": {
@@ -96,10 +90,9 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", socversions);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);

@@ -28,7 +28,8 @@ static constexpr int OUTPUT_PD_SHIFT_INDEX = 2;
 static constexpr int OUTPUT_PD_GAMMA_INDEX = 3;
 static constexpr int OUTPUT_PD_BETA_INDEX = 4;
 
-static ge::graphStatus InferShapeAdaLayerNormGrad(gert::InferShapeContext* context) {
+static ge::graphStatus InferShapeAdaLayerNormGrad(gert::InferShapeContext* context)
+{
     if (context == nullptr) {
         OP_LOGE("AdaLayerNormGrad", "InferShapeContext is nullptr");
         return ge::GRAPH_FAILED;
@@ -108,5 +109,7 @@ static ge::graphStatus InferDataTypeAdaLayerNormGrad(gert::InferDataTypeContext*
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(AdaLayerNormGrad).InferShape(InferShapeAdaLayerNormGrad).InferDataType(InferDataTypeAdaLayerNormGrad);
+IMPL_OP_INFERSHAPE(AdaLayerNormGrad)
+    .InferShape(InferShapeAdaLayerNormGrad)
+    .InferDataType(InferDataTypeAdaLayerNormGrad);
 } // namespace ops

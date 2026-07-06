@@ -90,8 +90,8 @@ uint32_t GetDataTypeSize(DataType dt)
     return dilation;
 }
 
-int32_t GenFloatData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, float value)
+int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                     float value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -109,7 +109,7 @@ int32_t GenFloatData(
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
-    delete[] pData;  // GE Tensor 构造已拷贝，立即释放
+    delete[] pData; // GE Tensor 构造已拷贝，立即释放
     return SUCCESS;
 }
 
@@ -138,9 +138,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 //   fillValue        : 填充的常数值
 //   graph / input / inputs : 图、device tensor 列表、graph 输入端口列表
 template <typename SetterFn>
-int32_t AddDataInput(
-    int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape, float fillValue,
-    Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
+int32_t AddDataInput(int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape,
+                     float fillValue, Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
 {
     std::string name = "placeholder" + std::to_string(placeholderIndex);
     auto data = op::Data(name.c_str()).set_attr_index(placeholderIndex);
@@ -161,9 +160,8 @@ int32_t AddDataInput(
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     // 自定义代码：添加 ApplyAdaMax 单算子定义到图中
     auto adamax = op::ApplyAdaMax("apply_adamax1");
@@ -174,24 +172,42 @@ int CreateOppInGraph(
 
     int idx = 0;
     // 9 个输入 —— 顺序须与 REG_OP(ApplyAdaMax) 的 .INPUT 顺序一致
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_var(d); }, inDtype, tensorShape, 1.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_m(d); }, inDtype, tensorShape, 0.1f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_v(d); }, inDtype, tensorShape, 0.5f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_beta1_power(d); }, inDtype, scalarShape, 0.9f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_lr(d); }, inDtype, scalarShape, 0.001f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_beta1(d); }, inDtype, scalarShape, 0.9f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_beta2(d); }, inDtype, scalarShape, 0.999f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { adamax.set_input_grad(d); }, inDtype, tensorShape, 0.2f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_var(d); }, inDtype, tensorShape, 1.0f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_m(d); }, inDtype, tensorShape, 0.1f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_v(d); }, inDtype, tensorShape, 0.5f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_beta1_power(d); }, inDtype, scalarShape, 0.9f, graph, input,
+            inputs) != SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_lr(d); }, inDtype, scalarShape, 0.001f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_beta1(d); }, inDtype, scalarShape, 0.9f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_beta2(d); }, inDtype, scalarShape, 0.999f, graph, input,
+            inputs) != SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f, graph, input,
+            inputs) != SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { adamax.set_input_grad(d); }, inDtype, tensorShape, 0.2f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
 
     // 单输出端口（var）的 TensorDesc，shape/dtype 与输入 var 一致
     TensorDesc varOutDesc = TensorDesc(ge::Shape(tensorShape), FORMAT_ND, inDtype);

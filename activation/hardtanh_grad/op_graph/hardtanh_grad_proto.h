@@ -40,9 +40,9 @@ namespace ge {
  * Compatible with the PyTorch operator HardtanhGrad.
  */
 REG_OP(HardtanhGrad)
-    .INPUT(result, TensorType({ DT_BF16, DT_FLOAT16, DT_FLOAT })) /* "First operand." */
-    .INPUT(grad, TensorType({ DT_BF16, DT_FLOAT16, DT_FLOAT }))   /* "Second operand." */
-    .OUTPUT(y, TensorType({ DT_BF16, DT_FLOAT16, DT_FLOAT }))     /* "Result, has same element type as two inputs" */
+    .INPUT(result, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT})) /* "First operand." */
+    .INPUT(grad, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))   /* "Second operand." */
+    .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))     /* "Result, has same element type as two inputs" */
     .ATTR(min_val, Float, -1.0)
     .ATTR(max_val, Float, 1.0)
     .OP_END_FACTORY_REG(HardtanhGrad)

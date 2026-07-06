@@ -144,10 +144,9 @@ __aicore__ inline void Celu<T>::Compute(int64_t currentNum)
     AscendC::Muls(negResult, outputLocal, static_cast<T>(alpha1_), currentNum);
     AscendC::Duplicate(outputLocal, static_cast<T>(alpha3_ * 3.0f), currentNum);
     AscendC::Duplicate(zerosBuf, static_cast<T>(0), currentNum);
-    AscendC::Compare(maskBuf, inputLocal, zerosBuf, AscendC::CMPMODE::GE,
-        static_cast<uint32_t>(currentNum));
-    AscendC::Select(outputLocal, maskBuf, outputLocal, negResult,
-        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, static_cast<uint32_t>(currentNum));
+    AscendC::Compare(maskBuf, inputLocal, zerosBuf, AscendC::CMPMODE::GE, static_cast<uint32_t>(currentNum));
+    AscendC::Select(outputLocal, maskBuf, outputLocal, negResult, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                    static_cast<uint32_t>(currentNum));
 
     inputQueue.FreeTensor(inputLocal);
     outputQueue.EnQue(outputLocal);

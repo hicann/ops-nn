@@ -29,7 +29,8 @@
 #define SMALL_KERNEL_NO_PADDING_FORMAT_NHWC 400001
 #define SMALL_KERNEL_PADDING_FORMAT_NHWC 400002
 
-extern "C" __global__ __aicore__ void max_pool_v2(GM_ADDR x, GM_ADDR ksize, GM_ADDR strides, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void max_pool_v2(GM_ADDR x, GM_ADDR ksize, GM_ADDR strides, GM_ADDR y,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     AscendC::TPipe pipeBase;
 

@@ -28,18 +28,11 @@
 
 using namespace std;
 
-class QuantizeTiling : public testing::Test
-{
+class QuantizeTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantizeTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantizeTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantizeTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantizeTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -110,23 +103,23 @@ static void ExecuteTestCase(ge::DataType xDtype, ge::DataType scalesDtype, ge::D
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .SetOpType(op_type)
-            .NodeIoNum(3, 1)
-            .IrInstanceNum({1, 1, 1})
-            .InputShapes({&xShape, &scalesShape, &zeroPointsShape})
-            .OutputShapes({&yShape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, scalesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, zeroPointsDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<string>(dtype)}, {"axis", Ops::NN::AnyValue::CreateFrom(axis)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &scalesShape, &zeroPointsShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, scalesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, zeroPointsDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<string>(dtype)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom(axis)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

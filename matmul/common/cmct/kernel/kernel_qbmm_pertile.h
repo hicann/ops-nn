@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -47,10 +47,8 @@ constexpr uint32_t PER_BLOCK_SIZE = 128;
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
 class QuantMmBatchPertile {
 public:
-    __aicore__ inline QuantMmBatchPertile()
-    {}
-    __aicore__ inline ~QuantMmBatchPertile()
-    {}
+    __aicore__ inline QuantMmBatchPertile() {}
+    __aicore__ inline ~QuantMmBatchPertile() {}
 
     static constexpr bool transA = BlockMmad::transA;
     static constexpr bool transB = BlockMmad::transB;
@@ -59,9 +57,9 @@ public:
     using BlockEpilogueParams = typename BlockEpilogue::Params;
 
     using AType = typename BlockMmad::AType;
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
-        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
-        transB, AType>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmad::L1TileShape,
+                                                                    typename BlockMmad::L0TileShape, BlockScheduler,
+                                                                    transA, transB, AType>::SchedulerOp;
     using BlockSchedulerParams = typename BlockSchedulerOp::Params;
     using BType = typename BlockMmad::BType;
     using CType = typename BlockMmad::CType;
@@ -96,13 +94,12 @@ public:
         uint32_t biasThreeDim;
         int32_t isBias;
 
-        __aicore__ QBMMTiling()
-        {}
-        __aicore__ QBMMTiling(
-            uint32_t batchA1_, uint32_t batchA2_, uint32_t batchA3_, uint32_t batchA4_, uint32_t batchB1_,
-            uint32_t batchB2_, uint32_t batchB3_, uint32_t batchB4_, uint32_t batchC1_, uint32_t batchC2_,
-            uint32_t batchC3_, uint32_t batchC4_, uint32_t kaL1_, uint32_t kbL1_, uint8_t nBufferNum_,
-            uint32_t biasThreeDim_, int32_t isBias_)
+        __aicore__ QBMMTiling() {}
+        __aicore__ QBMMTiling(uint32_t batchA1_, uint32_t batchA2_, uint32_t batchA3_, uint32_t batchA4_,
+                              uint32_t batchB1_, uint32_t batchB2_, uint32_t batchB3_, uint32_t batchB4_,
+                              uint32_t batchC1_, uint32_t batchC2_, uint32_t batchC3_, uint32_t batchC4_,
+                              uint32_t kaL1_, uint32_t kbL1_, uint8_t nBufferNum_, uint32_t biasThreeDim_,
+                              int32_t isBias_)
             : batchA1(batchA1_),
               batchA2(batchA2_),
               batchA3(batchA3_),
@@ -133,17 +130,14 @@ public:
     };
 
 public:
-    __aicore__ inline void Init(
-        const Params& params, AscendC::LocalTensor<CType>& mmResPing, AscendC::LocalTensor<CType>& mmResPong);
+    __aicore__ inline void Init(const Params& params, AscendC::LocalTensor<CType>& mmResPing,
+                                AscendC::LocalTensor<CType>& mmResPong);
     __aicore__ inline void Run(const Params& params);
-    __aicore__ inline void operator()(const Params& params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(const Params& params) { Run(params); }
 
 private:
-    __aicore__ inline void ProcessWithoutBatch(
-        const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound);
+    __aicore__ inline void ProcessWithoutBatch(const Params& params, BlockSchedulerOp& bs, uint64_t restBatch,
+                                               bool isTailRound);
     __aicore__ inline void ProcessWithBatch(const Params& params, BlockSchedulerOp& bs);
     __aicore__ inline void UpdateOffset(uint64_t batchA4Offset, uint64_t batchB4Offset, uint64_t batchC4Offset);
     __aicore__ inline void UpdateMMGlobalAddr();
@@ -197,11 +191,10 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 
     isPertile_ = params.epilogueParams.groupSizeM == 1;
     mmadOp_.Init(
-        TupleShape{
-            static_cast<int64_t>(params.epilogueParams.baseM), static_cast<int64_t>(params.epilogueParams.baseN),
-            static_cast<int64_t>(params.epilogueParams.baseK)},
-        BlockShape{
-            1UL, 1UL, static_cast<int64_t>(params.qbmmParams.kaL1), static_cast<int64_t>(params.qbmmParams.kbL1)},
+        TupleShape{static_cast<int64_t>(params.epilogueParams.baseM), static_cast<int64_t>(params.epilogueParams.baseN),
+                   static_cast<int64_t>(params.epilogueParams.baseK)},
+        BlockShape{1UL, 1UL, static_cast<int64_t>(params.qbmmParams.kaL1),
+                   static_cast<int64_t>(params.qbmmParams.kbL1)},
         &mmResPing, &mmResPong, params.qbmmParams.nBufferNum);
     epilogueOp_.Init(&params.epilogueParams);
 
@@ -223,31 +216,38 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::UpdateOffset(
-    uint64_t batchA4Offset, uint64_t batchB4Offset, uint64_t batchC4Offset)
+__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::UpdateOffset(uint64_t batchA4Offset,
+                                                                                             uint64_t batchB4Offset,
+                                                                                             uint64_t batchC4Offset)
 {
-    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) * Get<MNK_K>(problemShape_);
-    Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) * Get<MNK_K>(problemShape_);
-    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) * Get<MNK_N>(problemShape_);
+    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) *
+                                                       Get<MNK_K>(problemShape_);
+    Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) *
+                                                       Get<MNK_K>(problemShape_);
+    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) *
+                                                       Get<MNK_N>(problemShape_);
 
     if (isPertile_) {
-        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset * static_cast<uint64_t>(Get<MNK_M>(problemShape_)) *
-                                               CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE);
+        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset *
+                                                                 static_cast<uint64_t>(Get<MNK_M>(problemShape_)) *
+                                                                 CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE);
     } else {
-        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset * CeilDiv(Get<MNK_M>(problemShape_), PER_BLOCK_SIZE) *
-                                               CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE);
+        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset *
+                                                                 CeilDiv(Get<MNK_M>(problemShape_), PER_BLOCK_SIZE) *
+                                                                 CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE);
     }
 
-    Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(baseOffset_) = batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE) *
-                                           CeilDiv(Get<MNK_N>(problemShape_), PER_BLOCK_SIZE);
+    Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(baseOffset_) = batchB4Offset *
+                                                             CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE) *
+                                                             CeilDiv(Get<MNK_N>(problemShape_), PER_BLOCK_SIZE);
     if (isBiasThreeDim_) {
         Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_N>(problemShape_);
     }
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(
-    const Params& params, BlockSchedulerOp& bs)
+__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(const Params& params,
+                                                                                                 BlockSchedulerOp& bs)
 {
     const auto& p = params.qbmmParams;
 
@@ -270,7 +270,7 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
     uint64_t batchC1Offset = 0;
     uint64_t batchA1Offset = 0;
     uint64_t batchB1Offset = 0;
- 	uint64_t totalCnt = bs.GetTotalCnt() * params.problemShape.b;
+    uint64_t totalCnt = bs.GetTotalCnt() * params.problemShape.b;
     uint64_t nonTailRoundCnt = (totalCnt / AscendC::GetBlockNum()) * AscendC::GetBlockNum();
     uint64_t curBatchC = 1UL;
     for (uint32_t b1Index = 0; b1Index < p.batchC1; ++b1Index) {
@@ -316,9 +316,8 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
     const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
 {
     UpdateMMGlobalAddr();
-    CoordClass coord(
-        Get<MNK_M>(problemShape_), Get<MNK_N>(problemShape_), Get<MNK_K>(problemShape_), params.epilogueParams.baseM,
-        params.epilogueParams.baseN, params.epilogueParams.baseK);
+    CoordClass coord(Get<MNK_M>(problemShape_), Get<MNK_N>(problemShape_), Get<MNK_K>(problemShape_),
+                     params.epilogueParams.baseM, params.epilogueParams.baseN, params.epilogueParams.baseK);
     BlockCoord tileIdx;
     // both tail of current batch and rest batch are tail round
     if (needUpdateTail_ || (isTailRound && ((bs.GetEndBlockIdx() + 1) + (restBatch * bs.GetTotalCnt())) *
@@ -331,11 +330,11 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
     while (bs.GetTileIdx(tileIdx)) {
         BlockShape singleShape;
         if (isPertile_) {
-            singleShape = bs.template GetBlockShape<
-                QuantBatchMatmul::QuantMode::PERGROUP_MODE, QuantBatchMatmul::QuantMode::PERBLOCK_MODE>(tileIdx);
+            singleShape = bs.template GetBlockShape<QuantBatchMatmul::QuantMode::PERGROUP_MODE,
+                                                    QuantBatchMatmul::QuantMode::PERBLOCK_MODE>(tileIdx);
         } else {
-            singleShape = bs.template GetBlockShape<
-                QuantBatchMatmul::QuantMode::PERBLOCK_MODE, QuantBatchMatmul::QuantMode::PERBLOCK_MODE>(tileIdx);
+            singleShape = bs.template GetBlockShape<QuantBatchMatmul::QuantMode::PERBLOCK_MODE,
+                                                    QuantBatchMatmul::QuantMode::PERBLOCK_MODE>(tileIdx);
         }
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
@@ -345,16 +344,18 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
                 AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
                 blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE, AType, true>(
                     Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
-                    Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape),
-                    loadBalanceInfo);
+                    Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
+                    Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);
             } else {
                 blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE, AType>(
                     Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
-                    Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
+                    Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
+                    Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
             }
         } else {
             blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERBLOCK_MODE, AType>(
-                Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
+                Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
+                Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
                 Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
         }
         Iterate(Get<MNK_M>(singleShape), Get<MNK_N>(singleShape));
@@ -363,13 +364,14 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::Iterate(
-    int64_t singleCoreM, int64_t singleCoreN)
+__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::Iterate(int64_t singleCoreM,
+                                                                                        int64_t singleCoreN)
 {
-    AscendC::Std::tuple<int64_t, int64_t, int64_t> blockShape{
-        singleCoreM, singleCoreN, static_cast<int64_t>(Get<MNK_K>(problemShape_))};
+    AscendC::Std::tuple<int64_t, int64_t, int64_t> blockShape{singleCoreM, singleCoreN,
+                                                              static_cast<int64_t>(Get<MNK_K>(problemShape_))};
     if ASCEND_IS_AIC {
-        mmadOp_(blockShape, aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)], bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)]);
+        mmadOp_(blockShape, aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
+                bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)]);
     }
     if ASCEND_IS_AIV {
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t> blockCoord{
@@ -411,4 +413,3 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

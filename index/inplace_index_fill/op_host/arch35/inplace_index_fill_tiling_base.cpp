@@ -41,7 +41,7 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     int64_t xShapeSize = inputXShape_->GetStorageShape().GetShapeSize();
     if (xShapeSize <= 0) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "x", std::to_string(xShapeSize).c_str(),
-            "shape size must be greater than zero");
+                                                  "shape size must be greater than zero");
         return ge::GRAPH_FAILED;
     }
     auto indicesShape_ = context_->GetInputShape(INPUT_INDICES_IDX);
@@ -49,7 +49,7 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     int64_t indicesShapeSize = indicesShape_->GetStorageShape().GetShapeSize();
     if (indicesShapeSize <= 0) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "indices", std::to_string(indicesShapeSize).c_str(),
-            "shape size must be greater than zero");
+                                                  "shape size must be greater than zero");
         return ge::GRAPH_FAILED;
     }
     // 校验x的dtype是否满足
@@ -57,9 +57,9 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
     auto xDType = inputXDesc->GetDataType();
     if (!IsSupportDtype(X_SUPPORT_DTYPE, xDType)) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x",
-            std::to_string(static_cast<int32_t>(xDType)).c_str(),
-            "dtype must be in [DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_INT32, DT_INT64, DT_BOOL]");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", std::to_string(static_cast<int32_t>(xDType)).c_str(),
+                                              "dtype must be in [DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT8, "
+                                              "DT_UINT8, DT_INT16, DT_INT32, DT_INT64, DT_BOOL]");
         return ge::GRAPH_FAILED;
     }
     // 校验x和y的dtype是否相同
@@ -67,8 +67,10 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     auto yDType = outputDesc->GetDataType();
     if (xDType != yDType) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, y",
-            (std::to_string(static_cast<int32_t>(xDType)) + ", " + std::to_string(static_cast<int32_t>(yDType))).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName_, "x, y",
+            (std::to_string(static_cast<int32_t>(xDType)) + ", " + std::to_string(static_cast<int32_t>(yDType)))
+                .c_str(),
             "x and y must have the same dtype");
         return ge::GRAPH_FAILED;
     }
@@ -77,8 +79,10 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, valueDesc);
     auto valueDType = valueDesc->GetDataType();
     if (xDType != valueDType) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, value",
-            (std::to_string(static_cast<int32_t>(xDType)) + ", " + std::to_string(static_cast<int32_t>(valueDType))).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName_, "x, value",
+            (std::to_string(static_cast<int32_t>(xDType)) + ", " + std::to_string(static_cast<int32_t>(valueDType)))
+                .c_str(),
             "x and value must have the same dtype");
         return ge::GRAPH_FAILED;
     }
@@ -88,8 +92,8 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     auto indicesDType = indicesDesc->GetDataType();
     if (!IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDType)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "indices",
-            std::to_string(static_cast<int32_t>(indicesDType)).c_str(),
-            "dtype must be DT_INT32 or DT_INT64");
+                                              std::to_string(static_cast<int32_t>(indicesDType)).c_str(),
+                                              "dtype must be DT_INT32 or DT_INT64");
         return ge::GRAPH_FAILED;
     }
     inputData.xDtypeSize = ge::GetSizeByDataType(xDType);
@@ -99,8 +103,8 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
 }
 
 // 校验shape与合轴处理
-void InplaceIndexFillTilingBase::CalculatePQ(
-    const gert::Shape& xShape, int64_t dim, int64_t xDim, InplaceIndexFIllInputInfo& inputDataParam)
+void InplaceIndexFillTilingBase::CalculatePQ(const gert::Shape& xShape, int64_t dim, int64_t xDim,
+                                             InplaceIndexFIllInputInfo& inputDataParam)
 {
     for (int64_t i = 0; i < dim; i++) {
         inputDataParam.preDimProduct *= xShape.GetDim(i);
@@ -114,7 +118,7 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
     const char* opName_ = "InplaceIndexFill";
     if (CheckDataType() != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x, y, value, indices", "unknown",
-            "please check the data types of input and output");
+                                              "please check the data types of input and output");
         return ge::GRAPH_FAILED;
     }
 
@@ -128,8 +132,7 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
     auto yShape = yShapePtr->GetStorageShape();
 
     if (xShape != yShape) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, y", "xShape, yShape",
-            "x and y must have the same shape");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, y", "xShape, yShape", "x and y must have the same shape");
         return ge::GRAPH_FAILED;
     }
     // 校验dim满足xShape
@@ -141,7 +144,7 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
     auto dim_ = *dimP;
     if (!((-xDim <= dim_) && (dim_ < xDim))) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "dim", std::to_string(dim_).c_str(),
-            "dim index must be in range [-xDim, xDim)");
+                                              "dim index must be in range [-xDim, xDim)");
         return ge::GRAPH_FAILED;
     }
     // dim处理
@@ -199,20 +202,11 @@ ge::graphStatus TilingPrepareForInplaceIndexFill(gert::TilingParseContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-bool InplaceIndexFillTilingBase::IsCapable()
-{
-    return true;
-}
+bool InplaceIndexFillTilingBase::IsCapable() { return true; }
 
-ge::graphStatus InplaceIndexFillTilingBase::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus InplaceIndexFillTilingBase::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus InplaceIndexFillTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus InplaceIndexFillTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus InplaceIndexFillTilingBase::GetWorkspaceSize()
 {
@@ -237,9 +231,8 @@ ge::graphStatus InplaceIndexFillTilingBase::PostTiling()
 
 uint64_t InplaceIndexFillTilingBase::GetTilingKey() const
 {
-    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
-        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
-        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4) ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32) :
+                                                       static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
     return GET_TPL_TILING_KEY(TPL_MODE_TEMPLATE_SIMT, dtypeMode);
 }
 

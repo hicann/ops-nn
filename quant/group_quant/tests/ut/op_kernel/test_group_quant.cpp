@@ -21,19 +21,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void group_quant(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR groupIndex, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void group_quant(GM_ADDR x, GM_ADDR scale, GM_ADDR groupIndex, GM_ADDR offset,
+                                                  GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 class GroupQuantTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "GroupQuantTest SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "GroupQuantTest TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "GroupQuantTest SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "GroupQuantTest TearDown\n" << endl; }
 };
 
 TEST_F(GroupQuantTest, op_demo_case)

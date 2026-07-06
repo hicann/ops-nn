@@ -29,7 +29,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static bool CheckNotNull(const aclTensor *self, aclTensor *out) {
+static bool CheckNotNull(const aclTensor* self, aclTensor* out)
+{
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
 
@@ -44,18 +45,20 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_BF16};
 
-static const int64_t AXIS_LIMIT = 8;  // 底层算子不支持超过8维
+static const int64_t AXIS_LIMIT = 8; // 底层算子不支持超过8维
 
-static inline const std::initializer_list<DataType>& GetDtypeSupportList(void) {
-    if(GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-       GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-      return ASCEND910B_DTYPE_SUPPORT_LIST;
-    }else {
-      return ASCEND910_DTYPE_SUPPORT_LIST;
+static inline const std::initializer_list<DataType>& GetDtypeSupportList(void)
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+        return ASCEND910B_DTYPE_SUPPORT_LIST;
+    } else {
+        return ASCEND910_DTYPE_SUPPORT_LIST;
     }
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+{
     const std::initializer_list<DataType>& dtypeSupportList = GetDtypeSupportList();
 
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
@@ -63,7 +66,8 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
     return true;
 }
 
-static bool CheckDim(const aclTensor *self, int64_t dim) {
+static bool CheckDim(const aclTensor* self, int64_t dim)
+{
     // 检查指定dim是否在self的维度范围内
     auto selfViewShape = self->GetViewShape();
     auto selfDimNum = static_cast<int64_t>(selfViewShape.GetDimNum());
@@ -77,7 +81,8 @@ static bool CheckDim(const aclTensor *self, int64_t dim) {
     return true;
 }
 
-static bool CheckShape(const aclTensor *self, aclTensor *out) {
+static bool CheckShape(const aclTensor* self, aclTensor* out)
+{
     OP_CHECK_MAX_DIM(self, AXIS_LIMIT, return false);
 
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
@@ -85,13 +90,14 @@ static bool CheckShape(const aclTensor *self, aclTensor *out) {
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, aclTensor* out) {
+static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, aclTensor* out)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 空tensor直接返回
     if (self->IsEmpty()) {
-      return ACLNN_SUCCESS;
+        return ACLNN_SUCCESS;
     }
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
@@ -105,8 +111,9 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, aclTensor* ou
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSoftmaxGetWorkspaceSize(const aclTensor* self, int64_t dim, aclTensor* out,
-                                         uint64_t* workspaceSize, aclOpExecutor** executor) {
+aclnnStatus aclnnSoftmaxGetWorkspaceSize(const aclTensor* self, int64_t dim, aclTensor* out, uint64_t* workspaceSize,
+                                         aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnSoftmax, DFX_IN(self, dim), DFX_OUT(out));
 
     // 固定写法，参数检查
@@ -147,7 +154,8 @@ aclnnStatus aclnnSoftmaxGetWorkspaceSize(const aclTensor* self, int64_t dim, acl
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSoftmax(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
+aclnnStatus aclnnSoftmax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnSoftmax);
     OP_LOGD("Entering aclnnSoftmax");
     // 固定写法，调用框架能力，完成计算

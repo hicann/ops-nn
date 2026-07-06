@@ -47,11 +47,9 @@ constexpr float DYNAMIC_QUANT_EPSINON = 1e-12;
 constexpr float MIN_FLOAT_VALUE = -3.4028235e+38f;
 constexpr float MAX_FLOAT_VALUE = 3.402823466e+38f;
 
-class DynamicQuantBase
-{
+class DynamicQuantBase {
 public:
-    __aicore__ inline DynamicQuantBase()
-    {}
+    __aicore__ inline DynamicQuantBase() {}
 
     __aicore__ inline void ParseTilingData(const DynamicQuantTilingData* tilingData)
     {
@@ -74,7 +72,7 @@ public:
     __aicore__ inline void InitBaseBuffer()
     {
         pPipe->InitBuffer(quantTemp, QUANT_TEMP_LEN * sizeof(float));
-        pPipe->InitBuffer(tempCastUb, (sizeHalfLen + SIXTY_THREE) / SIXTY_FOUR * SIXTY_FOUR  * sizeof(float));
+        pPipe->InitBuffer(tempCastUb, (sizeHalfLen + SIXTY_THREE) / SIXTY_FOUR * SIXTY_FOUR * sizeof(float));
         pPipe->InitBuffer(fp32_buf_, sizeHalfLen * sizeof(float));
     }
 
@@ -211,8 +209,8 @@ public:
                 Max(src_local, src_local[ELEM_PER_REP_FP32], src_local, ELEM_PER_REP_FP32, MAX_REPEAT,
                     {1, 1, 1, 0, 8, 0});
                 PipeBarrier<PIPE_V>();
-                Max(src_local, src_local[ELEM_PER_REP_FP32 * MAX_REPEAT], src_local, ELEM_PER_REP_FP32, repsFp32 - MAX_REPEAT - 1,
-                    {1, 1, 1, 0, 8, 0});
+                Max(src_local, src_local[ELEM_PER_REP_FP32 * MAX_REPEAT], src_local, ELEM_PER_REP_FP32,
+                    repsFp32 - MAX_REPEAT - 1, {1, 1, 1, 0, 8, 0});
             } else {
                 Max(src_local, src_local[ELEM_PER_REP_FP32], src_local, ELEM_PER_REP_FP32, repsFp32 - 1,
                     {1, 1, 1, 0, 8, 0});
@@ -249,16 +247,14 @@ public:
         WholeReduceMax(src_local, src_local, mask, 1, 8, 1, 8);
     }
 
-    __aicore__ inline float GetMax(float a, float b)
-    {
-        return a > b ? a : b;
-    }
+    __aicore__ inline float GetMax(float a, float b) { return a > b ? a : b; }
 
     template <typename T1, typename T2>
     __aicore__ inline auto GetMin(T1 a, T2 b)
     {
         return a < b ? a : b;
     };
+
 protected:
     TPipe* pPipe = nullptr;
     /* tiling data */

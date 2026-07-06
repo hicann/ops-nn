@@ -26,11 +26,9 @@ constexpr int32_t BUFFER_NUM = 2;
 constexpr uint8_t INPUT_PARAMETER_COUNT = 2;
 constexpr bool NEED_COPY_OUT = true;
 
-template <
-    typename T, typename Predicate, int32_t bufferNum = BUFFER_NUM, uint8_t paramsCount = INPUT_PARAMETER_COUNT,
-    bool needCopyOut = NEED_COPY_OUT>
-class KernelForeachUnary : public KernelForeachBase<T>
-{
+template <typename T, typename Predicate, int32_t bufferNum = BUFFER_NUM, uint8_t paramsCount = INPUT_PARAMETER_COUNT,
+          bool needCopyOut = NEED_COPY_OUT>
+class KernelForeachUnary : public KernelForeachBase<T> {
 protected:
     using Base = KernelForeachBase<T>;
 
@@ -53,8 +51,8 @@ protected:
 
 private:
     __aicore__ inline void CopyIn(uint32_t index, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder);
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder);
     __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder);
     __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder);
     __aicore__ inline void BeforeProcess();
@@ -167,8 +165,9 @@ __aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
 }
 
 template <typename T, typename Predicate, int32_t bufferNum, uint8_t paramsCount, bool needCopyOut>
-__aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, needCopyOut>::CopyIn(
-    uint32_t index, int64_t dataCount, bool isRemainder)
+__aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, needCopyOut>::CopyIn(uint32_t index,
+                                                                                                     int64_t dataCount,
+                                                                                                     bool isRemainder)
 {
     LocalTensor<T> dataLocal = dataQueue.template AllocTensor<T>();
     if (isRemainder) {
@@ -182,8 +181,9 @@ __aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
 }
 
 template <typename T, typename Predicate, int32_t bufferNum, uint8_t paramsCount, bool needCopyOut>
-__aicore__ inline bool KernelForeachUnary<T, Predicate, bufferNum, paramsCount, needCopyOut>::CopyOut(
-    uint32_t index, int64_t dataCount, bool isRemainder)
+__aicore__ inline bool KernelForeachUnary<T, Predicate, bufferNum, paramsCount, needCopyOut>::CopyOut(uint32_t index,
+                                                                                                      int64_t dataCount,
+                                                                                                      bool isRemainder)
 {
     static_assert(std::is_member_function_pointer_v<decltype(&Predicate::CopyOut)>);
     if (!pred.CopyOut(index, dataCount, isRemainder)) {

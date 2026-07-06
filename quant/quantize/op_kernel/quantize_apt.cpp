@@ -31,8 +31,8 @@ using namespace AscendC;
 using namespace QuantizeOp;
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerChannel(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerChannel(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace,
+                                          GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -42,8 +42,8 @@ __aicore__ inline void QuantizePerChannel(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerChannelNoOffset(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerChannelNoOffset(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -53,8 +53,8 @@ __aicore__ inline void QuantizePerChannelNoOffset(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerChannelNddma(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerChannelNddma(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
+                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -64,8 +64,8 @@ __aicore__ inline void QuantizePerChannelNddma(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerChannelNddmaNoOffset(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerChannelNddmaNoOffset(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
+                                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -76,8 +76,8 @@ __aicore__ inline void QuantizePerChannelNddmaNoOffset(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerTensor(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerTensor(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace,
+                                         GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -87,8 +87,8 @@ __aicore__ inline void QuantizePerTensor(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerTensorNoOffset(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerTensorNoOffset(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
+                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -98,8 +98,8 @@ __aicore__ inline void QuantizePerTensorNoOffset(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerHead(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerHead(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace,
+                                       GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -109,8 +109,8 @@ __aicore__ inline void QuantizePerHead(
 }
 
 template <typename zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerHeadNoOffset(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void QuantizePerHeadNoOffset(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
+                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -124,44 +124,44 @@ __aicore__ inline void QuantizePerHeadNoOffset(
  * \brief quantize kernel main entry
  */
 template <uint64_t perMode, uint64_t zeroPointsType, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__global__ __aicore__ void quantize(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void quantize(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace,
+                                    GM_ADDR tiling)
 {
-    #if (__NPU_ARCH__ == 3510)
-        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
-    #endif
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+#endif
     using ZeroType = typename TypeFromEnum<zeroPointsType>::type;
     if constexpr (perMode == TPL_PER_TENSOR) {
         if constexpr (zeroPointsType == TPL_NONE) {
-            QuantizePerTensorNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(
-                x, scales, zero_points, y, workspace, tiling);
+            QuantizePerTensorNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace,
+                                                                              tiling);
         } else {
             QuantizePerTensor<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace, tiling);
         }
     } else if constexpr (perMode == TPL_PER_CHANNEL) {
         if constexpr (zeroPointsType == TPL_NONE) {
-            QuantizePerChannelNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(
-                x, scales, zero_points, y, workspace, tiling);
+            QuantizePerChannelNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace,
+                                                                               tiling);
         } else {
             QuantizePerChannel<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace, tiling);
         }
     } else if constexpr (perMode == TPL_PER_HEAD) {
         if constexpr (zeroPointsType == TPL_NONE) {
-            QuantizePerHeadNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(
-                x, scales, zero_points, y, workspace, tiling);
+            QuantizePerHeadNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace,
+                                                                            tiling);
         } else {
             QuantizePerHead<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace, tiling);
         }
     } else if constexpr (perMode == TPL_PER_CHANNEL_NDDMA) {
         if constexpr (zeroPointsType == TPL_NONE) {
-            QuantizePerChannelNddmaNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(
-                x, scales, zero_points, y, workspace, tiling);
+            QuantizePerChannelNddmaNoOffset<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y,
+                                                                                    workspace, tiling);
         } else {
-            QuantizePerChannelNddma<ZeroType, DivMode, RoundMode, SqrtMode>(
-                x, scales, zero_points, y, workspace, tiling);
+            QuantizePerChannelNddma<ZeroType, DivMode, RoundMode, SqrtMode>(x, scales, zero_points, y, workspace,
+                                                                            tiling);
         }
     }
-    #if (__NPU_ARCH__ == 3510)
-        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
-    #endif
+#if (__NPU_ARCH__ == 3510)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+#endif
 }

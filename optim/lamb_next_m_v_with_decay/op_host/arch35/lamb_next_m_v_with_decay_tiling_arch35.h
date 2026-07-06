@@ -30,8 +30,7 @@ struct LambNextMVWithDecayCompileInfo {
 
 class LambNextMVWithDecayTiling : public TilingBaseClass {
 public:
-    explicit LambNextMVWithDecayTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LambNextMVWithDecayTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

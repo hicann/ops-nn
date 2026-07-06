@@ -13,8 +13,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> ChamferDistanceGrad(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> ChamferDistanceGrad(const aclTensor* xyz1, const aclTensor* xyz2,
+                                                             const aclTensor* idx1, const aclTensor* idx2,
+                                                             const aclTensor* gradDist1, const aclTensor* gradDist2,
+                                                             aclOpExecutor* executor);
 }
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_CHAMFER_DISTANCE_GRAD_OP_H_

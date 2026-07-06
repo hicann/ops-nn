@@ -22,14 +22,10 @@ using namespace AddRmsNormQuantBase;
 template <typename TX, typename TScale, typename TOffset, bool RN, bool A, bool PT>
 class KernelAddRmsNormQuantSplitD {
 public:
-    __aicore__ inline KernelAddRmsNormQuantSplitD(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1,
-        GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
-        const AddRMSNormQuantTilingData* tilingData)
+    __aicore__ inline KernelAddRmsNormQuantSplitD(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR res_out, const AddRMSNormQuantTilingData* tilingData)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim1 can not be zero!");
         this->numCol = tilingData->numCol;
@@ -172,11 +168,11 @@ private:
 
             Add(x1Fp32Local, x1Fp32Local, x2Fp32Local, num);
             PipeBarrier<PIPE_V>();
-            #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
             Cast(xLocal, x1Fp32Local, RoundMode::CAST_NONE, num);
-            #else
+#else
             Cast(xLocal, x1Fp32Local, RoundMode::CAST_RINT, num);
-            #endif
+#endif
             PipeBarrier<PIPE_V>();
             // x1+x2 saved in x1Fp32Local
             // 有beta的bf16场景，做一个x-> bf16 -> fp32的转换
@@ -203,9 +199,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeFormer(
-        uint32_t iOIdx, uint32_t calcRowNum, uint32_t jIdx, LocalTensor<float>& rstdLocal, LocalTensor<float>& sumLocal,
-        uint32_t num)
+    __aicore__ inline void ComputeFormer(uint32_t iOIdx, uint32_t calcRowNum, uint32_t jIdx,
+                                         LocalTensor<float>& rstdLocal, LocalTensor<float>& sumLocal, uint32_t num)
     {
         for (uint32_t i_i = 0; i_i < calcRowNum; i_i++) {
             CopyInAndAdd(iOIdx * rowFactor + i_i, jIdx, num);
@@ -249,8 +244,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeLatter(
-        uint32_t iOIdx, uint32_t calcRowNum, uint32_t jIdx, LocalTensor<float>& rstdLocal, uint32_t num)
+    __aicore__ inline void ComputeLatter(uint32_t iOIdx, uint32_t calcRowNum, uint32_t jIdx,
+                                         LocalTensor<float>& rstdLocal, uint32_t num)
     {
         CopyInGammaBeta(jIdx, num);
 
@@ -285,19 +280,21 @@ private:
 
         AddRmsNormQuantBase::CopyInScales<TScale>(scales1Buf, scales1Gm[jIdx * ubFactor], num, ubFactor);
         if (PT) {
-            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints1Buf, zeroPoints1Gm, num, ubFactor, hasZeroPoints1);
+            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints1Buf, zeroPoints1Gm, num, ubFactor,
+                                                           hasZeroPoints1);
         } else {
-            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints1Buf, zeroPoints1Gm[jIdx * ubFactor], num, ubFactor, hasZeroPoints1);
+            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints1Buf, zeroPoints1Gm[jIdx * ubFactor], num,
+                                                           ubFactor, hasZeroPoints1);
         }
         if (hasScales2) {
             AddRmsNormQuantBase::CopyInScales<TScale>(scales2Buf, scales2Gm[jIdx * ubFactor], num, ubFactor);
-            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(
-                zeroPoints2Buf, zeroPoints2Gm[jIdx * ubFactor], num, ubFactor, hasZeroPoints2);
+            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints2Buf, zeroPoints2Gm[jIdx * ubFactor], num,
+                                                           ubFactor, hasZeroPoints2);
         }
     }
 
     __aicore__ inline void ComputeY(uint32_t iIIdx, LocalTensor<TX>& gammaLocal, LocalTensor<float>& rstdLocal,
-        uint32_t *computeParams, LocalTensor<TX>& betaLocal=nullptr)
+                                    uint32_t* computeParams, LocalTensor<TX>& betaLocal = nullptr)
     {
         uint32_t num = computeParams[0];
         uint32_t iIdx = computeParams[1];
@@ -349,11 +346,11 @@ private:
 
     __aicore__ inline void doCast(LocalTensor<TX>& rnLocal, LocalTensor<float>& xFp32Local, uint32_t num)
     {
-        #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
         Cast(rnLocal, xFp32Local, RoundMode::CAST_NONE, num);
-        #else
+#else
         Cast(rnLocal, xFp32Local, RoundMode::CAST_RINT, num);
-        #endif
+#endif
     }
 
     __aicore__ inline void doQuant(LocalTensor<float> xFp32Local, uint32_t num)

@@ -27,16 +27,13 @@ using AscendC::LoadData2dTransposeParams;
 using AscendC::MmadParams;
 
 template <bool hasAntiqOffset>
-class WeightQuantBatchMatmulV2FixpipeStage1
-{
+class WeightQuantBatchMatmulV2FixpipeStage1 {
 public:
-    __aicore__ inline WeightQuantBatchMatmulV2FixpipeStage1()
-    {}
+    __aicore__ inline WeightQuantBatchMatmulV2FixpipeStage1() {}
 
-    __aicore__ inline void Init(
-        const LocalTensor<int8_t>& weightS8L0a, const LocalTensor<int8_t>& diagS8L0b,
-        const LocalTensor<int32_t>& antiqOffsetBT, const LocalTensor<uint64_t>& antiqScaleFP,
-        const LocalTensor<int32_t>& weightS32L0c)
+    __aicore__ inline void Init(const LocalTensor<int8_t>& weightS8L0a, const LocalTensor<int8_t>& diagS8L0b,
+                                const LocalTensor<int32_t>& antiqOffsetBT, const LocalTensor<uint64_t>& antiqScaleFP,
+                                const LocalTensor<int32_t>& weightS32L0c)
     {
         // L0A DB
         weightS8L0a_ = weightS8L0a;
@@ -119,18 +116,16 @@ public:
     __aicore__ inline void Compute(const uint64_t pingpongOffset, const uint64_t biasOffset)
     {
         if constexpr (hasAntiqOffset) {
-            Mmad(
-                weightS32L0c_[pingpongOffset], weightS8L0a_[pingpongOffset], diagS8L0b_, antiqOffsetBT_[biasOffset],
-                mmadParams_);
+            Mmad(weightS32L0c_[pingpongOffset], weightS8L0a_[pingpongOffset], diagS8L0b_, antiqOffsetBT_[biasOffset],
+                 mmadParams_);
         } else {
             Mmad(weightS32L0c_[pingpongOffset], weightS8L0a_[pingpongOffset], diagS8L0b_, mmadParams_);
         }
     }
 
     // weight16 CO1->B1
-    __aicore__ inline void WeightFixpDequant(
-        const LocalTensor<half>& weightFP16L1, uint64_t pingpongOffset, uint64_t antiqScaleOffset, const uint32_t kSize,
-        const uint32_t nSize)
+    __aicore__ inline void WeightFixpDequant(const LocalTensor<half>& weightFP16L1, uint64_t pingpongOffset,
+                                             uint64_t antiqScaleOffset, const uint32_t kSize, const uint32_t nSize)
     {
         SetFixPipeConfig(antiqScaleFP_[antiqScaleOffset]);
         DataCopyCO12DstParams params;
@@ -145,9 +140,8 @@ public:
         DataCopy(weightFP16L1, weightS32L0c_[pingpongOffset], params);
     }
 
-    __aicore__ inline void Process(
-        const LocalTensor<half>& weightFP16L1, const LocalTensor<int8_t>& weightS8L1, const uint64_t biasOffset,
-        const uint32_t kSize, const uint32_t nSize)
+    __aicore__ inline void Process(const LocalTensor<half>& weightFP16L1, const LocalTensor<int8_t>& weightS8L1,
+                                   const uint64_t biasOffset, const uint32_t kSize, const uint32_t nSize)
     {
         uint64_t pingpongOffset = (processCount_ & 1) * pingpongSize_;
         WeightToL0A(weightS8L1, pingpongOffset);
@@ -170,9 +164,8 @@ public:
         return pingpongOffset;
     }
 
-    __aicore__ inline void Process2(
-        const LocalTensor<half>& weightFP16L1, const uint64_t biasOffset, const uint64_t pingpongOffset,
-        const uint32_t kSize, const uint32_t nSize)
+    __aicore__ inline void Process2(const LocalTensor<half>& weightFP16L1, const uint64_t biasOffset,
+                                    const uint64_t pingpongOffset, const uint32_t kSize, const uint32_t nSize)
     {
         Compute(pingpongOffset, biasOffset);
         event_t eventIdMToFix = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::M_FIX));

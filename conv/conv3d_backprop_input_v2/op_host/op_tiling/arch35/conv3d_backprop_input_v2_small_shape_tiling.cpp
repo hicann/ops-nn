@@ -30,8 +30,7 @@ namespace Conv {
 
 bool Conv3DDXV2SmallShapeTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
-        NpuArch::DAV_3510 &&
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }
@@ -78,7 +77,8 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable small shape tiling");
     if (isGetTilingFromRepo) {
-        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: SmallShape get tiling from knowledge_tiling success.");
+        OP_LOGD(context_->GetNodeName(),
+                "Conv3DBackpropInputV2 AscendC: SmallShape get tiling from knowledge_tiling success.");
         PrintTilingSummary();
         return ge::GRAPH_SUCCESS;
     }
@@ -101,8 +101,8 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
     if (!IsL1ParamsValid(l1Params, l0Params)) {
         LegalProtection(l1Params, l0Params); // L1合法性兜底, 兜底也不行就报错
         if (IsL1ParamsValid(l1Params, l0Params)) {
-            Conv3DDXV2InnerProductTiling::SetSingleCoreInfo(
-                coreParams, l0Params); // 重新设置核间切分数据，只允许调小baseMN
+            Conv3DDXV2InnerProductTiling::SetSingleCoreInfo(coreParams,
+                                                            l0Params); // 重新设置核间切分数据，只允许调小baseMN
         } else {
             CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "params exceed max L1 limit size.");
             return ge::GRAPH_FAILED;
@@ -126,30 +126,30 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     uint64_t minTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(l0Params.baseM)) *
                            Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
     uint64_t maxTotalCnt = Ops::Base::CeilAlign(minTotalCnt, static_cast<uint64_t>(coreNum_));
-    uint64_t minL1LoadSize = dtypeByteL0b_ * (l0Params.baseN * kernelHW * runInfo_.dedy_cout) + dtypeByteL0a_ *
-                                           (static_cast<uint64_t>(CalFmapH(l0Params.baseM)) * runInfo_.dedy_w *
-                                               runInfo_.stride_w * runInfo_.dedy_cout);
+    uint64_t minL1LoadSize = dtypeByteL0b_ * (l0Params.baseN * kernelHW * runInfo_.dedy_cout) +
+                             dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(l0Params.baseM)) * runInfo_.dedy_w *
+                                              runInfo_.stride_w * runInfo_.dedy_cout);
     // 基本块小于64进入MTE1和scalar bound的区间，暂不从这个区间寻找负载均衡收益
-    uint32_t maxBaseM =
-        tilingRunInfo_.nValue <= static_cast<uint64_t>(tilingRunInfo_.n0) ? BASIC_BLOCK_SIZE_512 : MAX_BASE_MN;
-    uint32_t maxBaseN =
-        tilingRunInfo_.mValue <= static_cast<uint64_t>(tilingRunInfo_.m0) ? BASIC_BLOCK_SIZE_512 : MAX_BASE_MN;
+    uint32_t maxBaseM = tilingRunInfo_.nValue <= static_cast<uint64_t>(tilingRunInfo_.n0) ? BASIC_BLOCK_SIZE_512 :
+                                                                                            MAX_BASE_MN;
+    uint32_t maxBaseN = tilingRunInfo_.mValue <= static_cast<uint64_t>(tilingRunInfo_.m0) ? BASIC_BLOCK_SIZE_512 :
+                                                                                            MAX_BASE_MN;
     uint64_t minMCnt = Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(maxBaseM));
     uint64_t maxMCnt = Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(BASIC_BLOCK_SIZE_64));
     uint64_t minNCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(maxBaseN));
     uint64_t maxNCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(BASIC_BLOCK_SIZE_64));
     for (uint64_t i = minMCnt; i <= maxMCnt; ++i) {
         for (uint64_t j = minNCnt; j <= maxNCnt; ++j) {
-            uint64_t tmpBaseM =
-                Ops::Base::CeilAlign(Ops::Base::CeilDiv(hwI, i), static_cast<uint64_t>(tilingRunInfo_.m0));
+            uint64_t tmpBaseM = Ops::Base::CeilAlign(Ops::Base::CeilDiv(hwI, i),
+                                                     static_cast<uint64_t>(tilingRunInfo_.m0));
             uint64_t tmpSingleCoreM = tmpBaseM;
             uint64_t alignedWiAl1 = std::max(tmpBaseM / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
             if (Ops::Base::CeilDiv(hwI, alignedWiAl1) == Ops::Base::CeilDiv(hwI, tmpBaseM)) {
                 tmpSingleCoreM = alignedWiAl1;
                 tmpBaseM = Ops::Base::CeilAlign(alignedWiAl1, static_cast<uint64_t>(tilingRunInfo_.m0));
             }
-            uint64_t tmpBaseN = Ops::Base::CeilAlign(
-                Ops::Base::CeilDiv(tilingRunInfo_.nValue, j), static_cast<uint64_t>(tilingRunInfo_.n0));
+            uint64_t tmpBaseN = Ops::Base::CeilAlign(Ops::Base::CeilDiv(tilingRunInfo_.nValue, j),
+                                                     static_cast<uint64_t>(tilingRunInfo_.n0));
             if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > platformInfo_.l0_c_size) {
                 continue;
             }
@@ -161,9 +161,9 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
             }
             // 1.少计算一轮为更好策略
             // 1.同样计算轮次的，载入量更均衡的为更好策略
-            uint64_t tmpL1LoadSize = dtypeByteL0b_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout) + dtypeByteL0a_ *
-                                                   (static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) * runInfo_.dedy_w *
-                                                       runInfo_.stride_w * runInfo_.dedy_cout);
+            uint64_t tmpL1LoadSize = dtypeByteL0b_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout) +
+                                     dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) *
+                                                      runInfo_.dedy_w * runInfo_.stride_w * runInfo_.dedy_cout);
             if (tmpMaxTotalCnt < maxTotalCnt || (tmpTotalCnt >= minTotalCnt && tmpL1LoadSize <= minL1LoadSize)) {
                 maxTotalCnt = tmpMaxTotalCnt;
                 minTotalCnt = tmpTotalCnt;

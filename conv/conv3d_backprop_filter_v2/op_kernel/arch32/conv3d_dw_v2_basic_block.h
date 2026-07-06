@@ -24,23 +24,24 @@
 #include "conv3d_backprop_filter_v2_tiling_data.h"
 
 namespace {
-    constexpr uint32_t ROW_FIRST = 1;
-    constexpr uint32_t COL_FIRST = 2;
-    constexpr uint32_t NO_STREAMK_CALC = 0;
-    constexpr uint32_t STREAMK_BATCHDOUT = 1;
-    constexpr uint32_t STREAMK_HWOUT = 2;
-    constexpr uint32_t BLOCK_CUBE = 16;
-    constexpr uint32_t MIN_DATA_SIZE = 256;
-    constexpr uint32_t VEC_CUBE_RATIO = 2;
-}
+constexpr uint32_t ROW_FIRST = 1;
+constexpr uint32_t COL_FIRST = 2;
+constexpr uint32_t NO_STREAMK_CALC = 0;
+constexpr uint32_t STREAMK_BATCHDOUT = 1;
+constexpr uint32_t STREAMK_HWOUT = 2;
+constexpr uint32_t BLOCK_CUBE = 16;
+constexpr uint32_t MIN_DATA_SIZE = 256;
+constexpr uint32_t VEC_CUBE_RATIO = 2;
+} // namespace
 
 namespace AscendC {
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
 class Conv3dDwBasicBlock : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlock() {};
+    __aicore__ inline Conv3dDwBasicBlock(){};
 
-    __aicore__ void InitCommonTilingData(const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ void InitCommonTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat>::InitTilingData(tilingData);
         this->usedCoreNum_ = tilingData->basicBlockTiling.usedCoreNum;
         this->coreBindOrder_ = tilingData->basicBlockTiling.coreBindOrder;
@@ -48,8 +49,8 @@ public:
         if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
             // Initialize the size of each GM space.
             uint64_t singleCoreHo = tilingData->dwTiling.singleCoreHo;
-            uint64_t singleCoreHi = (singleCoreHo - 1) * tilingData->dwTiling.strideH
-                + (tilingData->dwTiling.hk - 1) * tilingData->dwTiling.dilationH + 1;
+            uint64_t singleCoreHi = (singleCoreHo - 1) * tilingData->dwTiling.strideH +
+                                    (tilingData->dwTiling.hk - 1) * tilingData->dwTiling.dilationH + 1;
             singleCoreHi = (singleCoreHi < tilingData->dwTiling.hi) ? singleCoreHi : tilingData->dwTiling.hi;
             uint64_t singleCoreCin = tilingData->dwTiling.singleCoreCin;
             this->gmPongOffset = singleCoreCin * singleCoreHi * static_cast<uint64_t>(tilingData->dwTiling.wi);
@@ -57,18 +58,21 @@ public:
 #endif
     }
 
-    __aicore__ inline void InitTransdataBuffer() {
+    __aicore__ inline void InitTransdataBuffer()
+    {
         this->dw_.ctx.pipe_.InitBuffer(this->dw_.ctx.transdataPing_, 1, SINGLE_UB_SIZE);
         this->dw_.ctx.pipe_.InitBuffer(this->dw_.ctx.transdataPong_, 1, SINGLE_UB_SIZE);
         this->dw_.ctx.pipe_.InitBuffer(this->dw_.ctx.transdataResultPing_, 1, SINGLE_UB_SIZE);
         this->dw_.ctx.pipe_.InitBuffer(this->dw_.ctx.transdataResultPong_, 1, SINGLE_UB_SIZE);
     }
 
-    __aicore__ void TransDataTo6HD(const uint64_t batchIdx, const uint64_t doutIdx) {
+    __aicore__ void TransDataTo6HD(const uint64_t batchIdx, const uint64_t doutIdx)
+    {
         uint64_t dinIdx = GetDinIdx(doutIdx);
         uint64_t maxHiWiCount = SINGLE_UB_SIZE / (this->c0_ * sizeof(xType));
         int64_t singleShapeCin = static_cast<int64_t>(this->singleShapeN_) / (this->hk_ * this->wk_);
-        uint64_t wsOffset = static_cast<uint64_t>(block_idx) * this->DOUBLE_BUFFER * this->gmPongOffset + (gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
+        uint64_t wsOffset = static_cast<uint64_t>(block_idx) * this->DOUBLE_BUFFER * this->gmPongOffset +
+                            (gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
         uint64_t hiWi = static_cast<uint64_t>(this->hi_) * this->wi_;
         uint64_t batchOffset = batchIdx * this->cin_ * this->di_ * hiWi;
         uint64_t index = 0;
@@ -87,7 +91,9 @@ public:
             if (dinIdx + dkIdx >= this->di_) {
                 break;
             }
-            uint64_t transDataCinCount = (static_cast<uint64_t>(this->cin_) - cinIdx) < this->c0_ ? (static_cast<uint64_t>(this->cin_) - cinIdx) : this->c0_;
+            uint64_t transDataCinCount = (static_cast<uint64_t>(this->cin_) - cinIdx) < this->c0_ ?
+                                             (static_cast<uint64_t>(this->cin_) - cinIdx) :
+                                             this->c0_;
             uint64_t hwCount = singleShapeHi * this->wi_;
             uint64_t hiTransDataCount = Ceil(hwCount, maxHiWiCount);
             uint64_t hiWiOffset = hiIdx * this->wi_;
@@ -126,16 +132,20 @@ protected:
     bool gmPingPongEventId_ = 1;
     bool ubPingPongEventId_ = 1;
 
-    __aicore__ uint64_t GetDinIdx(uint64_t doutIdx) {
+    __aicore__ uint64_t GetDinIdx(uint64_t doutIdx)
+    {
         uint64_t dinIdx = 0;
         if (doutIdx * this->strideD_ > this->padFront_) {
-            dinIdx = doutIdx * this->strideD_ -  this->padFront_;
+            dinIdx = doutIdx * this->strideD_ - this->padFront_;
         }
         return dinIdx;
     }
 
-    __aicore__ void CopyGmDataToVecin(const uint64_t gmOffset, uint64_t copyCinCount, uint64_t copyHiWiCount, uint64_t maxCopyHiWiCount) {
-        LocalTensor<xType> vecin = ubPingPongEventId_ ? this->dw_.ctx.transdataPing_.template AllocTensor<xType>() : this->dw_.ctx.transdataPong_.template AllocTensor<xType>();
+    __aicore__ void CopyGmDataToVecin(const uint64_t gmOffset, uint64_t copyCinCount, uint64_t copyHiWiCount,
+                                      uint64_t maxCopyHiWiCount)
+    {
+        LocalTensor<xType> vecin = ubPingPongEventId_ ? this->dw_.ctx.transdataPing_.template AllocTensor<xType>() :
+                                                        this->dw_.ctx.transdataPong_.template AllocTensor<xType>();
         xType initValue(0);
         Duplicate<xType>(vecin, initValue, this->c0_ * maxCopyHiWiCount);
         TEventID eventId = GetTPipePtr()->FetchEventID<HardEvent::V_MTE2>();
@@ -161,7 +171,8 @@ protected:
         }
     }
 
-    __aicore__ void TransVecinDataTo5HDToVecout(const uint64_t maxCopyHiWiCount) {
+    __aicore__ void TransVecinDataTo5HDToVecout(const uint64_t maxCopyHiWiCount)
+    {
         LocalTensor<xType> vecin;
         LocalTensor<xType> vecout;
         if (ubPingPongEventId_) {
@@ -204,7 +215,8 @@ protected:
         }
     }
 
-    __aicore__ void CopyVecoutDataToWorkSpace(uint64_t wsOffset, uint64_t copyHiWiCount) {
+    __aicore__ void CopyVecoutDataToWorkSpace(uint64_t wsOffset, uint64_t copyHiWiCount)
+    {
         LocalTensor<xType> vecout;
         if (ubPingPongEventId_) {
             vecout = this->dw_.ctx.transdataResultPing_.template DeQue<xType>();
@@ -230,10 +242,10 @@ protected:
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
 class Conv3dDwBasicBlockSplitMK : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockSplitMK() {};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDwBasicBlockSplitMK(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+                                const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->InitCommonTilingData(tilingData);
         InitSplitTilingData(tilingData);
         // init global buffer
@@ -244,13 +256,14 @@ public:
         this->workspaceXGm_.SetGlobalBuffer((__gm__ xType*)workSpace);
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (block_idx >= this->usedCoreNum_) { // vector GetBlockIdx() 与 Cube不同，此处注意使用全局变量准确。
             return;
         }
         if ASCEND_IS_AIV {
             if constexpr (xFormat != FORMAT_NCDHW) {
-                return ;
+                return;
             }
             this->InitTransdataBuffer();
         }
@@ -261,13 +274,15 @@ public:
 protected:
     static constexpr uint8_t SYNC_MODE2 = 2;
 
-    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->singleShapeM_ = tilingData->basicBlockTiling.singleCoreM;
         this->singleShapeK_ = tilingData->basicBlockTiling.singleCoreK;
         this->singleShapeN_ = this->n_;
     }
 
-    __aicore__ inline void CalBasicBlock() {
+    __aicore__ inline void CalBasicBlock()
+    {
         uint32_t mCnt = DivCeil(this->m_, this->singleShapeM_);
         uint32_t mCoreTail = this->m_ - (mCnt - 1) * this->singleShapeM_;
 
@@ -291,7 +306,7 @@ protected:
             basicBlockIdx = block_idx * calRound + tailCnt;
         }
 
-        //1:M*K 行优先绑核，2:M*K 列优先绑核
+        // 1:M*K 行优先绑核，2:M*K 列优先绑核
         uint64_t batchDoutIndex = 0;
         uint64_t batchDoutMcnt = batchDout * mCnt;
         this->nCoreIndx_ = 0; // 默认不分核
@@ -328,7 +343,8 @@ protected:
             this->dw_.SetFmap(this->xGm_[this->offsetB_]);
 #if __CCE_AICORE__ == 220
             if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
-                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset + (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
+                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset +
+                                    (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
                 this->dw_.SetFmap(this->workspaceXGm_[wsOffset]);
                 if ASCEND_IS_AIV {
                     if (syncTimes > 1) {
@@ -355,17 +371,17 @@ protected:
 #else
             this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
 #endif
-            }
+        }
     }
 };
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
 class Conv3dDwBasicBlockSplitKN : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockSplitKN() {};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDwBasicBlockSplitKN(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+                                const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->InitCommonTilingData(tilingData);
         InitSplitTilingData(tilingData);
         // init global buffer
@@ -376,13 +392,14 @@ public:
         this->workspaceXGm_.SetGlobalBuffer((__gm__ xType*)workSpace);
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (block_idx >= this->usedCoreNum_) {
             return;
         }
         if ASCEND_IS_AIV {
             if constexpr (xFormat != FORMAT_NCDHW) {
-                return ;
+                return;
             }
             this->InitTransdataBuffer();
         }
@@ -393,13 +410,15 @@ public:
 protected:
     static constexpr uint8_t SYNC_MODE2 = 2;
 
-    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->singleShapeM_ = this->m_;
         this->singleShapeK_ = tilingData->basicBlockTiling.singleCoreK;
         this->singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
     }
 
-    __aicore__ inline void CalBasicBlock() {
+    __aicore__ inline void CalBasicBlock()
+    {
         uint64_t nCnt = DivCeil(this->n_, this->singleShapeN_);
         uint64_t nCoreTail = this->n_ - (nCnt - 1) * this->singleShapeN_;
 
@@ -423,7 +442,7 @@ protected:
             basicBlockIdx = block_idx * calRound + tailCnt;
         }
 
-        //1:M*K 行优先绑核，2:M*K 列优先绑核
+        // 1:M*K 行优先绑核，2:M*K 列优先绑核
         uint64_t batchDoutIndex = 0;
         uint64_t batchDoutNcnt = batchDout * nCnt;
         this->mCoreIndx_ = 0; // 默认不分核
@@ -445,7 +464,7 @@ protected:
             uint64_t doutIdx = batchDoutIndex - batchIdx * this->dout_;
             basicBlockIdx++;
 
-           // 不可用totalCnt - 1作为尾块, totalCnt包含batch*dout
+            // 不可用totalCnt - 1作为尾块, totalCnt包含batch*dout
             uint64_t nCoreUse = (this->nCoreIndx_ == (nCnt - 1)) ? nCoreTail : this->singleShapeN_;
             uint64_t kCoreUse = (this->kCoreIndx_ == (kCnt - 1)) ? kCoreTail : this->singleShapeK_;
 
@@ -461,7 +480,8 @@ protected:
             this->dw_.SetFmap(this->xGm_[this->offsetB_]);
 #if __CCE_AICORE__ == 220
             if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
-                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset + (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
+                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset +
+                                    (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
                 this->dw_.SetFmap(this->workspaceXGm_[wsOffset]);
                 if ASCEND_IS_AIV {
                     if (syncTimes > 1) {
@@ -488,17 +508,17 @@ protected:
 #else
             this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
 #endif
-            }
+        }
     }
 };
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
 class Conv3dDwBasicBlockSplitMN : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockSplitMN() {};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDwBasicBlockSplitMN(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+                                const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->InitCommonTilingData(tilingData);
         InitSplitTilingData(tilingData);
         // init global buffer
@@ -509,13 +529,14 @@ public:
         this->workspaceXGm_.SetGlobalBuffer((__gm__ xType*)workSpace);
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (block_idx >= this->usedCoreNum_) {
             return;
         }
         if ASCEND_IS_AIV {
             if constexpr (xFormat != FORMAT_NCDHW) {
-                return ;
+                return;
             }
             this->InitTransdataBuffer();
         }
@@ -526,13 +547,15 @@ public:
 protected:
     static constexpr uint8_t SYNC_MODE2 = 2;
 
-    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->singleShapeM_ = tilingData->basicBlockTiling.singleCoreM;
         this->singleShapeK_ = this->k_;
         this->singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
     }
 
-    __aicore__ inline void CalBasicBlock() {
+    __aicore__ inline void CalBasicBlock()
+    {
         uint32_t mCnt = DivCeil(this->m_, this->singleShapeM_);
         uint32_t mCoreTail = this->m_ - (mCnt - 1) * this->singleShapeM_;
 
@@ -555,7 +578,7 @@ protected:
             basicBlockIdx = block_idx * calRound + tailCnt;
         }
 
-        //1:M*K 行优先绑核，2:M*K 列优先绑核
+        // 1:M*K 行优先绑核，2:M*K 列优先绑核
         uint64_t batchDoutIndex = 0;
         uint64_t batchDoutNcnt = batchDout * nCnt;
         this->kCoreIndx_ = 0; // 默认不分核
@@ -578,7 +601,7 @@ protected:
 
             basicBlockIdx++;
 
-           // 不可用totalCnt - 1作为尾块, totalCnt包含batch*dout
+            // 不可用totalCnt - 1作为尾块, totalCnt包含batch*dout
             uint64_t mCoreUse = (this->mCoreIndx_ == (mCnt - 1)) ? mCoreTail : this->singleShapeM_;
             uint64_t nCoreUse = (this->nCoreIndx_ == (nCnt - 1)) ? nCoreTail : this->singleShapeN_;
 
@@ -594,7 +617,8 @@ protected:
             this->dw_.SetFmap(this->xGm_[this->offsetB_]);
 #if __CCE_AICORE__ == 220
             if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
-                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset + (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
+                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset +
+                                    (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
                 this->dw_.SetFmap(this->workspaceXGm_[wsOffset]);
                 if ASCEND_IS_AIV {
                     if (syncTimes > 1) {
@@ -621,17 +645,18 @@ protected:
 #else
             this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
 #endif
-            }
+        }
     }
 };
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat>
-class Conv3dDwBasicBlockSplitMNStreamK : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
+class Conv3dDwBasicBlockSplitMNStreamK
+    : public Conv3dDwBasicBlock<xType, xFormat, dedyType, dedyFormat, yType, yFormat> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockSplitMNStreamK() {};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy,
-                                GM_ADDR y, GM_ADDR workSpace,
-                                const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline Conv3dDwBasicBlockSplitMNStreamK(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+                                const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->InitCommonTilingData(tilingData);
         InitSplitTilingData(tilingData);
         // init global buffer
@@ -645,7 +670,8 @@ public:
 #endif
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (block_idx >= this->usedCoreNum_) {
             return;
         }
@@ -655,10 +681,10 @@ public:
             } else {
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_MODE == 1
                 if (this->streamKType_ == NO_STREAMK_CALC) {
-                    return ;
+                    return;
                 }
 #else
-                return ;
+                return;
 #endif
             }
         }
@@ -679,7 +705,8 @@ protected:
     uint64_t streamkWorkspaceSize_ = 0;
     uint32_t channelSize_ = 0;
 
-    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData) {
+    __aicore__ inline void InitSplitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
         this->streamKType_ = tilingData->basicBlockTiling.streamKType;
         this->coreStreamK_ = tilingData->basicBlockTiling.coreStreamK;
         this->streamkWorkspaceSize_ = static_cast<uint64_t>(tilingData->basicBlockTiling.singleCoreM) *
@@ -690,7 +717,8 @@ protected:
         this->channelSize_ = tilingData->dwTiling.channelSize;
     }
 
-    __aicore__ inline void CalBasicBlock() {
+    __aicore__ inline void CalBasicBlock()
+    {
         uint32_t mCnt = DivCeil(this->m_, this->singleShapeM_);
         uint32_t mCoreTail = this->m_ - (mCnt - 1) * this->singleShapeM_;
 
@@ -751,8 +779,8 @@ protected:
                     if (this->singleShapeNInCurrentHo_ == 0 || this->singleShapeMInCurrentHo_ == 0) {
                         continue;
                     }
-                    uint64_t nCoreUseCur =
-                        nCoreUse > this->singleShapeNInCurrentHo_ ? this->singleShapeNInCurrentHo_ : nCoreUse;
+                    uint64_t nCoreUseCur = nCoreUse > this->singleShapeNInCurrentHo_ ? this->singleShapeNInCurrentHo_ :
+                                                                                       nCoreUse;
                     this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
                     this->hoStartIdx_ = 0;
                     this->dw_.SetSingleShape(mCoreUse, nCoreUseCur, this->singleShapeK_, this->hoStartIdx_);
@@ -781,7 +809,7 @@ protected:
             basicBlockIdx = block_idx * calRound;
         }
 
-        //1:M*K 行优先绑核，2:M*K 列优先绑核
+        // 1:M*K 行优先绑核，2:M*K 列优先绑核
         uint64_t batchDoutIndex = 0;
         uint64_t batchDoutNcnt = batchDout * nCnt;
         this->kCoreIndx_ = 0; // 默认不分核
@@ -811,7 +839,7 @@ protected:
 
             basicBlockIdx++;
 
-           // 不可用totalCnt - 1作为尾块, totalCnt包含batch*dout
+            // 不可用totalCnt - 1作为尾块, totalCnt包含batch*dout
             uint64_t mCoreUse = (this->mCoreIndx_ == (mCnt - 1)) ? mCoreTail : this->singleShapeM_;
             uint64_t nCoreUse = (this->nCoreIndx_ == (nCnt - 1)) ? nCoreTail : this->singleShapeN_;
 
@@ -834,9 +862,8 @@ protected:
         }
     }
 
-    __aicore__ inline void CalStreamK(
-        uint64_t totalCnt, uint64_t calRound, uint64_t tailCnt, uint64_t batchDout, uint64_t mCnt, uint64_t nCnt,
-        uint64_t mCoreTail, uint64_t nCoreTail)
+    __aicore__ inline void CalStreamK(uint64_t totalCnt, uint64_t calRound, uint64_t tailCnt, uint64_t batchDout,
+                                      uint64_t mCnt, uint64_t nCnt, uint64_t mCoreTail, uint64_t nCoreTail)
     {
         if (tailCnt == 0 || this->coreStreamK_ == 0) {
             return;
@@ -894,9 +921,8 @@ protected:
                 if (splitIdx >= splitCnt) {
                     isParticipant = false;
                 } else {
-                    coreUse = (splitIdx == (splitCnt - 1)) ?
-                                  (batchDout - (splitCnt - 1) * streamSingleShapeBatchDout) :
-                                  streamSingleShapeBatchDout;
+                    coreUse = (splitIdx == (splitCnt - 1)) ? (batchDout - (splitCnt - 1) * streamSingleShapeBatchDout) :
+                                                             streamSingleShapeBatchDout;
                     if (coreUse == 0) {
                         isParticipant = false;
                     }
@@ -964,8 +990,8 @@ protected:
                     if (this->singleShapeNInCurrentHo_ == 0 || this->singleShapeMInCurrentHo_ == 0) {
                         continue;
                     }
-                    uint64_t nCoreUseCur =
-                        nCoreUse > this->singleShapeNInCurrentHo_ ? this->singleShapeNInCurrentHo_ : nCoreUse;
+                    uint64_t nCoreUseCur = nCoreUse > this->singleShapeNInCurrentHo_ ? this->singleShapeNInCurrentHo_ :
+                                                                                       nCoreUse;
                     this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
                     this->dw_.SetSingleShape(mCoreUse, nCoreUseCur, kCoreUse, this->hoStartIdx_);
                     this->dw_.SetFmap(this->xGm_[this->offsetB_]);
@@ -1049,7 +1075,7 @@ protected:
         uint64_t vecOffsetC = 0;
         uint32_t offsetBlock = 0;
 
-        uint32_t totalBlockNum =  Ceil(nCoreUse, this->channelSize_);
+        uint32_t totalBlockNum = Ceil(nCoreUse, this->channelSize_);
         useVecCore = totalBlockNum > maxVecCore ? maxVecCore : totalBlockNum;
         if (localVecIdx >= useVecCore) {
             return;
@@ -1061,16 +1087,16 @@ protected:
             offsetBlock += localVecIdx < tailVecNum ? localVecIdx : tailVecNum;
             totalSize += localVecIdx < tailVecNum ? 1 : 0;
         }
-        totalSize = totalSize * Ceil(mCoreUse, BLOCK_CUBE) *  BLOCK_CUBE * this->channelSize_;
+        totalSize = totalSize * Ceil(mCoreUse, BLOCK_CUBE) * BLOCK_CUBE * this->channelSize_;
         curOffsetC += offsetBlock * alignedM * this->channelSize_;
         vecOffsetC = offsetBlock * mCoreUse * this->channelSize_;
-        
+
         LocalTensor<yType> ubSrc1 = this->tmpBuf_.template Get<yType>();
         LocalTensor<yType> ubSrc2 = ubSrc1[this->dataSize_];
         uint64_t processed = 0;
         uint64_t baseCore = tailBlockIdx * this->coreStreamK_;
-        uint64_t perDataSize = !isSplitM ? this->dataSize_ : 
-                                Ceil(mCoreUse, BLOCK_CUBE) *  BLOCK_CUBE * this->channelSize_;
+        uint64_t perDataSize = !isSplitM ? this->dataSize_ :
+                                           Ceil(mCoreUse, BLOCK_CUBE) * BLOCK_CUBE * this->channelSize_;
         TEventID eventIdMte2ToV = GetTPipePtr()->FetchEventID<HardEvent::MTE2_V>();
         TEventID eventIdVToMte2 = GetTPipePtr()->FetchEventID<HardEvent::V_MTE2>();
 
@@ -1081,7 +1107,8 @@ protected:
 
         while (processed < totalSize) {
             uint64_t curSize = (totalSize - processed) < perDataSize ? (totalSize - processed) : perDataSize;
-            DataCopy(ubSrc1, this->workspaceGm_[baseCore * this->streamkWorkspaceSize_ + vecOffsetC + processed], curSize);
+            DataCopy(ubSrc1, this->workspaceGm_[baseCore * this->streamkWorkspaceSize_ + vecOffsetC + processed],
+                     curSize);
             for (uint32_t coreIdx = 1; coreIdx < this->coreStreamK_; ++coreIdx) {
                 uint64_t srcCore = baseCore + coreIdx;
                 uint64_t srcOffset = srcCore * this->streamkWorkspaceSize_ + vecOffsetC + processed;
@@ -1095,7 +1122,7 @@ protected:
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             DataCopy(this->yGm_[curOffsetC], ubSrc1, curSize);
-            
+
             processed += curSize;
             if constexpr (!isSplitM) {
                 curOffsetC += curSize;

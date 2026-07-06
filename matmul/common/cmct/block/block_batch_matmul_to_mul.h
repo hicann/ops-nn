@@ -107,8 +107,8 @@ public:
                                    const uint64_t batchAub)
     {
         if (batchAub > 0) {
-            uint8_t rightPadding =
-                static_cast<uint8_t>(AscendC::CeilAlign(batchAub * m_, ALIGN_BYTE / sizeof(A_T)) - batchAub * m_);
+            uint8_t rightPadding = static_cast<uint8_t>(AscendC::CeilAlign(batchAub * m_, ALIGN_BYTE / sizeof(A_T)) -
+                                                        batchAub * m_);
             AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(batchAub * m_ * sizeof(A_T)), 0, 0, 0};
             AscendC::DataCopyPadExtParams<A_T> copyPadParams{false, 0, rightPadding, 0};
             AscendC::DataCopyPad(aubLocal, aGlobal, copyParams, copyPadParams);
@@ -117,7 +117,7 @@ public:
 
     // 用于特殊优化场景的A Tensor对齐搬入
     __aicore__ inline void CopyInAlignA(const AscendC::GlobalTensor<A_T>& aGlobal,
-                                       const AscendC::LocalTensor<A_T>& aubLocal, const uint64_t batchAub)
+                                        const AscendC::LocalTensor<A_T>& aubLocal, const uint64_t batchAub)
     {
         if (batchAub > 0) {
             uint16_t blockCount = static_cast<uint16_t>(batchAub);
@@ -130,7 +130,7 @@ public:
     }
 
     __aicore__ inline void CopyInB(const AscendC::GlobalTensor<B_T>& bGlobal, const AscendC::LocalTensor<B_T>& bubLocal,
-                                  const uint64_t batchBub)
+                                   const uint64_t batchBub)
     {
         if (batchBub > 0) {
             uint16_t blockCount = static_cast<uint16_t>(batchBub);
@@ -142,10 +142,9 @@ public:
         }
     }
 
-    static __simd_vf__ inline void MulsVfSmallN(__ubuf__ A_T* dstPtr, __ubuf__ A_T* srcPtr,
-                                                __ubuf__ A_T* aubPtr, uint32_t oneRepeatSize, uint32_t countMPerVL,
-                                                uint16_t repeatTimes, uint64_t mAub, uint64_t alignM_, uint64_t nBub,
-                                                uint64_t batchNum)
+    static __simd_vf__ inline void MulsVfSmallN(__ubuf__ A_T* dstPtr, __ubuf__ A_T* srcPtr, __ubuf__ A_T* aubPtr,
+                                                uint32_t oneRepeatSize, uint32_t countMPerVL, uint16_t repeatTimes,
+                                                uint64_t mAub, uint64_t alignM_, uint64_t nBub, uint64_t batchNum)
     {
         AscendC::MicroAPI::RegTensor<B_T> vSrcReg0;
         AscendC::MicroAPI::RegTensor<C_T> vDstReg0;
@@ -157,22 +156,24 @@ public:
             AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_BLK>(vSrcReg0, srcPtr, addrRegSrc);
             for (uint16_t mIdx = 0; mIdx < repeatTimes; ++mIdx) {
                 auto addrRegScalar = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, alignM_, mIdx, countMPerVL);
-                if constexpr (sizeof(A_T)==sizeof(float)) {
-                    AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_E2B_B32>(scalarReg, aubPtr, addrRegScalar);
+                if constexpr (sizeof(A_T) == sizeof(float)) {
+                    AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_E2B_B32>(scalarReg, aubPtr,
+                                                                                                 addrRegScalar);
                 } else {
-                    AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(scalarReg, aubPtr, addrRegScalar);
+                    AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(scalarReg, aubPtr,
+                                                                                                 addrRegScalar);
                 }
                 AscendC::MicroAPI::Mul(vDstReg0, vSrcReg0, scalarReg, maskReg);
-                auto addrRegDst =
-                    AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx, countMPerVL * nBub);
+                auto addrRegDst = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx,
+                                                                        countMPerVL * nBub);
                 AscendC::MicroAPI::StoreAlign(dstPtr, vDstReg0, addrRegDst, maskReg);
             }
         }
     }
 
-    static __simd_vf__ inline void MulsVf(__ubuf__ A_T* dstPtr, __ubuf__ A_T* srcPtr,
-                                          __ubuf__ A_T* aubPtr, uint32_t count, uint16_t repeatTimes,
-                                          uint64_t mAub, uint64_t nBub, uint64_t batchNum, uint32_t oneRepeatSize)
+    static __simd_vf__ inline void MulsVf(__ubuf__ A_T* dstPtr, __ubuf__ A_T* srcPtr, __ubuf__ A_T* aubPtr,
+                                          uint32_t count, uint16_t repeatTimes, uint64_t mAub, uint64_t nBub,
+                                          uint64_t batchNum, uint32_t oneRepeatSize)
     {
         AscendC::MicroAPI::RegTensor<B_T> vSrcReg0;
         AscendC::MicroAPI::RegTensor<C_T> vDstReg0;
@@ -182,18 +183,19 @@ public:
         for (uint16_t batchIdx = 0; static_cast<uint16_t>(batchIdx) < batchNum; ++batchIdx) {
             for (uint16_t mIdx = 0; static_cast<uint16_t>(mIdx) < mAub; ++mIdx) {
                 auto addrRegScalar = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub, mIdx, 1);
-                if constexpr (sizeof(A_T)==sizeof(float)) {
-                    AscendC::MicroAPI::LoadAlign<B_T, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(scalarReg, aubPtr, addrRegScalar);
+                if constexpr (sizeof(A_T) == sizeof(float)) {
+                    AscendC::MicroAPI::LoadAlign<B_T, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(scalarReg, aubPtr,
+                                                                                                 addrRegScalar);
                 } else {
-                    AscendC::MicroAPI::LoadAlign<B_T, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(scalarReg, aubPtr, addrRegScalar);
+                    AscendC::MicroAPI::LoadAlign<B_T, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(scalarReg, aubPtr,
+                                                                                                 addrRegScalar);
                 }
                 tmpCount = count;
                 for (uint16_t i = 0; i < repeatTimes; ++i) {
                     maskReg = AscendC::MicroAPI::UpdateMask<A_T>(tmpCount);
-                    auto addrRegSrc = AscendC::MicroAPI::CreateAddrReg<B_T>(
-                        batchIdx, nBub, mIdx, 0, i, oneRepeatSize);
-                    auto addrRegDst =
-                        AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx, nBub, i, oneRepeatSize);
+                    auto addrRegSrc = AscendC::MicroAPI::CreateAddrReg<B_T>(batchIdx, nBub, mIdx, 0, i, oneRepeatSize);
+                    auto addrRegDst = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx, nBub, i,
+                                                                            oneRepeatSize);
                     AscendC::MicroAPI::LoadAlign(vSrcReg0, srcPtr, addrRegSrc);
                     AscendC::MicroAPI::Mul(vDstReg0, vSrcReg0, scalarReg, maskReg);
                     AscendC::MicroAPI::StoreAlign(dstPtr, vDstReg0, addrRegDst, maskReg);
@@ -216,7 +218,7 @@ public:
             __ubuf__ B_T* srcPtr = (__ubuf__ B_T*)bubLocal.GetPhyAddr();
             __ubuf__ A_T* aubPtr = (__ubuf__ A_T*)aubLocal.GetPhyAddr();
             AscendC::VF_CALL<MulsVfSmallN>(dstPtr, srcPtr, aubPtr, oneRepeatSize, countMPerVL, repeatTimes, m_, alignM_,
-                                  alignN_, batchNum);
+                                           alignN_, batchNum);
         } else {
             uint32_t count = n_;
             uint16_t repeatTimes = AscendC::CeilDiv(count, oneRepeatSize);
@@ -248,8 +250,7 @@ public:
             ubOffsetBPing = batchNumPing_ * alignM_ + ubOffsetAPing;
         }
         uint64_t ubOffsetCPing = batchNumPing_ * alignN_ + ubOffsetBPing;
-        uint64_t ubOffsetAPong =
-            AscendC::CeilAlign(batchNumPing_ * (m_ * alignN_), alignNum_) + ubOffsetCPing;
+        uint64_t ubOffsetAPong = AscendC::CeilAlign(batchNumPing_ * (m_ * alignN_), alignNum_) + ubOffsetCPing;
         if (alignN_ <= alignNum_) {
             ubOffsetAPong = batchNumPing_ * alignM_ * alignN_ + ubOffsetCPing;
         }
@@ -319,4 +320,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

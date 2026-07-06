@@ -22,11 +22,11 @@ namespace l0op {
 
 OP_TYPE_REGISTER(ReluGradV2);
 
-const aclTensor *ReluGradV2(const aclTensor *gradients, const aclTensor *features, aclOpExecutor *executor)
+const aclTensor* ReluGradV2(const aclTensor* gradients, const aclTensor* features, aclOpExecutor* executor)
 {
     L0_DFX(ReluGradV2, gradients, features);
-    auto out = executor->AllocTensor(
-        gradients->GetStorageShape(), gradients->GetDataType(), gradients->GetStorageFormat());
+    auto out = executor->AllocTensor(gradients->GetStorageShape(), gradients->GetDataType(),
+                                     gradients->GetStorageFormat());
     CHECK_RET(out != nullptr, nullptr);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ReluGradV2, OP_INPUT(gradients, features), OP_OUTPUT(out));
@@ -35,4 +35,4 @@ const aclTensor *ReluGradV2(const aclTensor *gradients, const aclTensor *feature
     return out;
 }
 
-}  // namespace l0op
+} // namespace l0op

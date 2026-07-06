@@ -52,9 +52,8 @@ using namespace GeluQuantALL;
 #define DYNAMIC_WORKSPACE_TEMPLATE_BF16_FLOAT 1045
 
 template <typename T1, typename T2>
-__aicore__ inline void invokeTemplateGeluQuant(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void invokeTemplateGeluQuant(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y,
+                                               GM_ADDR out_scale, GM_ADDR userWS, const GeluQuantTilingData& tilingData)
 {
     GeluQuant<T1, T2> op;
     op.Init(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
@@ -62,9 +61,9 @@ __aicore__ inline void invokeTemplateGeluQuant(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void invokeTemplateStaticQuantPerTensor(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void invokeTemplateStaticQuantPerTensor(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset,
+                                                          GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
+                                                          const GeluQuantTilingData& tilingData)
 {
     StaticQuantPerTensor<T1, T2> op;
     op.Init(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
@@ -72,9 +71,9 @@ __aicore__ inline void invokeTemplateStaticQuantPerTensor(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void invokeTemplateStaticQuantBlock(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void invokeTemplateStaticQuantBlock(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y,
+                                                      GM_ADDR out_scale, GM_ADDR userWS,
+                                                      const GeluQuantTilingData& tilingData)
 {
     StaticQuantBlock<T1, T2> op;
     op.Init(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
@@ -82,9 +81,9 @@ __aicore__ inline void invokeTemplateStaticQuantBlock(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void invokeTemplateGeluDynamicQuant(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void invokeTemplateGeluDynamicQuant(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y,
+                                                      GM_ADDR out_scale, GM_ADDR userWS,
+                                                      const GeluQuantTilingData& tilingData)
 {
     GeluDynamicQuant<T1, T2> op;
     op.Init(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
@@ -92,25 +91,24 @@ __aicore__ inline void invokeTemplateGeluDynamicQuant(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void invokeTemplateGeluDynamicQuantWorkspace(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void invokeTemplateGeluDynamicQuantWorkspace(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset,
+                                                               GM_ADDR y, GM_ADDR out_scale, GM_ADDR userWS,
+                                                               const GeluQuantTilingData& tilingData)
 {
     GeluDynamicQuantWorkspace<T1, T2> op;
     op.Init(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void gelu_quant(
-    GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR workspace,
-    GM_ADDR tiling_data)
+extern "C" __global__ __aicore__ void gelu_quant(GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y,
+                                                 GM_ADDR out_scale, GM_ADDR workspace, GM_ADDR tiling_data)
 {
     GM_ADDR userWS = GetUserWorkspace(workspace);
     GET_TILING_DATA(tilingData, tiling_data);
 #if (ORIG_DTYPE_X == DT_FLOAT)
     if (TILING_KEY_IS(STATIC_PER_TENSOR_TEMPLATE_FLOAT_FLOAT)) {
-        invokeTemplateStaticQuantPerTensor<float, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateStaticQuantPerTensor<float, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                         tilingData);
     } else if (TILING_KEY_IS(STATIC_FUNCTION_TEMPLATE_FLOAT_FLOAT)) {
         invokeTemplateGeluQuant<float, float>(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
     } else if (TILING_KEY_IS(STATIC_PERFORMANCE_TEMPLATE_FLOAT_FLOAT)) {
@@ -118,8 +116,8 @@ extern "C" __global__ __aicore__ void gelu_quant(
     } else if (TILING_KEY_IS(DYNAMIC_NORMAL_TEMPLATE_FLOAT_FLOAT)) {
         invokeTemplateGeluDynamicQuant<float, float>(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_WORKSPACE_TEMPLATE_FLOAT_FLOAT)) {
-        invokeTemplateGeluDynamicQuantWorkspace<float, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuantWorkspace<float, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                              tilingData);
     }
 #endif
 
@@ -141,43 +139,43 @@ extern "C" __global__ __aicore__ void gelu_quant(
     } else if (TILING_KEY_IS(DYNAMIC_NORMAL_TEMPLATE_HALF_FLOAT)) {
         invokeTemplateGeluDynamicQuant<half, float>(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_WORKSPACE_TEMPLATE_HALF_HALF)) {
-        invokeTemplateGeluDynamicQuantWorkspace<half, half>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuantWorkspace<half, half>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                            tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_WORKSPACE_TEMPLATE_HALF_FLOAT)) {
-        invokeTemplateGeluDynamicQuantWorkspace<half, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuantWorkspace<half, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                             tilingData);
     }
 #endif
 
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) && (ORIG_DTYPE_X == DT_BF16)
     if (TILING_KEY_IS(STATIC_PER_TENSOR_TEMPLATE_BF16_BF16)) {
-        invokeTemplateStaticQuantPerTensor<bfloat16_t, bfloat16_t>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateStaticQuantPerTensor<bfloat16_t, bfloat16_t>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                                   tilingData);
     } else if (TILING_KEY_IS(STATIC_PER_TENSOR_TEMPLATE_BF16_FLOAT)) {
-        invokeTemplateStaticQuantPerTensor<bfloat16_t, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateStaticQuantPerTensor<bfloat16_t, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                              tilingData);
     } else if (TILING_KEY_IS(STATIC_FUNCTION_TEMPLATE_BF16_BF16)) {
         invokeTemplateGeluQuant<bfloat16_t, bfloat16_t>(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
     } else if (TILING_KEY_IS(STATIC_FUNCTION_TEMPLATE_BF16_FLOAT)) {
         invokeTemplateGeluQuant<bfloat16_t, float>(x, input_scale, input_offset, y, out_scale, userWS, tilingData);
     } else if (TILING_KEY_IS(STATIC_PERFORMANCE_TEMPLATE_BF16_BF16)) {
-        invokeTemplateStaticQuantBlock<bfloat16_t, bfloat16_t>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateStaticQuantBlock<bfloat16_t, bfloat16_t>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                               tilingData);
     } else if (TILING_KEY_IS(STATIC_PERFORMANCE_TEMPLATE_BF16_FLOAT)) {
-        invokeTemplateStaticQuantBlock<bfloat16_t, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateStaticQuantBlock<bfloat16_t, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                          tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_NORMAL_TEMPLATE_BF16_BF16)) {
-        invokeTemplateGeluDynamicQuant<bfloat16_t, bfloat16_t>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuant<bfloat16_t, bfloat16_t>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                               tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_NORMAL_TEMPLATE_BF16_FLOAT)) {
-        invokeTemplateGeluDynamicQuant<bfloat16_t, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuant<bfloat16_t, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                          tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_WORKSPACE_TEMPLATE_BF16_BF16)) {
-        invokeTemplateGeluDynamicQuantWorkspace<bfloat16_t, bfloat16_t>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuantWorkspace<bfloat16_t, bfloat16_t>(x, input_scale, input_offset, y, out_scale,
+                                                                        userWS, tilingData);
     } else if (TILING_KEY_IS(DYNAMIC_WORKSPACE_TEMPLATE_BF16_FLOAT)) {
-        invokeTemplateGeluDynamicQuantWorkspace<bfloat16_t, float>(
-            x, input_scale, input_offset, y, out_scale, userWS, tilingData);
+        invokeTemplateGeluDynamicQuantWorkspace<bfloat16_t, float>(x, input_scale, input_offset, y, out_scale, userWS,
+                                                                   tilingData);
     }
 #endif
     // todo empty tensor

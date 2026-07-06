@@ -22,15 +22,9 @@
 
 class ThresholdV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "threshold_v2 test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "threshold_v2 test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "threshold_v2 test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "threshold_v2 test TearDown" << std::endl; }
 };
 
 TEST_F(ThresholdV2Test, threshold_v2_infershape_success_fp16)

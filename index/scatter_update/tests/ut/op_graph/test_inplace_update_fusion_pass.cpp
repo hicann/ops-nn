@@ -28,31 +28,30 @@ using namespace fusion;
 using namespace ops;
 
 namespace {
-const char *kInplaceUpdateType = "InplaceUpdate";
-const char *kTensorMoveType = "TensorMove";
-const char *kScatterUpdateType = "ScatterUpdate";
+const char* kInplaceUpdateType = "InplaceUpdate";
+const char* kTensorMoveType = "TensorMove";
+const char* kScatterUpdateType = "ScatterUpdate";
 
 // Build a single InplaceUpdate(x, indices, v) -> y graph for testing.
 // InplaceUpdate has no ES API, so the node is built with CompliantNodeBuilder.
 // After connecting edges the input descs are mirrored onto the node so that the
 // dtype guard in the fusion pass reads the real dtype (avoid false-green UT).
 std::shared_ptr<Graph> BuildInplaceUpdateGraph(const std::vector<int64_t>& xDims, DataType xDtype,
-    const std::vector<int64_t>& indicesDims, DataType indicesDtype, const std::vector<int64_t>& vDims, DataType vDtype)
+                                               const std::vector<int64_t>& indicesDims, DataType indicesDtype,
+                                               const std::vector<int64_t>& vDims, DataType vDtype)
 {
     auto graphBuilder = es::EsGraphBuilder("inplace_update_test");
     auto x = graphBuilder.CreateInput(0, "x", xDtype, FORMAT_ND, xDims);
     auto indices = graphBuilder.CreateInput(1, "indices", indicesDtype, FORMAT_ND, indicesDims);
     auto v = graphBuilder.CreateInput(2, "v", vDtype, FORMAT_ND, vDims);
 
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto inplaceUpdate = es::CompliantNodeBuilder(graph)
                              .OpType(kInplaceUpdateType)
                              .Name("InplaceUpdate")
-                             .IrDefInputs({
-                                 {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                 {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                 {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-                             })
+                             .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                              .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                              .Build();
 
@@ -69,12 +68,12 @@ std::shared_ptr<Graph> BuildInplaceUpdateGraph(const std::vector<int64_t>& xDims
     inplaceUpdate.UpdateInputDesc(2, vDesc);
     inplaceUpdate.UpdateOutputDesc(0, xDesc);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(inplaceUpdate, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(inplaceUpdate, 0);
     auto y = es::EsTensorHolder(yHolder);
     return graphBuilder.BuildAndReset({y});
 }
 
-int CountNodeByType(const std::shared_ptr<Graph>& graph, const char *opType)
+int CountNodeByType(const std::shared_ptr<Graph>& graph, const char* opType)
 {
     int count = 0;
     for (auto node : graph->GetAllNodes()) {

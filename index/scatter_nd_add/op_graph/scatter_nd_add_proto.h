@@ -14,7 +14,7 @@
 #include "graph/operator_reg.h"
 #include "graph/operator.h"
 
-namespace ge { 
+namespace ge {
 
 /**
 * @brief Applies sparse "updates" to individual values or slices in a variable reference using the "add" operation.
@@ -45,7 +45,7 @@ REG_OP(ScatterNdAdd)
     .OUTPUT(var, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16,
                              DT_UINT16, DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_BOOL}))
     .ATTR(use_locking, Bool, false)
-    .OP_END_FACTORY_REG(ScatterNdAdd)    
-}
+    .OP_END_FACTORY_REG(ScatterNdAdd)
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ND_ADD_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ND_ADD_H_

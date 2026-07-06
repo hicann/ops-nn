@@ -45,15 +45,15 @@ struct PergroupBasicApiCaseResult {
     uint64_t numBlocks = 0;
 };
 
-class TestQuantBatchMatmulV4PergroupBasicApiTiling
-    : public testing::TestWithParam<PergroupBasicApiShapeGuardCase> {};
+class TestQuantBatchMatmulV4PergroupBasicApiTiling : public testing::TestWithParam<PergroupBasicApiShapeGuardCase> {};
 
 static std::vector<PergroupBasicApiShapeGuardCase> GetParams()
 {
     std::vector<PergroupBasicApiShapeGuardCase> params;
     const std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
     const std::string casePath(
-        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_pergroup_basic_api_tiling.csv");
+        rootPath +
+        "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_pergroup_basic_api_tiling.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
         std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -91,7 +91,7 @@ static std::vector<PergroupBasicApiShapeGuardCase> GetParams()
     return params;
 }
 
-static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApiShapeGuardCase &param)
+static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApiShapeGuardCase& param)
 {
     PergroupBasicApiCaseResult caseResult;
     const int64_t m = param.x1Dims[0];
@@ -158,12 +158,12 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
 
     auto kernelHold = gert::KernelRunContextFaker()
                           .KernelIONum(2, 1)
-                          .Inputs({const_cast<char *>(compileInfoStr.c_str()), reinterpret_cast<void *>(&platformInfo)})
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
                           .Outputs({&compileInfo})
                           .Build();
 
     const std::string opType("QuantBatchMatmulV4");
-    auto *opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str());
+    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str());
     if (opImpl == nullptr) {
         return caseResult;
     }
@@ -173,16 +173,16 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
         return caseResult;
     }
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape, nullptr,
-                                    nullptr, &x2OffsetShape, nullptr, nullptr})
+                      .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape, nullptr, nullptr,
+                                    &x2OffsetShape, nullptr, nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -204,7 +204,7 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
                       .SetOpType(opType)
                       .Build();
 
-    auto *tilingContext = holder.GetContext<gert::TilingContext>();
+    auto* tilingContext = holder.GetContext<gert::TilingContext>();
     if (tilingContext == nullptr || tilingContext->GetPlatformInfo() == nullptr) {
         return caseResult;
     }
@@ -230,7 +230,7 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
 
 TEST_P(TestQuantBatchMatmulV4PergroupBasicApiTiling, ShapeGuard)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
     const auto result = RunPergroupBasicApiCase(param);
     ASSERT_EQ(result.result, param.expectedResult) << "case=" << param.caseName;
     if (param.checkTilingMeta) {

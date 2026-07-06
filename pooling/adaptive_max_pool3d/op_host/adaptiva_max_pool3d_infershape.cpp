@@ -69,8 +69,8 @@ static ge::graphStatus InferShape4AdaptiveMaxPool3d(gert::InferShapeContext* con
     }
 
     if (input_dim_num != NCDHW_DIMS && input_dim_num != CDHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "AdaptiveMaxPool3d", "X", std::to_string(input_dim_num).c_str(), "X shape dim must be 4 or 5");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("AdaptiveMaxPool3d", "X", std::to_string(input_dim_num).c_str(),
+                                                 "X shape dim must be 4 or 5");
         return GRAPH_FAILED;
     }
     y_shape->SetDimNum(input_dim_num);
@@ -78,8 +78,9 @@ static ge::graphStatus InferShape4AdaptiveMaxPool3d(gert::InferShapeContext* con
 
     size_t output_size_len = output_size_ptr->GetSize();
     if (output_size_len != OUTPUT_SIZE_DIMS && output_size_len != ONE_DIMS && output_size_len != NONE_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            "AdaptiveMaxPool3d", "output_size", std::to_string(output_size_len).c_str(), "Out Size must be in [0, 1, 3]");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON("AdaptiveMaxPool3d", "output_size",
+                                                  std::to_string(output_size_len).c_str(),
+                                                  "Out Size must be in [0, 1, 3]");
         return GRAPH_FAILED;
     }
     for (size_t j = 0; j < input_dim_num - OUTPUT_SIZE_DIMS; j++) {

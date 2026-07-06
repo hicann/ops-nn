@@ -49,8 +49,7 @@ static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
     }
 }
 
-static ge::graphStatus GetPlatformInfoFallback(
-    gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
+static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
 {
     auto compileInfo = reinterpret_cast<const ForeachAddcdivScalarCompileInfo*>(context->GetCompileInfo());
     if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
@@ -72,14 +71,15 @@ static ge::graphStatus GetPlatformInfoFallback(
     return ge::GRAPH_FAILED;
 }
 
-static void AssignDataToEachCore(
-    ForeachAddcdivScalarTilingDataHost& tilingDataHost,
-    int64_t needCoreNum, int64_t dataTypeSize)
+static void AssignDataToEachCore(ForeachAddcdivScalarTilingDataHost& tilingDataHost, int64_t needCoreNum,
+                                 int64_t dataTypeSize)
 {
     int64_t elementsPerBlock = ALIGN_SIZE / dataTypeSize;
     int64_t totalDataCount = tilingDataHost.totalDataCount;
     int64_t blockCount = (totalDataCount + elementsPerBlock - 1) / elementsPerBlock;
-    if (blockCount == 0) { blockCount = 1; }
+    if (blockCount == 0) {
+        blockCount = 1;
+    }
 
     int64_t perCoreBlockCount = blockCount / needCoreNum;
     int64_t remainder = blockCount % needCoreNum;
@@ -122,7 +122,8 @@ static void AssignDataToEachCore(
 
     if (dataCount > 0) {
         tilingDataHost.tensorEndList[coreIndex] = static_cast<uint16_t>(tilingDataHost.tensorCount - 1);
-        tilingDataHost.tensorEndOffsetList[coreIndex] = tilingDataHost.tensorDataCountList[tilingDataHost.tensorCount - 1] - 1;
+        tilingDataHost
+            .tensorEndOffsetList[coreIndex] = tilingDataHost.tensorDataCountList[tilingDataHost.tensorCount - 1] - 1;
     }
 }
 
@@ -131,11 +132,9 @@ static ge::graphStatus ForeachAddcdivScalarTilingFunc(gert::TilingContext* conte
     int64_t coreNum = 0;
     int64_t ubSize = 0;
     OP_CHECK_IF(GetPlatformInfoFallback(context, coreNum, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Failed to get platform info"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
@@ -145,9 +144,9 @@ static ge::graphStatus ForeachAddcdivScalarTilingFunc(gert::TilingContext* conte
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
     OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ADDCDIV_SCALAR),
-        OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ADDCDIV_SCALAR %d",
-                 tensorNum, MAX_TENSOR_NUM_FOREACH_ADDCDIV_SCALAR),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ADDCDIV_SCALAR %d", tensorNum,
+                        MAX_TENSOR_NUM_FOREACH_ADDCDIV_SCALAR),
+                return ge::GRAPH_FAILED);
 
     int64_t totalDataCount = 0;
     ge::DataType dataType = ge::DT_FLOAT;
@@ -174,10 +173,18 @@ static ge::graphStatus ForeachAddcdivScalarTilingFunc(gert::TilingContext* conte
 
     int64_t dataTypeSize = 0;
     switch (dataType) {
-        case ge::DT_FLOAT16:   dataTypeSize = 2; break;
-        case ge::DT_FLOAT:     dataTypeSize = 4; break;
-        case ge::DT_BF16:      dataTypeSize = 2; break;
-        default:               dataTypeSize = 4; break;
+        case ge::DT_FLOAT16:
+            dataTypeSize = 2;
+            break;
+        case ge::DT_FLOAT:
+            dataTypeSize = 4;
+            break;
+        case ge::DT_BF16:
+            dataTypeSize = 2;
+            break;
+        default:
+            dataTypeSize = 4;
+            break;
     }
 
     int64_t needCoreNum = (totalDataCount + SINGLE_CORE_MIN_ELEMENTS - 1) / SINGLE_CORE_MIN_ELEMENTS;
@@ -201,9 +208,8 @@ static ge::graphStatus ForeachAddcdivScalarTilingFunc(gert::TilingContext* conte
     context->SetTilingKey(GetTilingKeyByDtype(dataType));
 
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize));
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+                return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = 0;
@@ -219,15 +225,11 @@ static ge::graphStatus TilingParseForForeachAddcdivScalar(gert::TilingParseConte
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

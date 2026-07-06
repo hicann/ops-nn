@@ -20,11 +20,10 @@
 using namespace AscendC;
 
 template <typename T>
-class InplaceIndexAddWithSortedAvg
-{
+class InplaceIndexAddWithSortedAvg {
 public:
-    __aicore__ inline InplaceIndexAddWithSortedAvg(
-        TPipe* pipeIn, const InplaceIndexAddWithSortedTilingData* __restrict tilingData)
+    __aicore__ inline InplaceIndexAddWithSortedAvg(TPipe* pipeIn,
+                                                   const InplaceIndexAddWithSortedTilingData* __restrict tilingData)
     {
         pipe = pipeIn;
         coreId = GetBlockIdx();
@@ -87,8 +86,8 @@ private:
             indexLocal = inQueueIndex.AllocTensor<int32_t>();
             int64_t indexOffset = coreId * eachIndexCountAvg + idxRound * eachUBIndexCountAvg;
             DataCopyPadExtParams<int32_t> tPadParams = {false, 0, 0, static_cast<int32_t>(0)};
-            DataCopyExtParams updatesExtParams = {
-                (uint16_t)1, static_cast<uint32_t>(currentEachIndex * sizeof(int32_t)), 0, 0, 0};
+            DataCopyExtParams updatesExtParams = {(uint16_t)1,
+                                                  static_cast<uint32_t>(currentEachIndex * sizeof(int32_t)), 0, 0, 0};
             DataCopyPad(indexLocal, indicesGmAvg[indexOffset], updatesExtParams, tPadParams);
             DataCopyPad(indexLocal[INDEX_UB_NUM], posGmAvg[indexOffset], updatesExtParams, tPadParams);
             event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));

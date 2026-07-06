@@ -20,9 +20,7 @@ namespace optiling {
 
 class WeightQuantBatchMatmulV2Checker4MmadS8S4 {
 public:
-    explicit WeightQuantBatchMatmulV2Checker4MmadS8S4(gert::TilingContext *context) : context_(context)
-    {
-    }
+    explicit WeightQuantBatchMatmulV2Checker4MmadS8S4(gert::TilingContext* context) : context_(context) {}
 
     ~WeightQuantBatchMatmulV2Checker4MmadS8S4() = default;
 
@@ -33,13 +31,13 @@ private:
     bool CheckDtype();
     bool CheckAttr();
     bool CheckShape();
-    bool CheckInputShape(const gert::StorageShape *xShape, const gert::StorageShape *weightShape);
-    bool CheckAntiQuantShape(const gert::StorageShape *antiQuantScaleShape,
-                             const gert::StorageShape *antiQuantOffsetShape);
-    bool CheckBatchInfo(const gert::Shape &xShape, const gert::Shape &weightShape) const;
+    bool CheckInputShape(const gert::StorageShape* xShape, const gert::StorageShape* weightShape);
+    bool CheckAntiQuantShape(const gert::StorageShape* antiQuantScaleShape,
+                             const gert::StorageShape* antiQuantOffsetShape);
+    bool CheckBatchInfo(const gert::Shape& xShape, const gert::Shape& weightShape) const;
 
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     WeightQuantBatchMatmulInfo inputParams_;
 };
-}  // namespace optiling
-#endif  // WEIGHT_QUANT_BATCH_MATMUL_V2_CHECKER_FOR_MMADS8S4_H
+} // namespace optiling
+#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_CHECKER_FOR_MMADS8S4_H

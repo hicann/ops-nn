@@ -33,8 +33,7 @@ using namespace op;
 extern "C" {
 #endif
 
-namespace
-{
+namespace {
 static constexpr const char* ACLNN_API_NAME = "aclnnDeformableConv2dGetWorkspaceSize";
 struct DeformableConv2dInputTensor {
     const aclTensor* input;
@@ -98,15 +97,15 @@ static aclnnStatus InputTransProcess(const aclTensor*& inputTensor, const string
         CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
         inputTensor = l0op::Transpose(inputTensor, perm, executor);
         OP_CHECK(inputTensor != nullptr,
-                OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Transpose return nullptr.",
-                        tensorName.c_str()),
-                return ACLNN_ERR_INNER_NULLPTR);
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Transpose return nullptr.",
+                         tensorName.c_str()),
+                 return ACLNN_ERR_INNER_NULLPTR);
     }
 
     if (curArch == NpuArch::DAV_3510 && tensorName != "weight") {
-        const_cast<aclTensor *>(inputTensor)->SetStorageFormat(Format::FORMAT_NHWC);
-        const_cast<aclTensor *>(inputTensor)->SetOriginalFormat(Format::FORMAT_NHWC);
-        const_cast<aclTensor *>(inputTensor)->SetViewFormat(Format::FORMAT_NHWC);
+        const_cast<aclTensor*>(inputTensor)->SetStorageFormat(Format::FORMAT_NHWC);
+        const_cast<aclTensor*>(inputTensor)->SetOriginalFormat(Format::FORMAT_NHWC);
+        const_cast<aclTensor*>(inputTensor)->SetViewFormat(Format::FORMAT_NHWC);
     }
     return ACLNN_SUCCESS;
 }
@@ -141,52 +140,44 @@ static std::string ArrayToString(const aclIntArray* array)
     return result;
 }
 
-#define CHECK_DEFORM_PARAM_NULLPTR(param, paramName, ret)                                                              \
-    do {                                                                                                        \
-        if ((param) == nullptr) {                                                                               \
-            OP_LOGE_FOR_INVALID_VALUE(ACLNN_API_NAME, paramName, "nullptr", "not nullptr");                    \
-            return ret;                                                                                         \
-        }                                                                                                       \
+#define CHECK_DEFORM_PARAM_NULLPTR(param, paramName, ret)                                   \
+    do {                                                                                    \
+        if ((param) == nullptr) {                                                           \
+            OP_LOGE_FOR_INVALID_VALUE(ACLNN_API_NAME, paramName, "nullptr", "not nullptr"); \
+            return ret;                                                                     \
+        }                                                                                   \
     } while (0)
 
-#define CHECK_PARAM_DIM(paramName, curDim, expectDim, ret)                                                     \
-    do {                                                                                                        \
-        if ((curDim) != expectDim) {                                                                            \
-            OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, paramName,                                            \
-                std::to_string(curDim), std::to_string(expectDim));                                            \
-            return ret;                                                                                         \
-        }                                                                                                       \
+#define CHECK_PARAM_DIM(paramName, curDim, expectDim, ret)                                  \
+    do {                                                                                    \
+        if ((curDim) != expectDim) {                                                        \
+            OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, paramName, std::to_string(curDim), \
+                                         std::to_string(expectDim));                        \
+            return ret;                                                                     \
+        }                                                                                   \
     } while (0)
 
-#define CHECK_SHAPE_EQUAL_EXPECTED(paramName, curShape, expectShape, ret)                                  \
-    do {                                                                                                        \
-        if (curShape.GetDimNum() != expectShape.GetDimNum()) {                                                 \
-            OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, paramName,                                            \
-                std::to_string(curShape.GetDimNum()), std::to_string(expectShape.GetDimNum()));                \
-            return ret;                                                                                         \
-        }                                                                                                       \
-        size_t dimNum = curShape.GetDimNum();                                                                   \
-        for (size_t idx = 0; idx < dimNum; idx++) {                                                             \
-            if (curShape[idx] != expectShape[idx]) {                                                            \
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, paramName, ShapeToString(curShape),      \
-                    "the shape of this parameter must be equal to its inferred shape " +                        \
-                    ShapeToString(expectShape));                                                                \
-                return ret;                                                                                     \
-            }                                                                                                   \
-        }                                                                                                       \
+#define CHECK_SHAPE_EQUAL_EXPECTED(paramName, curShape, expectShape, ret)                                             \
+    do {                                                                                                              \
+        if (curShape.GetDimNum() != expectShape.GetDimNum()) {                                                        \
+            OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, paramName, std::to_string(curShape.GetDimNum()),             \
+                                         std::to_string(expectShape.GetDimNum()));                                    \
+            return ret;                                                                                               \
+        }                                                                                                             \
+        size_t dimNum = curShape.GetDimNum();                                                                         \
+        for (size_t idx = 0; idx < dimNum; idx++) {                                                                   \
+            if (curShape[idx] != expectShape[idx]) {                                                                  \
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(                                                                \
+                    ACLNN_API_NAME, paramName, ShapeToString(curShape),                                               \
+                    "the shape of this parameter must be equal to its inferred shape " + ShapeToString(expectShape)); \
+                return ret;                                                                                           \
+            }                                                                                                         \
+        }                                                                                                             \
     } while (0)
 
+std::string GeFormatToString(const ge::Format& geFormat) { return op::ToString(geFormat).GetString(); }
 
-
-std::string GeFormatToString(const ge::Format& geFormat)
-{
-    return op::ToString(geFormat).GetString();
-}
-
-std::string GeDtypeToString(const ge::DataType& geDtype)
-{
-    return op::ToString(geDtype).GetString();
-}
+std::string GeDtypeToString(const ge::DataType& geDtype) { return op::ToString(geDtype).GetString(); }
 
 static aclnnStatus InputProcess(const aclTensor*& inputTensor, const string& tensorName, aclOpExecutor* executor)
 {
@@ -231,8 +222,8 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
         CHECK_RET(outPermArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
         resultTensor.out = l0op::Transpose(resultTensor.out, outPermArray, executor);
         OP_CHECK(resultTensor.out != nullptr,
-                OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, out with Transpose return nullptr."),
-                return ACLNN_ERR_INNER_NULLPTR);
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, out with Transpose return nullptr."),
+                 return ACLNN_ERR_INNER_NULLPTR);
     }
     auto resultOut = l0op::ViewCopy(resultTensor.out, outputTensor.out, executor);
     OP_CHECK(resultOut != nullptr,
@@ -250,12 +241,12 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
             CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
             resultTensor.deformOutOptional = l0op::Transpose(resultTensor.deformOutOptional, perm, executor);
             OP_CHECK(resultTensor.deformOutOptional != nullptr,
-                    OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                            "The output viewprocess failed, deformableOut with Transpose return nullptr."),
-                    return ACLNN_ERR_INNER_NULLPTR);
+                     OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                             "The output viewprocess failed, deformableOut with Transpose return nullptr."),
+                     return ACLNN_ERR_INNER_NULLPTR);
         }
-        auto resultDeformableOut =
-            l0op::ViewCopy(resultTensor.deformOutOptional, outputTensor.deformOutOptional, executor);
+        auto resultDeformableOut = l0op::ViewCopy(resultTensor.deformOutOptional, outputTensor.deformOutOptional,
+                                                  executor);
         OP_CHECK(resultDeformableOut != nullptr,
                  OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
                          "The output viewprocess failed, deformableOut with ViewCopy return nullptr."),
@@ -264,48 +255,47 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
     return ACLNN_SUCCESS;
 }
 
-static aclIntArray* ResetParams(int64_t newValue, aclOpExecutor* executor) {
+static aclIntArray* ResetParams(int64_t newValue, aclOpExecutor* executor)
+{
     int64_t data[DIM_FOUR];
     data[INDEX_ZERO] = newValue;
     data[INDEX_ONE] = newValue;
     data[INDEX_TWO] = newValue;
     data[INDEX_THREE] = newValue;
-    aclIntArray *newArray = executor->AllocIntArray(data, DIM_FOUR);
+    aclIntArray* newArray = executor->AllocIntArray(data, DIM_FOUR);
     return newArray;
 }
 
-static aclIntArray* ParamsTranspose(const aclIntArray* inputArray, aclOpExecutor* executor) {
+static aclIntArray* ParamsTranspose(const aclIntArray* inputArray, aclOpExecutor* executor)
+{
     int64_t data[DIM_FOUR];
     data[INDEX_ZERO] = (*inputArray)[INDEX_ZERO];
     data[INDEX_ONE] = (*inputArray)[INDEX_TWO];
     data[INDEX_TWO] = (*inputArray)[INDEX_THREE];
     data[INDEX_THREE] = (*inputArray)[INDEX_ONE];
-    aclIntArray *newArray = executor->AllocIntArray(data, DIM_FOUR);
+    aclIntArray* newArray = executor->AllocIntArray(data, DIM_FOUR);
     return newArray;
 }
 
 static aclnnStatus DeformableConv2dV2(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor,
-                                     DeformableConv2dParams& params, aclOpExecutor* executor)
+                                      DeformableConv2dParams& params, aclOpExecutor* executor)
 {
     params.stride = ParamsTranspose(params.stride, executor);
     params.dilation = ParamsTranspose(params.dilation, executor);
     OP_CHECK_NULL(params.stride, return ACLNN_ERR_INNER_NULLPTR);
     OP_CHECK_NULL(params.dilation, return ACLNN_ERR_INNER_NULLPTR);
     auto deformOut = l0op::DeformableOffsetsNHWC(inputTensor.input, inputTensor.offset, params.kernelSize,
-                                                    outputTensor.out->GetDataType(), params.stride,
-                                                    params.padding, params.dilation,
-                                                    params.deformableGroups, params.modulated, executor);
+                                                 outputTensor.out->GetDataType(), params.stride, params.padding,
+                                                 params.dilation, params.deformableGroups, params.modulated, executor);
     int64_t deformOutPerm[4] = {0, 3, 1, 2};
     auto perm = executor->AllocIntArray(deformOutPerm, 4);
     CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
     deformOut = l0op::Transpose(deformOut, perm, executor);
-    OP_CHECK(deformOut != nullptr,
-                OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                        "DeformableOut with Transpose return nullptr."),
-                return ACLNN_ERR_INNER_NULLPTR);
-    const_cast<aclTensor *>(deformOut)->SetStorageFormat(Format::FORMAT_NCHW);
-    const_cast<aclTensor *>(deformOut)->SetOriginalFormat(Format::FORMAT_NCHW);
-    const_cast<aclTensor *>(deformOut)->SetViewFormat(Format::FORMAT_NCHW);
+    OP_CHECK(deformOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "DeformableOut with Transpose return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+    const_cast<aclTensor*>(deformOut)->SetStorageFormat(Format::FORMAT_NCHW);
+    const_cast<aclTensor*>(deformOut)->SetOriginalFormat(Format::FORMAT_NCHW);
+    const_cast<aclTensor*>(deformOut)->SetViewFormat(Format::FORMAT_NCHW);
     params.padding = ResetParams(0, executor);
     params.dilation = ResetParams(1, executor);
     OP_CHECK_NULL(params.padding, return ACLNN_ERR_INNER_NULLPTR);
@@ -316,9 +306,8 @@ static aclnnStatus DeformableConv2dV2(DeformableConv2dInputTensor& inputTensor, 
     auto newStrideArray = executor->AllocIntArray(newStride, KERNEL_ARRAY_DIM_SIZE);
     OP_CHECK_NULL(newStrideArray, return ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* tmpOut = l0op::Conv2dV2NCHW(deformOut, inputTensor.weight, inputTensor.biasOptional,
-                                                    outputTensor.out->GetDataType(), newStrideArray,
-                                                    params.padding, params.dilation, params.groups,
-                                                    false, executor);
+                                                 outputTensor.out->GetDataType(), newStrideArray, params.padding,
+                                                 params.dilation, params.groups, false, executor);
     ConvolutionResult resultTensor = {tmpOut, deformOut};
     auto result = ResultViewProcess(inputTensor, resultTensor, outputTensor, executor);
     CHECK_RET(result == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
@@ -356,10 +345,10 @@ static aclnnStatus CalculateDeformableConv2d(DeformableConv2dInputTensor& inputT
         }
     }
 
-    auto deformableResult =
-        l0op::DeformableConv2d(inputTensor.input, inputTensor.weight, inputTensor.offset, inputTensor.biasOptional,
-                               params.kernelSize, params.stride, params.padding, params.dilation, params.groups,
-                               params.deformableGroups, params.modulated, executor);
+    auto deformableResult = l0op::DeformableConv2d(inputTensor.input, inputTensor.weight, inputTensor.offset,
+                                                   inputTensor.biasOptional, params.kernelSize, params.stride,
+                                                   params.padding, params.dilation, params.groups,
+                                                   params.deformableGroups, params.modulated, executor);
     const aclTensor* tmpOut = std::get<0>(deformableResult);
     const aclTensor* tmpDeformableOut = std::get<1>(deformableResult);
     CHECK_RET(tmpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -389,26 +378,26 @@ static bool CheckDtypeValid(DeformableConv2dInputTensor& inputTensor, Convolutio
 {
     if (DTYPE_SUPPORT_LIST.find(inputTensor.input->GetDataType()) == DTYPE_SUPPORT_LIST.end()) {
         OP_LOGE_FOR_INVALID_DTYPE(ACLNN_API_NAME, "x", GeDtypeToString(inputTensor.input->GetDataType()),
-            "one of {" + GeDtypeToString(op::DataType::DT_FLOAT) + ", " +
-            GeDtypeToString(op::DataType::DT_FLOAT16) + ", " +
-            GeDtypeToString(op::DataType::DT_BF16) + "}");
+                                  "one of {" + GeDtypeToString(op::DataType::DT_FLOAT) + ", " +
+                                      GeDtypeToString(op::DataType::DT_FLOAT16) + ", " +
+                                      GeDtypeToString(op::DataType::DT_BF16) + "}");
         return false;
     }
     if (inputTensor.biasOptional != nullptr) {
         if (inputTensor.biasOptional->GetDataType() != inputTensor.input->GetDataType()) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_API_NAME, "bias, x",
-                GeDtypeToString(inputTensor.biasOptional->GetDataType()) + ", " +
-                GeDtypeToString(inputTensor.input->GetDataType()),
-                "the dtypes of these parameters must be the same");
+                                                   GeDtypeToString(inputTensor.biasOptional->GetDataType()) + ", " +
+                                                       GeDtypeToString(inputTensor.input->GetDataType()),
+                                                   "the dtypes of these parameters must be the same");
             return false;
         }
     }
     if (outputTensor.deformOutOptional != nullptr) {
         if (outputTensor.deformOutOptional->GetDataType() != inputTensor.input->GetDataType()) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_API_NAME, "deformOut, x",
-                GeDtypeToString(outputTensor.deformOutOptional->GetDataType()) + ", " +
-                GeDtypeToString(inputTensor.input->GetDataType()),
-                "the dtypes of these parameters must be the same");
+                                                   GeDtypeToString(outputTensor.deformOutOptional->GetDataType()) +
+                                                       ", " + GeDtypeToString(inputTensor.input->GetDataType()),
+                                                   "the dtypes of these parameters must be the same");
             return false;
         }
     }
@@ -416,11 +405,11 @@ static bool CheckDtypeValid(DeformableConv2dInputTensor& inputTensor, Convolutio
         inputTensor.weight->GetDataType() != inputTensor.input->GetDataType() ||
         outputTensor.out->GetDataType() != inputTensor.input->GetDataType()) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_API_NAME, "offset, filter, y, x",
-            GeDtypeToString(inputTensor.offset->GetDataType()) + ", " +
-            GeDtypeToString(inputTensor.weight->GetDataType()) + ", " +
-            GeDtypeToString(outputTensor.out->GetDataType()) + ", " +
-            GeDtypeToString(inputTensor.input->GetDataType()),
-            "the dtypes of these parameters must be the same");
+                                               GeDtypeToString(inputTensor.offset->GetDataType()) + ", " +
+                                                   GeDtypeToString(inputTensor.weight->GetDataType()) + ", " +
+                                                   GeDtypeToString(outputTensor.out->GetDataType()) + ", " +
+                                                   GeDtypeToString(inputTensor.input->GetDataType()),
+                                               "the dtypes of these parameters must be the same");
         return false;
     }
     return true;
@@ -431,47 +420,57 @@ static bool CheckFormat(DeformableConv2dInputTensor& inputTensor, ConvolutionOut
     // 如果输入格式不满足格式要求，记录日志，直接报错
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (curArch == NpuArch::DAV_3510) {
-        OP_CHECK(inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW,
+        OP_CHECK(
+            inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW,
             OP_LOGE_FOR_INVALID_FORMAT(ACLNN_API_NAME, "x", GeFormatToString(inputTensor.input->GetStorageFormat()),
-            GeFormatToString(Format::FORMAT_NCHW)), return false);
+                                       GeFormatToString(Format::FORMAT_NCHW)),
+            return false);
     } else {
         OP_CHECK(inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW ||
-                 inputTensor.input->GetStorageFormat() == Format::FORMAT_ND,
-            OP_LOGE_FOR_INVALID_FORMAT(ACLNN_API_NAME, "x", GeFormatToString(inputTensor.input->GetStorageFormat()),
-            GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_ND)), return false);
+                     inputTensor.input->GetStorageFormat() == Format::FORMAT_ND,
+                 OP_LOGE_FOR_INVALID_FORMAT(
+                     ACLNN_API_NAME, "x", GeFormatToString(inputTensor.input->GetStorageFormat()),
+                     GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_ND)),
+                 return false);
     }
 
     OP_CHECK(inputTensor.offset->GetStorageFormat() == inputTensor.input->GetStorageFormat(),
-        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "offset, x",
-            GeFormatToString(inputTensor.offset->GetStorageFormat()) + ", " +
-            GeFormatToString(inputTensor.input->GetStorageFormat()),
-            "the formats of these parameters must be the same"), return false);
+             OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "offset, x",
+                                                    GeFormatToString(inputTensor.offset->GetStorageFormat()) + ", " +
+                                                        GeFormatToString(inputTensor.input->GetStorageFormat()),
+                                                    "the formats of these parameters must be the same"),
+             return false);
 
     OP_CHECK(inputTensor.weight->GetStorageFormat() == inputTensor.input->GetStorageFormat(),
-        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "filter, x",
-            GeFormatToString(inputTensor.weight->GetStorageFormat()) + ", " +
-            GeFormatToString(inputTensor.input->GetStorageFormat()),
-            "the formats of these parameters must be the same"), return false);
+             OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "filter, x",
+                                                    GeFormatToString(inputTensor.weight->GetStorageFormat()) + ", " +
+                                                        GeFormatToString(inputTensor.input->GetStorageFormat()),
+                                                    "the formats of these parameters must be the same"),
+             return false);
 
     if (inputTensor.biasOptional != nullptr) {
         OP_CHECK(inputTensor.biasOptional->GetStorageFormat() == Format::FORMAT_ND,
-            OP_LOGE_FOR_INVALID_FORMAT(ACLNN_API_NAME, "bias",
-                GeFormatToString(inputTensor.biasOptional->GetStorageFormat()),
-                GeFormatToString(Format::FORMAT_ND)), return false);
+                 OP_LOGE_FOR_INVALID_FORMAT(ACLNN_API_NAME, "bias",
+                                            GeFormatToString(inputTensor.biasOptional->GetStorageFormat()),
+                                            GeFormatToString(Format::FORMAT_ND)),
+                 return false);
     }
 
     OP_CHECK(outputTensor.out->GetStorageFormat() == inputTensor.input->GetStorageFormat(),
-        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "y, x",
-            GeFormatToString(outputTensor.out->GetStorageFormat()) + ", " +
-            GeFormatToString(inputTensor.input->GetStorageFormat()),
-            "the formats of these parameters must be the same"), return false);
+             OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "y, x",
+                                                    GeFormatToString(outputTensor.out->GetStorageFormat()) + ", " +
+                                                        GeFormatToString(inputTensor.input->GetStorageFormat()),
+                                                    "the formats of these parameters must be the same"),
+             return false);
 
     if (outputTensor.deformOutOptional != nullptr) {
         OP_CHECK(outputTensor.deformOutOptional->GetStorageFormat() == inputTensor.input->GetStorageFormat(),
-            OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(ACLNN_API_NAME, "deformOut, x",
-                GeFormatToString(outputTensor.deformOutOptional->GetStorageFormat()) + ", " +
-                GeFormatToString(inputTensor.input->GetStorageFormat()),
-                "the formats of these parameters must be the same"), return false);
+                 OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+                     ACLNN_API_NAME, "deformOut, x",
+                     GeFormatToString(outputTensor.deformOutOptional->GetStorageFormat()) + ", " +
+                         GeFormatToString(inputTensor.input->GetStorageFormat()),
+                     "the formats of these parameters must be the same"),
+                 return false);
     }
     return true;
 }
@@ -479,48 +478,62 @@ static bool CheckFormat(DeformableConv2dInputTensor& inputTensor, ConvolutionOut
 static bool CheckAttrs(DeformableConv2dParams& params)
 {
     OP_CHECK(params.kernelSize->Size() == KERNEL_ARRAY_DIM_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "kernelSize", std::to_string(params.kernelSize->Size()),
-            std::to_string(KERNEL_ARRAY_DIM_SIZE)), return false);
+             OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "kernelSize", std::to_string(params.kernelSize->Size()),
+                                          std::to_string(KERNEL_ARRAY_DIM_SIZE)),
+             return false);
     OP_CHECK(params.stride->Size() == STRIDE_ARRAY_DIM_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "strides", std::to_string(params.stride->Size()),
-            std::to_string(STRIDE_ARRAY_DIM_SIZE)), return false);
+             OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "strides", std::to_string(params.stride->Size()),
+                                          std::to_string(STRIDE_ARRAY_DIM_SIZE)),
+             return false);
     OP_CHECK(params.padding->Size() == PADDING_ARRAY_DIM_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "pads", std::to_string(params.padding->Size()),
-            std::to_string(PADDING_ARRAY_DIM_SIZE)), return false);
+             OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "pads", std::to_string(params.padding->Size()),
+                                          std::to_string(PADDING_ARRAY_DIM_SIZE)),
+             return false);
     OP_CHECK(params.dilation->Size() == DILATION_ARRAY_DIM_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "dilations", std::to_string(params.dilation->Size()),
-            std::to_string(DILATION_ARRAY_DIM_SIZE)), return false);
+             OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_API_NAME, "dilations", std::to_string(params.dilation->Size()),
+                                          std::to_string(DILATION_ARRAY_DIM_SIZE)),
+             return false);
 
     int64_t kH = (*params.kernelSize)[INDEX_ZERO];
     int64_t kW = (*params.kernelSize)[INDEX_ONE];
     OP_CHECK(kH > 0 && kW > 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "kernelSize", ArrayToString(params.kernelSize),
-            "All dimensions of this parameter must be greater than 0"), return false);
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "kernelSize", ArrayToString(params.kernelSize),
+                                                   "All dimensions of this parameter must be greater than 0"),
+             return false);
     OP_CHECK(kH * kW <= MAX_KERNEL_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "kernelSize", ArrayToString(params.kernelSize),
-            "The following constraint must be met: shape[0] * shape[1] <= " + std::to_string(MAX_KERNEL_SIZE)),
-        return false);
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_API_NAME, "kernelSize", ArrayToString(params.kernelSize),
+                 "The following constraint must be met: shape[0] * shape[1] <= " + std::to_string(MAX_KERNEL_SIZE)),
+             return false);
     OP_CHECK((*params.stride)[INDEX_ZERO] == 1 && (*params.stride)[INDEX_ONE] == 1,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "strides", ArrayToString(params.stride),
-            "Shape[0] and shape[1] of this parameter must be 1"), return false);
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "strides", ArrayToString(params.stride),
+                                                   "Shape[0] and shape[1] of this parameter must be 1"),
+             return false);
     OP_CHECK((*params.stride)[INDEX_TWO] > 0 && (*params.stride)[INDEX_THREE] > 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "strides", ArrayToString(params.stride),
-            "Shape[2] and shape[3] of this parameter must be greater than 0"), return false);
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "strides", ArrayToString(params.stride),
+                                                   "Shape[2] and shape[3] of this parameter must be greater than 0"),
+             return false);
     OP_CHECK((*params.dilation)[INDEX_ZERO] == 1 && (*params.dilation)[INDEX_ONE] == 1,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "dilations", ArrayToString(params.dilation),
-            "Shape[0] and shape[1] of this parameter must be 1"), return false);
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "dilations", ArrayToString(params.dilation),
+                                                   "Shape[0] and shape[1] of this parameter must be 1"),
+             return false);
     OP_CHECK((*params.dilation)[INDEX_TWO] > 0 && (*params.dilation)[INDEX_THREE] > 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "dilations", ArrayToString(params.dilation),
-            "Shape[2] and shape[3] of this parameter must be greater than 0"), return false);
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "dilations", ArrayToString(params.dilation),
+                                                   "Shape[2] and shape[3] of this parameter must be greater than 0"),
+             return false);
 
     OP_CHECK(params.groups > 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_API_NAME, "groups", std::to_string(params.groups),
-            "it should be greater than 0"), return false);
-    OP_CHECK(params.deformableGroups > 0,
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_API_NAME, "groups", std::to_string(params.groups),
+                                                   "it should be greater than 0"),
+             return false);
+    OP_CHECK(
+        params.deformableGroups > 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_API_NAME, "deformableGroups",
-            std::to_string(params.deformableGroups), "it should be greater than 0"), return false);
+                                              std::to_string(params.deformableGroups), "it should be greater than 0"),
+        return false);
     OP_CHECK(params.modulated == true,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_API_NAME, "modulated", "false", "it should be true"), return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_API_NAME, "modulated", "false", "it should be true"),
+             return false);
     return true;
 }
 
@@ -539,7 +552,7 @@ static bool CheckDimension(DeformableConv2dInputTensor& inputTensor, Convolution
     return true;
 }
 
-static bool CheckExpected(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor, 
+static bool CheckExpected(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor,
                           DeformableConv2dParams& params)
 {
     int64_t n = inputTensor.input->GetViewShape()[INDEX_ZERO];
@@ -571,13 +584,13 @@ static bool CheckExpected(DeformableConv2dInputTensor& inputTensor, ConvolutionO
     CHECK_SHAPE_EQUAL_EXPECTED("y", outputTensor.out->GetViewShape(), outExpectShape, false);
     if (outputTensor.deformOutOptional != nullptr) {
         op::Shape deformOutExpectShape = {n, inC, outH * kH, outW * kW};
-        CHECK_SHAPE_EQUAL_EXPECTED("deformOut", outputTensor.deformOutOptional->GetViewShape(),
-            deformOutExpectShape, false);
+        CHECK_SHAPE_EQUAL_EXPECTED("deformOut", outputTensor.deformOutOptional->GetViewShape(), deformOutExpectShape,
+                                   false);
     }
     return true;
 }
 
-static bool CheckShape(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor, 
+static bool CheckShape(DeformableConv2dInputTensor& inputTensor, ConvolutionOutput& outputTensor,
                        DeformableConv2dParams& params)
 {
     int64_t inC = inputTensor.input->GetViewShape()[INDEX_ONE];
@@ -586,18 +599,24 @@ static bool CheckShape(DeformableConv2dInputTensor& inputTensor, ConvolutionOutp
     int64_t inSize = inH * inW;
     int64_t outC = inputTensor.weight->GetViewShape()[INDEX_ZERO];
     OP_CHECK(inC % params.deformableGroups == 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "x", ShapeToString(inputTensor.input->GetViewShape()),
-            "Shape[1] of this parameter must be exactly divided by attr deformableGroups(" +
-            std::to_string(params.deformableGroups) + ")"), return false);
-    OP_CHECK(inC % params.groups == 0 && outC % params.groups == 0,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ACLNN_API_NAME, "x, filter",
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_API_NAME, "x", ShapeToString(inputTensor.input->GetViewShape()),
+                 "Shape[1] of this parameter must be exactly divided by attr deformableGroups(" +
+                     std::to_string(params.deformableGroups) + ")"),
+             return false);
+    OP_CHECK(
+        inC % params.groups == 0 && outC % params.groups == 0,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            ACLNN_API_NAME, "x, filter",
             ShapeToString(inputTensor.input->GetViewShape()) + ", " + ShapeToString(inputTensor.weight->GetViewShape()),
             "shape[1] of x and shape[0] of filter must be exactly divisible by attribute groups(" +
-            std::to_string(params.groups) + ")"), return false);
-    OP_CHECK(inSize <= INT_MAX_VALUE,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "x", ShapeToString(inputTensor.input->GetViewShape()),
-            "The following constraint must be met: Shape[2] * Shape[3] <= " + std::to_string(INT_MAX_VALUE)),
+                std::to_string(params.groups) + ")"),
         return false);
+    OP_CHECK(inSize <= INT_MAX_VALUE,
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_API_NAME, "x", ShapeToString(inputTensor.input->GetViewShape()),
+                 "The following constraint must be met: Shape[2] * Shape[3] <= " + std::to_string(INT_MAX_VALUE)),
+             return false);
 
     int64_t kH = (*params.kernelSize)[INDEX_ZERO];
     int64_t kW = (*params.kernelSize)[INDEX_ONE];
@@ -607,12 +626,13 @@ static bool CheckShape(DeformableConv2dInputTensor& inputTensor, ConvolutionOutp
     }
 
     int64_t matmulK = kH * kW * inC / params.groups;
-    OP_CHECK(matmulK <= MAX_MATMUL_K, 
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_API_NAME, "x, kernelSize",
-            ShapeToString(inputTensor.input->GetViewShape()) + ", " + ArrayToString(params.kernelSize),
-            "x[1] * kernelSize[0] * kernelSize[1] / groups(" + std::to_string(params.groups) + ") " +
-            "must less than or equal to " + std::to_string(MAX_MATMUL_K)),
-        return false);
+    OP_CHECK(matmulK <= MAX_MATMUL_K,
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_API_NAME, "x, kernelSize",
+                 ShapeToString(inputTensor.input->GetViewShape()) + ", " + ArrayToString(params.kernelSize),
+                 "x[1] * kernelSize[0] * kernelSize[1] / groups(" + std::to_string(params.groups) + ") " +
+                     "must less than or equal to " + std::to_string(MAX_MATMUL_K)),
+             return false);
     return true;
 }
 
@@ -637,7 +657,7 @@ static aclnnStatus CheckParams(DeformableConv2dInputTensor& inputTensor, Convolu
 
     return ACLNN_SUCCESS;
 }
-};  // namespace
+}; // namespace
 
 aclnnStatus aclnnDeformableConv2dGetWorkspaceSize(const aclTensor* x, const aclTensor* weight, const aclTensor* offset,
                                                   const aclTensor* biasOptional, const aclIntArray* kernelSize,
@@ -681,7 +701,7 @@ aclnnStatus aclnnDeformableConv2dGetWorkspaceSize(const aclTensor* x, const aclT
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor
+    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
     return ACLNN_SUCCESS;
 }
 

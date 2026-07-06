@@ -42,27 +42,27 @@ struct SwiGluTilingData {
 #pragma pack()
 
 struct DequantSwigluQuantBaseTilingData {
-  int64_t inDimx;
-  int64_t inDimy;
-  int64_t outDimy;
-  int64_t UbFactorDimx;
-  int64_t UbFactorDimy;
-  int64_t usedCoreNum;
-  int64_t maxCoreNum;
-  int64_t inGroupNum;
-  int64_t quantMode;
-  int64_t actRight;
-  int64_t quantScaleDtype;
-  int64_t groupIndexDtype;
-  int64_t needSmoothScale;
-  int64_t speGroupType;
-  int64_t activationScaleIsEmpty;
-  int64_t quantIsOne;
-  int64_t swigluMode;
-  float clampLimit;
-  float gluAlpha;
-  float gluBias;
-  int64_t reserved;
+    int64_t inDimx;
+    int64_t inDimy;
+    int64_t outDimy;
+    int64_t UbFactorDimx;
+    int64_t UbFactorDimy;
+    int64_t usedCoreNum;
+    int64_t maxCoreNum;
+    int64_t inGroupNum;
+    int64_t quantMode;
+    int64_t actRight;
+    int64_t quantScaleDtype;
+    int64_t groupIndexDtype;
+    int64_t needSmoothScale;
+    int64_t speGroupType;
+    int64_t activationScaleIsEmpty;
+    int64_t quantIsOne;
+    int64_t swigluMode;
+    float clampLimit;
+    float gluAlpha;
+    float gluBias;
+    int64_t reserved;
 };
 
 inline void IDequantSwigluQuantTilingData(uint8_t* tiling, SwiGluTilingData* constData)
@@ -75,33 +75,33 @@ inline void IDequantSwigluQuantTilingData(uint8_t* tiling, DequantSwigluQuantBas
     memcpy(constData, tiling, sizeof(DequantSwigluQuantBaseTilingData));
 }
 
-#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg)      \
-    tilingStruct tilingData;                                                  \
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg) \
+    tilingStruct tilingData;                                             \
     IDequantSwigluQuantTilingData(tilingArg, &tilingData)
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)  \
-    __ubuf__ tilingStruct* tilingDataPointer =                                 \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
-#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)     \
+#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-    SwiGluTilingData tilingData;                                               \
-    INIT_TILING_DATA(SwiGluTilingData, tilingDataPointer, tilingPointer);  \
-    (tilingData).rowLen = tilingDataPointer->rowLen;                              \
-    (tilingData).colLen = tilingDataPointer->colLen;                          \
-    (tilingData).is32BAligned = tilingDataPointer->is32BAligned;            \
-    (tilingData).isDoubleBuffer = tilingDataPointer->isDoubleBuffer;              \
-    (tilingData).baseRowLen = tilingDataPointer->baseRowLen;            \
-    (tilingData).baseColLen = tilingDataPointer->baseColLen;            \
-    (tilingData).activateLeft = tilingDataPointer->activateLeft;        \
-    (tilingData).biasIsEmpty = tilingDataPointer->biasIsEmpty;                          \
-    (tilingData).quantScaleIsEmpty = tilingDataPointer->quantScaleIsEmpty;            \
-    (tilingData).activateScaleIsEmpty = tilingDataPointer->activateScaleIsEmpty;            \
-    (tilingData).swiColLen = tilingDataPointer->swiColLen;              \
-    (tilingData).perRowLen = tilingDataPointer->perRowLen;            \
-    (tilingData).modRowLen = tilingDataPointer->modRowLen;            \
+#define GET_TILING_DATA(tilingData, tilingPointer)                               \
+    SwiGluTilingData tilingData;                                                 \
+    INIT_TILING_DATA(SwiGluTilingData, tilingDataPointer, tilingPointer);        \
+    (tilingData).rowLen = tilingDataPointer->rowLen;                             \
+    (tilingData).colLen = tilingDataPointer->colLen;                             \
+    (tilingData).is32BAligned = tilingDataPointer->is32BAligned;                 \
+    (tilingData).isDoubleBuffer = tilingDataPointer->isDoubleBuffer;             \
+    (tilingData).baseRowLen = tilingDataPointer->baseRowLen;                     \
+    (tilingData).baseColLen = tilingDataPointer->baseColLen;                     \
+    (tilingData).activateLeft = tilingDataPointer->activateLeft;                 \
+    (tilingData).biasIsEmpty = tilingDataPointer->biasIsEmpty;                   \
+    (tilingData).quantScaleIsEmpty = tilingDataPointer->quantScaleIsEmpty;       \
+    (tilingData).activateScaleIsEmpty = tilingDataPointer->activateScaleIsEmpty; \
+    (tilingData).swiColLen = tilingDataPointer->swiColLen;                       \
+    (tilingData).perRowLen = tilingDataPointer->perRowLen;                       \
+    (tilingData).modRowLen = tilingDataPointer->modRowLen;                       \
     (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;
 
 #define DTYPE_QUANT_SCALE half

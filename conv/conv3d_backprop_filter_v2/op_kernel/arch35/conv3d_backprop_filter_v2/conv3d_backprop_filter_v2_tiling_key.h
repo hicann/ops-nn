@@ -22,62 +22,35 @@
 
 // 模板参数
 ASCENDC_TPL_ARGS_DECL(Conv3dBackPropFilterV2,
-    ASCENDC_TPL_UINT_DECL(conv3DDWTemplateId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_STREAM_K, TPL_MN_STREAM_K), // LIST模式, 穷举
-    ASCENDC_TPL_BOOL_DECL(isSplitKernelHW, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(groupEnlarge, 0, 1)
-);
+                      ASCENDC_TPL_UINT_DECL(conv3DDWTemplateId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_STREAM_K,
+                                            TPL_MN_STREAM_K), // LIST模式, 穷举
+                      ASCENDC_TPL_BOOL_DECL(isSplitKernelHW, 0, 1), ASCENDC_TPL_BOOL_DECL(groupEnlarge, 0, 1));
 
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)
-    ),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-        ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1),
-        ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)
-    )
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                                     ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
+                                     ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1)));
 
 #endif // CONV3D_BACKPROP_FILTER_V2_TILING_KEY_ARCH35_H

@@ -66,10 +66,7 @@ struct TilingValue {
 
 class Conv3DBackpropInputV2Tiling : public TilingBaseClass {
 public:
-    explicit Conv3DBackpropInputV2Tiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit Conv3DBackpropInputV2Tiling(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~Conv3DBackpropInputV2Tiling() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -108,8 +105,8 @@ protected:
     void UpdateBaseBlock(uint32_t& baseM, uint32_t& baseK, uint32_t& baseN, const TilingValue& tilingParams);
     void UpdateBaseStep(uint32_t& stepKa, uint32_t& stepKb, TilingValue& tilingParams);
     void CalCoreDimTiling(TilingValue& tilingParams, const uint32_t coreNum, bool& enableTbeBlock);
-    void SetTilingParamByDimInfo(
-        TilingValue& tilingParams, const int32_t batchDim, const int32_t dDim, const int32_t mDim, const int32_t nDim);
+    void SetTilingParamByDimInfo(TilingValue& tilingParams, const int32_t batchDim, const int32_t dDim,
+                                 const int32_t mDim, const int32_t nDim);
     bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t byteSize);
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, const bool adaptFP32) const;
     void UpdateStepFp32(uint32_t& stepKa, uint32_t& stepKb, const TilingValue& tilingParams);

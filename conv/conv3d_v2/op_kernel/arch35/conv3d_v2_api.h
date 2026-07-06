@@ -23,22 +23,20 @@
 namespace conv3d {
 using namespace conv;
 
-template <class Config,
-          template <typename, class> class Impl = Conv3dApiImpl,
+template <class Config, template <typename, class> class Impl = Conv3dApiImpl,
           template <class, template <typename, class> class> class Intf = Conv3dIntf>
 struct Conv3dIntfExt : public Intf<Config, Impl> {
-    __aicore__ inline Conv3dIntfExt()
-    {}
+    __aicore__ inline Conv3dIntfExt() {}
 };
 
-#define REGISTER_CONV3D_API(name, Config, Impl, Intf)                                                                \
-    template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE,              \
-              class CONV_CFG = Conv3dParam>                                                                          \
-    using name = Conv3dIntfExt<                                                                                      \
+#define REGISTER_CONV3D_API(name, Config, Impl, Intf)                                                   \
+    template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, \
+              class CONV_CFG = Conv3dParam>                                                             \
+    using name = Conv3dIntfExt<                                                                         \
         Config<ConvDataType<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>>, Impl, Intf>
 
 REGISTER_CONV3D_API(Conv3d, Conv3dCfg, Conv3dApiImpl, Conv3dIntf);
 
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif // CONV3D_V2_API_H

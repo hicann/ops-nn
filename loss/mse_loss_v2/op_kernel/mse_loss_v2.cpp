@@ -22,8 +22,8 @@
     op.Init(output, input, target, usrWorkspace);   \
     op.Process()
 
-extern "C" __global__ __aicore__ void mse_loss_v2(
-    GM_ADDR input, GM_ADDR target, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void mse_loss_v2(GM_ADDR input, GM_ADDR target, GM_ADDR output, GM_ADDR workspace,
+                                                  GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
 

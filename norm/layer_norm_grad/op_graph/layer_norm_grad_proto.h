@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -60,7 +60,8 @@ namespace ge {
 
 *@par Outputs:
 *Three outputs, including:
-* @li pd_x: A tensor. Indicates the first output of the forward calculation, which is the output tensor of the x derivative.
+* @li pd_x: A tensor. Indicates the first output of the forward calculation, which is the output tensor of the x
+derivative.
 * Must be one of the following types: float16, float32, bfloat16. The format must be ND.
 * Has the same type, shape and format as x.
 * @li pd_gamma: A tensor. Indicates the output tensor of gamma derivative.
@@ -84,5 +85,5 @@ REG_OP(LayerNormGrad)
     .OUTPUT(pd_beta, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(LayerNormGrad)
 
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM1_OPS_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM1_OPS_H_

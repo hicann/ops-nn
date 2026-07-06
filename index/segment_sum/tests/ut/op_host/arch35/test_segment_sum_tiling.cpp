@@ -26,7 +26,7 @@ using namespace std;
 using namespace ge;
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -40,21 +40,14 @@ static string to_string(void *buf, size_t size)
 
 class SegmentSumTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SegmentSumTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SegmentSumTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SegmentSumTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SegmentSumTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    gert::StorageShape& dataStorageShape, gert::StorageShape& segmentIdsStorageShape, 
-    gert::StorageShape& outputStorageShape, ge::DataType dtype, ge::DataType segmentIds_dtype,
-    uint64_t except_tilingkey, std::string expect)
+static void ExecuteTestCase(gert::StorageShape& dataStorageShape, gert::StorageShape& segmentIdsStorageShape,
+                            gert::StorageShape& outputStorageShape, ge::DataType dtype, ge::DataType segmentIds_dtype,
+                            uint64_t except_tilingkey, std::string expect)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -89,21 +82,21 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -149,32 +142,30 @@ static void ExecuteTestCase(
     EXPECT_EQ(tiling_data_result, expect);
 }
 
-TEST_F(SegmentSumTiling, simt) {
+TEST_F(SegmentSumTiling, simt)
+{
     // input
     gert::StorageShape data_shape = {{4, 2}, {4, 2}};
     gert::StorageShape segment_ids_shape = {{4}, {4}};
     // output
-    gert::StorageShape y_shape = {{4, 2}, {4, 2}};   // assume that max segment_id is 3
+    gert::StorageShape y_shape = {{4, 2}, {4, 2}}; // assume that max segment_id is 3
     ge::DataType dtype = ge::DT_FLOAT;
     ge::DataType segment_ids_dtype = ge::DT_INT32;
     uint64_t except_tilingkey = 1000;
     std::string expect = "4 0 2 0 0 0 8 0 0 27640 0 1 0 4 0 4 ";
-    ExecuteTestCase(
-        data_shape, segment_ids_shape, y_shape, 
-        dtype, segment_ids_dtype, except_tilingkey, expect);
+    ExecuteTestCase(data_shape, segment_ids_shape, y_shape, dtype, segment_ids_dtype, except_tilingkey, expect);
 }
 
-TEST_F(SegmentSumTiling, simt_perf) {
+TEST_F(SegmentSumTiling, simt_perf)
+{
     // input
     gert::StorageShape data_shape = {{2500, 1}, {2500, 1}};
     gert::StorageShape segment_ids_shape = {{2500}, {2500}};
     // output
-    gert::StorageShape y_shape = {{2500, 1}, {2500, 1}};   // assume that max segment_id is 3
+    gert::StorageShape y_shape = {{2500, 1}, {2500, 1}}; // assume that max segment_id is 3
     ge::DataType dtype = ge::DT_FLOAT;
     ge::DataType segment_ids_dtype = ge::DT_INT32;
     uint64_t except_tilingkey = 1000;
     std::string expect = "2500 0 1 0 39 0 43 0 0 27640 1 1 39 43 39 43 ";
-    ExecuteTestCase(
-        data_shape, segment_ids_shape, y_shape, 
-        dtype, segment_ids_dtype, except_tilingkey, expect);
+    ExecuteTestCase(data_shape, segment_ids_shape, y_shape, dtype, segment_ids_dtype, except_tilingkey, expect);
 }

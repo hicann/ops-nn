@@ -23,14 +23,8 @@ using namespace std;
 
 class l2_sigmoid_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "Sigmoid Test Setup" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "Sigmoid Test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "Sigmoid Test Setup" << endl; }
+    static void TearDownTestCase() { cout << "Sigmoid Test TearDown" << endl; }
 };
 
 TEST_F(l2_sigmoid_test, case_1)

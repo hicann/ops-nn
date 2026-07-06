@@ -13,28 +13,22 @@
 #include "infershape_test_util.h" // NOLINT
 #include "ut_op_common.h"
 
-std::vector<int64_t> ToVectorForMseLossV2(const gert::Shape& shape) {
-  size_t shape_size = shape.GetDimNum();
-  std::vector<int64_t> shape_vec(shape_size, 0);
+std::vector<int64_t> ToVectorForMseLossV2(const gert::Shape& shape)
+{
+    size_t shape_size = shape.GetDimNum();
+    std::vector<int64_t> shape_vec(shape_size, 0);
 
-  for (size_t i = 0; i < shape_size; i++) {
-    shape_vec[i] = shape.GetDim(i);
-  }
-  return shape_vec;
+    for (size_t i = 0; i < shape_size; i++) {
+        shape_vec[i] = shape.GetDim(i);
+    }
+    return shape_vec;
 }
 
-class MSELossV2 : public testing::Test
-{
+class MSELossV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MSELossV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MSELossV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MSELossV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MSELossV2 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(MSELossV2, MSELossV2_infershape_case_0)

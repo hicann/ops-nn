@@ -22,8 +22,7 @@
 #include "op_kernel/math_util.h"
 #include "softmax_grad_base.h"
 
-namespace SoftmaxGradOps
-{
+namespace SoftmaxGradOps {
 using namespace AscendC;
 
 static constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
@@ -32,13 +31,9 @@ static constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BTYES / 
 static constexpr int64_t A_IN_IN = 1;
 
 template <typename T>
-class SoftmaxGradArRecompute : public SoftmaxGradOpsBase
-{
+class SoftmaxGradArRecompute : public SoftmaxGradOpsBase {
 public:
-    __aicore__ inline SoftmaxGradArRecompute(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline SoftmaxGradArRecompute(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y, const SoftmaxGradARRecomputeTilingData* tilingData);
     __aicore__ inline void Process();
@@ -115,10 +110,10 @@ __aicore__ inline void SoftmaxGradArRecompute<T>::Init(GM_ADDR x0, GM_ADDR x1, G
 template <typename T>
 __aicore__ inline void SoftmaxGradArRecompute<T>::Process()
 {
-    int64_t xDimOffsetPerCore = tl_->aBlockFactor * blockIdx_;  // 每个核按行的偏移
+    int64_t xDimOffsetPerCore = tl_->aBlockFactor * blockIdx_; // 每个核按行的偏移
 
     for (uint64_t rowIdx = 0; rowIdx < currentRowBlock_; rowIdx++) {
-        int64_t xDimOffset = (xDimOffsetPerCore + rowIdx) * tl_->r;  // 每行的偏移量
+        int64_t xDimOffset = (xDimOffsetPerCore + rowIdx) * tl_->r; // 每行的偏移量
 
         CalcReduceSum(xDimOffset);
 
@@ -142,7 +137,7 @@ __aicore__ inline void SoftmaxGradArRecompute<T>::CalcReduceSum(int64_t xDimOffs
     LocalTensor<float> cacheLocal = cachebuffer_.Get<float>();
     LocalTensor<float> xSum = xSumBuffer_.Get<float>();
 
-    LocalTensor<float> xTmp = yQueue_.AllocTensor<float>();  // 复用y做二分累加
+    LocalTensor<float> xTmp = yQueue_.AllocTensor<float>(); // 复用y做二分累加
     __local_mem__ float* xTmpLocal = (__local_mem__ float*)xTmp.GetPhyAddr();
 
     // ub间累加fold折叠到main
@@ -227,8 +222,8 @@ __aicore__ inline void SoftmaxGradArRecompute<T>::FoldBlockVF(__local_mem__ floa
     {
         AscendC::MicroAPI::RegTensor<float> reg0, reg1;
         AscendC::MicroAPI::MaskReg pregMask;
-        AscendC::MicroAPI::MaskReg maskFull =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            maskFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
 
         uint16_t loopTimes = CeilDivision(ubFactor, VL_FP32);
         uint32_t sreg = ubFactor;
@@ -301,7 +296,7 @@ __aicore__ inline void SoftmaxGradArRecompute<T>::LoadTensorForDtypeT(__local_me
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-    } else {  // fp16、bf16
+    } else { // fp16、bf16
         RegTensor<T> xFp16;
         DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
         Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, pregMask);
@@ -355,5 +350,5 @@ __aicore__ inline void SoftmaxGradArRecompute<T>::CopyInX(int64_t xGmOffset, uin
     DataCopyPad(x1, x1Gm_[xGmOffset], params, padParams);
     x1Queue_.EnQue(x1);
 }
-}  // namespace SoftmaxGradOps
-#endif  // SOFTMAX_GRAD_AR_RECOMPUTE_H
+} // namespace SoftmaxGradOps
+#endif // SOFTMAX_GRAD_AR_RECOMPUTE_H

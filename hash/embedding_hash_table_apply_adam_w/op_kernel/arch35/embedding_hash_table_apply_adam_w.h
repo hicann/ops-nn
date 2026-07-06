@@ -33,7 +33,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(EMBEDDING_THREAD_NUM) inline void ComputeAda
     int32_t threadYNum = blockDim.y;
 
     int64_t tableAddr = *(reinterpret_cast<__gm__ int64_t*>(gmTableIn[0]));
-    __gm__ uint8_t *table = reinterpret_cast<__gm__ uint8_t*>(tableAddr);
+    __gm__ uint8_t* table = reinterpret_cast<__gm__ uint8_t*>(tableAddr);
 
     float beta1PowerLocal = static_cast<float>(gmBeta1Power[0]);
     float beta2PowerLocal = static_cast<float>(gmBeta2Power[0]);
@@ -81,7 +81,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(EMBEDDING_THREAD_NUM) inline void ComputeAda
                     // threadXNum比embedingDim要大，多出来的线程不做任何操作
                     break;
                 }
-                __gm__ float* currItemVal = reinterpret_cast<__gm__ float*>(currItem + TABLE_FLAG_NUM * sizeof(int64_t)); // 这是currItem+24，第24字节开始是values
+                __gm__ float* currItemVal = reinterpret_cast<__gm__ float*>(
+                    currItem + TABLE_FLAG_NUM * sizeof(int64_t)); // 这是currItem+24，第24字节开始是values
 
                 float gtLocal = static_cast<float>(gmGrad[idx * embeddingDim + xOffset]);
                 if (maximize != 0) {
@@ -120,14 +121,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(EMBEDDING_THREAD_NUM) inline void ComputeAda
 template <typename T>
 class KernelEmbeddingHashTableApplyAdamW {
 public:
-    __aicore__ inline KernelEmbeddingHashTableApplyAdamW()
-    {}
+    __aicore__ inline KernelEmbeddingHashTableApplyAdamW() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR tableIn, GM_ADDR keys, GM_ADDR m, GM_ADDR v, GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
-        GM_ADDR weightDecay, GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR maxGradNorm,
-        GM_ADDR mOut, GM_ADDR vOut, GM_ADDR beta1PowerOut, GM_ADDR beta2PowerOut, GM_ADDR maxGradNormOut,
-        GM_ADDR workspace, EmbeddingHashTableApplyAdamWTilingData tilingData)
+    __aicore__ inline void Init(GM_ADDR tableIn, GM_ADDR keys, GM_ADDR m, GM_ADDR v, GM_ADDR beta1Power,
+                                GM_ADDR beta2Power, GM_ADDR lr, GM_ADDR weightDecay, GM_ADDR beta1, GM_ADDR beta2,
+                                GM_ADDR epsilon, GM_ADDR grad, GM_ADDR maxGradNorm, GM_ADDR mOut, GM_ADDR vOut,
+                                GM_ADDR beta1PowerOut, GM_ADDR beta2PowerOut, GM_ADDR maxGradNormOut, GM_ADDR workspace,
+                                EmbeddingHashTableApplyAdamWTilingData tilingData)
     {
         blockIdx_ = GetBlockIdx();
 

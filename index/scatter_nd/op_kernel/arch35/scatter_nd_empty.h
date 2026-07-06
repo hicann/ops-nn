@@ -21,11 +21,10 @@
 namespace ScatterNdEmpty {
 using namespace AscendC;
 
-template<typename U>
+template <typename U>
 class ScatterNdEmptyImpl {
 public:
-    __aicore__ inline ScatterNdEmptyImpl(const ScatterNdTilingData& tilingData) :
-        tilingData_(tilingData) {};
+    __aicore__ inline ScatterNdEmptyImpl(const ScatterNdTilingData& tilingData) : tilingData_(tilingData){};
     __aicore__ inline void Init(GM_ADDR y);
 
 private:
@@ -33,7 +32,7 @@ private:
     AscendC::GlobalTensor<U> yGmInit_;
 };
 
-template<typename U>
+template <typename U>
 __aicore__ inline void ScatterNdEmptyImpl<U>::Init(GM_ADDR y)
 {
     uint32_t coreNum = GetBlockNum();
@@ -42,10 +41,10 @@ __aicore__ inline void ScatterNdEmptyImpl<U>::Init(GM_ADDR y)
     uint64_t initCoreReal = GetBlockIdx() == (coreNum - 1) ? initTailCore : initPerCore;
     uint64_t yGmOffset = GetBlockIdx() * initPerCore;
 
-    yGmInit_.SetGlobalBuffer((__gm__ U *)(y) + yGmOffset);
+    yGmInit_.SetGlobalBuffer((__gm__ U*)(y) + yGmOffset);
     InitGlobalMemory(yGmInit_, initCoreReal, static_cast<U>(0));
 }
 
-} //namespace ScatterNdEmpty
+} // namespace ScatterNdEmpty
 
-#endif //SCATTER_ND_EMPTY_H
+#endif // SCATTER_ND_EMPTY_H

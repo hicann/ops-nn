@@ -70,14 +70,14 @@ bool UniqueDimTilingHelper::GetShapeInfo()
     int64_t dimNum = inputShape.GetDimNum();
 
     OP_CHECK_IF(dimNum > 8,
-        OP_LOGE(context_->GetNodeName(), "UniqueDim only supports up to 8 dimensions, got %ld.", dimNum),
-        return false);
+                OP_LOGE(context_->GetNodeName(), "UniqueDim only supports up to 8 dimensions, got %ld.", dimNum),
+                return false);
 
     // Read dim from attrs (attr index 0)
     auto attrs = context_->GetAttrs();
     int64_t rawDim = 0;
     if (attrs != nullptr && attrs->GetAttrNum() >= 1) {
-        const int64_t *dimPtr = attrs->GetAttrPointer<int64_t>(0);
+        const int64_t* dimPtr = attrs->GetAttrPointer<int64_t>(0);
         if (dimPtr != nullptr) {
             rawDim = *dimPtr;
         }
@@ -107,8 +107,8 @@ bool UniqueDimTilingHelper::ReadAttrs()
 {
     auto attrs = context_->GetAttrs();
     if (attrs != nullptr && attrs->GetAttrNum() >= 4) {
-        const bool *ri = attrs->GetAttrPointer<bool>(2);
-        const bool *rc = attrs->GetAttrPointer<bool>(3);
+        const bool* ri = attrs->GetAttrPointer<bool>(2);
+        const bool* rc = attrs->GetAttrPointer<bool>(3);
         if (ri != nullptr) {
             returnInverse_ = *ri;
         }
@@ -144,8 +144,8 @@ bool UniqueDimTilingHelper::DoBlockTiling()
     tileSize_ = TILE_SIZE;
     blockDimX_ = BLOCK_DIM_X;
 
-    OP_LOGI("DoBlockTiling", "usedCoreNum=%ld, elementsPerCore=%ld, tailCoreElements=%ld, numTiles=%ld",
-            usedCoreNum_, elementsPerCore_, tailCoreElements_, numTiles_);
+    OP_LOGI("DoBlockTiling", "usedCoreNum=%ld, elementsPerCore=%ld, tailCoreElements=%ld, numTiles=%ld", usedCoreNum_,
+            elementsPerCore_, tailCoreElements_, numTiles_);
     return true;
 }
 
@@ -182,7 +182,7 @@ bool UniqueDimTilingHelper::ComputeWorkspaces()
     return true;
 }
 
-void UniqueDimTilingHelper::SetTilingData(UniqueDimTilingData *tiling)
+void UniqueDimTilingHelper::SetTilingData(UniqueDimTilingData* tiling)
 {
     tiling->set_numInp(numInp_);
     tiling->set_rowLen(rowLen_);
@@ -220,7 +220,7 @@ void UniqueDimTilingHelper::SetTilingData(UniqueDimTilingData *tiling)
     tiling->set_inputDim6(inputDims_[6]);
     tiling->set_inputDim7(inputDims_[7]);
 
-    size_t *currentWorkspace = context_->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     usedCoreNum_ = (usedCoreNum_ > 0) ? usedCoreNum_ : 1;
 
     uint64_t tilingKey = (numInp_ > 0) ? TILING_KEY_BASE : TILING_KEY_EMPTY;
@@ -238,7 +238,7 @@ void UniqueDimTilingHelper::SetTilingData(UniqueDimTilingData *tiling)
             workspaceSize_);
 }
 
-static ge::graphStatus TilingPrepare4UniqueDim(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4UniqueDim(gert::TilingParseContext* context)
 {
     OP_LOGI(context->GetNodeName(), "TilingPrepare4UniqueDim start");
     auto compileInfo = context->GetCompiledInfo<UniqueDimCompileInfo>();
@@ -257,7 +257,7 @@ static ge::graphStatus TilingPrepare4UniqueDim(gert::TilingParseContext *context
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus Tiling4UniqueDim(gert::TilingContext *context)
+static ge::graphStatus Tiling4UniqueDim(gert::TilingContext* context)
 {
     OP_CHECK_IF(nullptr == context, OP_LOGE("Tiling4UniqueDim", "context is NULL"), return ge::GRAPH_FAILED);
 
@@ -273,8 +273,6 @@ static ge::graphStatus Tiling4UniqueDim(gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(UniqueDim)
-    .Tiling(Tiling4UniqueDim)
-    .TilingParse<UniqueDimCompileInfo>(TilingPrepare4UniqueDim);
+IMPL_OP_OPTILING(UniqueDim).Tiling(Tiling4UniqueDim).TilingParse<UniqueDimCompileInfo>(TilingPrepare4UniqueDim);
 
 } // namespace optiling

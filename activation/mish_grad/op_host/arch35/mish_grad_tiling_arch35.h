@@ -15,29 +15,30 @@
 #include "atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
-    using namespace Ops::Base;
-    struct MishGradCompileInfo {
-        uint64_t coreNum = 0;
-        uint64_t ubSize = 0;
-    };
+using namespace Ops::Base;
+struct MishGradCompileInfo {
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+};
 
-    class MishGradTiling {
-    public:
-        explicit MishGradTiling(gert::TilingContext* context) : tilingContext(context) {};
-        ge::graphStatus RunTiling();
-    protected:
-        ge::graphStatus CalcOutputDtype();
-        ge::graphStatus CalcInputDtype();
-        ge::graphStatus CheckShape();
+class MishGradTiling {
+public:
+    explicit MishGradTiling(gert::TilingContext* context) : tilingContext(context){};
+    ge::graphStatus RunTiling();
 
-    private:
-        gert::TilingContext* tilingContext;
-        ge::DataType outputDtype = ge::DT_UNDEFINED;
-        ge::DataType inputDtype = ge::DT_UNDEFINED;
-        ge::DataType inputDtype1 = ge::DT_UNDEFINED;
-        ge::DataType inputDtype2 = ge::DT_UNDEFINED;
-        bool unfullCompute = true;
-        uint64_t dType = 0;
-    };
-}  // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_MISHGRAD_ARCH35_TILING_H
+protected:
+    ge::graphStatus CalcOutputDtype();
+    ge::graphStatus CalcInputDtype();
+    ge::graphStatus CheckShape();
+
+private:
+    gert::TilingContext* tilingContext;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype1 = ge::DT_UNDEFINED;
+    ge::DataType inputDtype2 = ge::DT_UNDEFINED;
+    bool unfullCompute = true;
+    uint64_t dType = 0;
+};
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_MISHGRAD_ARCH35_TILING_H

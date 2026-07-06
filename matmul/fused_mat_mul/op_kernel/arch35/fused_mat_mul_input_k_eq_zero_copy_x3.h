@@ -31,8 +31,8 @@ using namespace AscendC;
 constexpr uint64_t K_EQ_ZERO_COPY_UB_SIZE = 32 * 1024;
 
 template <class X_DTYPE>
-__aicore__ inline void MatMulInputKEqZeroCopyX3ToOutput(
-    GM_ADDR x3GM, GM_ADDR yGM, const MatMulV3KEqZeroBasicTilingData& tilingData)
+__aicore__ inline void MatMulInputKEqZeroCopyX3ToOutput(GM_ADDR x3GM, GM_ADDR yGM,
+                                                        const MatMulV3KEqZeroBasicTilingData& tilingData)
 {
     if ASCEND_IS_AIC {
         return;

@@ -38,9 +38,8 @@ inline bool IsConstTensor(const gert::Tensor* input_tensor)
 }
 
 template <typename T>
-static int64_t GetOutputAxisLen(
-    const gert::Shape* xShape, const gert::Shape* repeatsShape, const gert::Tensor* repeatsInput,
-    const int64_t axisAttr)
+static int64_t GetOutputAxisLen(const gert::Shape* xShape, const gert::Shape* repeatsShape,
+                                const gert::Tensor* repeatsInput, const int64_t axisAttr)
 {
     int64_t repeatsSum = 0;
     if (repeatsShape->GetShapeSize() == 1) {
@@ -95,31 +94,29 @@ static graphStatus InferShape4RepeatInterleave(gert::InferShapeContext* context)
 
     if (IsConstTensor(repeatsInput) && xShape->GetDim(axisAttr) != -1) {
         ge::DataType repeatsDtype = repeatsInput->GetDataType();
-        OP_LOGD(
-            context->GetNodeName(), "InferShape4RepeatInterleave repeatsDtype is %s.",
-            Ops::Base::ToString(repeatsDtype).c_str());
+        OP_LOGD(context->GetNodeName(), "InferShape4RepeatInterleave repeatsDtype is %s.",
+                Ops::Base::ToString(repeatsDtype).c_str());
         switch (repeatsDtype) {
             case DT_INT32:
-                OP_CHECK_IF(
-                    repeatsInput->GetData<int32_t>() == nullptr,
-                    OP_LOGE(context->GetNodeName(), "repeatsInput->GetData() is nullptr"), return ge::GRAPH_FAILED);
+                OP_CHECK_IF(repeatsInput->GetData<int32_t>() == nullptr,
+                            OP_LOGE(context->GetNodeName(), "repeatsInput->GetData() is nullptr"),
+                            return ge::GRAPH_FAILED);
                 yShape->SetDim(axisAttr, GetOutputAxisLen<int32_t>(xShape, repeatsShape, repeatsInput, axisAttr));
                 break;
             case DT_INT64:
-                OP_CHECK_IF(
-                    repeatsInput->GetData<int64_t>() == nullptr,
-                    OP_LOGE(context->GetNodeName(), "repeatsInput->GetData() is nullptr"), return ge::GRAPH_FAILED);
+                OP_CHECK_IF(repeatsInput->GetData<int64_t>() == nullptr,
+                            OP_LOGE(context->GetNodeName(), "repeatsInput->GetData() is nullptr"),
+                            return ge::GRAPH_FAILED);
                 yShape->SetDim(axisAttr, GetOutputAxisLen<int64_t>(xShape, repeatsShape, repeatsInput, axisAttr));
                 break;
             default:
-                OP_LOGE_FOR_INVALID_DTYPE(
-                    context->GetNodeName(), "repeats", Ops::Base::ToString(repeatsDtype).c_str(), "int32_t or int64_t");
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "repeats", Ops::Base::ToString(repeatsDtype).c_str(),
+                                          "int32_t or int64_t");
                 return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGD(
-            context->GetNodeName(),
-            "If not satisfy that repeats is ConstTensor and input[axisAttr] != -1, then set output shape to -2");
+        OP_LOGD(context->GetNodeName(),
+                "If not satisfy that repeats is ConstTensor and input[axisAttr] != -1, then set output shape to -2");
         Ops::Base::SetUnknownRank(*yShape);
         return ge::GRAPH_SUCCESS;
     }

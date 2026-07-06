@@ -20,16 +20,14 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormDualStaticQuantSingleRow : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormDualStaticQuantSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormDualStaticQuantSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales1, __gm__ uint8_t* scales2, __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2,
-        __gm__ uint8_t* y1, __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* fakeOut1, __gm__ uint8_t* fakeOut2,
-        __gm__ uint8_t* workspace, const AddLayerNormQuantTilingData* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales1, __gm__ uint8_t* scales2,
+                                __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2, __gm__ uint8_t* y1,
+                                __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* fakeOut1,
+                                __gm__ uint8_t* fakeOut2, __gm__ uint8_t* workspace,
+                                const AddLayerNormQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -198,9 +196,8 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            this->numLastDim);
+        Cast(constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             this->numLastDim);
         PipeBarrier<PIPE_V>();
         Cast(y1Local, constsTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDim);
         quantizeOutQue.EnQue(y1Local);
@@ -243,9 +240,8 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            this->numLastDim);
+        Cast(constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             this->numLastDim);
         PipeBarrier<PIPE_V>();
         Cast(y2Local, constsTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDim);
         quantizeOutQue.EnQue(y2Local);
@@ -276,16 +272,14 @@ private:
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormSoleStaticQuantSingleRow : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormSoleStaticQuantSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormSoleStaticQuantSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales, __gm__ uint8_t* fakeScale, __gm__ uint8_t* offsets, __gm__ uint8_t* fakeOffsets,
-        __gm__ uint8_t* y, __gm__ uint8_t* fakeY, __gm__ uint8_t* x, __gm__ uint8_t* fakeOut1, __gm__ uint8_t* fakeOut2,
-        __gm__ uint8_t* workspace, const AddLayerNormQuantTilingData* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales, __gm__ uint8_t* fakeScale,
+                                __gm__ uint8_t* offsets, __gm__ uint8_t* fakeOffsets, __gm__ uint8_t* y,
+                                __gm__ uint8_t* fakeY, __gm__ uint8_t* x, __gm__ uint8_t* fakeOut1,
+                                __gm__ uint8_t* fakeOut2, __gm__ uint8_t* workspace,
+                                const AddLayerNormQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -459,9 +453,8 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            xTensor.ReinterpretCast<half>(), xTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            this->numLastDim);
+        Cast(xTensor.ReinterpretCast<half>(), xTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             this->numLastDim);
         PipeBarrier<PIPE_V>();
         Cast(yLocal, xTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDim);
         quantizeOutQue.EnQue(yLocal);

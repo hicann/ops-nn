@@ -29,17 +29,17 @@ constexpr uint32_t DOUBLE_BUFFER = 2;
 constexpr uint64_t ubBlockSize = 32;
 constexpr uint32_t MAX_DIM_NUM = 8;
 
-
-template<typename TX, typename TIDX, bool IsAtomicAdd>
+template <typename TX, typename TIDX, bool IsAtomicAdd>
 class IndexPutV2Simd {
 public:
     __aicore__ inline IndexPutV2Simd(){};
-    __aicore__ inline void Init(
-        GM_ADDR inputX, GM_ADDR value, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-        IndexPutV2SimdTilingData tilingData_);
+    __aicore__ inline void Init(GM_ADDR inputX, GM_ADDR value, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
+                                GM_ADDR indices, IndexPutV2SimdTilingData tilingData_);
     __aicore__ inline void Process();
-    __aicore__ inline void CopyOut(LocalTensor<TX> valueLocal, int64_t ubRowOffset, int64_t inputGmOffset, int64_t curCols);
-    __aicore__ inline void CopyInIndices(LocalTensor<TIDX> xLocal, GlobalTensor<TIDX> xGm, int64_t gmOffset, int64_t localOffset, uint32_t copyCount, uint32_t copyLen);
+    __aicore__ inline void CopyOut(LocalTensor<TX> valueLocal, int64_t ubRowOffset, int64_t inputGmOffset,
+                                   int64_t curCols);
+    __aicore__ inline void CopyInIndices(LocalTensor<TIDX> xLocal, GlobalTensor<TIDX> xGm, int64_t gmOffset,
+                                         int64_t localOffset, uint32_t copyCount, uint32_t copyLen);
     __aicore__ inline void HandleIndices(int64_t curRows);
     __aicore__ inline void CopyInValue(int64_t copyCount, int64_t copyLen, int64_t blockOffset);
     __aicore__ inline void GetIndices(int64_t curRows);
@@ -50,9 +50,9 @@ private:
     GlobalTensor<TIDX> indicesGM_;
     GlobalTensor<TX> valueGM_;
 
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> indicesQue_;    // 一次存储rowsFactor组索引
-    TQueBind<TPosition::VECIN, TPosition::VECOUT, DOUBLE_BUFFER> valueQue_;   // 一次存储rowsFactor * cowsFactor个元素
-    TBuf<QuePosition::VECCALC> linearIndexBuf_;          // 将indicesQue通过HandleIndices转换为一维索引
+    TQue<QuePosition::VECIN, DOUBLE_BUFFER> indicesQue_;                    // 一次存储rowsFactor组索引
+    TQueBind<TPosition::VECIN, TPosition::VECOUT, DOUBLE_BUFFER> valueQue_; // 一次存储rowsFactor * cowsFactor个元素
+    TBuf<QuePosition::VECCALC> linearIndexBuf_; // 将indicesQue通过HandleIndices转换为一维索引
     TBuf<QuePosition::VECCALC> inputShapeBuf_;
     TBuf<QuePosition::VECCALC> indexedStridesBuf_;
 
@@ -77,10 +77,10 @@ private:
     ListTensorDesc indicesList_;
 };
 
-template<typename TX, typename TIDX, bool IsAtomicAdd>
-__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Init(
-    GM_ADDR inputX, GM_ADDR value, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-    IndexPutV2SimdTilingData tilingData)
+template <typename TX, typename TIDX, bool IsAtomicAdd>
+__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Init(GM_ADDR inputX, GM_ADDR value, GM_ADDR indexedSizes,
+                                                                   GM_ADDR indexedStrides, GM_ADDR indices,
+                                                                   IndexPutV2SimdTilingData tilingData)
 {
     tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
@@ -102,10 +102,10 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Init(
     rowsFactor_ = tilingData_.rowsFactor;
     colsFactor_ = tilingData_.colsFactor;
 
-    actualRowsNum_ = (rowCoreIdx_ == tilingData_.blockNumInRow - 1)
-        ? tilingData_.tailCoreRowsNum : tilingData_.normalCoreRowsNum;
-    actualColsNum_ = (colCoreIdx_ == tilingData_.blockNumInCol - 1)
-        ? tilingData_.tailCoreColsNum : tilingData_.normalCoreColsNum;
+    actualRowsNum_ = (rowCoreIdx_ == tilingData_.blockNumInRow - 1) ? tilingData_.tailCoreRowsNum :
+                                                                      tilingData_.normalCoreRowsNum;
+    actualColsNum_ = (colCoreIdx_ == tilingData_.blockNumInCol - 1) ? tilingData_.tailCoreColsNum :
+                                                                      tilingData_.normalCoreColsNum;
 
     rowsUbLoop = Ops::Base::CeilDiv(actualRowsNum_, tilingData_.rowsFactor);
     colsUbLoop = Ops::Base::CeilDiv(actualColsNum_, tilingData_.colsFactor);
@@ -117,7 +117,8 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Init(
 
     // indicesQue_: indexedDimNum 个维度，每维 rowsFactor 个索引
     uint64_t valueBuf = tilingData_.rowsFactor * Ops::Base::CeilAlign(tilingData_.colsFactor * sizeof(TX), ubBlockSize);
-    uint64_t indicesBuf = tilingData_.indexedDimNum * Ops::Base::CeilAlign(tilingData_.rowsFactor * sizeof(TIDX), ubBlockSize);
+    uint64_t indicesBuf = tilingData_.indexedDimNum *
+                          Ops::Base::CeilAlign(tilingData_.rowsFactor * sizeof(TIDX), ubBlockSize);
     uint64_t linearIndexBuf = Ops::Base::CeilAlign(tilingData_.rowsFactor * sizeof(TIDX), ubBlockSize);
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUFFER, indicesBuf);
     pipe_.InitBuffer(valueQue_, DOUBLE_BUFFER, valueBuf);
@@ -134,7 +135,7 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Init(
 }
 
 // 索引搬入：将 indexedDimNum 个维度的索引搬入同一块 UB buffer
-template<typename TX, typename TIDX, bool IsAtomicAdd>
+template <typename TX, typename TIDX, bool IsAtomicAdd>
 __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::GetIndices(int64_t curRows)
 {
     LocalTensor<TIDX> indicesLocal = indicesQue_.AllocTensor<TIDX>();
@@ -148,9 +149,9 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::GetIndices(int64_t
 }
 
 // 将 UB 中一行 value 数据搬出到 inputGM_ 的目标位置
-template<typename TX, typename TIDX, bool IsAtomicAdd>
-__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyOut(
-    LocalTensor<TX> valueLocal, int64_t ubRowOffset, int64_t inputGmOffset, int64_t curCols)
+template <typename TX, typename TIDX, bool IsAtomicAdd>
+__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyOut(LocalTensor<TX> valueLocal, int64_t ubRowOffset,
+                                                                      int64_t inputGmOffset, int64_t curCols)
 {
     DataCopyExtParams dataCopyExtParams;
     dataCopyExtParams.blockCount = 1;
@@ -161,10 +162,11 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyOut(
 }
 
 // 将一个维度的索引从 GM 搬入 UB 的指定偏移位置
-template<typename TX, typename TIDX, bool IsAtomicAdd>
-__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyInIndices(
-    LocalTensor<TIDX> xLocal, GlobalTensor<TIDX> xGm,
-    int64_t gmOffset, int64_t localOffset, uint32_t copyCount, uint32_t copyLen)
+template <typename TX, typename TIDX, bool IsAtomicAdd>
+__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyInIndices(LocalTensor<TIDX> xLocal,
+                                                                            GlobalTensor<TIDX> xGm, int64_t gmOffset,
+                                                                            int64_t localOffset, uint32_t copyCount,
+                                                                            uint32_t copyLen)
 {
     DataCopyPadExtParams<TIDX> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -180,8 +182,9 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyInIndices(
     DataCopyPad(xLocal[localOffset], xGm[gmOffset], dataCoptExtParams, dataCopyPadExtParams);
 }
 
-template<typename TX, typename TIDX, bool IsAtomicAdd>
-__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyInValue(int64_t copyCount, int64_t copyLen, int64_t gmOffset)
+template <typename TX, typename TIDX, bool IsAtomicAdd>
+__aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyInValue(int64_t copyCount, int64_t copyLen,
+                                                                          int64_t gmOffset)
 {
     int64_t gmStride = tilingData_.nonIndexedLength - copyLen;
     LocalTensor<TX> valueLocal = valueQue_.AllocTensor<TX>();
@@ -200,7 +203,7 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::CopyInValue(int64_
     valueQue_.EnQue(valueLocal);
 }
 
-template<typename TX, typename TIDX, bool IsAtomicAdd>
+template <typename TX, typename TIDX, bool IsAtomicAdd>
 __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Process()
 {
     if (blockIdx_ >= tilingData_.coreNum) {
@@ -208,8 +211,8 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Process()
     }
 
     for (uint16_t rowId = 0; rowId < rowsUbLoop; rowId++) {
-        int64_t curRows = (rowId == rowsUbLoop - 1)
-            ? (actualRowsNum_ - rowId * rowsFactor_) : static_cast<int64_t>(rowsFactor_);
+        int64_t curRows = (rowId == rowsUbLoop - 1) ? (actualRowsNum_ - rowId * rowsFactor_) :
+                                                      static_cast<int64_t>(rowsFactor_);
 
         GetIndices(curRows);
         HandleIndices(curRows);
@@ -220,13 +223,12 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Process()
         WaitFlag<HardEvent::V_S>(eventIDVToS);
 
         for (uint16_t colId = 0; colId < colsUbLoop; colId++) {
-            int64_t curCols = (colId == colsUbLoop - 1)
-                ? (actualColsNum_ - colId * colsFactor_) : static_cast<int64_t>(colsFactor_);
+            int64_t curCols = (colId == colsUbLoop - 1) ? (actualColsNum_ - colId * colsFactor_) :
+                                                          static_cast<int64_t>(colsFactor_);
 
             // value GM 偏移 = 核起始偏移 + 行迭代推进 + 列迭代推进
-            int64_t valueGmOffset = blockOffset_
-                + rowId * rowsFactor_ * tilingData_.nonIndexedLength
-                + colId * colsFactor_;
+            int64_t valueGmOffset = blockOffset_ + rowId * rowsFactor_ * tilingData_.nonIndexedLength +
+                                    colId * colsFactor_;
 
             CopyInValue(curRows, curCols, valueGmOffset);
             PipeBarrier<PIPE_MTE2>();
@@ -235,12 +237,12 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Process()
             for (int64_t i = 0; i < curRows; i++) {
                 int64_t linearIdx = static_cast<int64_t>(tmpLocal.GetValue(i));
                 if (linearIdx == invalidIndex) {
-                    continue; 
+                    continue;
                 }
                 // inputGM 目标偏移 = 线性索引（索引合一结果） + 列偏移
                 int64_t inputGmTarget = linearIdx + colGmOffset_ + colId * colsFactor_;
                 int64_t ubRowOffset = i * Ops::Base::CeilAlign(curCols * sizeof(TX), ubBlockSize) / sizeof(TX);
-                if constexpr(IsAtomicAdd) {
+                if constexpr (IsAtomicAdd) {
                     SetAtomicAdd<TX>();
                     CopyOut(valueLocal, ubRowOffset, inputGmTarget, curCols);
                     SetAtomicNone();
@@ -255,16 +257,16 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Process()
 }
 
 //负索引转正、越界标记（-1）、多维合一（linear = sum(idx[k] * stride[k]))
-template<typename TX, typename TIDX, bool IsAtomicAdd>
+template <typename TX, typename TIDX, bool IsAtomicAdd>
 __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int64_t curRows)
 {
     uint16_t oneRepeatNum = GetVecLen() / sizeof(TIDX);
     uint16_t repeatTimes = Ops::Base::CeilDiv(curRows, static_cast<int64_t>(oneRepeatNum));
 
     LocalTensor<TIDX> indicesLocal = indicesQue_.DeQue<TIDX>();
-    __local_mem__ TIDX *indicesAddr = (__local_mem__ TIDX *)indicesLocal.GetPhyAddr();
+    __local_mem__ TIDX* indicesAddr = (__local_mem__ TIDX*)indicesLocal.GetPhyAddr();
     LocalTensor<TIDX> linearIndex = linearIndexBuf_.Get<TIDX>();
-    __local_mem__ TIDX * linearIndexAddr = (__local_mem__ TIDX *)linearIndex.GetPhyAddr();
+    __local_mem__ TIDX* linearIndexAddr = (__local_mem__ TIDX*)linearIndex.GetPhyAddr();
 
     LocalTensor<int64_t> inputShapesTensor = inputShapeBuf_.Get<int64_t>();
     LocalTensor<int64_t> indexedStridesTensor = indexedStridesBuf_.Get<int64_t>();
@@ -274,9 +276,9 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<TIDX> idxReg;          // 当前维度的索引值
-        MicroAPI::RegTensor<TIDX> idxFusionReg;    // 累加的线性索引
-        MicroAPI::RegTensor<TIDX> zeroReg;          // 零值寄存器，用于负索引比较
+        MicroAPI::RegTensor<TIDX> idxReg;       // 当前维度的索引值
+        MicroAPI::RegTensor<TIDX> idxFusionReg; // 累加的线性索引
+        MicroAPI::RegTensor<TIDX> zeroReg;      // 零值寄存器，用于负索引比较
         MicroAPI::RegTensor<TIDX> selectReg;
         MicroAPI::RegTensor<TIDX> dimSizeReg;
         uint32_t curRepeatNum = curRows;
@@ -328,6 +330,6 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
     indicesQue_.FreeTensor(indicesLocal);
 }
 
-} // namespace IndexPutV2Simd
+} // namespace IndexPutV2
 
 #endif // INDEX_PUT_V2_SIMD

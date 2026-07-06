@@ -25,8 +25,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ThresholdV2);
 
-const aclTensor* Threshold(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* value, aclOpExecutor* executor)
+const aclTensor* Threshold(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                           aclOpExecutor* executor)
 {
     L0_DFX(Threshold, self, threshold, value);
 
@@ -39,10 +39,10 @@ const aclTensor* Threshold(
     const aclTensor* valueTensor = executor->ConvertToTensor(value, self->GetDataType());
     CHECK_RET(valueTensor != nullptr, nullptr);
 
-    auto retAicore =
-        ADD_TO_LAUNCHER_LIST_AICORE(ThresholdV2, OP_INPUT(self, thresholdTensor, valueTensor), OP_OUTPUT(out));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return nullptr, "ThresholdV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(ThresholdV2, OP_INPUT(self, thresholdTensor, valueTensor),
+                                                 OP_OUTPUT(out));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "ThresholdV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 }
 } // namespace l0op

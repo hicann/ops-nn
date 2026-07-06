@@ -40,11 +40,9 @@ struct computeParam {
     uint64_t tailDataNum = 0;
 };
 
-class LinearIndexV2Tiling
-{
+class LinearIndexV2Tiling {
 public:
-    explicit LinearIndexV2Tiling(gert::TilingContext* context) : tilingContext_(context)
-    {}
+    explicit LinearIndexV2Tiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -95,10 +93,7 @@ void LinearIndexV2Tiling::TilingCompute(const uint64_t idxNum, const uint64_t co
     OP_LOGD(tilingContext_, "common tiling end");
 }
 
-void LinearIndexV2Tiling::SetTilingKeyMode(bool isInt32Dtype)
-{
-    tilingKey_ = isInt32Dtype ? 1 : 0;
-}
+void LinearIndexV2Tiling::SetTilingKeyMode(bool isInt32Dtype) { tilingKey_ = isInt32Dtype ? 1 : 0; }
 
 ge::graphStatus LinearIndexV2Tiling::Init()
 {
@@ -135,16 +130,18 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     // 1. 取出tensorList中第一个tensor的shape, aclnn中保证了第一个tensor是非空的(For ascend950, need find a valid
     // shape)
     auto idxTensorShapePtr = compileInfo->isAscend950 ? tilingContext_->GetDynamicInputShape(0, validIdx) :
-                                                           tilingContext_->GetDynamicInputShape(0, 0);
+                                                        tilingContext_->GetDynamicInputShape(0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorShapePtr);
     auto idxTensorDtypePtr = compileInfo->isAscend950 ? tilingContext_->GetDynamicInputDesc(0, validIdx) :
-                                                           tilingContext_->GetDynamicInputDesc(0, 0);
+                                                        tilingContext_->GetDynamicInputDesc(0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorDtypePtr);
     auto idxDtype = idxTensorDtypePtr->GetDataType();
     if (idxDtype != ge::DT_INT32 && idxDtype != ge::DT_INT64) {
         OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
-            (ge::TypeUtils::DataTypeToSerialString(idxDtype) + "(" + std::to_string(static_cast<int32_t>(idxDtype)) + ")").c_str(),
-            "[DT_INT32(3), DT_INT64(9)]");
+                                  (ge::TypeUtils::DataTypeToSerialString(idxDtype) + "(" +
+                                   std::to_string(static_cast<int32_t>(idxDtype)) + ")")
+                                      .c_str(),
+                                  "[DT_INT32(3), DT_INT64(9)]");
         return ge::GRAPH_FAILED;
     }
     SetTilingKeyMode(idxDtype == ge::DT_INT32);
@@ -155,16 +152,14 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     }
 
     usedCoreNum_ = std::min(static_cast<uint64_t>(compileInfo->totalCoreNum), idxNum);
-    OP_CHECK_IF(
-        (usedCoreNum_ == 0), OP_LOGE(tilingContext_, "coreNum in common must greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((usedCoreNum_ == 0), OP_LOGE(tilingContext_, "coreNum in common must greater than 0."),
+                return ge::GRAPH_FAILED);
 
     workspaceSize_ = compileInfo->workspaceSize;
     // 2. 计算ub内一次最多能存放的数据量
     ubSize_ = compileInfo->ubSizePlatForm - SCALE_SPACE;
-    OP_CHECK_IF(
-        (ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %lu is less than 1024", ubSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %lu is less than 1024", ubSize_),
+                return ge::GRAPH_FAILED);
     // 计算连续场景下的参数
     TilingCompute(idxNum, usedCoreNum_);
     OP_LOGD(tilingContext_, "Tiling end.");
@@ -191,8 +186,8 @@ ge::graphStatus LinearIndexV2Tiling::RunKernelTiling()
     tilingData_.params.set_tailCoreFormerTime(tailCoreParam_.formerTime);
     tilingData_.params.set_tailCoreTailTime(tailCoreParam_.tailTime);
 
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     tilingContext_->SetTilingKey(tilingKey_);
     tilingContext_->SetBlockDim(usedCoreNum_);
@@ -254,8 +249,8 @@ ge::graphStatus TilingPrepareForLinearIndexV2(gert::TilingParseContext* context)
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

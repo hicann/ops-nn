@@ -23,18 +23,15 @@
 #include "ut_op_common.h"
 
 class EmbeddingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "EmbeddingTest SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "EmbeddingTest SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "EmbeddingTest TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "EmbeddingTest TearDown" << std::endl; }
 };
 
-TEST_F(EmbeddingTest, embedding_infer_shape_runtime_test_0) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Embedding")->infer_shape;
+TEST_F(EmbeddingTest, embedding_infer_shape_runtime_test_0)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Embedding")->infer_shape;
 
     gert::StorageShape xShape = {{8, 10}, {8, 10}};
     gert::StorageShape yShape = {{}, {}};

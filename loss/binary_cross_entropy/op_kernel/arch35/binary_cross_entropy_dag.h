@@ -34,8 +34,8 @@ using AscendC::MicroAPI::RegTensor;
 constexpr static uint16_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
 
 template <typename U = float>
-__aicore__ inline void CalcYLogX(MicroAPI::RegTensor<U> &regYLogX, MicroAPI::RegTensor<U> &regX, MicroAPI::RegTensor<U> &regY,
-                                 MicroAPI::MaskReg &pregUp)
+__aicore__ inline void CalcYLogX(MicroAPI::RegTensor<U>& regYLogX, MicroAPI::RegTensor<U>& regX,
+                                 MicroAPI::RegTensor<U>& regY, MicroAPI::MaskReg& pregUp)
 {
     MicroAPI::RegTensor<U> regLogX;
     MicroAPI::RegTensor<U> regClipLogX;
@@ -46,18 +46,21 @@ __aicore__ inline void CalcYLogX(MicroAPI::RegTensor<U> &regYLogX, MicroAPI::Reg
 #endif
 template <typename U = float>
 struct CalcBinaryYLogX : public Ops::Base::Vec::ElemwiseBinaryOP<U, U, U> {
-    __aicore__ inline CalcBinaryYLogX(Ops::Base::LocalTensor<U>& yLogX, Ops::Base::LocalTensor<U>& x, Ops::Base::LocalTensor<U>& y, int32_t count) {
+    __aicore__ inline CalcBinaryYLogX(Ops::Base::LocalTensor<U>& yLogX, Ops::Base::LocalTensor<U>& x,
+                                      Ops::Base::LocalTensor<U>& y, int32_t count)
+    {
 #ifdef __CCE_AICORE__
 
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
         uint32_t repeatTimes = Ops::Base::CeilDiv<uint32_t>(totalLen, oneRepeat);
 
-        __ubuf__ U * xAddr = (__ubuf__ U *)x.GetPhyAddr();
-        __ubuf__ U * yAddr = (__ubuf__ U *)y.GetPhyAddr();
-        __ubuf__ U * yLogXTAddr = (__ubuf__ U *)yLogX.GetPhyAddr();
+        __ubuf__ U* xAddr = (__ubuf__ U*)x.GetPhyAddr();
+        __ubuf__ U* yAddr = (__ubuf__ U*)y.GetPhyAddr();
+        __ubuf__ U* yLogXTAddr = (__ubuf__ U*)yLogX.GetPhyAddr();
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             MicroAPI::MaskReg pregUp;
             MicroAPI::RegTensor<U> regX;
             MicroAPI::RegTensor<U> regY;
@@ -73,7 +76,7 @@ struct CalcBinaryYLogX : public Ops::Base::Vec::ElemwiseBinaryOP<U, U, U> {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
                 MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
                 MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
-                
+
                 CalcYLogX<U>(regYLogX, regX, regY, pregUp);
                 MicroAPI::Duplicate(regTensorOne, (U)1.0f, pregUp);
                 MicroAPI::Sub(regOneSubX, regTensorOne, regX, pregUp);
@@ -82,14 +85,15 @@ struct CalcBinaryYLogX : public Ops::Base::Vec::ElemwiseBinaryOP<U, U, U> {
                 MicroAPI::Add(regDataSum, regYLogX, regOneSubYLogX, pregUp);
                 MicroAPI::Muls(regBinaryYLogX, regDataSum, (U)-1.0f, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yLogXTAddr, regBinaryYLogX, (int32_t)oneRepeat, pregUp);
+                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yLogXTAddr, regBinaryYLogX,
+                                                                               (int32_t)oneRepeat, pregUp);
             }
         }
 #endif
     }
 };
-}
-}
+} // namespace Vec
+} // namespace AscendC
 
 namespace BinaryCrossEntropy {
 
@@ -208,4 +212,4 @@ struct BCEHasWeightMeanDag {
     using OpDag = Ops::Base::DAGSch<Outputs, void, MemCfg>;
 };
 } // namespace BinaryCrossEntropy
-#endif //ASCENDC_BINARY_CROSS_ENTROPY_DAG_H_
+#endif // ASCENDC_BINARY_CROSS_ENTROPY_DAG_H_

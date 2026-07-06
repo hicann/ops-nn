@@ -31,8 +31,7 @@ static constexpr int32_t DEFAULT_AXIS = -1;
 static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT = {
     op::DataType::DT_INT8, op::DataType::DT_INT32, op::DataType::DT_INT4};
@@ -44,14 +43,14 @@ static const std::initializer_list<DataType> EMPTY_LIST = {};
 static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201:{
+        case NpuArch::DAV_2201: {
             return X_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
         case NpuArch::DAV_2002:
@@ -77,7 +76,7 @@ static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
 {
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201:{
+        case NpuArch::DAV_2201: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
         case NpuArch::DAV_2002:
@@ -113,8 +112,8 @@ static bool CheckDtypeCompatible(const aclTensor* self, const aclTensor* scale)
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* offset, const aclTensor* out, int32_t dstType)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const aclTensor* offset,
+                            const aclTensor* out, int32_t dstType)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, GetInDtypeSupportList(), return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, GetOutDtypeSupportList(), return false);
@@ -124,16 +123,15 @@ static bool CheckDtypeValid(
         OP_CHECK_DTYPE_NOT_SAME(scale, offset, return false);
     }
     if (!CheckDtypeCompatible(self, scale)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "input x:%s not compatible with scale:%s.",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(scale->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x:%s not compatible with scale:%s.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(scale->GetDataType()).GetString());
         return false;
     }
 
     if (static_cast<int32_t>(out->GetDataType()) != dstType) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "dstType:%d(%s) must be able to represent the y dtype[%s].", dstType,
-            op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(out->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%d(%s) must be able to represent the y dtype[%s].", dstType,
+                op::ToString(static_cast<op::DataType>(dstType)).GetString(),
+                op::ToString(out->GetDataType()).GetString());
         return false;
     }
 
@@ -159,9 +157,8 @@ static bool CheckDim(const aclTensor* self, const aclTensor* scale, const aclTen
     }
     int64_t lastDim = self->GetViewShape().GetDim(dimNum - 1);
     if (scaleDim != lastDim && scaleDim != 1) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "the last dim size(%ld) of x must be same as scale and offset(%ld).", lastDim,
-            scaleDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the last dim size(%ld) of x must be same as scale and offset(%ld).", lastDim,
+                scaleDim);
         return false;
     }
     return true;
@@ -190,14 +187,14 @@ static bool CheckInt32OutputShape(const aclTensor* self, const aclTensor* out)
     int64_t dimInput = self->GetViewShape().GetDim(dimNum - 1);
     int64_t dimOutput = out->GetViewShape().GetDim(dimNum - 1);
     // check last dim
-    bool inputIsNot8xOutput =
-        ((static_cast<uint64_t>(dimOutput) * INT4_NUMS_IN_INT32_SPACE) != static_cast<uint64_t>(dimInput)) ? true :
-                                                                                                             false;
+    bool inputIsNot8xOutput = ((static_cast<uint64_t>(dimOutput) * INT4_NUMS_IN_INT32_SPACE) !=
+                               static_cast<uint64_t>(dimInput)) ?
+                                  true :
+                                  false;
     if (inputIsNot8xOutput) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "the y last dim must be 1/8 of input last dim, input last dim is (%ld), output last dim is (%ld).",
-            dimInput, dimOutput);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "the y last dim must be 1/8 of input last dim, input last dim is (%ld), output last dim is (%ld).",
+                dimInput, dimOutput);
         return false;
     }
     // check others dim
@@ -205,10 +202,9 @@ static bool CheckInt32OutputShape(const aclTensor* self, const aclTensor* out)
         dimInput = self->GetViewShape().GetDim(i);
         dimOutput = out->GetViewShape().GetDim(i);
         if (dimInput != dimOutput) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "the dim(%ld) of input must be same with output, input is (%ld), output is (%ld).", i, dimInput,
-                dimOutput);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "the dim(%ld) of input must be same with output, input is (%ld), output is (%ld).", i, dimInput,
+                    dimOutput);
             return false;
         }
     }
@@ -265,8 +261,8 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
 
     if (offset != nullptr) {
         if (!CheckDimOne(offset)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "offset dim num must be 1. offset:%zu", offset->GetViewShape().GetDimNum());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "offset dim num must be 1. offset:%zu",
+                    offset->GetViewShape().GetDimNum());
             return false;
         }
         OP_CHECK_BROADCAST_WITH_SHAPE(offset, x->GetViewShape(), return false);
@@ -283,17 +279,15 @@ static bool CheckRoundMode(const char* roundMode)
     }
     const std::string mode = std::string(roundMode);
     if (mode != "round" && mode != "floor" && mode != "ceil" && mode != "trunc") {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "check roundMode failed, roundMode[%s] not in ['round','floor','ceil','trunc'].",
-            mode.c_str());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "check roundMode failed, roundMode[%s] not in ['round','floor','ceil','trunc'].", mode.c_str());
         return false;
     }
     return true;
 }
 
-static aclnnStatus Int42Int32PackedTensor(
-    const aclTensor* out, const aclTensor*& outTensor, const int32_t& dstType, aclOpExecutor* executor)
+static aclnnStatus Int42Int32PackedTensor(const aclTensor* out, const aclTensor*& outTensor, const int32_t& dstType,
+                                          aclOpExecutor* executor)
 {
     if (dstType != op::DataType::DT_INT32) {
         OP_LOGD("AclnnAscendQuant output do not need to pack.");
@@ -313,9 +307,8 @@ static aclnnStatus Int42Int32PackedTensor(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* offset, const char* roundMode, int32_t dstType,
-    const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* scale, const aclTensor* offset,
+                               const char* roundMode, int32_t dstType, const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(self, scale, out), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -328,9 +321,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAscendQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode, const char* roundMode,
-    int32_t dstType, const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAscendQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* scale, const aclTensor* offset,
+                                             bool sqrtMode, const char* roundMode, int32_t dstType, const aclTensor* y,
+                                             uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAscendQuant, DFX_IN(x, scale, offset, roundMode, sqrtMode, dstType), DFX_OUT(y));
     // 固定写法，创建OpExecutor
@@ -368,8 +361,8 @@ aclnnStatus aclnnAscendQuantGetWorkspaceSize(
         yDtype = op::DataType::DT_INT4;
         OP_LOGD("AclnnAscendQuant real output is int4.");
     }
-    auto ascendQuantV2Result = l0op::AscendQuantV2(
-        selfContiguous, scaleCast, offsetCast, sqrtMode, roundMode, yDtype, DEFAULT_AXIS, uniqueExecutor.get());
+    auto ascendQuantV2Result = l0op::AscendQuantV2(selfContiguous, scaleCast, offsetCast, sqrtMode, roundMode, yDtype,
+                                                   DEFAULT_AXIS, uniqueExecutor.get());
     CHECK_RET(ascendQuantV2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 如果输出是Int4，需要转成Int32，8个Int4输出拼成1个Int32

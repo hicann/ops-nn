@@ -14,15 +14,13 @@
 
 namespace ge {
 REG_OP(IndexAiCore)
-    .INPUT(x,
-        TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT16,
-            DT_INT32, DT_INT64, DT_INT8, DT_UINT8, DT_BOOL}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT16, DT_INT32, DT_INT64, DT_INT8, DT_UINT8,
+                          DT_BOOL}))
     .INPUT(indexed_sizes, TensorType({DT_INT64}))
     .INPUT(indexed_strides, TensorType({DT_INT64}))
     .DYNAMIC_INPUT(indices, TensorType({DT_INT64, DT_INT32}))
-    .OUTPUT(y,
-        TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT16,
-            DT_INT32, DT_INT64, DT_INT8, DT_UINT8, DT_BOOL}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT16, DT_INT32, DT_INT64, DT_INT8, DT_UINT8,
+                           DT_BOOL}))
     .OP_END_FACTORY_REG(IndexAiCore)
-}  // namespace ge
-#endif  // OPS_NN_EXPERIMENTAL_INDEX_EXPERIMENTAL_INDEX_PROTO_H_
+} // namespace ge
+#endif // OPS_NN_EXPERIMENTAL_INDEX_EXPERIMENTAL_INDEX_PROTO_H_

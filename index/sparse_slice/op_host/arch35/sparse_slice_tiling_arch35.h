@@ -77,10 +77,8 @@ struct SparseSliceTilingParam {
 
 class SparseSliceTiling : public TilingBaseClass {
 public:
-    explicit SparseSliceTiling(gert::TilingContext* context_) : TilingBaseClass(context_)
-    {}
-    ~SparseSliceTiling() override
-    {}
+    explicit SparseSliceTiling(gert::TilingContext* context_) : TilingBaseClass(context_) {}
+    ~SparseSliceTiling() override {}
 
     const string nodeName = "SparseSlice";
     SparseSliceTilingData tilingData;

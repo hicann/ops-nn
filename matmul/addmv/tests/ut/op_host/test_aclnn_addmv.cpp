@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -23,15 +24,9 @@ using namespace op;
 
 class l2_addmv_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "addmv_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "addmv_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "addmv_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "addmv_test TearDown" << endl; }
 };
 
 // 输入nullptr
@@ -48,33 +43,33 @@ TEST_F(l2_addmv_test, input_nullptr)
 
     uint64_t workspace_size = 0;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(nullptr, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(nullptr, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut1 = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, nullptr, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut1 = OP_API_UT(aclnnAddmv,
+                         INPUT(input_tensor_desc, nullptr, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                         OUTPUT(out_tensor_desc), cubeMathType);
     aclRet = ut1.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut2 = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, nullptr, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut2 = OP_API_UT(aclnnAddmv,
+                         INPUT(input_tensor_desc, mat_tensor_desc, nullptr, alpha_scalar_desc, beta_scalar_desc),
+                         OUTPUT(out_tensor_desc), cubeMathType);
     aclRet = ut2.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut3 = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, nullptr, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut3 = OP_API_UT(aclnnAddmv,
+                         INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, nullptr, beta_scalar_desc),
+                         OUTPUT(out_tensor_desc), cubeMathType);
     aclRet = ut3.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut4 = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, nullptr),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut4 = OP_API_UT(aclnnAddmv,
+                         INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, nullptr),
+                         OUTPUT(out_tensor_desc), cubeMathType);
     aclRet = ut4.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
@@ -98,9 +93,9 @@ TEST_F(l2_addmv_test, input_shape_check)
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
     uint64_t workspace_size = 0;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
@@ -124,9 +119,9 @@ TEST_F(l2_addmv_test, alpha_0_beta_0)
     auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -148,9 +143,9 @@ TEST_F(l2_addmv_test, input_empty)
     auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -172,9 +167,9 @@ TEST_F(l2_addmv_test, mat_empty)
     auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -196,9 +191,9 @@ TEST_F(l2_addmv_test, mat_empty_keep_dtype)
     auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
     int8_t cubeMathType = KEEP_DTYPE;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -220,9 +215,9 @@ TEST_F(l2_addmv_test, mat_empty_use_fp32_add)
     auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
     int8_t cubeMathType = USE_FP32_ADD;
 
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;

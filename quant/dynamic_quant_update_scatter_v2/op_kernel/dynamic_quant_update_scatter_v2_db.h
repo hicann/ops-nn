@@ -23,14 +23,10 @@ using namespace AscendC;
 template <typename xDtype, typename yDtype>
 class DynamicQuantUpdateScatterV2DbOpt : public DynamicQuantUpdateScatterV2Base {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterV2DbOpt(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantUpdateScatterV2DbOpt(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR indices, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantUpdateScatterV2TilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
+                                const DynamicQuantUpdateScatterV2TilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitParams();
@@ -101,8 +97,8 @@ private:
         pPipe->InitBuffer(indicesQueue, BUFFER_NUM, sizeIntLen * sizeof(int32_t));
     }
 
-    __aicore__ inline void ProcessAsymmetric(
-        uint64_t multiRow, uint64_t loopNum, const LocalTensor<int32_t>& indicesLocal)
+    __aicore__ inline void ProcessAsymmetric(uint64_t multiRow, uint64_t loopNum,
+                                             const LocalTensor<int32_t>& indicesLocal)
     {
         uint64_t index = 0;
         float maxValue;

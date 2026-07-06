@@ -20,13 +20,10 @@
 
 namespace optiling {
 
-class ScatterNdCommonSimtSortTiling : public ScatterNdCommonBaseTiling
-{
+class ScatterNdCommonSimtSortTiling : public ScatterNdCommonBaseTiling {
 public:
-    explicit ScatterNdCommonSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonBaseTiling(context)
-    {}
-    ~ScatterNdCommonSimtSortTiling() override
-    {}
+    explicit ScatterNdCommonSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonBaseTiling(context) {}
+    ~ScatterNdCommonSimtSortTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -52,7 +49,8 @@ private:
     int64_t CalcOneIndexRowAlignSize(int64_t ubBlock);
     int64_t CalcOneUpdateRowAlignSize(int64_t ubBlock, ge::DataType sortTmpType);
     void CalcTilingWhenTight(int64_t halfUbSize, int64_t indicesAlignSize, ge::DataType sortTmpType);
-    void CalcTilingWhenSpacious(int64_t halfUbSize, int64_t ubBlock, int64_t indicesAlignSize, int64_t updateAlignSize, ge::DataType sortTmpType);
+    void CalcTilingWhenSpacious(int64_t halfUbSize, int64_t ubBlock, int64_t indicesAlignSize, int64_t updateAlignSize,
+                                ge::DataType sortTmpType);
 };
 } // namespace optiling
 #endif // SCATTER_ND_COMMON_SIMT_SORT_TILING_H

@@ -41,16 +41,16 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) 
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shape_size = 1;
-    for (auto i: shape) {
+    for (auto i : shape) {
         shape_size *= i;
     }
     return shape_size;
 }
 
-float Float16BitsToFloat(uint16_t float16Bits) 
+float Float16BitsToFloat(uint16_t float16Bits)
 {
     uint32_t sign = (float16Bits & 0x8000) << 16;
     uint32_t exp16 = (float16Bits & 0x7C00) >> 10;
@@ -73,23 +73,25 @@ float Float16BitsToFloat(uint16_t float16Bits)
     return *reinterpret_cast<float*>(&float32Bits);
 }
 
-uint64_t MaskFloat32(float deqScale) {
+uint64_t MaskFloat32(float deqScale)
+{
     uint32_t deqScaleUint32 = *reinterpret_cast<uint32_t*>(&deqScale);
     uint32_t maskedUint32 = deqScaleUint32 & 0xffffe000;
     uint64_t result = static_cast<uint64_t>(maskedUint32);
-    
+
     return result;
 }
 
-std::vector<uint64_t> ConvertScaleData(const std::vector<float>& scaleData) {
+std::vector<uint64_t> ConvertScaleData(const std::vector<float>& scaleData)
+{
     std::vector<uint64_t> scaleDataUint64;
     scaleDataUint64.reserve(scaleData.size());
-    
+
     for (size_t i = 0; i < scaleData.size(); ++i) {
         uint64_t convertedVal = MaskFloat32(scaleData[i]);
         scaleDataUint64.push_back(convertedVal);
     }
-    
+
     return scaleDataUint64;
 }
 
@@ -106,9 +108,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -126,16 +127,14 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCDHW, 
-        shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCDHW,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensorND(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType, 
-    aclTensor** tensor)
+int CreateAclTensorND(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                      aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用 aclrtMalloc 申请 device 侧内存
@@ -153,9 +152,8 @@ int CreateAclTensorND(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-        shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -191,8 +189,8 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
 
     aclTensor* input = nullptr;
     aclTensor* weight = nullptr;
-    aclTensor* scale= nullptr;
-    aclTensor* bias= nullptr;
+    aclTensor* scale = nullptr;
+    aclTensor* bias = nullptr;
     aclTensor* result = nullptr;
     std::vector<int8_t> inputData(GetShapeSize(shapeInput), 1);
     std::vector<int8_t> weightData(GetShapeSize(shapeWeight), 1);
@@ -206,57 +204,58 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
     aclDataType outputDtype = dtypesInfo[4];
     // 创建input aclTensor
     ret = CreateAclTensor(inputData, shapeInput, &deviceDataA, inputDtype, &input);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> inputTensorPtr(input, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> deviceDataAPtr(deviceDataA, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> inputTensorPtr(input, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> deviceDataAPtr(deviceDataA, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建weight aclTensor
     ret = CreateAclTensor(weightData, shapeWeight, &deviceDataB, weightDtype, &weight);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> weightTensorPtr(weight, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> deviceDataBPtr(deviceDataB, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> weightTensorPtr(weight, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> deviceDataBPtr(deviceDataB, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建scale，此处转换float的scale放入uint64的Tensor
     ret = CreateAclTensorND(ConvertScaleData(scaleData), shapeScale, &deviceDataScale, scaleDtype, &scale);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> scaleTensorPtr(scale, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> deviceDataScalePtr(deviceDataScale, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scaleTensorPtr(scale, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> deviceDataScalePtr(deviceDataScale, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建bias
     ret = CreateAclTensorND(biasData, shapeBias, &deviceDataBias, biasDtype, &bias);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> biasTensorPtr(bias, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> deviceDataBiasPtr(deviceDataBias, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> biasTensorPtr(bias, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> deviceDataBiasPtr(deviceDataBias, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建out aclTensor
     ret = CreateAclTensor(outputData, shapeResult, &deviceDataResult, outputDtype, &result);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> outputTensorPtr(result, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> deviceDataResultPtr(deviceDataResult, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outputTensorPtr(result, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> deviceDataResultPtr(deviceDataResult, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
-    aclIntArray *strides = aclCreateIntArray(convStrides.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> stridesPtr(strides, aclDestroyIntArray);
+    aclIntArray* strides = aclCreateIntArray(convStrides.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> stridesPtr(strides, aclDestroyIntArray);
     CHECK_FREE_RET(strides != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-    aclIntArray *pads = aclCreateIntArray(convPads.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
+    aclIntArray* pads = aclCreateIntArray(convPads.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> padsPtr(pads, aclDestroyIntArray);
     CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-    aclIntArray *outPads = aclCreateIntArray(convOutPads.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outPadsPtr(outPads, aclDestroyIntArray);
+    aclIntArray* outPads = aclCreateIntArray(convOutPads.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> outPadsPtr(outPads, aclDestroyIntArray);
     CHECK_FREE_RET(outPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-    aclIntArray *dilations = aclCreateIntArray(convDilations.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
+    aclIntArray* dilations = aclCreateIntArray(convDilations.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> dilationsPtr(dilations, aclDestroyIntArray);
     CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 3. 调用 CANN 算子库 API，需要修改为具体的 API
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnConvolution第一段接口
-    ret = aclnnQuantConvolutionGetWorkspaceSize(input, weight, bias, scale, nullptr, strides, pads, dilations,
-                                                false, outPads, 1, 0, nullptr, result, &workspaceSize, &executor);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantConvolutionGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnQuantConvolutionGetWorkspaceSize(input, weight, bias, scale, nullptr, strides, pads, dilations, false,
+                                                outPads, 1, 0, nullptr, result, &workspaceSize, &executor);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantConvolutionGetWorkspaceSize failed. ERROR: %d\n", ret);
+                   return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
-    std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtr(nullptr, aclrtFree);
+    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
@@ -274,8 +273,9 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
     auto size = GetShapeSize(shapeResult);
     std::vector<uint16_t> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), deviceDataResult,
-                        size * sizeof(uint16_t), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+                      size * sizeof(uint16_t), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                   return ret);
     int64_t printSize = size > 10 ? 10 : size;
     for (int64_t i = 0; i < printSize; i++) {
         LOG_PRINT("result[%ld] is: %.4f\n", i, Float16BitsToFloat(resultData[i]));
@@ -291,7 +291,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     std::vector<aclDataType> dtypesInfo = {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_INT32,
-        aclDataType::ACL_INT64, aclDataType::ACL_FLOAT16}; // 分别是input/weight/bias/scale/output的datatype
+                                           aclDataType::ACL_INT64,
+                                           aclDataType::ACL_FLOAT16}; // 分别是input/weight/bias/scale/output的datatype
     auto ret = aclnnQuantConvolutionTest(deviceId, stream, dtypesInfo);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantConvolutionTest failed. ERROR: %d\n", ret); return ret);
 

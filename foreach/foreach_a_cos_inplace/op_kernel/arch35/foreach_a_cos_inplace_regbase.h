@@ -23,8 +23,7 @@ using namespace AscendC;
 // bfloat16 computes in float (Acos supports only half/float). Init/Compute are shared by the base.
 template <typename T, typename Tiling>
 class ForeachACosInplaceRegbase
-    : public ForeachUnaryCastInplaceRegbase<T, Tiling, ForeachACosInplaceRegbase<T, Tiling>>
-{
+    : public ForeachUnaryCastInplaceRegbase<T, Tiling, ForeachACosInplaceRegbase<T, Tiling>> {
 public:
     template <typename U>
     __aicore__ inline void ApplyOp(LocalTensor<U> dst, LocalTensor<U> src, int64_t dataCount)

@@ -30,13 +30,11 @@ static __aicore__ inline void CalOut2B1ParamsBaseNUndivided(Intf* self, Out2L1Sc
         params.out2B1SrcAddr = static_cast<uint64_t>(b1SrCin) * self->ctx.tiling_->n0 * self->ctx.dhwI_ +
                                (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwI_;
     } else {
-        params.out2B1SrcAddr =
-            static_cast<uint64_t>(b1SrCin) * self->ctx.tiling_->n0 +
-            (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwI_ * self->ctx.tiling_->cin;
+        params.out2B1SrcAddr = static_cast<uint64_t>(b1SrCin) * self->ctx.tiling_->n0 +
+                               (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwI_ * self->ctx.tiling_->cin;
     }
 
-    uint64_t bL1N =
-        ShiftCeilM0(self->ctx.baseUseN_ / self->ctx.curSingleCoreDk_, self->ctx.tiling_->n0);
+    uint64_t bL1N = ShiftCeilM0(self->ctx.baseUseN_ / self->ctx.curSingleCoreDk_, self->ctx.tiling_->n0);
     uint32_t bL1cin1CopyLen = Ceil(bL1N, self->ctx.hwK_);
     if (self->ctx.singleShapeCin_ > SINGLE_SHAPE_CIN0) {
         // 当singleShapeCin_小于16时，搬运的bL1cin1CopyLen最大为1，无需多搬
@@ -64,9 +62,9 @@ static __aicore__ inline void CalOut2B1Params(Intf* self, Out2L1ScalarParams& pa
     uint64_t b1SrCin = (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
                        (self->ctx.hwK_ * self->ctx.curSingleCoreDk_);
     if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-        params.out2B1SrcAddr =
-            static_cast<uint64_t>(b1SrCin) * self->ctx.dhwI_ +
-            (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwI_;
+        params.out2B1SrcAddr = static_cast<uint64_t>(b1SrCin) * self->ctx.dhwI_ +
+                               (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ *
+                                   self->ctx.hwI_;
     } else {
         params.out2B1SrcAddr = static_cast<uint64_t>(b1SrCin) + (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) *
                                                                     self->ctx.curSingleCoreDk_ * self->ctx.hwI_ *
@@ -80,9 +78,9 @@ static __aicore__ inline void CalOut2B1Params(Intf* self, Out2L1ScalarParams& pa
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB1Dn2Nz(
-    Intf* self, const uint32_t hiCopyLen, const uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams& params,
-    LocalTensor<typename Intf::SrcT>& useB1Buf)
+static __aicore__ inline void LoadToB1Dn2Nz(Intf* self, const uint32_t hiCopyLen, const uint64_t out2B1SrcAddrOffset,
+                                            const Out2L1ScalarParams& params,
+                                            LocalTensor<typename Intf::SrcT>& useB1Buf)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         Dn2NzParams dn2NzParams;
@@ -117,9 +115,9 @@ static __aicore__ inline void LoadToB1Dn2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB1Nd2Nz(
-    Intf* self, const uint32_t hiCopyLen, const uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams& params,
-    LocalTensor<typename Intf::SrcT>& useB1Buf)
+static __aicore__ inline void LoadToB1Nd2Nz(Intf* self, const uint32_t hiCopyLen, const uint64_t out2B1SrcAddrOffset,
+                                            const Out2L1ScalarParams& params,
+                                            LocalTensor<typename Intf::SrcT>& useB1Buf)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         Nd2NzParams nd2NzParams;
@@ -154,8 +152,8 @@ static __aicore__ inline void LoadToB1Nd2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline bool CalB1HiCopyParams(
-    Intf* self, uint64_t kbStepIdx, const Out2L1ScalarParams& params, B1HiCopyParams& hiParams)
+static __aicore__ inline bool CalB1HiCopyParams(Intf* self, uint64_t kbStepIdx, const Out2L1ScalarParams& params,
+                                                B1HiCopyParams& hiParams)
 {
     uint64_t b1SrcKAlign = kbStepIdx * self->ctx.kbl1_;
     uint32_t b1SrcHo = b1SrcKAlign / self->ctx.singleShapeWo_;
@@ -207,9 +205,9 @@ static __aicore__ inline uint64_t CalB1GmOffset(Intf* self, uint32_t b1SrcHi, co
  * 因此循环搬运hiCopyLen次，每次搬运dnNum数量为W方向有效数据个数
  */
 template <class Intf>
-static __aicore__ inline void LoadToB1Dn2NzSplitKernelHW(
-    Intf* self, const uint32_t hiCopyLen, const uint32_t wiCopyLen, uint64_t out2B1SrcAddrOffset,
-    const Out2L1ScalarParams& params, LocalTensor<typename Intf::SrcT>& useB1Buf)
+static __aicore__ inline void LoadToB1Dn2NzSplitKernelHW(Intf* self, const uint32_t hiCopyLen, const uint32_t wiCopyLen,
+                                                         uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams& params,
+                                                         LocalTensor<typename Intf::SrcT>& useB1Buf)
 {
     Dn2NzParams dn2NzParams;
     dn2NzParams.dnNum = self->ctx.load3d_.l1W;
@@ -233,9 +231,9 @@ static __aicore__ inline void LoadToB1Dn2NzSplitKernelHW(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB1Nd2NzSplitKernelHW(
-    Intf* self, const uint32_t hiCopyLen, const uint32_t wiCopyLen, uint64_t out2B1SrcAddrOffset,
-    const Out2L1ScalarParams& params, LocalTensor<typename Intf::SrcT>& useB1Buf)
+static __aicore__ inline void LoadToB1Nd2NzSplitKernelHW(Intf* self, const uint32_t hiCopyLen, const uint32_t wiCopyLen,
+                                                         uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams& params,
+                                                         LocalTensor<typename Intf::SrcT>& useB1Buf)
 {
     Nd2NzParams nd2NzParams;
     nd2NzParams.ndNum = self->ctx.load3d_.l1W;
@@ -253,14 +251,14 @@ static __aicore__ inline void LoadToB1Nd2NzSplitKernelHW(
     for (uint32_t i = 0; i < hiCopyLen; ++i) {
         DataCopy(useB1Buf[dstAddrOffset], self->ctx.fmapGlobal_[out2B1SrcAddrOffset], nd2NzParams);
         dstAddrOffset += self->ctx.load3d_.l1W * self->ctx.tiling_->k0;
-        out2B1SrcAddrOffset +=
-            static_cast<uint64_t>(self->ctx.tiling_->wi) * self->ctx.tiling_->strideH * self->ctx.tiling_->cin;
+        out2B1SrcAddrOffset += static_cast<uint64_t>(self->ctx.tiling_->wi) * self->ctx.tiling_->strideH *
+                               self->ctx.tiling_->cin;
     }
 }
 
 template <class Intf>
-static __aicore__ inline bool CalB1HiCopyParamsSplitKernelHW(
-    Intf* self, uint64_t kbStepIdx, uint64_t hkIdx, const Out2L1ScalarParams& params, B1HiCopyParams& hiParams)
+static __aicore__ inline bool CalB1HiCopyParamsSplitKernelHW(Intf* self, uint64_t kbStepIdx, uint64_t hkIdx,
+                                                             const Out2L1ScalarParams& params, B1HiCopyParams& hiParams)
 {
     // L0shape到orgShape的对应关系，L0和L1是16对齐的，orgShape是Wi对齐的,先算Wo对齐再算Wi对齐
     // 先算L0B所在BL1块的起始地址，16对齐的
@@ -270,7 +268,7 @@ static __aicore__ inline bool CalB1HiCopyParamsSplitKernelHW(
     uint32_t b1SrcHoGm = b1SrcHo + self->ctx.hoStartIdx_;
     // 计算Ho对应的Hi，根据卷积原理
     int64_t b1SrcHiGm = static_cast<uint64_t>(b1SrcHoGm) * self->ctx.tiling_->strideH +
-        hkIdx * self->ctx.tiling_->dilationH - self->ctx.tiling_->padUp;
+                        hkIdx * self->ctx.tiling_->dilationH - self->ctx.tiling_->padUp;
     if (b1SrcHiGm > 0 && self->ctx.hiStartIdx_ > 0) {
         hiParams.b1SrcHi = b1SrcHiGm - self->ctx.hiStartIdx_;
     } else if (b1SrcHiGm > 0) {
@@ -293,7 +291,8 @@ static __aicore__ inline bool CalB1HiCopyParamsSplitKernelHW(
     if (b1SrcHiGm < 0) {
         //起始地址计算
         hiParams.padUp = -b1SrcHiGm;
-        hiParams.hiUpValidOffset = Ceil(hiParams.padUp, self->ctx.tiling_->strideH) * self->ctx.tiling_->strideH - hiParams.padUp;
+        hiParams.hiUpValidOffset = Ceil(hiParams.padUp, self->ctx.tiling_->strideH) * self->ctx.tiling_->strideH -
+                                   hiParams.padUp;
     }
 
     uint32_t padDown = 0;

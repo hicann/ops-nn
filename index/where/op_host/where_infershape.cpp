@@ -71,12 +71,11 @@ static ge::graphStatus InferShape4Where(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
 
     auto dims_num = inShape->GetDimNum();
-    OP_CHECK_IF(
-        dims_num < 1, OP_LOGE(context->GetNodeName(), "input x must be at least 1D, actual is %zu", dims_num),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        dims_num > kMaxDimSize, OP_LOGE(context->GetNodeName(), "input x must be at most 8D, actual is %zu", dims_num),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dims_num < 1, OP_LOGE(context->GetNodeName(), "input x must be at least 1D, actual is %zu", dims_num),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dims_num > kMaxDimSize,
+                OP_LOGE(context->GetNodeName(), "input x must be at most 8D, actual is %zu", dims_num),
+                return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*inShape)) {
         OP_LOGW("InferShape4Where", "the input shape is [-2], set output shape is [-1, -1]!");

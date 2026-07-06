@@ -34,15 +34,8 @@ struct ApplyAdadeltaOutputs {
     const aclTensor* accumUpdateOut;
 };
 
-ApplyAdadeltaOutputs ApplyAdadelta(
-    const aclTensor* var,
-    const aclTensor* accum,
-    const aclTensor* accumUpdate,
-    const aclTensor* grad,
-    float lr,
-    float rho,
-    float epsilon,
-    aclOpExecutor* executor);
+ApplyAdadeltaOutputs ApplyAdadelta(const aclTensor* var, const aclTensor* accum, const aclTensor* accumUpdate,
+                                   const aclTensor* grad, float lr, float rho, float epsilon, aclOpExecutor* executor);
 
 } // namespace l0op
 

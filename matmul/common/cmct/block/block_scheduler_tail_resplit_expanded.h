@@ -30,24 +30,22 @@ public:
     };
 
     template <typename ProblemShape, typename Tiling>
-    __aicore__ inline static Params ToUnderlyingArguments(
-        const ProblemShape& problemShape, const Arguments& args, Tiling const* tiling)
+    __aicore__ inline static Params ToUnderlyingArguments(const ProblemShape& problemShape, const Arguments& args,
+                                                          Tiling const* tiling)
     {
-        return {
-            .mL1Tile = tiling->matmulTiling.baseM,
-            .mainBlockCount = tiling->mainBlockCount,
-            .firstTailBlockCount = tiling->firstTailBlockCount,
-            .secondTailBlockCount = tiling->secondTailBlockCount,
-            .mainBlockSize = tiling->mainBlockL1Size,
-            .firstTailBlockSize = tiling->firstTailBlockL1Size,
-            .secondTailBlockSize = tiling->secondTailBlockL1Size,
-            .cubeNumBlocksM = tiling->cubeNumBlocksM,
-            .cubeNumBlocksN = tiling->cubeNumBlocksN};
+        return {.mL1Tile = tiling->matmulTiling.baseM,
+                .mainBlockCount = tiling->mainBlockCount,
+                .firstTailBlockCount = tiling->firstTailBlockCount,
+                .secondTailBlockCount = tiling->secondTailBlockCount,
+                .mainBlockSize = tiling->mainBlockL1Size,
+                .firstTailBlockSize = tiling->firstTailBlockL1Size,
+                .secondTailBlockSize = tiling->secondTailBlockL1Size,
+                .cubeNumBlocksM = tiling->cubeNumBlocksM,
+                .cubeNumBlocksN = tiling->cubeNumBlocksN};
     }
 
-    template <
-        typename ProblemShape, typename Params,
-        AscendC::Std::enable_if_t<!AscendC::Std::is_tuple_v<Params>, bool> = true>
+    template <typename ProblemShape, typename Params,
+              AscendC::Std::enable_if_t<!AscendC::Std::is_tuple_v<Params>, bool> = true>
     __aicore__ inline BlockSchedulerTailResplitExpanded(const ProblemShape& problemShape, const Params& params)
     {
         auto mSize = Cmct::Gemm::Get<0>(problemShape);
@@ -107,4 +105,3 @@ public:
     uint64_t n2Tile;
 };
 } // namespace Cmct::Gemm::Block
-

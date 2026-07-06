@@ -77,5 +77,5 @@ public:
     int64_t padW = 0;
     int64_t includeBatchInIndex = 0;
 };
-}
-#endif //MAX_POOL_WITH_ARGMAX_STRUCT_H
+} // namespace MaxPoolWithArgmaxCommonStructNameSpace
+#endif // MAX_POOL_WITH_ARGMAX_STRUCT_H

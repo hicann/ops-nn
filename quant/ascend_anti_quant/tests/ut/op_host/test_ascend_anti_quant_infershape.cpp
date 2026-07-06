@@ -18,15 +18,9 @@ using namespace op;
 
 class AscendAntiQuantProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AscendAntiQuantProto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AscendAntiQuantProto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AscendAntiQuantProto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AscendAntiQuantProto TearDown" << std::endl; }
 };
 
 TEST_F(AscendAntiQuantProto, AscendAntiQuant_proto_int8_fp16)

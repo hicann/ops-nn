@@ -23,17 +23,10 @@ using namespace std;
 using namespace op;
 
 namespace {
-class l2_addmmWeightNz_test : public testing::Test
-{
+class l2_addmmWeightNz_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_addmm_weight_nz_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_addmm_weight_nz_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_addmm_weight_nz_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_addmm_weight_nz_test TearDown" << endl; }
 };
 
 // // 正常流程16*16 self dims == 1 dtype == float
@@ -49,9 +42,9 @@ protected:
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // // 正常流程16*16 self dims == 1 dtype == fp16
@@ -67,9 +60,9 @@ protected:
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // // 正常流程16*16 self dims == 2  dtype == fp16
@@ -85,9 +78,9 @@ protected:
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // // 正常流程16*16 self dtype == fp16  mat dtype == bf16
@@ -103,9 +96,9 @@ protected:
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // // 正常流程16*16
@@ -121,9 +114,9 @@ protected:
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // 异常，计算weightNzshape有误
@@ -163,7 +156,7 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_bf16_16mm16_Kdiff)
 }
 
 // 异常：mat1, mat2为float
-//TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat1_mat2_not_fp16bf16_1)
+// TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat1_mat2_not_fp16bf16_1)
 //{
 //    auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
 //    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -180,22 +173,22 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_bf16_16mm16_Kdiff)
 //    EXPECT_NE(aclRet, ACL_SUCCESS);
 //}
 
-//TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat1_mat2_not_fp16bf16_2)
+// TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat1_mat2_not_fp16bf16_2)
 //{
-//    auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-//    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-//    auto mat2 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
-//    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-//    auto beta = ScalarDesc(1.0f);
-//    auto alpha = ScalarDesc(1.0f);
-//    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+//     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+//     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+//     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
+//     auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+//     auto beta = ScalarDesc(1.0f);
+//     auto alpha = ScalarDesc(1.0f);
+//     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 //
-//    auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+//     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 //
-//    uint64_t workspace_size = 0;
-//    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//    EXPECT_NE(aclRet, ACL_SUCCESS);
-//}
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_NE(aclRet, ACL_SUCCESS);
+// }
 
 // 正常：self为(1, n)且为float类型
 TEST_F(l2_addmmWeightNz_test, ascend910B2_case_fp16_16mm16_self_float_dims2)
@@ -228,9 +221,9 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_fp16_16mm16_self_float_dims2)
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // 异常：mat2为NZ，但是shape为2维
@@ -270,7 +263,7 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat2_1dim)
 }
 
 // 异常：mat1 mat2 dtype不一致
-//TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat1bf16_mat2fp16)
+// TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat1bf16_mat2fp16)
 //{
 //    auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
 //    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -288,7 +281,7 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat2_1dim)
 //}
 
 // 异常：mat1 mat2 dtype不一致
-//TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat2bf16_mat1fp16)
+// TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat2bf16_mat1fp16)
 //{
 //    auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
 //    auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -318,9 +311,9 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat2_1dim)
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // TEST_F(l2_addmmWeightNz_test, ascend910B2_case_alpha_ne_1)
@@ -335,9 +328,9 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_mat2_1dim)
 
 //     auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
 
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+// uint64_t workspace_size = 0;
+// aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// EXPECT_EQ(aclRet, ACL_SUCCESS);
 // }
 
 // 异常：self与mat1为NZ格式
@@ -681,4 +674,4 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_910b_FP32_FP16_USE_FP32_ADD)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-}
+} // namespace

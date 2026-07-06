@@ -20,4 +20,4 @@ using namespace Ops::Base;
 
 namespace ops {
 IMPL_OP_INFERSHAPE(Erfinv).InferShape(InferShape4Elewise);
-}  // namespace ops
+} // namespace ops

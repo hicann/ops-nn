@@ -14,12 +14,9 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "transpose_batch_mat_mul_tiling_data.h"
 
-inline void InitTbmmTilingData(void* tiling, void* const_data, size_t size)
-{
-    memcpy(const_data, tiling, size);
-}
+inline void InitTbmmTilingData(void* tiling, void* const_data, size_t size) { memcpy(const_data, tiling, size); }
 
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct_type, tiling_var_name, tiling_arg) \
-    tiling_struct_type tiling_var_name;                                           \
+    tiling_struct_type tiling_var_name;                                              \
     InitTbmmTilingData((tiling_arg), &tiling_var_name, sizeof(tiling_struct_type))
 #endif

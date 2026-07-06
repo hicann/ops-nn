@@ -41,8 +41,7 @@ constexpr uint32_t BYTE_LEN_2 = 2;
 
 constexpr uint8_t UB_DIVIDER_FOR_TEMP_CASTING = 10;
 
-class ForeachNormTiling
-{
+class ForeachNormTiling {
 public:
     ForeachNormTiling() = default;
     void Init(const std::vector<std::vector<uint64_t>>& shapeInfos, uint16_t dataType, uint8_t theCode);

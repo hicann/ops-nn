@@ -25,7 +25,7 @@ namespace batch_matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTiling, DAV_3510, BL1_FULL_LOAD_BASIC);
 
-//supportMmadS8S4平台
+// supportMmadS8S4平台
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTiling, DAV_RESV, BL1_FULL_LOAD_BASIC);
 
 bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
@@ -57,7 +57,7 @@ bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
     uint64_t alignMatBSize = batchInfo_->batchB * alignKbValue * alignNValue * args_.bDtypeSize;
     if (alignMatASize < (compileInfo_.l1Size) * compileInfo_.aicNum &&
         batchInfo_->batchA * ops::CeilDiv(args_.mValue, BASIC_BLOCK_SIZE_256) <
-            4UL * compileInfo_.aicNum) {  // each core needs to loop at least 4 batch
+            4UL * compileInfo_.aicNum) { // each core needs to loop at least 4 batch
         return false;
     }
     if (alignMatBSize * NUM_TWO > compileInfo_.l1Size) {

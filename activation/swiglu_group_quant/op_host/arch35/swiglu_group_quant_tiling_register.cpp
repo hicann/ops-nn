@@ -27,18 +27,17 @@ constexpr int64_t BLOCK_QUANT = 0;
 constexpr int64_t STATIC_HIFP8_QUANT = 2;
 constexpr int64_t DYNAMIC_HIFP8_QUANT = 3;
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
-}
+} // namespace
 
-ge::graphStatus TilingPrepareForSwigluGroupQuant(gert::TilingParseContext *context)
+ge::graphStatus TilingPrepareForSwigluGroupQuant(gert::TilingParseContext* context)
 {
     (void)context;
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingForSwigluGroupQuant(gert::TilingContext *context)
+ge::graphStatus TilingForSwigluGroupQuant(gert::TilingContext* context)
 {
-    OP_CHECK_IF(context == nullptr, OP_LOGE("SwigluGroupQuant", "Tiling context is null"),
-               return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, OP_LOGE("SwigluGroupQuant", "Tiling context is null"), return ge::GRAPH_FAILED);
 
     auto* attrs = context->GetAttrs();
     int64_t quantMode = BLOCK_QUANT;
@@ -61,4 +60,4 @@ ge::graphStatus TilingForSwigluGroupQuant(gert::TilingContext *context)
 IMPL_OP_OPTILING(SwigluGroupQuant)
     .Tiling(TilingForSwigluGroupQuant)
     .TilingParse<SwigluGroupQuantCompileInfo>(TilingPrepareForSwigluGroupQuant);
-}  // namespace optiling
+} // namespace optiling

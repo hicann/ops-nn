@@ -16,25 +16,23 @@
 
 namespace ops {
 static const std::vector<ge::DataType> SUPPORT_DTYPE = {
-    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_INT64, ge::DT_UINT8, ge::DT_INT8, ge::DT_UINT32, ge::DT_UINT64,
-    ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_INT64, ge::DT_UINT8, ge::DT_INT8, ge::DT_UINT32, ge::DT_UINT64,
-    ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0
-};
+    ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_BF16,   ge::DT_INT32,       ge::DT_INT64,         ge::DT_UINT8,
+    ge::DT_INT8,    ge::DT_UINT32, ge::DT_UINT64, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
+    ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_BF16,   ge::DT_INT32,       ge::DT_INT64,         ge::DT_UINT8,
+    ge::DT_INT8,    ge::DT_UINT32, ge::DT_UINT64, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0};
 static const std::vector<ge::DataType> INDICES_SUPPORT_DTYPE = {
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64
-};
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 static const std::vector<ge::Format> SUPPORT_FORMAT = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 class ScatterUpdate : public OpDef {
 public:
-    explicit ScatterUpdate(const char* name) : OpDef(name) {
+    explicit ScatterUpdate(const char* name) : OpDef(name)
+    {
         this->Input("var")
             .ParamType(REQUIRED)
             .AutoContiguous()
@@ -72,4 +70,4 @@ public:
 };
 
 OP_ADD(ScatterUpdate);
-}
+} // namespace ops

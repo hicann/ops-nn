@@ -28,20 +28,20 @@ struct ChamferDistanceGradTilingDataTest {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                     \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                         \
     ChamferDistanceGradTilingDataTest tilingData;                                          \
     INIT_TILING_DATA(ChamferDistanceGradTilingDataTest, tilingDataPointer, tilingPointer); \
-    (tilingData).batch_size = tilingDataPointer->batch_size;                           \
-    (tilingData).num = tilingDataPointer->num;                                         \
-    (tilingData).ub_size = tilingDataPointer->ub_size;                                 \
-    (tilingData).task_per_core = tilingDataPointer->task_per_core;                     \
-    (tilingData).core_used = tilingDataPointer->core_used;                             \
+    (tilingData).batch_size = tilingDataPointer->batch_size;                               \
+    (tilingData).num = tilingDataPointer->num;                                             \
+    (tilingData).ub_size = tilingDataPointer->ub_size;                                     \
+    (tilingData).task_per_core = tilingDataPointer->task_per_core;                         \
+    (tilingData).core_used = tilingDataPointer->core_used;                                 \
     (tilingData).task_tail_core = tilingDataPointer->task_tail_core;
 #endif

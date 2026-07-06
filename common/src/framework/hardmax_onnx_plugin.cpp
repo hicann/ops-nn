@@ -11,9 +11,9 @@
 #include "onnx_common.h"
 
 namespace domi {
-static Status parse_params_hard_max(const Message *op_src, ge::Operator &op_dest)
+static Status parse_params_hard_max(const Message* op_src, ge::Operator& op_dest)
 {
-    const ge::onnx::NodeProto *node = reinterpret_cast<const ge::onnx::NodeProto *>(op_src);
+    const ge::onnx::NodeProto* node = reinterpret_cast<const ge::onnx::NodeProto*>(op_src);
     if (node == nullptr) {
         OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
         return FAILED;
@@ -30,17 +30,12 @@ static Status parse_params_hard_max(const Message *op_src, ge::Operator &op_dest
 
 REGISTER_CUSTOM_OP("HardMax")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::Hardmax"),
-                   ge::AscendString("ai.onnx::9::Hardmax"),
-                   ge::AscendString("ai.onnx::10::Hardmax"),
-                   ge::AscendString("ai.onnx::11::Hardmax"),
-                   ge::AscendString("ai.onnx::12::Hardmax"),
-                   ge::AscendString("ai.onnx::13::Hardmax"),
-                   ge::AscendString("ai.onnx::14::Hardmax"),
-                   ge::AscendString("ai.onnx::15::Hardmax"),
-                   ge::AscendString("ai.onnx::16::Hardmax"),
-                   ge::AscendString("ai.onnx::17::Hardmax"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::Hardmax"), ge::AscendString("ai.onnx::9::Hardmax"),
+                   ge::AscendString("ai.onnx::10::Hardmax"), ge::AscendString("ai.onnx::11::Hardmax"),
+                   ge::AscendString("ai.onnx::12::Hardmax"), ge::AscendString("ai.onnx::13::Hardmax"),
+                   ge::AscendString("ai.onnx::14::Hardmax"), ge::AscendString("ai.onnx::15::Hardmax"),
+                   ge::AscendString("ai.onnx::16::Hardmax"), ge::AscendString("ai.onnx::17::Hardmax"),
                    ge::AscendString("ai.onnx::18::Hardmax")})
     .ParseParamsFn(parse_params_hard_max)
     .ImplyType(ImplyType::TVM);
-}
+} // namespace domi

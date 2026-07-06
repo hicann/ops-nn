@@ -18,17 +18,13 @@
 #include "op_host/tiling_templates_registry.h"
 
 using namespace ge;
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t VL_DOUBLE = 2;
 
 static std::vector<std::array<ge::DataType, INPUT_NUM>> validInferInputDtype = {
     {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
-    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}
-};
-
-
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
 
 void BatchNormGradInferBase::Reset()
 {
@@ -140,10 +136,11 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
 
     // 校验dim相等
     if (dyDimNum != xDimNum || dyDimNum != dxDimNum) {
-        std::string dimsStr = std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + " and " + std::to_string(dxDimNum);
+        std::string dimsStr = std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + " and " +
+                              std::to_string(dxDimNum);
         std::string reasonMsg = "The shape dims of y_backprop, x and x_backprop must be the same";
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
-            dimsStr.c_str(), reasonMsg.c_str());
+                                                  dimsStr.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -153,44 +150,47 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
                                  ge::TypeUtils::FormatToSerialString(xFormat) + " and " +
                                  ge::TypeUtils::FormatToSerialString(dxFormat);
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
-            formatsStr.c_str(),
-            "The formats of y_backprop, x and x_backprop must be the same");
+                                                formatsStr.c_str(),
+                                                "The formats of y_backprop, x and x_backprop must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (dyFormat == FORMAT_NCHW || dyFormat == FORMAT_NHWC) {
         if (dyDimNum != DIM_NUM_4) {
-            std::string reason = "the dim size of y_backprop must be 4D with " + std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
+            std::string reason = "the dim size of y_backprop must be 4D with " +
+                                 std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "y_backprop",
-                std::to_string(dyDimNum).c_str(), reason.c_str());
+                                                     std::to_string(dyDimNum).c_str(), reason.c_str());
             return ge::GRAPH_FAILED;
         }
     } else if (dyFormat == FORMAT_NCDHW || dyFormat == FORMAT_NDHWC) {
         if (dyDimNum != DIM_NUM_5) {
-            std::string reason = "the dim size of y_backprop must be 5D with " + std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
+            std::string reason = "the dim size of y_backprop must be 5D with " +
+                                 std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "y_backprop",
-                std::to_string(dyDimNum).c_str(), reason.c_str());
+                                                     std::to_string(dyDimNum).c_str(), reason.c_str());
             return ge::GRAPH_FAILED;
         }
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "y_backprop",
-            ge::TypeUtils::FormatToSerialString(dyFormat).c_str(),
-            "NCHW, NHWC, NCDHW and NDHWC");
+                                   ge::TypeUtils::FormatToSerialString(dyFormat).c_str(),
+                                   "NCHW, NHWC, NCDHW and NDHWC");
         return ge::GRAPH_FAILED;
     }
 
     // 校验shape的dims相同
     for (int64_t i = 0; i < dyDimNum; i++) {
-        if (xStorageShape.GetDim(i) != dyStorageShape.GetDim(i) || dxStorageShape.GetDim(i) != dyStorageShape.GetDim(i)) {
+        if (xStorageShape.GetDim(i) != dyStorageShape.GetDim(i) ||
+            dxStorageShape.GetDim(i) != dyStorageShape.GetDim(i)) {
             std::string reasonMsg = "dim[" + std::to_string(i) + "] of y_backprop, x and x_backprop must be the same";
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y_backprop",
-                Ops::Base::ToString(dyStorageShape).c_str(), reasonMsg.c_str());
+                                                  Ops::Base::ToString(dyStorageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         if (dyStorageShape.GetDim(i) <= 0) {
             std::string reasonMsg = "dim" + std::to_string(i) + " of y_backprop should be greater than 0";
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context_->GetNodeName(), "y_backprop", Ops::Base::ToString(dyStorageShape).c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y_backprop",
+                                                  Ops::Base::ToString(dyStorageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -213,15 +213,16 @@ ge::graphStatus BatchNormGradInferBase::CheckSmallShapesValid()
         auto storageShape = shape->GetStorageShape();
         if (storageShape.GetDimNum() != 1) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputParamNames[i],
-                std::to_string(storageShape.GetDimNum()).c_str(), "1D");
+                                         std::to_string(storageShape.GetDimNum()).c_str(), "1D");
             return ge::GRAPH_FAILED;
         }
 
         int64_t a = storageShape.GetDim(INDEX_0);
         if (a != aDim) {
-            std::string reasonMsg = "the first dim of " + std::string(inputParamNames[i]) + " should be " + std::to_string(aDim);
+            std::string reasonMsg = "the first dim of " + std::string(inputParamNames[i]) + " should be " +
+                                    std::to_string(aDim);
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
-                Ops::Base::ToString(storageShape).c_str(), reasonMsg.c_str());
+                                                  Ops::Base::ToString(storageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -233,14 +234,15 @@ ge::graphStatus BatchNormGradInferBase::CheckSmallShapesValid()
 
         if (storageShape.GetDimNum() != 1) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), outputParamNames[i],
-                std::to_string(storageShape.GetDimNum()).c_str(), "1D");
+                                         std::to_string(storageShape.GetDimNum()).c_str(), "1D");
             return ge::GRAPH_FAILED;
         }
         int64_t a = storageShape.GetDim(INDEX_0);
         if (a != aDim) {
-            std::string reasonMsg = "The first dim of " + std::string(outputParamNames[i]) + " must be equal to" + std::to_string(aDim);
+            std::string reasonMsg = "The first dim of " + std::string(outputParamNames[i]) + " must be equal to" +
+                                    std::to_string(aDim);
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputParamNames[i],
-                Ops::Base::ToString(storageShape).c_str(), reasonMsg.c_str());
+                                                  Ops::Base::ToString(storageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -276,25 +278,27 @@ ge::graphStatus BatchNormGradInferBase::CheckDtypeValid()
             if (i == INPUT_NUM - 1 && inputDesc == nullptr) {
                 continue;
             }
-            if (!incorrectDtypeStr.empty()) incorrectDtypeStr += ", ";
+            if (!incorrectDtypeStr.empty())
+                incorrectDtypeStr += ", ";
             incorrectDtypeStr += ge::TypeUtils::DataTypeToSerialString(inputDesc->GetDataType());
         }
         for (const auto& dtypeList : validInferInputDtype) {
-            if (!expectedDtypesStr.empty()) expectedDtypesStr += " or ";
+            if (!expectedDtypesStr.empty())
+                expectedDtypesStr += " or ";
             expectedDtypesStr += "[";
             for (int i = 0; i < INPUT_NUM; i++) {
-                if (i > 0) expectedDtypesStr += ", ";
+                if (i > 0)
+                    expectedDtypesStr += ", ";
                 expectedDtypesStr += ge::TypeUtils::DataTypeToSerialString(dtypeList[i]);
             }
             expectedDtypesStr += "]";
         }
     }
-    OP_CHECK_IF(
-        invalid == true,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "y_backprop, x, scale, reserve_space_1, reserve_space_2, reserve_space_3",
-            incorrectDtypeStr.c_str(), expectedDtypesStr.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(invalid == true,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(),
+                                          "y_backprop, x, scale, reserve_space_1, reserve_space_2, reserve_space_3",
+                                          incorrectDtypeStr.c_str(), expectedDtypesStr.c_str()),
+                return ge::GRAPH_FAILED);
 
     auto weightDesc = context_->GetInputDesc(PARAM_INPUT_WEIGHT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
@@ -316,22 +320,22 @@ ge::graphStatus BatchNormGradInferBase::CheckDtypeValid()
     if (dxDtype != dyDtype_) {
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dxDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(dyDtype_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x_backprop and y_backprop",
-            dtypesStr.c_str(), "The dtypes of x_backprop and y_backprop must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x_backprop and y_backprop", dtypesStr.c_str(),
+                                               "The dtypes of x_backprop and y_backprop must be the same");
         return ge::GRAPH_FAILED;
     }
     if (dweightDtype != weightDtype_) {
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dweightDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(weightDtype_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "scale_backprop and scale",
-            dtypesStr.c_str(), "The dtypes of scale_backprop and scale must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "scale_backprop and scale", dtypesStr.c_str(),
+                                               "The dtypes of scale_backprop and scale must be the same");
         return ge::GRAPH_FAILED;
     }
     if (dbiasDtype != weightDtype_) {
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dbiasDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(weightDtype_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "offset_backprop and scale",
-            dtypesStr.c_str(), "The dtypes of offset_backprop and scale must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "offset_backprop and scale", dtypesStr.c_str(),
+                                               "The dtypes of offset_backprop and scale must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -349,7 +353,8 @@ ge::graphStatus BatchNormGradInferBase::GetShapeAttrsInfo()
 
     const bool* isTrainingPtr = attrs->GetBool(PARAM_ATTRS_ISTRAING_INDEX);
     bool isTraining = (isTrainingPtr == nullptr) ? true : *isTrainingPtr;
-    OP_CHECK_IF(isTraining == true, OP_LOGD(context_, "This node only support inference."), return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(isTraining == true, OP_LOGD(context_, "This node only support inference."),
+                return ge::GRAPH_PARAM_INVALID);
 
     const float* epsilonPtr = attrs->GetFloat(PARAM_ATTRS_EPSILON_INDEX);
     epsilon_ = (epsilonPtr == nullptr) ? DEFAULT_EPSILON : *epsilonPtr;
@@ -360,8 +365,9 @@ ge::graphStatus BatchNormGradInferBase::GetShapeAttrsInfo()
         enableDgamma = false;
         enableDbeta = false;
     } else {
-        OP_CHECK_IF(outputMask->GetSize() != 3, OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "output_mask",
-                    std::to_string(outputMask->GetSize()).c_str(), "3"),
+        OP_CHECK_IF(outputMask->GetSize() != 3,
+                    OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "output_mask",
+                                                 std::to_string(outputMask->GetSize()).c_str(), "3"),
                     return ge::GRAPH_PARAM_INVALID);
         auto outputMaskData = static_cast<const bool*>(outputMask->GetData());
         enableDx = static_cast<bool>(outputMaskData[0]);
@@ -370,21 +376,18 @@ ge::graphStatus BatchNormGradInferBase::GetShapeAttrsInfo()
     }
 
     // 大shape shape和format检查
-    OP_CHECK_IF(
-        CheckBigShapesFormatValid() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Check shape or format error."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckBigShapesFormatValid() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Check shape or format error."),
+                return ge::GRAPH_FAILED);
 
     auto ret = GetDyInfo();
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetShapeAttrsInfo failed."), return ret);
 
     // 小shape 校验
-    OP_CHECK_IF(
-        CheckSmallShapesValid() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Input small shapes are invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckSmallShapesValid() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Input small shapes are invalid."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckDtypeValid() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Input dtypes are invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtypeValid() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Input dtypes are invalid."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -401,41 +404,41 @@ ge::graphStatus BatchNormGradInferBase::GetDyInfo()
     dyFormat_ = dyDesc->GetFormat().GetStorageFormat();
     if (dyFormat_ == FORMAT_NHWC) {
         OP_CHECK_IF(dyDimNum_ != DIM_NUM_4,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
-                std::to_string(dyDimNum_).c_str(), "4D with NHWC format"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
+                                                 std::to_string(dyDimNum_).c_str(), "4D with NHWC format"),
+                    return ge::GRAPH_FAILED);
         aDim = dyStorageShape.GetDim(DIM_3);
         r1Dim = dyStorageShape.GetDim(DIM_0) * dyStorageShape.GetDim(DIM_1) * dyStorageShape.GetDim(DIM_2);
         r0Dim = 1;
     } else if (dyFormat_ == FORMAT_NDHWC) {
         OP_CHECK_IF(dyDimNum_ != DIM_NUM_5,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
-                std::to_string(dyDimNum_).c_str(), "5D with NDHWC format"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
+                                                 std::to_string(dyDimNum_).c_str(), "5D with NDHWC format"),
+                    return ge::GRAPH_FAILED);
         aDim = dyStorageShape.GetDim(DIM_4);
         r1Dim = dyStorageShape.GetDim(DIM_0) * dyStorageShape.GetDim(DIM_1) * dyStorageShape.GetDim(DIM_2) *
-                      dyStorageShape.GetDim(DIM_3);
+                dyStorageShape.GetDim(DIM_3);
         r0Dim = 1;
     } else if (dyFormat_ == FORMAT_NCHW) {
         OP_CHECK_IF(dyDimNum_ != DIM_NUM_4,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
-                std::to_string(dyDimNum_).c_str(), "4D with NCHW format"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
+                                                 std::to_string(dyDimNum_).c_str(), "4D with NCHW format"),
+                    return ge::GRAPH_FAILED);
         r1Dim = dyStorageShape.GetDim(DIM_0);
         aDim = dyStorageShape.GetDim(DIM_1);
         r0Dim = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3);
     } else if (dyFormat_ == FORMAT_NCDHW) {
         OP_CHECK_IF(dyDimNum_ != DIM_NUM_5,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
-                std::to_string(dyDimNum_).c_str(), "5D with NCDHW format"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y_backprop",
+                                                 std::to_string(dyDimNum_).c_str(), "5D with NCDHW format"),
+                    return ge::GRAPH_FAILED);
         r1Dim = dyStorageShape.GetDim(DIM_0);
         aDim = dyStorageShape.GetDim(DIM_1);
         r0Dim = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3) * dyStorageShape.GetDim(DIM_4);
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "y_backprop",
-            ge::TypeUtils::FormatToSerialString(dyFormat_).c_str(),
-            "NCHW, NCDHW, NHWC and NDHWC");
+                                   ge::TypeUtils::FormatToSerialString(dyFormat_).c_str(),
+                                   "NCHW, NCDHW, NHWC and NDHWC");
         return ge::GRAPH_PARAM_INVALID;
     }
     // 特殊场景处理, R1AR0, A==1时转（1,1,R1*R0)
@@ -447,10 +450,7 @@ ge::graphStatus BatchNormGradInferBase::GetDyInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchNormGradInferBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BatchNormGradInferBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus BatchNormGradInferBase::GetWorkspaceSize()
 {
@@ -459,4 +459,4 @@ ge::graphStatus BatchNormGradInferBase::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

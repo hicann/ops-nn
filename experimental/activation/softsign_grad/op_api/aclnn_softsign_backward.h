@@ -46,12 +46,9 @@ extern "C" {
  * @param executor [out] 返回执行器
  * @return aclnnStatus 状态码
  */
-ACLNN_API aclnnStatus aclnnSoftsignBackwardGetWorkspaceSize(
-    const aclTensor *gradients,
-    const aclTensor *features,
-    const aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnSoftsignBackwardGetWorkspaceSize(const aclTensor* gradients, const aclTensor* features,
+                                                            const aclTensor* out, uint64_t* workspaceSize,
+                                                            aclOpExecutor** executor);
 
 /**
  * @brief 执行 SoftsignBackward 算子计算
@@ -61,11 +58,8 @@ ACLNN_API aclnnStatus aclnnSoftsignBackwardGetWorkspaceSize(
  * @param stream [in] ACL 流
  * @return aclnnStatus 状态码
  */
-ACLNN_API aclnnStatus aclnnSoftsignBackward(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSoftsignBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                            aclrtStream stream);
 
 #ifdef __cplusplus
 }

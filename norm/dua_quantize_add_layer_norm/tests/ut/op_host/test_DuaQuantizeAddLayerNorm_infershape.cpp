@@ -13,18 +13,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/dua_quantize_add_layer_norm_proto.h"
 
-class DuaQuantizeAddLayerNorm : public testing::Test
-{
+class DuaQuantizeAddLayerNorm : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DuaQuantizeAddLayerNorm infershape Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DuaQuantizeAddLayerNorm infershape Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DuaQuantizeAddLayerNorm infershape Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DuaQuantizeAddLayerNorm infershape Test TearDown" << std::endl; }
 };
 
 TEST_F(DuaQuantizeAddLayerNorm, DuaQuantizeAddLayerNorm_infershape_case_0)

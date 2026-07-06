@@ -52,8 +52,10 @@ string GetTime()
 
 uint32_t GetDataTypeSize(DataType dt)
 {
-    if (dt == ge::DT_FLOAT) return 4;
-    if (dt == ge::DT_FLOAT16 || dt == ge::DT_BF16) return 2;
+    if (dt == ge::DT_FLOAT)
+        return 4;
+    if (dt == ge::DT_FLOAT16 || dt == ge::DT_BF16)
+        return 2;
     return 4;
 }
 
@@ -62,9 +64,11 @@ int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, float 
 {
     desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
-    for (auto d : shapes) size *= d;
+    for (auto d : shapes)
+        size *= d;
     float* pData = new (std::nothrow) float[size];
-    for (size_t i = 0; i < size; ++i) pData[i] = value;
+    for (size_t i = 0; i < size; ++i)
+        pData[i] = value;
     tensor = Tensor(desc, reinterpret_cast<uint8_t*>(pData), size * sizeof(float));
     delete[] pData;
     return SUCCESS;
@@ -83,25 +87,34 @@ int CreateGraph(Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operat
     // self (x)
     auto selfData = op::Data("self").set_attr_index(0);
     TensorDesc selfDesc(ge::Shape(shape), FORMAT_ND, dt);
-    Tensor selfT; ret = GenData(shape, selfT, selfDesc, 0.5f);
-    selfData.update_input_desc_x(selfDesc); selfData.update_output_desc_y(selfDesc);
-    op.set_input_self(selfData); input.push_back(selfT);
+    Tensor selfT;
+    ret = GenData(shape, selfT, selfDesc, 0.5f);
+    selfData.update_input_desc_x(selfDesc);
+    selfData.update_output_desc_y(selfDesc);
+    op.set_input_self(selfData);
+    input.push_back(selfT);
     inputs.push_back(selfData);
 
     // target (y, ±1)
     auto targetData = op::Data("target").set_attr_index(1);
     TensorDesc targetDesc(ge::Shape(shape), FORMAT_ND, dt);
-    Tensor targetT; ret = GenData(shape, targetT, targetDesc, 1.0f);
-    targetData.update_input_desc_x(targetDesc); targetData.update_output_desc_y(targetDesc);
-    op.set_input_target(targetData); input.push_back(targetT);
+    Tensor targetT;
+    ret = GenData(shape, targetT, targetDesc, 1.0f);
+    targetData.update_input_desc_x(targetDesc);
+    targetData.update_output_desc_y(targetDesc);
+    op.set_input_target(targetData);
+    input.push_back(targetT);
     inputs.push_back(targetData);
 
     // grad_output
     auto gradData = op::Data("grad_output").set_attr_index(2);
     TensorDesc gradDesc(ge::Shape(shape), FORMAT_ND, dt);
-    Tensor gradT; ret = GenData(shape, gradT, gradDesc, 1.0f);
-    gradData.update_input_desc_x(gradDesc); gradData.update_output_desc_y(gradDesc);
-    op.set_input_grad_output(gradData); input.push_back(gradT);
+    Tensor gradT;
+    ret = GenData(shape, gradT, gradDesc, 1.0f);
+    gradData.update_input_desc_x(gradDesc);
+    gradData.update_output_desc_y(gradDesc);
+    op.set_input_grad_output(gradData);
+    input.push_back(gradT);
     inputs.push_back(gradData);
 
     TensorDesc outDesc(ge::Shape(shape), FORMAT_ND, dt);
@@ -118,18 +131,27 @@ int main(int argc, char* argv[])
 
     std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     Status ret = ge::GEInitialize(global_options);
-    if (ret != SUCCESS) { printf("%s - ERROR: GEInitialize failed\n", GetTime().c_str()); return FAILED; }
+    if (ret != SUCCESS) {
+        printf("%s - ERROR: GEInitialize failed\n", GetTime().c_str());
+        return FAILED;
+    }
     printf("%s - INFO: GEInitialize success\n", GetTime().c_str());
 
     std::vector<Operator> inputs{}, outputs{};
     if (CreateGraph(graph, input, inputs, outputs) != SUCCESS) {
-        printf("%s - ERROR: create graph failed\n", GetTime().c_str()); GEFinalize(); return FAILED;
+        printf("%s - ERROR: create graph failed\n", GetTime().c_str());
+        GEFinalize();
+        return FAILED;
     }
-    if (!inputs.empty() && !outputs.empty()) graph.SetInputs(inputs).SetOutputs(outputs);
+    if (!inputs.empty() && !outputs.empty())
+        graph.SetInputs(inputs).SetOutputs(outputs);
 
     std::map<AscendString, AscendString> build_options;
     ge::Session* session = new Session(build_options);
-    if (session == nullptr) { printf("%s - ERROR: create session failed\n", GetTime().c_str()); return FAILED; }
+    if (session == nullptr) {
+        printf("%s - ERROR: create session failed\n", GetTime().c_str());
+        return FAILED;
+    }
 
     uint32_t graph_id = 0;
     std::map<AscendString, AscendString> graph_options;
@@ -139,7 +161,10 @@ int main(int argc, char* argv[])
     std::vector<ge::Tensor> output;
     ret = session->RunGraph(graph_id, input, output);
     if (ret != SUCCESS) {
-        printf("%s - INFO: Run graph failed\n", GetTime().c_str()); delete session; GEFinalize(); return FAILED;
+        printf("%s - INFO: Run graph failed\n", GetTime().c_str());
+        delete session;
+        GEFinalize();
+        return FAILED;
     }
     printf("%s - INFO: Run graph success, outputs=%zu\n", GetTime().c_str(), output.size());
 

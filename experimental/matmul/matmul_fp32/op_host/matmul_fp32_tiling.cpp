@@ -25,7 +25,7 @@
 using namespace matmul_tiling;
 
 namespace optiling {
-constexpr uint64_t WS_SYS_SIZE =  16U * 1024U* 1024U; // 16MB
+constexpr uint64_t WS_SYS_SIZE = 16U * 1024U * 1024U; // 16MB
 constexpr uint64_t DB_SIZE = 2UL;
 constexpr uint64_t BLOCK_BYTE_SIZE = 32UL;
 constexpr uint64_t H_ALIGNED = 16UL;
@@ -48,7 +48,7 @@ constexpr uint64_t MIN_BASE_M_VALUE = 16;
 uint64_t FULL_LOAD_TYPE = MAT_MUL_FP32_NO_FULLLOAD;
 bool is_support_bl1 = false;
 
-struct MatmulFp32CompileInfo{
+struct MatmulFp32CompileInfo {
     uint64_t aicNum{0UL};
     uint64_t aivNum{0UL};
     uint64_t ubSize{0UL};
@@ -61,8 +61,7 @@ struct MatmulFp32CompileInfo{
     platform_ascendc::SocVersion socVersion;
 };
 
-struct MatmulFp32RunInfo
-{
+struct MatmulFp32RunInfo {
     uint64_t usedCoreNum = 1;
     uint64_t singleCoreM = 1;
     uint64_t singleCoreN = 1;
@@ -80,7 +79,7 @@ struct MatmulFp32RunInfo
     uint64_t dbL0c = 0;
 };
 
-struct MatmulFp32Args{
+struct MatmulFp32Args {
     const char* opName = nullptr;
     bool isATrans = false;
     bool isBTrans = false;
@@ -105,16 +104,14 @@ inline uint64_t CeilDiv(uint64_t x, uint64_t align)
     return (x + align - 1) / align;
 }
 
-inline uint64_t CeilAlign(uint64_t x, uint64_t align)
-{
-    return CeilDiv(x, align) * align;
-}
+inline uint64_t CeilAlign(uint64_t x, uint64_t align) { return CeilDiv(x, align) * align; }
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, MatmulFp32CompileInfo* compileInfoPtr)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context->GetNodeName(), "context is null"), return ge::GRAPH_FAILED);
-    fe::PlatFormInfos *platFormInfos = context->GetPlatformInfo();
-    OP_CHECK_IF(platFormInfos == nullptr, OP_LOGE(context->GetNodeName(), "platform info is null"), return ge::GRAPH_FAILED);
+    fe::PlatFormInfos* platFormInfos = context->GetPlatformInfo();
+    OP_CHECK_IF(platFormInfos == nullptr, OP_LOGE(context->GetNodeName(), "platform info is null"),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platFormInfos);
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     if (compileInfoPtr->aicNum == 0) {
@@ -129,9 +126,9 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, MatmulFp32C
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, compileInfoPtr->l0BSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr->l0CSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
-    OP_LOGI(context->GetNodeName(),
-        "parse compile info soc:%d, l1Size:%lu, l2Size:%lu, coreNum:%lu",
-        static_cast<int32_t>(compileInfoPtr->socVersion), compileInfoPtr->l1Size, compileInfoPtr->l2Size, compileInfoPtr->aicNum);
+    OP_LOGI(context->GetNodeName(), "parse compile info soc:%d, l1Size:%lu, l2Size:%lu, coreNum:%lu",
+            static_cast<int32_t>(compileInfoPtr->socVersion), compileInfoPtr->l1Size, compileInfoPtr->l2Size,
+            compileInfoPtr->aicNum);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -147,10 +144,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, MatmulFp3
     auto descX2 = context->GetInputDesc(1);
     auto descOut = context->GetOutputDesc(0);
     auto attrs = context->GetAttrs();
-    OP_CHECK_IF(
-        shapeX1 == nullptr || shapeX2 == nullptr || shapeBias == nullptr || descX1 == nullptr || descX2 == nullptr ||
-            descOut == nullptr || attrs == nullptr,
-        OP_LOGE(argsPtr->opName, "the input is invalid"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shapeX1 == nullptr || shapeX2 == nullptr || shapeBias == nullptr || descX1 == nullptr ||
+                    descX2 == nullptr || descOut == nullptr || attrs == nullptr,
+                OP_LOGE(argsPtr->opName, "the input is invalid"), return ge::GRAPH_FAILED);
     // 输入属性信息
     argsPtr->isATrans = *attrs->GetAttrPointer<bool>(0);
     argsPtr->isBTrans = *attrs->GetAttrPointer<bool>(1);
@@ -166,40 +162,40 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, MatmulFp3
     argsPtr->aType = descX1->GetDataType();
     argsPtr->bType = descX2->GetDataType();
     argsPtr->cType = descOut->GetDataType();
-    OP_CHECK_IF(
-        argsPtr->aType != ge::DT_FLOAT || argsPtr->bType != ge::DT_FLOAT || argsPtr->cType != ge::DT_FLOAT,
-        OP_LOGE(argsPtr->opName, "input and output only support float32"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(argsPtr->aType != ge::DT_FLOAT || argsPtr->bType != ge::DT_FLOAT || argsPtr->cType != ge::DT_FLOAT,
+                OP_LOGE(argsPtr->opName, "input and output only support float32"), return ge::GRAPH_FAILED);
 
     // 获取input的m/n/k
     const size_t x1DimNum = shapeX1->GetStorageShape().GetDimNum();
     const size_t x2DimNum = shapeX2->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        x1DimNum != 2 || x2DimNum != 2, OP_LOGE(argsPtr->opName, "the input shape dimensions are not equal to 2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x1DimNum != 2 || x2DimNum != 2,
+                OP_LOGE(argsPtr->opName, "the input shape dimensions are not equal to 2"), return ge::GRAPH_FAILED);
     argsPtr->hasBias = shapeBias == nullptr ? false : true;
     argsPtr->mValue = argsPtr->isATrans ? shapeX1->GetStorageShape().GetDim(1) : shapeX1->GetStorageShape().GetDim(0);
     argsPtr->kValue = argsPtr->isATrans ? shapeX1->GetStorageShape().GetDim(0) : shapeX1->GetStorageShape().GetDim(1);
     argsPtr->nValue = argsPtr->isBTrans ? shapeX2->GetStorageShape().GetDim(0) : shapeX2->GetStorageShape().GetDim(1);
-    OP_LOGD(context->GetNodeName(),
-        "parse op shape info m:%d, n:%d, k:%d",
-        static_cast<int>(argsPtr->mValue), static_cast<int>(argsPtr->nValue), static_cast<int>(argsPtr->kValue));
+    OP_LOGD(context->GetNodeName(), "parse op shape info m:%d, n:%d, k:%d", static_cast<int>(argsPtr->mValue),
+            static_cast<int>(argsPtr->nValue), static_cast<int>(argsPtr->kValue));
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InitTilingData(
-    AscendC::tiling::TCubeTiling& tCubeTiling, MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32Args* argsPtr)
+static ge::graphStatus InitTilingData(AscendC::tiling::TCubeTiling& tCubeTiling, MatmulFp32CompileInfo* compileInfoPtr,
+                                      MatmulFp32Args* argsPtr)
 {
     auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
     MultiCoreMatmulTiling tilingApi(*ascendcPlatform);
-    tilingApi.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT, argsPtr->isATrans);
-    tilingApi.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT, argsPtr->isBTrans);
+    tilingApi.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT,
+                       argsPtr->isATrans);
+    tilingApi.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT,
+                       argsPtr->isBTrans);
     tilingApi.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT);
     tilingApi.SetDim(compileInfoPtr->aicNum);
     tilingApi.SetShape(argsPtr->mValue, argsPtr->nValue, argsPtr->kValue);
     tilingApi.SetOrgShape(argsPtr->mValue, argsPtr->nValue, argsPtr->kValue);
     if (argsPtr->hasBias) {
         tilingApi.SetBias(true);
-        tilingApi.SetBiasType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT);
+        tilingApi.SetBiasType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
+                              matmul_tiling::DataType::DT_FLOAT);
     }
     tilingApi.SetBufferSpace(compileInfoPtr->l1Size, compileInfoPtr->l0CSize, compileInfoPtr->ubSize);
     if (tilingApi.GetTiling(tCubeTiling) == -1) {
@@ -221,14 +217,15 @@ inline void ResetBase(MatmulFp32Args* argsPtr, MatmulFp32RunInfo* runInfoPtr)
     runInfoPtr->singleCoreK = argsPtr->kValue;
 }
 
-
 static void CalL1Tiling(MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32Args* argsPtr, MatmulFp32RunInfo* runInfoPtr)
 {
     runInfoPtr->baseM = CeilAlign(std::min(argsPtr->mValue, runInfoPtr->baseM), BASIC_ALIGN_16);
     runInfoPtr->baseN = CeilAlign(std::min(argsPtr->nValue, runInfoPtr->baseN), BASIC_ALIGN_16);
     uint64_t reserveBTSize = argsPtr->hasBias ? BIAS_TABLE_NUM * DATA_SIZE_FP32 : 0;
-    runInfoPtr->depthA1 = compileInfoPtr->l1Size / NUM_HALF / runInfoPtr->baseM / runInfoPtr->baseK / DATA_SIZE_FP32; // 2: half of l1
-    runInfoPtr->depthB1 = compileInfoPtr->l1Size / NUM_HALF / runInfoPtr->baseN / runInfoPtr->baseK / DATA_SIZE_FP32; // 2: half of l1
+    runInfoPtr->depthA1 = compileInfoPtr->l1Size / NUM_HALF / runInfoPtr->baseM / runInfoPtr->baseK /
+                          DATA_SIZE_FP32; // 2: half of l1
+    runInfoPtr->depthB1 = compileInfoPtr->l1Size / NUM_HALF / runInfoPtr->baseN / runInfoPtr->baseK /
+                          DATA_SIZE_FP32; // 2: half of l1
 
     uint64_t depthASize = runInfoPtr->depthA1 * runInfoPtr->baseM * runInfoPtr->baseK * DATA_SIZE_FP32;
     uint64_t depthBSize = runInfoPtr->depthB1 * runInfoPtr->baseN * runInfoPtr->baseK * DATA_SIZE_FP32;
@@ -252,15 +249,16 @@ static void CalL1Tiling(MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32Args* a
     runInfoPtr->singleCoreM = runInfoPtr->baseM;
     runInfoPtr->singleCoreN = runInfoPtr->baseN;
     return;
-} 
+}
 
-static ge::graphStatus DoBL1FullLoadTiling(MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32Args* argsPtr, MatmulFp32RunInfo* runInfoPtr)
+static ge::graphStatus DoBL1FullLoadTiling(MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32Args* argsPtr,
+                                           MatmulFp32RunInfo* runInfoPtr)
 {
     // mValue should be 16 times more than max of k/nValue, and kValue should be no more than 256
     bool validMK = argsPtr->mValue > 16 * std::max(argsPtr->kValue, argsPtr->nValue) && argsPtr->kValue <= 256;
     uint64_t biasSize = argsPtr->hasBias ? runInfoPtr->baseN * DATA_SIZE_FP32 : 0; // 默认最高精度保证BF16
-    bool bl1SizeValid =
-        (compileInfoPtr->l1Size / NUM_HALF - biasSize) > argsPtr->kValue * argsPtr->nValue * DATA_SIZE_FP32;
+    bool bl1SizeValid = (compileInfoPtr->l1Size / NUM_HALF - biasSize) >
+                        argsPtr->kValue * argsPtr->nValue * DATA_SIZE_FP32;
     if (!validMK || !bl1SizeValid) {
         return ge::GRAPH_FAILED;
     }
@@ -269,19 +267,23 @@ static ge::graphStatus DoBL1FullLoadTiling(MatmulFp32CompileInfo* compileInfoPtr
     runInfoPtr->stepM = 1;
     runInfoPtr->baseN = std::min(argsPtr->nValue, runInfoPtr->baseN);
     // BaseN need to do Block alignment
-    runInfoPtr->baseN = argsPtr->isBTrans ? CeilAlign(runInfoPtr->baseN, H_ALIGNED) : CeilAlign(runInfoPtr->baseN, CO_SIZE_FP32);
+    runInfoPtr->baseN = argsPtr->isBTrans ? CeilAlign(runInfoPtr->baseN, H_ALIGNED) :
+                                            CeilAlign(runInfoPtr->baseN, CO_SIZE_FP32);
     runInfoPtr->stepN = CeilDiv(argsPtr->nValue, runInfoPtr->baseN);
     runInfoPtr->stepKb = CeilDiv(argsPtr->kValue, runInfoPtr->baseK);
     runInfoPtr->stepKa = runInfoPtr->stepKb;
     runInfoPtr->depthA1 = DB_SIZE * runInfoPtr->stepKa;
     runInfoPtr->depthB1 = runInfoPtr->stepN * runInfoPtr->stepKb;
     uint64_t loadSize = static_cast<uint64_t>(runInfoPtr->baseK) *
-                        (runInfoPtr->depthA1 * runInfoPtr->baseM + runInfoPtr->depthB1 * runInfoPtr->baseN) * DATA_SIZE_FP32;
+                        (runInfoPtr->depthA1 * runInfoPtr->baseM + runInfoPtr->depthB1 * runInfoPtr->baseN) *
+                        DATA_SIZE_FP32;
     loadSize += argsPtr->hasBias ? runInfoPtr->baseN * DATA_SIZE_FP32 : 0;
     // Check L1 load size
-    uint64_t totalBSizeL1 = loadSize - (runInfoPtr->baseM - MIN_BASE_M_VALUE) * runInfoPtr->baseK * runInfoPtr->depthA1 * DATA_SIZE_FP32;
+    uint64_t totalBSizeL1 = loadSize - (runInfoPtr->baseM - MIN_BASE_M_VALUE) * runInfoPtr->baseK *
+                                           runInfoPtr->depthA1 * DATA_SIZE_FP32;
     if (totalBSizeL1 > compileInfoPtr->l1Size) {
-        OP_LOGI(argsPtr->opName, "min A size in L1 and total B size in L1 is larger than total L1 size, cannot be fullLoad.");
+        OP_LOGI(argsPtr->opName,
+                "min A size in L1 and total B size in L1 is larger than total L1 size, cannot be fullLoad.");
         FULL_LOAD_TYPE = MAT_MUL_FP32_NO_FULLLOAD;
         return ge::GRAPH_FAILED;
     }
@@ -292,13 +294,14 @@ static ge::graphStatus DoBL1FullLoadTiling(MatmulFp32CompileInfo* compileInfoPtr
     }
     runInfoPtr->singleCoreM = DB_SIZE * runInfoPtr->baseM;
     runInfoPtr->singleCoreN = argsPtr->nValue;
-    runInfoPtr->dbL0c = runInfoPtr->baseM * runInfoPtr->baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfoPtr->l0CSize ? DB_SIZE : 1;
+    runInfoPtr->dbL0c = runInfoPtr->baseM * runInfoPtr->baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfoPtr->l0CSize ?
+                            DB_SIZE :
+                            1;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus DoOpTiling(
-    AscendC::tiling::TCubeTiling& tCubeTiling, MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32Args* argsPtr,
-    MatmulFp32RunInfo* runInfoPtr)
+static ge::graphStatus DoOpTiling(AscendC::tiling::TCubeTiling& tCubeTiling, MatmulFp32CompileInfo* compileInfoPtr,
+                                  MatmulFp32Args* argsPtr, MatmulFp32RunInfo* runInfoPtr)
 {
     // 高阶api初始化tilingdata
     auto ret = InitTilingData(tCubeTiling, compileInfoPtr, argsPtr);
@@ -317,15 +320,16 @@ static ge::graphStatus DoOpTiling(
     return ret;
 }
 
-static ge::graphStatus PostTiling(
-    gert::TilingContext* context, MatmulFp32CompileInfo* compileInfoPtr, MatmulFp32TilingData* tilingDataPtr,
-    MatmulFp32Args* argsPtr, MatmulFp32RunInfo* runInfoPtr)
+static ge::graphStatus PostTiling(gert::TilingContext* context, MatmulFp32CompileInfo* compileInfoPtr,
+                                  MatmulFp32TilingData* tilingDataPtr, MatmulFp32Args* argsPtr,
+                                  MatmulFp32RunInfo* runInfoPtr)
 {
     // 设置tilingdata
     tilingDataPtr->matmulFp32RunInfo.transA = static_cast<uint32_t>(argsPtr->isATrans);
     tilingDataPtr->matmulFp32RunInfo.transB = static_cast<uint32_t>(argsPtr->isBTrans);
-    tilingDataPtr->tCubeTiling.usedCoreNum = std::min(CeilDiv(argsPtr->mValue, runInfoPtr->singleCoreM) *
-        CeilDiv(argsPtr->nValue, runInfoPtr->singleCoreN), compileInfoPtr->aicNum);
+    tilingDataPtr->tCubeTiling.usedCoreNum = std::min(
+        CeilDiv(argsPtr->mValue, runInfoPtr->singleCoreM) * CeilDiv(argsPtr->nValue, runInfoPtr->singleCoreN),
+        compileInfoPtr->aicNum);
     tilingDataPtr->tCubeTiling.singleCoreM = static_cast<uint32_t>(runInfoPtr->singleCoreM);
     tilingDataPtr->tCubeTiling.singleCoreN = static_cast<uint32_t>(runInfoPtr->singleCoreN);
     tilingDataPtr->tCubeTiling.singleCoreK = static_cast<uint32_t>(runInfoPtr->singleCoreK);
@@ -341,9 +345,8 @@ static ge::graphStatus PostTiling(
     tilingDataPtr->tCubeTiling.iterateOrder = static_cast<uint32_t>(runInfoPtr->iterateOrder);
     tilingDataPtr->tCubeTiling.dbL0C = static_cast<uint32_t>(runInfoPtr->dbL0c);
     size_t tilingDataSize = sizeof(MatmulFp32TilingData);
-    auto ret = memcpy_s(
-        context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(tilingDataPtr), tilingDataSize);
+    auto ret = memcpy_s(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity(),
+                        reinterpret_cast<void*>(tilingDataPtr), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -352,8 +355,8 @@ static ge::graphStatus PostTiling(
     context->SetBlockDim(tilingDataPtr->tCubeTiling.usedCoreNum);
     context->SetScheduleMode(1);
     // 生成tilingkey
-    uint64_t tilingKey = GET_TPL_TILING_KEY(
-        FULL_LOAD_TYPE, MAT_MUL_FP32_BASE_SPLIT_K, MAT_MUL_FP32_BASE_FIXOPTI, MAT_MUL_FP32_MIXND2NZ_TRUE);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(FULL_LOAD_TYPE, MAT_MUL_FP32_BASE_SPLIT_K, MAT_MUL_FP32_BASE_FIXOPTI,
+                                            MAT_MUL_FP32_MIXND2NZ_TRUE);
     OP_LOGI(context->GetNodeName(), "Tiling Key is 0x%x", tilingKey);
     context->SetTilingKey(tilingKey);
     return ge::GRAPH_SUCCESS;
@@ -379,15 +382,15 @@ static ge::graphStatus MatmulFp32TilingFunc(gert::TilingContext* context)
 {
     // 2.1 平台信息
     auto compileInfoPtr = std::make_unique<MatmulFp32CompileInfo>();
-    auto ret =GetPlatformInfo(context, compileInfoPtr.get());
-    if (ret !=ge::GRAPH_SUCCESS){
+    auto ret = GetPlatformInfo(context, compileInfoPtr.get());
+    if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
     // 2.2 输入信息
     auto argsPtr = std::make_unique<MatmulFp32Args>();
     ret = GetShapeAttrsInfo(context, argsPtr.get());
-    if (ret !=ge::GRAPH_SUCCESS){
+    if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
@@ -396,13 +399,13 @@ static ge::graphStatus MatmulFp32TilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingDataPtr);
     auto runInfoPtr = std::make_unique<MatmulFp32RunInfo>();
     ret = DoOpTiling(tilingDataPtr->tCubeTiling, compileInfoPtr.get(), argsPtr.get(), runInfoPtr.get());
-    if (ret !=ge::GRAPH_SUCCESS){
+    if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
     // 2.4 设置TillingData与生成tilingkey
     ret = PostTiling(context, compileInfoPtr.get(), tilingDataPtr, argsPtr.get(), runInfoPtr.get());
-    if (ret !=ge::GRAPH_SUCCESS){
+    if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
@@ -411,9 +414,8 @@ static ge::graphStatus MatmulFp32TilingFunc(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-
 // 3. Tiling注册入口
 IMPL_OP_OPTILING(MatmulFp32)
     .Tiling(MatmulFp32TilingFunc)
     .TilingParse<MatmulFp32CompileInfo>(TilingPrepareForMatmulFp32);
-}
+} // namespace optiling

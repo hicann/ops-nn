@@ -17,32 +17,31 @@
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #pragma pack(push, 8)
-namespace optiling{
-    BEGIN_TILING_DATA_DEF(ModulateGradTiling)
-        TILING_DATA_FIELD_DEF(uint64_t,B);
-        TILING_DATA_FIELD_DEF(uint64_t,L);
-        TILING_DATA_FIELD_DEF(uint64_t,D);
-        TILING_DATA_FIELD_DEF(uint32_t,dataType);
-        TILING_DATA_FIELD_DEF(uint32_t,block_dim);
-        TILING_DATA_FIELD_DEF(uint32_t,dataTypeSize);
-        TILING_DATA_FIELD_DEF(uint32_t,splitB);
-        TILING_DATA_FIELD_DEF(uint32_t,coresPerB);
-        TILING_DATA_FIELD_DEF(uint32_t,usedCores);
-        TILING_DATA_FIELD_DEF(uint32_t,formerNum);
-        TILING_DATA_FIELD_DEF(uint32_t,formerLength);
-        TILING_DATA_FIELD_DEF(uint32_t,tailNum);
-        TILING_DATA_FIELD_DEF(uint32_t,tailLength);
-        TILING_DATA_FIELD_DEF(uint32_t,has_scale);
-        TILING_DATA_FIELD_DEF(uint32_t,has_shift);
-    
-    END_TILING_DATA_DEF;
+namespace optiling {
+BEGIN_TILING_DATA_DEF(ModulateGradTiling)
+TILING_DATA_FIELD_DEF(uint64_t, B);
+TILING_DATA_FIELD_DEF(uint64_t, L);
+TILING_DATA_FIELD_DEF(uint64_t, D);
+TILING_DATA_FIELD_DEF(uint32_t, dataType);
+TILING_DATA_FIELD_DEF(uint32_t, block_dim);
+TILING_DATA_FIELD_DEF(uint32_t, dataTypeSize);
+TILING_DATA_FIELD_DEF(uint32_t, splitB);
+TILING_DATA_FIELD_DEF(uint32_t, coresPerB);
+TILING_DATA_FIELD_DEF(uint32_t, usedCores);
+TILING_DATA_FIELD_DEF(uint32_t, formerNum);
+TILING_DATA_FIELD_DEF(uint32_t, formerLength);
+TILING_DATA_FIELD_DEF(uint32_t, tailNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailLength);
+TILING_DATA_FIELD_DEF(uint32_t, has_scale);
+TILING_DATA_FIELD_DEF(uint32_t, has_shift);
 
-    REGISTER_TILING_DATA_CLASS(ModulateGrad, ModulateGradTiling)
-    struct ModulateGradCompileInfo{
-        uint32_t totalCoreNum = 0;
-        uint64_t ubSizePlatForm = 0;
+END_TILING_DATA_DEF;
 
-    };
- 
-}
+REGISTER_TILING_DATA_CLASS(ModulateGrad, ModulateGradTiling)
+struct ModulateGradCompileInfo {
+    uint32_t totalCoreNum = 0;
+    uint64_t ubSizePlatForm = 0;
+};
+
+} // namespace optiling
 #endif

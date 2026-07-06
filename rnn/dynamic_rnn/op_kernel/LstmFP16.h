@@ -36,44 +36,47 @@ public:
 public:
     __aicore__ inline void ProcessInputMM();
     __aicore__ inline void ProcessHiddenMM(int64_t tIdx);
-    __aicore__ inline void ProcessVectorOnce(
-        int64_t tIdx, int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<float> &mixGm);
-    __aicore__ inline void ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<float> &mixGm);
+    __aicore__ inline void ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx,
+                                             AscendC::GlobalTensor<float>& mixGm);
+    __aicore__ inline void ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<float>& mixGm);
     __aicore__ inline void ProcessVector(int64_t tIdx);
     __aicore__ inline void ProcessInitalT();
-    __aicore__ inline void CopyInHCSeq(
-        AscendC::LocalTensor<float> &dstUb, AscendC::GlobalTensor<T> &mixGm, int64_t off);
-    __aicore__ inline void CopyOutput(AscendC::GlobalTensor<T> &gm, AscendC::LocalTensor<float> &ub, int64_t off);
-    __aicore__ inline void CalcVecScaler(
-        int64_t tIdx, int64_t mIdx, int64_t nIdx, int64_t &off1, int64_t &off2, int64_t &off3);
-    __aicore__ inline void CopyInFJ(AscendC::LocalTensor<float> &dst, AscendC::GlobalTensor<float> &mixGm, int64_t off);
-    __aicore__ inline void CopyInIO(AscendC::LocalTensor<float> &dst, AscendC::GlobalTensor<float> &mixGm, int64_t off);
-    __aicore__ inline void CopyInC(AscendC::LocalTensor<T> &dst, AscendC::GlobalTensor<T> &mixGm, const int64_t off);
-    __aicore__ inline void AddfSigmoid(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
-    __aicore__ inline void CaliSigmoid(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
-    __aicore__ inline void CaljTanh(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off, LocalTensor<float> &temp1, LocalTensor<float> &temp2);
-    __aicore__ inline void CaloSigmoid(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src, int64_t off);
-    __aicore__ inline void InitCMulfSigmoid(
-        AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<T> &src1, AscendC::LocalTensor<float> &src2);
-    __aicore__ inline void CalAddTanh(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src1,
-        AscendC::LocalTensor<float> &src2, int64_t off1, int64_t off2, LocalTensor<float> &temp1);
-    __aicore__ inline void CalAddTanht0(AscendC::LocalTensor<float> &dst, AscendC::LocalTensor<float> &src1,
-        AscendC::LocalTensor<float> &src2, int64_t off1, int64_t off2, LocalTensor<float> &temp1);
-    __aicore__ inline void CopyOutYH(AscendC::LocalTensor<float> &src, int64_t off1, int64_t off2);
-    __aicore__ inline void CopyOutYHt0(AscendC::LocalTensor<float> &src, int64_t off);
+    __aicore__ inline void CopyInHCSeq(AscendC::LocalTensor<float>& dstUb, AscendC::GlobalTensor<T>& mixGm,
+                                       int64_t off);
+    __aicore__ inline void CopyOutput(AscendC::GlobalTensor<T>& gm, AscendC::LocalTensor<float>& ub, int64_t off);
+    __aicore__ inline void CalcVecScaler(int64_t tIdx, int64_t mIdx, int64_t nIdx, int64_t& off1, int64_t& off2,
+                                         int64_t& off3);
+    __aicore__ inline void CopyInFJ(AscendC::LocalTensor<float>& dst, AscendC::GlobalTensor<float>& mixGm, int64_t off);
+    __aicore__ inline void CopyInIO(AscendC::LocalTensor<float>& dst, AscendC::GlobalTensor<float>& mixGm, int64_t off);
+    __aicore__ inline void CopyInC(AscendC::LocalTensor<T>& dst, AscendC::GlobalTensor<T>& mixGm, const int64_t off);
+    __aicore__ inline void AddfSigmoid(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src, int64_t off);
+    __aicore__ inline void CaliSigmoid(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src, int64_t off);
+    __aicore__ inline void CaljTanh(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src, int64_t off,
+                                    LocalTensor<float>& temp1, LocalTensor<float>& temp2);
+    __aicore__ inline void CaloSigmoid(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src, int64_t off);
+    __aicore__ inline void InitCMulfSigmoid(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<T>& src1,
+                                            AscendC::LocalTensor<float>& src2);
+    __aicore__ inline void CalAddTanh(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src1,
+                                      AscendC::LocalTensor<float>& src2, int64_t off1, int64_t off2,
+                                      LocalTensor<float>& temp1);
+    __aicore__ inline void CalAddTanht0(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src1,
+                                        AscendC::LocalTensor<float>& src2, int64_t off1, int64_t off2,
+                                        LocalTensor<float>& temp1);
+    __aicore__ inline void CopyOutYH(AscendC::LocalTensor<float>& src, int64_t off1, int64_t off2);
+    __aicore__ inline void CopyOutYHt0(AscendC::LocalTensor<float>& src, int64_t off);
 
 public:
     // describe Matmul input/output dtype&format
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>, RNN_MM_CFG>
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>, RNN_MM_CFG>
         inputMM;
 
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>,
-        matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>, RNN_MM_CFG>
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>,
+                   matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>, RNN_MM_CFG>
         hiddenMM;
 };
 

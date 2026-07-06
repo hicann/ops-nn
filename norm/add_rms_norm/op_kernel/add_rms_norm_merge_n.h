@@ -22,10 +22,7 @@ using namespace RmsNorm;
 template <typename T, int32_t MODE>
 class KernelAddRmsNormMergeN {
 public:
-    __aicore__ inline KernelAddRmsNormMergeN(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormMergeN(TPipe* pipe) { Ppipe = pipe; }
 
     __aicore__ inline void InitParams(const AddRMSNormTilingData* tiling)
     {
@@ -57,29 +54,34 @@ public:
         this->isPerformance = tiling->is_performance;
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, const AddRMSNormTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->InitParams(tiling);
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol,
+                             this->rowWork * this->numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol,
+                             this->rowWork * this->numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
             rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
+                                this->rowWork * this->numCol);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
+                                this->rowWork * this->numCol);
         }
 
         // pipe alloc memory to queue, the unit is Bytes
         Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, this->ubFactor * sizeof(T));
         Ppipe->InitBuffer(inQueueGamma, BUFFER_NUM, this->ubFactor * sizeof(T));
         Ppipe->InitBuffer(outQueueY, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         Ppipe->InitBuffer(outQueueRstd, BUFFER_NUM, rowFactor * sizeof(float));
 #else
         Ppipe->InitBuffer(rstdBuf, rowFactor * sizeof(float));
@@ -104,7 +106,8 @@ public:
 
     __aicore__ inline void MainCompute(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) * static_cast<uint64_t>(numCol);
+        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) *
+                           static_cast<uint64_t>(numCol);
         uint32_t elementNum = calc_row_num * numColAlign;
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(elementNum);
@@ -113,7 +116,8 @@ public:
         } else {
             outQueueY.FreeTensor(xLocal);
         }
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         ComputeRstd(xLocal, rstdLocal, calc_row_num, elementNum);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
@@ -201,7 +205,8 @@ private:
         inQueueGamma.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void ComputeRstd(LocalTensor<T> xLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num, uint32_t elementNum)
+    __aicore__ inline void ComputeRstd(LocalTensor<T> xLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num,
+                                       uint32_t elementNum)
     {
         LocalTensor<float> sqx = sqxBuf.Get<float>();
         LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
@@ -231,21 +236,22 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeY(
-        LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num, uint32_t elementNum)
+    __aicore__ inline void ComputeY(LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal,
+                                    uint32_t calc_row_num, uint32_t elementNum)
     {
         LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
         uint32_t splidRow = 240;
         uint32_t rowRepeatLoop1 = calc_row_num / splidRow;
         uint32_t rowRepeatTail1 = calc_row_num - rowRepeatLoop1 * splidRow;
-        for(uint32_t r_i = 0; r_i < rowRepeatLoop1; r_i ++) {
-          Brcb(tmpLocal[r_i * splidRow * MOV_8], rstdLocal[r_i * splidRow], splidRow, {1, 8});
+        for (uint32_t r_i = 0; r_i < rowRepeatLoop1; r_i++) {
+            Brcb(tmpLocal[r_i * splidRow * MOV_8], rstdLocal[r_i * splidRow], splidRow, {1, 8});
         }
         PipeBarrier<PIPE_V>();
-        
-        if(rowRepeatTail1 > 0) {
-          Brcb(tmpLocal[rowRepeatLoop1 * splidRow * MOV_8], rstdLocal[rowRepeatLoop1 * splidRow], rowRepeatTail1, {1, 8});
-          PipeBarrier<PIPE_V>();
+
+        if (rowRepeatTail1 > 0) {
+            Brcb(tmpLocal[rowRepeatLoop1 * splidRow * MOV_8], rstdLocal[rowRepeatLoop1 * splidRow], rowRepeatTail1,
+                 {1, 8});
+            PipeBarrier<PIPE_V>();
         }
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
         if constexpr (!is_same<T, float>::value) {
@@ -289,18 +295,20 @@ private:
         outQueueY.FreeTensor(yLocal);
     }
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
     {
-       LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
+        LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
         DataCopyCustom<float>(rstdGm[outer_progress * rowFactor], rstdLocal, num);
         outQueueRstd.FreeTensor(rstdLocal);
     }
 #endif
-    
+
     template <typename U>
-    __aicore__ inline void repeatByRow(const LocalTensor<U>& dstLocal, const LocalTensor<U>& src1Local, const LocalTensor<U>& src2Local, uint32_t calc_row_num, uint32_t type)
-    {   
+    __aicore__ inline void repeatByRow(const LocalTensor<U>& dstLocal, const LocalTensor<U>& src1Local,
+                                       const LocalTensor<U>& src2Local, uint32_t calc_row_num, uint32_t type)
+    {
         // TWO_UINT=gammaFp16 ONE_UINT=rstd
         uint32_t strideParams[6] = {mulLoopFp32, mulTailFp32, 64, 1, dstRepStrideFp32, 0};
         if (type == TWO_UINT) {
@@ -316,11 +324,12 @@ private:
         uint32_t rowRepeatLoop = calc_row_num / singlT;
         uint32_t rowRepeatTail = calc_row_num - rowRepeatLoop * singlT;
         uint32_t offset2 = 0;
-        for(uint32_t r_i = 0; r_i < rowRepeatLoop; r_i ++) {
+        for (uint32_t r_i = 0; r_i < rowRepeatLoop; r_i++) {
             offset2 = type == 1 ? (r_i * singlT * MOV_8) : 0;
-            mulRepeat<U>(dstLocal[r_i * singlT * numColAlign], src1Local[r_i * singlT * numColAlign], src2Local[offset2], singlT, strideParams);
+            mulRepeat<U>(dstLocal[r_i * singlT * numColAlign], src1Local[r_i * singlT * numColAlign],
+                         src2Local[offset2], singlT, strideParams);
         }
-        if(rowRepeatTail > 0) {
+        if (rowRepeatTail > 0) {
             offset2 = type == 1 ? (rowRepeatLoop * singlT * MOV_8) : 0;
             uint32_t offset1 = rowRepeatLoop * singlT * numColAlign;
             mulRepeat<U>(dstLocal[offset1], src1Local[offset1], src2Local[offset2], rowRepeatTail, strideParams);
@@ -328,7 +337,8 @@ private:
     }
 
     template <typename U>
-    __aicore__ inline void mulRepeat(const LocalTensor<U>& dstLocal, const LocalTensor<U>& src1Local, const LocalTensor<U>& src2Local, uint32_t calcRowNum, uint32_t strideParams[6])
+    __aicore__ inline void mulRepeat(const LocalTensor<U>& dstLocal, const LocalTensor<U>& src1Local,
+                                     const LocalTensor<U>& src2Local, uint32_t calcRowNum, uint32_t strideParams[6])
     {
         uint32_t mulLoop = strideParams[0];
         uint32_t mulTail = strideParams[1];
@@ -336,24 +346,28 @@ private:
         uint8_t src1BlkStride = static_cast<uint8_t>(strideParams[3]);
         uint8_t dstRepStride = static_cast<uint8_t>(strideParams[4]);
         uint8_t src1RepStride = static_cast<uint8_t>(strideParams[5]);
-        if(src1BlkStride == 0) {
-          for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
-            Mul(dstLocal[m_i * strideNum], src1Local[m_i * strideNum], src2Local, strideNum, calcRowNum, {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
-          }
-          PipeBarrier<PIPE_V>();
-          if(mulTail > 0) {
-            Mul(dstLocal[mulLoop * strideNum], src1Local[mulLoop * strideNum], src2Local, mulTail, calcRowNum, {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
-          }
-          PipeBarrier<PIPE_V>();
+        if (src1BlkStride == 0) {
+            for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
+                Mul(dstLocal[m_i * strideNum], src1Local[m_i * strideNum], src2Local, strideNum, calcRowNum,
+                    {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
+            }
+            PipeBarrier<PIPE_V>();
+            if (mulTail > 0) {
+                Mul(dstLocal[mulLoop * strideNum], src1Local[mulLoop * strideNum], src2Local, mulTail, calcRowNum,
+                    {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
+            }
+            PipeBarrier<PIPE_V>();
         } else {
-          for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
-              Mul(dstLocal[m_i * strideNum], src1Local[m_i * strideNum], src2Local[m_i * strideNum], strideNum, calcRowNum, {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
-          }
-          PipeBarrier<PIPE_V>();
-          if(mulTail > 0) {
-              Mul(dstLocal[mulLoop * strideNum], src1Local[mulLoop * strideNum], src2Local[mulLoop * strideNum], mulTail, calcRowNum, {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
-          }
-          PipeBarrier<PIPE_V>();
+            for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
+                Mul(dstLocal[m_i * strideNum], src1Local[m_i * strideNum], src2Local[m_i * strideNum], strideNum,
+                    calcRowNum, {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
+            }
+            PipeBarrier<PIPE_V>();
+            if (mulTail > 0) {
+                Mul(dstLocal[mulLoop * strideNum], src1Local[mulLoop * strideNum], src2Local[mulLoop * strideNum],
+                    mulTail, calcRowNum, {1, 1, src1BlkStride, dstRepStride, dstRepStride, src1RepStride});
+            }
+            PipeBarrier<PIPE_V>();
         }
     }
 
@@ -363,7 +377,8 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER_NUM> inQueueX;
     // create queues for output, in this case depth is equal to buffer num
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueRstd;
 #else
     TBuf<TPosition::VECCALC> rstdBuf;

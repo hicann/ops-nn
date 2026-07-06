@@ -19,8 +19,8 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* SyncBNTrainingUpdate(
-    const aclTensor* meanAll, const aclTensor* runningMean, const float momentum, aclOpExecutor* executor);
+const aclTensor* SyncBNTrainingUpdate(const aclTensor* meanAll, const aclTensor* runningMean, const float momentum,
+                                      aclOpExecutor* executor);
 } // namespace l0op
 
 #endif

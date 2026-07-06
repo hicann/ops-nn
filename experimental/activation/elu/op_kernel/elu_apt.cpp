@@ -29,7 +29,7 @@ using namespace EluOp;
 
 namespace {
 template <uint64_t schMode, typename InTy>
-__aicore__ inline void RunEluSch(EluTilingData &tilingData, TPipe &pipe, GM_ADDR x, GM_ADDR y)
+__aicore__ inline void RunEluSch(EluTilingData& tilingData, TPipe& pipe, GM_ADDR x, GM_ADDR y)
 {
     ElementwiseSch<schMode, typename EluDag<InTy, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
     sch.template SetVar<float, ELU_ATTR_ALPHA_INDEX>(tilingData.alpha);

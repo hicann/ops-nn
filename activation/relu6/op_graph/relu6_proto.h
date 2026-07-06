@@ -38,6 +38,6 @@ REG_OP(Relu6)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_BF16}))
     .OP_END_FACTORY_REG(Relu6)
-}
+} // namespace ge
 
 #endif // OPS_BUILT_IN_OP_PROTO_INC_RELU6_H_

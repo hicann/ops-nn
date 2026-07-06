@@ -17,33 +17,25 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_INFER = 910000;
 constexpr int64_t TILINGKEY_INFER_SMALL_AB1 = 911000;
-constexpr int64_t SMALL_SHAPE_NUM = 6;  // scale, offset, mean, var, outMean, outVar
-constexpr int64_t BIG_SHAPE_NUM = 2;    // x, y
+constexpr int64_t SMALL_SHAPE_NUM = 6; // scale, offset, mean, var, outMean, outVar
+constexpr int64_t BIG_SHAPE_NUM = 2;   // x, y
 constexpr int64_t SMALL_AB1_FACTOR_LIMIT = 32;
 constexpr int64_t MIN_SMALL_AB1_B0_CORE_FACTOR = 2;
 constexpr int64_t SMALL_AB1_CACHE_BUFFER_NUM = 5;
-constexpr int64_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
-}  // namespace
+constexpr int64_t MEAN_VAR_OUTPUT_COUNT = 2; // mean, var
+} // namespace
 
-namespace optiling
-{
-class BatchNormInferTiling : public BatchNormTilingInferBase
-{
+namespace optiling {
+class BatchNormInferTiling : public BatchNormTilingInferBase {
 public:
-    explicit BatchNormInferTiling(gert::TilingContext* context) : BatchNormTilingInferBase(context)
-    {
-    }
+    explicit BatchNormInferTiling(gert::TilingContext* context) : BatchNormTilingInferBase(context) {}
     ~BatchNormInferTiling() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
     ge::graphStatus DoOpTiling() override;
 
@@ -67,10 +59,7 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
     return (value + factor - 1) / factor;
 }
 
-inline static int64_t AlignUp(int64_t value, int64_t align)
-{
-    return CeilDiv(value, align) * align;
-}
+inline static int64_t AlignUp(int64_t value, int64_t align) { return CeilDiv(value, align) * align; }
 
 ge::graphStatus BatchNormInferTiling::DoOpTiling()
 {
@@ -104,17 +93,18 @@ ge::graphStatus BatchNormInferTiling::DoOpTiling()
         int64_t paramCacheElemLen = (vlFp32_ / abLen) * abLen;
         int64_t alignedParamCacheLen = CeilDiv(paramCacheElemLen, vlFp32_) * vlFp32_;
         int64_t smallAB1CacheBytes = SMALL_AB1_CACHE_BUFFER_NUM * alignedParamCacheLen * FLOAT32_BYTES;
-        int64_t meanVarOutBytes = MEAN_VAR_OUTPUT_COUNT * AlignUp(FLOAT32_BYTES * aInner, static_cast<int64_t>(blockSize_));
-        int64_t ubCanUseBytes = static_cast<int64_t>(aicoreParams_.ubSize) - DOUBLE_BUFFER * paramBytes - meanVarOutBytes -
-                                smallAB1CacheBytes;
+        int64_t meanVarOutBytes = MEAN_VAR_OUTPUT_COUNT *
+                                  AlignUp(FLOAT32_BYTES * aInner, static_cast<int64_t>(blockSize_));
+        int64_t ubCanUseBytes = static_cast<int64_t>(aicoreParams_.ubSize) - DOUBLE_BUFFER * paramBytes -
+                                meanVarOutBytes - smallAB1CacheBytes;
         int64_t bytesPerB0 = abLen * bytesPerElement_ * BIG_SHAPE_NUM * DOUBLE_BUFFER;
         b0Inner = bytesPerB0 == 0 ? 1 : ubCanUseBytes / bytesPerB0;
         b0Inner = std::max<int64_t>(1, std::min<int64_t>(b0Inner, fusedB0Len_));
         b0Outer = CeilDiv(fusedB0Len_, b0Inner);
     } else {
-        int64_t ubBufferSize =
-            (aicoreParams_.ubSize / DOUBLE_BUFFER - SMALL_SHAPE_NUM * FLOAT32_BYTES * aInner * aTileBase_) /
-            bytesPerElement_ / BIG_SHAPE_NUM;
+        int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
+                                SMALL_SHAPE_NUM * FLOAT32_BYTES * aInner * aTileBase_) /
+                               bytesPerElement_ / BIG_SHAPE_NUM;
 
         // 先按照B切分，再切A
         // UB可载入最大tile块数
@@ -142,18 +132,17 @@ ge::graphStatus BatchNormInferTiling::DoOpTiling()
             int64_t tileBlockB1Len = b1Inner * aTileBase_;
             int64_t xyBufferSize = b0Inner * aInnerCandidate * tileBlockB1Len * bytesPerElement_;
             int64_t paramBufferSize = aInnerCandidate * FLOAT32_BYTES;
-            return DOUBLE_BUFFER *
-                   (BIG_SHAPE_NUM * AlignUp(xyBufferSize, blockSize_) +
-                    SMALL_SHAPE_NUM * AlignUp(paramBufferSize, blockSize_));
+            return DOUBLE_BUFFER * (BIG_SHAPE_NUM * AlignUp(xyBufferSize, blockSize_) +
+                                    SMALL_SHAPE_NUM * AlignUp(paramBufferSize, blockSize_));
         };
         while (aInner > 0 && getAlignedUbSize(aInner) > ubSize) {
             --aInner;
         }
         OP_CHECK_IF(aInner <= 0,
                     OP_LOGE(context_->GetNodeName(),
-                        "Invalid tiling params, aInner: %ld, b0Inner: %ld, b1Inner: %ld, aTileBase: %ld, "
-                        "bytesPerElement: %ld, ubSize: %lu",
-                        aInner, b0Inner, b1Inner, aTileBase_, bytesPerElement_, aicoreParams_.ubSize),
+                            "Invalid tiling params, aInner: %ld, b0Inner: %ld, b1Inner: %ld, aTileBase: %ld, "
+                            "bytesPerElement: %ld, ubSize: %lu",
+                            aInner, b0Inner, b1Inner, aTileBase_, bytesPerElement_, aicoreParams_.ubSize),
                     return ge::GRAPH_FAILED);
         aOuter = CeilDiv(fusedALen_, aInner);
     }
@@ -201,9 +190,8 @@ ge::graphStatus BatchNormInferTiling::PostTiling()
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(tilingData_.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    tilingData_.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        tilingData_.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     tilingData_.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData_.GetDataSize());
@@ -212,4 +200,4 @@ ge::graphStatus BatchNormInferTiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormInferTiling, 91000);
-}  // namespace optiling
+} // namespace optiling

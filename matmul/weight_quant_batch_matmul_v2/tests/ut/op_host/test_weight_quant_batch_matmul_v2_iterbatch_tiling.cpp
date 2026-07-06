@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -54,7 +54,8 @@ static void SplitStr2Vec(const string& input, const string& delimiter, vector<st
     }
 }
 
-static void replacePlaceholder(std::string& str, const std::string& placeholder, const std::string& replacement) {
+static void replacePlaceholder(std::string& str, const std::string& placeholder, const std::string& replacement)
+{
     size_t pos = str.find(placeholder);
     if (pos != std::string::npos) {
         str.replace(pos, placeholder.length(), replacement);
@@ -179,7 +180,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     replacePlaceholder(compileInfoStr, "aivNum", to_string(aivNum));
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
     aicoreSpec["cube_freq"] = "1800";
-    if(static_cast<int>(soc) == 1) {
+    if (static_cast<int>(soc) == 1) {
         aicoreSpec["cube_freq"] = "1500";
     }
 
@@ -201,32 +202,32 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
     auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(7, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-            .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
-                          antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                          quantScaleExistFlag ? &quantScaleShape : nullptr,
-                          quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
-            .OutputShapes({&outputShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-            .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, weightDtype, ge::FORMAT_ND, bFormat)
-            .NodeInputTd(2, antiQuantScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, quantScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                        {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                        {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, weightDtype, ge::FORMAT_ND, bFormat)
+                      .NodeInputTd(2, antiQuantScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, quantScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     map<string, string> soc_version_infos;
     soc_version_infos.insert(make_pair("Short_SoC_version", "RESERVED_VERSION"));
@@ -271,7 +272,8 @@ TEST_P(TestWeightQuantBatchMatmulV2IterBatchTiling, generalTest)
     TestOneParamCase(param);
 }
 
-// format: b1 b2 b3 b4 m k n antiQuantOffsetExistFlag quantScaleExistFlag quantOffsetExistFlag biasFlag transA transB group Xdtype
+// format: b1 b2 b3 b4 m k n antiQuantOffsetExistFlag quantScaleExistFlag quantOffsetExistFlag biasFlag transA transB
+// group Xdtype
 //         weigthDtype antiQuantScaleDtype quantScaleDtype yDtype aicNum aivNum weightFormat(0:ND,1:NZ)
 // Note: group value
 //       -1: per channel, 0: per tensor, > 0: per group

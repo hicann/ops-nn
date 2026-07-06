@@ -28,15 +28,13 @@ namespace ForeachDivScalar {
 using namespace AscendC;
 constexpr int32_t VL_SIZE = platform::GetVRegSize();
 template <typename T, typename ScalarT, typename Tiling>
-class ForeachDivScalarRegbase : public ForeachRegbaseUnary<T, Tiling, ForeachDivScalarRegbase<T, ScalarT, Tiling>>
-{
+class ForeachDivScalarRegbase : public ForeachRegbaseUnary<T, Tiling, ForeachDivScalarRegbase<T, ScalarT, Tiling>> {
 public:
     using Base = ForeachRegbaseUnary<T, Tiling, ForeachDivScalarRegbase<T, ScalarT, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachDivScalarRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData,
-        TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(tensor1, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ ScalarT*)tensor2);

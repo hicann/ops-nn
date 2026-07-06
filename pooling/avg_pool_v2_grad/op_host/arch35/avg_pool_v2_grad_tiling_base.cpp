@@ -63,26 +63,23 @@ static bool IsInvalidPaddingMode(std::string padMode)
 
 static inline bool IsGreaterThanInt32Max(const AvgPoolV2GradInputInfo& inputData, AvgPoolV2GradCommon& commInfo)
 {
-    int64_t totalSize =
-        inputData.batches * inputData.channels * inputData.inputShape[H_DIM] * inputData.inputShape[W_DIM];
+    int64_t totalSize = inputData.batches * inputData.channels * inputData.inputShape[H_DIM] *
+                        inputData.inputShape[W_DIM];
     return totalSize > static_cast<int64_t>(INT32_MAX);
 }
 
-static ge::graphStatus GetPadInfo(
-    gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs, AvgPoolV2GradInputInfo& inputData,
-    const AvgPoolV2GradCommon& commInfo)
+static ge::graphStatus GetPadInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
+                                  AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
 {
     if (commInfo.padModeStr == "VALID") {
         inputData.pad = {0, 0, 0, 0}; // top, bottom, left, right
     } else if (commInfo.padModeStr == "SAME") {
-        int64_t hPadNeed = std::max(
-            int64_t{0}, (inputData.gradShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM] -
-                            inputData.inputShape[H_DIM]);
+        int64_t hPadNeed = std::max(int64_t{0}, (inputData.gradShape[H_DIM] - 1) * inputData.stride[H_DIM] +
+                                                    inputData.kernelSize[H_DIM] - inputData.inputShape[H_DIM]);
         int64_t topPad = hPadNeed / TWO;
         int64_t bottomPad = hPadNeed - topPad;
-        int64_t wPadNeed = std::max(
-            int64_t{0}, (inputData.gradShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM] -
-                            inputData.inputShape[W_DIM]);
+        int64_t wPadNeed = std::max(int64_t{0}, (inputData.gradShape[W_DIM] - 1) * inputData.stride[W_DIM] +
+                                                    inputData.kernelSize[W_DIM] - inputData.inputShape[W_DIM]);
         int64_t leftPad = wPadNeed / TWO;
         int64_t rightPad = wPadNeed - leftPad;
 
@@ -92,8 +89,8 @@ static ge::graphStatus GetPadInfo(
         OPS_CHECK_NULL_WITH_CONTEXT(context, padding);
         auto paddingDim = padding->GetSize();
         if (paddingDim != ONE_DIMS && paddingDim != HW_DIMS && paddingDim != NCHW_DIMS) {
-            OP_LOGE_FOR_INVALID_LISTSIZE(
-                context->GetNodeName(), "pad", std::to_string(paddingDim).c_str(), "1, 2 or 4");
+            OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pad", std::to_string(paddingDim).c_str(),
+                                         "1, 2 or 4");
             return ge::GRAPH_FAILED;
         }
         int64_t topPad;
@@ -130,23 +127,22 @@ static ge::graphStatus GetPadInfo(
         }
         inputData.pad = {topPad, bottomPad, leftPad, rightPad};
     } else {
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "padding_mode", commInfo.padModeStr.c_str(), "SAME, VALID and CALCULATED");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding_mode", commInfo.padModeStr.c_str(),
+                                  "SAME, VALID and CALCULATED");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetStrideInfo(
-    gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs, AvgPoolV2GradInputInfo& inputData,
-    const AvgPoolV2GradCommon& commInfo)
+static ge::graphStatus GetStrideInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
+                                     AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
 {
     auto stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, stride);
     auto strideDim = stride->GetSize();
     if (strideDim != ZERO_DIMS && strideDim != ONE_DIMS && strideDim != HW_DIMS && strideDim != NCHW_DIMS) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "stride", std::to_string(strideDim).c_str(), "0, 1, 2 or 4");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "stride", std::to_string(strideDim).c_str(),
+                                     "0, 1, 2 or 4");
         return ge::GRAPH_FAILED;
     }
 
@@ -168,24 +164,22 @@ static ge::graphStatus GetStrideInfo(
     inputData.stride = {hStride, wStride};
     if (hStride <= 0 || wStride <= 0) {
         std::string strideMsg = std::to_string(hStride) + " and " + std::to_string(wStride);
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "hStride and wStride", strideMsg.c_str(),
-            "stride of H and W dimensions should be greater than 0");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "hStride and wStride", strideMsg.c_str(),
+                                               "stride of H and W dimensions should be greater than 0");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetKernelKsizeInfo(
-    gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs, AvgPoolV2GradInputInfo& inputData,
-    const AvgPoolV2GradCommon& commInfo)
+static ge::graphStatus GetKernelKsizeInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
+                                          AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
 {
     auto kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, kernelSize);
     auto kSizeDim = kernelSize->GetSize();
     if (kSizeDim != ONE_DIMS && kSizeDim != HW_DIMS && kSizeDim != NCHW_DIMS) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "kernel_size", std::to_string(kSizeDim).c_str(), "1, 2 or 4");
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "kernel_size", std::to_string(kSizeDim).c_str(),
+                                     "1, 2 or 4");
         return ge::GRAPH_FAILED;
     }
     int64_t hKernelSize = 1;
@@ -204,9 +198,8 @@ static ge::graphStatus GetKernelKsizeInfo(
 
     if (hKernelSize <= 0 || wKernelSize <= 0) {
         std::string ksizeMsg = std::to_string(hKernelSize) + " and " + std::to_string(wKernelSize);
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "hKernelSize and wKernelSize", ksizeMsg.c_str(),
-            "ksize of H and W dimensions should be greater than 0");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "hKernelSize and wKernelSize", ksizeMsg.c_str(),
+                                               "ksize of H and W dimensions should be greater than 0");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -215,45 +208,44 @@ static ge::graphStatus GetKernelKsizeInfo(
 static ge::graphStatus CheckShape(gert::TilingContext* context, gert::Shape& gradShape, gert::Shape& outputShape)
 {
     if (gradShape.GetDimNum() != NCHW_DIMS && gradShape.GetDimNum() != CHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context->GetNodeName(), "input_grad", std::to_string(gradShape.GetDimNum()).c_str(),
-            "shape dim should be 3 or 4");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "input_grad",
+                                                 std::to_string(gradShape.GetDimNum()).c_str(),
+                                                 "shape dim should be 3 or 4");
         return ge::GRAPH_FAILED;
     }
     if (outputShape.GetDimNum() != NCHW_DIMS && outputShape.GetDimNum() != CHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context->GetNodeName(), "output", std::to_string(outputShape.GetDimNum()).c_str(),
-            "shape dim should be 3 or 4");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "output",
+                                                 std::to_string(outputShape.GetDimNum()).c_str(),
+                                                 "shape dim should be 3 or 4");
         return ge::GRAPH_FAILED;
     }
     if (gradShape.GetShapeSize() == 0 && outputShape.GetShapeSize() == 0) {
         return ge::GRAPH_SUCCESS;
     }
     if (gradShape.GetShapeSize() <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE(
-            context->GetNodeName(), "input_grad", std::to_string(gradShape.GetShapeSize()).c_str(), "greater than 0");
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "input_grad",
+                                      std::to_string(gradShape.GetShapeSize()).c_str(), "greater than 0");
         return ge::GRAPH_FAILED;
     }
 
     if (outputShape.GetShapeSize() <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE(
-            context->GetNodeName(), "output", std::to_string(outputShape.GetShapeSize()).c_str(), "greater than 0");
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "output",
+                                      std::to_string(outputShape.GetShapeSize()).c_str(), "greater than 0");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAndDtype(
-    gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs, AvgPoolV2GradInputInfo& inputData,
-    AvgPoolV2GradCommon& commInfo)
+static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
+                                        AvgPoolV2GradInputInfo& inputData, AvgPoolV2GradCommon& commInfo)
 {
     // 输入值依赖input
     auto inputShape0 = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape0);
     auto shapeDim = inputShape0->GetStorageShape().GetDim(0);
     if (shapeDim != NCHW_DIMS && shapeDim != CHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context->GetNodeName(), "orig_input_shape", std::to_string(shapeDim).c_str(), "shape dim must be 3 or 4");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "orig_input_shape",
+                                                 std::to_string(shapeDim).c_str(), "shape dim must be 3 or 4");
         return ge::GRAPH_FAILED;
     }
     // input_grad
@@ -270,21 +262,21 @@ static ge::graphStatus GetShapeAndDtype(
 
     auto dtype = inputDesc->GetDataType();
     if (IsInvalidType(dtype)) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "input_grad", Ops::Base::ToString(dtype).c_str(), "float16, bfloat16 and float32");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "input_grad", Ops::Base::ToString(dtype).c_str(),
+                                  "float16, bfloat16 and float32");
         return ge::GRAPH_FAILED;
     }
     inputData.dtypeSize = ge::GetSizeByDataType(dtype);
     if (inputData.dtypeSize <= 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "dtypeSize", std::to_string(inputData.dtypeSize).c_str(),
-            "dtype size must be greater than 0");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dtypeSize",
+                                              std::to_string(inputData.dtypeSize).c_str(),
+                                              "dtype size must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     // 校验是否是3/4维
     if (CheckShape(context, gradShape, outShape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "shape", "check_failed", "check shape validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "shape", "check_failed",
+                                              "check shape validation failed");
         return ge::GRAPH_FAILED;
     }
     // 值依赖转换
@@ -337,9 +329,8 @@ static ge::graphStatus GetShapeAndDtype(
         }
         inputData.channels = shapeValue[commInfo.cDim];
     } else {
-        OP_LOGE_FOR_INVALID_FORMAT(
-            context->GetNodeName(), "input_format", Ops::Base::ToString(inputData.inputFormat).c_str(),
-            "NCHW and NHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "input_format",
+                                   Ops::Base::ToString(inputData.inputFormat).c_str(), "NCHW and NHWC");
         return ge::GRAPH_FAILED;
     }
     inputData.inputShape = {shapeValue[commInfo.hDim], shapeValue[commInfo.wDim]};
@@ -348,50 +339,45 @@ static ge::graphStatus GetShapeAndDtype(
         if (shapeValue[commInfo.nDim] != outShape.GetDim(commInfo.nDim)) {
             std::string valMsg = "input " + std::to_string(shapeValue[commInfo.nDim]) + " and output " +
                                  std::to_string(outShape.GetDim(commInfo.nDim));
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                context->GetNodeName(), "n-dim of input and output", valMsg.c_str(),
-                "n-dim of input and output should be the same");
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "n-dim of input and output", valMsg.c_str(),
+                                                   "n-dim of input and output should be the same");
             return ge::GRAPH_FAILED;
         }
     }
     if (shapeValue[commInfo.cDim] != outShape.GetDim(commInfo.cDim)) {
         std::string valMsg = "input " + std::to_string(shapeValue[commInfo.cDim]) + " and output " +
                              std::to_string(outShape.GetDim(commInfo.cDim));
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "c-dim of input and output", valMsg.c_str(),
-            "c-dim of input and output should be the same");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "c-dim of input and output", valMsg.c_str(),
+                                               "c-dim of input and output should be the same");
         return ge::GRAPH_FAILED;
     }
     if (shapeValue[commInfo.hDim] != outShape.GetDim(commInfo.hDim)) {
         std::string valMsg = "input " + std::to_string(shapeValue[commInfo.hDim]) + " and output " +
                              std::to_string(outShape.GetDim(commInfo.hDim));
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "h-dim of input and output", valMsg.c_str(),
-            "h-dim of input and output should be the same");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "h-dim of input and output", valMsg.c_str(),
+                                               "h-dim of input and output should be the same");
         return ge::GRAPH_FAILED;
     }
     if (shapeValue[commInfo.wDim] != outShape.GetDim(commInfo.wDim)) {
         std::string valMsg = "input " + std::to_string(shapeValue[commInfo.wDim]) + " and output " +
                              std::to_string(outShape.GetDim(commInfo.wDim));
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "w-dim of input and output", valMsg.c_str(),
-            "w-dim of input and output should be the same");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "w-dim of input and output", valMsg.c_str(),
+                                               "w-dim of input and output should be the same");
         return ge::GRAPH_FAILED;
     }
     inputData.outShape = {outShape.GetDim(commInfo.hDim), outShape.GetDim(commInfo.wDim)};
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetAttrsInfo(
-    gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs, AvgPoolV2GradInputInfo& inputData,
-    AvgPoolV2GradCommon& commInfo)
+static ge::graphStatus GetAttrsInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
+                                    AvgPoolV2GradInputInfo& inputData, AvgPoolV2GradCommon& commInfo)
 {
     const char* padMode = runtimeAttrs->GetAttrPointer<char>(PADDING_MODE_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, padMode);
     commInfo.padModeStr = padMode;
     if (IsInvalidPaddingMode(commInfo.padModeStr)) {
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "padding_mode", commInfo.padModeStr.c_str(), "SAME, VALID and CALCULATED");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding_mode", commInfo.padModeStr.c_str(),
+                                  "SAME, VALID and CALCULATED");
         return ge::GRAPH_FAILED;
     }
     const bool* ceilMode = runtimeAttrs->GetAttrPointer<bool>(CEIL_MODE_POS);
@@ -415,17 +401,17 @@ static ge::graphStatus GetAttrsInfo(
 
 static ge::graphStatus CheckGradShapeForValid(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData)
 {
-    int64_t expectedH =
-        (inputData.inputShape[H_DIM] - inputData.kernelSize[H_DIM] + inputData.stride[H_DIM]) / inputData.stride[H_DIM];
-    int64_t expectedW =
-        (inputData.inputShape[W_DIM] - inputData.kernelSize[W_DIM] + inputData.stride[W_DIM]) / inputData.stride[W_DIM];
+    int64_t expectedH = (inputData.inputShape[H_DIM] - inputData.kernelSize[H_DIM] + inputData.stride[H_DIM]) /
+                        inputData.stride[H_DIM];
+    int64_t expectedW = (inputData.inputShape[W_DIM] - inputData.kernelSize[W_DIM] + inputData.stride[W_DIM]) /
+                        inputData.stride[W_DIM];
     if (inputData.gradShape[H_DIM] != expectedH || inputData.gradShape[W_DIM] != expectedW) {
-        std::string shapeMsg =
-            std::to_string(inputData.gradShape[H_DIM]) + " and " + std::to_string(inputData.gradShape[W_DIM]);
+        std::string shapeMsg = std::to_string(inputData.gradShape[H_DIM]) + " and " +
+                               std::to_string(inputData.gradShape[W_DIM]);
         std::string reasonMsg = "when padmode is VALID, grad shape in h-dim and w-dim should be " +
                                 std::to_string(expectedH) + " and " + std::to_string(expectedW);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "h-dim and w-dim of input_grad", shapeMsg.c_str(), reasonMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "h-dim and w-dim of input_grad",
+                                               shapeMsg.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -436,12 +422,12 @@ static ge::graphStatus CheckGradShapeForSame(gert::TilingContext* context, AvgPo
     int64_t expectedH = (inputData.inputShape[H_DIM] + inputData.stride[H_DIM] - 1) / inputData.stride[H_DIM];
     int64_t expectedW = (inputData.inputShape[W_DIM] + inputData.stride[W_DIM] - 1) / inputData.stride[W_DIM];
     if (inputData.gradShape[H_DIM] != expectedH || inputData.gradShape[W_DIM] != expectedW) {
-        std::string shapeMsg =
-            std::to_string(inputData.gradShape[H_DIM]) + " and " + std::to_string(inputData.gradShape[W_DIM]);
+        std::string shapeMsg = std::to_string(inputData.gradShape[H_DIM]) + " and " +
+                               std::to_string(inputData.gradShape[W_DIM]);
         std::string reasonMsg = "when padmode is SAME, grad shape in h-dim and w-dim should be " +
                                 std::to_string(expectedH) + " and " + std::to_string(expectedW);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "h-dim and w-dim of input_grad", shapeMsg.c_str(), reasonMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "h-dim and w-dim of input_grad",
+                                               shapeMsg.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -453,10 +439,12 @@ static ge::graphStatus CheckGradShapeForCalculated(gert::TilingContext* context,
     int64_t bottomPad = inputData.pad[BOTTOM_PAD_INDEX];
     int64_t leftPad = inputData.pad[LEFT_PAD_INDEX];
     int64_t rightPad = inputData.pad[RIGHT_PAD_INDEX];
-    int64_t expectedH =
-        (inputData.inputShape[H_DIM] - inputData.kernelSize[H_DIM] + topPad + bottomPad) / inputData.stride[H_DIM] + 1;
-    int64_t expectedW =
-        (inputData.inputShape[W_DIM] - inputData.kernelSize[W_DIM] + leftPad + rightPad) / inputData.stride[W_DIM] + 1;
+    int64_t expectedH = (inputData.inputShape[H_DIM] - inputData.kernelSize[H_DIM] + topPad + bottomPad) /
+                            inputData.stride[H_DIM] +
+                        1;
+    int64_t expectedW = (inputData.inputShape[W_DIM] - inputData.kernelSize[W_DIM] + leftPad + rightPad) /
+                            inputData.stride[W_DIM] +
+                        1;
     if (inputData.ceilMode) {
         expectedH = (inputData.inputShape[H_DIM] - inputData.kernelSize[H_DIM] + topPad + bottomPad +
                      inputData.stride[H_DIM] - 1) /
@@ -474,19 +462,19 @@ static ge::graphStatus CheckGradShapeForCalculated(gert::TilingContext* context,
         }
     }
     if (inputData.gradShape[H_DIM] != expectedH || inputData.gradShape[W_DIM] != expectedW) {
-        std::string shapeMsg =
-            std::to_string(inputData.gradShape[H_DIM]) + " and " + std::to_string(inputData.gradShape[W_DIM]);
+        std::string shapeMsg = std::to_string(inputData.gradShape[H_DIM]) + " and " +
+                               std::to_string(inputData.gradShape[W_DIM]);
         std::string reasonMsg = "when padmode is CALCULATED, grad shape in h-dim and w-dim should be " +
                                 std::to_string(expectedH) + " and " + std::to_string(expectedW);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "h-dim and w-dim of input_grad", shapeMsg.c_str(), reasonMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "h-dim and w-dim of input_grad",
+                                               shapeMsg.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckGradShape(
-    gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
+static ge::graphStatus CheckGradShape(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData,
+                                      const AvgPoolV2GradCommon& commInfo)
 {
     if (commInfo.padModeStr == "VALID") {
         return CheckGradShapeForValid(context, inputData);
@@ -495,8 +483,8 @@ static ge::graphStatus CheckGradShape(
     } else if (commInfo.padModeStr == "CALCULATED") {
         return CheckGradShapeForCalculated(context, inputData);
     }
-    OP_LOGE_FOR_INVALID_VALUE(
-        context->GetNodeName(), "padding_mode", commInfo.padModeStr.c_str(), "SAME, VALID and CALCULATED");
+    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding_mode", commInfo.padModeStr.c_str(),
+                              "SAME, VALID and CALCULATED");
     return ge::GRAPH_FAILED;
 }
 
@@ -505,8 +493,8 @@ ge::graphStatus GetAvgPoolV2GradPlatformInfo(gert::TilingContext* context, uint6
     auto platformPtr = context->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = static_cast<const AvgPoolV2GradCompileInfo*>(context->GetCompileInfo());
-        OP_TILING_CHECK(
-            compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compile info is null"), return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compile info is null"),
+                        return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
         ubSize = compileInfoPtr->ubSize;
     } else {
@@ -528,30 +516,35 @@ ge::graphStatus GetAvgPoolV2GradShapeAttrsInfo(gert::TilingContext* context, Avg
     AvgPoolV2GradCommon commInfo;
     OPS_CHECK_NULL_WITH_CONTEXT(context, runtimeAttrs);
     if (GetAttrsInfo(context, runtimeAttrs, inputData, commInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "attrs", "check_failed", "GetAttrsInfo validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "attrs", "check_failed",
+                                              "GetAttrsInfo validation failed");
         return ge::GRAPH_FAILED;
     }
     if (GetShapeAndDtype(context, runtimeAttrs, inputData, commInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "shape_and_dtype", "check_failed", "GetShapeAndDtype validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "shape_and_dtype", "check_failed",
+                                              "GetShapeAndDtype validation failed");
         return ge::GRAPH_FAILED;
     }
     if (GetKernelKsizeInfo(context, runtimeAttrs, inputData, commInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "kernel_size", "check_failed", "GetKernelKsizeInfo validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "kernel_size", "check_failed",
+                                              "GetKernelKsizeInfo validation failed");
         return ge::GRAPH_FAILED;
     }
     if (GetStrideInfo(context, runtimeAttrs, inputData, commInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "stride", "check_failed", "GetStrideInfo validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "stride", "check_failed",
+                                              "GetStrideInfo validation failed");
         return ge::GRAPH_FAILED;
     }
     if (GetPadInfo(context, runtimeAttrs, inputData, commInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pad", "check_failed", "GetPadInfo validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pad", "check_failed",
+                                              "GetPadInfo validation failed");
         return ge::GRAPH_FAILED;
     }
     if (inputData.globalPooling) {
         if ((inputData.inputShape[0] != 0 && inputData.gradShape[0] != 1) ||
             (inputData.inputShape[1] != 0 && inputData.gradShape[1] != 1)) {
-            std::string shapeMsg =
-                std::to_string(inputData.gradShape[0]) + " and " + std::to_string(inputData.gradShape[1]);
+            std::string shapeMsg = std::to_string(inputData.gradShape[0]) + " and " +
+                                   std::to_string(inputData.gradShape[1]);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 context->GetNodeName(), "h-dim and w-dim of input_grad", shapeMsg.c_str(),
                 "when global_pooling is true, grad shape in h-dim and w-dim must be 1 if the size of corresponding "
@@ -566,7 +559,8 @@ ge::graphStatus GetAvgPoolV2GradShapeAttrsInfo(gert::TilingContext* context, Avg
         }
     }
     if (CheckGradShape(context, inputData, commInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "grad_shape", "check_failed", "CheckGradShape validation failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "grad_shape", "check_failed",
+                                              "CheckGradShape validation failed");
         return ge::GRAPH_FAILED;
     }
     inputData.isInt32Meet = IsGreaterThanInt32Max(inputData, commInfo) ? 0 : ONE;

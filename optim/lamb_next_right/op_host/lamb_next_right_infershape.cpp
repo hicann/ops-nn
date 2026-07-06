@@ -33,12 +33,10 @@ static ge::graphStatus InferShape4LambNextRight(gert::InferShapeContext* context
     for (size_t i = 0; i < OUT_NUM; i++) {
         auto out = context->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, out);
-        OP_CHECK_IF(
-            !BroadcastShape(sq, v, out),
-            OP_LOGE(
-                context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*sq).c_str(),
-                ToString(*v).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!BroadcastShape(sq, v, out),
+                    OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*sq).c_str(),
+                            ToString(*v).c_str()),
+                    return ge::GRAPH_FAILED);
     }
     return GRAPH_SUCCESS;
 }

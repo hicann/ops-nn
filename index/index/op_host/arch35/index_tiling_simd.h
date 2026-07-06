@@ -28,8 +28,7 @@ constexpr int64_t MAX_DIM_NUM = 8;
 
 class IndexTilingSimd : public IndexTilingCommon {
 public:
-    explicit IndexTilingSimd(gert::TilingContext* context) : IndexTilingCommon(context)
-    {}
+    explicit IndexTilingSimd(gert::TilingContext* context) : IndexTilingCommon(context) {}
 
 private:
     bool IsCapable() override;

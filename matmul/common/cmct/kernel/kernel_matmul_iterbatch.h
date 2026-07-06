@@ -49,8 +49,8 @@ __aicore__ inline uint64_t GetCurrentBlockIdx()
     return AscendC::GetBlockIdx();
 }
 
-template <
-    class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_, typename Enable_ = void>
+template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
+          typename Enable_ = void>
 class KernelMatMulIterBatch {
     static_assert(AscendC::Std::always_false_v<BlockEpilogue_>, "BlockMmad is not matched for this BlockEpilogue");
 };
@@ -67,29 +67,35 @@ class KernelMatMulIterBatch<
           AscendC::Std::is_same_v<
               MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
               typename BlockMmadBuilder_::BlockMatmulPolicy>)) ||
-        ((AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
+        ((AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_,
               Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
           AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<
-                                  bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>) && 
-          (AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
-           AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
-           AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy>))>> {
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<
+                  bfloat16_t, bfloat16_t,
+                  Block::DefaultFusion<
+                      bfloat16_t, bfloat16_t>>>)&&(AscendC::Std::
+                                                       is_same_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
+                                                                                 AscendC::Shape<_0, _0, _0, _0>,
+                                                                                 OP_TYPE_EMPTY>,
+                                                                 typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+                                                   AscendC::Std::is_same_v<
+                                                       MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
+                                                                       AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+                                                       typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+                                                   AscendC::Std::is_same_v<
+                                                       MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
+                                                                       AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+                                                       typename BlockMmadBuilder_::BlockMatmulPolicy>))>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}
     __aicore__ inline ~KernelMatMulIterBatch() {}
@@ -102,10 +108,9 @@ public:
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-                                               typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA,
-                                               transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -178,7 +183,7 @@ public:
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
         if (blockMmadParams_.biasGmAddr != nullptr) {
             isBias_ = true;
-            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType *>(blockMmadParams_.biasGmAddr));
+            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType*>(blockMmadParams_.biasGmAddr));
         }
     }
 
@@ -213,7 +218,7 @@ public:
         return Status::success;
     }
 
-    __host_aicore__ static Status CanImplement(Arguments const &args)
+    __host_aicore__ static Status CanImplement(Arguments const& args)
     {
         // Check shape in kernel
         CHECK_AND_RETURN(CheckShape(args.problemShape));
@@ -232,7 +237,7 @@ public:
         return workSpaceSize;
     }
 
-    __host_aicore__ static Params InitParams(Arguments const &args, GM_ADDR workspace)
+    __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR workspace)
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
@@ -284,12 +289,12 @@ public:
         }
         // Process tiles in ping-pong mode
         bool isPreLoadRound = true; // records if first loop, which need copy double buffer data parts to L1.
-        bool isFinalRound = false; // records if last loop, which do not need copy any data.
+        bool isFinalRound = false;  // records if last loop, which do not need copy any data.
         for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
             auto blockShape = bs.GetBlockShape(tileIdx);
             auto blockCoord = bs.GetBlockCoord(tileIdx);
-            auto blockOffset =
-                GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_, bs.GetInnerBatch(), transB);
+            auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_,
+                                                  bs.GetInnerBatch(), transB);
             // calculate block-level offset
             int64_t offsetA = Get<0>(blockOffset);
             int64_t offsetB = Get<1>(blockOffset);
@@ -309,10 +314,9 @@ public:
                                 nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound,
                                 isFinalRound);
                 } else {
-                    blockMmadOp(
-                        cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_, blockNum, curIterBatchL1,
-                        nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound,
-                        isFinalRound);
+                    blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_, blockNum,
+                                curIterBatchL1, nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK,
+                                isPreLoadRound, isFinalRound);
                 }
                 isPreLoadRound = false;
             }
@@ -331,4 +335,3 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

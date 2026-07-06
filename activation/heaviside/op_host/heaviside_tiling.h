@@ -19,8 +19,7 @@
 #include "tiling/tiling_api.h"
 
 namespace optiling {
-struct HeavisideCompileInfo {
-};
+struct HeavisideCompileInfo {};
 
 BEGIN_TILING_DATA_DEF(HeavisideTilingData)
 

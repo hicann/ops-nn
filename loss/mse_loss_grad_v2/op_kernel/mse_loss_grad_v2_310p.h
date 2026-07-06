@@ -20,14 +20,12 @@
 using namespace AscendC;
 
 template <typename inType>
-class KernelMseLossGrad310P : public KernelMseLossGradBase<inType>
-{
+class KernelMseLossGrad310P : public KernelMseLossGradBase<inType> {
 public:
-    __aicore__ inline KernelMseLossGrad310P()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, float cof, uint64_t totalLength, uint64_t tileNum,
-        uint64_t blockLength, uint64_t padLength, uint64_t usedDb)
+    __aicore__ inline KernelMseLossGrad310P() {}
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, float cof,
+                                uint64_t totalLength, uint64_t tileNum, uint64_t blockLength, uint64_t padLength,
+                                uint64_t usedDb)
     {
         this->cof = cof;
         this->totalLength = static_cast<int32_t>(totalLength);

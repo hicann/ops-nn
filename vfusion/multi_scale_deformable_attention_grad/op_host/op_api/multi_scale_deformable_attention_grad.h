@@ -19,13 +19,9 @@
 
 namespace l0op {
 
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> MultiScaleDeformableAttentionGrad(const aclTensor *value,
-                                                                                       const aclTensor *spatialShape,
-                                                                                       const aclTensor *levelStartIndex,
-                                                                                       const aclTensor *location,
-                                                                                       const aclTensor *attnWeight,
-                                                                                       const aclTensor *gradOutput,
-                                                                                       aclOpExecutor *executor);
-} // l0op
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> MultiScaleDeformableAttentionGrad(
+    const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex, const aclTensor* location,
+    const aclTensor* attnWeight, const aclTensor* gradOutput, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_MULTI_SCALE_DEFORMABLE_ATTENTION_GRAD_H_

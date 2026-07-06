@@ -49,4 +49,4 @@ ACLNN_API aclnnStatus aclnnEinsum(void* workspace, uint64_t workspaceSize, aclOp
 }
 #endif
 
-#endif  // OP_API_INC_EINSUM_H_
+#endif // OP_API_INC_EINSUM_H_

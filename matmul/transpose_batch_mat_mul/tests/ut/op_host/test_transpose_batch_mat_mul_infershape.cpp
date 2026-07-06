@@ -19,373 +19,385 @@
 #include "platform/platform_info.h"
 
 namespace {
-class TransposeBatchMatMulInferShape : public testing::Test {
-};
+class TransposeBatchMatMulInferShape : public testing::Test {};
 
 //   pass cases
-TEST_F(TransposeBatchMatMulInferShape, Basic) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950PR_9589";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-  
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, Basic)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  gert::Shape x1_shape = {32, 16, 512};
-  gert::Shape x2_shape = {16, 512, 128};
-  gert::Shape scale_shape = {2048};
-  gert::Shape expect_output_shape = {32, 16, 128};
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape output_shape = {};
+    gert::Shape x1_shape = {32, 16, 512};
+    gert::Shape x2_shape = {16, 512, 128};
+    gert::Shape scale_shape = {2048};
+    gert::Shape expect_output_shape = {32, 16, 128};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    gert::Shape output_shape = {};
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TransposeBatchMatMulInferShape, Basic_Scale) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend910B";
-  optiCompilationInfo.soc_version = "Ascend910B1";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B1"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-  
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, Basic_Scale)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    optiCompilationInfo.soc_version = "Ascend910B1";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B1"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  gert::Shape x1_shape = {32, 16, 512};
-  gert::Shape x2_shape = {16, 512, 128};
-  gert::Shape expect_output_shape = {2, 32, 1024};
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape output_shape = {};
+    gert::Shape x1_shape = {32, 16, 512};
+    gert::Shape x2_shape = {16, 512, 128};
+    gert::Shape expect_output_shape = {2, 32, 1024};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    gert::Shape output_shape = {};
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
 //  fail cases
-TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case01) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case01)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {3, 4, 5};
-  gert::Shape x2_shape = {3, 5, 4};
+    gert::Shape x1_shape = {3, 4, 5};
+    gert::Shape x2_shape = {3, 5, 4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidPermX1) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidPermX1)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {3, 5, 4};
-  gert::Shape x2_shape = {3, 5, 4};
+    gert::Shape x1_shape = {3, 5, 4};
+    gert::Shape x2_shape = {3, 5, 4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2Case01) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2Case01)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {4, 3, 5};
-  gert::Shape x2_shape = {4, 3, 5};
+    gert::Shape x1_shape = {4, 3, 5};
+    gert::Shape x2_shape = {4, 3, 5};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2_Bias) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2_Bias)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {4, 3, 5};
-  gert::Shape x2_shape = {4, 3, 5};
-  gert::Shape bias_shape = {4};
+    gert::Shape x1_shape = {4, 3, 5};
+    gert::Shape x2_shape = {4, 3, 5};
+    gert::Shape bias_shape = {4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2Y_Bias) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2Y_Bias)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {4, 3, 5};
-  gert::Shape x2_shape = {4, 3, 5};
-  gert::Shape bias_shape = {4};
+    gert::Shape x1_shape = {4, 3, 5};
+    gert::Shape x2_shape = {4, 3, 5};
+    gert::Shape bias_shape = {4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
 //  fail cases: broadcast
-TEST_F(TransposeBatchMatMulInferShape, InvalidX2Case02) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidX2Case02)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {3, 4, 5};
-  gert::Shape x2_shape = {5, 4};
+    gert::Shape x1_shape = {3, 4, 5};
+    gert::Shape x2_shape = {5, 4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case02) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case02)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {3, 4, 5};
-  gert::Shape x2_shape = {1, 5, 4};
+    gert::Shape x1_shape = {3, 4, 5};
+    gert::Shape x2_shape = {1, 5, 4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
 //  fail cases: dim != 3
-TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case03) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case03)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {2, 3, 4, 5};
-  gert::Shape x2_shape = {2, 3, 5, 4};
+    gert::Shape x1_shape = {2, 3, 4, 5};
+    gert::Shape x2_shape = {2, 3, 5, 4};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
 // dynamic shape
 //   -2
-TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case04) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidX1X2Case04)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape output_shape = {};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidBatchSplitFactor) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidBatchSplitFactor)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {32, 16, 512};
-  gert::Shape x2_shape = {16, 512, 128};
+    gert::Shape x1_shape = {32, 16, 512};
+    gert::Shape x2_shape = {16, 512, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(10)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(10)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2Case02) {
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+TEST_F(TransposeBatchMatMulInferShape, InvalidPermX2Case02)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
 
-  gert::Shape x1_shape = {-1, -1, -1};
-  gert::Shape x2_shape = {-1, -1, -1};
+    gert::Shape x1_shape = {-1, -1, -1};
+    gert::Shape x2_shape = {-1, -1, -1};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 1)
-                    .IrInstanceNum({1, 1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
-                                {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, nullptr})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2, 0})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 } // namespace

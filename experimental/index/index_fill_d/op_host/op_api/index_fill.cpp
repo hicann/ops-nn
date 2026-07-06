@@ -33,8 +33,8 @@ OP_TYPE_REGISTER(InplaceIndexFill);
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_910B_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
-    op::DataType::DT_BOOL,    op::DataType::DT_BF16};
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BOOL,
+    op::DataType::DT_BF16};
 
 // 根据dtype判断算子是否支持走aicore
 static bool IsAiCoreSupport(const aclTensor* self)
@@ -48,21 +48,19 @@ static bool IsAiCoreSupport(const aclTensor* self)
 }
 
 // AICORE算子kernel
-static const aclTensor* IndexFillDAiCore(
-    const aclTensor* self, const aclTensor* assist1, const aclTensor* assist2, int64_t dim, aclTensor* out,
-    aclOpExecutor* executor)
+static const aclTensor* IndexFillDAiCore(const aclTensor* self, const aclTensor* assist1, const aclTensor* assist2,
+                                         int64_t dim, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(IndexFillDAiCore, self, assist1, assist2);
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将indexfilld算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexFillD, OP_INPUT(self, assist1, assist2), OP_OUTPUT(out), OP_ATTR(dim));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillDAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillDAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return out;
 }
 
-const aclTensor* IndexFillD(
-    const aclTensor* self, const aclTensor* assist1, const aclTensor* assist2, int64_t dim, aclOpExecutor* executor)
+const aclTensor* IndexFillD(const aclTensor* self, const aclTensor* assist1, const aclTensor* assist2, int64_t dim,
+                            aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
     if (IsAiCoreSupport(self)) {
@@ -72,29 +70,28 @@ const aclTensor* IndexFillD(
     }
 }
 
-const aclTensor* IndexFill(
-    const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim, aclOpExecutor* executor)
+const aclTensor* IndexFill(const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim,
+                           aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
     L0_DFX(IndexFill, self, indices, value);
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将indexfill算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexFill, OP_INPUT(self, indices, value), OP_OUTPUT(out), OP_ATTR(dim));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return out;
 }
 
-const aclTensor* InplaceIndexFill(
-    const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim, aclOpExecutor* executor)
+const aclTensor* InplaceIndexFill(const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim,
+                                  aclOpExecutor* executor)
 {
     L0_DFX(InplaceIndexFill, self, indices, value);
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将inplaceindexfill算子加入任务队列
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexFill, OP_INPUT(self, indices, value), OP_OUTPUT(self), OP_ATTR(dim));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexFill, OP_INPUT(self, indices, value), OP_OUTPUT(self),
+                                           OP_ATTR(dim));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return self;
 }
 

@@ -43,8 +43,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessHiddenMM(int64_t tIdx)
 {
     if (GetBlockIdx() < this->hiddenMMTiling.usedCoreNum) {
         if (this->tiling->direction == 1) {
-            this->hiddenOffsets.COffset =
-                this->oriHiddenOffsets.COffset + (this->tiling->timeStep - 1 - tIdx) * this->allCellSize;
+            this->hiddenOffsets.COffset = this->oriHiddenOffsets.COffset +
+                                          (this->tiling->timeStep - 1 - tIdx) * this->allCellSize;
         } else {
             this->hiddenOffsets.COffset = this->oriHiddenOffsets.COffset + tIdx * this->allCellSize;
         }
@@ -63,8 +63,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessHiddenMM(int64_t tIdx)
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyGate(
-    LocalTensor<T> &ub, GlobalTensor<T> &gm, int64_t mIdx, int64_t nIdx, int64_t gateOffset)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyGate(LocalTensor<T>& ub, GlobalTensor<T>& gm, int64_t mIdx,
+                                                        int64_t nIdx, int64_t gateOffset)
 {
     DataCopyParams dataCopyParams;
     dataCopyParams.blockCount = this->calcM;
@@ -79,16 +79,15 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyGate(
     padParams.paddingValue = 0;
 
     DataCopyPad(ub,
-        gm[gateOffset + this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize * 4 +
-            mIdx * this->vectorBaseM * this->tiling->hiddenSize * 4 + nIdx * this->vectorBaseN],
-        dataCopyParams,
-        padParams);
+                gm[gateOffset + this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize * 4 +
+                   mIdx * this->vectorBaseM * this->tiling->hiddenSize * 4 + nIdx * this->vectorBaseN],
+                dataCopyParams, padParams);
     this->qidVecIn.EnQue(ub);
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithSigmoid(
-    LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithSigmoid(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm,
+                                                               int64_t mIdx, int64_t nIdx, int64_t gateOffset)
 {
     LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
     this->CopyGate(ubLocalIn, mixGm, mIdx, nIdx, gateOffset);
@@ -98,8 +97,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithSigmoid(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithSigmoidAddBias(
-    LocalTensor<float> &dstUb, GlobalTensor<float> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithSigmoidAddBias(LocalTensor<float>& dstUb,
+                                                                      GlobalTensor<float>& mixGm, int64_t mIdx,
+                                                                      int64_t nIdx, int64_t gateOffset)
 {
     LocalTensor<float> ubLocalIn = this->qidVecIn.template AllocTensor<float>();
     this->CopyGate(ubLocalIn, mixGm, mIdx, nIdx, gateOffset);
@@ -111,8 +111,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithSigmoidAddBias(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanh(
-    LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanh(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm, int64_t mIdx,
+                                                            int64_t nIdx, int64_t gateOffset)
 {
     LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
     this->CopyGate(ubLocalIn, mixGm, mIdx, nIdx, gateOffset);
@@ -122,9 +122,10 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanh(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanhHighPrecision(
-    LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset,
-    LocalTensor<T> &temp1, LocalTensor<T> &temp2, int64_t calcSizeAlign)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanhHighPrecision(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm,
+                                                                         int64_t mIdx, int64_t nIdx, int64_t gateOffset,
+                                                                         LocalTensor<T>& temp1, LocalTensor<T>& temp2,
+                                                                         int64_t calcSizeAlign)
 {
     LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
     this->CopyGate(ubLocalIn, mixGm, mIdx, nIdx, gateOffset);
@@ -137,8 +138,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithTanhHighPrecision(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithMul(
-    LocalTensor<T> &dstUb, LocalTensor<T> &other, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithMul(LocalTensor<T>& dstUb, LocalTensor<T>& other,
+                                                           GlobalTensor<T>& mixGm, int64_t mIdx, int64_t nIdx)
 {
     LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
     DataCopyParams dataCopyParams;
@@ -154,10 +155,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithMul(
     padParams.paddingValue = 0;
 
     DataCopyPad(ubLocalIn,
-        mixGm[this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize +
-              mIdx * this->vectorBaseM * this->tiling->hiddenSize + nIdx * this->vectorBaseN],
-        dataCopyParams,
-        padParams);
+                mixGm[this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize +
+                      mIdx * this->vectorBaseM * this->tiling->hiddenSize + nIdx * this->vectorBaseN],
+                dataCopyParams, padParams);
     this->qidVecIn.EnQue(ubLocalIn);
     ubLocalIn = this->qidVecIn.template DeQue<T>();
     Mul(dstUb, ubLocalIn, other, this->calcSizeAlign);
@@ -165,8 +165,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyWithMul(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInHC(
-    LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t tIdx, int64_t mIdx, int64_t nIdx)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInHC(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm, int64_t tIdx,
+                                                        int64_t mIdx, int64_t nIdx)
 {
     LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
     DataCopyParams dataCopyParams;
@@ -182,10 +182,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInHC(
     padParams.paddingValue = 0;
 
     DataCopyPad(ubLocalIn,
-        mixGm[this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize +
-              mIdx * this->vectorBaseM * this->tiling->hiddenSize + nIdx * this->vectorBaseN],
-        dataCopyParams,
-        padParams);
+                mixGm[this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize +
+                      mIdx * this->vectorBaseM * this->tiling->hiddenSize + nIdx * this->vectorBaseN],
+                dataCopyParams, padParams);
     this->qidVecIn.EnQue(ubLocalIn);
     ubLocalIn = this->qidVecIn.template DeQue<T>();
     PipeBarrier<PIPE_V>();
@@ -195,8 +194,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInHC(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInSeq(
-    LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t tIdx, int64_t mIdx, int64_t nIdx)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInSeq(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm, int64_t tIdx,
+                                                         int64_t mIdx, int64_t nIdx)
 {
     LocalTensor<T> ubLocalIn = this->qidVecIn.template AllocTensor<T>();
     DataCopyParams dataCopyParams;
@@ -218,10 +217,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInSeq(
     }
 
     DataCopyPad(ubLocalIn,
-        mixGm[tOffset + this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize +
-              mIdx * this->vectorBaseM * this->tiling->hiddenSize + nIdx * this->vectorBaseN],
-        dataCopyParams,
-        padParams);
+                mixGm[tOffset + this->blockIdx * this->vectorCoreM * this->tiling->hiddenSize +
+                      mIdx * this->vectorBaseM * this->tiling->hiddenSize + nIdx * this->vectorBaseN],
+                dataCopyParams, padParams);
     this->qidVecIn.EnQue(ubLocalIn);
     ubLocalIn = this->qidVecIn.template DeQue<T>();
     PipeBarrier<PIPE_V>();
@@ -231,8 +229,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyInSeq(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyOutput(
-    GlobalTensor<T> &gm, LocalTensor<T> &ub, int64_t tIdx, int64_t mIdx, int64_t nIdx)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyOutput(GlobalTensor<T>& gm, LocalTensor<T>& ub, int64_t tIdx,
+                                                          int64_t mIdx, int64_t nIdx)
 {
     LocalTensor<T> outLocal = this->qidVecOut.template AllocTensor<T>();
     PipeBarrier<PIPE_V>();
@@ -266,8 +264,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyOutput(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
-    int64_t tIdx, int64_t mIdx, int64_t nIdx, GlobalTensor<T> &mixGm)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx,
+                                                                 GlobalTensor<T>& mixGm)
 {
     this->blockIdx = GetBlockIdx();
     // get n size
@@ -315,7 +313,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
 
     // j [1] [2] 3 4 -> [1] [2] [3] 4
     auto jTanh = this->ubLocal3;
-    CopyWithTanhHighPrecision(jTanh, mixGm, mIdx, nIdx, this->jOffset, this->ubLocal1, this->ubLocal4, this->calcSizeAlign);
+    CopyWithTanhHighPrecision(jTanh, mixGm, mIdx, nIdx, this->jOffset, this->ubLocal1, this->ubLocal4,
+                              this->calcSizeAlign);
     if (this->tiling->isTraining == 1) {
         CopyOutput(this->outputGm.outJGm, jTanh, tIdx, mIdx, nIdx);
     }
@@ -365,7 +364,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
 
     // tanh(c) 1 [2] 3 4 -> 1 [2] 3 4
     auto cTanh = this->ubLocal2;
-    Tanh(cTanh, updateC, this->calcSizeAlign);  // 这里只有u3可用，还差1块UB，暂且从qidVecIn中取
+    Tanh(cTanh, updateC, this->calcSizeAlign); // 这里只有u3可用，还差1块UB，暂且从qidVecIn中取
     LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
     this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal3, temp2Tensor, this->calcSizeAlign);
     this->qidVecIn.FreeTensor(temp2Tensor);
@@ -411,7 +410,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, GlobalTensor<T> &mixGm)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, GlobalTensor<T>& mixGm)
 {
     this->blockIdx = GetBlockIdx();
     // get n size
@@ -459,7 +458,8 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
 
     // j [1] [2] 3 4 -> [1] [2] [3] 4
     auto jTanh = this->ubLocal3;
-    CopyWithTanhHighPrecision(jTanh, mixGm, mIdx, nIdx, this->jOffset, this->ubLocal2, this->ubLocal4, this->calcSizeAlign);
+    CopyWithTanhHighPrecision(jTanh, mixGm, mIdx, nIdx, this->jOffset, this->ubLocal2, this->ubLocal4,
+                              this->calcSizeAlign);
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outJGm, jTanh, 0, mIdx, nIdx);
     }
@@ -492,7 +492,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
     auto cTanh = this->ubLocal2;
     Tanh(cTanh, updateC, this->calcSizeAlign);
     LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
-    this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal1, temp2Tensor, this->calcSizeAlign);  // u1 + qidVecIn
+    this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal1, temp2Tensor, this->calcSizeAlign); // u1 + qidVecIn
     this->qidVecIn.FreeTensor(temp2Tensor);
     if (this->tiling->isTraining == 1) {
         this->CopyOutput(this->outputGm.outTanhCGm, cTanh, 0, mIdx, nIdx);
@@ -578,10 +578,10 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::Process()
         SyncAll();
         this->ProcessInitalT();
         if (this->tiling->direction == 1) {
-            this->inputGm.initCGm =
-                this->outputGm.outCGm[(this->tiling->timeStep - 1) * this->tiling->batch * this->tiling->hiddenSize];
-            this->inputGm.initHGm =
-                this->outputGm.outHGm[(this->tiling->timeStep - 1) * this->tiling->batch * this->tiling->hiddenSize];
+            this->inputGm.initCGm = this->outputGm.outCGm[(this->tiling->timeStep - 1) * this->tiling->batch *
+                                                          this->tiling->hiddenSize];
+            this->inputGm.initHGm = this->outputGm.outHGm[(this->tiling->timeStep - 1) * this->tiling->batch *
+                                                          this->tiling->hiddenSize];
         } else {
             this->inputGm.initCGm = this->outputGm.outCGm;
             this->inputGm.initHGm = this->outputGm.outHGm;
@@ -602,12 +602,10 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::Process()
         SyncAll();
 
         if (this->tiling->direction == 1) {
-            this->inputGm.initCGm =
-                this->outputGm
-                    .outCGm[(this->tiling->timeStep - 1 - tIdx) * this->tiling->batch * this->tiling->hiddenSize];
-            this->inputGm.initHGm =
-                this->outputGm
-                    .outHGm[(this->tiling->timeStep - 1 - tIdx) * this->tiling->batch * this->tiling->hiddenSize];
+            this->inputGm.initCGm = this->outputGm.outCGm[(this->tiling->timeStep - 1 - tIdx) * this->tiling->batch *
+                                                          this->tiling->hiddenSize];
+            this->inputGm.initHGm = this->outputGm.outHGm[(this->tiling->timeStep - 1 - tIdx) * this->tiling->batch *
+                                                          this->tiling->hiddenSize];
         } else {
             this->inputGm.initCGm = this->outputGm.outCGm[tIdx * this->tiling->batch * this->tiling->hiddenSize];
             this->inputGm.initHGm = this->outputGm.outHGm[tIdx * this->tiling->batch * this->tiling->hiddenSize];

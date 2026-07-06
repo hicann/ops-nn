@@ -81,8 +81,8 @@ int64_t BatchNormV3FullReduceTiling::DoUbTiling(const int64_t blockFactor, int64
                 commonParams.patternR1 * Ops::Base::CeilAlign(aUbFactor, commonParams.patternR0Align),
                 B16_BLOCK_ALIGN_NUM);
         } else {
-            rUbSize = Ops::Base::CeilAlign(
-                aUbFactor * commonParams.patternR1 * commonParams.patternR0Align, B16_BLOCK_ALIGN_NUM);
+            rUbSize = Ops::Base::CeilAlign(aUbFactor * commonParams.patternR1 * commonParams.patternR0Align,
+                                           B16_BLOCK_ALIGN_NUM);
         }
         if (aUbSize * A_UB_NUM + rUbSize * rUbNum > eleNum) {
             aUbFactor = aUbFactor - 1;
@@ -101,10 +101,7 @@ bool BatchNormV3FullReduceTiling::IsCapable()
     return true;
 }
 
-uint64_t BatchNormV3FullReduceTiling::GetTilingKey() const
-{
-    return fullReduceTilingkey;
-}
+uint64_t BatchNormV3FullReduceTiling::GetTilingKey() const { return fullReduceTilingkey; }
 
 ge::graphStatus BatchNormV3FullReduceTiling::DoOpTiling()
 {
@@ -126,14 +123,13 @@ ge::graphStatus BatchNormV3FullReduceTiling::DoOpTiling()
     td_.set_batchVarScale(batchVarScale);
     uint32_t cofFactor = FindCofFactor(commonParams.patternR0 * commonParams.patternR1);
     td_.set_coefficient0(static_cast<float>(1.0 / static_cast<double>(cofFactor)));
-    td_.set_coefficient1(static_cast<float>(
-        static_cast<double>(cofFactor) / static_cast<double>(commonParams.patternR0 * commonParams.patternR1)));
+    td_.set_coefficient1(static_cast<float>(static_cast<double>(cofFactor) /
+                                            static_cast<double>(commonParams.patternR0 * commonParams.patternR1)));
     int64_t aUbSize = 1;
     int64_t rUbSize = 1;
     int64_t aUbFactor = DoUbTiling(blockFactor, aUbSize, rUbSize);
-    OP_CHECK_IF(
-        aUbFactor == 0, OP_LOGI(commonParams.nodeName, "BatchNormV3FullReduceTiling not supported this case"),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(aUbFactor == 0, OP_LOGI(commonParams.nodeName, "BatchNormV3FullReduceTiling not supported this case"),
+                return ge::GRAPH_PARAM_INVALID);
     td_.set_aUbFactor(aUbFactor);
     td_.set_aUbSize(aUbSize);
     td_.set_rUbSize(rUbSize);
@@ -162,12 +158,10 @@ ge::graphStatus BatchNormV3FullReduceTiling::PostTiling()
     td_.set_momentumReverse(commonParams.momentumReverse);
     context_->SetBlockDim(usedCoreNum);
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        td_.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu", td_.GetDataSize(),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(td_.GetDataSize() > rawTilingData->GetCapacity(),
+                OP_LOGE(commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu",
+                        td_.GetDataSize(), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     td_.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(td_.GetDataSize());
 

@@ -13,9 +13,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::array<const aclTensor*, 2> NLLLoss(
-    const aclTensor* x, const aclTensor* target, const aclTensor* weight, const std::string& reduction,
-    int64_t ignoreIndex, aclOpExecutor* executor);
+const std::array<const aclTensor*, 2> NLLLoss(const aclTensor* x, const aclTensor* target, const aclTensor* weight,
+                                              const std::string& reduction, int64_t ignoreIndex,
+                                              aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_ADD_OP_H_

@@ -38,10 +38,11 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeluQuantGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const char* approximate, const char* quantMode, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* outScaleOptional, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeluQuantGetWorkspaceSize(const aclTensor* self, const aclTensor* inputScaleOptional,
+                                                     const aclTensor* inputOffsetOptional, const char* approximate,
+                                                     const char* quantMode, const char* roundMode, int64_t dstType,
+                                                     const aclTensor* y, const aclTensor* outScaleOptional,
+                                                     uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnGeluQuant的第二段接口，用于执行计算。
@@ -51,8 +52,8 @@ ACLNN_API aclnnStatus aclnnGeluQuantGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnGeluQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGeluQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream);
 
 #ifdef __cplusplus
 }

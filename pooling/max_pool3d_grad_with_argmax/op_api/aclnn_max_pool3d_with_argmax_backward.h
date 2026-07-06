@@ -61,8 +61,8 @@ ACLNN_API aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
  * @return aclnnStatus: returned status code
  */
 
-ACLNN_API aclnnStatus
-aclnnMaxPool3dWithArgmaxBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnMaxPool3dWithArgmaxBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                       aclrtStream stream);
 
 #ifdef __cplusplus
 }

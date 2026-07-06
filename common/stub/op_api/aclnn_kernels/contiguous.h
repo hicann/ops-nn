@@ -78,9 +78,8 @@ const aclTensor* PickViewAsContiguous(const aclTensor* x, aclOpExecutor* executo
 const aclTensor* ReViewToOut(const aclTensor* x, const aclTensor* y, aclOpExecutor* executor);
 
 // ============内部接口=============
-bool CanOptimizeContiguous(
-    const op::Shape& viewShape, const op::Strides& strides, int64_t offset, int64_t storageSize,
-    ContiguousParam& param);
+bool CanOptimizeContiguous(const op::Shape& viewShape, const op::Strides& strides, int64_t offset, int64_t storageSize,
+                           ContiguousParam& param);
 
 bool CanOptimizeView(const op::Shape& viewShape, const op::Strides& strides, int64_t offset, ContiguousParam& param);
 // ============内部接口=============

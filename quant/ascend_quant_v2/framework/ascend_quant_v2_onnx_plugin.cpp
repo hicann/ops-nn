@@ -13,8 +13,9 @@
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status ParseParamsNPUAscendQuantV2(const Message *opSrc, ge::Operator &opDest) {
-    const NodeProto *node = dynamic_cast<const NodeProto *>(opSrc);
+static Status ParseParamsNPUAscendQuantV2(const Message* opSrc, ge::Operator& opDest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(opSrc);
     if (node == nullptr) {
         OP_LOGE(GetOpName(opDest).c_str(), "Dynamic cast opSrc to NodeProto failed.");
         return FAILED;
@@ -34,16 +35,12 @@ static Status ParseParamsNPUAscendQuantV2(const Message *opSrc, ge::Operator &op
 }
 
 REGISTER_CUSTOM_OP("AscendQuantV2")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::11::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::12::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::13::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::14::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::15::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::16::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::17::NPUAscendQuantV2"),
-                 ge::AscendString("ai.onnx::18::NPUAscendQuantV2")})
-  .ParseParamsFn(ParseParamsNPUAscendQuantV2)
-  .ImplyType(ImplyType::TVM);
-} // domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("npu::1::NPUAscendQuantV2"), ge::AscendString("ai.onnx::11::NPUAscendQuantV2"),
+                   ge::AscendString("ai.onnx::12::NPUAscendQuantV2"), ge::AscendString("ai.onnx::13::NPUAscendQuantV2"),
+                   ge::AscendString("ai.onnx::14::NPUAscendQuantV2"), ge::AscendString("ai.onnx::15::NPUAscendQuantV2"),
+                   ge::AscendString("ai.onnx::16::NPUAscendQuantV2"), ge::AscendString("ai.onnx::17::NPUAscendQuantV2"),
+                   ge::AscendString("ai.onnx::18::NPUAscendQuantV2")})
+    .ParseParamsFn(ParseParamsNPUAscendQuantV2)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

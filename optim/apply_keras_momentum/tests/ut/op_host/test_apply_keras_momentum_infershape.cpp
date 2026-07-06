@@ -18,15 +18,9 @@
 
 class ApplyKerasMomentum : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyKerasMomentum SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyKerasMomentum SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyKerasMomentum TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyKerasMomentum TearDown" << std::endl; }
 };
 
 TEST_F(ApplyKerasMomentum, ApplyKerasMomentum_infershape_3d_fp32)
@@ -41,11 +35,11 @@ TEST_F(ApplyKerasMomentum, ApplyKerasMomentum_infershape_3d_fp32)
     gert::StorageShape momentumShape = {{1}, {1}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(5, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1})
-        .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
-        .OutputShapes({&varShape})
-        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
+                      .OutputShapes({&varShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
@@ -62,11 +56,11 @@ TEST_F(ApplyKerasMomentum, ApplyKerasMomentum_infershape_2d_fp16)
     gert::StorageShape momentumShape = {{1}, {1}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(5, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1})
-        .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
-        .OutputShapes({&varShape})
-        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
+                      .OutputShapes({&varShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
@@ -83,11 +77,11 @@ TEST_F(ApplyKerasMomentum, ApplyKerasMomentum_infershape_1d_bf16)
     gert::StorageShape momentumShape = {{1}, {1}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(5, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1})
-        .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
-        .OutputShapes({&varShape})
-        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
+                      .OutputShapes({&varShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

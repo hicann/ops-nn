@@ -28,7 +28,7 @@ enum class ConvCfgTypeID {
     CONV_ID_Unknown,
     CONV_ID_Normal,
     CONV_ID_Test,
-    CONV_ID_END  // 由于编译器限制，最大为: 1024
+    CONV_ID_END // 由于编译器限制，最大为: 1024
 };
 
 enum class ConvFormat { ND = 0, NCHW, NHWC, NC1HWC0, FRACTAL_Z, NDC1HWC0, FRACTAL_Z_3D, NCDHW };
@@ -108,23 +108,20 @@ struct ConvDataType {
     constexpr static bool isBias = true;
 
     using ContextData = struct _ {
-        __aicore__ inline _()
-        {}
+        __aicore__ inline _() {}
     };
 };
 
 template <class ConvDataType>
 struct ConvConfig : public ConvDataType {
 public:
-    __aicore__ inline ConvConfig()
-    {}
+    __aicore__ inline ConvConfig() {}
 
     using ContextData = struct _ : public ConvDataType::ContextData {
-        __aicore__ inline _()
-        {}
+        __aicore__ inline _() {}
         int test1 = 11;
     };
 };
 
-}  // namespace conv
+} // namespace conv
 #endif

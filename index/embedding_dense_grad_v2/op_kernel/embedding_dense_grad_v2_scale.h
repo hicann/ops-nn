@@ -32,13 +32,13 @@ struct ComputeParam {
     uint64_t formerComputeTailNum;
 };
 
-
 namespace AscendC {
-template<typename T>
+template <typename T>
 class EmbeddingDenseGradV2ScaleKernel {
 public:
     __aicore__ inline EmbeddingDenseGradV2ScaleKernel() = delete;
-    __aicore__ inline EmbeddingDenseGradV2ScaleKernel(GM_ADDR backProps, GM_ADDR workSpace, const EmbeddingDenseGradV2TilingData &tiling, TPipe &pipe)
+    __aicore__ inline EmbeddingDenseGradV2ScaleKernel(GM_ADDR backProps, GM_ADDR workSpace,
+                                                      const EmbeddingDenseGradV2TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -103,8 +103,8 @@ private:
             Muls(gradOutLocal, gradInLocal, reciScale, computeParam_.mask, computeParam_.repeatTime, {1, 1, 8, 8});
         }
         if (computeParam_.computeTailNum > 0) {
-            Muls(gradOutLocal[computeParam_.computeFormerNum], gradInLocal[computeParam_.computeFormerNum],
-                    reciScale, computeParam_.computeTailNum, 1, {1, 1, 0, 0});
+            Muls(gradOutLocal[computeParam_.computeFormerNum], gradInLocal[computeParam_.computeFormerNum], reciScale,
+                 computeParam_.computeTailNum, 1, {1, 1, 0, 0});
         }
         gradInQue_.FreeTensor<T>(gradInLocal);
         scaleQue_.FreeTensor<float>(scaleLocal);
@@ -120,7 +120,7 @@ private:
         gradOutQue_.FreeTensor<T>(gradOutLocal);
     }
 
-    __aicore__ inline void InitParams(const EmbeddingDenseGradV2TilingData &tiling)
+    __aicore__ inline void InitParams(const EmbeddingDenseGradV2TilingData& tiling)
     {
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ >= tiling.scaleTiling.formerCoreRowRepTime) {
@@ -143,7 +143,7 @@ private:
         curEmbeddingDim_ = formerEmbeddingDim_;
     }
 
-    __aicore__ inline void InitBuffers(TPipe &pipe)
+    __aicore__ inline void InitBuffers(TPipe& pipe)
     {
         uint64_t alignNum = BLOCK_SIZE / sizeof(T);
         uint64_t scaleAlign = BLOCK_SIZE / sizeof(float);
@@ -153,11 +153,17 @@ private:
         pipe.InitBuffer(gradOutQue_, DOUBLE_BUFFER, gradAlign * sizeof(T));
     }
 
-    __aicore__ inline void SetGmAddr(GM_ADDR backProps, GM_ADDR indiceCountGm, const EmbeddingDenseGradV2TilingData &tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR backProps, GM_ADDR indiceCountGm,
+                                     const EmbeddingDenseGradV2TilingData& tiling)
     {
-        uint64_t formerCoreRowNumLoops = blockIdx_ < tiling.scaleTiling.formerCoreRowRepTime ? blockIdx_ : tiling.scaleTiling.formerCoreRowRepTime;
-        uint64_t tailCoreRowNumLoops = blockIdx_ < tiling.scaleTiling.formerCoreRowRepTime ? 0 : blockIdx_ - tiling.scaleTiling.formerCoreRowRepTime;
-        uint64_t addrOffset = tiling.scaleTiling.formerCoreRowNum * formerCoreRowNumLoops + tiling.scaleTiling.tailCoreRowNum * tailCoreRowNumLoops;
+        uint64_t formerCoreRowNumLoops = blockIdx_ < tiling.scaleTiling.formerCoreRowRepTime ?
+                                             blockIdx_ :
+                                             tiling.scaleTiling.formerCoreRowRepTime;
+        uint64_t tailCoreRowNumLoops = blockIdx_ < tiling.scaleTiling.formerCoreRowRepTime ?
+                                           0 :
+                                           blockIdx_ - tiling.scaleTiling.formerCoreRowRepTime;
+        uint64_t addrOffset = tiling.scaleTiling.formerCoreRowNum * formerCoreRowNumLoops +
+                              tiling.scaleTiling.tailCoreRowNum * tailCoreRowNumLoops;
         backPropGm_.SetGlobalBuffer((__gm__ T*)backProps + addrOffset * embeddingDim_);
         indexCountGm_.SetGlobalBuffer((__gm__ float*)indiceCountGm + addrOffset);
     }
@@ -183,6 +189,6 @@ private:
     uint64_t tailEmbeddingDim_;
     uint64_t curEmbeddingDim_;
 };
-}
+} // namespace AscendC
 
 #endif // EMBEDDING_DENSE_GRAD_V2_H_SCALE_H

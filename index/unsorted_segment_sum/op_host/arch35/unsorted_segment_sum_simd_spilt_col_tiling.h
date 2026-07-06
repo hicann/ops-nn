@@ -33,13 +33,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_5000, UnsortedSegmentSumSimdSplitColTilingData);
 
-class UnsortedSegmentSumSimdSplitColTiling : public UnsortedSegmentSumBaseTiling
-{
+class UnsortedSegmentSumSimdSplitColTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSimdSplitColTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
     {}
-    ~UnsortedSegmentSumSimdSplitColTiling() override
-    {}
+    ~UnsortedSegmentSumSimdSplitColTiling() override {}
 
 private:
     bool IsCapable() override;

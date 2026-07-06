@@ -79,7 +79,5 @@ static ge::graphStatus ModulateGradInferDataType(gert::InferDataTypeContext* con
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ModulateGrad)
-    .InferShape(ModulateGradInferShape)
-    .InferDataType(ModulateGradInferDataType);
+IMPL_OP_INFERSHAPE(ModulateGrad).InferShape(ModulateGradInferShape).InferDataType(ModulateGradInferDataType);
 } // namespace ops

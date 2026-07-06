@@ -18,8 +18,8 @@
 #define TILING_KEY_SIMIT_MODE_INT64 1001
 
 using namespace DeformableOffsetsGrad;
-extern "C" __global__ __aicore__ void deformable_offsets_grad(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR offsets, GM_ADDR grad_x, GM_ADDR grad_offsets, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void deformable_offsets_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR offsets, GM_ADDR grad_x,
+                                                              GM_ADDR grad_offsets, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);

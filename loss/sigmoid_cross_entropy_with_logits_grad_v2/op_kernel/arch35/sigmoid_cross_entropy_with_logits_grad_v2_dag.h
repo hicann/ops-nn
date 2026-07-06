@@ -26,9 +26,8 @@ constexpr uint32_t VEC_LENGTH_B32 = 64;
 
 #ifdef __CCE_AICORE__
 using AscendC::MicroAPI::RegTensor;
-__aicore__ inline void SigmoidCustomImpl(
-    MicroAPI::RegTensor<float>& yReg, MicroAPI::RegTensor<float>& xReg, MicroAPI::RegTensor<float>& oneReg,
-    MicroAPI::MaskReg& mask)
+__aicore__ inline void SigmoidCustomImpl(MicroAPI::RegTensor<float>& yReg, MicroAPI::RegTensor<float>& xReg,
+                                         MicroAPI::RegTensor<float>& oneReg, MicroAPI::MaskReg& mask)
 {
     MicroAPI::Muls(yReg, xReg, -1.0f, mask);
     MicroAPI::Exp(yReg, yReg, mask);
@@ -38,9 +37,11 @@ __aicore__ inline void SigmoidCustomImpl(
 #endif
 
 template <uint32_t HAS_WEIGHT, uint32_t HAS_POS_WEIGHT, uint32_t IS_MEAN>
-__aicore__ inline void SigmoidCrossEntropyWithLogitsGradV2Impl(
-    LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target, LocalTensor<float>& dout,
-    LocalTensor<float>& weight, LocalTensor<float>& posWeight, float scale, uint32_t count)
+__aicore__ inline void SigmoidCrossEntropyWithLogitsGradV2Impl(LocalTensor<float>& dst, LocalTensor<float>& predict,
+                                                               LocalTensor<float>& target, LocalTensor<float>& dout,
+                                                               LocalTensor<float>& weight,
+                                                               LocalTensor<float>& posWeight, float scale,
+                                                               uint32_t count)
 {
 #ifdef __CCE_AICORE__
     uint16_t loopNum = (count + VEC_LENGTH_B32 - 1) / VEC_LENGTH_B32;
@@ -110,45 +111,45 @@ __aicore__ inline void SigmoidCrossEntropyWithLogitsGradV2Impl(
 
 template <uint32_t HAS_WEIGHT, uint32_t HAS_POS_WEIGHT, uint32_t IS_MEAN>
 struct DagWeightPosWightCompute : public Vec::Elemwise6OP<float, float, float, float, float, float, float> {
-    __aicore__ inline DagWeightPosWightCompute(
-        LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target, LocalTensor<float>& dout,
-        LocalTensor<float>& weight, LocalTensor<float>& posWeight, float scale, uint32_t count)
+    __aicore__ inline DagWeightPosWightCompute(LocalTensor<float>& dst, LocalTensor<float>& predict,
+                                               LocalTensor<float>& target, LocalTensor<float>& dout,
+                                               LocalTensor<float>& weight, LocalTensor<float>& posWeight, float scale,
+                                               uint32_t count)
     {
-        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(
-            dst, predict, target, dout, weight, posWeight, scale, count);
+        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(dst, predict, target, dout, weight,
+                                                                                     posWeight, scale, count);
     }
 };
 
 template <uint32_t HAS_WEIGHT, uint32_t HAS_POS_WEIGHT, uint32_t IS_MEAN>
 struct DagWeightCompute : public Vec::ElemwiseQuinaryOP<float, float, float, float, float, float> {
-    __aicore__ inline DagWeightCompute(
-        LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target, LocalTensor<float>& dout,
-        LocalTensor<float>& weight, float scale, uint32_t count)
+    __aicore__ inline DagWeightCompute(LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target,
+                                       LocalTensor<float>& dout, LocalTensor<float>& weight, float scale,
+                                       uint32_t count)
     {
-        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(
-            dst, predict, target, dout, weight, predict, scale, count);
+        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(dst, predict, target, dout, weight,
+                                                                                     predict, scale, count);
     }
 };
 
 template <uint32_t HAS_WEIGHT, uint32_t HAS_POS_WEIGHT, uint32_t IS_MEAN>
 struct DagPosWeightCompute : public Vec::ElemwiseQuinaryOP<float, float, float, float, float, float> {
-    __aicore__ inline DagPosWeightCompute(
-        LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target, LocalTensor<float>& dout,
-        LocalTensor<float>& posWeight, float scale, uint32_t count)
+    __aicore__ inline DagPosWeightCompute(LocalTensor<float>& dst, LocalTensor<float>& predict,
+                                          LocalTensor<float>& target, LocalTensor<float>& dout,
+                                          LocalTensor<float>& posWeight, float scale, uint32_t count)
     {
-        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(
-            dst, predict, target, dout, predict, posWeight, scale, count);
+        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(dst, predict, target, dout,
+                                                                                     predict, posWeight, scale, count);
     }
 };
 
 template <uint32_t HAS_WEIGHT, uint32_t HAS_POS_WEIGHT, uint32_t IS_MEAN>
 struct DagCompute : public Vec::ElemwiseQuaternaryOP<float, float, float, float, float> {
-    __aicore__ inline DagCompute(
-        LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target, LocalTensor<float>& dout,
-        float scale, uint32_t count)
+    __aicore__ inline DagCompute(LocalTensor<float>& dst, LocalTensor<float>& predict, LocalTensor<float>& target,
+                                 LocalTensor<float>& dout, float scale, uint32_t count)
     {
-        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(
-            dst, predict, target, dout, predict, predict, scale, count);
+        SigmoidCrossEntropyWithLogitsGradV2Impl<HAS_WEIGHT, HAS_POS_WEIGHT, IS_MEAN>(dst, predict, target, dout,
+                                                                                     predict, predict, scale, count);
     }
 };
 
@@ -167,9 +168,8 @@ struct SigmoidCrossEntropyWithLogitsGradV2DagWeightPosWight {
     using InputWeight = Bind<Vec::Cast<float, T, 0>, InputWeightT>;
     using InputPosWeight = Bind<Vec::Cast<float, T, 0>, InputPosWeightT>;
 
-    using OpResult = Bind<
-        DagWeightPosWightCompute<1, 1, IS_MEAN>, InputPredict, InputTarget, InputDout, InputWeight, InputPosWeight,
-        Placeholder::Var<float, 0>>;
+    using OpResult = Bind<DagWeightPosWightCompute<1, 1, IS_MEAN>, InputPredict, InputTarget, InputDout, InputWeight,
+                          InputPosWeight, Placeholder::Var<float, 0>>;
     using OpCastRes = Bind<Vec::Cast<T, float, 1>, OpResult>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpCastRes>;
 
@@ -192,8 +192,8 @@ struct SigmoidCrossEntropyWithLogitsGradV2DagWeight {
     using InputDout = Bind<Vec::Cast<float, T, 0>, InputDoutT>;
     using InputWeight = Bind<Vec::Cast<float, T, 0>, InputWeightT>;
 
-    using OpResult = Bind<
-        DagWeightCompute<1, 0, IS_MEAN>, InputPredict, InputTarget, InputDout, InputWeight, Placeholder::Var<float, 0>>;
+    using OpResult = Bind<DagWeightCompute<1, 0, IS_MEAN>, InputPredict, InputTarget, InputDout, InputWeight,
+                          Placeholder::Var<float, 0>>;
     using OpCastRes = Bind<Vec::Cast<T, float, 1>, OpResult>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpCastRes>;
 
@@ -216,9 +216,8 @@ struct SigmoidCrossEntropyWithLogitsGradV2DagPosWeight {
     using InputDout = Bind<Vec::Cast<float, T, 0>, InputDoutT>;
     using InputPosWeight = Bind<Vec::Cast<float, T, 0>, InputPosWeightT>;
 
-    using OpResult = Bind<
-        DagPosWeightCompute<0, 1, IS_MEAN>, InputPredict, InputTarget, InputDout, InputPosWeight,
-        Placeholder::Var<float, 0>>;
+    using OpResult = Bind<DagPosWeightCompute<0, 1, IS_MEAN>, InputPredict, InputTarget, InputDout, InputPosWeight,
+                          Placeholder::Var<float, 0>>;
     using OpCastRes = Bind<Vec::Cast<T, float, 1>, OpResult>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpCastRes>;
 

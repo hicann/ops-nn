@@ -48,12 +48,9 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 /**
  * \brief SIMT VF kernel: atan for float32 tensors (no type promotion needed)
  */
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAtanSimtFloat(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAtanSimtFloat(int32_t tensorCount,
+                                                                                   __gm__ int64_t* tensorElements,
+                                                                                   GM_ADDR xList, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -64,11 +61,9 @@ inline void OpForeachAtanSimtFloat(
         __gm__ float* xData = SimtGetTensorAddr<float>(xList, t);
         __gm__ float* yData = SimtGetTensorAddr<float>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             yData[idx] = atanf(xData[idx]);
@@ -79,12 +74,9 @@ inline void OpForeachAtanSimtFloat(
 /**
  * \brief SIMT VF kernel: atan for float16 tensors (type promotion: half -> float -> atanf -> half)
  */
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAtanSimtHalf(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAtanSimtHalf(int32_t tensorCount,
+                                                                                  __gm__ int64_t* tensorElements,
+                                                                                  GM_ADDR xList, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -95,11 +87,9 @@ inline void OpForeachAtanSimtHalf(
         __gm__ half* xData = SimtGetTensorAddr<half>(xList, t);
         __gm__ half* yData = SimtGetTensorAddr<half>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             float xVal = __half2float(xData[idx]);
@@ -112,12 +102,9 @@ inline void OpForeachAtanSimtHalf(
 /**
  * \brief SIMT VF kernel: atan for bfloat16 tensors (type promotion: bf16 -> float -> atanf -> bf16)
  */
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAtanSimtBfloat16(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAtanSimtBfloat16(int32_t tensorCount,
+                                                                                      __gm__ int64_t* tensorElements,
+                                                                                      GM_ADDR xList, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -128,11 +115,9 @@ inline void OpForeachAtanSimtBfloat16(
         __gm__ bfloat16_t* xData = SimtGetTensorAddr<bfloat16_t>(xList, t);
         __gm__ bfloat16_t* yData = SimtGetTensorAddr<bfloat16_t>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             float xVal = __bfloat162float(xData[idx]);
@@ -146,39 +131,22 @@ inline void OpForeachAtanSimtBfloat16(
  * \brief Process entry: launch SIMT VF for foreach_atan
  */
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y,
-    const __gm__ ForeachAtanTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const __gm__ ForeachAtanTilingData* tilingGm)
 {
     // Extract tensorElements array pointer from GM tiling data
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachAtanTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachAtanTilingData*>(tilingGm)) +
         offsetof(ForeachAtanTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
     if constexpr (std::is_same_v<T, float>) {
-        AscendC::Simt::VF_CALL<OpForeachAtanSimtFloat>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            tensorCount,
-            elemCounts,
-            x,
-            y);
+        AscendC::Simt::VF_CALL<OpForeachAtanSimtFloat>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
     } else if constexpr (std::is_same_v<T, half>) {
-        AscendC::Simt::VF_CALL<OpForeachAtanSimtHalf>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            tensorCount,
-            elemCounts,
-            x,
-            y);
+        AscendC::Simt::VF_CALL<OpForeachAtanSimtHalf>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
     } else if constexpr (std::is_same_v<T, bfloat16_t>) {
-        AscendC::Simt::VF_CALL<OpForeachAtanSimtBfloat16>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            tensorCount,
-            elemCounts,
-            x,
-            y);
+        AscendC::Simt::VF_CALL<OpForeachAtanSimtBfloat16>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x,
+                                                          y);
     }
 }
 

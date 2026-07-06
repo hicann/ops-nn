@@ -128,7 +128,9 @@ public:
         UpdateAivBasicBlock();
         for (uint64_t index = 0; index < aivMte2Num_; index++) {
             UpdateAivParams(index);
-            if (copyGm2UbParams_.mBurst == 0) { return; }
+            if (copyGm2UbParams_.mBurst == 0) {
+                return;
+            }
             RunFusion();
         }
     }
@@ -140,18 +142,17 @@ public:
         uint64_t tilePaddedSize = copyGm2UbParams_.mBurst * paddedN;
 
         uint32_t wsRowBytes = static_cast<uint32_t>(aivParams_.curNL1InAiv * sizeof(float));
-        uint32_t wsSrcGap = static_cast<uint32_t>(
-            (aivParams_.curAlignedNInAiv - aivParams_.curNL1InAiv) * sizeof(float));
+        uint32_t wsSrcGap = static_cast<uint32_t>((aivParams_.curAlignedNInAiv - aivParams_.curNL1InAiv) *
+                                                  sizeof(float));
         uint32_t wsDstGap = static_cast<uint32_t>(
-            (paddedN * sizeof(float) - CeilAlign(aivParams_.curNL1InAiv * sizeof(float),
-            DATABLOCK_SIZE)) / DATABLOCK_SIZE);
+            (paddedN * sizeof(float) - CeilAlign(aivParams_.curNL1InAiv * sizeof(float), DATABLOCK_SIZE)) /
+            DATABLOCK_SIZE);
         uint64_t wsBaseGM = copyGm2UbParams_.offsetWorkspaceGM;
         for (uint64_t k = 0; k < copyGm2UbParams_.kCnt; ++k) {
             uint64_t gmOff = wsBaseGM + k * BLOCK_BASE_M * BLOCK_BASE_N;
-            DataCopyExtParams wsParams{static_cast<uint16_t>(copyGm2UbParams_.mBurst),
-                wsRowBytes, wsSrcGap, wsDstGap, 0};
-            DataCopyPad<float>(ubAddTensor[k * tilePaddedSize], workspaceGlobal_[gmOff],
-                               wsParams, {false, 0, 0, 0});
+            DataCopyExtParams wsParams{static_cast<uint16_t>(copyGm2UbParams_.mBurst), wsRowBytes, wsSrcGap, wsDstGap,
+                                       0};
+            DataCopyPad<float>(ubAddTensor[k * tilePaddedSize], workspaceGlobal_[gmOff], wsParams, {false, 0, 0, 0});
         }
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(FLAG_0);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(FLAG_0);
@@ -162,8 +163,7 @@ public:
 
         uint64_t castBufOffset = copyGm2UbParams_.kCnt * tilePaddedSize;
         if constexpr (sizeof(OutType) == sizeof(half)) {
-            AscendC::LocalTensor<OutType> ubCastDst =
-                ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
+            AscendC::LocalTensor<OutType> ubCastDst = ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
             Cast(ubCastDst, ubAddTensor, RoundMode::CAST_RINT, tilePaddedSize);
             AscendC::PipeBarrier<PIPE_V>();
             AscendC::LocalTensor<OutType> ubX3 = ubCastDst[tilePaddedSize];
@@ -171,8 +171,7 @@ public:
             FuseFlat(ubCastDst, ubX3, tilePaddedSize);
             WriteResultToGm(ubCastDst, paddedN);
         } else {
-            AscendC::LocalTensor<OutType> ubX3 =
-                ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
+            AscendC::LocalTensor<OutType> ubX3 = ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
             LoadX3Padded(ubX3, paddedN);
             FuseFlat(ubAddTensor, ubX3, tilePaddedSize);
             WriteResultToGm(ubAddTensor, paddedN);
@@ -184,12 +183,10 @@ public:
         uint32_t x3RowBytes = static_cast<uint32_t>(aivParams_.curNL1InAiv * sizeof(OutType));
         uint32_t x3SrcGap = static_cast<uint32_t>((n_ - aivParams_.curNL1InAiv) * sizeof(OutType));
         uint32_t x3DstGap = static_cast<uint32_t>(
-            (paddedN * sizeof(OutType) - CeilAlign(aivParams_.curNL1InAiv * sizeof(OutType),
-            DATABLOCK_SIZE)) / DATABLOCK_SIZE);
-        DataCopyExtParams x3Params{static_cast<uint16_t>(copyGm2UbParams_.mBurst),
-            x3RowBytes, x3SrcGap, x3DstGap, 0};
-        AscendC::DataCopyPad(ubX3, x3Global_[copyUb2GmParams_.offsetCGm],
-                             x3Params, {false, 0, 0, 0});
+            (paddedN * sizeof(OutType) - CeilAlign(aivParams_.curNL1InAiv * sizeof(OutType), DATABLOCK_SIZE)) /
+            DATABLOCK_SIZE);
+        DataCopyExtParams x3Params{static_cast<uint16_t>(copyGm2UbParams_.mBurst), x3RowBytes, x3SrcGap, x3DstGap, 0};
+        AscendC::DataCopyPad(ubX3, x3Global_[copyUb2GmParams_.offsetCGm], x3Params, {false, 0, 0, 0});
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(FLAG_0);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(FLAG_0);
     }
@@ -212,11 +209,11 @@ public:
     {
         uint32_t outRowBytes = static_cast<uint32_t>(aivParams_.curNL1InAiv * sizeof(OutType));
         uint32_t outSrcGap = static_cast<uint32_t>(
-            (paddedN * sizeof(OutType) - CeilAlign(aivParams_.curNL1InAiv * sizeof(OutType),
-            DATABLOCK_SIZE)) / DATABLOCK_SIZE);
+            (paddedN * sizeof(OutType) - CeilAlign(aivParams_.curNL1InAiv * sizeof(OutType), DATABLOCK_SIZE)) /
+            DATABLOCK_SIZE);
         uint32_t outDstGap = static_cast<uint32_t>((n_ - aivParams_.curNL1InAiv) * sizeof(OutType));
-        DataCopyExtParams outParams{static_cast<uint16_t>(copyUb2GmParams_.mLength),
-            outRowBytes, outSrcGap, outDstGap, 0};
+        DataCopyExtParams outParams{static_cast<uint16_t>(copyUb2GmParams_.mLength), outRowBytes, outSrcGap, outDstGap,
+                                    0};
         DataCopyPad<OutType>(cGlobal_[copyUb2GmParams_.offsetCGm], srcTensor, outParams);
     }
 
@@ -240,8 +237,8 @@ public:
         aivParams_.kCntIndex = AscendC::GetBlockIdx() % (AscendC::GetTaskRation() * kCnt_);
         aivParams_.indexParams = newBlockIdx;
         aivParams_.bCntIndex = newBlockIdx / (mCnt_ * nCnt_);
-        uint64_t mnIndex =
-            (aivParams_.indexParams + (bCnt_ * mCnt_ * nCnt_ - bCnt_ * mCnt_ * nCnt_ % usedCoreNum_)) % (mCnt_ * nCnt_);
+        uint64_t mnIndex = (aivParams_.indexParams + (bCnt_ * mCnt_ * nCnt_ - bCnt_ * mCnt_ * nCnt_ % usedCoreNum_)) %
+                           (mCnt_ * nCnt_);
         uint64_t mainWindow = AscendC::Std::min(MAIN_WINDOW, mCnt_);
         uint64_t mainRow = mainWindow == 0 ? 0 : mCnt_ / mainWindow - 1UL;
         uint64_t rowIdx = mainWindow == 0 ? 0 : mnIndex / nCnt_ / mainWindow;
@@ -263,7 +260,7 @@ public:
     __aicore__ inline void UpdateAivParams(uint64_t index)
     {
         mBurstBase_ = CeilAlign(CeilDiv(aivParams_.curML1InAiv, kCnt_ * AscendC::GetTaskRation()),
-                      CeilDiv(UB2GM_SRCGAP_UNIT, aivParams_.curAlignedNInAiv));
+                                CeilDiv(UB2GM_SRCGAP_UNIT, aivParams_.curAlignedNInAiv));
         uint64_t mBurstCnt = CeilDiv(aivParams_.curML1InAiv, mBurstBase_);
         uint64_t mBurstTail = aivParams_.curML1InAiv - (mBurstCnt - 1) * mBurstBase_;
 
@@ -275,14 +272,14 @@ public:
 
         copyGm2UbParams_.kCnt = kCnt_;
         copyGm2UbParams_.mBurst = CeilDiv(copyGm2UbParams_.mBurstOri, aivMte2Num_);
-        //moving out to GM.
+        // moving out to GM.
         copyUb2GmParams_.offsetCGm = aivParams_.nCntIndex * nL1_ + aivParams_.mCntIndex * mL1_ * n_ +
                                      (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) * n_ +
                                      aivParams_.bCntIndex * m_ * n_;
-        //moving into UB.
-        copyGm2UbParams_.offsetWorkspaceGM =
-            aivParams_.indexParams * kCnt_ * BLOCK_BASE_M * BLOCK_BASE_N +
-            (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) * aivParams_.curAlignedNInAiv;
+        // moving into UB.
+        copyGm2UbParams_.offsetWorkspaceGM = aivParams_.indexParams * kCnt_ * BLOCK_BASE_M * BLOCK_BASE_N +
+                                             (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) *
+                                                 aivParams_.curAlignedNInAiv;
         uint64_t singleCnt = 1;
         if (index >= singleCnt) {
             copyGm2UbParams_.mBurst = 0;
@@ -292,10 +289,7 @@ public:
         copyUb2GmParams_.mLength = copyGm2UbParams_.mBurst;
     }
 
-    __aicore__ inline void operator()()
-    {
-        Run();
-    }
+    __aicore__ inline void operator()() { Run(); }
 
 private:
     constexpr static uint64_t NUM_TWO = 2UL;

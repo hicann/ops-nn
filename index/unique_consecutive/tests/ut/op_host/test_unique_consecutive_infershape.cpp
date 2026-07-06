@@ -27,65 +27,63 @@
 
 class UniqueConsecutiveTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "UniqueConsecutive Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "UniqueConsecutive Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "UniqueConsecutive Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "UniqueConsecutive Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_shape_test1) {
-  ge::op::UniqueConsecutive op;
+TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_shape_test1)
+{
+    ge::op::UniqueConsecutive op;
 
-  ge::DataType dtype = ge::DT_INT64;
-  ge::Format format = ge::FORMAT_ND;
-  
-  auto input_tensor = create_desc_with_ori({3,4}, dtype, format, {3,4}, format);
-  
-  op.UpdateInputDesc("x", input_tensor);
+    ge::DataType dtype = ge::DT_INT64;
+    ge::Format format = ge::FORMAT_ND;
 
-  op.SetAttr("return_idx", false);
-  op.SetAttr("return_counts", false);
-  op.SetAttr("axis", 1000);
-  Runtime2TestParam param{{"return_idx", "return_counts", "axis"}};
-  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    auto input_tensor = create_desc_with_ori({3, 4}, dtype, format, {3, 4}, format);
 
-  auto output_desc = op.GetOutputDescByName("y");
-  auto idx_desc = op.GetOutputDescByName("idx");
-  auto count_desc = op.GetOutputDescByName("count");
+    op.UpdateInputDesc("x", input_tensor);
 
-  EXPECT_EQ(output_desc.GetShape().GetDimNum(), 1);
-  EXPECT_EQ(idx_desc.GetShape().GetDimNum(), 2);
-  EXPECT_EQ(count_desc.GetShape().GetDimNum(), 1);
+    op.SetAttr("return_idx", false);
+    op.SetAttr("return_counts", false);
+    op.SetAttr("axis", 1000);
+    Runtime2TestParam param{{"return_idx", "return_counts", "axis"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_desc = op.GetOutputDescByName("y");
+    auto idx_desc = op.GetOutputDescByName("idx");
+    auto count_desc = op.GetOutputDescByName("count");
+
+    EXPECT_EQ(output_desc.GetShape().GetDimNum(), 1);
+    EXPECT_EQ(idx_desc.GetShape().GetDimNum(), 2);
+    EXPECT_EQ(count_desc.GetShape().GetDimNum(), 1);
 }
 
-TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_shape_test2) {
-  ge::op::UniqueConsecutive op;
+TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_shape_test2)
+{
+    ge::op::UniqueConsecutive op;
 
-  ge::DataType dtype = ge::DT_INT64;
-  ge::Format format = ge::FORMAT_ND;
-  
-  auto input_tensor = create_desc_with_ori({-2}, dtype, format, {-2}, format);
-  
-  op.UpdateInputDesc("x", input_tensor);
+    ge::DataType dtype = ge::DT_INT64;
+    ge::Format format = ge::FORMAT_ND;
 
-  op.SetAttr("return_idx", true);
-  op.SetAttr("return_counts", true);
-  op.SetAttr("axis", 1000);
-  Runtime2TestParam param{{"return_idx", "return_counts", "axis"}};
-  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    auto input_tensor = create_desc_with_ori({-2}, dtype, format, {-2}, format);
 
-  auto output_desc = op.GetOutputDescByName("y");
-  auto idx_desc = op.GetOutputDescByName("idx");
-  auto count_desc = op.GetOutputDescByName("count");
+    op.UpdateInputDesc("x", input_tensor);
 
-  std::vector<int64_t> expected_idx_shape = {-2};
-  std::vector<int64_t> expected_count_shape = {-2};
-  EXPECT_EQ(output_desc.GetShape().GetDims(), expected_idx_shape);
-  EXPECT_EQ(idx_desc.GetShape().GetDims(), expected_idx_shape);
-  EXPECT_EQ(count_desc.GetShape().GetDims(), expected_idx_shape);
+    op.SetAttr("return_idx", true);
+    op.SetAttr("return_counts", true);
+    op.SetAttr("axis", 1000);
+    Runtime2TestParam param{{"return_idx", "return_counts", "axis"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_desc = op.GetOutputDescByName("y");
+    auto idx_desc = op.GetOutputDescByName("idx");
+    auto count_desc = op.GetOutputDescByName("count");
+
+    std::vector<int64_t> expected_idx_shape = {-2};
+    std::vector<int64_t> expected_count_shape = {-2};
+    EXPECT_EQ(output_desc.GetShape().GetDims(), expected_idx_shape);
+    EXPECT_EQ(idx_desc.GetShape().GetDims(), expected_idx_shape);
+    EXPECT_EQ(count_desc.GetShape().GetDims(), expected_idx_shape);
 }
 
 TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_data_ype)
@@ -151,7 +149,8 @@ TEST_F(UniqueConsecutiveTest, unique_consecutive_infer_range_test0)
                                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
                                           {"out_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                               .InputShapeRanges({&input_x_range})
-                              .OutputShapeRanges({&output_y_shape_range, &output_idx_shape_range, &output_count_shape_range})
+                              .OutputShapeRanges(
+                                  {&output_y_shape_range, &output_idx_shape_range, &output_count_shape_range})
                               .Build();
 
     auto context = context_holder.GetContext<gert::InferShapeRangeContext>();

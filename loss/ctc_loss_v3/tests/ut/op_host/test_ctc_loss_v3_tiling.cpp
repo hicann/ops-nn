@@ -32,34 +32,25 @@
 using namespace std;
 using namespace ge;
 
-class CTCLossV3Tiling : public testing::Test
-{
+class CTCLossV3Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CTCLossV3Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CTCLossV3Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CTCLossV3Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CTCLossV3Tiling TearDown" << std::endl; }
 };
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}},         // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        dtype,                              // dt
-        nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dt
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -70,11 +61,11 @@ void SetConstInput(
     const_tensors.push_back(std::move(pair));
 }
 
-void TestCTCLossV3Tiling(
-    gert::StorageShape& logProbsShape, gert::StorageShape& targetsShape, gert::StorageShape& inputLengthsShape,
-    gert::StorageShape& targetLengthsShape, gert::StorageShape& lossShape, gert::StorageShape& logAlphaShape,
-    std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType gradDataType,
-    ge::DataType indicesDataType, uint64_t expectTilingKey)
+void TestCTCLossV3Tiling(gert::StorageShape& logProbsShape, gert::StorageShape& targetsShape,
+                         gert::StorageShape& inputLengthsShape, gert::StorageShape& targetLengthsShape,
+                         gert::StorageShape& lossShape, gert::StorageShape& logAlphaShape,
+                         std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType gradDataType,
+                         ge::DataType indicesDataType, uint64_t expectTilingKey)
 {
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -100,19 +91,19 @@ void TestCTCLossV3Tiling(
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // TilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -138,10 +129,9 @@ void TestCTCLossV3Tiling(
                       .NodeInputTd(3, indicesDataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
-                           {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
+                                  {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .ConstInput(const_tensors)
                       .Workspace(wsSize)
@@ -163,7 +153,8 @@ void TestCTCLossV3Tiling(
 
 TEST_F(CTCLossV3Tiling, ctc_loss_v3_tilingkey_0)
 {
-    std::cout << "run case: " << "ctc_loss_v3_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "ctc_loss_v3_tilingkey_0" << std::endl;
     gert::StorageShape logProbsShape = {{32, 1, 1024}, {32, 1, 1024}};
     gert::StorageShape targetsShape = {{1, 32}, {1, 32}};
     gert::StorageShape inputLengthsShape = {{1}, {1}};
@@ -171,7 +162,6 @@ TEST_F(CTCLossV3Tiling, ctc_loss_v3_tilingkey_0)
     gert::StorageShape lossShape = {{1}, {1}};
     gert::StorageShape logAlphaShape = {{1, 32, 65}, {1, 32, 65}};
     std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {};
-    TestCTCLossV3Tiling(
-        logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape, attrList,
-        ge::DT_FLOAT, ge::DT_INT64, 0);
+    TestCTCLossV3Tiling(logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape,
+                        attrList, ge::DT_FLOAT, ge::DT_INT64, 0);
 }

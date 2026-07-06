@@ -11,13 +11,12 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
 bool SoftmaxGradTilingARSmallR::IsCapable()
 {
-    OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || (r_ > CONST_EIGHT && yDtype_ == ge::DT_FLOAT), OP_LOGI(context_->GetNodeName(), "AR small r template is not capable. "),
-                    return false);
+    OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || (r_ > CONST_EIGHT && yDtype_ == ge::DT_FLOAT),
+                OP_LOGI(context_->GetNodeName(), "AR small r template is not capable. "), return false);
     return true;
 }
 
@@ -42,11 +41,11 @@ ge::graphStatus SoftmaxGradTilingARSmallR::DoOpTiling()
 
     // 放不下一个a基本块
     OP_CHECK_IF(a0TileNumMax <= 0,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA full load template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
-                            "tileBase: %ld, ub factor: %ld.",
-                            a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, a0TileNumMax),
-                    return ge::GRAPH_PARAM_INVALID);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA full load template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
+                        "tileBase: %ld, ub factor: %ld.",
+                        a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, a0TileNumMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     // 切a0
     int64_t a0TileNumTmp = Ops::Base::CeilDiv(a0New, a0TileBase);
@@ -77,10 +76,7 @@ ge::graphStatus SoftmaxGradTilingARSmallR::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxGradTilingARSmallR::GetTilingKey() const
-{
-    return TILINGKEY_AR_SMALL_R;
-}
+uint64_t SoftmaxGradTilingARSmallR::GetTilingKey() const { return TILINGKEY_AR_SMALL_R; }
 
 ge::graphStatus SoftmaxGradTilingARSmallR::PostTiling()
 {
@@ -95,4 +91,4 @@ ge::graphStatus SoftmaxGradTilingARSmallR::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxGrad, SoftmaxGradTilingARSmallR, TEMPLATE_AR_SMALL_R_PRIORITY);
 
-}  // namespace optiling
+} // namespace optiling

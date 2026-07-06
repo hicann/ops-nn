@@ -25,15 +25,9 @@ class KernelAddLayerNormNormalSpecialReduce {
 #define IS_BIAS_BROADCAST ((TILING_KEY % 10) == 2)
 
 public:
-    __aicore__ inline KernelAddLayerNormNormalSpecialReduce(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormNormalSpecialReduce(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-    {
-        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-    }
+    __aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
     __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     {
@@ -51,22 +45,16 @@ public:
         return 0;
     }
 
-    __aicore__ inline uint32_t MIN(uint32_t a, uint32_t b)
-    {
-        return a < b ? a : b;
-    }
+    __aicore__ inline uint32_t MIN(uint32_t a, uint32_t b) { return a < b ? a : b; }
 
-    __aicore__ inline uint32_t MAX(uint32_t a, uint32_t b)
-    {
-        return a > b ? a : b;
-    }
+    __aicore__ inline uint32_t MAX(uint32_t a, uint32_t b) { return a > b ? a : b; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x, __gm__ uint8_t* workspace,
-        uint32_t numCore_, uint32_t numLastDim_, uint32_t numFirstDim_, uint32_t nlFirstDimPerCore_,
-        uint32_t lFirstDimPerCore_, uint32_t firstDimPerTime_, uint32_t lastDimPerTime_, float eps_, float aveNum_,
-        uint32_t colMoveCnt_, uint32_t colTail_, uint32_t workspace_size)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* x, __gm__ uint8_t* workspace, uint32_t numCore_, uint32_t numLastDim_,
+                                uint32_t numFirstDim_, uint32_t nlFirstDimPerCore_, uint32_t lFirstDimPerCore_,
+                                uint32_t firstDimPerTime_, uint32_t lastDimPerTime_, float eps_, float aveNum_,
+                                uint32_t colMoveCnt_, uint32_t colTail_, uint32_t workspace_size)
     {
         numCore = numCore_;
         numLastDim = numLastDim_;
@@ -182,8 +170,10 @@ public:
             auto x1x2Local = x1x2Que.template DeQue<T>();
 
             if constexpr (!is_same<T, float>::value) {
-                Cast(gammaLocalReduce, gammaLocalReduce.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE, numLastDim);
-                Cast(betaLocalReduce, betaLocalReduce.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE, numLastDim);
+                Cast(gammaLocalReduce, gammaLocalReduce.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE,
+                     numLastDim);
+                Cast(betaLocalReduce, betaLocalReduce.ReinterpretCast<T>()[numLastDimAligned], RoundMode::CAST_NONE,
+                     numLastDim);
             }
 
             if constexpr (IS_BIAS_BROADCAST) {
@@ -249,8 +239,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInAndAddBroadCast(
-        int32_t rowCount, uint32_t elementCount, LocalTensor<T>& biasLocal, LocalTensor<T>& x1x2Local)
+    __aicore__ inline void CopyInAndAddBroadCast(int32_t rowCount, uint32_t elementCount, LocalTensor<T>& biasLocal,
+                                                 LocalTensor<T>& x1x2Local)
     {
         LocalTensor<float> addBufLocal = zBufFp32.Get<float>();
         LocalTensor<float> xBufLocal = xBufFp32.Get<float>();
@@ -282,8 +272,8 @@ private:
         x1x2Que.FreeTensor(x1x2Local);
     }
 
-    __aicore__ inline void CopyIn(
-        int32_t rowCount, uint32_t elementCount, LocalTensor<T>& x1x2Local, const DataCopyPadParams& padParams = {})
+    __aicore__ inline void CopyIn(int32_t rowCount, uint32_t elementCount, LocalTensor<T>& x1x2Local,
+                                  const DataCopyPadParams& padParams = {})
     {
         auto x1Local = x1x2Local[0];
         auto x2Local = x1x2Local[elementCount];
@@ -328,8 +318,8 @@ private:
         }
     }
 
-    __aicore__ inline void PrecisionCompute(
-        int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal, uint32_t elementCount)
+    __aicore__ inline void PrecisionCompute(int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal,
+                                            uint32_t elementCount)
     {
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -352,8 +342,8 @@ private:
         const uint32_t tailCount = numLastDim % ELEM_PER_REP_FP32;
         const uint32_t repeat = nums; // repeat < 255 * 8 = 2040
         const uint8_t repStride = numLastDimAligned / FLOAT_BLOCK_ELEM;
-        ReduceSumForSmallReduceDim(
-            xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDim(xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat,
+                                   repStride);
 
         // 3. rstd process: x - mean
         SetFlag<HardEvent::V_S>(eventVS);
@@ -380,8 +370,8 @@ private:
         PipeBarrier<PIPE_V>();
         Duplicate(yLocalFp32, ZERO, nums * ELEM_PER_REP_FP32);
         PipeBarrier<PIPE_V>();
-        ReduceSumForSmallReduceDim(
-            xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDim(xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat,
+                                   repStride);
         PipeBarrier<PIPE_V>();
 
         // 6. rstd end: 1 / sqrt( 1 / N * reduce( (x - mean) ^ 2 ) )
@@ -443,8 +433,8 @@ private:
         yQue.EnQue(yLocal);
     }
 
-    __aicore__ inline void PrecisionComputeBigN(
-        int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal)
+    __aicore__ inline void PrecisionComputeBigN(int32_t nums, LocalTensor<float>& gammaLocal,
+                                                LocalTensor<float>& betaLocal)
     {
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         PrecisionComputeBigNBrcb(nums, gammaLocal, betaLocal);
@@ -453,8 +443,8 @@ private:
 #endif
     }
 
-    __aicore__ inline void precisionComputeBigNTranspose(
-        int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal)
+    __aicore__ inline void precisionComputeBigNTranspose(int32_t nums, LocalTensor<float>& gammaLocal,
+                                                         LocalTensor<float>& betaLocal)
     {
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -481,18 +471,19 @@ private:
         const uint32_t tailCount = numLastDim % ELEM_PER_REP_FP32;
         const uint32_t repeat = nums; // repeat < 255 * 8 = 2040
         const uint8_t repStride = numLastDimAligned / FLOAT_BLOCK_ELEM;
-        ReduceSumForSmallReduceDim(
-            xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDim(xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat,
+                                   repStride);
         PipeBarrier<PIPE_V>();
 
         // 2.2. broadcast reducesum value
         uint64_t srcLocalList[16];
         uint64_t dstLocalList[16];
-        InitVAForTransposeAscendC((__ubuf__ half *)transposeDstLocal.GetPhyAddr(), (__ubuf__ half *)transposeSrcLocal.GetPhyAddr(), dstLocalList, srcLocalList);
+        InitVAForTransposeAscendC((__ubuf__ half*)transposeDstLocal.GetPhyAddr(),
+                                  (__ubuf__ half*)transposeSrcLocal.GetPhyAddr(), dstLocalList, srcLocalList);
         CCEBroadCastShortAscendC(xLocalFp32.ReinterpretCast<int16_t>(), xLocalFp32.ReinterpretCast<float>(),
-                        transposeDstLocal.ReinterpretCast<int16_t>(), transposeSrcLocal.ReinterpretCast<int16_t>(),
-                        orOffsetINT16.ReinterpretCast<int16_t>(), dstLocalList, srcLocalList,
-                        forCount, tailCount, repeat, repStride);
+                                 transposeDstLocal.ReinterpretCast<int16_t>(),
+                                 transposeSrcLocal.ReinterpretCast<int16_t>(), orOffsetINT16.ReinterpretCast<int16_t>(),
+                                 dstLocalList, srcLocalList, forCount, tailCount, repeat, repStride);
         PipeBarrier<PIPE_V>();
 
         // 3. rstd process: x - mean
@@ -507,8 +498,8 @@ private:
         Muls(xLocalFp32, xLocalFp32, aveNum, elementNum);
         Duplicate(yLocalFp32, ZERO, nums * ELEM_PER_REP_FP32);
         PipeBarrier<PIPE_V>();
-        ReduceSumForSmallReduceDim(
-            xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDim(xLocalFp32, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat,
+                                   repStride);
         PipeBarrier<PIPE_V>();
 
         // 6. rstd end: 1 / sqrt( 1 / N * reduce( (x - mean) ^ 2 ) )
@@ -522,9 +513,9 @@ private:
 
         // 7. broadcast reducesum value
         CCEBroadCastShortAscendC(xLocalFp32.ReinterpretCast<int16_t>(), xLocalFp32.ReinterpretCast<float>(),
-                      transposeDstLocal.ReinterpretCast<int16_t>(), transposeSrcLocal.ReinterpretCast<int16_t>(),
-                      orOffsetINT16.ReinterpretCast<int16_t>(), dstLocalList, srcLocalList,
-                      forCount, tailCount, repeat, repStride);
+                                 transposeDstLocal.ReinterpretCast<int16_t>(),
+                                 transposeSrcLocal.ReinterpretCast<int16_t>(), orOffsetINT16.ReinterpretCast<int16_t>(),
+                                 dstLocalList, srcLocalList, forCount, tailCount, repeat, repStride);
         PipeBarrier<PIPE_V>();
         Mul(zLocalFp32, zLocalFp32, xLocalFp32, elementNum);
         PipeBarrier<PIPE_V>();
@@ -554,8 +545,8 @@ private:
     }
 
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-    __aicore__ inline void PrecisionComputeBigNBrcb(
-        int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal)
+    __aicore__ inline void PrecisionComputeBigNBrcb(int32_t nums, LocalTensor<float>& gammaLocal,
+                                                    LocalTensor<float>& betaLocal)
     {
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -579,8 +570,8 @@ private:
         const uint32_t tailCount = numLastDim % ELEM_PER_REP_FP32;
         const uint32_t repeat = nums; // repeat < 255 * 8 = 2040
         const uint8_t repStride = numLastDimAligned / FLOAT_BLOCK_ELEM;
-        ReduceSumForSmallReduceDim(
-            meanLocal, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDim(meanLocal, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat,
+                                   repStride);
         PipeBarrier<PIPE_V>();
 
         // 2.2. broadcast reducesum value
@@ -604,8 +595,8 @@ private:
         Muls(xLocalFp32, xLocalFp32, aveNum, elementNum);
         Duplicate(yLocalFp32, ZERO, nums * ELEM_PER_REP_FP32);
         PipeBarrier<PIPE_V>();
-        ReduceSumForSmallReduceDim(
-            rstdLocal, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDim(rstdLocal, xLocalFp32, yLocalFp32, numLastDimAligned, numLastDim, tailCount, repeat,
+                                   repStride);
         PipeBarrier<PIPE_V>();
 
         // 6. rstd end: 1 / sqrt( 1 / N * reduce( (x - mean) ^ 2 ) )

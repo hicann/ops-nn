@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_log2_proto.h"
 
-class ForeachLog2Test : public testing::Test
-{
+class ForeachLog2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachLog2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachLog2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachLog2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachLog2 TearDown" << std::endl; }
 };
 
 TEST_F(ForeachLog2Test, infer_shape_known_success)

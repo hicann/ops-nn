@@ -12,7 +12,7 @@
  * \file hardtanh_grad_infer.cpp
  * \brief
  */
- 
+
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -42,4 +42,4 @@ static ge::graphStatus InferShapeHardtanhGrad(gert::InferShapeContext* context)
 }
 
 IMPL_OP_INFERSHAPE(HardtanhGrad).InferShape(InferShapeHardtanhGrad);
-}
+} // namespace ops

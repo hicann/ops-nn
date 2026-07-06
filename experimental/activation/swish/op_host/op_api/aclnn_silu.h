@@ -21,8 +21,7 @@ extern "C" {
 ACLNN_API aclnnStatus aclnnSiluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
                                                 aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnSilu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSilu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -28,17 +28,13 @@ extern "C" __global__ __aicore__ void prelu_grad_reduce(GM_ADDR grads, GM_ADDR f
 
 class p_relu_grad_reduce_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "p_relu_grad_reduce_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "p_relu_grad_reduce_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "p_relu_grad_reduce TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./p_relu_grad_reduce_data");
     }
 };
-
 
 TEST_F(p_relu_grad_reduce_test, test_case_fp32_1)
 {
@@ -54,11 +50,12 @@ TEST_F(p_relu_grad_reduce_test, test_case_fp32_1)
     uint8_t* weights = (uint8_t*)AscendC::GmAlloc(weightsByteSize);
     uint8_t* updates = (uint8_t*)AscendC::GmAlloc(updatesByteSize);
     uint8_t* da = (uint8_t*)AscendC::GmAlloc(daByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    
-    kernel_ut::SetupTestEnvironment("activation/p_relu_grad_reduce/tests/ut/op_kernel/p_relu_grad_reduce_data", "p_relu_grad_reduce_data");
+
+    kernel_ut::SetupTestEnvironment("activation/p_relu_grad_reduce/tests/ut/op_kernel/p_relu_grad_reduce_data",
+                                    "p_relu_grad_reduce_data");
     kernel_ut::RunGenData("./p_relu_grad_reduce_data", {"'(256)'", "float32"});
 
     std::string path = kernel_ut::GetTestWorkDir();
@@ -84,19 +81,21 @@ TEST_F(p_relu_grad_reduce_test, test_case_fp32_1)
     tilingDatafromBin->sliceNum[0] = 1;
     tilingDatafromBin->sliceShape[0] = 256;
     tilingDatafromBin->sliceStride[0] = 1;
-    
+
     ReadFile(path + "/p_relu_grad_reduce_data/input_grads.bin", gradsByteSize, grads, gradsByteSize);
     ReadFile(path + "/p_relu_grad_reduce_data/input_features.bin", featuresByteSize, features, featuresByteSize);
     ReadFile(path + "/p_relu_grad_reduce_data/input_weights.bin", weightsByteSize, weights, weightsByteSize);
     ReadFile(path + "/p_relu_grad_reduce_data/input_updates.bin", updatesByteSize, updates, updatesByteSize);
-    
-    auto KernelPReluGradReduce = [](GM_ADDR grads, GM_ADDR features, GM_ADDR weights, GM_ADDR updates, GM_ADDR da, GM_ADDR workspace, GM_ADDR tiling) {
+
+    auto KernelPReluGradReduce = [](GM_ADDR grads, GM_ADDR features, GM_ADDR weights, GM_ADDR updates, GM_ADDR da,
+                                    GM_ADDR workspace, GM_ADDR tiling) {
         ::prelu_grad_reduce<true, 10, 10, 0>(grads, features, weights, updates, da, workspace, tiling);
     };
-    
+
     ICPU_SET_TILING_KEY(10);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelPReluGradReduce, blockDim, grads, features, weights, updates, da, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelPReluGradReduce, blockDim, grads, features, weights, updates, da, workspace,
+                (uint8_t*)(tilingDatafromBin));
     WriteFile(path + "/p_relu_grad_reduce_data/output_da.bin", da, daByteSize);
 
     AscendC::GmFree(grads);

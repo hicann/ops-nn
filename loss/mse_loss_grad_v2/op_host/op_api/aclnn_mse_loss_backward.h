@@ -61,4 +61,4 @@ ACLNN_API aclnnStatus aclnnMseLossBackward(void* workspace, uint64_t workspaceSi
 }
 #endif
 
-#endif  // OP_API_INC_MSE_LOSS_BACKWARD_H_
+#endif // OP_API_INC_MSE_LOSS_BACKWARD_H_

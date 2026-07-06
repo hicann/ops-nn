@@ -21,15 +21,16 @@ using namespace AscendC;
 #define DTYPE_ZERO_POINTS1 int32_t
 #endif
 
-#define INIT_AND_PROCESS                                                                                    \
-    do {                                                                                                    \
+#define INIT_AND_PROCESS                                                                                             \
+    do {                                                                                                             \
         op.Init(x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, x, nullptr, &tilingData); \
-        op.Process();                                                                                       \
+        op.Process();                                                                                                \
     } while (0)
 
-extern "C" __global__ __aicore__ void add_rms_norm_quant(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
-    GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_rms_norm_quant(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1,
+                                                         GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
+                                                         GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);

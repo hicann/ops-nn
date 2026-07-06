@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include "foreach_mul_scalar_v2.h"
 #include "opdev/op_log.h"
 #include "opdev/op_dfx.h"
@@ -20,15 +19,15 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ForeachMulScalar);
 
-const aclTensorList *ForeachMulScalarV2(const aclTensorList *x,  const aclTensor *scalar, const aclTensorList *out, aclOpExecutor *executor) {
+const aclTensorList* ForeachMulScalarV2(const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out,
+                                        aclOpExecutor* executor)
+{
     L0_DFX(ForeachMulScalarV2, x, scalar);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachMulScalar,
-                                      OP_INPUT(x, scalar),
-                                      OP_OUTPUT(out));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachMulScalar, OP_INPUT(x, scalar), OP_OUTPUT(out));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
     }
     return out;
 }
-}  // namespace l0op
+} // namespace l0op

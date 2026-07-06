@@ -30,8 +30,7 @@ struct LambApplyOptimizerAssignCompileInfo {
 
 class LambApplyOptimizerAssignTiling : public TilingBaseClass {
 public:
-    explicit LambApplyOptimizerAssignTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LambApplyOptimizerAssignTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

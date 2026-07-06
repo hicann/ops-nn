@@ -14,10 +14,8 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-class LogSoftmaxGrad : public OpDef
-{
+namespace ops {
+class LogSoftmaxGrad : public OpDef {
 public:
     explicit LogSoftmaxGrad(const char* name) : OpDef(name)
     {
@@ -53,4 +51,4 @@ public:
 };
 
 OP_ADD(LogSoftmaxGrad);
-}  // namespace ops
+} // namespace ops

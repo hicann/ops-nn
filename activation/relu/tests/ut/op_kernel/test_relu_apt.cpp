@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file in in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -27,17 +27,13 @@ extern "C" __global__ __aicore__ void relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspa
 
 class relu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "relu_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "relu_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "relu TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./relu_data");
     }
 };
-
 
 TEST_F(relu_test, test_case_fp32_1)
 {
@@ -47,7 +43,7 @@ TEST_F(relu_test, test_case_fp32_1)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/relu/tests/ut/op_kernel/relu_data", "relu_data");
@@ -60,11 +56,9 @@ TEST_F(relu_test, test_case_fp32_1)
     tilingDatafromBin->dim0 = 256;
     tilingDatafromBin->coreNum = 1;
     tilingDatafromBin->ubFormer = 1024;
-    
+
     ReadFile(path + "/relu_data/input_x.bin", xByteSize, x, xByteSize);
-    auto KernelRelu = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::relu(x, y, workspace, tiling);
-    };
+    auto KernelRelu = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) { ::relu(x, y, workspace, tiling); };
     ICPU_SET_TILING_KEY(103);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelRelu, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));

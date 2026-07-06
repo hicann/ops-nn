@@ -20,8 +20,8 @@
 
 namespace ForeachAddcdivList {
 template <typename T, typename ScalarT, typename Tiling>
-using ForeachAddcdivListRegbase =
-    ForeachAddcList::ForeachAddcListRegbase<T, ScalarT, Tiling, ForeachAddcList::AddcOp::DIV>;
+using ForeachAddcdivListRegbase = ForeachAddcList::ForeachAddcListRegbase<T, ScalarT, Tiling,
+                                                                          ForeachAddcList::AddcOp::DIV>;
 } // namespace ForeachAddcdivList
 
 #endif // FOREACH_ADDCDIV_LIST_REGBASE_H

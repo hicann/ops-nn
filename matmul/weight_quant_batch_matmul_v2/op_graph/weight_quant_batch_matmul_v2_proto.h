@@ -91,7 +91,8 @@ namespace ge {
 * The type should be the same with x when quant_scale not exits.
 
 * @attention Constraints:
-* @li It is not recommended to use weight NZ format on Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component,
+* @li It is not recommended to use weight NZ format on Atlas A2 Training Series Product/Atlas 800I A2 Inference
+Product/A200I A2 Box Heterogeneous Component,
 * because its performance may not be better than ND format.
 * @li All of these conditions must be met on Atlas Inference Series Product: weight type is int8,
 * weight format is NZ, transpose_weight is true, x type is float16, antiquant_scale only support the per_channel mode,
@@ -102,9 +103,7 @@ namespace ge {
 */
 REG_OP(WeightQuantBatchMatmulV2)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
-    .INPUT(
-        weight, TensorType(
-                    {DT_INT8, DT_INT4, DT_INT32, DT_FLOAT8_E4M3FN, DT_HIFLOAT8, DT_FLOAT4_E2M1}))
+    .INPUT(weight, TensorType({DT_INT8, DT_INT4, DT_INT32, DT_FLOAT8_E4M3FN, DT_HIFLOAT8, DT_FLOAT4_E2M1}))
     .INPUT(antiquant_scale, TensorType({DT_FLOAT16, DT_BF16, DT_UINT64, DT_INT64, DT_FLOAT8_E8M0}))
     .OPTIONAL_INPUT(antiquant_offset, TensorType({DT_FLOAT16, DT_BF16, DT_INT32}))
     .OPTIONAL_INPUT(quant_scale, TensorType({DT_FLOAT, DT_UINT64}))

@@ -19,26 +19,26 @@ namespace tuningtiling {
 struct Conv3DBackpropFilterArgs {
     int32_t batch;
     int32_t groups;
-    int32_t co;             // output channels
-    int32_t ci;             // input channels
-    int32_t dout;           // output depth
-    int32_t wo;             // output width
-    int32_t ho;             // output height
-    int32_t wi;             // input width
-    int32_t hi;             // input height
-    int32_t di;             // input depth
-    int32_t kw;             // kernel width
-    int32_t kh;             // kernel height
-    int32_t kd;             // kernel depth
+    int32_t co;   // output channels
+    int32_t ci;   // input channels
+    int32_t dout; // output depth
+    int32_t wo;   // output width
+    int32_t ho;   // output height
+    int32_t wi;   // input width
+    int32_t hi;   // input height
+    int32_t di;   // input depth
+    int32_t kw;   // kernel width
+    int32_t kh;   // kernel height
+    int32_t kd;   // kernel depth
     int32_t stride_w;
     int32_t stride_h;
     int32_t stride_d;
-    int32_t pad_l;          // left padding
-    int32_t pad_r;          // right padding
-    int32_t pad_u;          // up padding
-    int32_t pad_d;          // down padding
-    int32_t pad_f;          // front padding
-    int32_t pad_b;          // back padding
+    int32_t pad_l; // left padding
+    int32_t pad_r; // right padding
+    int32_t pad_u; // up padding
+    int32_t pad_d; // down padding
+    int32_t pad_f; // front padding
+    int32_t pad_b; // back padding
     int32_t dilation_w;
     int32_t dilation_h;
     int32_t dilation_d;
@@ -52,7 +52,7 @@ struct Conv3DBackpropFilterArgs {
     ge::Format fmapFormat;
     ge::Format dedyFormat;
     ge::Format filterFormat;
-    };
+};
 #pragma pack(pop)
 
 BEGIN_TUNING_TILING_DEF(Conv3DBackpropFilterTunerTiling)
@@ -94,42 +94,25 @@ TUNING_TILING_DATA_FIELD_DEF(bool, groupEnlarge);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, coreBindDirection);
 END_TUNING_TILING_DEF
 
-DECLARE_SCHEMA(Conv3DBackpropFilterTunerTiling,
-  FIELD(Conv3DBackpropFilterTunerTiling, cin1G),
-  FIELD(Conv3DBackpropFilterTunerTiling, cout1G),
-  FIELD(Conv3DBackpropFilterTunerTiling, realGroup),
-  FIELD(Conv3DBackpropFilterTunerTiling, channelSize),
-  FIELD(Conv3DBackpropFilterTunerTiling, al0Pbuffer),
-  FIELD(Conv3DBackpropFilterTunerTiling, bl0Pbuffer),
-  FIELD(Conv3DBackpropFilterTunerTiling, cl0Pbuffer),
-  FIELD(Conv3DBackpropFilterTunerTiling, al1Pbuffer),
-  FIELD(Conv3DBackpropFilterTunerTiling, bl1Pbuffer),
-  FIELD(Conv3DBackpropFilterTunerTiling, baseM),
-  FIELD(Conv3DBackpropFilterTunerTiling, baseK),
-  FIELD(Conv3DBackpropFilterTunerTiling, baseN),
-  FIELD(Conv3DBackpropFilterTunerTiling, m0),
-  FIELD(Conv3DBackpropFilterTunerTiling, k0),
-  FIELD(Conv3DBackpropFilterTunerTiling, n0),
-  FIELD(Conv3DBackpropFilterTunerTiling, stepKa),
-  FIELD(Conv3DBackpropFilterTunerTiling, stepKb),
-  FIELD(Conv3DBackpropFilterTunerTiling, iterateOrder),
-  FIELD(Conv3DBackpropFilterTunerTiling, bl1Bound),
-  FIELD(Conv3DBackpropFilterTunerTiling, al1Bound),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreDk),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreGroup),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreCout),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreHo),
-  FIELD(Conv3DBackpropFilterTunerTiling, splitWo),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreBatch),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreCin),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreBatchDout),
-  FIELD(Conv3DBackpropFilterTunerTiling, streamkType),
-  FIELD(Conv3DBackpropFilterTunerTiling, usedCoreNum),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreM),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreN),
-  FIELD(Conv3DBackpropFilterTunerTiling, singleCoreK),
-  FIELD(Conv3DBackpropFilterTunerTiling, isSplitKernelHW),
-  FIELD(Conv3DBackpropFilterTunerTiling, groupEnlarge),
-  FIELD(Conv3DBackpropFilterTunerTiling, coreBindDirection));
-}  // namespace tuningtiling
+DECLARE_SCHEMA(
+    Conv3DBackpropFilterTunerTiling, FIELD(Conv3DBackpropFilterTunerTiling, cin1G),
+    FIELD(Conv3DBackpropFilterTunerTiling, cout1G), FIELD(Conv3DBackpropFilterTunerTiling, realGroup),
+    FIELD(Conv3DBackpropFilterTunerTiling, channelSize), FIELD(Conv3DBackpropFilterTunerTiling, al0Pbuffer),
+    FIELD(Conv3DBackpropFilterTunerTiling, bl0Pbuffer), FIELD(Conv3DBackpropFilterTunerTiling, cl0Pbuffer),
+    FIELD(Conv3DBackpropFilterTunerTiling, al1Pbuffer), FIELD(Conv3DBackpropFilterTunerTiling, bl1Pbuffer),
+    FIELD(Conv3DBackpropFilterTunerTiling, baseM), FIELD(Conv3DBackpropFilterTunerTiling, baseK),
+    FIELD(Conv3DBackpropFilterTunerTiling, baseN), FIELD(Conv3DBackpropFilterTunerTiling, m0),
+    FIELD(Conv3DBackpropFilterTunerTiling, k0), FIELD(Conv3DBackpropFilterTunerTiling, n0),
+    FIELD(Conv3DBackpropFilterTunerTiling, stepKa), FIELD(Conv3DBackpropFilterTunerTiling, stepKb),
+    FIELD(Conv3DBackpropFilterTunerTiling, iterateOrder), FIELD(Conv3DBackpropFilterTunerTiling, bl1Bound),
+    FIELD(Conv3DBackpropFilterTunerTiling, al1Bound), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreDk),
+    FIELD(Conv3DBackpropFilterTunerTiling, singleCoreGroup), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreCout),
+    FIELD(Conv3DBackpropFilterTunerTiling, singleCoreHo), FIELD(Conv3DBackpropFilterTunerTiling, splitWo),
+    FIELD(Conv3DBackpropFilterTunerTiling, singleCoreBatch), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreCin),
+    FIELD(Conv3DBackpropFilterTunerTiling, singleCoreBatchDout), FIELD(Conv3DBackpropFilterTunerTiling, streamkType),
+    FIELD(Conv3DBackpropFilterTunerTiling, usedCoreNum), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreM),
+    FIELD(Conv3DBackpropFilterTunerTiling, singleCoreN), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreK),
+    FIELD(Conv3DBackpropFilterTunerTiling, isSplitKernelHW), FIELD(Conv3DBackpropFilterTunerTiling, groupEnlarge),
+    FIELD(Conv3DBackpropFilterTunerTiling, coreBindDirection));
+} // namespace tuningtiling
 #endif

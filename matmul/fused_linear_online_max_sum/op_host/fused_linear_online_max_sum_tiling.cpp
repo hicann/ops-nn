@@ -56,20 +56,12 @@ constexpr uint64_t RESVERD_BUFF_BYTES = 8192;
 constexpr uint64_t SYS_WORKSPACE_BYTES = static_cast<uint64_t>(16 * 1024 * 1024);
 constexpr uint32_t BATCH_MODE = 1;
 
-const static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP =
-{
+const static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
     {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
     {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
-    {ge::DT_BF16, matmul_tiling::DataType::DT_BF16}
-};
-const static std::map<ge::DataType, uint64_t> BYTES_MAP =
-{
-    {ge::DT_FLOAT16, 2},
-    {ge::DT_FLOAT, 4},
-    {ge::DT_INT32, 4},
-    {ge::DT_INT64, 8},
-    {ge::DT_BF16, 2}
-};
+    {ge::DT_BF16, matmul_tiling::DataType::DT_BF16}};
+const static std::map<ge::DataType, uint64_t> BYTES_MAP = {
+    {ge::DT_FLOAT16, 2}, {ge::DT_FLOAT, 4}, {ge::DT_INT32, 4}, {ge::DT_INT64, 8}, {ge::DT_BF16, 2}};
 } // namespace
 
 namespace optiling {
@@ -78,6 +70,7 @@ public:
     explicit FusedLinearOnlineMaxSumTiling(gert::TilingContext* context) : tilingContext_(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
+
 private:
     FusedLinearOnlineMaxSumTilingData tilingData_;
     gert::TilingContext* tilingContext_ = nullptr;
@@ -89,7 +82,7 @@ private:
     bool GetMatmulTiling();
     void FillTilingData();
     void PrintTilingData();
-    const char *opName_ = nullptr;
+    const char* opName_ = nullptr;
     uint64_t tilingKey_ = 0;
     uint64_t btSize_ = 0;
     uint64_t hSize_ = 0;
@@ -121,7 +114,8 @@ private:
     uint64_t vocabParallelLogitsOutFlag_ = 1;
 };
 
-ge::graphStatus FusedLinearOnlineMaxSumTiling::Init() {
+ge::graphStatus FusedLinearOnlineMaxSumTiling::Init()
+{
     opName_ = tilingContext_->GetNodeName();
     OP_LOGD(opName_, "FusedLinearOnlineMaxSumTiling init.");
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext_->GetPlatformInfo());
@@ -137,55 +131,50 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::Init() {
     return ge::GRAPH_SUCCESS;
 }
 
-bool FusedLinearOnlineMaxSumTiling::CheckShapeInfoValid() {
+bool FusedLinearOnlineMaxSumTiling::CheckShapeInfoValid()
+{
     auto inputShape = tilingContext_->GetInputShape(INPUT_INPUT_IDX)->GetStorageShape();
     auto weightShape = tilingContext_->GetInputShape(INPUT_WEIGHT_IDX)->GetStorageShape();
     auto targetShape = tilingContext_->GetInputShape(INPUT_TARGET_IDX)->GetStorageShape();
-    OP_TILING_CHECK(
-        inputShape.GetDimNum() != EXPECTED_DIM_NUM_TWO,
-        OP_LOGE(opName_, "the dim of input should be 2."), return false);
-    
-    OP_TILING_CHECK(
-        weightShape.GetDimNum() != EXPECTED_DIM_NUM_TWO,
-        OP_LOGE(opName_, "the dim of weight should be 2."), return false);
-    
-    OP_TILING_CHECK(
-        targetShape.GetDimNum() != EXPECTED_DIM_NUM_ONE,
-        OP_LOGE(opName_, "the dim of target should be 1."), return false);
+    OP_TILING_CHECK(inputShape.GetDimNum() != EXPECTED_DIM_NUM_TWO, OP_LOGE(opName_, "the dim of input should be 2."),
+                    return false);
+
+    OP_TILING_CHECK(weightShape.GetDimNum() != EXPECTED_DIM_NUM_TWO, OP_LOGE(opName_, "the dim of weight should be 2."),
+                    return false);
+
+    OP_TILING_CHECK(targetShape.GetDimNum() != EXPECTED_DIM_NUM_ONE, OP_LOGE(opName_, "the dim of target should be 1."),
+                    return false);
     btSize_ = inputShape.GetDim(DIM_INDEX0);
     hSize_ = inputShape.GetDim(DIM_INDEX1);
     vSize_ = weightShape.GetDim(DIM_INDEX0);
 
-    OP_TILING_CHECK(
-        hSize_ > MAX_INPUT_DIM_ONE_SIZE,
-        OP_LOGE(opName_, "input.size(1) should be less than or equal to 65534."),
-        return false);
+    OP_TILING_CHECK(hSize_ > MAX_INPUT_DIM_ONE_SIZE,
+                    OP_LOGE(opName_, "input.size(1) should be less than or equal to 65534."), return false);
 
-    OP_TILING_CHECK(
-        static_cast<uint64_t>(weightShape.GetDim(DIM_INDEX1)) != hSize_,
-        OP_LOGE(opName_, "weight.size(1) should be equal to input.size(1)."),
-        return false);
+    OP_TILING_CHECK(static_cast<uint64_t>(weightShape.GetDim(DIM_INDEX1)) != hSize_,
+                    OP_LOGE(opName_, "weight.size(1) should be equal to input.size(1)."), return false);
 
-    OP_TILING_CHECK(
-        static_cast<uint64_t>(targetShape.GetDim(DIM_INDEX0)) != btSize_,
-        OP_LOGE(opName_, "the size of target should be equal to input.size(0)."),
-        return false);
+    OP_TILING_CHECK(static_cast<uint64_t>(targetShape.GetDim(DIM_INDEX0)) != btSize_,
+                    OP_LOGE(opName_, "the size of target should be equal to input.size(0)."), return false);
 
     return true;
 }
 
-void FusedLinearOnlineMaxSumTiling::InitWorkspaceTiling() {
+void FusedLinearOnlineMaxSumTiling::InitWorkspaceTiling()
+{
     initWorkspaceLength_ = Ops::Base::FloorAlign(bufSize_ / BYTES_B32 / INIT_TYPE_NUM, BLOCK_DATA_B32);
     uint64_t btSizeAligned = Ops::Base::CeilAlign((btSize_ + 1) / DOUBLE_COF, BLOCK_DATA_B32);
     initWorkspaceLength_ = btSizeAligned < initWorkspaceLength_ ? btSizeAligned : initWorkspaceLength_;
 }
 
-void FusedLinearOnlineMaxSumTiling::SetTilingKey() {
+void FusedLinearOnlineMaxSumTiling::SetTilingKey()
+{
     tilingKey_ = vocabParallelLogitsOutFlag_;
     tilingContext_->SetTilingKey(tilingKey_);
 }
 
-void FusedLinearOnlineMaxSumTiling::TargetTiling() {
+void FusedLinearOnlineMaxSumTiling::TargetTiling()
+{
     uint64_t batchTasks = Ops::Base::CeilDiv(btSize_, BLOCK_DATA_B32);
     batchTaksPerVecCore_ = batchTasks / aiVecNum_;
     batchTaksTailVecCore_ = batchTasks % aiVecNum_;
@@ -197,7 +186,8 @@ void FusedLinearOnlineMaxSumTiling::TargetTiling() {
     targetTasksPerLoop_ = maxTasksPerLoop;
 }
 
-bool FusedLinearOnlineMaxSumTiling::GetMatmulTiling() {
+bool FusedLinearOnlineMaxSumTiling::GetMatmulTiling()
+{
     auto inputDataType = tilingContext_->GetInputDesc(INPUT_INPUT_IDX)->GetDataType();
     matmul_tiling::MatmulApiTiling mmTiling;
     mmTiling.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, DTYPE_MAP.at(inputDataType), false);
@@ -205,9 +195,12 @@ bool FusedLinearOnlineMaxSumTiling::GetMatmulTiling() {
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, DTYPE_MAP.at(inputDataType));
     mmTiling.SetBias(false);
     mmTiling.SetOrgShape(btSize_, vSize_, hSize_); // 设置Matmul计算时的原始完整的形状M、N、K或Ka/Kb，单位均为元素个数。
-    mmTiling.SetShape(baseM_, baseN_, hSize_); // 设置Matmul计算的形状m、n、k，该形状可以为原始完整矩阵或其局部矩阵，单位为元素个数。该形状的矩阵乘可以由单核或多核计算完成。
+    mmTiling.SetShape(
+        baseM_, baseN_,
+        hSize_); // 设置Matmul计算的形状m、n、k，该形状可以为原始完整矩阵或其局部矩阵，单位为元素个数。该形状的矩阵乘可以由单核或多核计算完成。
     mmTiling.SetFixSplit(baseM_, baseN_, baseK_); // 设置固定的baseM、baseN、baseK，单位为元素个数。
-    mmTiling.SetBufferSpace(-1, -1, -1); // 设置Matmul计算时可用的L1 Buffer/L0C Buffer/Unified Buffer/BiasTable Buffer空间大小，单位为字节。
+    mmTiling.SetBufferSpace(
+        -1, -1, -1); // 设置Matmul计算时可用的L1 Buffer/L0C Buffer/Unified Buffer/BiasTable Buffer空间大小，单位为字节。
 
     if (mmTiling.GetTiling(tilingData_.mmTiling) == -1) {
         return false;
@@ -215,10 +208,10 @@ bool FusedLinearOnlineMaxSumTiling::GetMatmulTiling() {
     return true;
 }
 
-bool FusedLinearOnlineMaxSumTiling::GetAttrAndCheck() {
+bool FusedLinearOnlineMaxSumTiling::GetAttrAndCheck()
+{
     auto attrs = tilingContext_->GetAttrs();
-    OP_TILING_CHECK(attrs == nullptr, OP_LOGE(opName_, "Get attrs Failed."),
-                    return false);
+    OP_TILING_CHECK(attrs == nullptr, OP_LOGE(opName_, "Get attrs Failed."), return false);
     vocabStartIndex_ = static_cast<float>(*(attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_START_IDX)));
     OP_TILING_CHECK(vocabStartIndex_ < 0,
                     OP_LOGE(opName_, "vocabStartIndex %f should not be smaller than 0.", vocabStartIndex_),
@@ -228,12 +221,13 @@ bool FusedLinearOnlineMaxSumTiling::GetAttrAndCheck() {
                     OP_LOGE(opName_, "vocabEndIndex %f should be greater than or equal to vocabStartIndex %f.",
                             vocabEndIndex_, vocabStartIndex_),
                     return false);
-    vocabParallelLogitsOutFlag_ =
-        static_cast<uint64_t>(*(attrs->GetAttrPointer<bool>(ATTR_IS_VOCAB_PARALLEL_LOGITS_OUT_IDX)));
+    vocabParallelLogitsOutFlag_ = static_cast<uint64_t>(
+        *(attrs->GetAttrPointer<bool>(ATTR_IS_VOCAB_PARALLEL_LOGITS_OUT_IDX)));
     return true;
 }
 
-ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling() {
+ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling()
+{
     OP_LOGD(opName_, "TilingForFusedLinearOnlineMaxSum RunKernelTiling start.");
     bufSize_ = ubSize_ - RESVERD_BUFF_BYTES;
 
@@ -255,7 +249,7 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling() {
     cubeCoreNumAligned_ = Ops::Base::CeilAlign(aiCubeNum_, BLOCK_DATA_B32);
     InitWorkspaceTiling();
     TargetTiling();
-    
+
     if (hSize_ > static_cast<uint64_t>(0)) {
         matmulInputEmptyFlag_ = static_cast<uint64_t>(0);
         if (!GetMatmulTiling()) {
@@ -284,7 +278,8 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-void FusedLinearOnlineMaxSumTiling::FillTilingData() {
+void FusedLinearOnlineMaxSumTiling::FillTilingData()
+{
     tilingData_.set_m(btSize_);
     tilingData_.set_k(hSize_);
     tilingData_.set_n(vSize_);
@@ -300,7 +295,8 @@ void FusedLinearOnlineMaxSumTiling::FillTilingData() {
     tilingData_.set_matmulInputEmptyFlag(matmulInputEmptyFlag_);
 }
 
-void FusedLinearOnlineMaxSumTiling::PrintTilingData() {
+void FusedLinearOnlineMaxSumTiling::PrintTilingData()
+{
     OP_LOGD(opName_, "m:  %lu.", tilingData_.get_m());
     OP_LOGD(opName_, "k:  %lu.", tilingData_.get_k());
     OP_LOGD(opName_, "n:  %lu.", tilingData_.get_n());
@@ -316,7 +312,8 @@ void FusedLinearOnlineMaxSumTiling::PrintTilingData() {
     OP_LOGD(opName_, "matmulInputEmptyFlag:  %lu.", tilingData_.get_matmulInputEmptyFlag());
 }
 
-static ge::graphStatus TilingForFusedLinearOnlineMaxSum(gert::TilingContext* context) {
+static ge::graphStatus TilingForFusedLinearOnlineMaxSum(gert::TilingContext* context)
+{
     FusedLinearOnlineMaxSumTiling tilingObject(context);
     auto ret = tilingObject.Init();
     if (ret != ge::GRAPH_SUCCESS) {
@@ -328,11 +325,12 @@ static ge::graphStatus TilingForFusedLinearOnlineMaxSum(gert::TilingContext* con
     return ret;
 }
 
-ge::graphStatus TilingPrepareForFusedLinearOnlineMaxSum([[maybe_unused]] gert::TilingParseContext* context) {
+ge::graphStatus TilingPrepareForFusedLinearOnlineMaxSum([[maybe_unused]] gert::TilingParseContext* context)
+{
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(FusedLinearOnlineMaxSum)
     .Tiling(TilingForFusedLinearOnlineMaxSum)
     .TilingParse<FusedLinearOnlineMaxSumCompileInfo>(TilingPrepareForFusedLinearOnlineMaxSum);
-}
+} // namespace optiling

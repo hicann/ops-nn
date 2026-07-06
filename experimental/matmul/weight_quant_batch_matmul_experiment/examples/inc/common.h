@@ -36,7 +36,7 @@
  * @param [out] fileSize: file size
  * @return read result
  */
-bool ReadFile(const std::string &filePath, size_t fileSize, void *buffer, size_t bufferSize);
+bool ReadFile(const std::string& filePath, size_t fileSize, void* buffer, size_t bufferSize);
 
 /**
  * @brief Write data to file
@@ -45,6 +45,6 @@ bool ReadFile(const std::string &filePath, size_t fileSize, void *buffer, size_t
  * @param [in] size: size to write
  * @return write result
  */
-bool WriteFile(const std::string &filePath, const void *buffer, size_t size);
+bool WriteFile(const std::string& filePath, const void* buffer, size_t size);
 
-#endif  // COMMON_H
+#endif // COMMON_H

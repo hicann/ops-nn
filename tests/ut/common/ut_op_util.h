@@ -23,29 +23,29 @@
 
 using namespace ge;
 
-#define TENSOR_INPUT_WITH_SHAPE(paras, key, shape, dtype, foramt, range)                        \
-  auto tensor_desc_##key = create_desc_shape_range(shape, dtype, foramt, shape, foramt, range); \
-  auto data##key = op::Data(#key);                                                              \
-  data##key.update_input_desc_x(tensor_desc_##key);                                             \
-  data##key.update_output_desc_y(tensor_desc_##key);                                            \
-  paras.set_input_##key(data##key);                                                             \
-  paras.UpdateInputDesc(#key, tensor_desc_##key)
+#define TENSOR_INPUT_WITH_SHAPE(paras, key, shape, dtype, foramt, range)                          \
+    auto tensor_desc_##key = create_desc_shape_range(shape, dtype, foramt, shape, foramt, range); \
+    auto data##key = op::Data(#key);                                                              \
+    data##key.update_input_desc_x(tensor_desc_##key);                                             \
+    data##key.update_output_desc_y(tensor_desc_##key);                                            \
+    paras.set_input_##key(data##key);                                                             \
+    paras.UpdateInputDesc(#key, tensor_desc_##key)
 
 #define TENSOR_INPUT_WITH_SHAPE_AND_CONST_VALUE(paras, key, shape, dtype, foramt, const_value) \
-  auto tensor_desc_##key = create_desc_shape_range(shape, dtype, foramt, shape, foramt, {});   \
-  Tensor tensor_const_##key(tensor_desc_##key);                                                \
-  tensor_desc_##key.SetName(#key);                                                             \
-  SetValueToConstTensor(tensor_const_##key, const_value);                                      \
-  auto const##key = op::Constant(#key).set_attr_value(tensor_const_##key);                     \
-  paras.set_input_##key(const##key);                                                           \
-  paras.UpdateInputDesc(#key, tensor_desc_##key)
+    auto tensor_desc_##key = create_desc_shape_range(shape, dtype, foramt, shape, foramt, {}); \
+    Tensor tensor_const_##key(tensor_desc_##key);                                              \
+    tensor_desc_##key.SetName(#key);                                                           \
+    SetValueToConstTensor(tensor_const_##key, const_value);                                    \
+    auto const##key = op::Constant(#key).set_attr_value(tensor_const_##key);                   \
+    paras.set_input_##key(const##key);                                                         \
+    paras.UpdateInputDesc(#key, tensor_desc_##key)
 
-#define TENSOR_OUTPUT_WITH_SHAPE(paras, key, shape, dtype, foramt, range)                           \
-  auto tensor_out_desc_##key = create_desc_shape_range(shape, dtype, foramt, shape, foramt, range); \
-  paras.UpdateOutputDesc(#key, tensor_out_desc_##key)
+#define TENSOR_OUTPUT_WITH_SHAPE(paras, key, shape, dtype, foramt, range)                             \
+    auto tensor_out_desc_##key = create_desc_shape_range(shape, dtype, foramt, shape, foramt, range); \
+    paras.UpdateOutputDesc(#key, tensor_out_desc_##key)
 
 namespace ut_util {
 std::vector<int64_t> ToVector(const gert::Shape& shape);
-}  // namespace ut_util
+} // namespace ut_util
 
-#endif //NN_TESTS_UT_COMMON_UT_OP_UTIL_H_
+#endif // NN_TESTS_UT_COMMON_UT_OP_UTIL_H_

@@ -20,8 +20,7 @@ namespace Ops {
 namespace Math {
 class AnyValue {
 public:
-    enum ValueType
-    {
+    enum ValueType {
         VT_STRING = 1,
         VT_FLOAT = 2,
         VT_BOOL = 3,
@@ -34,13 +33,11 @@ public:
         VT_LIST_INT = static_cast<int32_t>(VT_LIST_BASE) + static_cast<int32_t>(VT_INT),
     };
 
-    AnyValue(ValueType type, const std::shared_ptr<void>& valuePtr) : type_(type), valuePtr_(valuePtr)
-    {}
+    AnyValue(ValueType type, const std::shared_ptr<void>& valuePtr) : type_(type), valuePtr_(valuePtr) {}
     ~AnyValue() = default;
-    AnyValue(const AnyValue& anyValue) : type_(anyValue.type_), valuePtr_(anyValue.valuePtr_)
-    {}
+    AnyValue(const AnyValue& anyValue) : type_(anyValue.type_), valuePtr_(anyValue.valuePtr_) {}
 
-    template<typename T>
+    template <typename T>
     static inline AnyValue CreateFrom(const T& value);
 
     ValueType type_;

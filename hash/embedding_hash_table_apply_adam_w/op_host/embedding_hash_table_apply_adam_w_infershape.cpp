@@ -37,12 +37,13 @@ static constexpr size_t attrRequiredNum = 2;
 static constexpr size_t attrEmbeddingDimIndex = 0;
 static constexpr size_t attrBucketSizeIndex = 1;
 
-graphStatus EmbeddingHashTableApplyAdamWInferOneRefOutputShape(gert::InferShapeContext *context, size_t inputIndex, size_t outputIndex)
+graphStatus EmbeddingHashTableApplyAdamWInferOneRefOutputShape(gert::InferShapeContext* context, size_t inputIndex,
+                                                               size_t outputIndex)
 {
-    const gert::Shape *inputShape = context->GetInputShape(inputIndex);
+    const gert::Shape* inputShape = context->GetInputShape(inputIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
 
-    gert::Shape *outputShape = context->GetOutputShape(outputIndex);
+    gert::Shape* outputShape = context->GetOutputShape(outputIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
 
     *outputShape = *inputShape;
@@ -56,9 +57,9 @@ graphStatus CheckForEmbeddingHashTableApplyAdamW(const gert::InferShapeContext* 
 
     size_t attrNum = attrs->GetAttrNum();
     OP_CHECK_IF(attrNum < attrRequiredNum,
-        OP_LOGE(context->GetNodeName(), "infer shape check attr num: %lu less than min: %lu, failed.", attrNum,
-            attrRequiredNum),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "infer shape check attr num: %lu less than min: %lu, failed.", attrNum,
+                        attrRequiredNum),
+                return ge::GRAPH_FAILED);
 
     auto embeddingDimPtr = attrs->GetInt(attrEmbeddingDimIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimPtr);
@@ -68,24 +69,22 @@ graphStatus CheckForEmbeddingHashTableApplyAdamW(const gert::InferShapeContext* 
     int64_t embeddingDim = *embeddingDimPtr;
     int64_t bucketSize = *bucketSizePtr;
 
-    OP_CHECK_IF(
-        embeddingDim < 0,
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "embedding_dim", std::to_string(embeddingDim), "greater than or equal to 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(embeddingDim < 0,
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "embedding_dim", std::to_string(embeddingDim),
+                                          "greater than or equal to 0"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        bucketSize < 0,
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "bucket_size", std::to_string(embeddingDim), "greater than or equal to 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(bucketSize < 0,
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "bucket_size", std::to_string(embeddingDim),
+                                          "greater than or equal to 0"),
+                return ge::GRAPH_FAILED);
 
     auto keyShape = context->GetInputShape(inputKeysIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, keyShape);
     int64_t keyNum = keyShape->GetShapeSize();
     if (keyNum <= 0 || Ops::Base::IsUnknownRank(*keyShape) || Ops::Base::IsUnknownShape(*keyShape)) {
-        OP_LOGD(context->GetNodeName(), "infer check success. keyNum: %ld eDim: %ld bucketSize: %ld", keyNum, embeddingDim,
-            bucketSize);
+        OP_LOGD(context->GetNodeName(), "infer check success. keyNum: %ld eDim: %ld bucketSize: %ld", keyNum,
+                embeddingDim, bucketSize);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -95,19 +94,21 @@ graphStatus CheckForEmbeddingHashTableApplyAdamW(const gert::InferShapeContext* 
     auto mShape = context->GetInputShape(inputMIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, mShape);
     int64_t mShapeSize = mShape->GetShapeSize();
-    OP_CHECK_IF(mShapeSize != shouldShapeSize && mShapeSize > 0 && !Ops::Base::IsUnknownRank(*mShape) &&
+    OP_CHECK_IF(
+        mShapeSize != shouldShapeSize && mShapeSize > 0 && !Ops::Base::IsUnknownRank(*mShape) &&
             !Ops::Base::IsUnknownShape(*mShape),
         OP_LOGE(context->GetNodeName(), "infer shape check m shape size: %ld fail. kNum: %ld eDim: %ld bSize: %ld",
-            mShapeSize, keyNum, embeddingDim, bucketSize),
+                mShapeSize, keyNum, embeddingDim, bucketSize),
         return ge::GRAPH_FAILED);
 
     auto vShape = context->GetInputShape(inputVIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, vShape);
     int64_t vShapeSize = vShape->GetShapeSize();
-    OP_CHECK_IF(vShapeSize != shouldShapeSize && vShapeSize > 0 && !Ops::Base::IsUnknownRank(*vShape) &&
+    OP_CHECK_IF(
+        vShapeSize != shouldShapeSize && vShapeSize > 0 && !Ops::Base::IsUnknownRank(*vShape) &&
             !Ops::Base::IsUnknownShape(*vShape),
         OP_LOGE(context->GetNodeName(), "infer shape check v shape size: %ld fail. kNum: %ld eDim: %ld bSize: %ld",
-            vShapeSize, keyNum, embeddingDim, bucketSize),
+                vShapeSize, keyNum, embeddingDim, bucketSize),
         return ge::GRAPH_FAILED);
 
     int64_t gradShouldShapeSize = keyNum * embeddingDim;
@@ -118,66 +119,66 @@ graphStatus CheckForEmbeddingHashTableApplyAdamW(const gert::InferShapeContext* 
         gradShapeSize != gradShouldShapeSize && gradShapeSize > 0 && !Ops::Base::IsUnknownRank(*gradShape) &&
             !Ops::Base::IsUnknownShape(*gradShape),
         OP_LOGE(context->GetNodeName(), "infer shape check grad shape size: %ld fail. kNum: %ld eDim: %ld bSize: %ld",
-            gradShapeSize, keyNum, embeddingDim, bucketSize),
+                gradShapeSize, keyNum, embeddingDim, bucketSize),
         return ge::GRAPH_FAILED);
 
     auto maxGradNormShape = context->GetInputShape(inputMaxGradNormIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, maxGradNormShape);
     int64_t maxGradNormShapeSize = maxGradNormShape->GetShapeSize();
     OP_CHECK_IF(maxGradNormShapeSize != shouldShapeSize && maxGradNormShapeSize > 0 &&
-            !Ops::Base::IsUnknownRank(*maxGradNormShape) && !Ops::Base::IsUnknownShape(*maxGradNormShape),
-        OP_LOGE(context->GetNodeName(),
-            "infer shape check maxGradNorm shape size: %ld fail. kNum: %ld eDim: %ld bSize: %ld", maxGradNormShapeSize,
-            keyNum, embeddingDim, bucketSize),
-        return ge::GRAPH_FAILED);
+                    !Ops::Base::IsUnknownRank(*maxGradNormShape) && !Ops::Base::IsUnknownShape(*maxGradNormShape),
+                OP_LOGE(context->GetNodeName(),
+                        "infer shape check maxGradNorm shape size: %ld fail. kNum: %ld eDim: %ld bSize: %ld",
+                        maxGradNormShapeSize, keyNum, embeddingDim, bucketSize),
+                return ge::GRAPH_FAILED);
 
-    OP_LOGD(context->GetNodeName(), "infer check success. keyNum: %ld eDim: %ld bucketSize: %ld", keyNum, embeddingDim, bucketSize);
+    OP_LOGD(context->GetNodeName(), "infer check success. keyNum: %ld eDim: %ld bucketSize: %ld", keyNum, embeddingDim,
+            bucketSize);
     return ge::GRAPH_SUCCESS;
 }
 
-graphStatus InferShapeForEmbeddingHashTableApplyAdamW(gert::InferShapeContext *context)
+graphStatus InferShapeForEmbeddingHashTableApplyAdamW(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeForEmbeddingHashTableApplyAdamW");
 
     graphStatus checkParamRes = CheckForEmbeddingHashTableApplyAdamW(context);
-    OP_CHECK_IF(checkParamRes != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "infer shape check params failed."),
-        return checkParamRes);
+    OP_CHECK_IF(checkParamRes != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "infer shape check params failed."),
+                return checkParamRes);
 
     graphStatus res = EmbeddingHashTableApplyAdamWInferOneRefOutputShape(context, inputMIndex, outputMIndex);
-    OP_CHECK_IF(res != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.",
-            inputMIndex, outputMIndex),
+    OP_CHECK_IF(
+        res != ge::GRAPH_SUCCESS,
+        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.", inputMIndex, outputMIndex),
         return res);
 
     res = EmbeddingHashTableApplyAdamWInferOneRefOutputShape(context, inputVIndex, outputVIndex);
-    OP_CHECK_IF(res != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.",
-            inputVIndex, outputVIndex),
+    OP_CHECK_IF(
+        res != ge::GRAPH_SUCCESS,
+        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.", inputVIndex, outputVIndex),
         return res);
 
     res = EmbeddingHashTableApplyAdamWInferOneRefOutputShape(context, inputBeta1PowerIndex, outputBeta1PowerIndex);
     OP_CHECK_IF(res != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.",
-            inputBeta1PowerIndex, outputBeta1PowerIndex),
-        return res);
+                OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.", inputBeta1PowerIndex,
+                        outputBeta1PowerIndex),
+                return res);
 
     res = EmbeddingHashTableApplyAdamWInferOneRefOutputShape(context, inputBeta2PowerIndex, outputBeta2PowerIndex);
     OP_CHECK_IF(res != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.",
-            inputBeta2PowerIndex, outputBeta2PowerIndex),
-        return res);
+                OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.", inputBeta2PowerIndex,
+                        outputBeta2PowerIndex),
+                return res);
 
     res = EmbeddingHashTableApplyAdamWInferOneRefOutputShape(context, inputMaxGradNormIndex, outputMaxGradNormIndex);
     OP_CHECK_IF(res != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.",
-            inputMaxGradNormIndex, outputMaxGradNormIndex),
-        return res);
+                OP_LOGE(context->GetNodeName(), "infer shape for input: %lu output: %lu failed.", inputMaxGradNormIndex,
+                        outputMaxGradNormIndex),
+                return res);
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForEmbeddingHashTableApplyAdamW");
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus InferDataTypeForEmbeddingHashTableApplyAdamW(gert::InferDataTypeContext *context)
+ge::graphStatus InferDataTypeForEmbeddingHashTableApplyAdamW(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForEmbeddingHashTableApplyAdamW");
     context->SetOutputDataType(outputMIndex, context->GetInputDataType(inputMIndex));
@@ -189,6 +190,7 @@ ge::graphStatus InferDataTypeForEmbeddingHashTableApplyAdamW(gert::InferDataType
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(EmbeddingHashTableApplyAdamW).InferShape(InferShapeForEmbeddingHashTableApplyAdamW)
-                .InferDataType(InferDataTypeForEmbeddingHashTableApplyAdamW);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(EmbeddingHashTableApplyAdamW)
+    .InferShape(InferShapeForEmbeddingHashTableApplyAdamW)
+    .InferDataType(InferDataTypeForEmbeddingHashTableApplyAdamW);
+} // namespace ops

@@ -23,15 +23,9 @@ using namespace std;
 
 class l2_rms_norm_grad_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_grad_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_grad_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_grad_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "rms_norm_grad_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_rms_norm_grad_quant_test, case_fp16_quant_hifloat8_001)
@@ -48,13 +42,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp16_quant_hifloat8_001)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -75,13 +66,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_bf16_quant_hifloat8_002)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -102,13 +90,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp16_quant_int8_003)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -129,13 +114,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp16_quant_int8_div_mode_false_004)
     char quantMode[] = "static";
     bool divMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -158,13 +140,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_bf16_quant_int8_005)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -185,13 +164,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp32_quant_hifloat8_006)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -212,13 +188,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp32_quant_int8_007)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -239,13 +212,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp16_gamma_fp16_scales_fp16_hifloat8_00
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -266,13 +236,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_bf16_gamma_bf16_scales_bf16_int8_div_fa
     char quantMode[] = "static";
     bool divMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -293,13 +260,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_fp16_scales_fp16_int8_010)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -320,13 +284,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_bf16_gamma_bf16_hifloat8_011)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -348,13 +309,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_offset_nullptr_012)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, nullptr, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              nullptr, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -377,13 +335,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_3d_shape_013)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -404,13 +359,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_4d_shape_014)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -433,13 +385,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_empty_gamma_015)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -461,13 +410,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_dy_016)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            nullptr, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(nullptr, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -487,13 +433,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_x_017)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, nullptr, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, nullptr, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -513,13 +456,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_rstd_018)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, nullptr, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, nullptr, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -539,13 +479,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_gamma_019)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, nullptr,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, nullptr, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -565,13 +502,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_scales_x_020)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            nullptr, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, nullptr,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -591,13 +525,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_dx_out_021)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            nullptr, tensor_desc_dgamma),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, nullptr, tensor_desc_dgamma),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -617,13 +548,10 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_dgamma_out_022)
     char quantMode[] = "static";
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormGradQuant,
-        INPUT(
-            tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma,
-            tensor_desc_scales_x, tensor_desc_offset_x, quantMode, divMode,
-            tensor_desc_dx, nullptr),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnRmsNormGradQuant,
+                        INPUT(tensor_desc_dy, tensor_desc_x, tensor_desc_rstd, tensor_desc_gamma, tensor_desc_scales_x,
+                              tensor_desc_offset_x, quantMode, divMode, tensor_desc_dx, nullptr),
+                        OUTPUT());
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

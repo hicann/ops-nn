@@ -98,70 +98,77 @@ const int64_t INDEX_ONE = 1;
 const int64_t INDEX_TWO = 2;
 const int64_t INDEX_THREE = 3;
 constexpr size_t DIM_FOUR = 4;
-static std::map<ge::Format, std::string> g_formatToStrTab = {
-    {ge::FORMAT_NCHW, "NCHW"},
-    {ge::FORMAT_NHWC, "NHWC"},
-    {ge::FORMAT_HWCN, "HWCN"},
-    {ge::FORMAT_DHWNC, "DHWNC"},
-    {ge::FORMAT_DHWCN, "DHWCN"},
-    {ge::FORMAT_NDHWC, "NDHWC"},
-    {ge::FORMAT_NCDHW, "NCDHW"},
-    {ge::FORMAT_NC1HWC0, "NC1HWC0"},
-    {ge::FORMAT_ND, "ND"},
-    {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
-    {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
-}
+static std::map<ge::Format, std::string> g_formatToStrTab = {{ge::FORMAT_NCHW, "NCHW"},
+                                                             {ge::FORMAT_NHWC, "NHWC"},
+                                                             {ge::FORMAT_HWCN, "HWCN"},
+                                                             {ge::FORMAT_DHWNC, "DHWNC"},
+                                                             {ge::FORMAT_DHWCN, "DHWCN"},
+                                                             {ge::FORMAT_NDHWC, "NDHWC"},
+                                                             {ge::FORMAT_NCDHW, "NCDHW"},
+                                                             {ge::FORMAT_NC1HWC0, "NC1HWC0"},
+                                                             {ge::FORMAT_ND, "ND"},
+                                                             {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
+                                                             {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
+} // namespace
 
 struct ConvolutionBackwardOutput {
-  aclTensor *gradInput;
-  aclTensor *gradWeight;
-  aclTensor *gradBias;
+    aclTensor* gradInput;
+    aclTensor* gradWeight;
+    aclTensor* gradBias;
 };
 
 struct ConvolutionBackwardResult {
-  const aclTensor *gradInput;
-  const aclTensor *gradWeight;
-  const aclTensor *gradBias;
+    const aclTensor* gradInput;
+    const aclTensor* gradWeight;
+    const aclTensor* gradBias;
 };
 
 struct BatchMatmulInput {
-  const aclTensor *leftData;
-  const aclTensor *rightData;
-  const aclTensor *outputData;
-  bool isLeftTranspose;
-  bool isRightTranspose;
+    const aclTensor* leftData;
+    const aclTensor* rightData;
+    const aclTensor* outputData;
+    bool isLeftTranspose;
+    bool isRightTranspose;
 };
 
 enum class Conv3DBp2MmMode {
-  CONV3D_BP_NO_MM = 0,
-  CONV3D_BP_MM_1x1_KERNEL = 1,
-  CONV3D_BP_MM_STRIDE_EQ_KERNEL = 2,
-  CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL = 3,
+    CONV3D_BP_NO_MM = 0,
+    CONV3D_BP_MM_1x1_KERNEL = 1,
+    CONV3D_BP_MM_STRIDE_EQ_KERNEL = 2,
+    CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL = 3,
 };
 
 struct ExpectValue {
-  int64_t doExpect;
-  int64_t hoExpect;
-  int64_t woExpect;
+    int64_t doExpect;
+    int64_t hoExpect;
+    int64_t woExpect;
 };
 
-bool CheckDtypeValid(const aclTensor *inputTensor, bool transposed = false);
-bool CheckParamsValueAllZero(const aclIntArray *params);
-bool CheckParamsValue(const aclIntArray *params, bool isPad);
+bool CheckDtypeValid(const aclTensor* inputTensor, bool transposed = false);
+bool CheckParamsValueAllZero(const aclIntArray* params);
+bool CheckParamsValue(const aclIntArray* params, bool isPad);
 // 需要调整
-void GetChannleIndex(const op::Shape &shape, const op::Format &format, int64_t &channelIndex);
-bool CheckResolutionGEKernelShape(const op::Shape &inputShape, const op::Shape &weightShape, const l0op::ConvolutionBackwardParams &params, int64_t dimIdx);
-void GetInputShapeSize(const op::Format &format, const op::Shape &shape, int64_t &shapeDVal, int64_t &shapeHVal, int64_t &shapeWVal);
-bool GetExpectValueDHW_95(const l0op::ConvolutionBackwardInputTensor &inputTensor, const l0op::ConvolutionBackwardParams &params, struct ExpectValue &expectValue, const op::Shape &inputShape, const op::Shape &weightShape);
-bool CheckResolutionGEKernelShape_95(int64_t inputVal, int64_t weightVal, int64_t dimOrder, const l0op::ConvolutionBackwardParams &params);
-int64_t GetExpectNum_95(int64_t inputVal, int64_t weightVal, int64_t dimOrder, const l0op::ConvolutionBackwardParams &params);
-int64_t GetExpectNum(const op::Shape &inputShape, const op::Shape &weightShape, const l0op::ConvolutionBackwardParams &params, int64_t dimIdx);
-bool CheckFormatValid(const aclTensor *inputTensor, const string &tensorName);
-void GetWeightShapeSize(const op::Format &weightFormat, const op::Shape &weightShape, int64_t &weightDVal, int64_t &weightHVal, int64_t &weightWVal);
-string AclarrayToString(const aclIntArray *array);
-aclnnStatus CalculateConvolutionBackwardWithEmpty(l0op::ConvolutionBackwardInputTensor &inputTensor,
-                                                  ConvolutionBackwardOutput &outputTensor,
-                                                  l0op::ConvolutionBackwardParams &params, aclOpExecutor *executor);
+void GetChannleIndex(const op::Shape& shape, const op::Format& format, int64_t& channelIndex);
+bool CheckResolutionGEKernelShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                  const l0op::ConvolutionBackwardParams& params, int64_t dimIdx);
+void GetInputShapeSize(const op::Format& format, const op::Shape& shape, int64_t& shapeDVal, int64_t& shapeHVal,
+                       int64_t& shapeWVal);
+bool GetExpectValueDHW_95(const l0op::ConvolutionBackwardInputTensor& inputTensor,
+                          const l0op::ConvolutionBackwardParams& params, struct ExpectValue& expectValue,
+                          const op::Shape& inputShape, const op::Shape& weightShape);
+bool CheckResolutionGEKernelShape_95(int64_t inputVal, int64_t weightVal, int64_t dimOrder,
+                                     const l0op::ConvolutionBackwardParams& params);
+int64_t GetExpectNum_95(int64_t inputVal, int64_t weightVal, int64_t dimOrder,
+                        const l0op::ConvolutionBackwardParams& params);
+int64_t GetExpectNum(const op::Shape& inputShape, const op::Shape& weightShape,
+                     const l0op::ConvolutionBackwardParams& params, int64_t dimIdx);
+bool CheckFormatValid(const aclTensor* inputTensor, const string& tensorName);
+void GetWeightShapeSize(const op::Format& weightFormat, const op::Shape& weightShape, int64_t& weightDVal,
+                        int64_t& weightHVal, int64_t& weightWVal);
+string AclarrayToString(const aclIntArray* array);
+aclnnStatus CalculateConvolutionBackwardWithEmpty(l0op::ConvolutionBackwardInputTensor& inputTensor,
+                                                  ConvolutionBackwardOutput& outputTensor,
+                                                  l0op::ConvolutionBackwardParams& params, aclOpExecutor* executor);
 
 namespace Ops {
 namespace NN {
@@ -169,66 +176,64 @@ namespace Conv {
 
 class ConvolutionBackwardChecker {
 public:
-ConvolutionBackwardChecker(const l0op::ConvolutionBackwardInputTensor &inputTensor, const ConvolutionBackwardOutput &outputTensor,
-                           const l0op::ConvolutionBackwardParams &params, const NpuArch npuArch):
-                           inputTensor_(inputTensor),
-                           outputTensor_(outputTensor),
-                           params_(params),
-                           npuArch_(npuArch){}
+    ConvolutionBackwardChecker(const l0op::ConvolutionBackwardInputTensor& inputTensor,
+                               const ConvolutionBackwardOutput& outputTensor,
+                               const l0op::ConvolutionBackwardParams& params, const NpuArch npuArch)
+        : inputTensor_(inputTensor), outputTensor_(outputTensor), params_(params), npuArch_(npuArch)
+    {}
 
 public:
+    bool CheckDataTypeValidForGradInput();
 
-bool CheckDataTypeValidForGradInput();
+    bool CheckDataTypeValidForGradWeight();
 
-bool CheckDataTypeValidForGradWeight();
+    bool CheckDataTypeValidForGradBias();
 
-bool CheckDataTypeValidForGradBias();
+    bool CheckDtypeValidFor8bit(const op::DataType& dType);
 
-bool CheckDtypeValidFor8bit(const op::DataType& dType);
+    bool InterceptConvFor8bit();
 
-bool InterceptConvFor8bit();
+    bool IsConv8bit(const op::DataType& dType) const;
 
-bool IsConv8bit(const op::DataType& dType) const;
+    bool CheckDtypeValidForBpFilter8bit(const op::DataType& dType);
 
-bool CheckDtypeValidForBpFilter8bit(const op::DataType& dType);
+    bool CheckParamsValidForBpFilter8bit();
 
-bool CheckParamsValidForBpFilter8bit();
+    bool CheckConvParams(size_t inputDim);
+    // 需要调整
+    inline op::DataType CalcPromoteType();
 
-bool CheckConvParams(size_t inputDim);
-// 需要调整
-inline op::DataType CalcPromoteType();
+    bool CheckCubeMathTypeConvBackward();
 
-bool CheckCubeMathTypeConvBackward();
+    bool CheckConvShape();
 
-bool CheckConvShape();
+    bool CheckConvChannelAndGroup();
 
-bool CheckConvChannelAndGroup();
+    bool CheckConvShapePlus();
 
-bool CheckConvShapePlus();
+    inline bool CheckNotNull();
 
-inline bool CheckNotNull();
+    aclnnStatus CheckParamsFor8Bit();
 
-aclnnStatus CheckParamsFor8Bit();
+    aclnnStatus CheckParams();
 
-aclnnStatus CheckParams();
+    bool CheckParamsDim();
 
-bool CheckParamsDim();
+    bool CheckEmptyTensor();
 
-bool CheckEmptyTensor();
+    bool CheckParamsGroup();
 
-bool CheckParamsGroup();
+    bool CheckShapeTransposed();
 
-bool CheckShapeTransposed();
+    bool CheckShape();
 
-bool CheckShape();
-
-bool CheckShapeEmpty();
+    bool CheckShapeEmpty();
 
 private:
-const l0op::ConvolutionBackwardInputTensor inputTensor_;
-const ConvolutionBackwardOutput outputTensor_;
-const l0op::ConvolutionBackwardParams params_;
-const NpuArch npuArch_;
+    const l0op::ConvolutionBackwardInputTensor inputTensor_;
+    const ConvolutionBackwardOutput outputTensor_;
+    const l0op::ConvolutionBackwardParams params_;
+    const NpuArch npuArch_;
 };
 } // namespace Conv
 } // namespace NN
@@ -237,4 +242,4 @@ const NpuArch npuArch_;
 }
 #endif
 
-#endif  // OP_API_INC_CONVOLUTION_BACKWARD_CHECKER_H_
+#endif // OP_API_INC_CONVOLUTION_BACKWARD_CHECKER_H_

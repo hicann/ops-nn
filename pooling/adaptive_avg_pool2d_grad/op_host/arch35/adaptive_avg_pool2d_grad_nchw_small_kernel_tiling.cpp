@@ -100,10 +100,8 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::DoBufferCalculate()
     const int64_t transRowAlign = TRANS_ADDR_LEN;
     const int64_t transColAlign = baseData.maxDataNumInOneBlock;
 
-    const int64_t hInputInner =
-        Ops::Base::CeilDiv(splitData.hOutputInner * gradInputH, gradOutputH) + 1;
-    const int64_t wInputInner =
-        Ops::Base::CeilDiv(splitData.wOutputInner * gradInputW, gradOutputW) + 1;
+    const int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner * gradInputH, gradOutputH) + 1;
+    const int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner * gradInputW, gradOutputW) + 1;
 
     const int64_t highAxisInner = splitData.highAxisInner;
     const int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, transColAlign);
@@ -124,27 +122,23 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::DoBufferCalculate()
     splitData.transQueBufferSize = Ops::Base::CeilAlign(transQueBytes, baseData.ubBlockSize);
     splitData.transOutQueBufferSize = Ops::Base::CeilAlign(transOutQueBytes, baseData.ubBlockSize);
 
-    splitData.totalBufferSize =
-        BUFFER_NUM * (splitData.inputQueBufferSize +
-                      splitData.transQueBufferSize +
-                      splitData.transOutQueBufferSize);
+    splitData.totalBufferSize = BUFFER_NUM * (splitData.inputQueBufferSize + splitData.transQueBufferSize +
+                                              splitData.transOutQueBufferSize);
 }
 
 bool AdaptiveAvgPool2dGradTilingSmallKernel::IsCapable()
 {
     InitializationVars();
 
-    const bool preferSimtInputAsGradY =
-        gradInputH > gradOutputH &&
-        gradInputW <= gradOutputW &&
-        gradInputW <= PREFER_SIMT_W_THRESHOLD &&
-        (gradInputH >= gradOutputH * STRONG_RESIZE_RATIO || gradOutputH <= PREFER_SIMT_H_LOW_THRESHOLD);
+    const bool preferSimtInputAsGradY = gradInputH > gradOutputH && gradInputW <= gradOutputW &&
+                                        gradInputW <= PREFER_SIMT_W_THRESHOLD &&
+                                        (gradInputH >= gradOutputH * STRONG_RESIZE_RATIO ||
+                                         gradOutputH <= PREFER_SIMT_H_LOW_THRESHOLD);
 
-    const bool preferSimtOutputAsGradY =
-        gradOutputH > gradInputH &&
-        gradOutputW <= gradInputW &&
-        gradOutputW <= PREFER_SIMT_W_THRESHOLD &&
-        (gradOutputH >= gradInputH * STRONG_RESIZE_RATIO || gradInputH <= PREFER_SIMT_H_LOW_THRESHOLD);
+    const bool preferSimtOutputAsGradY = gradOutputH > gradInputH && gradOutputW <= gradInputW &&
+                                         gradOutputW <= PREFER_SIMT_W_THRESHOLD &&
+                                         (gradOutputH >= gradInputH * STRONG_RESIZE_RATIO ||
+                                          gradInputH <= PREFER_SIMT_H_LOW_THRESHOLD);
 
     if (preferSimtInputAsGradY || preferSimtOutputAsGradY) {
         return false;
@@ -193,30 +187,19 @@ bool AdaptiveAvgPool2dGradTilingSmallKernel::IsCapable()
     const bool wResize = gradOutputW != gradInputW;
     const bool twoAxisResize = hResize && wResize;
 
-    const bool bothUpsampleAreaExpand =
-        hUpsample &&
-        wUpsample &&
-        highAxis <= SIMT_BOTH_UPSAMPLE_NC_MAX &&
-        outputHW >= inputHW * UPSAMPLE_AREA_EXPAND_RATIO;
+    const bool bothUpsampleAreaExpand = hUpsample && wUpsample && highAxis <= SIMT_BOTH_UPSAMPLE_NC_MAX &&
+                                        outputHW >= inputHW * UPSAMPLE_AREA_EXPAND_RATIO;
 
-    const bool hExpandWCollapseStrong =
-        hUpsample &&
-        wDownsample &&
-        gradOutputH >= gradInputH * STRONG_RESIZE_RATIO &&
-        gradInputW >= gradOutputW * STRONG_COLLAPSE_RATIO;
+    const bool hExpandWCollapseStrong = hUpsample && wDownsample && gradOutputH >= gradInputH * STRONG_RESIZE_RATIO &&
+                                        gradInputW >= gradOutputW * STRONG_COLLAPSE_RATIO;
 
-    const bool hCollapseWExpandStrong =
-        hDownsample &&
-        wUpsample &&
-        gradInputH >= gradOutputH * STRONG_COLLAPSE_RATIO &&
-        gradOutputW * RESIZE_W_EXPAND_RATIO >= gradInputW * STRONG_COLLAPSE_RATIO;
+    const bool hCollapseWExpandStrong = hDownsample && wUpsample && gradInputH >= gradOutputH * STRONG_COLLAPSE_RATIO &&
+                                        gradOutputW * RESIZE_W_EXPAND_RATIO >= gradInputW * STRONG_COLLAPSE_RATIO;
 
-    const bool preferSimtUnfriendlyResize =
-        kernelSize <= SIMT_RESIZE_KERNEL_SIZE_MAX &&
-        highAxis >= HIGH_THRESHOLD &&
-        highAxis <= SIMT_RESIZE_NC_MAX &&
-        twoAxisResize &&
-        (bothUpsampleAreaExpand || hExpandWCollapseStrong || hCollapseWExpandStrong);
+    const bool preferSimtUnfriendlyResize = kernelSize <= SIMT_RESIZE_KERNEL_SIZE_MAX && highAxis >= HIGH_THRESHOLD &&
+                                            highAxis <= SIMT_RESIZE_NC_MAX && twoAxisResize &&
+                                            (bothUpsampleAreaExpand || hExpandWCollapseStrong ||
+                                             hCollapseWExpandStrong);
 
     if (preferSimtUnfriendlyResize) {
         return false;
@@ -237,8 +220,7 @@ bool AdaptiveAvgPool2dGradTilingSmallKernel::IsMeetTargetCoreNum()
     const int64_t tmpHOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
     const int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
 
-    return tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >=
-           baseData.coreUsedForBestPerformance;
+    return tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData.coreUsedForBestPerformance;
 }
 
 bool AdaptiveAvgPool2dGradTilingSmallKernel::IsMeetUBSize()
@@ -281,8 +263,7 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::SplitUnalignHW()
 
         DynamicAdjustmentHW();
 
-        if (oldH == splitData.hOutputInner &&
-            oldW == splitData.wOutputInner) {
+        if (oldH == splitData.hOutputInner && oldW == splitData.wOutputInner) {
             break;
         }
     }
@@ -312,17 +293,14 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::SearchBestTiling()
     long double bestCost = std::numeric_limits<long double>::max();
 
     if (searchHwSize <= SEARCH_HW_SIZE_LIMIT) {
-        int64_t ncSearchMax = std::max<int64_t>(
-            Ops::Base::CeilAlign(baseData.inputNCSize, TRANS_ADDR_LEN),
-            inputVl * NC_SEARCH_INPUT_VL_MULTIPLIER);
+        int64_t ncSearchMax = std::max<int64_t>(Ops::Base::CeilAlign(baseData.inputNCSize, TRANS_ADDR_LEN),
+                                                inputVl * NC_SEARCH_INPUT_VL_MULTIPLIER);
         ncSearchMax = std::min<int64_t>(ncSearchMax, static_cast<int64_t>(NC_SEARCH_MAX));
         ncSearchMax = std::max<int64_t>(ncSearchMax, computeVl);
 
-        ExhaustiveSearchBestTiling(
-            computeVl, ncSearchMax,
-            bestHighAxisInner, bestHOutputInner, bestWOutputInner,
-            bestBlockNum, bestUsedCoreNum, bestHighAxisPadding,
-            bestHighAxisTail, bestBufferSize, bestCost, found);
+        ExhaustiveSearchBestTiling(computeVl, ncSearchMax, bestHighAxisInner, bestHOutputInner, bestWOutputInner,
+                                   bestBlockNum, bestUsedCoreNum, bestHighAxisPadding, bestHighAxisTail, bestBufferSize,
+                                   bestCost, found);
     }
 
     if (found) {
@@ -337,154 +315,120 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::SearchBestTiling()
 }
 
 bool AdaptiveAvgPool2dGradTilingSmallKernel::ExhaustiveSearchBestTiling(
-    int64_t computeVl, int64_t ncSearchMax,
-    int64_t& bestHighAxisInner, int64_t& bestHOutputInner, int64_t& bestWOutputInner,
-    int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
-    int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
-    int64_t& bestBufferSize, long double& bestCost, bool& found)
+    int64_t computeVl, int64_t ncSearchMax, int64_t& bestHighAxisInner, int64_t& bestHOutputInner,
+    int64_t& bestWOutputInner, int64_t& bestBlockNum, int64_t& bestUsedCoreNum, int64_t& bestHighAxisPadding,
+    int64_t& bestHighAxisTail, int64_t& bestBufferSize, long double& bestCost, bool& found)
 {
-    for (int64_t highAxisInner = computeVl;
-         highAxisInner <= ncSearchMax; highAxisInner += TRANS_ADDR_LEN) {
+    for (int64_t highAxisInner = computeVl; highAxisInner <= ncSearchMax; highAxisInner += TRANS_ADDR_LEN) {
         splitData.highAxisInner = highAxisInner;
-        const int64_t highAxisOuter =
-            Ops::Base::CeilDiv(baseData.inputNCSize, highAxisInner);
-        const int64_t highAxisTail =
-            (baseData.inputNCSize % highAxisInner == 0) ? highAxisInner :
-            (baseData.inputNCSize % highAxisInner);
-        const int64_t highAxisPadding =
-            highAxisOuter * highAxisInner - baseData.inputNCSize;
+        const int64_t highAxisOuter = Ops::Base::CeilDiv(baseData.inputNCSize, highAxisInner);
+        const int64_t highAxisTail = (baseData.inputNCSize % highAxisInner == 0) ?
+                                         highAxisInner :
+                                         (baseData.inputNCSize % highAxisInner);
+        const int64_t highAxisPadding = highAxisOuter * highAxisInner - baseData.inputNCSize;
         for (int64_t hOutputInner = LIMIT; hOutputInner <= gradOutputH; ++hOutputInner) {
             splitData.hOutputInner = hOutputInner;
-            const int64_t hOutputOuter =
-                Ops::Base::CeilDiv(gradOutputH, hOutputInner);
+            const int64_t hOutputOuter = Ops::Base::CeilDiv(gradOutputH, hOutputInner);
             for (int64_t wOutputInner = LIMIT; wOutputInner <= gradOutputW; ++wOutputInner) {
                 splitData.wOutputInner = wOutputInner;
                 DoBufferCalculate();
-                if (splitData.totalBufferSize > baseData.availableUb) { continue; }
-                const int64_t wOutputOuter =
-                    Ops::Base::CeilDiv(gradOutputW, wOutputInner);
+                if (splitData.totalBufferSize > baseData.availableUb) {
+                    continue;
+                }
+                const int64_t wOutputOuter = Ops::Base::CeilDiv(gradOutputW, wOutputInner);
                 const int64_t blockNum = highAxisOuter * hOutputOuter * wOutputOuter;
-                if (blockNum < baseData.coreUsedForBestPerformance) { continue; }
-                const int64_t normalCoreProcessNum =
-                    Ops::Base::CeilDiv(blockNum, baseData.totalCoreNum);
-                long double cost = EvalTilingCandidate(
-                    highAxisInner, highAxisOuter, highAxisTail, highAxisPadding,
-                    hOutputInner, hOutputOuter, wOutputInner, wOutputOuter,
-                    blockNum, computeVl, normalCoreProcessNum);
-                if (cost < 0.0L) { continue; }
-                const int64_t usedCoreNum =
-                    Ops::Base::CeilDiv(blockNum, normalCoreProcessNum);
-                TryRecordBetterTiling(cost, hOutputInner, wOutputInner,
-                    blockNum, usedCoreNum, highAxisInner,
-                    highAxisPadding, highAxisTail,
-                    bestHighAxisInner, bestHOutputInner, bestWOutputInner,
-                    bestBlockNum, bestUsedCoreNum, bestHighAxisPadding,
-                    bestHighAxisTail, bestBufferSize, bestCost, found);
+                if (blockNum < baseData.coreUsedForBestPerformance) {
+                    continue;
+                }
+                const int64_t normalCoreProcessNum = Ops::Base::CeilDiv(blockNum, baseData.totalCoreNum);
+                long double cost = EvalTilingCandidate(highAxisInner, highAxisOuter, highAxisTail, highAxisPadding,
+                                                       hOutputInner, hOutputOuter, wOutputInner, wOutputOuter, blockNum,
+                                                       computeVl, normalCoreProcessNum);
+                if (cost < 0.0L) {
+                    continue;
+                }
+                const int64_t usedCoreNum = Ops::Base::CeilDiv(blockNum, normalCoreProcessNum);
+                TryRecordBetterTiling(cost, hOutputInner, wOutputInner, blockNum, usedCoreNum, highAxisInner,
+                                      highAxisPadding, highAxisTail, bestHighAxisInner, bestHOutputInner,
+                                      bestWOutputInner, bestBlockNum, bestUsedCoreNum, bestHighAxisPadding,
+                                      bestHighAxisTail, bestBufferSize, bestCost, found);
             }
         }
     }
     return found;
 }
 
-long double AdaptiveAvgPool2dGradTilingSmallKernel::EvalTilingCandidate(
-    int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail,
-    int64_t highAxisPadding,
-    int64_t hOutputInner, int64_t hOutputOuter,
-    int64_t wOutputInner, int64_t wOutputOuter,
-    int64_t blockNum, int64_t computeVl,
-    int64_t normalCoreProcessNum)
+long double AdaptiveAvgPool2dGradTilingSmallKernel::EvalTilingCandidate(int64_t highAxisInner, int64_t highAxisOuter,
+                                                                        int64_t highAxisTail, int64_t highAxisPadding,
+                                                                        int64_t hOutputInner, int64_t hOutputOuter,
+                                                                        int64_t wOutputInner, int64_t wOutputOuter,
+                                                                        int64_t blockNum, int64_t computeVl,
+                                                                        int64_t normalCoreProcessNum)
 {
-    const int64_t oneBufferSize =
-        splitData.inputQueBufferSize + splitData.transQueBufferSize +
-        splitData.transOutQueBufferSize;
-    const int64_t hInputInner =
-        Ops::Base::CeilDiv(hOutputInner * gradInputH, gradOutputH) +
-        HW_INNER_SAFE_MARGIN;
-    const int64_t wInputInner =
-        Ops::Base::CeilDiv(wOutputInner * gradInputW, gradOutputW) +
-        HW_INNER_SAFE_MARGIN;
+    const int64_t oneBufferSize = splitData.inputQueBufferSize + splitData.transQueBufferSize +
+                                  splitData.transOutQueBufferSize;
+    const int64_t hInputInner = Ops::Base::CeilDiv(hOutputInner * gradInputH, gradOutputH) + HW_INNER_SAFE_MARGIN;
+    const int64_t wInputInner = Ops::Base::CeilDiv(wOutputInner * gradInputW, gradOutputW) + HW_INNER_SAFE_MARGIN;
     const int64_t actualInputElem = highAxisInner * hInputInner * wInputInner;
     const int64_t actualOutputElem = highAxisInner * hOutputInner * wOutputInner;
-    const int64_t oneBlockWork =
-        oneBufferSize +
-        actualInputElem * (baseData.inputBytes + FLOAT32_SIZE) +
-        actualOutputElem * FLOAT32_SIZE * OUTPUT_FP32_FACTOR +
-        baseData.ubBlockSize * WORK_PER_BLOCK_UB_OVERHEAD;
+    const int64_t oneBlockWork = oneBufferSize + actualInputElem * (baseData.inputBytes + FLOAT32_SIZE) +
+                                 actualOutputElem * FLOAT32_SIZE * OUTPUT_FP32_FACTOR +
+                                 baseData.ubBlockSize * WORK_PER_BLOCK_UB_OVERHEAD;
 
-    long double cost =
-        static_cast<long double>(normalCoreProcessNum) *
-        static_cast<long double>(oneBlockWork);
-    cost += static_cast<long double>(highAxisPadding) *
-            static_cast<long double>(gradOutputH) *
+    long double cost = static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
+    cost += static_cast<long double>(highAxisPadding) * static_cast<long double>(gradOutputH) *
             static_cast<long double>(gradOutputW) * COST_HIGH_AXIS_PADDING_FACTOR;
 
-    cost = AddCostPenalties(
-        cost, highAxisInner, highAxisOuter, highAxisTail,
-        hOutputInner, wOutputInner,
-        blockNum, computeVl,
-        normalCoreProcessNum, oneBlockWork);
+    cost = AddCostPenalties(cost, highAxisInner, highAxisOuter, highAxisTail, hOutputInner, wOutputInner, blockNum,
+                            computeVl, normalCoreProcessNum, oneBlockWork);
     return cost;
 }
 
-long double AdaptiveAvgPool2dGradTilingSmallKernel::AddCostPenalties(
-    long double cost, int64_t highAxisInner, int64_t highAxisOuter,
-    int64_t highAxisTail,
-    int64_t hOutputInner, int64_t wOutputInner,
-    int64_t blockNum, int64_t computeVl,
-    int64_t normalCoreProcessNum, int64_t oneBlockWork)
+long double AdaptiveAvgPool2dGradTilingSmallKernel::AddCostPenalties(long double cost, int64_t highAxisInner,
+                                                                     int64_t highAxisOuter, int64_t highAxisTail,
+                                                                     int64_t hOutputInner, int64_t wOutputInner,
+                                                                     int64_t blockNum, int64_t computeVl,
+                                                                     int64_t normalCoreProcessNum, int64_t oneBlockWork)
 {
     if (highAxisOuter > 1 && highAxisTail < computeVl) {
-        if (highAxisOuter >= HIGH_AXIS_TAIL_OPT_THRESHOLD &&
-            gradInputW > gradOutputW) {
-            cost += static_cast<long double>(normalCoreProcessNum) *
-                    static_cast<long double>(oneBlockWork) /
+        if (highAxisOuter >= HIGH_AXIS_TAIL_OPT_THRESHOLD && gradInputW > gradOutputW) {
+            cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork) /
                     static_cast<long double>(highAxisOuter);
         } else {
-            cost += static_cast<long double>(normalCoreProcessNum) *
-                    static_cast<long double>(oneBlockWork);
+            cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
         }
     }
 
     if (computeVl > 0 && highAxisInner % computeVl != 0) {
-        const long double partialVlPenalty = gradInputW > gradOutputW ?
-            COST_PARTIAL_VL_PENALTY_HW : COST_PARTIAL_VL_PENALTY_BASELINE;
-        cost += static_cast<long double>(highAxisInner % computeVl) *
-                static_cast<long double>(normalCoreProcessNum) * partialVlPenalty;
+        const long double partialVlPenalty = gradInputW > gradOutputW ? COST_PARTIAL_VL_PENALTY_HW :
+                                                                        COST_PARTIAL_VL_PENALTY_BASELINE;
+        cost += static_cast<long double>(highAxisInner % computeVl) * static_cast<long double>(normalCoreProcessNum) *
+                partialVlPenalty;
     }
 
-    if (gradInputW > gradOutputW &&
-        gradInputW >= gradOutputW * STRONG_COLLAPSE_RATIO) {
+    if (gradInputW > gradOutputW && gradInputW >= gradOutputW * STRONG_COLLAPSE_RATIO) {
         const int64_t alignedOutputRow = Ops::Base::CeilAlign(
-            hOutputInner *
-                Ops::Base::CeilAlign(wOutputInner, baseData.maxDataNumInOneBlock),
-            TRANS_ADDR_LEN);
-        cost += static_cast<long double>(blockNum) *
-                static_cast<long double>(alignedOutputRow) *
+            hOutputInner * Ops::Base::CeilAlign(wOutputInner, baseData.maxDataNumInOneBlock), TRANS_ADDR_LEN);
+        cost += static_cast<long double>(blockNum) * static_cast<long double>(alignedOutputRow) *
                 static_cast<long double>(highAxisInner) * COST_TRANS_ALIGN_FACTOR;
     }
 
-    const int64_t idleCoreNum =
-        baseData.totalCoreNum -
-        Ops::Base::CeilDiv(blockNum, normalCoreProcessNum);
-    cost += static_cast<long double>(std::max<int64_t>(0, idleCoreNum)) *
-            static_cast<long double>(oneBlockWork) * COST_IDLE_CORE_FACTOR;
+    const int64_t idleCoreNum = baseData.totalCoreNum - Ops::Base::CeilDiv(blockNum, normalCoreProcessNum);
+    cost += static_cast<long double>(std::max<int64_t>(0, idleCoreNum)) * static_cast<long double>(oneBlockWork) *
+            COST_IDLE_CORE_FACTOR;
 
     if (hOutputInner == LIMIT && gradOutputH > LIMIT) {
-        cost += static_cast<long double>(normalCoreProcessNum) *
-                static_cast<long double>(oneBlockWork);
+        cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
     }
 
     return cost;
 }
 
 bool AdaptiveAvgPool2dGradTilingSmallKernel::TryRecordBetterTiling(
-    long double cost, int64_t hOutputInner, int64_t wOutputInner,
-    int64_t blockNum, int64_t usedCoreNum,
-    int64_t highAxisInner, int64_t highAxisPadding, int64_t highAxisTail,
-    int64_t& bestHighAxisInner, int64_t& bestHOutputInner, int64_t& bestWOutputInner,
-    int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
-    int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
-    int64_t& bestBufferSize, long double& bestCost,
+    long double cost, int64_t hOutputInner, int64_t wOutputInner, int64_t blockNum, int64_t usedCoreNum,
+    int64_t highAxisInner, int64_t highAxisPadding, int64_t highAxisTail, int64_t& bestHighAxisInner,
+    int64_t& bestHOutputInner, int64_t& bestWOutputInner, int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
+    int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail, int64_t& bestBufferSize, long double& bestCost,
     bool& found)
 {
     bool better = false;
@@ -493,10 +437,8 @@ bool AdaptiveAvgPool2dGradTilingSmallKernel::TryRecordBetterTiling(
     } else if (cost == bestCost) {
         const int64_t curArea = hOutputInner * wOutputInner;
         const int64_t bestArea = bestHOutputInner * bestWOutputInner;
-        if (blockNum < bestBlockNum ||
-            (blockNum == bestBlockNum && curArea > bestArea) ||
-            (blockNum == bestBlockNum && curArea == bestArea &&
-             highAxisPadding < bestHighAxisPadding)) {
+        if (blockNum < bestBlockNum || (blockNum == bestBlockNum && curArea > bestArea) ||
+            (blockNum == bestBlockNum && curArea == bestArea && highAxisPadding < bestHighAxisPadding)) {
             better = true;
         }
     }
@@ -553,31 +495,27 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::DoUBTiling()
     DoBufferCalculate();
 
     splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
-    splitData.wOutputTail =
-        (gradOutputW % splitData.wOutputInner == 0) ? splitData.wOutputInner : (gradOutputW % splitData.wOutputInner);
+    splitData.wOutputTail = (gradOutputW % splitData.wOutputInner == 0) ? splitData.wOutputInner :
+                                                                          (gradOutputW % splitData.wOutputInner);
 
     splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
-    splitData.hOutputTail =
-        (gradOutputH % splitData.hOutputInner == 0) ? splitData.hOutputInner : (gradOutputH % splitData.hOutputInner);
+    splitData.hOutputTail = (gradOutputH % splitData.hOutputInner == 0) ? splitData.hOutputInner :
+                                                                          (gradOutputH % splitData.hOutputInner);
 
     splitData.highAxisOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
-    splitData.highAxisTail =
-        (baseData.inputNCSize % splitData.highAxisInner == 0) ?
-            splitData.highAxisInner :
-            (baseData.inputNCSize % splitData.highAxisInner);
+    splitData.highAxisTail = (baseData.inputNCSize % splitData.highAxisInner == 0) ?
+                                 splitData.highAxisInner :
+                                 (baseData.inputNCSize % splitData.highAxisInner);
 }
 
 void AdaptiveAvgPool2dGradTilingSmallKernel::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum =
-        splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter;
+    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter;
 
-    splitData.normalCoreProcessNum =
-        Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
-    splitData.usedCoreNum =
-        Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
+    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void AdaptiveAvgPool2dGradTilingSmallKernel::SetTilingData()
@@ -613,12 +551,14 @@ void AdaptiveAvgPool2dGradTilingSmallKernel::PrintSplitData() const
     const int64_t highAxisTotalCapacity = splitData.highAxisOuter * splitData.highAxisInner;
     const int64_t highAxisPadding = highAxisTotalCapacity - baseData.inputNCSize;
     const double highAxisValidRate = highAxisTotalCapacity == 0 ? 0.0 :
-        static_cast<double>(baseData.inputNCSize) / static_cast<double>(highAxisTotalCapacity);
+                                                                  static_cast<double>(baseData.inputNCSize) /
+                                                                      static_cast<double>(highAxisTotalCapacity);
     const double ubUseRate = baseData.availableUb == 0 ? 0.0 :
-        static_cast<double>(splitData.totalBufferSize) / static_cast<double>(baseData.availableUb);
+                                                         static_cast<double>(splitData.totalBufferSize) /
+                                                             static_cast<double>(baseData.availableUb);
     const double coreUseRate = baseData.totalCoreNum == 0 ? 0.0 :
-        static_cast<double>(splitData.usedCoreNum) / static_cast<double>(baseData.totalCoreNum);
-
+                                                            static_cast<double>(splitData.usedCoreNum) /
+                                                                static_cast<double>(baseData.totalCoreNum);
 }
 
 ge::graphStatus AdaptiveAvgPool2dGradTilingSmallKernel::DoOpTiling()
@@ -654,10 +594,7 @@ ge::graphStatus AdaptiveAvgPool2dGradTilingSmallKernel::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool2dGradTilingSmallKernel::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool2dGradTilingSmallKernel::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2dGrad, AdaptiveAvgPool2dGradTilingSmallKernel, 20);
 } // namespace optiling

@@ -30,70 +30,50 @@ public:
         // scale/batch_variance 始终为 fp32 + FORMAT_ND
         this->Input("grads")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
-                     ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                                ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
-                                ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                     ge::FORMAT_NC1HWC0})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                                 ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NC1HWC0,
+                                 ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0})
             .AutoContiguous();
 
         this->Input("scale")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
         this->Input("batch_variance")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
         this->Output("x_backprop")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
-                     ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-                                ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
-                                ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                     ge::FORMAT_NC1HWC0})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                                 ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NC1HWC0,
+                                 ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0})
             .AutoContiguous();
 
-        this->Attr("epsilon")
-            .AttrType(OPTIONAL)
-            .Float(0.0001f);
+        this->Attr("epsilon").AttrType(OPTIONAL).Float(0.0001f);
 
         // format_mode 属性：指定 grads 的逻辑数据布局。
         // 框架的 AutoContiguous 会将 NHWC 等格式归一化为 ND，
         // 导致 tiling 侧无法通过 GetFormat() 区分 NCHW 与 NHWC。
         // 因此通过显式属性传递格式信息。
         // 取值：0=NCHW(默认) / 1=NHWC / 2=NC1HWC0
-        this->Attr("format_mode")
-            .AttrType(OPTIONAL)
-            .Int(0);
+        this->Attr("format_mode").AttrType(OPTIONAL).Int(0);
 
         OpAICoreConfig aicoreConfig910B;
         aicoreConfig910B.DynamicCompileStaticFlag(true)

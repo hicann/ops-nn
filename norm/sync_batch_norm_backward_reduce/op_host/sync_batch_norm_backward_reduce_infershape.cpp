@@ -19,21 +19,23 @@
 using namespace ge;
 namespace ops {
 ge::graphStatus InferShape4InIdxAndOutVector(gert::InferShapeContext* context, int64_t input_idx,
-                                             const std::vector<int64_t>& output_idxs) {
-  auto in_shape = context->GetInputShape(input_idx);
-  OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
-  for (int64_t idx : output_idxs) {
-    auto out_shape = context->GetOutputShape(idx);
-    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-    *out_shape = *in_shape;
-  }
-  return ge::GRAPH_SUCCESS;
+                                             const std::vector<int64_t>& output_idxs)
+{
+    auto in_shape = context->GetInputShape(input_idx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
+    for (int64_t idx : output_idxs) {
+        auto out_shape = context->GetOutputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+        *out_shape = *in_shape;
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShape4SyncBatchNormBackwardReduce(gert::InferShapeContext* context) {
-  static const std::vector<int64_t> out_idxs{0, 1};
-  return InferShape4InIdxAndOutVector(context, 0, out_idxs);
+static ge::graphStatus InferShape4SyncBatchNormBackwardReduce(gert::InferShapeContext* context)
+{
+    static const std::vector<int64_t> out_idxs{0, 1};
+    return InferShape4InIdxAndOutVector(context, 0, out_idxs);
 }
 
 IMPL_OP_INFERSHAPE(SyncBatchNormBackwardReduce).InferShape(InferShape4SyncBatchNormBackwardReduce);
-}  // namespace ops
+} // namespace ops

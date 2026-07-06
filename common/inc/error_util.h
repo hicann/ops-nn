@@ -18,18 +18,18 @@
 #include "log/log.h"
 #include "graph/operator.h"
 
-#define CUBE_INNER_ERR_REPORT(opName, errMsg, ...)                                                            \
-    do {                                                                                                      \
-        OP_LOGE_WITHOUT_REPORT(opName, errMsg, ##__VA_ARGS__);                                                \
-        REPORT_INNER_ERR_MSG(                                                                                 \
-            "E69999", "op[%s], " errMsg, Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(opName)), ##__VA_ARGS__); \
+#define CUBE_INNER_ERR_REPORT(opName, errMsg, ...)                                                             \
+    do {                                                                                                       \
+        OP_LOGE_WITHOUT_REPORT(opName, errMsg, ##__VA_ARGS__);                                                 \
+        REPORT_INNER_ERR_MSG("E69999", "op[%s], " errMsg, Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(opName)), \
+                             ##__VA_ARGS__);                                                                   \
     } while (0)
 
-#define VECTOR_INNER_ERR_REPORT_TILIING(opName, errMsg, ...)                                                  \
-    do {                                                                                                      \
-        OP_LOGE_WITHOUT_REPORT(opName, errMsg, ##__VA_ARGS__);                                                \
-        REPORT_INNER_ERR_MSG(                                                                                 \
-            "E89999", "op[%s], " errMsg, Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(opName)), ##__VA_ARGS__); \
+#define VECTOR_INNER_ERR_REPORT_TILIING(opName, errMsg, ...)                                                   \
+    do {                                                                                                       \
+        OP_LOGE_WITHOUT_REPORT(opName, errMsg, ##__VA_ARGS__);                                                 \
+        REPORT_INNER_ERR_MSG("E89999", "op[%s], " errMsg, Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(opName)), \
+                             ##__VA_ARGS__);                                                                   \
     } while (0)
 
 #define OP_TILING_CHECK(cond, log_func, expr) \
@@ -56,7 +56,8 @@
     }
 
 template <typename T>
-std::string Shape2String(const T& shape) {
+std::string Shape2String(const T& shape)
+{
     std::ostringstream oss;
     oss << "[";
     if (shape.GetDimNum() > 0) {
@@ -82,13 +83,13 @@ std::string Shape2String(const T& shape) {
         }                                                                                                        \
     } while (0)
 
-#define OP_LOGW_IF(condition, opName, fmt, ...)                                                                \
-  static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
-  do {                                                                                                         \
-    if (unlikely(condition)) {                                                                                 \
-      OP_LOGW(opName, fmt, ##__VA_ARGS__);                                                                     \
-    }                                                                                                          \
-  } while (0)
+#define OP_LOGW_IF(condition, opName, fmt, ...)                                                                  \
+    static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
+    do {                                                                                                         \
+        if (unlikely(condition)) {                                                                               \
+            OP_LOGW(opName, fmt, ##__VA_ARGS__);                                                                 \
+        }                                                                                                        \
+    } while (0)
 
 #define OP_LOGI_IF_RETURN(condition, returnValue, opName, fmt, ...)                                              \
     static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
@@ -99,4 +100,4 @@ std::string Shape2String(const T& shape) {
         }                                                                                                        \
     } while (0)
 
-#endif  // COMMON_INC_ERROR_UTIL_H_
+#endif // COMMON_INC_ERROR_UTIL_H_

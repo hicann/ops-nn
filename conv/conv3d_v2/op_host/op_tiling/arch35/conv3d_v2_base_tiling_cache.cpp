@@ -32,8 +32,8 @@ bool Conv3dBaseTilingV2::GetTilingFromCache()
     }
 
     Conv3dTilingCache& tilingCache = Conv3dTilingCache::GetInstance();
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: current cache size is %zu.",
-            paramInfo_.nodeType.c_str(), tilingCache.GetCacheSize());
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: current cache size is %zu.", paramInfo_.nodeType.c_str(),
+            tilingCache.GetCacheSize());
     GetCacheTilingInputArgs();
     if (tilingCache.GetCachedTiling(cacheInputArgs_, cachedTilingData_)) {
         TranslateCachedTilingData();
@@ -106,11 +106,7 @@ void Conv3dBaseTilingV2::GetCacheTilingInputArgs()
     cacheInputArgs_.scaleFlag1 = 0;
 }
 
-
-void Conv3dBaseTilingV2::GetCachedTilingData()
-{
-    cachedTilingData_ = tilingData_;
-}
+void Conv3dBaseTilingV2::GetCachedTilingData() { cachedTilingData_ = tilingData_; }
 
 void Conv3dBaseTilingV2::TranslateCachedTilingData()
 {
@@ -123,5 +119,5 @@ void Conv3dBaseTilingV2::TranslateCachedTilingData()
                               (cachedTilingData_.kwL1 > 0 && cachedTilingData_.kwL1 < cacheInputArgs_.weightShapeW);
     flagInfo_.convGroupType = GetGroupsInfo();
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

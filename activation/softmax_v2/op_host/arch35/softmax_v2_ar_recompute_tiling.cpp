@@ -22,11 +22,10 @@
 using namespace ge;
 
 using namespace Ops::Base;
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t AR_RECOMPUTE_MAX_BUFFER_BTYES = 32;
 constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;   // sizeof(float) * 8 * 64
+constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048; // sizeof(float) * 8 * 64
 constexpr int64_t TRIPLE_BUFFER = 3;
 constexpr int64_t BIT_COUNT_64 = 64;
 
@@ -34,10 +33,10 @@ bool SoftmaxV2TilingARRecompute::IsCapable()
 {
     // a0_为1的场景走AR模板
     OP_CHECK_IF(a0_ != DIM_NUM_ONE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR recompute template is not capable. axes is: %ld, merged shape is (%ld, %ld, %ld).",
-                            reduceAxes_, a1_, r_, a0_),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR recompute template is not capable. axes is: %ld, merged shape is (%ld, %ld, %ld).",
+                        reduceAxes_, a1_, r_, a0_),
+                return false);
     return true;
 }
 
@@ -94,16 +93,16 @@ int64_t SoftmaxV2TilingARRecompute::Lcm(const int64_t a, const int64_t b)
 ge::graphStatus SoftmaxV2TilingARRecompute::DoOpTiling()
 {
     // 检查ub空间是否足够
-    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_MAX_BUFFER_BTYES - AR_RECOMPUTE_SUM_BUFFER_BTYES
-                    - AR_RECOMPUTE_BINARY_CACHE_BTYES;
+    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_MAX_BUFFER_BTYES - AR_RECOMPUTE_SUM_BUFFER_BTYES -
+                  AR_RECOMPUTE_BINARY_CACHE_BTYES;
     baseFactor_ = xDtypeSize_ * TRIPLE_BUFFER + yDtypeSize_ * DOUBLE_BUFFER + sizeof(float);
 
     OP_CHECK_IF((baseFactor_ > ubFlexible_),
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR recompute template is not capable. original shape is:(%s), axes is: %ld, merged "
-                            "shape is (%ld, %ld, %ld), ub size: %ldB",
-                            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_, aicoreParams_.ubSize),
-                    return ge::GRAPH_PARAM_INVALID);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR recompute template is not capable. original shape is:(%s), axes is: %ld, merged "
+                        "shape is (%ld, %ld, %ld), ub size: %ldB",
+                        VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_, aicoreParams_.ubSize),
+                return ge::GRAPH_PARAM_INVALID);
 
     OP_LOGI(context_->GetNodeName(),
             "AR recompute template is capable. original shape is:(%s), axes is: %ld, merged shape is "
@@ -132,10 +131,7 @@ ge::graphStatus SoftmaxV2TilingARRecompute::DoOpTiling()
     return BinarySummationTiling();
 }
 
-uint64_t SoftmaxV2TilingARRecompute::GetTilingKey() const
-{
-    return TILINGKEY_AR_RECOMPUTE;
-}
+uint64_t SoftmaxV2TilingARRecompute::GetTilingKey() const { return TILINGKEY_AR_RECOMPUTE; }
 
 ge::graphStatus SoftmaxV2TilingARRecompute::PostTiling()
 {
@@ -149,4 +145,4 @@ ge::graphStatus SoftmaxV2TilingARRecompute::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxV2, SoftmaxV2TilingARRecompute, TEMPLATE_AR_RECOMPUTE_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include "gtest/gtest.h"
@@ -13,18 +14,11 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 
-class l2BatchNormBackwardTest : public testing::Test
-{
+class l2BatchNormBackwardTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2BatchNormBackwardTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2BatchNormBackwardTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2BatchNormBackwardTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2BatchNormBackwardTest TearDown" << std::endl; }
 };
 
 TEST_F(l2BatchNormBackwardTest, l2_batch_norm_backward_false_bias)
@@ -342,10 +336,9 @@ TEST_F(l2BatchNormBackwardTest, l2_batch_norm_backward_err_null)
     auto gradBiasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
     auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormBackward,
-        INPUT(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, true, 1e-5, output_mask),
-        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormBackward,
+                        INPUT(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, true, 1e-5, output_mask),
+                        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

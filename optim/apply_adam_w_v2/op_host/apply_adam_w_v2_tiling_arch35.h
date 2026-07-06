@@ -24,39 +24,41 @@
 namespace optiling {
 using namespace Ops::Base;
 class ApplyAdamWV2RegbaseTiling {
- public:
-  explicit ApplyAdamWV2RegbaseTiling(gert::TilingContext *context) : tilingContext_(context) {};
+public:
+    explicit ApplyAdamWV2RegbaseTiling(gert::TilingContext* context) : tilingContext_(context){};
 
-  ge::graphStatus RunTiling();
-  ApplyAdamWV2RegbaseTilingData *tiling_ = nullptr;
+    ge::graphStatus RunTiling();
+    ApplyAdamWV2RegbaseTilingData* tiling_ = nullptr;
 
- protected:
-  ge::graphStatus DoElewiseTiling();
-  ge::graphStatus DoAmsGradTiling(ElewiseBaseTiling& eleBaseTiling, ge::DataType& varDType, ge::DataType& gradDType, ge::DataType& stepDType);
-  ge::graphStatus DoNormTiling(ElewiseBaseTiling& eleBaseTiling, ge::DataType& varDType, ge::DataType& gradDType, ge::DataType& stepDType);
-  ge::graphStatus SetTilingData();
-  ge::graphStatus CheckScalarInput();
-  ge::graphStatus CheckMixAndOptionalInput(const gert::Shape& inputStorageShape);
-  ge::graphStatus CheckSameShape(size_t inputIdx, const gert::Shape& input0Shape);
-  ge::graphStatus CheckSameDtype(size_t inputIdx, ge::DataType& input0Dtype);
-  ge::graphStatus CheckShapeAndType();
-  ge::graphStatus GetAttributes();
-  void PrintInfo();
+protected:
+    ge::graphStatus DoElewiseTiling();
+    ge::graphStatus DoAmsGradTiling(ElewiseBaseTiling& eleBaseTiling, ge::DataType& varDType, ge::DataType& gradDType,
+                                    ge::DataType& stepDType);
+    ge::graphStatus DoNormTiling(ElewiseBaseTiling& eleBaseTiling, ge::DataType& varDType, ge::DataType& gradDType,
+                                 ge::DataType& stepDType);
+    ge::graphStatus SetTilingData();
+    ge::graphStatus CheckScalarInput();
+    ge::graphStatus CheckMixAndOptionalInput(const gert::Shape& inputStorageShape);
+    ge::graphStatus CheckSameShape(size_t inputIdx, const gert::Shape& input0Shape);
+    ge::graphStatus CheckSameDtype(size_t inputIdx, ge::DataType& input0Dtype);
+    ge::graphStatus CheckShapeAndType();
+    ge::graphStatus GetAttributes();
+    void PrintInfo();
 
- private:
-  gert::TilingContext *tilingContext_;
-  uint64_t tilingKey = 0;
-  uint64_t dType = 0;
-  uint64_t schMode = 0;
-  float lrAttr_ = 0.1;
-  float beta1Attr_ = 0.1;
-  float beta2Attr_ = 0.1;
-  float weightDecayAttr_ = 0.1;
-  float epsAttr_ = 1e-8;
-  bool amsgradAttr_ = false;
-  bool maximizeAttr_ = false;
-  uint64_t amsgrad = 0;
+private:
+    gert::TilingContext* tilingContext_;
+    uint64_t tilingKey = 0;
+    uint64_t dType = 0;
+    uint64_t schMode = 0;
+    float lrAttr_ = 0.1;
+    float beta1Attr_ = 0.1;
+    float beta2Attr_ = 0.1;
+    float weightDecayAttr_ = 0.1;
+    float epsAttr_ = 1e-8;
+    bool amsgradAttr_ = false;
+    bool maximizeAttr_ = false;
+    uint64_t amsgrad = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // RUNTIME_V2_OP_IMPL_APPLY_ADAM_W_V2_REGBASE_TILING_H_
+#endif // RUNTIME_V2_OP_IMPL_APPLY_ADAM_W_V2_REGBASE_TILING_H_

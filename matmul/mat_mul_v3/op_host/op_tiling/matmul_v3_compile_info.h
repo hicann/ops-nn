@@ -37,5 +37,5 @@ struct MatmulV3CompileInfo {
     bool supportL0c2out = false;
     bool supportL12BtBf16 = false;
 };
-}
+} // namespace optiling
 #endif // __OP_HOST_MATMUL_V3_COMPILE_INFO_H__

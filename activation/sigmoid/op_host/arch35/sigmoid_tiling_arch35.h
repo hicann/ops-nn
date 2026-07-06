@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -23,14 +23,14 @@
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(SigmoidTilingData)
-    TILING_DATA_FIELD_DEF(int64_t, dim0);
-    TILING_DATA_FIELD_DEF(int64_t, blockFormer);
-    TILING_DATA_FIELD_DEF(int64_t, ubFormer);
-    TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock);
-    TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);
-    TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock);
-    TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);
-    TILING_DATA_FIELD_DEF(int64_t, elemNum);
+TILING_DATA_FIELD_DEF(int64_t, dim0);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, elemNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(Sigmoid, SigmoidTilingData);
@@ -41,10 +41,10 @@ struct SigmoidCompileInfo {
 };
 
 class SigmoidTiling : public Ops::NN::Optiling::TilingBaseClass {
-   public:
+public:
     explicit SigmoidTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
-   protected:
+protected:
     bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -53,9 +53,9 @@ class SigmoidTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    std::string ToString(SigmoidTilingData &tilingData_) const;
+    std::string ToString(SigmoidTilingData& tilingData_) const;
 
-   private:
+private:
     uint64_t GetOpKey(ge::DataType xDtype, ge::DataType yDtype) const;
     uint64_t GenerateTilingKey(uint64_t innerKey) const;
     std::map<uint64_t, Ops::Base::ComputeParams> GetComputeMap(uint64_t opKey_) const;
@@ -67,6 +67,6 @@ class SigmoidTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t blockNum = 0;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif //AIR_CXX_RUNTIME_V2_OP_IMPL_SIGMOID_H_
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SIGMOID_H_

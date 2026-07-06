@@ -22,17 +22,16 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SwishV2);
 
-const aclTensor *SwishV2(const aclTensor *self, float scale, aclOpExecutor *executor)
+const aclTensor* SwishV2(const aclTensor* self, float scale, aclOpExecutor* executor)
 {
     L0_DFX(SwishV2, self, scale);
-    auto *swishOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
+    auto* swishOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
     CHECK_RET(swishOut != nullptr, nullptr);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SwishV2, OP_INPUT(self), OP_OUTPUT(swishOut), OP_ATTR(scale));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SwishV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SwishV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return swishOut;
 }
 
-}  // namespace l0op
+} // namespace l0op

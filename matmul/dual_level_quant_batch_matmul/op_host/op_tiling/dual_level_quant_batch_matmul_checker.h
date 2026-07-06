@@ -22,8 +22,7 @@
 #endif
 
 namespace optiling {
-enum class QuantType
-{
+enum class QuantType {
     NONE = 0,
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
@@ -48,13 +47,11 @@ inline constexpr const char* QuantTypeToString(QuantType quantType)
     }
 }
 
-enum class KernelTemplateType
-{
+enum class KernelTemplateType {
     DEFAULT_CUBE_BOUND = 0,
 };
 
-enum class WeightFormat
-{
+enum class WeightFormat {
     ND = 0,
     FRACTAL_NZ = 1,
 };
@@ -106,17 +103,14 @@ namespace Ops::NN::DLQBMMChecker {
 
 ge::graphStatus CheckContext(gert::TilingContext* context, uint64_t tilingDataSize);
 
-bool CheckAttrs(
-    [[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
-    const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
+bool CheckAttrs([[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+                const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
-bool CheckDtypes(
-    [[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
-    const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
+bool CheckDtypes([[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+                 const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
-bool CheckInputs(
-    [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
-    const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
+bool CheckInputs([[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+                 const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
 } // namespace Ops::NN::DLQBMMChecker
 #endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_CHECKER_H

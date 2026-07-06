@@ -58,30 +58,27 @@ const int32_t BLOCK_SIZE = 32;
 const uint32_t UB_INDEX_NUM = 2048;
 const uint32_t INDEX_BUFFER_SIZE = UB_INDEX_NUM * 2 * SIZE_OF_INT32;
 const uint32_t RESERVED_BUFFER_SIZE = 1024;
-static const std::map<int32_t, int32_t> DTYPE_BUF_CNT_MAP = {
-    {FLOAT32_TILING_KEY, BUF_CNT_2},
-    {FLOAT16_TILING_KEY, BUF_CNT_7},
-    {BF16_TILING_KEY, BUF_CNT_7},
-    {INT16_TILING_KEY, BUF_CNT_2},
-    {INT32_TILING_KEY, BUF_CNT_2},
-    {FLOAT32_FIX_TILING_KEY, BUF_CNT_3},
-    {FLOAT32_OTHER_DIM_TILING_KEY, BUF_CNT_2},
-    {FLOAT16_OTHER_DIM_TILING_KEY, BUF_CNT_6},
-    {BF16_OTHER_DIM_TILING_KEY, BUF_CNT_6},
-    {INT16_OTHER_DIM_TILING_KEY, BUF_CNT_2},
-    {INT32_OTHER_DIM_TILING_KEY, BUF_CNT_2}};
+static const std::map<int32_t, int32_t> DTYPE_BUF_CNT_MAP = {{FLOAT32_TILING_KEY, BUF_CNT_2},
+                                                             {FLOAT16_TILING_KEY, BUF_CNT_7},
+                                                             {BF16_TILING_KEY, BUF_CNT_7},
+                                                             {INT16_TILING_KEY, BUF_CNT_2},
+                                                             {INT32_TILING_KEY, BUF_CNT_2},
+                                                             {FLOAT32_FIX_TILING_KEY, BUF_CNT_3},
+                                                             {FLOAT32_OTHER_DIM_TILING_KEY, BUF_CNT_2},
+                                                             {FLOAT16_OTHER_DIM_TILING_KEY, BUF_CNT_6},
+                                                             {BF16_OTHER_DIM_TILING_KEY, BUF_CNT_6},
+                                                             {INT16_OTHER_DIM_TILING_KEY, BUF_CNT_2},
+                                                             {INT32_OTHER_DIM_TILING_KEY, BUF_CNT_2}};
 
 struct InplaceIndexAddWithSortedCompileInfo {
     uint32_t totalCoreNum = 40;
     int64_t ubSizePlatForm = 0;
 };
 
-class InplaceIndexAddWithSortedTilingDef
-{
+class InplaceIndexAddWithSortedTilingDef {
 public:
-    InplaceIndexAddWithSortedTilingDef(
-        const std::vector<std::vector<int64_t>> shapesInfo, const std::vector<int64_t> attsInfo,
-        ge::DataType varDtypeIn = ge::DT_FLOAT)
+    InplaceIndexAddWithSortedTilingDef(const std::vector<std::vector<int64_t>> shapesInfo,
+                                       const std::vector<int64_t> attsInfo, ge::DataType varDtypeIn = ge::DT_FLOAT)
         : dimAttr(attsInfo[0])
     {
         varDtype = varDtypeIn;
@@ -106,14 +103,8 @@ public:
 
     ge::graphStatus RunKernelTiling();
     void TilingDataSet(uint8_t* tilingPtr);
-    int32_t GetTilingKey()
-    {
-        return static_cast<int32_t>(tilingKey);
-    };
-    int32_t GetNeedCoreNum()
-    {
-        return static_cast<int32_t>(usedCoreNum);
-    };
+    int32_t GetTilingKey() { return static_cast<int32_t>(tilingKey); };
+    int32_t GetNeedCoreNum() { return static_cast<int32_t>(usedCoreNum); };
 
 private:
     template <typename T1, typename T2>

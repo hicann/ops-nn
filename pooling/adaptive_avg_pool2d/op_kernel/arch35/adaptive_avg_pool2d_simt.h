@@ -37,33 +37,35 @@ constexpr static uint32_t IDX3 = 3;
 template <typename VALUE_T, typename OFFSET_T>
 class AdaptiveAvgPool2dSimt {
 public:
-    __aicore__ inline AdaptiveAvgPool2dSimt(TPipe *pipe,
-                                                  const AdaptivePool2DSimtTilingData *__restrict__ tilingData)
+    __aicore__ inline AdaptiveAvgPool2dSimt(TPipe* pipe, const AdaptivePool2DSimtTilingData* __restrict__ tilingData)
         : pipe_(pipe), tilingData_(tilingData)
-    {
-    }
+    {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     AscendC::GlobalTensor<VALUE_T> x_;
     AscendC::GlobalTensor<VALUE_T> y_;
-    const AdaptivePool2DSimtTilingData *tilingData_;
+    const AdaptivePool2DSimtTilingData* tilingData_;
     TBuf<TPosition::VECCALC> simtTilingDataBuf_;
     TBuf<TPosition::VECCALC> paramBuf_;
 };
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalStartIdx(DIV_T outIdx,  DIV_T inLen, DIV_T magicOutLen, DIV_T shiftOutLen)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalStartIdx(DIV_T outIdx, DIV_T inLen,
+                                                                                          DIV_T magicOutLen,
+                                                                                          DIV_T shiftOutLen)
 {
     DIV_T pStart = outIdx * inLen;
     return Simt::UintDiv<DIV_T>(pStart, magicOutLen, shiftOutLen);
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalEndIdx(DIV_T outIdx,  DIV_T inLen, DIV_T outLen, DIV_T magicOutLen, DIV_T shiftOutLen)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalEndIdx(DIV_T outIdx, DIV_T inLen,
+                                                                                        DIV_T outLen, DIV_T magicOutLen,
+                                                                                        DIV_T shiftOutLen)
 {
     // wOutIndex=0, inW=109, outW=46
     DIV_T pEnd = ((outIdx + 1) * inLen + outLen - 1);
@@ -72,28 +74,24 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T Ca
 
 template <typename VALUE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dNchw(
-    const __gm__ VALUE_T* x,  __gm__ VALUE_T* y,
-    const OFFSET_T magicOH, const OFFSET_T shiftOH,
-    const OFFSET_T magicOW, const OFFSET_T shiftOW,
-    const OFFSET_T nDims, const OFFSET_T cDims,
-    const OFFSET_T inH, const OFFSET_T inW,
-    const OFFSET_T outH, const OFFSET_T outW
-   )
+    const __gm__ VALUE_T* x, __gm__ VALUE_T* y, const OFFSET_T magicOH, const OFFSET_T shiftOH, const OFFSET_T magicOW,
+    const OFFSET_T shiftOW, const OFFSET_T nDims, const OFFSET_T cDims, const OFFSET_T inH, const OFFSET_T inW,
+    const OFFSET_T outH, const OFFSET_T outW)
 {
     OFFSET_T count = nDims * cDims * outH * outW;
-    for (OFFSET_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
-         index += gridDim.x * blockDim.x) {
+    for (OFFSET_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index += gridDim.x * blockDim.x) {
         OFFSET_T wDiv = Simt::UintDiv(index, magicOW, shiftOW);
-        OFFSET_T wOutIndex = index - wDiv * outW;      //w= index % outW
+        OFFSET_T wOutIndex = index - wDiv * outW; // w= index % outW
         OFFSET_T hDiv = Simt::UintDiv(wDiv, magicOH, shiftOH);
-        OFFSET_T hOutIndex = wDiv - hDiv * outH;      //h = (index / inw) % inH
+        OFFSET_T hOutIndex = wDiv - hDiv * outH; // h = (index / inw) % inH
 
         OFFSET_T hStarts = CalStartIdx<OFFSET_T>(hOutIndex, inH, magicOH, shiftOH); // oy*isize/osize
-        OFFSET_T hEnds = CalEndIdx<OFFSET_T>(hOutIndex, inH, outH, magicOH, shiftOH);// ((oy+1)* isize + osize - 1)/osize
+        OFFSET_T hEnds = CalEndIdx<OFFSET_T>(hOutIndex, inH, outH, magicOH,
+                                             shiftOH); // ((oy+1)* isize + osize - 1)/osize
         OFFSET_T wStarts = CalStartIdx<OFFSET_T>(wOutIndex, inW, magicOW, shiftOW);
         OFFSET_T wEnds = CalEndIdx<OFFSET_T>(wOutIndex, inW, outW, magicOW, shiftOW);
 
-        //input
+        // input
         OFFSET_T kH = hEnds - hStarts;
         OFFSET_T kW = wEnds - wStarts;
         OFFSET_T div = kH * kW;
@@ -115,8 +113,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dNch
 template <typename VALUE_T, typename OFFSET_T>
 __aicore__ inline void AdaptiveAvgPool2dSimt<VALUE_T, OFFSET_T>::Init(GM_ADDR x, GM_ADDR y)
 {
-    x_.SetGlobalBuffer((__gm__ VALUE_T *)(x));
-    y_.SetGlobalBuffer((__gm__ VALUE_T *)(y));
+    x_.SetGlobalBuffer((__gm__ VALUE_T*)(x));
+    y_.SetGlobalBuffer((__gm__ VALUE_T*)(y));
     pipe_->InitBuffer(simtTilingDataBuf_, TILING_DATA_NUM * sizeof(int64_t));
     pipe_->InitBuffer(paramBuf_, SIMT_PARAMS_NUM * sizeof(OFFSET_T));
 }
@@ -131,19 +129,14 @@ __aicore__ inline void AdaptiveAvgPool2dSimt<VALUE_T, OFFSET_T>::Process()
     GetUintDivMagicAndShift<OFFSET_T>(magicOsizeW, shiftOsizeW, tilingData_->wOutDim);
 
     DataSyncBarrier<MemDsbT::UB>();
-    auto xData = (__gm__ VALUE_T *)x_.GetPhyAddr();
-    auto yData = (__gm__ VALUE_T *)y_.GetPhyAddr();
+    auto xData = (__gm__ VALUE_T*)x_.GetPhyAddr();
+    auto yData = (__gm__ VALUE_T*)y_.GetPhyAddr();
 
     asc_vf_call<AdaptiveAvgPool2dNchw<VALUE_T, OFFSET_T>>(
-        dim3(tilingData_->threads),
-        xData, yData,
-        magicOsizeH, shiftOsizeH,
-        magicOsizeW, shiftOsizeW,
-        tilingData_->nDim, tilingData_->cDim,
-        tilingData_->hInDim, tilingData_->wInDim,
-        tilingData_->hOutDim, tilingData_->wOutDim);
+        dim3(tilingData_->threads), xData, yData, magicOsizeH, shiftOsizeH, magicOsizeW, shiftOsizeW, tilingData_->nDim,
+        tilingData_->cDim, tilingData_->hInDim, tilingData_->wInDim, tilingData_->hOutDim, tilingData_->wOutDim);
 }
 
-}
+} // namespace AdaptiveAvgPool2dOp
 
-#endif  //ADAPTIVE_AVG_POOL2D_SIMT_H
+#endif // ADAPTIVE_AVG_POOL2D_SIMT_H

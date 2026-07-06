@@ -40,6 +40,6 @@ REG_OP(LeakyRelu)
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_BF16}))
     .OP_END_FACTORY_REG(LeakyRelu)
 
-}
+} // namespace ge
 
 #endif // LEAKY_RELU_PROTO_H_

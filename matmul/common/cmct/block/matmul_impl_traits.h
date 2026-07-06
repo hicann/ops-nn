@@ -63,63 +63,40 @@ __aicore__ inline constexpr auto GetBiasParams()
     return params;
 }
 
-template <
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType
->
+template <class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType>
 __aicore__ inline constexpr auto GetStaticTiling()
 {
     constexpr auto CONFIG = GetMMConfig<DispatchPolicy::CONFIG>(
         GetMatmulShapeParams<typename DispatchPolicy::SingleShape, L0Shape>(),
-        GetFuncParams<DispatchPolicy::ENABLE_INTRINSICS_CHECK>(),
-        GetBiasParams<DispatchPolicy::ENABLE_SET_BIAS>()
-    );
+        GetFuncParams<DispatchPolicy::ENABLE_INTRINSICS_CHECK>(), GetBiasParams<DispatchPolicy::ENABLE_SET_BIAS>());
     return AscendC::GetMatmulApiTiling<AType, BType, CType, BiasType, typename DispatchPolicy::SingleShape, L1Shape,
                                        L0Shape>(CONFIG);
 }
 } // namespace Detail
 
-template <
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType,
-    class TileCopy,
-    template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass,
-    typename Enable = void
->
+template <class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType,
+          class TileCopy,
+          template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass,
+          typename Enable = void>
 struct MatmulImplTraits {
     static_assert(AscendC::Std::always_false_v<DispatchPolicy>,
                   "MatmulImplTraits is not implemented for this DispatchPolicy");
 };
 
-template <
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType
->
-struct MatmulImplTraits<
-    DispatchPolicy,
-    L1Shape, L0Shape,
-    AType, BType, CType, BiasType,
-    void,
-    AscendC::Impl::Detail::MatmulPolicy
-> {
-    constexpr static auto STATIC_TILING =
-        Detail::GetStaticTiling<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType>();
+template <class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType>
+struct MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, void,
+                        AscendC::Impl::Detail::MatmulPolicy> {
+    constexpr static auto
+        STATIC_TILING = Detail::GetStaticTiling<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType>();
 
     using Type = AscendC::MatmulImpl<AType, BType, CType, BiasType, STATIC_TILING>;
 };
 
-template <
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType,
-    template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass
->
+template <class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType,
+          template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass>
 struct MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, void, MatmulPolicyClass> {
-    constexpr static auto STATIC_TILING =
-        Detail::GetStaticTiling<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType>();
+    constexpr static auto
+        STATIC_TILING = Detail::GetStaticTiling<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType>();
 
     template <const auto& MM_CFG, typename Impl, typename AT, typename BT, typename CT, typename BiasT>
     struct MatmulPolicyCustom : public MatmulPolicyClass<MM_CFG, Impl, AT, BT, CT, BiasT> {};
@@ -128,23 +105,19 @@ struct MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, B
                                      AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>, MatmulPolicyCustom>;
 };
 
-template <
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType,
-    class TileCopy,
-    template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass
->
+template <class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType,
+          class TileCopy,
+          template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass>
 struct MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy, MatmulPolicyClass> {
     /**
-    * @brief Define a custom matrix multiplication policy
-    * @param [in] MM_CFG: matrix multiplication configuration
-    * @param [in] Impl: implementation type
-    * @param [in] InputAType: input data type of matrix A
-    * @param [in] InputBType: input data type of matrix B
-    * @param [out] OutputCType: output data type of matrix C
-    * @param [in] InputBiasType: input data type of the bias
-    */
+     * @brief Define a custom matrix multiplication policy
+     * @param [in] MM_CFG: matrix multiplication configuration
+     * @param [in] Impl: implementation type
+     * @param [in] InputAType: input data type of matrix A
+     * @param [in] InputBType: input data type of matrix B
+     * @param [out] OutputCType: output data type of matrix C
+     * @param [in] InputBiasType: input data type of the bias
+     */
     template <const auto& MM_CFG, typename Impl, typename AT, typename BT, typename CT, typename BiasT>
     struct MatmulPolicyCustom : public MatmulPolicyClass<MM_CFG, Impl, AT, BT, CT, BiasT> {
     private:
@@ -158,9 +131,8 @@ struct MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, B
                                                                   MM_CFG, void, TileCopy::template CopyGmToB1>;
         };
         struct AdaptedCopyOut {
-            using CopyOutType = AscendC::Impl::Detail::CopyCubeOut<Impl, AT, BT, CT, MM_CFG,
-                                                                   AscendC::McgShfMode::RESERVED, void,
-                                                                   TileCopy::template CopyCo1ToOut>;
+            using CopyOutType = AscendC::Impl::Detail::CopyCubeOut<
+                Impl, AT, BT, CT, MM_CFG, AscendC::McgShfMode::RESERVED, void, TileCopy::template CopyCo1ToOut>;
         };
         struct BaseCopyType {
             using CopyInAType = typename Base::CopyCubeInA;
@@ -169,47 +141,28 @@ struct MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, B
         };
 
     public:
-        using CopyCubeInA = typename AscendC::Std::conditional_t<
-            Tile::HasCopyGmToA1V<TileCopy>,
-            AdaptedCopyInA,
-            BaseCopyType
-        >::CopyInAType;
+        using CopyCubeInA = typename AscendC::Std::conditional_t<Tile::HasCopyGmToA1V<TileCopy>, AdaptedCopyInA,
+                                                                 BaseCopyType>::CopyInAType;
 
-        using CopyCubeInB = typename AscendC::Std::conditional_t<
-            Tile::HasCopyGmToB1V<TileCopy>,
-            AdaptedCopyInB,
-            BaseCopyType
-        >::CopyInBType;
+        using CopyCubeInB = typename AscendC::Std::conditional_t<Tile::HasCopyGmToB1V<TileCopy>, AdaptedCopyInB,
+                                                                 BaseCopyType>::CopyInBType;
 
-        using CopyCubeOut = typename AscendC::Std::conditional_t<
-            Tile::HasCopyCo1ToOutV<TileCopy>,
-            AdaptedCopyOut,
-            BaseCopyType
-        >::CopyOutType;
+        using CopyCubeOut = typename AscendC::Std::conditional_t<Tile::HasCopyCo1ToOutV<TileCopy>, AdaptedCopyOut,
+                                                                 BaseCopyType>::CopyOutType;
     };
 
-    constexpr static auto STATIC_TILING =
-        Detail::GetStaticTiling<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType>();
+    constexpr static auto
+        STATIC_TILING = Detail::GetStaticTiling<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType>();
     using Type = AscendC::MatmulImpl<AType, BType, CType, BiasType, STATIC_TILING,
                                      AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>, MatmulPolicyCustom>;
 };
 
-template <
-    class DispatchPolicy,
-    class L1Shape, class L0Shape,
-    class AType, class BType, class CType, class BiasType,
-    class TileCopy = void,
-    template <const auto&, typename, typename, typename, typename, typename> class MatmulPolicyClass =
-        AscendC::Impl::Detail::MatmulPolicy
->
-using MatmulImplTraitsT = typename MatmulImplTraits<
-    DispatchPolicy,
-    L1Shape, L0Shape,
-    AType, BType, CType, BiasType,
-    TileCopy,
-    MatmulPolicyClass
->::Type;
+template <class DispatchPolicy, class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType,
+          class TileCopy = void,
+          template <const auto&, typename, typename, typename, typename, typename>
+          class MatmulPolicyClass = AscendC::Impl::Detail::MatmulPolicy>
+using MatmulImplTraitsT = typename MatmulImplTraits<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType,
+                                                    TileCopy, MatmulPolicyClass>::Type;
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

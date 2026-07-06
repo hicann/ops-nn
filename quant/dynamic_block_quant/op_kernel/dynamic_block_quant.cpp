@@ -17,8 +17,8 @@
 using namespace DynamicBlockQuant;
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void dynamic_block_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void dynamic_block_quant(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

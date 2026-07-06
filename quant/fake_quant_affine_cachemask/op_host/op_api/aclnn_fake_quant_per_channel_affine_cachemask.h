@@ -51,7 +51,8 @@ extern "C" {
  * @param [in] quantMax: Host侧的整型，表示输入数据伪量化后的最大值，数据类型支持INT。
  * @param [out] out:
  * Device侧的aclTensor，数据类型支持LOAT16、FLOAT32，支持非连续Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
- * @param [out] mask: Device侧的aclTensor，数据类型支持BOOL，支持非连续Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+ * @param [out] mask:
+ * Device侧的aclTensor，数据类型支持BOOL，支持非连续Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -70,8 +71,8 @@ ACLNN_API aclnnStatus aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(void* workspace, uint64_t workspaceSize,
+                                                              aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

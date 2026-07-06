@@ -27,10 +27,8 @@ template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class A
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
-                                   DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
-                                   DispatchPolicy_>>> {
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;
@@ -70,8 +68,8 @@ public:
     }
 
 public:
-    __aicore__ inline void Init(const TupleShape& shape, const TupleShape& iterBatchTuple,
-                                const TupleShape& tileL1, const TupleShape& tileL0)
+    __aicore__ inline void Init(const TupleShape& shape, const TupleShape& iterBatchTuple, const TupleShape& tileL1,
+                                const TupleShape& tileL0)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -82,12 +80,12 @@ public:
         batchAL1_ = Get<ZERO_FLAG>(iterBatchTuple);
         batchBL1_ = Get<FIRST_FLAG>(iterBatchTuple);
         batchL0_ = Get<THIRD_FLAG>(iterBatchTuple);
-        alignedKa_ =
-            AType::isTrans ? CeilAlign(kL1_, AscendC::BLOCK_CUBE) : CeilAlign(kL1_, AscendC::AuxGetC0Size<A_T>());
-        alignedKb_ =
-            BType::isTrans ? CeilAlign(kL1_, AscendC::AuxGetC0Size<B_T>()) : CeilAlign(kL1_, AscendC::BLOCK_CUBE);
-        alignedM_ = !AType::isTrans ? CeilAlign(batchAL1_ * m_, AscendC::BLOCK_CUBE)
-                                    : CeilAlign(m_, AscendC::BLOCK_CUBE);
+        alignedKa_ = AType::isTrans ? CeilAlign(kL1_, AscendC::BLOCK_CUBE) :
+                                      CeilAlign(kL1_, AscendC::AuxGetC0Size<A_T>());
+        alignedKb_ = BType::isTrans ? CeilAlign(kL1_, AscendC::AuxGetC0Size<B_T>()) :
+                                      CeilAlign(kL1_, AscendC::BLOCK_CUBE);
+        alignedM_ = !AType::isTrans ? CeilAlign(batchAL1_ * m_, AscendC::BLOCK_CUBE) :
+                                      CeilAlign(m_, AscendC::BLOCK_CUBE);
         // 无论什么dtype n轴按16对齐
         alignedN_ = CeilAlign(n_, AscendC::BLOCK_CUBE);
 
@@ -103,7 +101,7 @@ public:
     {
         // (b, m, k) -> (k1, b*m/m0, m0, k0)
         AscendC::Nd2NzParams nd2NzParams;
-        if constexpr(!AType::isTrans) {
+        if constexpr (!AType::isTrans) {
             // mk场景
             nd2NzParams.ndNum = 1;
             nd2NzParams.nValue = curBatchAL1_ * m_;
@@ -128,12 +126,11 @@ public:
     }
 
     __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T>& bGlobal,
-                                    const AscendC::LocalTensor<B_T>& bl1Local,
-                                    uint64_t batchBl1, uint64_t realKl1)
+                                    const AscendC::LocalTensor<B_T>& bl1Local, uint64_t batchBl1, uint64_t realKl1)
     {
         AscendC::Nd2NzParams nd2NzParams;
         // false (b, k, n) -> (b, n1, k1, k0, n0)
-        if constexpr(!BType::isTrans) {
+        if constexpr (!BType::isTrans) {
             nd2NzParams.ndNum = batchBl1;
             nd2NzParams.nValue = realKl1;
             nd2NzParams.dValue = n_;
@@ -156,8 +153,7 @@ public:
         AscendC::DataCopy(bl1Local, bGlobal, nd2NzParams);
     }
 
-    __aicore__ inline void CopyInA2(const AscendC::LocalTensor<A_T>& a2Local,
-                                    const AscendC::LocalTensor<A_T>& al1Local,
+    __aicore__ inline void CopyInA2(const AscendC::LocalTensor<A_T>& a2Local, const AscendC::LocalTensor<A_T>& al1Local,
                                     uint64_t realBatchL0, uint64_t realKl1, uint64_t realK0)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
@@ -182,8 +178,8 @@ public:
                 loadDataParams.dstStride = loadDataParams.kStep;
             } else {
                 // actually div 8 then align to 2
-                loadDataParams.kStep = realBatchL0 * CeilAlign(
-                    Cmct::Gemm::CeilDiv(m_, AscendC::AuxGetC0Size<A_T>()), NUM_TWO);
+                loadDataParams.kStep = realBatchL0 *
+                                       CeilAlign(Cmct::Gemm::CeilDiv(m_, AscendC::AuxGetC0Size<A_T>()), NUM_TWO);
                 loadDataParams.dstStride = loadDataParams.kStep >> 1;
             }
         }
@@ -194,8 +190,7 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInB2(const AscendC::LocalTensor<B_T>& b2Local,
-                                    const AscendC::LocalTensor<B_T>& bl1Local,
+    __aicore__ inline void CopyInB2(const AscendC::LocalTensor<B_T>& b2Local, const AscendC::LocalTensor<B_T>& bl1Local,
                                     uint64_t realBatchL0, uint64_t realKl1, uint64_t realK0)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
@@ -224,8 +219,8 @@ public:
                 loadDataParams.dstStride = loadDataParams.kStep;
             } else {
                 // actually div 8 then align to 2
-                loadDataParams.kStep = realBatchL0 * CeilAlign(
-                    Cmct::Gemm::CeilDiv(n_, AscendC::AuxGetC0Size<A_T>()), NUM_TWO);
+                loadDataParams.kStep = realBatchL0 *
+                                       CeilAlign(Cmct::Gemm::CeilDiv(n_, AscendC::AuxGetC0Size<A_T>()), NUM_TWO);
                 loadDataParams.dstStride = loadDataParams.kStep >> 1;
             }
         }
@@ -257,11 +252,12 @@ public:
         }
         fixpParams.params.ndNum = curBatchAL1_;
         fixpParams.params.srcNdStride = CeilAlign(curBatchAL1_ * m_, AscendC::BLOCK_CUBE) *
-            CeilDiv(n_, AscendC::BLOCK_CUBE) + m_;
+                                            CeilDiv(n_, AscendC::BLOCK_CUBE) +
+                                        m_;
         if constexpr (AType::isTrans) {
             fixpParams.srcStride = curBatchAL1_ * CeilAlign(m_, AscendC::BLOCK_CUBE);
             fixpParams.params.srcNdStride = (curBatchAL1_ * CeilDiv(n_, AscendC::BLOCK_CUBE) + 1) *
-                CeilAlign(m_, AscendC::BLOCK_CUBE);
+                                            CeilAlign(m_, AscendC::BLOCK_CUBE);
         }
         fixpParams.params.dstNdStride = m_ * n_;
         fixpParams.dualDstCtl = 0;
@@ -270,26 +266,24 @@ public:
     }
 
     __aicore__ inline void ProcessL0(const AscendC::LocalTensor<B_T>& al1Local,
-                                     const AscendC::LocalTensor<B_T>& bl1Local,
-                                     uint64_t iterK1, uint64_t iterK0, uint64_t realKl1, uint64_t realK0,
-                                     uint64_t realBatchL0)
+                                     const AscendC::LocalTensor<B_T>& bl1Local, uint64_t iterK1, uint64_t iterK0,
+                                     uint64_t realKl1, uint64_t realK0, uint64_t realBatchL0)
     {
         // 搬运AL0
         AscendC::LocalTensor<A_T> a2Local = l0aLocal_[L0A_ELEMENTS / BUFFER_NUM * (l0EventID_ & 0x1)];
         // false (k1, (b*m)/m0, m0, k0)
         // true (b*m1, k1, k0, m0)
         uint64_t realAlignedM = CeilAlign(realBatchL0 * m_, AscendC::BLOCK_CUBE);
-        uint64_t al1Offset = AType::isTrans
-                                ? (iterK0 * baseK_ * AscendC::AuxGetC0Size<A_T>())
-                                : (iterK0 * baseK_ * realAlignedM);
+        uint64_t al1Offset = AType::isTrans ? (iterK0 * baseK_ * AscendC::AuxGetC0Size<A_T>()) :
+                                              (iterK0 * baseK_ * realAlignedM);
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(l0EventID_ & 0x1);
         CopyInA2(a2Local, al1Local[al1Offset], realBatchL0, realKl1, realK0);
         // 搬运BL0
         AscendC::LocalTensor<B_T> b2Local = l0bLocal_[L0B_ELEMENTS / BUFFER_NUM * (l0EventID_ & 0x1)];
         // false (b, n1, k1, k0, n0)
         // true (k1, b*n1, n0, k0)
-        uint64_t bl1Offset = BType::isTrans ? (iterK0 * realBatchL0 * baseK_ * alignedN_)
-                                            : (iterK0 * baseK_ * AscendC::AuxGetC0Size<A_T>());
+        uint64_t bl1Offset = BType::isTrans ? (iterK0 * realBatchL0 * baseK_ * alignedN_) :
+                                              (iterK0 * baseK_ * AscendC::AuxGetC0Size<A_T>());
         if (iterK0 == 0) {
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>((bL1EventID_ & 0x1) + L1_EVENT_ID_OFFSET);
         }
@@ -312,10 +306,8 @@ public:
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(l0EventID_ & 0x1);
     }
 
-    __aicore__ inline void operator()(AscendC::GlobalTensor<C_T> cGlobal,
-                                      AscendC::GlobalTensor<A_T> aGlobal,
-                                      AscendC::GlobalTensor<B_T> bGlobal,
-                                      uint64_t curBatchAL1)
+    __aicore__ inline void operator()(AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal,
+                                      AscendC::GlobalTensor<B_T> bGlobal, uint64_t curBatchAL1)
     {
         if (curBatchAL1 == 0) {
             return;
@@ -339,8 +331,7 @@ public:
 
                 // 搬运BL1
                 uint64_t realBatchBL1 = curBatchAL1_;
-                AscendC::LocalTensor<B_T> bl1Local = l1Local_[al1Size_ * BUFFER_NUM +
-                    bl1Size_ * (bL1EventID_ & 0x1)];
+                AscendC::LocalTensor<B_T> bl1Local = l1Local_[al1Size_ * BUFFER_NUM + bl1Size_ * (bL1EventID_ & 0x1)];
                 // false: (b, k, n)  true: (b, n, k)
                 uint64_t offsetBGlobal = BType::isTrans ? (iterK1 * kL1_) : (iterK1 * kL1_ * n_);
                 CopyInB1(bGlobal[offsetBGlobal], bl1Local, realBatchBL1, realKl1);
@@ -410,4 +401,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

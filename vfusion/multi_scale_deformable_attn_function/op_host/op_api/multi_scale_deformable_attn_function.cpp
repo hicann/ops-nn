@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file multi_scale_deformable_attn_function.cpp
  * \brief
@@ -30,44 +29,47 @@ static const int64_t VALUE_INDEX_1 = 1;
 static const int64_t VALUE_INDEX_2 = 2;
 static const int64_t NUMQUERIES_MIN = 32;
 
-const std::tuple<aclTensor*> MultiScaleDeformableAttnFunction(const aclTensor *value,
-                                                              const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                                                              const aclTensor *location, const aclTensor *attnWeight,
-                                                              aclOpExecutor *executor) {
-  L0_DFX(MultiScaleDeformableAttnFunction, value, spatialShape, levelStartIndex, location, attnWeight);
-  // shape推导
-  Shape outputShape;
-  auto valueShape = value->GetViewShape();
-  auto locationShape = location->GetViewShape();
+const std::tuple<aclTensor*> MultiScaleDeformableAttnFunction(const aclTensor* value, const aclTensor* spatialShape,
+                                                              const aclTensor* levelStartIndex,
+                                                              const aclTensor* location, const aclTensor* attnWeight,
+                                                              aclOpExecutor* executor)
+{
+    L0_DFX(MultiScaleDeformableAttnFunction, value, spatialShape, levelStartIndex, location, attnWeight);
+    // shape推导
+    Shape outputShape;
+    auto valueShape = value->GetViewShape();
+    auto locationShape = location->GetViewShape();
 
-  uint64_t numQueries = locationShape.GetDim(1);
-  uint64_t nqIndex = LOCATION_INDEX_1;
-  uint64_t nhIndex = VALUE_INDEX_2;
-  if (numQueries < NUMQUERIES_MIN) {
-    nqIndex = LOCATION_INDEX_5;
-    nhIndex = VALUE_INDEX_1;
-  }
-  outputShape.AppendDim(valueShape.GetDim(VALUE_INDEX_0));
+    uint64_t numQueries = locationShape.GetDim(1);
+    uint64_t nqIndex = LOCATION_INDEX_1;
+    uint64_t nhIndex = VALUE_INDEX_2;
+    if (numQueries < NUMQUERIES_MIN) {
+        nqIndex = LOCATION_INDEX_5;
+        nhIndex = VALUE_INDEX_1;
+    }
+    outputShape.AppendDim(valueShape.GetDim(VALUE_INDEX_0));
 
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
-    nqIndex = LOCATION_INDEX_3;
-    nhIndex = VALUE_INDEX_1;
-    outputShape.AppendDim(valueShape.GetDim(nhIndex) * valueShape.GetDim(VALUE_INDEX_3));
-    outputShape.AppendDim(locationShape.GetDim(nqIndex));
-  } else {
-    outputShape.AppendDim(locationShape.GetDim(nqIndex));
-    outputShape.AppendDim(valueShape.GetDim(nhIndex) * valueShape.GetDim(VALUE_INDEX_3));
-  }
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+        nqIndex = LOCATION_INDEX_3;
+        nhIndex = VALUE_INDEX_1;
+        outputShape.AppendDim(valueShape.GetDim(nhIndex) * valueShape.GetDim(VALUE_INDEX_3));
+        outputShape.AppendDim(locationShape.GetDim(nqIndex));
+    } else {
+        outputShape.AppendDim(locationShape.GetDim(nqIndex));
+        outputShape.AppendDim(valueShape.GetDim(nhIndex) * valueShape.GetDim(VALUE_INDEX_3));
+    }
 
-  // 创建输出Tensor
-  auto output = executor->AllocTensor(outputShape, value->GetDataType());
+    // 创建输出Tensor
+    auto output = executor->AllocTensor(outputShape, value->GetDataType());
 
-  // 调用device的MultiScaleDeformableAttnFunction算子
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MultiScaleDeformableAttnFunction,
-                                         OP_INPUT(value, spatialShape, levelStartIndex, location, attnWeight),
-                                         OP_OUTPUT(output));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MultiScaleDeformableAttnFunctionAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    std::tuple<aclTensor*>(nullptr));
-  return std::tie(output);
+    // 调用device的MultiScaleDeformableAttnFunction算子
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MultiScaleDeformableAttnFunction,
+                                           OP_INPUT(value, spatialShape, levelStartIndex, location, attnWeight),
+                                           OP_OUTPUT(output));
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MultiScaleDeformableAttnFunctionAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        std::tuple<aclTensor*>(nullptr));
+    return std::tie(output);
 }
-} // l0op
+} // namespace l0op

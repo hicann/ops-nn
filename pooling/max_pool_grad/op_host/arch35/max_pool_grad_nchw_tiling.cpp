@@ -41,13 +41,13 @@ void MaxPoolGradNCHWTilingHelper::DoBufferCalculate()
         int64_t inputPlaneSizeHW = hInputInner * wInputInnerAligned;
         int64_t outputPlaneSizeHW = splitData.hOutputInner * wOutputInnerAligned;
 
-        splitData.inputBufferSize =
-            splitData.highAxisInner *
-            (splitData.hOutputInner + ((inputData->hKernel - KERNEL_OFFSET) * inputData->hDilation) * DOUBLE) *
-            wInputAligned * baseData.inputBytes;
+        splitData.inputBufferSize = splitData.highAxisInner *
+                                    (splitData.hOutputInner +
+                                     ((inputData->hKernel - KERNEL_OFFSET) * inputData->hDilation) * DOUBLE) *
+                                    wInputAligned * baseData.inputBytes;
         splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeHW * baseData.inputBytes;
-        splitData.argmaxBufferSize =
-            splitData.highAxisInner * inputPlaneSizeHW * (inputData->isInt32Meet ? INT64_SIZE : INT32_SIZE);
+        splitData.argmaxBufferSize = splitData.highAxisInner * inputPlaneSizeHW *
+                                     (inputData->isInt32Meet ? INT64_SIZE : INT32_SIZE);
         splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeHW * FLOAT32_SIZE;
 
         int64_t tmpTotalBufferSize = splitData.inputBufferSize + splitData.outputBufferSize + splitData.gradBufferSize;
@@ -57,11 +57,9 @@ void MaxPoolGradNCHWTilingHelper::DoBufferCalculate()
         }
     } else {
         const int64_t hArgmaxInner = std::min<int64_t>(
-            inputData->hGrad,
-            Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride));
+            inputData->hGrad, Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride));
         const int64_t wArgmaxInner = std::min<int64_t>(
-            inputData->wGrad,
-            Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride));
+            inputData->wGrad, Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride));
 
         const int64_t wArgmaxInnerAligned = Ops::Base::CeilAlign(wArgmaxInner, baseData.maxDataNumInOneBlock);
         const int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.maxDataNumInOneBlock);
@@ -78,8 +76,8 @@ void MaxPoolGradNCHWTilingHelper::DoBufferCalculate()
 
         const int64_t fullKernelCount = inputData->hKernel * inputData->wKernel;
         const int64_t fullKernelBytes = fullKernelCount * baseData.inputBytes;
-        const int64_t forwardInputAvailableBytes =
-            std::max<int64_t>(0, baseData.availableUb - splitData.argmaxBufferSize - BIG_MERGE_BUF_ALIGN);
+        const int64_t forwardInputAvailableBytes = std::max<int64_t>(
+            0, baseData.availableUb - splitData.argmaxBufferSize - BIG_MERGE_BUF_ALIGN);
         const int64_t maxLoadCount = std::max<int64_t>(1, forwardInputAvailableBytes / baseData.inputBytes);
 
         if (fullKernelBytes <= forwardInputAvailableBytes) {
@@ -89,11 +87,11 @@ void MaxPoolGradNCHWTilingHelper::DoBufferCalculate()
         }
 
         const int64_t forwardStageBufferSize = splitData.inputBufferSize * BIG_DOUBLE_BUFFER + BIG_MERGE_BUF_ALIGN;
-        const int64_t backwardStageBufferSize =
-            splitData.gradBufferSize * BIG_DOUBLE_BUFFER + splitData.outputBufferSize * BIG_DOUBLE_BUFFER;
+        const int64_t backwardStageBufferSize = splitData.gradBufferSize * BIG_DOUBLE_BUFFER +
+                                                splitData.outputBufferSize * BIG_DOUBLE_BUFFER;
 
-        splitData.totalBufferSize =
-            splitData.argmaxBufferSize + std::max<int64_t>(forwardStageBufferSize, backwardStageBufferSize);
+        splitData.totalBufferSize = splitData.argmaxBufferSize +
+                                    std::max<int64_t>(forwardStageBufferSize, backwardStageBufferSize);
     }
 }
 
@@ -115,8 +113,8 @@ uint64_t MaxPoolGradNCHWTiling::GetTilingKey() const
 {
     uint32_t format = TPL_NCHW_FORMAT;
     uint32_t isCheckRange = commonTiling.GetSplitData().isCheckRange;
-    uint32_t kernelMode =
-        (inputData.hKernel * inputData.wKernel >= KSIZE_THRESHOLD) ? TPL_NCHW_BIG_KERNEL : TPL_NCHW_SMALL_KERNEL;
+    uint32_t kernelMode = (inputData.hKernel * inputData.wKernel >= KSIZE_THRESHOLD) ? TPL_NCHW_BIG_KERNEL :
+                                                                                       TPL_NCHW_SMALL_KERNEL;
     return GET_TPL_TILING_KEY(kernelMode, format, TPL_INT32, isCheckRange);
 }
 
@@ -126,10 +124,7 @@ ge::graphStatus MaxPoolGradNCHWTiling::DoOpTiling()
     return commonTiling.DoOpTiling(context_, GetTilingKey());
 }
 
-ge::graphStatus MaxPoolGradNCHWTiling::PostTiling()
-{
-    return commonTiling.PostTiling(context_);
-}
+ge::graphStatus MaxPoolGradNCHWTiling::PostTiling() { return commonTiling.PostTiling(context_); }
 
 ge::graphStatus MaxPoolGradNCHWTiling::GetShapeAttrsInfo()
 {
@@ -151,9 +146,8 @@ ge::graphStatus MaxPoolGradNCHWTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = static_cast<const MaxPoolGradWithArgmaxCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                    return ge::GRAPH_FAILED);
         hwInfo.coreNum = compileInfoPtr->coreNum;
         hwInfo.ubSize = compileInfoPtr->ubSize;
     } else {

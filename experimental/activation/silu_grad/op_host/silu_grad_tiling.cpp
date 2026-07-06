@@ -67,10 +67,9 @@ static ge::graphStatus TilingParseForSiluGrad([[maybe_unused]] gert::TilingParse
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum, uint64_t& inputBytes,
-    uint64_t& singleTileDataNum, uint64_t& doubleTileDataNum, uint64_t& inputLengthAlgin,
-    uint64_t& ubBlockSize)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum,
+                                         uint64_t& inputBytes, uint64_t& singleTileDataNum, uint64_t& doubleTileDataNum,
+                                         uint64_t& inputLengthAlgin, uint64_t& ubBlockSize)
 {
     if (context == nullptr || context->GetInputShape(0) == nullptr) {
         OP_LOGE(context, "GetShapeAttrsInfo: context or inputShape is nullptr.");
@@ -99,7 +98,8 @@ static ge::graphStatus GetShapeAttrsInfo(
         singleUbDataNumber = UB_NUM_FLOAT_SINGLE;
     }
     if (ubBlockSize == 0 || singleUbDataNumber == 0) {
-        OP_LOGE(context, "GetShapeAttrsInfo: ubBlockSize(%lu) or singleUbDataNumber(%lu) is zero.", ubBlockSize, singleUbDataNumber);
+        OP_LOGE(context, "GetShapeAttrsInfo: ubBlockSize(%lu) or singleUbDataNumber(%lu) is zero.", ubBlockSize,
+                singleUbDataNumber);
         return ge::GRAPH_FAILED;
     }
     uint64_t singleTileBlockNum = (ubSize / ubBlockSize) / singleUbDataNumber;
@@ -119,13 +119,13 @@ static ge::graphStatus GetShapeAttrsInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(
-    gert::TilingContext* context, uint64_t inputLengthAlgin, int64_t coreNum, uint64_t inputBytes,
-    uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum, uint64_t& tailBlockNum,
-    uint64_t ubBlockSize)
+static ge::graphStatus CalculateCoreBlockNums(gert::TilingContext* context, uint64_t inputLengthAlgin, int64_t coreNum,
+                                              uint64_t inputBytes, uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum,
+                                              uint64_t& tailBlockNum, uint64_t ubBlockSize)
 {
     if (0 == ubBlockSize || 0 == coreNum || 0 == inputBytes) {
-        OP_LOGE(context, "CalculateCoreBlockNums: ubBlockSize(%lu) coreNum(%ld) inputBytes(%lu) invalid.", ubBlockSize, coreNum, inputBytes);
+        OP_LOGE(context, "CalculateCoreBlockNums: ubBlockSize(%lu) coreNum(%ld) inputBytes(%lu) invalid.", ubBlockSize,
+                coreNum, inputBytes);
         return ge::GRAPH_FAILED;
     }
     uint64_t everyCoreInputBlockNum = inputLengthAlgin / ubBlockSize / coreNum;
@@ -150,7 +150,8 @@ static ge::graphStatus TilingFuncSiluGrad(gert::TilingContext* context)
     }
     // 2、获取shape、属性信息
     uint64_t inputNum, inputBytes, singleTileDataNum, doubleTileDataNum, inputLengthAlgin, ubBlockSize;
-    ret = GetShapeAttrsInfo(context, ubSize, inputNum, inputBytes, singleTileDataNum, doubleTileDataNum, inputLengthAlgin, ubBlockSize);
+    ret = GetShapeAttrsInfo(context, ubSize, inputNum, inputBytes, singleTileDataNum, doubleTileDataNum,
+                            inputLengthAlgin, ubBlockSize);
     if (ret != ge::GRAPH_SUCCESS) {
         OP_LOGE(context, "TilingFuncSiluGrad: GetShapeAttrsInfo failed.");
         return ge::GRAPH_FAILED;
@@ -186,8 +187,8 @@ static ge::graphStatus TilingFuncSiluGrad(gert::TilingContext* context)
     }
     // 计算每个core处理的数据块数
     uint64_t smallCoreDataNum, bigCoreDataNum, tailBlockNum;
-    ret = CalculateCoreBlockNums(
-        context, inputLengthAlgin, coreNum, inputBytes, smallCoreDataNum, bigCoreDataNum, tailBlockNum, ubBlockSize);
+    ret = CalculateCoreBlockNums(context, inputLengthAlgin, coreNum, inputBytes, smallCoreDataNum, bigCoreDataNum,
+                                 tailBlockNum, ubBlockSize);
     if (ret != ge::GRAPH_SUCCESS) {
         OP_LOGE(context, "TilingFuncSiluGrad: CalculateCoreBlockNums failed.");
         return ge::GRAPH_FAILED;

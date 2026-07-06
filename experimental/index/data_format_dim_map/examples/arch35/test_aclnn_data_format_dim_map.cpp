@@ -35,29 +35,23 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_data_format_dim_map.h"
 
-#define ACL_CHECK(expr)                                                    \
-    do {                                                                   \
-        auto _ret = (expr);                                                \
-        if (_ret != 0) {                                                   \
-            printf("[ERROR] %s:%d  %s  failed, ret = %d\n",               \
-                   __FILE__, __LINE__, #expr, static_cast<int>(_ret));    \
-            goto cleanup;                                                  \
-        }                                                                  \
+#define ACL_CHECK(expr)                                                                                         \
+    do {                                                                                                        \
+        auto _ret = (expr);                                                                                     \
+        if (_ret != 0) {                                                                                        \
+            printf("[ERROR] %s:%d  %s  failed, ret = %d\n", __FILE__, __LINE__, #expr, static_cast<int>(_ret)); \
+            goto cleanup;                                                                                       \
+        }                                                                                                       \
     } while (0)
 
-static aclTensor* CreateAclTensor(const std::vector<int64_t>& shape,
-                                   aclDataType dtype,
-                                   void* devAddr)
+static aclTensor* CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* devAddr)
 {
     std::vector<int64_t> strides(shape.size(), 1);
     for (int i = static_cast<int>(shape.size()) - 2; i >= 0; --i) {
         strides[i] = strides[i + 1] * shape[i + 1];
     }
-    return aclCreateTensor(shape.data(), static_cast<uint64_t>(shape.size()),
-                           dtype, strides.data(), 0,
-                           aclFormat::ACL_FORMAT_ND,
-                           shape.data(), static_cast<uint64_t>(shape.size()),
-                           devAddr);
+    return aclCreateTensor(shape.data(), static_cast<uint64_t>(shape.size()), dtype, strides.data(), 0,
+                           aclFormat::ACL_FORMAT_ND, shape.data(), static_cast<uint64_t>(shape.size()), devAddr);
 }
 
 int main()
@@ -86,8 +80,7 @@ int main()
 
         ACL_CHECK(aclrtMalloc(&devX, byteSize, ACL_MEM_MALLOC_HUGE_FIRST));
         ACL_CHECK(aclrtMalloc(&devY, byteSize, ACL_MEM_MALLOC_HUGE_FIRST));
-        ACL_CHECK(aclrtMemcpy(devX, byteSize, hostX, byteSize,
-                               ACL_MEMCPY_HOST_TO_DEVICE));
+        ACL_CHECK(aclrtMemcpy(devX, byteSize, hostX, byteSize, ACL_MEMCPY_HOST_TO_DEVICE));
 
         // ---- 3. Create aclTensors ----
         tensorX = CreateAclTensor(shape, ACL_INT32, devX);
@@ -102,30 +95,24 @@ int main()
         char dstFormat[] = "NCHW";
         uint64_t workspaceSize = 0;
 
-        ACL_CHECK(aclnnDataFormatDimMapGetWorkspaceSize(
-            tensorX, srcFormat, dstFormat, tensorY,
-            &workspaceSize, &executor));
+        ACL_CHECK(
+            aclnnDataFormatDimMapGetWorkspaceSize(tensorX, srcFormat, dstFormat, tensorY, &workspaceSize, &executor));
 
         // ---- 5. Allocate workspace (if needed) ----
         if (workspaceSize > 0) {
-            ACL_CHECK(aclrtMalloc(&workspace, workspaceSize,
-                                   ACL_MEM_MALLOC_HUGE_FIRST));
+            ACL_CHECK(aclrtMalloc(&workspace, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST));
         }
 
         // ---- 6. Stage 2: Execute ----
-        ACL_CHECK(aclnnDataFormatDimMap(workspace, workspaceSize,
-                                         executor, stream));
+        ACL_CHECK(aclnnDataFormatDimMap(workspace, workspaceSize, executor, stream));
         ACL_CHECK(aclrtSynchronizeStream(stream));
 
         // ---- 7. Copy result back and print ----
         int32_t hostY[4] = {0};
-        ACL_CHECK(aclrtMemcpy(hostY, byteSize, devY, byteSize,
-                               ACL_MEMCPY_DEVICE_TO_HOST));
+        ACL_CHECK(aclrtMemcpy(hostY, byteSize, devY, byteSize, ACL_MEMCPY_DEVICE_TO_HOST));
 
-        printf("Input  (NHWC dim indices): [%d, %d, %d, %d]\n",
-               hostX[0], hostX[1], hostX[2], hostX[3]);
-        printf("Output (NCHW dim indices): [%d, %d, %d, %d]\n",
-               hostY[0], hostY[1], hostY[2], hostY[3]);
+        printf("Input  (NHWC dim indices): [%d, %d, %d, %d]\n", hostX[0], hostX[1], hostX[2], hostX[3]);
+        printf("Output (NCHW dim indices): [%d, %d, %d, %d]\n", hostY[0], hostY[1], hostY[2], hostY[3]);
 
         // Verify result
         const int32_t expected[] = {0, 2, 3, 1};
@@ -142,12 +129,24 @@ int main()
 
 cleanup:
     // ---- 8. Release resources ----
-    if (tensorX != nullptr) { aclDestroyTensor(tensorX); }
-    if (tensorY != nullptr) { aclDestroyTensor(tensorY); }
-    if (workspace != nullptr) { aclrtFree(workspace); }
-    if (devX != nullptr) { aclrtFree(devX); }
-    if (devY != nullptr) { aclrtFree(devY); }
-    if (stream != nullptr) { aclrtDestroyStream(stream); }
+    if (tensorX != nullptr) {
+        aclDestroyTensor(tensorX);
+    }
+    if (tensorY != nullptr) {
+        aclDestroyTensor(tensorY);
+    }
+    if (workspace != nullptr) {
+        aclrtFree(workspace);
+    }
+    if (devX != nullptr) {
+        aclrtFree(devX);
+    }
+    if (devY != nullptr) {
+        aclrtFree(devY);
+    }
+    if (stream != nullptr) {
+        aclrtDestroyStream(stream);
+    }
     aclrtResetDevice(0);
     aclFinalize();
     return ret;

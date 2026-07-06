@@ -32,11 +32,11 @@ static constexpr uint32_t INPUT_SEGMENT_IDS_INDEX = 1;
 static constexpr uint32_t INPUT_NUM_SEGMENTS_INDEX = 2;
 static constexpr uint32_t OUTPUT_DATA_INDEX = 0;
 static constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = static_cast<uint32_t>(16 * 1024 * 1024);
-static constexpr uint64_t CAST_INT32_2_INT16 = 1;   // int32 Cast int16
-static constexpr uint64_t CAST_INT64_2_INT32 = 2;   // int64 Cast int32
-static constexpr uint64_t CAST_INT64_2_INT16 = 3;   // int64 Cast int16
-static constexpr uint64_t CAST_INT32_2_UINT8 = 4;   // int32 Cast uint8
-static constexpr uint64_t CAST_INT64_2_UINT8 = 5;   // int64 Cast uint8
+static constexpr uint64_t CAST_INT32_2_INT16 = 1; // int32 Cast int16
+static constexpr uint64_t CAST_INT64_2_INT32 = 2; // int64 Cast int32
+static constexpr uint64_t CAST_INT64_2_INT16 = 3; // int64 Cast int16
+static constexpr uint64_t CAST_INT32_2_UINT8 = 4; // int32 Cast uint8
+static constexpr uint64_t CAST_INT64_2_UINT8 = 5; // int64 Cast uint8
 
 static const std::map<ge::DataType, uint32_t> dataTypeMap = {{ge::DT_FLOAT, 0}, {ge::DT_FLOAT16, 1}, {ge::DT_BF16, 2},
                                                              {ge::DT_INT32, 3}, {ge::DT_INT64, 4},   {ge::DT_UINT32, 5},
@@ -49,8 +49,7 @@ static const std::map<ge::DataType, uint32_t> indexTypeMap = {
 
 ge::graphStatus UnsortedSegmentSumBaseTiling::GetPlatformInfo()
 {
-    auto compileInfo =
-        static_cast<const TilingPrepareForUnsortedSegmentSumCompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = static_cast<const TilingPrepareForUnsortedSegmentSumCompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
@@ -108,21 +107,21 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetCastType()
 
     if (idType_ == ge::DT_INT32) {
         if (outputOuterDim_ < UINT8_MAX) {
-            indicesCastMode_ = CAST_INT32_2_UINT8;          // int32 Cast uint8
+            indicesCastMode_ = CAST_INT32_2_UINT8; // int32 Cast uint8
             indicesCastDtype_ = ge::DT_UINT8;
         } else if (outputOuterDim_ < INT16_MAX) {
-            indicesCastMode_ = CAST_INT32_2_INT16;          // int32 Cast int16
+            indicesCastMode_ = CAST_INT32_2_INT16; // int32 Cast int16
             indicesCastDtype_ = ge::DT_INT16;
         }
     } else {
         if (outputOuterDim_ < UINT8_MAX) {
-            indicesCastMode_ = CAST_INT64_2_UINT8;          // int64 Cast uint8
+            indicesCastMode_ = CAST_INT64_2_UINT8; // int64 Cast uint8
             indicesCastDtype_ = ge::DT_UINT8;
         } else if (outputOuterDim_ < INT16_MAX) {
-            indicesCastMode_ = CAST_INT64_2_INT16;          // int64 Cast int16
+            indicesCastMode_ = CAST_INT64_2_INT16; // int64 Cast int16
             indicesCastDtype_ = ge::DT_INT16;
         } else if (outputOuterDim_ < INT32_MAX) {
-            indicesCastMode_ = CAST_INT64_2_INT32;          // int64 Cast int32
+            indicesCastMode_ = CAST_INT64_2_INT32; // int64 Cast int32
             indicesCastDtype_ = ge::DT_INT32;
         }
     }
@@ -145,17 +144,14 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::CheckInputDtype()
     OP_CHECK_IF(
         dataTypeIter == dataTypeMap.end(),
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "data", 
-            Ops::Base::ToString(dataDtypePtr->GetDataType()).c_str(),
+            context_->GetNodeName(), "data", Ops::Base::ToString(dataDtypePtr->GetDataType()).c_str(),
             "supported dtype list is [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT32, DT_INT64, DT_UINT32, DT_UINT64]"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        indexTypeIter == indexTypeMap.end(),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "segment_ids",
-            Ops::Base::ToString(segmentIdsDtypePtr->GetDataType()).c_str(),
-            "supported dtype list is [DT_INT32, DT_INT64]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indexTypeIter == indexTypeMap.end(),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids",
+                                                      Ops::Base::ToString(segmentIdsDtypePtr->GetDataType()).c_str(),
+                                                      "supported dtype list is [DT_INT32, DT_INT64]"),
+                return ge::GRAPH_FAILED);
 
     dataType_ = dataDtypePtr->GetDataType();
     idType_ = segmentIdsDtypePtr->GetDataType();
@@ -163,11 +159,15 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::CheckInputDtype()
     valueTypeBytes_ = ge::GetSizeByDataType(dataType_);
     idTypeBytes_ = ge::GetSizeByDataType(idType_);
     OP_CHECK_IF(
-        valueTypeBytes_ <= 0UL, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data", Ops::Base::ToString(dataType_).c_str(), "failed to get dtype size, dtype may be unsupported"),
+        valueTypeBytes_ <= 0UL,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data", Ops::Base::ToString(dataType_).c_str(),
+                                              "failed to get dtype size, dtype may be unsupported"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        idTypeBytes_ <= 0UL, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids", Ops::Base::ToString(idType_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(idTypeBytes_ <= 0UL,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids",
+                                                      Ops::Base::ToString(idType_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -175,10 +175,8 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
 {
     OP_CHECK_IF(
         CheckInputDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "data, segment_ids",
-            "data_dtype, segment_ids_dtype",
-            "dtype combination not supported"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "data, segment_ids",
+                                               "data_dtype, segment_ids_dtype", "dtype combination not supported"),
         return ge::GRAPH_FAILED);
 
     auto dataShapePtr = context_->GetInputShape(INPUT_DATA_INDEX);
@@ -197,31 +195,25 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShapePtr);
     auto outputShape = outputShapePtr->GetStorageShape();
 
-    OP_CHECK_IF(
-        numSegmentsShape.GetDimNum() != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "num_segments",
-            std::to_string(numSegmentsShape.GetDimNum()).c_str(), "1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(numSegmentsShape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "num_segments",
+                                             std::to_string(numSegmentsShape.GetDimNum()).c_str(), "1"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        !ShapeStartsWith(dataShape, segmentIdsShape),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "data, segment_ids",
-            "data_shape, segment_ids_shape",
-            "data.shape must start with segment_ids.shape"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeStartsWith(dataShape, segmentIdsShape),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "data, segment_ids",
+                                                       "data_shape, segment_ids_shape",
+                                                       "data.shape must start with segment_ids.shape"),
+                return ge::GRAPH_FAILED);
 
     std::tie(inputOuterDim_, innerDim_) = FlatInput(dataShape, segmentIdsShape);
     // check key value not greater than 2^48.
     uint64_t bound = static_cast<int64_t>(1ULL << 48);
-    OP_CHECK_IF(
-        inputOuterDim_ > bound,
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-            context_->GetNodeName(), "inputOuterDim",
-            std::to_string(inputOuterDim_).c_str(),
-            "value must be in range (0, 2^48)"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputOuterDim_ > bound,
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "inputOuterDim",
+                                                           std::to_string(inputOuterDim_).c_str(),
+                                                           "value must be in range (0, 2^48)"),
+                return ge::GRAPH_FAILED);
 
     dataShapeSize_ = dataShape.GetShapeSize();
     outputOuterDim_ = outputShape[0];
@@ -231,8 +223,8 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-std::tuple<uint64_t, uint64_t> UnsortedSegmentSumBaseTiling::AutoTiling(
-    uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize, bool colTileNumMin)
+std::tuple<uint64_t, uint64_t> UnsortedSegmentSumBaseTiling::AutoTiling(uint64_t usedCoreNum, uint64_t colNumAlign,
+                                                                        uint64_t colLimitSize, bool colTileNumMin)
 {
     /* 给定Shape[M, N] 和 block core num
     ** M切分成m块，N切分成n块，找到m*n <= usedCoreNum, 且m*n尽可能接近usedCoreNum的所有m和n的可能
@@ -277,19 +269,19 @@ std::tuple<uint64_t, uint64_t> UnsortedSegmentSumBaseTiling::AutoTiling(
     }
 
     if (colTileNumMin) {
-        std::sort(
-            allTiling.begin(), allTiling.end(), [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
-                constexpr int NIndex = 1;
-                constexpr int DeltaIndex = 3;
-                return std::make_pair(a[DeltaIndex], a[NIndex]) < std::make_pair(b[DeltaIndex], b[NIndex]);
-            });
+        std::sort(allTiling.begin(), allTiling.end(),
+                  [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
+                      constexpr int NIndex = 1;
+                      constexpr int DeltaIndex = 3;
+                      return std::make_pair(a[DeltaIndex], a[NIndex]) < std::make_pair(b[DeltaIndex], b[NIndex]);
+                  });
     } else {
-        std::sort(
-            allTiling.begin(), allTiling.end(), [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
-                constexpr int MIndex = 0;
-                constexpr int DeltaIndex = 3;
-                return std::make_pair(a[DeltaIndex], a[MIndex]) < std::make_pair(b[DeltaIndex], b[MIndex]);
-            });
+        std::sort(allTiling.begin(), allTiling.end(),
+                  [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
+                      constexpr int MIndex = 0;
+                      constexpr int DeltaIndex = 3;
+                      return std::make_pair(a[DeltaIndex], a[MIndex]) < std::make_pair(b[DeltaIndex], b[MIndex]);
+                  });
     }
 
     uint64_t rowTileNum = allTiling[0][0];
@@ -310,25 +302,13 @@ std::set<uint64_t> UnsortedSegmentSumBaseTiling::FindUniqueCut(uint64_t usedCore
     return result;
 }
 
-bool UnsortedSegmentSumBaseTiling::IsCapable()
-{
-    return true;
-}
+bool UnsortedSegmentSumBaseTiling::IsCapable() { return true; }
 
-ge::graphStatus UnsortedSegmentSumBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus UnsortedSegmentSumBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus UnsortedSegmentSumBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus UnsortedSegmentSumBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t UnsortedSegmentSumBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t UnsortedSegmentSumBaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus UnsortedSegmentSumBaseTiling::GetWorkspaceSize()
 {
@@ -340,9 +320,6 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus UnsortedSegmentSumBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus UnsortedSegmentSumBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 } // namespace optiling

@@ -29,21 +29,16 @@
 
 class SparseApplyRMSProp : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SparseApplyRMSProp SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseApplyRMSProp SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SparseApplyRMSProp TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SparseApplyRMSProp TearDown" << std::endl; }
 };
 
 static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 {
     std::vector<int64_t> v;
-    if (s == nullptr) return v;
+    if (s == nullptr)
+        return v;
     for (size_t i = 0; i < s->GetDimNum(); ++i) {
         v.push_back(s->GetDim(i));
     }
@@ -51,12 +46,9 @@ static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 }
 
 // Drive InferShape via the Faker holder; outputs 0/1/2 follow inputs 0/1/2.
-static ge::graphStatus RunAndGetOutputShapes(
-    gert::StorageShape& varShape,
-    gert::StorageShape& gradShape,
-    gert::StorageShape& indicesShape,
-    gert::StorageShape& scalarShape,
-    std::vector<std::vector<int64_t>>& outShapes)
+static ge::graphStatus RunAndGetOutputShapes(gert::StorageShape& varShape, gert::StorageShape& gradShape,
+                                             gert::StorageShape& indicesShape, gert::StorageShape& scalarShape,
+                                             std::vector<std::vector<int64_t>>& outShapes)
 {
     auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyRMSProp");
     if (opImpl == nullptr) {
@@ -68,15 +60,13 @@ static ge::graphStatus RunAndGetOutputShapes(
     }
 
     gert::StorageShape outVar = {{}, {}};
-    gert::StorageShape outMs  = {{}, {}};
+    gert::StorageShape outMs = {{}, {}};
     gert::StorageShape outMom = {{}, {}};
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &varShape, &varShape,
-                           &scalarShape, &scalarShape, &scalarShape, &scalarShape,
-                           &gradShape, &indicesShape})
+                      .InputShapes({&varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &gradShape, &indicesShape})
                       .OutputShapes({&outVar, &outMs, &outMom})
                       .Build();
 
@@ -95,14 +85,13 @@ static ge::graphStatus RunAndGetOutputShapes(
 TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyRMSProp"), nullptr);
-    gert::StorageShape varShape     = {{4, 8}, {4, 8}};
-    gert::StorageShape gradShape    = {{2, 8}, {2, 8}};
+    gert::StorageShape varShape = {{4, 8}, {4, 8}};
+    gert::StorageShape gradShape = {{2, 8}, {2, 8}};
     gert::StorageShape indicesShape = {{2}, {2}};
-    gert::StorageShape scalarShape  = {{1}, {1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
     std::vector<std::vector<int64_t>> outShapes;
 
-    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes),
-              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
     ASSERT_EQ(outShapes.size(), 3u);
     EXPECT_EQ(outShapes[0], (std::vector<int64_t>{4, 8}));
     EXPECT_EQ(outShapes[1], (std::vector<int64_t>{4, 8}));
@@ -113,14 +102,13 @@ TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_0)
 TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_1)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyRMSProp"), nullptr);
-    gert::StorageShape varShape     = {{16}, {16}};
-    gert::StorageShape gradShape    = {{4}, {4}};
+    gert::StorageShape varShape = {{16}, {16}};
+    gert::StorageShape gradShape = {{4}, {4}};
     gert::StorageShape indicesShape = {{4}, {4}};
-    gert::StorageShape scalarShape  = {{1}, {1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
     std::vector<std::vector<int64_t>> outShapes;
 
-    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes),
-              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
     ASSERT_EQ(outShapes.size(), 3u);
     EXPECT_EQ(outShapes[0], (std::vector<int64_t>{16}));
 }
@@ -129,14 +117,13 @@ TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_1)
 TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_2)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyRMSProp"), nullptr);
-    gert::StorageShape varShape     = {{8, 4, 8, 16}, {8, 4, 8, 16}};
-    gert::StorageShape gradShape    = {{2, 4, 8, 16}, {2, 4, 8, 16}};
+    gert::StorageShape varShape = {{8, 4, 8, 16}, {8, 4, 8, 16}};
+    gert::StorageShape gradShape = {{2, 4, 8, 16}, {2, 4, 8, 16}};
     gert::StorageShape indicesShape = {{2}, {2}};
-    gert::StorageShape scalarShape  = {{1}, {1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
     std::vector<std::vector<int64_t>> outShapes;
 
-    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes),
-              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
     ASSERT_EQ(outShapes.size(), 3u);
     EXPECT_EQ(outShapes[0], (std::vector<int64_t>{8, 4, 8, 16}));
     EXPECT_EQ(outShapes[2], (std::vector<int64_t>{8, 4, 8, 16}));
@@ -146,14 +133,13 @@ TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_2)
 TEST_F(SparseApplyRMSProp, sparse_apply_rms_prop_infershape_case_3_empty)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyRMSProp"), nullptr);
-    gert::StorageShape varShape     = {{4, 8}, {4, 8}};
-    gert::StorageShape gradShape    = {{0, 8}, {0, 8}};
+    gert::StorageShape varShape = {{4, 8}, {4, 8}};
+    gert::StorageShape gradShape = {{0, 8}, {0, 8}};
     gert::StorageShape indicesShape = {{0}, {0}};
-    gert::StorageShape scalarShape  = {{1}, {1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
     std::vector<std::vector<int64_t>> outShapes;
 
-    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes),
-              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
     ASSERT_EQ(outShapes.size(), 3u);
     EXPECT_EQ(outShapes[0], (std::vector<int64_t>{4, 8}));
 }

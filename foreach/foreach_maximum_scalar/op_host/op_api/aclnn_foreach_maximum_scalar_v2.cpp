@@ -35,30 +35,29 @@ const int32_t INT32_MIN_VAL = -2147483648;
 const int32_t INT32_MAX_VAL = 2147483647;
 } // namespace
 
-static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-                                                                                    DataType::DT_FLOAT16,
-                                                                                    DataType::DT_BF16,
-                                                                                    DataType::DT_INT32};
+static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
 
 static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT_SUPPORT_LIST = {DataType::DT_FLOAT,
-                                                                    DataType::DT_DOUBLE};
+                                                                                  DataType::DT_DOUBLE};
 
 static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT16_SUPPORT_LIST = {DataType::DT_FLOAT16,
-                                                                    DataType::DT_DOUBLE};
+                                                                                    DataType::DT_DOUBLE};
 
-static const std::initializer_list<DataType> FOREACH_SCALAR_INT_SUPPORT_LIST = {DataType::DT_INT32,
-                                                                    DataType::DT_INT64};
+static const std::initializer_list<DataType> FOREACH_SCALAR_INT_SUPPORT_LIST = {DataType::DT_INT32, DataType::DT_INT64};
 
-static const std::initializer_list<DataType> EMPTY_LIST  = {};
+static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+{
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(scalar, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out) {
+static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
+{
     for (uint64_t k = 0; k < self->Size(); k++) {
         // self格式不能是私有格式
         if (IsPrivateFormat((*self)[k]->GetStorageFormat()) || IsPrivateFormat((*out)[k]->GetStorageFormat())) {
@@ -69,22 +68,24 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
     return true;
 }
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  auto curArch_1 = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch_1 == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch_1)) {
-    return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
-  } else {
-    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
-    return EMPTY_LIST;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    auto curArch_1 = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch_1 == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch_1)) {
+        return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+    } else {
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+        return EMPTY_LIST;
+    }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+{
     const auto& dtypeSupportList_1 = GetDtypeSupportList();
     if (dtypeSupportList_1.size() == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
     if (self->Size() == 0) {
@@ -96,11 +97,11 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList_1, return false);
     for (uint64_t j = 0; j < self->Size(); j++) {
         OP_CHECK_DTYPE_NOT_MATCH((*self)[j], selfDtyte, return false);
-	}
+    }
 
     for (uint64_t j = 0; j < out->Size(); j++) {
         OP_CHECK_DTYPE_NOT_MATCH((*out)[j], selfDtyte, return false);
-	}
+    }
 
     // check the releation of self and scalar
     if (selfDtyte == DataType::DT_BF16 || selfDtyte == DataType::DT_FLOAT) {
@@ -113,7 +114,8 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     return true;
 }
 
-static inline bool CheckShapeValid(const aclTensorList* self, const aclTensorList* out) {
+static inline bool CheckShapeValid(const aclTensorList* self, const aclTensorList* out)
+{
     // tensor 维度检查
     for (uint64_t j = 0; j < self->Size(); j++) {
         OP_CHECK_MAX_DIM((*self)[j], MAX_SUPPORT_DIMS_NUMS, return false);
@@ -126,7 +128,8 @@ static inline bool CheckShapeValid(const aclTensorList* self, const aclTensorLis
     return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
@@ -177,9 +180,11 @@ static inline aclnnStatus CheckScalarValueValid(const aclScalar* scalar, const D
     }
 }
 
-static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorList *x,  const aclScalar *scalar, const aclTensorList *out, uint64_t *workspaceSize,
-                                             aclOpExecutor **executor) {
-     // 固定写法，创建OpExecutor
+static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar,
+                                                              const aclTensorList* out, uint64_t* workspaceSize,
+                                                              aclOpExecutor** executor)
+{
+    // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
@@ -195,7 +200,7 @@ static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorLis
     }
 
     // self如果非连续，需要转连续
-    std::vector<const aclTensor *> tensorsVec;
+    std::vector<const aclTensor*> tensorsVec;
     for (size_t i = 0; i < x->Size(); ++i) {
         auto secondContiguous = l0op::Contiguous((*x)[i], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -210,7 +215,7 @@ static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorLis
 
     // sclar to tensor
     const aclTensor* otherTensor;
-    if ((*x)[0]->GetDataType() ==  DataType::DT_BF16) {
+    if ((*x)[0]->GetDataType() == DataType::DT_BF16) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
     } else {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
@@ -226,18 +231,17 @@ static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorLis
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnForeachMaximumScalarV2GetWorkspaceSize(
-    const aclTensorList *x,
-    const aclScalar *scalar,
-    aclTensorList *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+aclnnStatus aclnnForeachMaximumScalarV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar,
+                                                        aclTensorList* out, uint64_t* workspaceSize,
+                                                        aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnForeachMaximumScalarV2, DFX_IN(x, scalar), DFX_OUT(out));
     return ExecForeachMaximumScalarV2GetWorkspaceSize(x, scalar, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnForeachMaximumScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream) {
+aclnnStatus aclnnForeachMaximumScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        const aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnForeachMaximumScalarV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
@@ -245,4 +249,3 @@ aclnnStatus aclnnForeachMaximumScalarV2(void* workspace, uint64_t workspaceSize,
 #ifdef __cplusplus
 }
 #endif
-

@@ -41,4 +41,3 @@ struct FusedQuantMatmulSwigluTilingData {
     TCubeTiling mmTilingData;
 };
 #pragma pack(pop)
-

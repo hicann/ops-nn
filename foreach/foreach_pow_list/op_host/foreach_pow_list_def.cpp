@@ -61,37 +61,37 @@ public:
     }
 
 private:
-  OpAICoreConfig GetKirinCoreConfig() const
-  {
-    OpAICoreConfig config_kirin;
-    config_kirin.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .PrecisionReduceFlag(true);
-    std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32};
-    std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
-    config_kirin.Input("x1")
-        .ParamType(DYNAMIC)
-        .DataType(tensor_dtype_list_kirin)
-        .Format(format_list_kirin)
-        .UnknownShapeFormat(format_list_kirin)
-        .AutoContiguous();
-    config_kirin.Input("x2")
-        .ParamType(DYNAMIC)
-        .DataType(tensor_dtype_list_kirin)
-        .Format(format_list_kirin)
-        .UnknownShapeFormat(format_list_kirin)
-        .AutoContiguous();
-    config_kirin.Output("y")
-        .ParamType(DYNAMIC)
-        .DataType(tensor_dtype_list_kirin)
-        .Format(format_list_kirin)
-        .UnknownShapeFormat(format_list_kirin)
-        .AutoContiguous();
-    return config_kirin;
-  }
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32};
+        std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
+        config_kirin.Input("x1")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        config_kirin.Input("x2")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        config_kirin.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        return config_kirin;
+    }
 };
 
 OP_ADD(ForeachPowList);

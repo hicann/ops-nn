@@ -34,8 +34,10 @@ using namespace ScatterNdAdd;
 #define TILING_KEY_INT64_EXCEED_UINT32 209
 #define TILING_KEY_BOOL_EXCEED_UINT32 212
 
-__aicore__ inline void fp32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void fp32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                              GM_ADDR workspace,
+                                                              const ScatterNdAddRegBaseTilingData& tilingData,
+                                                              TPipe& pipe)
 {
     if (tilingData.isDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -124,8 +126,10 @@ __aicore__ inline void fp32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR
     }
 }
 
-__aicore__ inline void fp32VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void fp32VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                               GM_ADDR workspace,
+                                                               const ScatterNdAddRegBaseTilingData& tilingData,
+                                                               TPipe& pipe)
 {
     if (tilingData.isDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -214,8 +218,10 @@ __aicore__ inline void fp32VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADD
     }
 }
 
-__aicore__ inline void fp16VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void fp16VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                              GM_ADDR workspace,
+                                                              const ScatterNdAddRegBaseTilingData& tilingData,
+                                                              TPipe& pipe)
 {
     if (tilingData.isDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -304,8 +310,10 @@ __aicore__ inline void fp16VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR
     }
 }
 
-__aicore__ inline void fp16VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void fp16VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                               GM_ADDR workspace,
+                                                               const ScatterNdAddRegBaseTilingData& tilingData,
+                                                               TPipe& pipe)
 {
     if (tilingData.isDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -360,7 +368,7 @@ __aicore__ inline void fp16VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADD
             op.Process();
         }
     } else {
-        if (tilingData.isSort == 1) { 
+        if (tilingData.isSort == 1) {
             if (tilingData.indiceCastMode == CAST_0) {
                 ScatterNdAddSimtSort<half, DTYPE_INDICES, uint64_t, DTYPE_INDICES, CAST_0> op(tilingData, pipe);
                 op.Init(x, indices, updates, y, workspace);
@@ -394,8 +402,10 @@ __aicore__ inline void fp16VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADD
     }
 }
 
-__aicore__ inline void int32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void int32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                               GM_ADDR workspace,
+                                                               const ScatterNdAddRegBaseTilingData& tilingData,
+                                                               TPipe& pipe)
 {
     if (tilingData.isSimdNonDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -458,8 +468,10 @@ __aicore__ inline void int32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADD
     }
 }
 
-__aicore__ inline void int32VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void int32VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                                GM_ADDR workspace,
+                                                                const ScatterNdAddRegBaseTilingData& tilingData,
+                                                                TPipe& pipe)
 {
     if (tilingData.isSimdNonDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -522,8 +534,10 @@ __aicore__ inline void int32VarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_AD
     }
 }
 
-__aicore__ inline void boolVarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void boolVarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                              GM_ADDR workspace,
+                                                              const ScatterNdAddRegBaseTilingData& tilingData,
+                                                              TPipe& pipe)
 {
     if (tilingData.isSimdNonDeterminstic == 1) {
         // cast添加
@@ -587,8 +601,10 @@ __aicore__ inline void boolVarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR
     }
 }
 
-__aicore__ inline void boolVarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, 
-                                                                 const ScatterNdAddRegBaseTilingData& tilingData, TPipe &pipe) 
+__aicore__ inline void boolVarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                               GM_ADDR workspace,
+                                                               const ScatterNdAddRegBaseTilingData& tilingData,
+                                                               TPipe& pipe)
 {
     if (tilingData.isSimdNonDeterminstic == 1) {
         if (tilingData.indiceCastMode == CAST_0) {
@@ -651,8 +667,8 @@ __aicore__ inline void boolVarBeyondUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADD
     }
 }
 
-extern "C" __global__ __aicore__ void scatter_nd_add(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void scatter_nd_add(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

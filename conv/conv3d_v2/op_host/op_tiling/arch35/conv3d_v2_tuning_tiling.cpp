@@ -19,24 +19,24 @@
 #include "register/tuning_bank_key_registry.h"
 
 namespace tuningtiling {
-void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs)
+void GetAttrsInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs)
 {
     auto attrs = context->GetAttrs();
     size_t idx = 0;
 
-    const gert::ContinuousVector *stridesList = nullptr;
+    const gert::ContinuousVector* stridesList = nullptr;
     stridesList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const gert::ContinuousVector *padsList = nullptr;
+    const gert::ContinuousVector* padsList = nullptr;
     padsList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const gert::ContinuousVector *dilationsList = nullptr;
+    const gert::ContinuousVector* dilationsList = nullptr;
     dilationsList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const int64_t *groups = nullptr;
+    const int64_t* groups = nullptr;
     groups = attrs->GetAttrPointer<int64_t>(idx++);
 
     conv3dArgs->groups = static_cast<int32_t>(*groups);
-    const int64_t *stridesListData = reinterpret_cast<const int64_t *>(stridesList->GetData());
-    const int64_t *padsListData = reinterpret_cast<const int64_t *>(padsList->GetData());
-    const int64_t *dilationsListData = reinterpret_cast<const int64_t *>(dilationsList->GetData());
+    const int64_t* stridesListData = reinterpret_cast<const int64_t*>(stridesList->GetData());
+    const int64_t* padsListData = reinterpret_cast<const int64_t*>(padsList->GetData());
+    const int64_t* dilationsListData = reinterpret_cast<const int64_t*>(dilationsList->GetData());
 
     if (context->GetOutputDesc(0)->GetOriginFormat() == ge::FORMAT_NCDHW) {
         // data format is NCDHW; 2, 3 is index of strides_d, strides_h, strides_w and dilationD, dilationH, dilationW
@@ -65,7 +65,7 @@ void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2In
     conv3dArgs->padRight = static_cast<int32_t>(padsListData[POS_INDEX_5]);
 }
 
-void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs)
+void GetOutputInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs)
 {
     auto outputDesc = context->GetOutputDesc(POS_INDEX_0);
     conv3dArgs->cDtype = outputDesc->GetDataType();
@@ -74,7 +74,7 @@ void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2I
     conv3dArgs->cFormat = outputOriFormat;
 
     auto outputShape = context->GetOutputShape(POS_INDEX_0);
-    auto &outputOriShape = outputShape->GetOriginShape();
+    auto& outputOriShape = outputShape->GetOriginShape();
 
     if (outputOriFormat == ge::FORMAT_NCDHW) {
         // output format is NCDHW; 2, 3, 4 is dim index for dedx_d, dedx_h, dedx_w
@@ -89,7 +89,7 @@ void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2I
     }
 }
 
-void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+void GetFmapInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs,
                  size_t fmapInputIndex)
 {
     auto fmapDesc = context->GetInputDesc(fmapInputIndex);
@@ -99,7 +99,7 @@ void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2Inp
     conv3dArgs->aFormat = fmapOriFormat;
 
     auto fmapShape = context->GetInputShape(fmapInputIndex);
-    auto &fmapOriShape = fmapShape->GetOriginShape();
+    auto& fmapOriShape = fmapShape->GetOriginShape();
 
     if (fmapOriFormat == ge::FORMAT_NCDHW) {
         // dedy format is NCDHW; 0, 2, 3, 4 is dim index for dedy_n, dedy_d, dedy_h, dedy_w
@@ -116,7 +116,7 @@ void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2Inp
     }
 }
 
-void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+void GetBiasInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs,
                  size_t biasInputIndex)
 {
     conv3dArgs->biasFlag = context->GetOptionalInputShape(biasInputIndex) != nullptr;
@@ -127,7 +127,7 @@ void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2Inp
     }
 }
 
-void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+void GetFilterInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs,
                    size_t filterInputIndex)
 {
     auto filterDesc = context->GetInputDesc(filterInputIndex);
@@ -137,7 +137,7 @@ void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2I
     conv3dArgs->bFormat = filterOriFormat;
 
     auto filterShape = context->GetInputShape(filterInputIndex);
-    auto &filterOriShape = filterShape->GetOriginShape();
+    auto& filterOriShape = filterShape->GetOriginShape();
 
     if (filterOriFormat == ge::FORMAT_NCDHW) {
         // filter format is NCDHW; 0, 1, 2, 3, 4 is dim index for filter_n, filter_c, filter_d, filter_h, filter_w
@@ -163,8 +163,7 @@ void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2I
     }
 }
 
-bool TilingForConv3DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &inputArgs,
-                                     size_t &size)
+bool TilingForConv3DV2Input(const gert::TilingContext* context, std::shared_ptr<void>& inputArgs, size_t& size)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE("CANNKB", "context is nullptr."), return false);
     std::shared_ptr<Conv3DV2InputArgs> conv3dArgs = std::make_shared<Conv3DV2InputArgs>();
@@ -181,12 +180,12 @@ bool TilingForConv3DV2Input(const gert::TilingContext *context, std::shared_ptr<
 }
 
 DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3DV2, Conv3DV2InputArgs, aDtype, bDtype, cDtype, biasDtype, aShapeN, aShapeD,
-                              aShapeH, aShapeW, bShapeN, bShapeC, bShapeD, bShapeH, bShapeW, cShapeD,
-                              cShapeH, cShapeW, aFormat, bFormat, cFormat, groups, strideD,
-                              strideH, strideW, dilationD, dilationH, dilationW, padHead, padTail, padTop,
-                              padBottom, padLeft, padRight, biasFlag, reserverdParam1, reserverdParam2,
-                              reserverdParam3, reserverdParam4, reserverdParam5, reserverdParam6);
+                                 aShapeH, aShapeW, bShapeN, bShapeC, bShapeD, bShapeH, bShapeW, cShapeD, cShapeH,
+                                 cShapeW, aFormat, bFormat, cFormat, groups, strideD, strideH, strideW, dilationD,
+                                 dilationH, dilationW, padHead, padTail, padTop, padBottom, padLeft, padRight, biasFlag,
+                                 reserverdParam1, reserverdParam2, reserverdParam3, reserverdParam4, reserverdParam5,
+                                 reserverdParam6);
 
 REGISTER_OP_BANK_KEY_CONVERT_FUN_V2(Conv3DV2, TilingForConv3DV2Input);
 REGISTER_TUNING_TILING_CLASS(Conv3DV2, Conv3DV2TunnerTiling);
-}  // namespace tuningtiling
+} // namespace tuningtiling

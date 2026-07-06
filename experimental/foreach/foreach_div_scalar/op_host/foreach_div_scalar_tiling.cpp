@@ -31,8 +31,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -60,11 +60,16 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 static int64_t GetTypeSizeBytes(ge::DataType dtype)
 {
     switch (dtype) {
-        case ge::DT_FLOAT:  return 4;
-        case ge::DT_FLOAT16: return 2;
-        case ge::DT_BF16:   return 2;
-        case ge::DT_DOUBLE: return 8;
-        default:             return 4;
+        case ge::DT_FLOAT:
+            return 4;
+        case ge::DT_FLOAT16:
+            return 2;
+        case ge::DT_BF16:
+            return 2;
+        case ge::DT_DOUBLE:
+            return 8;
+        default:
+            return 4;
     }
 }
 
@@ -72,15 +77,11 @@ static ge::graphStatus ForeachDivScalarTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // x is IR index 0 (DYNAMIC)
     auto inputDesc = context->GetDynamicInputDesc(0, 0);
@@ -93,23 +94,25 @@ static ge::graphStatus ForeachDivScalarTilingFunc(gert::TilingContext* context)
 
     ForeachDivScalarTilingData* tiling = context->GetTilingData<ForeachDivScalarTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachDivScalarTilingData), 0, sizeof(ForeachDivScalarTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachDivScalarTilingData), 0, sizeof(ForeachDivScalarTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->tensorNum = tensorNum;
 
     // Determine scalar dtype for kernel to interpret GM data correctly
-    tiling->scalarDtype = 0;  // default: float
+    tiling->scalarDtype = 0; // default: float
     {
         // scalar is at physical input index after all dynamic x tensors
         // Use GetInputDesc with physical index = tensorNum (x takes indices 0..tensorNum-1, scalar is next)
         auto scalarDesc = context->GetInputDesc(tensorNum);
         if (scalarDesc != nullptr) {
             ge::DataType sDtype = scalarDesc->GetDataType();
-            if (sDtype == ge::DT_FLOAT16) tiling->scalarDtype = 1;
-            else if (sDtype == ge::DT_DOUBLE) tiling->scalarDtype = 2;
-            else tiling->scalarDtype = 0;
+            if (sDtype == ge::DT_FLOAT16)
+                tiling->scalarDtype = 1;
+            else if (sDtype == ge::DT_DOUBLE)
+                tiling->scalarDtype = 2;
+            else
+                tiling->scalarDtype = 0;
         }
     }
 
@@ -141,7 +144,7 @@ static ge::graphStatus ForeachDivScalarTilingFunc(gert::TilingContext* context)
     // Total per element = 2 + 2 + 4 = 8 bytes, so divide UB by 4 (not 2)
     int64_t ubDivisor = 2;
     if (dataType == ge::DT_BF16) {
-        ubDivisor = 4;  // 2 bf16 buffers + 1 fp32 buffer = 2+2+4=8 bytes/elem, 8/2=4
+        ubDivisor = 4; // 2 bf16 buffers + 1 fp32 buffer = 2+2+4=8 bytes/elem, 8/2=4
     }
     int64_t ubFactorElems = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor), ubBlockSize);
     tiling->ubFactor = ubFactorElems;

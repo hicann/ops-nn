@@ -15,7 +15,6 @@
 #ifndef OPS_NORM_MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_OP_HOST_H_
 #define OPS_NORM_MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_OP_HOST_H_
 
-
 #include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
 #include "register/op_impl_registry.h"
@@ -54,18 +53,11 @@ struct MultiAddRmsNormDynamicQuantCompileInfo {
     uint64_t maxUbSize = 0;
 };
 
-enum class UB_TILING_POLICY : uint8_t
-{
-    NORMAL,
-    SINGLE_ROW,
-    SLICE_D
-};
+enum class UB_TILING_POLICY : uint8_t { NORMAL, SINGLE_ROW, SLICE_D };
 
-class MultiAddRmsNormDynamicQuantTilingHelper
-{
+class MultiAddRmsNormDynamicQuantTilingHelper {
 public:
-    explicit MultiAddRmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context)
-    {}
+    explicit MultiAddRmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context) {}
 
     ~MultiAddRmsNormDynamicQuantTilingHelper() = default;
     bool DoTiling();

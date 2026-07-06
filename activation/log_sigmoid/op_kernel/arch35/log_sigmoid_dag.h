@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -89,7 +89,7 @@ struct LogSigmoidCustom : public Vec::ElemwiseUnaryOP<T, T> {
     }
 };
 
-template<typename T> 
+template <typename T>
 struct LogSigmoidNoCast {
     // 通过Compute构造计算图
     using OpCopyIn = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
@@ -101,8 +101,8 @@ struct LogSigmoidNoCast {
     using OpDag = DAGSch<Outputs>;
 };
 
-template<typename T> 
- struct LogSigmoidNeedCast {
+template <typename T>
+struct LogSigmoidNeedCast {
     // 通过Compute构造计算图
     using OpCopyIn = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>; // x
     using CastIn = Bind<Vec::Cast<float, T, CAST_MODE_NONE>, OpCopyIn>;

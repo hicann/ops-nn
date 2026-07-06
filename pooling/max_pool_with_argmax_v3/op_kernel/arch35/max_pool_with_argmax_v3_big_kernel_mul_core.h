@@ -37,17 +37,16 @@ constexpr int64_t MASK_RATIO = 8;
 template <typename T>
 class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        const LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB, TBuf<>& workLocalUB,
-        uint32_t dataCount)
+    __aicore__ inline void Compute(const LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB,
+                                   TBuf<>& workLocalUB, uint32_t dataCount)
     {
         LocalTensor<T> maxOutLocal = maxUB.Get<T>();
         ReduceMax<T>(maxOutLocal, xLocal, xLocal, dataCount, true);
         // pipev
     }
 
-    __aicore__ inline void GetMask(
-        const LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<uint8_t>& mask, uint32_t dataCount)
+    __aicore__ inline void GetMask(const LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32,
+                                   LocalTensor<uint8_t>& mask, uint32_t dataCount)
     {
         uint32_t dataCountAlign = (dataCount + REPEAT_DATA - 1) / REPEAT_DATA * REPEAT_DATA;
         if (dataCountAlign > dataCount) {
@@ -64,9 +63,8 @@ public:
 template <>
 class InnerComputer<bfloat16_t> {
 public:
-    __aicore__ inline void Compute(
-        const LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB, TBuf<>& workLocalUB,
-        uint32_t dataCount)
+    __aicore__ inline void Compute(const LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB,
+                                   TBuf<>& workLocalUB, uint32_t dataCount)
     {
         LocalTensor<float> maxOutLocal = maxUB.Get<float>();
         Cast(castToFP32, xLocal, RoundMode::CAST_NONE, dataCount);
@@ -75,9 +73,8 @@ public:
         // pipev
     }
 
-    __aicore__ inline void GetMask(
-        const LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<uint8_t>& mask,
-        uint32_t dataCount)
+    __aicore__ inline void GetMask(const LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32,
+                                   LocalTensor<uint8_t>& mask, uint32_t dataCount)
     {
         uint32_t dataCountAlign = (dataCount + REPEAT_DATA - 1) / REPEAT_DATA * REPEAT_DATA;
         if (dataCountAlign > dataCount) {
@@ -95,31 +92,30 @@ template <typename T1, typename T2, typename TINDEX>
 class MaxPoolWithArgmaxV3BigKernelMulCore {
 public:
     __aicore__ inline MaxPoolWithArgmaxV3BigKernelMulCore(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-        const MaxPoolWithArgmaxV3BigKernelMulCoreTilingData* __restrict tiling);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
+                                const MaxPoolWithArgmaxV3BigKernelMulCoreTilingData* __restrict tiling);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void Prepare(int64_t curIdx, int64_t innerBlockIdx);
     __aicore__ inline void BaseCompute(int64_t curIdx);
-    __aicore__ inline int64_t HwCopyInput(
-        int64_t offset, int64_t blockCount, int64_t blockLen, int64_t blockLenAlign, int64_t srcStride);
+    __aicore__ inline int64_t HwCopyInput(int64_t offset, int64_t blockCount, int64_t blockLen, int64_t blockLenAlign,
+                                          int64_t srcStride);
     __aicore__ inline int32_t Compute(int64_t dataCount);
     __aicore__ inline int64_t RestoreIndex(int32_t index, int64_t hLen, int64_t wLen);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
     __aicore__ inline void CopyIndicesOut(int64_t maxIndex, int64_t curIdx);
     __aicore__ inline void NaNIndicesInit(LocalTensor<float> indicesLocal);
-    __aicore__ inline void GetIndexWithLastNan(
-        LocalTensor<float> indicesMaxLocal, LocalTensor<uint8_t> maskNanLocal, int64_t dataCount, int32_t& index);
+    __aicore__ inline void GetIndexWithLastNan(LocalTensor<float> indicesMaxLocal, LocalTensor<uint8_t> maskNanLocal,
+                                               int64_t dataCount, int32_t& index);
     __aicore__ inline int64_t AllWInKernelProcess();
     __aicore__ inline void UpdateMax(int64_t curMaxIndex, T2& maxValue, int64_t& maxIndice, bool first);
     __aicore__ inline int32_t KernelRealIndex(int32_t index, int64_t blockLen, int64_t blockLenAlign);
     __aicore__ inline void CopyOut(int64_t idx, int32_t index);
     __aicore__ inline void ComputeMulCore(int32_t& index);
     __aicore__ inline void CopyInMulCore(int64_t startIdx);
-    __aicore__ inline void SplitW(
-        int64_t blockLen, int64_t alignBlockLen, int64_t strStride, int64_t& maxValueIndex, T2& value);
+    __aicore__ inline void SplitW(int64_t blockLen, int64_t alignBlockLen, int64_t strStride, int64_t& maxValueIndex,
+                                  T2& value);
     __aicore__ inline int64_t CeilValue(int64_t inputValue, int64_t upperValue)
     {
         if (upperValue == 0) {
@@ -128,10 +124,7 @@ private:
         return (inputValue + upperValue - 1) / upperValue * upperValue;
     }
 
-    __aicore__ inline int64_t Min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t Min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     __aicore__ inline bool IsNan(T2 value)
     {
@@ -229,9 +222,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Init
     maxValueWorkspaceGm.SetGlobalBuffer((__gm__ T2*)workspace);
     maxValueIndexWorkspaceGm.SetGlobalBuffer((__gm__ TINDEX*)(workspace + VALUE_WORKSPACE_SIZE));
 
-    pipe->InitBuffer(
-        inputQue, BUFFER_NUM,
-        tilingData->maxCountLength * sizeof(float));              // 原地cast 并复用为 nan index 的列表
+    pipe->InitBuffer(inputQue, BUFFER_NUM,
+                     tilingData->maxCountLength * sizeof(float)); // 原地cast 并复用为 nan index 的列表
     pipe->InitBuffer(maxUB, tilingData->valueBufferLength);       // next do 256  参数化
     pipe->InitBuffer(maxUBOutput, tilingData->valueBufferLength); // next do 256  参数化
     pipe->InitBuffer(indicesInitUB, tilingData->maxCountLength * sizeof(float));
@@ -353,9 +345,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Comp
 
         LocalTensor<float> indicesLocal = indicesInitUB.Get<float>();
         LocalTensor<float> nanMaxIndex = nanMaxIndexUB.Get<float>();
-        Select(
-            castBuffLocal, maskNanLocal, indicesLocal, float(-1), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            tilingData->multiCoreNum);
+        Select(castBuffLocal, maskNanLocal, indicesLocal, float(-1), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+               tilingData->multiCoreNum);
         ReduceMax<float>(nanMaxIndex, castBuffLocal, castBuffLocal, tilingData->multiCoreNum, false);
 
         event_t eventIdVtoS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -404,8 +395,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Copy
     return;
 }
 template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Prepare(
-    int64_t curIdx, int64_t innerBlockIdx)
+__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Prepare(int64_t curIdx,
+                                                                                    int64_t innerBlockIdx)
 {
     int64_t cur2D = curIdx % outHW;
     int64_t curNc = curIdx / outHW;
@@ -429,8 +420,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Prep
     }
 
     if (tilingData->splitW == 0) {
-        curOriginIndex =
-            (curOriginH + innerBlockIdx * tilingData->kernelBlockFactorH) * tilingData->wInDim + curOriginW;
+        curOriginIndex = (curOriginH + innerBlockIdx * tilingData->kernelBlockFactorH) * tilingData->wInDim +
+                         curOriginW;
     } else {
         curOriginIndex = (curOriginH + innerBlockIdx / tilingData->splitSlice) * tilingData->wInDim + curOriginW +
                          innerBlockIdx % tilingData->splitSlice * tilingData->wSplitSize;
@@ -531,8 +522,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::GetI
 }
 
 template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline int64_t MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::RestoreIndex(
-    int32_t index, int64_t hLen, int64_t wLen)
+__aicore__ inline int64_t MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::RestoreIndex(int32_t index, int64_t hLen,
+                                                                                            int64_t wLen)
 {
     int64_t realIndex = 0;
     if (tilingData->splitW == 0) {
@@ -562,8 +553,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Copy
 }
 
 template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::CopyIndicesOut(
-    int64_t maxIndex, int64_t curIdx)
+__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::CopyIndicesOut(int64_t maxIndex,
+                                                                                           int64_t curIdx)
 {
     DataCopyExtParams extParams;
     extParams.blockCount = 1;
@@ -596,8 +587,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::NaNI
     CreateVecIndex(indicesLocal, 0.0f, InitIndicesNum);
 }
 template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::SplitW(
-    int64_t blockLen, int64_t alignBlockLen, int64_t strStride, int64_t& maxValueIndex, T2& value)
+__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::SplitW(int64_t blockLen,
+                                                                                   int64_t alignBlockLen,
+                                                                                   int64_t strStride,
+                                                                                   int64_t& maxValueIndex, T2& value)
 {
     int64_t kernelOffset = 0;
     int64_t inputOffset = curInOffset;
@@ -623,9 +616,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Spli
         for (int64_t w = 0; w < curKernelBlockFactorH; w++) {
             for (int64_t eachLoopW = 0; eachLoopW < loopWCount; eachLoopW++) {
                 int64_t wBlockLen = (eachLoopW == (loopWCount - 1) ? tailLoopWSize : tilingData->maxCountLength);
-                int64_t alignWBlockLen =
-                    (eachLoopW == (loopWCount - 1) ? CeilValue(tailLoopWSize, BLOCK_NUM_T1) :
-                                                     tilingData->maxCountLength);
+                int64_t alignWBlockLen = (eachLoopW == (loopWCount - 1) ? CeilValue(tailLoopWSize, BLOCK_NUM_T1) :
+                                                                          tilingData->maxCountLength);
                 int32_t dataCount = HwCopyInput(inputOffset, 1, wBlockLen, alignWBlockLen, 0);
                 int32_t index = Compute(dataCount);
                 bool first = (eachLoopW == 0 && w == 0);
@@ -692,8 +684,8 @@ __aicore__ inline int64_t MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::A
     return realIndex;
 }
 template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::UpdateMax(
-    int64_t curMaxIndex, T2& maxValue, int64_t& maxIndex, bool first)
+__aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::UpdateMax(int64_t curMaxIndex, T2& maxValue,
+                                                                                      int64_t& maxIndex, bool first)
 {
     LocalTensor<T2> maxOutLocal = maxUB.Get<T2>();
     T2 curMaxValue = maxOutLocal.GetValue(0);
@@ -712,8 +704,9 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::Upda
 }
 
 template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline int32_t MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::KernelRealIndex(
-    int32_t index, int64_t blockLen, int64_t blockLenAlign)
+__aicore__ inline int32_t MaxPoolWithArgmaxV3BigKernelMulCore<T1, T2, TINDEX>::KernelRealIndex(int32_t index,
+                                                                                               int64_t blockLen,
+                                                                                               int64_t blockLenAlign)
 {
     int64_t alignNum = blockLenAlign - blockLen;
     if (alignNum != 0) {

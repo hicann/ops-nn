@@ -33,14 +33,13 @@ constexpr int64_t EXPECT_GRAD_SHAPE = 5;
 
 OP_TYPE_REGISTER(AvgPool3DGrad);
 
-const aclTensor* AvgPool3DGrad(
-    const aclTensor* self, const aclTensor* shapeOrigInput, const aclTensor* gradOutput, const aclIntArray* ksize,
-    const aclIntArray* strides, const aclIntArray* pads, bool ceilMode, bool countIncludePad, int divisorOverride,
-    const std::string& dataFormat, aclOpExecutor* executor)
+const aclTensor* AvgPool3DGrad(const aclTensor* self, const aclTensor* shapeOrigInput, const aclTensor* gradOutput,
+                               const aclIntArray* ksize, const aclIntArray* strides, const aclIntArray* pads,
+                               bool ceilMode, bool countIncludePad, int divisorOverride, const std::string& dataFormat,
+                               aclOpExecutor* executor)
 {
-    L0_DFX(
-        AvgPool3DGrad, gradOutput, shapeOrigInput, ksize, strides, pads, ceilMode, countIncludePad, divisorOverride,
-        dataFormat);
+    L0_DFX(AvgPool3DGrad, gradOutput, shapeOrigInput, ksize, strides, pads, ceilMode, countIncludePad, divisorOverride,
+           dataFormat);
 
     auto gradShape = gradOutput->GetViewShape();
     auto gradSize = gradShape.GetDimNum();
@@ -75,9 +74,9 @@ const aclTensor* AvgPool3DGrad(
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         AvgPool3DGrad, OP_INPUT(shapeOrigInput, gradOutput), OP_OUTPUT(out),
         OP_ATTR(ksize, strides, pads, ceilMode, countIncludePad, divisorOverride, dataFormat));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPool3DGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AvgPool3DGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 } // namespace l0op

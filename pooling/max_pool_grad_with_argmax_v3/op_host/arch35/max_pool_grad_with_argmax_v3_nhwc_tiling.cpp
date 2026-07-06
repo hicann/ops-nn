@@ -40,9 +40,9 @@ uint64_t MaxPoolGradWithArgmaxV3NHWCTiling::GetTilingKey() const
     uint16_t computeSizeArgmax = NHWCBase->GetBaseData().vRegSize / NHWCBase->GetBaseData().indexBytes;
 
     uint64_t tilingKey = CHECK_RANGE_TILING_KEY_NHWC;
-    if(computeSizeArgmax / inputData.cGrad < THRESHOLD) {
+    if (computeSizeArgmax / inputData.cGrad < THRESHOLD) {
         tilingKey = NO_CHECK_RANGE_TILING_KEY_NHWC_BIGC;
-    } else if(computeSizeArgmax / (inputData.cGrad * inputData.wGrad) < THRESHOLD) {
+    } else if (computeSizeArgmax / (inputData.cGrad * inputData.wGrad) < THRESHOLD) {
         tilingKey = NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC;
     }
 
@@ -62,10 +62,7 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NHWCTiling::DoOpTiling()
     return NHWCBase->DoOpTiling(context_, GetTilingKey());
 }
 
-ge::graphStatus MaxPoolGradWithArgmaxV3NHWCTiling::PostTiling()
-{
-    return NHWCBase->PostTiling(context_);
-}
+ge::graphStatus MaxPoolGradWithArgmaxV3NHWCTiling::PostTiling() { return NHWCBase->PostTiling(context_); }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3NHWCTiling, 3);
 

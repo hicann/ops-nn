@@ -23,19 +23,17 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ThresholdGradV2D);
 
-const aclTensor *ThresholdGradV2D(const aclTensor *gradOutput, const aclTensor *self, float threshold,
-                                  aclOpExecutor *executor) {
-  L0_DFX(ThresholdGradV2D, gradOutput, self, threshold);
-  // 根据推导出的输出shape申请输出tensor
-  Shape broadcastShape;
-  OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, gradOutput, broadcastShape, return nullptr);
-  // 第一个参数是输出shape，第二个参数是输出的dtype
-  auto out = executor->AllocTensor(broadcastShape, self->GetDataType());
+const aclTensor* ThresholdGradV2D(const aclTensor* gradOutput, const aclTensor* self, float threshold,
+                                  aclOpExecutor* executor)
+{
+    L0_DFX(ThresholdGradV2D, gradOutput, self, threshold);
+    // 根据推导出的输出shape申请输出tensor
+    Shape broadcastShape;
+    OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, gradOutput, broadcastShape, return nullptr);
+    // 第一个参数是输出shape，第二个参数是输出的dtype
+    auto out = executor->AllocTensor(broadcastShape, self->GetDataType());
 
-  ADD_TO_LAUNCHER_LIST_AICORE(ThresholdGradV2D,
-                              OP_INPUT(gradOutput, self),
-                              OP_OUTPUT(out),
-                              OP_ATTR(threshold));
-  return out;
+    ADD_TO_LAUNCHER_LIST_AICORE(ThresholdGradV2D, OP_INPUT(gradOutput, self), OP_OUTPUT(out), OP_ATTR(threshold));
+    return out;
 }
-}  // namespace l0op
+} // namespace l0op

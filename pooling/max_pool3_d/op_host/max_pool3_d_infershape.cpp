@@ -37,8 +37,8 @@ constexpr size_t PAD_BOTTOM = 3;
 constexpr size_t PAD_LEFT = 4;
 constexpr size_t PAD_RIGHT = 5;
 
-using InferShapePaddingFunc = ge::graphStatus (*)(
-    gert::InferShapeContext*, size_t, size_t, size_t, const gert::RuntimeAttrs*);
+using InferShapePaddingFunc = ge::graphStatus (*)(gert::InferShapeContext*, size_t, size_t, size_t,
+                                                  const gert::RuntimeAttrs*);
 
 static std::string Int64ToString(const int64_t* data, size_t size)
 {
@@ -55,8 +55,8 @@ static int64_t SameUpdateDim(const int64_t ksize, const int64_t strides, int64_t
     return (strides == 0) ? (dim_size - ksize + 1) : ((dim_size - ksize + strides) / strides);
 }
 
-static void CalculateUpdateDim(
-    const int64_t ksize, const int64_t stride, const int64_t dilation, const bool ceil_mode, int64_t& dim_size)
+static void CalculateUpdateDim(const int64_t ksize, const int64_t stride, const int64_t dilation, const bool ceil_mode,
+                               int64_t& dim_size)
 {
     if (ceil_mode) {
         dim_size = (stride == 0) ? (dim_size - ksize + 1) :
@@ -66,55 +66,50 @@ static void CalculateUpdateDim(
     }
 }
 
-static ge::graphStatus InferShapePaddingCalculated(
-    gert::InferShapeContext* context, size_t d_dim, size_t h_dim, size_t w_dim, const gert::RuntimeAttrs* attrs)
+static ge::graphStatus InferShapePaddingCalculated(gert::InferShapeContext* context, size_t d_dim, size_t h_dim,
+                                                   size_t w_dim, const gert::RuntimeAttrs* attrs)
 {
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetSize() != SHAPE_SIZE,
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "ksize",
-            std::to_string(ksize->GetSize()).c_str(), std::to_string(SHAPE_SIZE).c_str()),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(ksize->GetSize() != SHAPE_SIZE,
+                OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(),
+                                             std::to_string(SHAPE_SIZE).c_str()),
+                return GRAPH_FAILED);
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
-    OP_CHECK_IF(
-        pads->GetSize() != PAD_SIZE,
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "pads",
-            std::to_string(pads->GetSize()).c_str(), std::to_string(PAD_SIZE).c_str()),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(pads->GetSize() != PAD_SIZE,
+                OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads", std::to_string(pads->GetSize()).c_str(),
+                                             std::to_string(PAD_SIZE).c_str()),
+                return GRAPH_FAILED);
     auto ceil_mode = attrs->GetAttrPointer<int32_t>(INDEX_CEIL_MODE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ceil_mode);
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
         strides->GetSize() != SHAPE_SIZE,
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "strides",
-            std::to_string(strides->GetSize()).c_str(), std::to_string(SHAPE_SIZE).c_str()),
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     std::to_string(SHAPE_SIZE).c_str()),
         return GRAPH_FAILED);
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
     OP_CHECK_IF(
-        strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0, {
-        std::string stridesVals = "d=" + std::to_string(strides_data[d_dim]) +
-            ", h=" + std::to_string(strides_data[h_dim]) +
-            ", w=" + std::to_string(strides_data[w_dim]);
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "strides_d, strides_h, strides_w", stridesVals.c_str(),
-            "strides d/h/w dimension values must be >0");
-        }, return GRAPH_FAILED);
+        strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
+        {
+            std::string stridesVals = "d=" + std::to_string(strides_data[d_dim]) +
+                                      ", h=" + std::to_string(strides_data[h_dim]) +
+                                      ", w=" + std::to_string(strides_data[w_dim]);
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "strides_d, strides_h, strides_w",
+                                                   stridesVals.c_str(), "strides d/h/w dimension values must be >0");
+        },
+        return GRAPH_FAILED);
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
 
     auto dilations = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilations);
     OP_CHECK_IF(
         ((dilations->GetSize() != SHAPE_SIZE) && (dilations->GetSize() != DIM_SIZE6)),
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "dilation",
-            std::to_string(dilations->GetSize()).c_str(), std::to_string(SHAPE_SIZE).c_str()),
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation", std::to_string(dilations->GetSize()).c_str(),
+                                     std::to_string(SHAPE_SIZE).c_str()),
         return GRAPH_FAILED);
     auto dilations_data = static_cast<const int64_t*>(dilations->GetData());
     if (dilations->GetSize() == DIM_SIZE6) {
@@ -154,36 +149,34 @@ static ge::graphStatus InferShapePaddingCalculated(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShapePaddingValid(
-    gert::InferShapeContext* context, size_t d_dim, size_t h_dim, size_t w_dim, const gert::RuntimeAttrs* attrs)
+static ge::graphStatus InferShapePaddingValid(gert::InferShapeContext* context, size_t d_dim, size_t h_dim,
+                                              size_t w_dim, const gert::RuntimeAttrs* attrs)
 {
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetSize() != SHAPE_SIZE,
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "ksize",
-            std::to_string(ksize->GetSize()).c_str(), std::to_string(SHAPE_SIZE).c_str()),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(ksize->GetSize() != SHAPE_SIZE,
+                OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(),
+                                             std::to_string(SHAPE_SIZE).c_str()),
+                return GRAPH_FAILED);
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
         strides->GetSize() != SHAPE_SIZE,
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "strides",
-            std::to_string(strides->GetSize()).c_str(), std::to_string(SHAPE_SIZE).c_str()),
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     std::to_string(SHAPE_SIZE).c_str()),
         return GRAPH_FAILED);
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
     OP_CHECK_IF(
-        strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0, {
-        std::string stridesVals = "d=" + std::to_string(strides_data[d_dim]) +
-            ", h=" + std::to_string(strides_data[h_dim]) +
-            ", w=" + std::to_string(strides_data[w_dim]);
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "strides_d, strides_h, strides_w", stridesVals.c_str(),
-            "strides d/h/w dimension values must be >0");
-        }, return GRAPH_FAILED);
+        strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
+        {
+            std::string stridesVals = "d=" + std::to_string(strides_data[d_dim]) +
+                                      ", h=" + std::to_string(strides_data[h_dim]) +
+                                      ", w=" + std::to_string(strides_data[w_dim]);
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "strides_d, strides_h, strides_w",
+                                                   stridesVals.c_str(), "strides d/h/w dimension values must be >0");
+        },
+        return GRAPH_FAILED);
 
     auto in_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
@@ -202,27 +195,27 @@ static ge::graphStatus InferShapePaddingValid(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShapePaddingSame(
-    gert::InferShapeContext* context, size_t d_dim, size_t h_dim, size_t w_dim, const gert::RuntimeAttrs* attrs)
+static ge::graphStatus InferShapePaddingSame(gert::InferShapeContext* context, size_t d_dim, size_t h_dim, size_t w_dim,
+                                             const gert::RuntimeAttrs* attrs)
 {
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
         strides->GetSize() != SHAPE_SIZE,
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "strides",
-            std::to_string(strides->GetSize()).c_str(), std::to_string(SHAPE_SIZE).c_str()),
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     std::to_string(SHAPE_SIZE).c_str()),
         return GRAPH_FAILED);
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
     OP_CHECK_IF(
-        strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0, {
-        std::string stridesVals = "d=" + std::to_string(strides_data[d_dim]) +
-            ", h=" + std::to_string(strides_data[h_dim]) +
-            ", w=" + std::to_string(strides_data[w_dim]);
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "strides_d, strides_h, strides_w", stridesVals.c_str(),
-            "strides d/h/w dimension values must be >0");
-        }, return GRAPH_FAILED);
+        strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
+        {
+            std::string stridesVals = "d=" + std::to_string(strides_data[d_dim]) +
+                                      ", h=" + std::to_string(strides_data[h_dim]) +
+                                      ", w=" + std::to_string(strides_data[w_dim]);
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "strides_d, strides_h, strides_w",
+                                                   stridesVals.c_str(), "strides d/h/w dimension values must be >0");
+        },
+        return GRAPH_FAILED);
 
     auto in_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
@@ -276,17 +269,14 @@ static ge::graphStatus InferShape4MaxPool3D(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     auto padding_mode = attrs->GetAttrPointer<char>(INDEX_PADDING);
     OP_CHECK_NULL_WITH_CONTEXT(context, padding_mode);
-    auto it = std::find_if(
-        kFuncMap.begin(), kFuncMap.end(),
-        [&padding_mode](const std::pair<std::string, InferShapePaddingFunc>& item) -> bool {
-            return item.first == padding_mode;
-        });
-    OP_CHECK_IF(
-        it == kFuncMap.end(),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "padding_mode", padding_mode,
-            "padding_mode must be one of (CALCULATED, VALID, SAME)"),
-        return GRAPH_FAILED);
+    auto it = std::find_if(kFuncMap.begin(), kFuncMap.end(),
+                           [&padding_mode](const std::pair<std::string, InferShapePaddingFunc>& item) -> bool {
+                               return item.first == padding_mode;
+                           });
+    OP_CHECK_IF(it == kFuncMap.end(),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "padding_mode", padding_mode,
+                                                      "padding_mode must be one of (CALCULATED, VALID, SAME)"),
+                return GRAPH_FAILED);
 
     // when padding_mode in (CALCULATED, VALID, SAME)
     return it->second(context, d_dim, h_dim, w_dim, attrs);

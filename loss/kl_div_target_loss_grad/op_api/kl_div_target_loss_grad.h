@@ -18,8 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *KlDivTargetLossGrad(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target,
-                               const char* reduction, bool logTarget, aclOpExecutor *executor);
+const aclTensor* KlDivTargetLossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                     const char* reduction, bool logTarget, aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_KL_DIV_TARGET_LOSS_GRAD_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_KL_DIV_TARGET_LOSS_GRAD_OP_H_

@@ -25,14 +25,13 @@ namespace AdvanceStepNs {
 using namespace AscendC;
 
 template <typename T>
-class KernelAdvanceStepSpec
-{
+class KernelAdvanceStepSpec {
 public:
     __aicore__ inline KernelAdvanceStepSpec(){};
-    __aicore__ inline void Init(
-        GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions, GM_ADDR seq_lens,
-        GM_ADDR slot_mapping, GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num, GM_ADDR workspace,
-        const AdvanceStepTilingData* tilingData, TPipe* tPipe);
+    __aicore__ inline void Init(GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions,
+                                GM_ADDR seq_lens, GM_ADDR slot_mapping, GM_ADDR block_tables, GM_ADDR spec_token,
+                                GM_ADDR accepted_num, GM_ADDR workspace, const AdvanceStepTilingData* tilingData,
+                                TPipe* tPipe);
     __aicore__ inline void Process();
     __aicore__ inline void CopyIn(int64_t loop, int64_t seqsNum);
     __aicore__ inline void Compute(int64_t loop, int64_t seqsNum);
@@ -76,10 +75,11 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void KernelAdvanceStepSpec<T>::Init(
-    GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
-    GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num, GM_ADDR workspace,
-    const AdvanceStepTilingData* tilingData, TPipe* tPipe)
+__aicore__ inline void KernelAdvanceStepSpec<T>::Init(GM_ADDR input_tokens, GM_ADDR sampled_token_ids,
+                                                      GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
+                                                      GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num,
+                                                      GM_ADDR workspace, const AdvanceStepTilingData* tilingData,
+                                                      TPipe* tPipe)
 {
     pipe_ = tPipe;
     blockIdx_ = GetBlockIdx();
@@ -130,8 +130,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyIn(int64_t loop, int64_t se
     LocalTensor<T> inputPositionsLocal = buffer1.AllocTensor<T>();
     LocalTensor<T> seqLensLocal = buffer2.AllocTensor<T>();
     LocalTensor<T> acceptedNumLocal = buffer3.AllocTensor<T>();
-    DataCopyExtParams dataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)), 0, 0, 0};
+    DataCopyExtParams dataCopyParams{static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)),
+                                     0, 0, 0};
     if (align) {
         dataCopyParams.dstStride = 1;
     }
@@ -139,8 +139,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyIn(int64_t loop, int64_t se
     int64_t offset = loop * perLoopSeqs_ * tokenEachReqs_;
     DataCopyPad(inputPositionsLocal, inputPositionsGm_[offset], dataCopyParams, dataCopyPadParams);
     DataCopyPad(seqLensLocal, seqLensGm_[offset], dataCopyParams, dataCopyPadParams);
-    DataCopyExtParams acceptedNumDataCopyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(seqsNum * sizeof(T)), 0, 0, 0};
+    DataCopyExtParams acceptedNumDataCopyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(seqsNum * sizeof(T)), 0,
+                                                0, 0};
     offset = loop * perLoopSeqs_;
     DataCopyPad(acceptedNumLocal, acceptedNumGm_[offset], acceptedNumDataCopyParams, dataCopyPadParams);
 
@@ -174,17 +174,20 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::Compute(int64_t loop, int64_t s
     int64_t index = 0;
     for (uint64_t i = 0; i < seqsNum; i++) {
         int32_t acceptedNumI = static_cast<int32_t>(acceptedNumLocalInt64.GetValue(i));
-        Adds(
-            bufferLocal[i * elementNum / seqsNum], bufferLocal[i * elementNum / seqsNum], acceptedNumI, tokenEachReqs_);
+        Adds(bufferLocal[i * elementNum / seqsNum], bufferLocal[i * elementNum / seqsNum], acceptedNumI,
+             tokenEachReqs_);
     }
     SetWaitFlag<HardEvent::S_V>(HardEvent::S_V);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     // inputPositions += 1
     Adds(bufferLocal, bufferLocal, 1, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     // seqLens = inputPositions + 1
     Adds(seqLensLocal, bufferLocal, 1, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Cast(inputPositionsLocalInt64, bufferLocal, RoundMode::CAST_NONE, elementNum);
     Cast(seqLensLocalInt64, seqLensLocal, RoundMode::CAST_NONE, elementNum);
     SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
@@ -201,8 +204,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOut(int64_t loop, int64_t s
     LocalTensor<T> inputPositionsLocal = buffer1.DeQue<T>();
     LocalTensor<T> seqLensLocal = buffer2.DeQue<T>();
     // 搬运inputPositions、seqLens、slotMapping，shape相同，用同一个dataCopyParams
-    DataCopyExtParams dataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)), 0, 0, 0};
+    DataCopyExtParams dataCopyParams{static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)),
+                                     0, 0, 0};
     if (align) {
         dataCopyParams.srcStride = 1;
     }
@@ -228,18 +231,21 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     }
     LocalTensor<int32_t> slotMappingLocal = outputInt32Buf_.Get<int32_t>();
     Cast(slotMappingLocal, slotMappingLocalInt64, RoundMode::CAST_NONE, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
     // 生成blockTables行偏移，存放在slotMappingLocal
     ArithProgression<int32_t>(bufferLocal, static_cast<int32_t>(0), blockTablesStride_, seqsNum);
     SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
     for (uint64_t i = 0; i < seqsNum; i++) {
         int32_t bufferLocalI = static_cast<int32_t>(bufferLocal.GetValue(i));
         Duplicate(slotMappingLocal[i * elementNum / seqsNum], bufferLocalI, tokenEachReqs_);
     }
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     // 计算inputPositions/blockSize，存放在bufferLocal，保证blockSize_不为0
     for (uint32_t i = 0; i < elementNum; i++) {
         bufferLocal.SetValue(i, inputPositionsLocal.GetValue(i) / static_cast<int32_t>(blockSize_));
@@ -249,7 +255,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     // 计算需要取出的blockTable的下标偏移，即上两项相加，inputPositions/blockSize + blockTablesStride*index
     Add(bufferLocal, slotMappingLocal, bufferLocal, elementNum);
     SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     // gather获取偏移中的值
     int64_t blockTablesOffset = loop * perLoopSeqs_ * blockTablesStride_;
     for (int i = 0; i < seqsNum; ++i) {
@@ -263,7 +270,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     SetWaitFlag<HardEvent::S_V>(HardEvent::S_V);
     // 计算blockTable[...] * blockSize
     Muls(slotMappingLocal, slotMappingLocal, static_cast<int32_t>(blockSize_), elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
     // 计算inputPositions % blockSize
     for (uint32_t i = 0; i < elementNum; i++) {
@@ -272,7 +280,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     SetWaitFlag<HardEvent::S_V>(HardEvent::S_V);
     // 计算slotMapping最终值
     Add(slotMappingLocal, bufferLocal, slotMappingLocal, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Cast(slotMappingLocalInt64, slotMappingLocal, RoundMode::CAST_NONE, elementNum);
     SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
 
@@ -286,8 +295,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOutSlotMapping(int64_t loop
 {
     LocalTensor<T> slotMappingLocal = buffer2.DeQue<T>();
     int elementNum = seqsNum * tokenEachReqs_;
-    DataCopyExtParams dataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)), 0, 0, 0};
+    DataCopyExtParams dataCopyParams{static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)),
+                                     0, 0, 0};
     if (align) {
         dataCopyParams.srcStride = 1;
     }
@@ -305,17 +314,16 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyInInputTokens(int64_t loop,
 
     // 搬运sampledTokenIds，其第2维是specNum+1
     int64_t offset = loop * perLoopSeqs_ * tokenEachReqs_;
-    DataCopyExtParams sampledTokenIdsDataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)), 0, 0, 0};
+    DataCopyExtParams sampledTokenIdsDataCopyParams{static_cast<uint16_t>(seqsNum),
+                                                    static_cast<uint32_t>(tokenEachReqs_ * sizeof(T)), 0, 0, 0};
     DataCopyPadExtParams<T> sampledTokenIdsDataCopyPadParams{false, 0, 0, 0};
-    DataCopyPad(
-        sampledTokenIdsLocal, sampledTokenIdsGm_[offset], sampledTokenIdsDataCopyParams,
-        sampledTokenIdsDataCopyPadParams);
+    DataCopyPad(sampledTokenIdsLocal, sampledTokenIdsGm_[offset], sampledTokenIdsDataCopyParams,
+                sampledTokenIdsDataCopyPadParams);
 
     // 搬运specToken，其第2维是specNum
     offset = loop * perLoopSeqs_ * specNum_;
-    DataCopyExtParams specTokenDataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(specNum_ * sizeof(T)), 0, 0, 0};
+    DataCopyExtParams specTokenDataCopyParams{static_cast<uint16_t>(seqsNum),
+                                              static_cast<uint32_t>(specNum_ * sizeof(T)), 0, 0, 0};
     DataCopyPadExtParams<T> specTokenDataCopyPadParams{false, 0, 0, 0};
     DataCopyPad(specTokenLocal, specTokenGm_[offset], specTokenDataCopyParams, specTokenDataCopyPadParams);
 
@@ -347,7 +355,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeInputTokens(int64_t loop
         // bufferLocal存放的是lastTokens
         int64_t lastToken = sampledTokenIdsLocalInt64.GetValue(i * stride + minIndex - 1);
         lastTokensInt64.SetValue(Align(1, sizeof(T)) * i, lastToken);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
     }
     buffer3.EnQue(lastTokensInt64);
     buffer1.FreeTensor(sampledTokenIdsLocalInt64);
@@ -360,15 +369,14 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOutInputTokens(int64_t loop
     LocalTensor<T> lastTokensLocal = buffer3.DeQue<T>();
     // 搬运lastToken到inputTokens的第1列
     int64_t offset = loop * perLoopSeqs_ * tokenEachReqs_;
-    DataCopyExtParams lastTokenDataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(sizeof(T)), 0,
-        static_cast<uint32_t>((specNum_) * sizeof(T)), 0};
+    DataCopyExtParams lastTokenDataCopyParams{static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(sizeof(T)), 0,
+                                              static_cast<uint32_t>((specNum_) * sizeof(T)), 0};
     DataCopyPad(inputTokensGm_[offset], lastTokensLocal, lastTokenDataCopyParams);
 
     // // 搬运specToke到inputTokens的后specNum列
-    DataCopyExtParams specTokenDataCopyParams{
-        static_cast<uint16_t>(seqsNum), static_cast<uint32_t>(specNum_ * sizeof(T)), 0,
-        static_cast<uint32_t>(sizeof(T)), 0};
+    DataCopyExtParams specTokenDataCopyParams{static_cast<uint16_t>(seqsNum),
+                                              static_cast<uint32_t>(specNum_ * sizeof(T)), 0,
+                                              static_cast<uint32_t>(sizeof(T)), 0};
     DataCopyPad(inputTokensGm_[offset + 1], specTokenLocal, specTokenDataCopyParams);
 
     buffer2.FreeTensor(specTokenLocal);

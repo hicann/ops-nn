@@ -40,22 +40,17 @@
 
 class ApplyRMSProp : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyRMSProp SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyRMSProp SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyRMSProp TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyRMSProp TearDown" << std::endl; }
 };
 
 // Build a 1-D / N-D shape from a vector for output assertions.
 static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 {
     std::vector<int64_t> v;
-    if (s == nullptr) return v;
+    if (s == nullptr)
+        return v;
     for (size_t i = 0; i < s->GetDimNum(); ++i) {
         v.push_back(s->GetDim(i));
     }
@@ -66,10 +61,8 @@ static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 // through the holder's context (since the Faker copies the input/output
 // StorageShape arguments — writes inside the InferShape function don't
 // propagate back to the caller-side variables).
-static ge::graphStatus RunAndGetOutputShape(
-    gert::StorageShape& tensorShape,
-    gert::StorageShape& scalarShape,
-    std::vector<int64_t>& outputDims)
+static ge::graphStatus RunAndGetOutputShape(gert::StorageShape& tensorShape, gert::StorageShape& scalarShape,
+                                            std::vector<int64_t>& outputDims)
 {
     auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyRMSProp");
     if (opImpl == nullptr) {
@@ -86,10 +79,8 @@ static ge::graphStatus RunAndGetOutputShape(
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(8, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&tensorShape, &tensorShape, &tensorShape,
-                           &scalarShape, &scalarShape, &scalarShape, &scalarShape,
-                           &tensorShape})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &tensorShape})
                       .OutputShapes({&outputShape})
                       .Build();
 

@@ -22,9 +22,10 @@
 
 using TilingDataType = SigmoidCrossEntropyWithLogitsGradV2TilingData;
 
-extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_grad_v2(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR dout, GM_ADDR weight, GM_ADDR pos_weight, GM_ADDR gradient,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_grad_v2(GM_ADDR predict, GM_ADDR target,
+                                                                                GM_ADDR dout, GM_ADDR weight,
+                                                                                GM_ADDR pos_weight, GM_ADDR gradient,
+                                                                                GM_ADDR workspace, GM_ADDR tiling);
 
 class sigmoid_cross_entropy_with_logits_grad_v2_test : public testing::Test {
 protected:
@@ -66,9 +67,8 @@ TEST_F(sigmoid_cross_entropy_with_logits_grad_v2_test, test_case_fp32_smoke)
 
     ICPU_SET_TILING_KEY(TILING_KEY_FLOAT);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        sigmoid_cross_entropy_with_logits_grad_v2, block_dim, predict, target, dout, weight, pos_weight, gradient,
-        workspace, (uint8_t*)(tiling_data_from_bin));
+    ICPU_RUN_KF(sigmoid_cross_entropy_with_logits_grad_v2, block_dim, predict, target, dout, weight, pos_weight,
+                gradient, workspace, (uint8_t*)(tiling_data_from_bin));
 
     AscendC::GmFree(predict);
     AscendC::GmFree(target);

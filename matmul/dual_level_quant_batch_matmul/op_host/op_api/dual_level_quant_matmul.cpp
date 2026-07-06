@@ -25,21 +25,21 @@ OP_TYPE_REGISTER(DualLevelQuantBatchMatmul);
 constexpr int64_t TYPE_FP16 = 1;
 constexpr int64_t TYPE_BF16 = 27;
 
-const aclTensor* DualLevelQuantBatchMatmul(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Level0Scale, const aclTensor* x2Level0Scale,
-    const aclTensor* x1Level1Scale, const aclTensor* x2Level1Scale, const aclTensor* optionalBias, int64_t dtype,
-    bool transposeX1, bool transposeX2, int64_t level0GroupSize, int64_t level1GroupSize, aclOpExecutor* executor)
+const aclTensor* DualLevelQuantBatchMatmul(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Level0Scale,
+                                           const aclTensor* x2Level0Scale, const aclTensor* x1Level1Scale,
+                                           const aclTensor* x2Level1Scale, const aclTensor* optionalBias, int64_t dtype,
+                                           bool transposeX1, bool transposeX2, int64_t level0GroupSize,
+                                           int64_t level1GroupSize, aclOpExecutor* executor)
 {
-    L0_DFX(
-        DualLevelQuantBatchMatmul, x1, x2, x1Level0Scale, x1Level1Scale, x2Level0Scale, x2Level0Scale, x2Level1Scale,
-        optionalBias, dtype, transposeX1, transposeX2, level0GroupSize, level1GroupSize);
+    L0_DFX(DualLevelQuantBatchMatmul, x1, x2, x1Level0Scale, x1Level1Scale, x2Level0Scale, x2Level0Scale, x2Level1Scale,
+           optionalBias, dtype, transposeX1, transposeX2, level0GroupSize, level1GroupSize);
     DataType outType = static_cast<DataType>(dtype);
     auto output = executor->AllocTensor(outType, Format::FORMAT_ND, Format::FORMAT_ND);
 
-    auto ret = INFER_SHAPE(
-        DualLevelQuantBatchMatmul,
-        OP_INPUT(x1, x2, x1Level0Scale, x1Level1Scale, x2Level0Scale, x2Level1Scale, optionalBias), OP_OUTPUT(output),
-        OP_ATTR(dtype, transposeX1, transposeX2, level0GroupSize, level1GroupSize));
+    auto ret = INFER_SHAPE(DualLevelQuantBatchMatmul,
+                           OP_INPUT(x1, x2, x1Level0Scale, x1Level1Scale, x2Level0Scale, x2Level1Scale, optionalBias),
+                           OP_OUTPUT(output),
+                           OP_ATTR(dtype, transposeX1, transposeX2, level0GroupSize, level1GroupSize));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
         return nullptr;

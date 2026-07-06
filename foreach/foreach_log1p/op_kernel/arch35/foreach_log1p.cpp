@@ -24,12 +24,11 @@ using namespace NsForeachLog1p;
 enum class ForeachLog1pTilingKey : uint32_t {
     TILING_KEY_FLOAT16 = 0,
     TILING_KEY_FLOAT32 = 1,
-    TILING_KEY_BF16    = 2,
+    TILING_KEY_BF16 = 2,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_log1p(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_log1p(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachLog1pTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachLog1pTilingData, tilingData, tiling);

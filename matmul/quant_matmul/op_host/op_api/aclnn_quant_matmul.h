@@ -21,39 +21,46 @@ extern "C" {
  * @brief aclnnQuantMatmul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
-__attribute__((deprecated("aclnnQuantMatmulGetWorkspaceSize is scheduled to be deprecated in a post-December 2026 version update, "
-                        "and will be replaced by the aclnnQuantMatmulV5GetWorkspaceSize. "
-                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
-ACLNN_API aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, float deqScale, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+__attribute__((
+    deprecated("aclnnQuantMatmulGetWorkspaceSize is scheduled to be deprecated in a post-December 2026 version update, "
+               "and will be replaced by the aclnnQuantMatmulV5GetWorkspaceSize. "
+               "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
+ACLNN_API aclnnStatus
+aclnnQuantMatmulGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, float deqScale,
+                                 aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantMatmul的第二段接口，用于执行计算。
  */
-__attribute__((deprecated("aclnnQuantMatmul is scheduled to be deprecated in a post-December 2026 version update, "
-                        "and will be replaced by the aclnnQuantMatmulV5. "
-                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
-ACLNN_API aclnnStatus aclnnQuantMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+__attribute__((
+    deprecated("aclnnQuantMatmul is scheduled to be deprecated in a post-December 2026 version update, "
+               "and will be replaced by the aclnnQuantMatmulV5. "
+               "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
+ACLNN_API aclnnStatus
+aclnnQuantMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
 
 /**
  * @brief aclnnQuantMatmulV2的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
-__attribute__((deprecated("aclnnQuantMatmulV2GetWorkspaceSize is scheduled to be deprecated in a post-December 2026 version update, "
-                        "and will be replaced by the aclnnQuantMatmulV5GetWorkspaceSize. "
-                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
-ACLNN_API aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, bool adjX1, bool adjX2,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
+__attribute__((deprecated(
+    "aclnnQuantMatmulV2GetWorkspaceSize is scheduled to be deprecated in a post-December 2026 version update, "
+    "and will be replaced by the aclnnQuantMatmulV5GetWorkspaceSize. "
+    "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
+ACLNN_API aclnnStatus
+aclnnQuantMatmulV2GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                   const aclTensor* deqScale, bool adjX1, bool adjX2, aclTensor* out,
+                                   uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantMatmulV2的第二段接口，用于执行计算。
  */
-__attribute__((deprecated("aclnnQuantMatmulV2 is scheduled to be deprecated in a post-December 2026 version update, "
-                        "and will be replaced by the aclnnQuantMatmulV5. "
-                        "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
-ACLNN_API aclnnStatus aclnnQuantMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+__attribute__((
+    deprecated("aclnnQuantMatmulV2 is scheduled to be deprecated in a post-December 2026 version update, "
+               "and will be replaced by the aclnnQuantMatmulV5. "
+               "We apologize for any inconvenience caused and appreciate your timely migration to the new interface.")))
+ACLNN_API aclnnStatus
+aclnnQuantMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
 
 #ifdef __cplusplus
 }

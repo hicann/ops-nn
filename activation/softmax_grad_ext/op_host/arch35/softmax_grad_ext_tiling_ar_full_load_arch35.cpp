@@ -20,28 +20,26 @@ using namespace Ops::Base;
 namespace optiling {
 
 static constexpr int64_t UB_RESERVED_BYTE = 1024 * 8;  //保留空间
-static constexpr int64_t R_MAX_VALUE = 16384; // 支持的最大r值
-static constexpr int64_t BINARY_TMP_LOCAL_SHAPE = 512;  //临时局部内存大小
+static constexpr int64_t R_MAX_VALUE = 16384;          // 支持的最大r值
+static constexpr int64_t BINARY_TMP_LOCAL_SHAPE = 512; //临时局部内存大小
 
 bool SoftmaxGradExtTilingAR::IsCapable()
 {
-    OP_TILING_CHECK(
-        a0_ != DIM_NUM_ONE, OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "), return false);
+    OP_TILING_CHECK(a0_ != DIM_NUM_ONE, OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "),
+                    return false);
 
-    OP_TILING_CHECK(
-        r_ > R_MAX_VALUE,
-        OP_LOGI(
-            context_->GetNodeName(), "AR full load template is not capable. actual r is %ld, larger than %ld", r_,
-            R_MAX_VALUE),
-        return false);
+    OP_TILING_CHECK(r_ > R_MAX_VALUE,
+                    OP_LOGI(context_->GetNodeName(),
+                            "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
+                    return false);
     return true;
 }
 
 ge::graphStatus SoftmaxGradExtTilingAR::DoOpTiling()
 {
-    int64_t rAligned =
-        CeilAlign(r_, (blockSize_ / xDtypeSize_)); // rAligned是将r_向上去整到blockSize_ /
-                                                   // xDtypeSize_的倍数；blocksize是块大小，xDtypeSize是输入数据的字节数
+    int64_t rAligned = CeilAlign(
+        r_, (blockSize_ / xDtypeSize_)); // rAligned是将r_向上去整到blockSize_ /
+                                         // xDtypeSize_的倍数；blocksize是块大小，xDtypeSize是输入数据的字节数
     int64_t ubFactor = (aicoreParams_.ubSize - UB_RESERVED_BYTE - BINARY_TMP_LOCAL_SHAPE) /
                        (DOUBLE_BUFFER * rAligned * (xDtypeSize_ * CONST_THREE + yDtypeSize_));
     // ubFactor:UB中可以容纳的块数；aicoreParams_.ubSize:是UB的总大小；UB_RESERVED_BYTE和BINARY_TMP_LOCAL_SHAPE是保留和临时使用的字节数；DOUBLE_BUFFER:双缓冲的倍数；分母表示每块需要的内存大小
@@ -50,8 +48,8 @@ ge::graphStatus SoftmaxGradExtTilingAR::DoOpTiling()
         OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. r is %ld, ubFactor %ld", r_, ubFactor),
         return ge::GRAPH_PARAM_INVALID);
 
-    int64_t rLoopCount =
-        CeilDiv(rAligned, vlFp32_); // vlFP32:每周期处理的FP32元素数量；rloopcount表示需要多少次循环来处理rAligned的数据
+    int64_t rLoopCount = CeilDiv(
+        rAligned, vlFp32_); // vlFP32:每周期处理的FP32元素数量；rloopcount表示需要多少次循环来处理rAligned的数据
 
     // 按a1分核
     int64_t aBlockFactor = CeilDiv(
@@ -74,10 +72,7 @@ ge::graphStatus SoftmaxGradExtTilingAR::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxGradExtTilingAR::GetTilingKey() const
-{
-    return TILINGKEY_AR;
-}
+uint64_t SoftmaxGradExtTilingAR::GetTilingKey() const { return TILINGKEY_AR; }
 
 ge::graphStatus SoftmaxGradExtTilingAR::PostTiling()
 {

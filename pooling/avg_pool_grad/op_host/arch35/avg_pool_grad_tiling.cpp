@@ -17,30 +17,30 @@
 #include "avg_pool_grad_tiling_base.h"
 #include "error_util.h"
 
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingRegistry;
 ge::graphStatus Tiling4AvgPoolGrad(gert::TilingContext* context)
 {
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-ge::graphStatus TilingPrepare4AvgPoolGrad(gert::TilingParseContext* context) {
-   OP_LOGD("AvgPoolGrad", "TilingPrepare4AvgPoolGrad");
-   fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-   OP_TILING_CHECK(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "platformInfoPtr info is null"),
-       return ge::GRAPH_FAILED);
-   auto compileInfoPtr = context->GetCompiledInfo<AvgPoolGradCompileInfo>();
-   OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compileInfoPtr is null"),
-       return ge::GRAPH_FAILED);
-   auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-   compileInfoPtr->coreNum = ascendcPlatform.GetCoreNum();
-   ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
-   return ge::GRAPH_SUCCESS;
+ge::graphStatus TilingPrepare4AvgPoolGrad(gert::TilingParseContext* context)
+{
+    OP_LOGD("AvgPoolGrad", "TilingPrepare4AvgPoolGrad");
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_TILING_CHECK(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "platformInfoPtr info is null"),
+                    return ge::GRAPH_FAILED);
+    auto compileInfoPtr = context->GetCompiledInfo<AvgPoolGradCompileInfo>();
+    OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compileInfoPtr is null"),
+                    return ge::GRAPH_FAILED);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    compileInfoPtr->coreNum = ascendcPlatform.GetCoreNum();
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
+    return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(AvgPoolGrad)
     .InputsDataDependency({0})
     .Tiling(Tiling4AvgPoolGrad)
     .TilingParse<AvgPoolGradCompileInfo>(TilingPrepare4AvgPoolGrad);
-}  // namespace optiling
+} // namespace optiling

@@ -49,9 +49,8 @@ template <typename T>
 inline bool CheckNumberIsValid(const T& num, const std::string& opName, const std::string& description)
 {
     if (num > static_cast<uint64_t>(INT32_MAX)) {
-        OP_LOGW(
-            opName.c_str(), "%s size is greater than INT32_MAX or less than 0, num:%s", description.c_str(),
-            std::to_string(num).c_str());
+        OP_LOGW(opName.c_str(), "%s size is greater than INT32_MAX or less than 0, num:%s", description.c_str(),
+                std::to_string(num).c_str());
         return true;
     }
     return false;
@@ -102,10 +101,7 @@ public:
     BasicTiling basicTiling_;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
@@ -132,8 +128,9 @@ protected:
     bool InitTilingData(matmul_tiling::MultiCoreMatmulTiling& mm);
     bool GetUbDequantExtreSpace();
     ge::graphStatus CalcUbTiling(uint64_t& baseM, uint64_t& baseN);
-    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> CalcCoreDistribution(
-        uint64_t mCnt, uint64_t nCnt, uint64_t calcOrder, uint64_t round, uint64_t usedCoreNum) const; // 计算核的排布
+    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> CalcCoreDistribution(uint64_t mCnt, uint64_t nCnt,
+                                                                            uint64_t calcOrder, uint64_t round,
+                                                                            uint64_t usedCoreNum) const; // 计算核的排布
     bool SetBase(const std::vector<uint64_t>& mBases, const std::vector<uint64_t>& nBases);
     void CompareBase(std::vector<uint64_t>& basicMetrics, uint64_t baseM, uint64_t baseN);
     bool CheckCalcAndMemRatio(uint64_t baseM, uint64_t baseN) const;
@@ -142,15 +139,15 @@ protected:
     bool CheckBiasAndScale(uint64_t baseN, uint64_t dbL0c = 1) const;
     uint64_t GetMaxBaseN() const;
     bool GetBaseK(uint64_t baseM, uint64_t baseN);
-    void CalcClashAndFirstL2Load(
-        uint64_t& coreClash, uint64_t& firstL2Load, uint64_t mCnt, uint64_t nCnt, uint64_t round) const;
+    void CalcClashAndFirstL2Load(uint64_t& coreClash, uint64_t& firstL2Load, uint64_t mCnt, uint64_t nCnt,
+                                 uint64_t round) const;
     bool CheckDbL0c() const;
     void InitBasicMetrics(std::vector<uint64_t>& basicMetrics);
     bool IsMNSmallForMultiCores(uint64_t coreNum) const;
     void ProcessMNSmallShape(uint64_t baseM, uint64_t baseN, uint64_t coreNum);
     uint64_t CalcL1LoadSize(uint64_t baseM, uint64_t baseN) const;
-    int8_t CheckLoadAndCalcSize(
-        uint64_t baseM, uint64_t baseN, uint64_t bestRound, uint64_t round, uint64_t& bestLoadSize) const;
+    int8_t CheckLoadAndCalcSize(uint64_t baseM, uint64_t baseN, uint64_t bestRound, uint64_t round,
+                                uint64_t& bestLoadSize) const;
     void ModifyBase(uint64_t& baseM, uint64_t& baseN) const;
     bool GetStepK(uint64_t& stepKa, uint64_t& stepKb) const;
     void CorrectStepK(uint64_t& bigStepK, uint64_t& smallStepK, uint64_t minStepK) const;
@@ -159,21 +156,17 @@ protected:
     bool IsTilingDataInvalid() const;
     void ResetBase(const uint64_t l0CSize);
     uint64_t GetTotalSize(uint64_t m, uint64_t ka, uint64_t kb, uint64_t n) const;
-    void CalcTileCnt(
-        uint64_t outOriShape, uint64_t innerOriShape, uint64_t outBase, uint64_t innerBase,
-        std::vector<std::tuple<uint64_t, uint64_t>>& tileCnt) const;
-    bool IsTileClash(
-        uint64_t outSplit, uint64_t innerSplit, std::tuple<uint64_t, uint64_t>& tileClash,
-        const std::tuple<uint64_t, uint64_t, uint64_t>& params) const;
+    void CalcTileCnt(uint64_t outOriShape, uint64_t innerOriShape, uint64_t outBase, uint64_t innerBase,
+                     std::vector<std::tuple<uint64_t, uint64_t>>& tileCnt) const;
+    bool IsTileClash(uint64_t outSplit, uint64_t innerSplit, std::tuple<uint64_t, uint64_t>& tileClash,
+                     const std::tuple<uint64_t, uint64_t, uint64_t>& params) const;
     uint64_t GetCalcOrder(uint64_t mCnt, uint64_t nCnt, uint64_t mSize, uint64_t nSize, uint64_t usedCoreNum) const;
     bool CheckTileTail(uint64_t outTail, uint64_t innerTail, uint64_t outL2SplitTmp, uint64_t innerL2SplitTmp) const;
-    bool CheckTileClash(
-        const std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>& tileInfo,
-        const std::tuple<uint64_t, uint64_t, uint64_t>& params,
-        std::vector<std::tuple<uint64_t, uint64_t>>& tileClash) const;
-    uint64_t CalcTile(
-        uint64_t& outTile, uint64_t& innerTile, uint64_t& outL2Split, uint64_t& innerL2Split,
-        const std::tuple<uint64_t, uint64_t, double>& params) const;
+    bool CheckTileClash(const std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>& tileInfo,
+                        const std::tuple<uint64_t, uint64_t, uint64_t>& params,
+                        std::vector<std::tuple<uint64_t, uint64_t>>& tileClash) const;
+    uint64_t CalcTile(uint64_t& outTile, uint64_t& innerTile, uint64_t& outL2Split, uint64_t& innerL2Split,
+                      const std::tuple<uint64_t, uint64_t, double>& params) const;
     void DivisibleCoreLayout(uint64_t mCnt, uint64_t nCnt, uint64_t& calcOrder, uint64_t round) const;
     void DetermineCalcOrder();
     void SetCalcOrderinMNClashCase(uint64_t mTotalCnt, uint64_t nTotalCnt);

@@ -14,10 +14,8 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-class LeakyReluGrad : public OpDef
-{
+namespace ops {
+class LeakyReluGrad : public OpDef {
 public:
     explicit LeakyReluGrad(const char* name) : OpDef(name)
     {
@@ -49,4 +47,4 @@ public:
     }
 };
 OP_ADD(LeakyReluGrad);
-}  // namespace ops
+} // namespace ops

@@ -23,8 +23,10 @@ OP_TYPE_REGISTER(LayerNormBetaGammaBackpropV2);
 
 constexpr size_t BETA_GAMMAX_NUM = 2;
 
-const std::array<aclTensor*, BETA_GAMMAX_NUM> LayerNormBetaGammaBackpropV2(
-    const aclTensor* gradOut, const aclTensor* gammaRes, const aclIntArray* gammaShape, aclOpExecutor* executor)
+const std::array<aclTensor*, BETA_GAMMAX_NUM> LayerNormBetaGammaBackpropV2(const aclTensor* gradOut,
+                                                                           const aclTensor* gammaRes,
+                                                                           const aclIntArray* gammaShape,
+                                                                           aclOpExecutor* executor)
 {
     L0_DFX(LayerNormBetaGammaBackpropV2, gradOut, gammaRes, gammaShape);
     op::Shape gradShape = gradOut->GetViewShape();
@@ -41,9 +43,8 @@ const std::array<aclTensor*, BETA_GAMMAX_NUM> LayerNormBetaGammaBackpropV2(
         matchShape.emplace_back(MATCH_SHAPE);
     }
     aclIntArray* matchArray = executor->AllocIntArray(matchShape.data(), matchShape.size());
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormBetaGammaBackpropV2, OP_INPUT(gradOut, gammaRes), OP_OUTPUT(gradWeightOut, gradBiasOut),
-        OP_ATTR(gammaShape, matchArray));
+    ADD_TO_LAUNCHER_LIST_AICORE(LayerNormBetaGammaBackpropV2, OP_INPUT(gradOut, gammaRes),
+                                OP_OUTPUT(gradWeightOut, gradBiasOut), OP_ATTR(gammaShape, matchArray));
 
     return {gradWeightOut, gradBiasOut};
 }

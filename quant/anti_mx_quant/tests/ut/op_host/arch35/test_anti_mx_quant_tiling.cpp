@@ -27,15 +27,9 @@ using namespace ge;
 
 class AntiMxQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AntiMxQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AntiMxQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AntiMxQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AntiMxQuantTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -51,9 +45,9 @@ static string to_string(void* buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape, gert::StorageShape scaleShape,
-    int64_t axis, int64_t dstType, string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
+                            gert::StorageShape scaleShape, int64_t axis, int64_t dstType, string expectTilingData,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -92,8 +86,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -112,9 +106,8 @@ static void ExecuteTestCase(
                       .NodeInputTd(0, inDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom(axis)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstType)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom(axis)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstType)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -147,7 +140,7 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_fp8e5m2_to_fp16_tail_axis)
     gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
     gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
     int64_t axis = -1;
-    int64_t dstType = 1;  // FP16
+    int64_t dstType = 1; // FP16
     string expectTilingData = "253952 1 64 64 64 1 13440 128 1 128 210 210 1280 ";
 
     ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData);
@@ -159,7 +152,7 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_fp8e4m3fn_to_bf16_tail_axis)
     gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
     gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
     int64_t axis = -1;
-    int64_t dstType = 27;  // BF16
+    int64_t dstType = 27; // BF16
     string expectTilingData = "253952 27 64 64 64 1 13440 128 1 128 210 210 1280 ";
 
     ExecuteTestCase(ge::DT_FLOAT8_E4M3FN, ge::DT_BF16, shape, scaleShape, axis, dstType, expectTilingData);
@@ -171,7 +164,7 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_fp4e2m1_to_fp32_tail_axis)
     gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
     gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
     int64_t axis = -1;
-    int64_t dstType = 0;  // FP32
+    int64_t dstType = 0; // FP32
     string expectTilingData = "253952 0 64 64 64 1 13440 128 1 128 210 210 864 ";
 
     ExecuteTestCase(ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, shape, scaleShape, axis, dstType, expectTilingData);
@@ -183,7 +176,7 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_fp4e1m2_to_fp16_tail_axis)
     gert::StorageShape shape = {{1024, 512, 64, 128}, {1024, 512, 64, 128}};
     gert::StorageShape scaleShape = {{1024, 512, 64, 2, 2}, {1024, 512, 64, 2, 2}};
     int64_t axis = -1;
-    int64_t dstType = 1;  // FP16
+    int64_t dstType = 1; // FP16
     string expectTilingData = "253952 1 64 64 64 1 33554432 128 1 128 524288 524288 1536 ";
 
     ExecuteTestCase(ge::DT_FLOAT4_E1M2, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData);
@@ -198,8 +191,8 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_inDtype)
     int64_t dstType = 1;
     string expectTilingData = "253952 1 64 64 64 1 13440 128 1 128 210 210 1280 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData,
+                    ge::GRAPH_FAILED);
 }
 
 // Error case 2: invalid output dtype
@@ -211,8 +204,8 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_outDtype)
     int64_t dstType = 1;
     string expectTilingData = "253952 1 64 64 64 1 13440 128 1 128 210 210 1280 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, dstType, expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, shape, scaleShape, axis, dstType, expectTilingData,
+                    ge::GRAPH_FAILED);
 }
 
 // Error case 3: invalid mxscale shape
@@ -225,6 +218,6 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_mxscale_shape)
     int64_t dstType = 1;
     string expectTilingData = "253952 1 64 64 64 1 13440 128 1 128 210 210 1280 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData,
+                    ge::GRAPH_FAILED);
 }

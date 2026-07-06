@@ -20,95 +20,97 @@
 #include "lib/matmul_intf.h"
 
 using namespace AscendC;
-using AscendC::TEventID;
 using AscendC::HardEvent;
 using AscendC::SetFlag;
+using AscendC::TEventID;
 using AscendC::WaitFlag;
 
-namespace TopKTopPSampleV2{
-    constexpr uint32_t SIZEOF_FP32 = sizeof(float);
-    constexpr uint32_t KERNEL_BUFFER_SIZE = 32768;
-    constexpr uint32_t NUM_ZERO = 0;
-    constexpr uint32_t NUM_ONE = 1;
-    constexpr uint32_t NUM_TWO = 2;
-    constexpr uint32_t NUM_THREE = 3;
-    constexpr uint32_t NUM_FOUR = 4;
-    constexpr uint32_t NUM_SIX = 6;
-    constexpr uint32_t MRG_PER_ELE = 2;
-    constexpr uint32_t BUFFER_NUM = 1;
-    constexpr uint32_t EIGHT = 8;  
-    constexpr uint32_t FIFTEEN = 15;
-    constexpr uint32_t SIXTEEN = 16;
-    constexpr uint32_t THIRTY_ONE = 31;
-    constexpr uint32_t THIRTY_TWO = 32;
-    constexpr uint32_t SIXTY_FOUR = THIRTY_TWO * NUM_TWO;
-    constexpr float FLOAT_MIN = -3.40282e+38f;
-    constexpr uint32_t SOFTMAX_PER_LEN = (KERNEL_BUFFER_SIZE / SIZEOF_FP32);  
+namespace TopKTopPSampleV2 {
+constexpr uint32_t SIZEOF_FP32 = sizeof(float);
+constexpr uint32_t KERNEL_BUFFER_SIZE = 32768;
+constexpr uint32_t NUM_ZERO = 0;
+constexpr uint32_t NUM_ONE = 1;
+constexpr uint32_t NUM_TWO = 2;
+constexpr uint32_t NUM_THREE = 3;
+constexpr uint32_t NUM_FOUR = 4;
+constexpr uint32_t NUM_SIX = 6;
+constexpr uint32_t MRG_PER_ELE = 2;
+constexpr uint32_t BUFFER_NUM = 1;
+constexpr uint32_t EIGHT = 8;
+constexpr uint32_t FIFTEEN = 15;
+constexpr uint32_t SIXTEEN = 16;
+constexpr uint32_t THIRTY_ONE = 31;
+constexpr uint32_t THIRTY_TWO = 32;
+constexpr uint32_t SIXTY_FOUR = THIRTY_TWO * NUM_TWO;
+constexpr float FLOAT_MIN = -3.40282e+38f;
+constexpr uint32_t SOFTMAX_PER_LEN = (KERNEL_BUFFER_SIZE / SIZEOF_FP32);
 
-    constexpr uint32_t SIZEOF_UINT32 = sizeof(uint32_t);
-    constexpr uint32_t SIZEOF_UINT64 = sizeof(uint64_t);
+constexpr uint32_t SIZEOF_UINT32 = sizeof(uint32_t);
+constexpr uint32_t SIZEOF_UINT64 = sizeof(uint64_t);
 
-    constexpr uint32_t NONE_SAMPLE = 0;
-    constexpr uint32_t Q_SAMPLE = 1;
-    constexpr uint32_t MULTINOMIAL_SAMPLE = 2;
+constexpr uint32_t NONE_SAMPLE = 0;
+constexpr uint32_t Q_SAMPLE = 1;
+constexpr uint32_t MULTINOMIAL_SAMPLE = 2;
 
-
-    __aicore__ inline int64_t SafeCeil(int64_t a, int64_t b){
-        if(b == 0){
-            return 0;
-        }
-        return (a + b - 1) / b;
+__aicore__ inline int64_t SafeCeil(int64_t a, int64_t b)
+{
+    if (b == 0) {
+        return 0;
     }
-
-    __aicore__ inline int64_t Align(int64_t a, int64_t b){
-        if(b == 0){
-            return 0;
-        }
-        return SafeCeil(a, b) * b;
-    }
-
-    template <HardEvent event>
-    __aicore__ inline void SetWaitFlag(HardEvent evt){
-        event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(evt));
-        SetFlag<event>(eventId);
-        WaitFlag<event>(eventId);
-    }
-
-    template <typename T, template <typename U> typename R, template <typename U> typename S>
-    __aicore__ inline void DataCopyEx(
-        const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1, const bool ubAligned = false)
-    {
-        DataCopyExtParams copyParams;
-        copyParams.blockCount = count;
-        copyParams.blockLen = len * sizeof(T);
-        if constexpr (std::is_same<R<T>, AscendC::LocalTensor<T>>::value) {
-            copyParams.srcStride = 0;
-            copyParams.dstStride = (ubAligned) ? 1 : 0;
-            DataCopyPad(dst, src, copyParams, {});
-        } else {
-            copyParams.srcStride = (ubAligned) ? 1 : 0;
-            copyParams.dstStride = 0;
-            DataCopyPad(dst, src, copyParams);
-        }
-    }
-
-    using TOPKPParams = struct TOPKPParams {
-        int32_t rowId;
-        uint32_t rowNum;
-        uint32_t rowLen;
-        uint32_t softmaxLoopTime;
-        uint32_t softmaxLoopEleTail;
-        uint32_t softmaxLoopEleTailPad;
-        uint32_t eightKPartNum;
-        uint32_t eightKPartTail;
-        uint32_t eightKPartTailPad;
-        bool inputIsLogits;
-        float reduceSumMax;
-        float rowMax;
-        float topp;
-        uint32_t toppNum;
-        LocalTensor<float> tensor0;
-        LocalTensor<float> tensor1;
-    };
+    return (a + b - 1) / b;
 }
+
+__aicore__ inline int64_t Align(int64_t a, int64_t b)
+{
+    if (b == 0) {
+        return 0;
+    }
+    return SafeCeil(a, b) * b;
+}
+
+template <HardEvent event>
+__aicore__ inline void SetWaitFlag(HardEvent evt)
+{
+    event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(evt));
+    SetFlag<event>(eventId);
+    WaitFlag<event>(eventId);
+}
+
+template <typename T, template <typename U> typename R, template <typename U> typename S>
+__aicore__ inline void DataCopyEx(const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
+                                  const bool ubAligned = false)
+{
+    DataCopyExtParams copyParams;
+    copyParams.blockCount = count;
+    copyParams.blockLen = len * sizeof(T);
+    if constexpr (std::is_same<R<T>, AscendC::LocalTensor<T>>::value) {
+        copyParams.srcStride = 0;
+        copyParams.dstStride = (ubAligned) ? 1 : 0;
+        DataCopyPad(dst, src, copyParams, {});
+    } else {
+        copyParams.srcStride = (ubAligned) ? 1 : 0;
+        copyParams.dstStride = 0;
+        DataCopyPad(dst, src, copyParams);
+    }
+}
+
+using TOPKPParams = struct TOPKPParams {
+    int32_t rowId;
+    uint32_t rowNum;
+    uint32_t rowLen;
+    uint32_t softmaxLoopTime;
+    uint32_t softmaxLoopEleTail;
+    uint32_t softmaxLoopEleTailPad;
+    uint32_t eightKPartNum;
+    uint32_t eightKPartTail;
+    uint32_t eightKPartTailPad;
+    bool inputIsLogits;
+    float reduceSumMax;
+    float rowMax;
+    float topp;
+    uint32_t toppNum;
+    LocalTensor<float> tensor0;
+    LocalTensor<float> tensor1;
+};
+} // namespace TopKTopPSampleV2
 #endif

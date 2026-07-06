@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OP_API_INC_LEVEL2_ACLNN_ELU_V2_H_
 #define OP_API_INC_LEVEL2_ACLNN_ELU_V2_H_
 
@@ -21,10 +21,9 @@
 extern "C" {
 #endif
 
-
-ACLNN_API aclnnStatus aclnnEluV2GetWorkspaceSize(
-    const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnEluV2GetWorkspaceSize(const aclTensor* self, const aclScalar* alpha, const aclScalar* scale,
+                                                 const aclScalar* inputScale, aclTensor* out, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor);
 
 ACLNN_API aclnnStatus aclnnEluV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 

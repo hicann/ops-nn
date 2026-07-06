@@ -16,15 +16,9 @@
 
 class HardswishContiguousTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "HardswishContiguousTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "HardswishContiguousTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "HardswishContiguousTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "HardswishContiguousTest TearDown" << std::endl; }
 };
 
 TEST_F(HardswishContiguousTest, Contiguous)

@@ -100,7 +100,7 @@ struct BasicBlock {
 };
 
 struct L1TilingParam {
-    int64_t iterateOrder = 0;  // 0: orderM, for m for n; 1: orderN for n for m
+    int64_t iterateOrder = 0; // 0: orderM, for m for n; 1: orderN for n for m
     int64_t stepM = 0;
     int64_t stepN = 0;
     int64_t stepKa = 0;
@@ -143,32 +143,26 @@ struct StepKParam {
 
 class QuantBatchMatmulV4BasicBlockTiling {
 public:
-    QuantBatchMatmulV4BasicBlockTiling()
-    {
-        Init();
-    }
+    QuantBatchMatmulV4BasicBlockTiling() { Init(); }
     ~QuantBatchMatmulV4BasicBlockTiling() = default;
 
     void Init();
     void Reset();
-    void SetPlatformParam(const PlatformParam &param);
+    void SetPlatformParam(const PlatformParam& param);
     void SetShape(int64_t mSize, int64_t nSize, int64_t kSize, int64_t groupSize);
-    void SetAttr(const char *opName, bool transA, bool transB, bool hasBias, bool weightNzFlag);
+    void SetAttr(const char* opName, bool transA, bool transB, bool hasBias, bool weightNzFlag);
     void SetQuantType(bool isMxType);
-    void SetDtypeBits(const int64_t aDtypeBits, const int64_t bDtypeBits,
-        const int64_t biasDtypeBits, const int64_t yScaleDtypeBits);
+    void SetDtypeBits(const int64_t aDtypeBits, const int64_t bDtypeBits, const int64_t biasDtypeBits,
+                      const int64_t yScaleDtypeBits);
     double GetMinMte2BW(int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const;
     double GetMte2BW(int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const;
     double GetMte2BWRatio(int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const;
-    int64_t GetCycleVF(const BasicBlockParam &basicBlockParam) const;
-    int64_t GetCycleBMte2(const BasicBlockParam &basicBlockParam) const;
-    int64_t GetCycleAMte2(const BasicBlockParam &basicBlockParam) const;
-    int64_t GetCycleCube(const BasicBlockParam &basicBlockParam) const;
+    int64_t GetCycleVF(const BasicBlockParam& basicBlockParam) const;
+    int64_t GetCycleBMte2(const BasicBlockParam& basicBlockParam) const;
+    int64_t GetCycleAMte2(const BasicBlockParam& basicBlockParam) const;
+    int64_t GetCycleCube(const BasicBlockParam& basicBlockParam) const;
     bool GetBasicBlockTiling();
-    const BasicBlockParam &GetTilingResult() const
-    {
-        return basicBlockParam_;
-    }
+    const BasicBlockParam& GetTilingResult() const { return basicBlockParam_; }
 
 protected:
     void InitBasicBlockParam();
@@ -178,22 +172,24 @@ protected:
     void GetNzBasicBlockBaseKSolution(const int64_t baseM, const int64_t baseN);
     void GetBasicBlockSolution();
     bool ValidateInputParam() const;
-    void GetMte2DataSize(BasicBlockParam &basicBlockParam, int64_t &mte2DataSize, int64_t &iterateOrder) const;
-    void GetMte2DataSizeGroup(BasicBlockParam &basicBlockParam, int64_t &mte2DataSize, int64_t &iterateOrder) const;
-    void GetMte2DataSizeMx(BasicBlockParam &basicBlockParam, int64_t &mte2DataSize) const;
-    void UpdateL1Param(L1TilingParam &l1TilingParam, int64_t &mte2DataSize, double &mte2Cost, bool &updateFlag);
-    bool GetL1TilingResult(L1TilingParam &l1TilingParam, int64_t &mte2DataSize, double &mte2Cost);
-    void UpdateL1ParamWithScaleFactor(L1TilingParam& l1TilingParam, int64_t& mte2DataSize, double& mte2Cost, bool& ret, const StepKParam& stepKParams);
+    void GetMte2DataSize(BasicBlockParam& basicBlockParam, int64_t& mte2DataSize, int64_t& iterateOrder) const;
+    void GetMte2DataSizeGroup(BasicBlockParam& basicBlockParam, int64_t& mte2DataSize, int64_t& iterateOrder) const;
+    void GetMte2DataSizeMx(BasicBlockParam& basicBlockParam, int64_t& mte2DataSize) const;
+    void UpdateL1Param(L1TilingParam& l1TilingParam, int64_t& mte2DataSize, double& mte2Cost, bool& updateFlag);
+    bool GetL1TilingResult(L1TilingParam& l1TilingParam, int64_t& mte2DataSize, double& mte2Cost);
+    void UpdateL1ParamWithScaleFactor(L1TilingParam& l1TilingParam, int64_t& mte2DataSize, double& mte2Cost, bool& ret,
+                                      const StepKParam& stepKParams);
     bool CheckL1TilingInvalid(int64_t stepKa, int64_t stepKb, int64_t stepKMax);
     bool GetFinalResult();
     bool GetFallbackTiling();
     bool GetFallbackBaseK();
     bool ValidateTilingResult() const;
     void AddOptionalSolution();
-    void PrintFinalResult(const BasicBlockParam &param, bool enable) const;
-    int64_t GetL1LoadSize(const BasicBlock &basicBlock, const L1TilingParam &l1Param) const;
+    void PrintFinalResult(const BasicBlockParam& param, bool enable) const;
+    int64_t GetL1LoadSize(const BasicBlock& basicBlock, const L1TilingParam& l1Param) const;
 
-    static int32_t CompareMxResult(const BasicBlockParam &param1, const BasicBlockParam &param2) {
+    static int32_t CompareMxResult(const BasicBlockParam& param1, const BasicBlockParam& param2)
+    {
         // 取单核上 mte2DataSize更小的
         int64_t blockNum1 = param1.nDim * param1.mDim;
         int64_t blockNum2 = param2.nDim * param2.mDim;
@@ -211,10 +207,10 @@ protected:
         int64_t nBlocks1 = CeilDiv(param1.nSize, param1.basicBlock.baseN);
         int64_t mBlocks2 = CeilDiv(param2.mSize, param2.basicBlock.baseM);
         int64_t nBlocks2 = CeilDiv(param2.nSize, param2.basicBlock.baseN);
-        double tailCoreRatio1 =
-            static_cast<double>(mBlocks1) * static_cast<double>(nBlocks1) / static_cast<double>(blockNum1);
-        double tailCoreRatio2 =
-            static_cast<double>(mBlocks2) * static_cast<double>(nBlocks2) / static_cast<double>(blockNum2);
+        double tailCoreRatio1 = static_cast<double>(mBlocks1) * static_cast<double>(nBlocks1) /
+                                static_cast<double>(blockNum1);
+        double tailCoreRatio2 = static_cast<double>(mBlocks2) * static_cast<double>(nBlocks2) /
+                                static_cast<double>(blockNum2);
         if (std::abs(tailCoreRatio1 - tailCoreRatio2) > EPSILON) {
             return tailCoreRatio1 > tailCoreRatio2 ? 1 : -1;
         }
@@ -229,7 +225,7 @@ protected:
         4）选择理论cycle小的解
         5）优先选择mte2Cost较小的tiling
     */
-    static bool CompareOptionalResult(const BasicBlockParam &param1, const BasicBlockParam &param2)
+    static bool CompareOptionalResult(const BasicBlockParam& param1, const BasicBlockParam& param2)
     {
         if (param1.mxType == 1) {
             int32_t mxRet = CompareMxResult(param1, param2);
@@ -248,16 +244,16 @@ protected:
         if (max(max(bCycle1, param1.cycleAMte2), param1.cycleCube) !=
             max(max(bCycle2, param2.cycleAMte2), param2.cycleCube)) {
             return max(max(bCycle2, param2.cycleAMte2), param2.cycleCube) >
-                max(max(bCycle1, param1.cycleAMte2), param1.cycleCube);
+                   max(max(bCycle1, param1.cycleAMte2), param1.cycleCube);
         }
         int64_t nBl1TailSize1 = param1.singleN % max(param1.l1Param.stepN * param1.basicBlock.baseN, BLOCK_CUBE);
         nBl1TailSize1 = nBl1TailSize1 == 0 ? param1.l1Param.stepN * param1.basicBlock.baseN : nBl1TailSize1;
         int64_t nBl1TailSize2 = param2.singleN % max(param2.l1Param.stepN * param2.basicBlock.baseN, BLOCK_CUBE);
         nBl1TailSize2 = nBl1TailSize2 == 0 ? param2.l1Param.stepN * param2.basicBlock.baseN : nBl1TailSize2;
         const int64_t bubLoadSize1 = CeilAlign(CeilDiv(nBl1TailSize1, BUFF_NUM_2), BLOCK_CUBE) * param1.l1Param.stepKb *
-                                param1.basicBlock.baseK;
+                                     param1.basicBlock.baseK;
         const int64_t bubLoadSize2 = CeilAlign(CeilDiv(nBl1TailSize2, BUFF_NUM_2), BLOCK_CUBE) * param2.l1Param.stepKb *
-                                param2.basicBlock.baseK;
+                                     param2.basicBlock.baseK;
         // 2）选Bub的载入量较大的解，即优先保证B矩阵的MTE2效率
         if (bubLoadSize1 != bubLoadSize2) {
             return bubLoadSize1 > bubLoadSize2;
@@ -276,10 +272,10 @@ protected:
         if (al1TailSize1 != al1TailSize2) {
             return al1TailSize1 > al1TailSize2;
         } else {
-            const int64_t al1LoadSize1 =
-                param1.l1Param.stepM * param1.basicBlock.baseM * param1.l1Param.stepKa * param1.basicBlock.baseK;
-            const int64_t al1LoadSize2 =
-                param2.l1Param.stepM * param2.basicBlock.baseM * param2.l1Param.stepKa * param2.basicBlock.baseK;
+            const int64_t al1LoadSize1 = param1.l1Param.stepM * param1.basicBlock.baseM * param1.l1Param.stepKa *
+                                         param1.basicBlock.baseK;
+            const int64_t al1LoadSize2 = param2.l1Param.stepM * param2.basicBlock.baseM * param2.l1Param.stepKa *
+                                         param2.basicBlock.baseK;
             return al1LoadSize1 > al1LoadSize2;
         }
     }
@@ -309,7 +305,7 @@ protected:
         return (num1 + num2 - 1) / num2 * num2;
     }
 
-    const char *opName_;
+    const char* opName_;
 
     bool transA_;
     bool transB_;
@@ -333,6 +329,5 @@ protected:
     BasicBlockParam basicBlockParam_;
 };
 
-}  // namespace matmul_v4
-}  // namespace optiling
-
+} // namespace matmul_v4
+} // namespace optiling

@@ -31,24 +31,17 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class AdaptiveMaxPool3DGradTiling : public testing::Test
-{
+class AdaptiveMaxPool3DGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3DGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveMaxPool3DGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3DGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveMaxPool3DGradTiling TearDown" << std::endl; }
 };
 
-void TestAdaptiveMaxPool3DGradTiling(
-    gert::StorageShape& xShape, gert::StorageShape& gradShape, gert::StorageShape& argmaxShape,
-    gert::StorageShape& dxShape, std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType dataType,
-    uint64_t expectTilingKey)
+void TestAdaptiveMaxPool3DGradTiling(gert::StorageShape& xShape, gert::StorageShape& gradShape,
+                                     gert::StorageShape& argmaxShape, gert::StorageShape& dxShape,
+                                     std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList,
+                                     ge::DataType dataType, uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
     map<string, string> socInfos;
@@ -75,19 +68,19 @@ void TestAdaptiveMaxPool3DGradTiling(
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // TilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -130,7 +123,8 @@ void TestAdaptiveMaxPool3DGradTiling(
 
 TEST_F(AdaptiveMaxPool3DGradTiling, adaptive_max_pool3d_grad_tilingkey_2_networkcase_0)
 {
-    std::cout << "run case: " << "adaptive_max_pool3d_grad_tilingkey_2_networkcase_0" << std::endl;
+    std::cout << "run case: "
+              << "adaptive_max_pool3d_grad_tilingkey_2_networkcase_0" << std::endl;
     // network case
     gert::StorageShape xShape = {{5, 640, 1, 64, 64}, {5, 640, 1, 64, 64}};
     gert::StorageShape gradShape = {{5, 640, 1, 1, 1}, {5, 640, 1, 1, 1}};
@@ -142,7 +136,8 @@ TEST_F(AdaptiveMaxPool3DGradTiling, adaptive_max_pool3d_grad_tilingkey_2_network
 
 TEST_F(AdaptiveMaxPool3DGradTiling, adaptive_max_pool3d_grad_tilingkey_0_networkcase_0)
 {
-    std::cout << "run case: " << "adaptive_max_pool3d_grad_tilingkey_0_networkcase_0" << std::endl;
+    std::cout << "run case: "
+              << "adaptive_max_pool3d_grad_tilingkey_0_networkcase_0" << std::endl;
     // network case
     gert::StorageShape xShape = {{39, 39, 14, 16, 30}, {39, 39, 14, 16, 30}};
     gert::StorageShape gradShape = {{39, 39, 14, 8, 5}, {39, 39, 14, 8, 5}};

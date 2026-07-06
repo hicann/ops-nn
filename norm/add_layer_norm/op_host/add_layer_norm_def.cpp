@@ -32,60 +32,60 @@ public:
         this->Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         this->Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         this->Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         this->Input("beta")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         this->Input("bias")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         this->Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         this->Output("mean")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         this->Output("rstd")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         this->Output("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
@@ -156,60 +156,60 @@ public:
         config_950.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         config_950.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         config_950.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         config_950.Input("beta")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         config_950.Input("bias")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910)
             .AutoContiguous();
         config_950.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         config_950.Output("mean")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         config_950.Output("rstd")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-            ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         config_950.Output("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         config_950.DynamicCompileStaticFlag(true)

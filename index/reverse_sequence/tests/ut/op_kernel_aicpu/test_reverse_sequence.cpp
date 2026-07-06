@@ -15,7 +15,8 @@ using namespace aicpu;
 
 class TEST_ReverseSequence_UTest : public testing::Test {};
 
-TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_Success) {
+TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_Success)
+{
     // raw data
     float x[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     uint64_t seq_lengths[3] = {1, 2, 3};
@@ -67,35 +68,35 @@ TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_Success) {
 
     float eps = 0.0001;
     for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        EXPECT_LT(std::abs(y[i][j] - y_expect[i][j]), eps);
-      }
+        for (int j = 0; j < 3; j++) {
+            EXPECT_LT(std::abs(y[i][j] - y_expect[i][j]), eps);
+        }
     }
 }
 
-#define CREATE_NODEDEF(shapes, data_types, datas, seq_dim, batch_dim)   \
-    auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef();      \
-    NodeDefBuilder(node_def.get(), "ReverseSequence", "ReverseSequence")  \
-        .Input({"x", data_types[0], shapes[0], datas[0]})                 \
-        .Input({"seq_lengths", data_types[1], shapes[1], datas[1]})       \
-        .Attr("seq_dim", seq_dim)                                         \
-        .Attr("batch_dim", batch_dim)                                     \
-        .Output({"y", data_types[2], shapes[2], datas[2]})                \
+#define CREATE_NODEDEF(shapes, data_types, datas, seq_dim, batch_dim)    \
+    auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef();     \
+    NodeDefBuilder(node_def.get(), "ReverseSequence", "ReverseSequence") \
+        .Input({"x", data_types[0], shapes[0], datas[0]})                \
+        .Input({"seq_lengths", data_types[1], shapes[1], datas[1]})      \
+        .Attr("seq_dim", seq_dim)                                        \
+        .Attr("batch_dim", batch_dim)                                    \
+        .Output({"y", data_types[2], shapes[2], datas[2]})
 
-TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_Input_Error) {
+TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_Input_Error)
+{
     vector<DataType> data_types = {DT_FLOAT, DT_UINT64, DT_FLOAT};
     vector<vector<int64_t>> shapes = {{3, 3}, {3}, {3, 3}};
     float x[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     uint64_t seq_lengths[3] = {1, 2, 3};
     float output_y[3][3] = {0};
-    vector<void *> datas = {(void *)x,
-                            (void *)seq_lengths,
-                            (void *)output_y};
+    vector<void*> datas = {(void*)x, (void*)seq_lengths, (void*)output_y};
     CREATE_NODEDEF(shapes, data_types, datas, 0, 1);
     RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
 }
 
-TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_ZeroLengthSequence) {
+TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_ZeroLengthSequence)
+{
     // raw data
     float x[3][4] = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}};
     uint64_t seq_lengths[4] = {0, 2, 1, 0};
@@ -147,47 +148,44 @@ TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_ZeroLengthSequence) {
 
     float eps = 0.0001;
     for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 4; j++) {
-        EXPECT_LT(std::abs(y[i][j] - y_expect[i][j]), eps);
-      }
+        for (int j = 0; j < 4; j++) {
+            EXPECT_LT(std::abs(y[i][j] - y_expect[i][j]), eps);
+        }
     }
 }
 
-TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_SeqDimEqualsBatchDim) {
+TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_SeqDimEqualsBatchDim)
+{
     vector<DataType> data_types = {DT_FLOAT, DT_INT64, DT_FLOAT};
     vector<vector<int64_t>> shapes = {{3, 3}, {3}, {3, 3}};
     float x[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     uint64_t seq_lengths[3] = {1, 2, 3};
     float output_y[3][3] = {0};
-    vector<void *> datas = {(void *)x,
-                            (void *)seq_lengths,
-                            (void *)output_y};
+    vector<void*> datas = {(void*)x, (void*)seq_lengths, (void*)output_y};
     CREATE_NODEDEF(shapes, data_types, datas, 0, 0);
     RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
 }
 
-TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_SeqDimOutOfRange) {
+TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_SeqDimOutOfRange)
+{
     vector<DataType> data_types = {DT_FLOAT, DT_INT64, DT_FLOAT};
     vector<vector<int64_t>> shapes = {{3, 3}, {3}, {3, 3}};
     float x[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     uint64_t seq_lengths[3] = {1, 2, 3};
     float output_y[3][3] = {0};
-    vector<void *> datas = {(void *)x,
-                            (void *)seq_lengths,
-                            (void *)output_y};
+    vector<void*> datas = {(void*)x, (void*)seq_lengths, (void*)output_y};
     CREATE_NODEDEF(shapes, data_types, datas, 2, 1);
     RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
 }
 
-TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_BatchDimOutOfRange) {
+TEST_F(TEST_ReverseSequence_UTest, ReverseSequence_BatchDimOutOfRange)
+{
     vector<DataType> data_types = {DT_FLOAT, DT_INT64, DT_FLOAT};
     vector<vector<int64_t>> shapes = {{3, 3}, {3}, {3, 3}};
     float x[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     uint64_t seq_lengths[3] = {1, 2, 3};
     float output_y[3][3] = {0};
-    vector<void *> datas = {(void *)x,
-                            (void *)seq_lengths,
-                            (void *)output_y};
+    vector<void*> datas = {(void*)x, (void*)seq_lengths, (void*)output_y};
     CREATE_NODEDEF(shapes, data_types, datas, 0, 2);
     RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
 }

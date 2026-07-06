@@ -66,9 +66,8 @@ inline static bool IsRegbaseArch()
 {
     PlatformInfo platInfo;
     OptionalInfo optInfo;
-    OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platInfo, optInfo) != SUCCESS,
-        false, kPassName.c_str(), "Get platform_info failed.");
+    OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platInfo, optInfo) != SUCCESS, false,
+               kPassName.c_str(), "Get platform_info failed.");
     const std::string shortSoc = platInfo.str_info.short_soc_version;
     bool isRegbaseArch = (shortSoc == "Ascend950" || shortSoc == "MC62");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", shortSoc.c_str(), isRegbaseArch);
@@ -94,8 +93,8 @@ bool ReadAttrVec4(const GNode& node, const char* attrName, std::vector<int64_t>&
     return true;
 }
 
-bool CalcSamePadding(
-    const int64_t inputSize, const int64_t ksize, const int64_t stride, int64_t& padBegin, int64_t& padEnd)
+bool CalcSamePadding(const int64_t inputSize, const int64_t ksize, const int64_t stride, int64_t& padBegin,
+                     int64_t& padEnd)
 {
     if (stride == 0) {
         return false;
@@ -114,9 +113,9 @@ void ExtractSpatialIdx(const Format inputFormat, const bool isV2, size_t& hIdx, 
     wIdx = (isNchw && isV2) ? 3U : 2U;
 }
 
-bool ConvertPadsV0(
-    const GNode& sourceNode, const bool isNchw, const std::vector<int64_t>& inputDims,
-    const std::vector<int64_t>& ksizeV3, const std::vector<int64_t>& stridesV3, std::vector<int64_t>& padsV3)
+bool ConvertPadsV0(const GNode& sourceNode, const bool isNchw, const std::vector<int64_t>& inputDims,
+                   const std::vector<int64_t>& ksizeV3, const std::vector<int64_t>& stridesV3,
+                   std::vector<int64_t>& padsV3)
 {
     AscendString paddingMode;
     if (sourceNode.GetAttr("padding", paddingMode) != SUCCESS) {
@@ -145,9 +144,8 @@ bool ConvertPadsV0(
     return true;
 }
 
-bool ConvertDilationV3(
-    const GNode& sourceNode, const Format inputFormat, const bool isV2, std::vector<int64_t>& dilationV3,
-    bool& hasDilation)
+bool ConvertDilationV3(const GNode& sourceNode, const Format inputFormat, const bool isV2,
+                       std::vector<int64_t>& dilationV3, bool& hasDilation)
 {
     std::vector<int64_t> dilation;
     hasDilation = (sourceNode.GetAttr("dilation", dilation) == SUCCESS);
@@ -165,10 +163,10 @@ bool ConvertDilationV3(
     return true;
 }
 
-bool ConvertToV3Attrs(
-    const GNode& sourceNode, const Format inputFormat, const bool isV0, const bool isV2,
-    const std::vector<int64_t>& inputDims, std::vector<int64_t>& ksizeV3, std::vector<int64_t>& stridesV3,
-    std::vector<int64_t>& padsV3, std::vector<int64_t>& dilationV3, AscendString& dataFormat, bool& hasDilation)
+bool ConvertToV3Attrs(const GNode& sourceNode, const Format inputFormat, const bool isV0, const bool isV2,
+                      const std::vector<int64_t>& inputDims, std::vector<int64_t>& ksizeV3,
+                      std::vector<int64_t>& stridesV3, std::vector<int64_t>& padsV3, std::vector<int64_t>& dilationV3,
+                      AscendString& dataFormat, bool& hasDilation)
 {
     std::vector<int64_t> ksize;
     if (!ReadAttrVec4(sourceNode, "ksize", ksize)) {
@@ -196,9 +194,9 @@ bool ConvertToV3Attrs(
         }
         padsV3 = {pads[1], pads[2]};
         if (pads[0] > 1 || pads[3] > 1) {
-            OPS_LOG_D(
-                kPassName.c_str(), "Pads {%ld, %ld, %ld, %ld} layout may be invalid, expected [N, pad_h, pad_w, C].",
-                pads[0], pads[1], pads[2], pads[3]);
+            OPS_LOG_D(kPassName.c_str(),
+                      "Pads {%ld, %ld, %ld, %ld} layout may be invalid, expected [N, pad_h, pad_w, C].", pads[0],
+                      pads[1], pads[2], pads[3]);
             return false;
         }
     }
@@ -218,8 +216,9 @@ bool ConvertToV3Attrs(
     return true;
 }
 
-std::pair<es::EsTensorHolder, es::EsTensorHolder> CreatePatternPool(
-    es::EsGraphBuilder& graphBuilder, const char* opType, const std::string& nodeName, const es::EsTensorHolder& x)
+std::pair<es::EsTensorHolder, es::EsTensorHolder> CreatePatternPool(es::EsGraphBuilder& graphBuilder,
+                                                                    const char* opType, const std::string& nodeName,
+                                                                    const es::EsTensorHolder& x)
 {
     const std::pair<es::EsTensorHolder, es::EsTensorHolder> emptyOutputs = {es::EsTensorHolder(), es::EsTensorHolder()};
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
@@ -227,9 +226,8 @@ std::pair<es::EsTensorHolder, es::EsTensorHolder> CreatePatternPool(
                     .OpType(opType)
                     .Name(nodeName.c_str())
                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-                    .IrDefOutputs(
-                        {{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-                         {"argmax", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                    .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                   {"argmax", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                     .Build();
 
     OP_LOGE_IF(
@@ -272,21 +270,18 @@ bool MaxPoolWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<Match
     }
 
     NodeIo inputIo;
-    OP_LOGE_IF(
-        matchResult->GetCapturedTensor(kInputIdx, inputIo) != SUCCESS, false, kPassName.c_str(),
-        "Get captured input failed.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kInputIdx, inputIo) != SUCCESS, false, kPassName.c_str(),
+               "Get captured input failed.");
     TensorDesc inputDesc;
-    OP_LOGE_IF(
-        inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, false, kPassName.c_str(),
-        "Get input desc failed.");
+    OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, false, kPassName.c_str(),
+               "Get input desc failed.");
     if (!IsDtypeSupported(inputDesc.GetDataType())) {
         return false;
     }
 
     NodeIo poolIo;
-    OP_LOGE_IF(
-        matchResult->GetCapturedTensor(kPoolIdx, poolIo) != SUCCESS, false, kPassName.c_str(),
-        "Get captured pool failed.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kPoolIdx, poolIo) != SUCCESS, false, kPassName.c_str(),
+               "Get captured pool failed.");
     GNode poolNode = poolIo.node;
 
     std::vector<int64_t> dummyKsize;
@@ -304,9 +299,8 @@ bool MaxPoolWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<Match
         OPS_LOG_D(kPassName.c_str(), "V0 MaxPoolWithArgmax has different argmax format, skip fusion.");
         return false;
     }
-    if (!ConvertToV3Attrs(
-            poolNode, inputDesc.GetFormat(), isV0, isV2, inputDesc.GetShape().GetDims(), dummyKsize, dummyStrides,
-            dummyPads, dummyDilation, dataFormat, hasDilation)) {
+    if (!ConvertToV3Attrs(poolNode, inputDesc.GetFormat(), isV0, isV2, inputDesc.GetShape().GetDims(), dummyKsize,
+                          dummyStrides, dummyPads, dummyDilation, dataFormat, hasDilation)) {
         return false;
     }
     return true;
@@ -317,12 +311,15 @@ GraphUniqPtr MaxPoolWithArgmaxV3FusionPass::Replacement(const std::unique_ptr<Ma
     OPS_LOG_D(kPassName.c_str(), "Enter Replacement for MaxPoolWithArgmaxV3FusionPass");
 
     NodeIo inputIo;
-    OP_LOGE_IF(matchResult->GetCapturedTensor(kInputIdx, inputIo) != SUCCESS, nullptr, kPassName.c_str(), "Get captured input failed.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kInputIdx, inputIo) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get captured input failed.");
     TensorDesc inputDesc;
-    OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, nullptr, kPassName.c_str(), "Get input desc failed.");
+    OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get input desc failed.");
 
     NodeIo poolIo;
-    OP_LOGE_IF(matchResult->GetCapturedTensor(kPoolIdx, poolIo) != SUCCESS, nullptr, kPassName.c_str(), "Get captured pool failed.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kPoolIdx, poolIo) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get captured pool failed.");
     GNode sourceNode = poolIo.node;
 
     AscendString sourceType;
@@ -336,7 +333,8 @@ GraphUniqPtr MaxPoolWithArgmaxV3FusionPass::Replacement(const std::unique_ptr<Ma
     std::vector<int64_t> dilation;
     AscendString dataFormat;
     bool hasDilation = false;
-    if (!ConvertToV3Attrs(sourceNode, inputDesc.GetFormat(), isV0, isV2, inputDesc.GetShape().GetDims(), ksize, strides, pads, dilation, dataFormat, hasDilation)) {
+    if (!ConvertToV3Attrs(sourceNode, inputDesc.GetFormat(), isV0, isV2, inputDesc.GetShape().GetDims(), ksize, strides,
+                          pads, dilation, dataFormat, hasDilation)) {
         return nullptr;
     }
 
@@ -351,13 +349,18 @@ GraphUniqPtr MaxPoolWithArgmaxV3FusionPass::Replacement(const std::unique_ptr<Ma
     int64_t dtype = static_cast<int64_t>(dtypeI32);
 
     auto graphBuilder = es::EsGraphBuilder("replacement");
-    auto repX = graphBuilder.CreateInput(0, "x", inputDesc.GetDataType(), inputDesc.GetFormat(), inputDesc.GetShape().GetDims());
-    auto outputs = es::MaxPoolWithArgmaxV3(repX, ksize, strides, pads, dtype, hasDilation ? dilation : std::vector<int64_t>{1, 1}, ceilMode, dataFormat.GetString());
+    auto repX = graphBuilder.CreateInput(0, "x", inputDesc.GetDataType(), inputDesc.GetFormat(),
+                                         inputDesc.GetShape().GetDims());
+    auto outputs = es::MaxPoolWithArgmaxV3(repX, ksize, strides, pads, dtype,
+                                           hasDilation ? dilation : std::vector<int64_t>{1, 1}, ceilMode,
+                                           dataFormat.GetString());
 
     TensorDesc yOutputDesc;
-    OP_LOGE_IF(sourceNode.GetOutputDesc(0, yOutputDesc) != SUCCESS, nullptr, kPassName.c_str(), "Get y output desc failed.");
+    OP_LOGE_IF(sourceNode.GetOutputDesc(0, yOutputDesc) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get y output desc failed.");
     TensorDesc argmaxOutputDesc;
-    OP_LOGE_IF(sourceNode.GetOutputDesc(1, argmaxOutputDesc) != SUCCESS, nullptr, kPassName.c_str(), "Get argmax output desc failed.");
+    OP_LOGE_IF(sourceNode.GetOutputDesc(1, argmaxOutputDesc) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get argmax output desc failed.");
     auto outNode = outputs.y.GetProducer();
     outNode->UpdateOutputDesc(0, yOutputDesc);
     outNode->UpdateOutputDesc(1, argmaxOutputDesc);

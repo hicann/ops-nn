@@ -15,15 +15,9 @@
 
 class ApplyAdamWQuantTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamWQuantTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamWQuantTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamWQuantTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamWQuantTest TearDown" << std::endl; }
 };
 
 TEST_F(ApplyAdamWQuantTest, apply_adam_w_quant_infershape_verify_test_01)
@@ -44,9 +38,8 @@ TEST_F(ApplyAdamWQuantTest, apply_adam_w_quant_infershape_verify_test_01)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 5)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &gradShape, &mShape, &vShape, &qmapMShape, &qmapVShape, &absmaxMShape,
-                           &absmaxMShape, &stepShape})
+                      .InputShapes({&varShape, &gradShape, &mShape, &vShape, &qmapMShape, &qmapVShape, &absmaxMShape,
+                                    &absmaxMShape, &stepShape})
                       .OutputShapes({&varShape, &mShape, &vShape, &absmaxMShape, &absmaxMShape})
                       .Build();
 

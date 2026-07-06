@@ -22,24 +22,23 @@
 using namespace AscendC;
 using namespace SoftmaxV2Ops;
 
-namespace
-{
+namespace {
 #define TILINGKEY_AR_SMALL_R 500
 #define TILINGKEY_AR 1000
 #define TILINGKEY_AR_RECOMPUTE 2000
 #define TILINGKEY_ARA 10000
 #define TILINGKEY_ARA_RECOMPUTE 20000
 
-}  // namespace
+} // namespace
 
-#define SOFTMAX_V2_AR_SMALL_R_IMPL(INPUT_TYPE, OUTPUT_TYPE)                                 \
-    do {                                                                                    \
-        GET_TILING_DATA_WITH_STRUCT(SoftmaxV2ArSmallRTilingData, tilingDataIn, tiling);     \
-        const SoftmaxV2ArSmallRTilingData* __restrict tilingData = &tilingDataIn;           \
-        TPipe pipe;                                                                         \
-        SoftmaxV2ArSmallR<INPUT_TYPE, OUTPUT_TYPE> op(&pipe);                               \
-        op.Init(x, y, tilingData);                                                          \
-        op.Process();                                                                       \
+#define SOFTMAX_V2_AR_SMALL_R_IMPL(INPUT_TYPE, OUTPUT_TYPE)                             \
+    do {                                                                                \
+        GET_TILING_DATA_WITH_STRUCT(SoftmaxV2ArSmallRTilingData, tilingDataIn, tiling); \
+        const SoftmaxV2ArSmallRTilingData* __restrict tilingData = &tilingDataIn;       \
+        TPipe pipe;                                                                     \
+        SoftmaxV2ArSmallR<INPUT_TYPE, OUTPUT_TYPE> op(&pipe);                           \
+        op.Init(x, y, tilingData);                                                      \
+        op.Process();                                                                   \
     } while (0)
 
 #define SOFTMAX_V2_AR_IMPL(INPUT_TYPE, OUTPUT_TYPE)                               \
@@ -52,14 +51,14 @@ namespace
         op.Process();                                                             \
     } while (0)
 
-#define SOFTMAX_V2_AR_RECOMPUTE_IMPL(INPUT_TYPE, OUTPUT_TYPE)                                   \
-    do {                                                                                        \
-        GET_TILING_DATA_WITH_STRUCT(SoftmaxV2ArRecomputeTilingData, tilingDataIn, tiling);      \
-        const SoftmaxV2ArRecomputeTilingData* __restrict tilingData = &tilingDataIn;            \
-        TPipe pipe;                                                                             \
-        SoftmaxV2ArRecompute<INPUT_TYPE, OUTPUT_TYPE> op(&pipe);                                \
-        op.Init(x, y, tilingData);                                                              \
-        op.Process();                                                                           \
+#define SOFTMAX_V2_AR_RECOMPUTE_IMPL(INPUT_TYPE, OUTPUT_TYPE)                              \
+    do {                                                                                   \
+        GET_TILING_DATA_WITH_STRUCT(SoftmaxV2ArRecomputeTilingData, tilingDataIn, tiling); \
+        const SoftmaxV2ArRecomputeTilingData* __restrict tilingData = &tilingDataIn;       \
+        TPipe pipe;                                                                        \
+        SoftmaxV2ArRecompute<INPUT_TYPE, OUTPUT_TYPE> op(&pipe);                           \
+        op.Init(x, y, tilingData);                                                         \
+        op.Process();                                                                      \
     } while (0)
 
 #define SOFTMAX_V2_ARA_IMPL(INPUT_TYPE, OUTPUT_TYPE)                                 \

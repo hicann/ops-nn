@@ -11,7 +11,7 @@
 /*!
  * \file index_fill_d.h
  * \brief
-*/
+ */
 #ifndef INDEX_FILL_D_H
 #define INDEX_FILL_D_H
 
@@ -29,11 +29,13 @@ class KernelIndexFillD {
 public:
     __aicore__ inline KernelIndexFillD(){};
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, const IndexFillDTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y,
+                                const IndexFillDTilingData* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void DoRunOp(int32_t offset);
+
 private:
     TPipe* pipe;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, BUFFER_NUM> bindQue;
@@ -50,45 +52,44 @@ private:
 };
 
 template <typename TYPE_X, typename TYPE_Y, uint64_t BUFFER_NUM>
-__aicore__ inline void KernelIndexFillD<TYPE_X, TYPE_Y, BUFFER_NUM>::Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, const IndexFillDTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void KernelIndexFillD<TYPE_X, TYPE_Y, BUFFER_NUM>::Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2,
+                                                                          GM_ADDR y,
+                                                                          const IndexFillDTilingData* tilingData,
+                                                                          TPipe* pipeIn)
 {
     ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
     uint32_t coreNum = GetBlockIdx();
     uint32_t globalBufferIndex = tilingData->bigCoreDataNum * GetBlockIdx();
     this->tileDataNum = tilingData->tileDataNum;
     this->pipe = pipeIn;
-    if (coreNum < tilingData->tailBlockNum)
-    {
+    if (coreNum < tilingData->tailBlockNum) {
         this->coreDataNum = tilingData->bigCoreDataNum;
         this->tileNum = tilingData->finalBigTileNum;
         this->tailDataNum = tilingData->bigTailDataNum;
-    }
-    else
-    {
+    } else {
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (GetBlockIdx() - tilingData->tailBlockNum);
     }
-    xGm.SetGlobalBuffer((__gm__ TYPE_X *)x + globalBufferIndex, this->coreDataNum);
-    assist1Gm.SetGlobalBuffer((__gm__ TYPE_X *)assist1 + globalBufferIndex, this->coreDataNum);
-    assist2Gm.SetGlobalBuffer((__gm__ TYPE_X *)assist2 + globalBufferIndex, this->coreDataNum);
-    yGm.SetGlobalBuffer((__gm__ TYPE_Y *)y + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
+    assist1Gm.SetGlobalBuffer((__gm__ TYPE_X*)assist1 + globalBufferIndex, this->coreDataNum);
+    assist2Gm.SetGlobalBuffer((__gm__ TYPE_X*)assist2 + globalBufferIndex, this->coreDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_Y*)y + globalBufferIndex, this->coreDataNum);
     pipe->InitBuffer(bindQue, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X) * 3);
     pipe->InitBuffer(maskBuf, this->tileDataNum * sizeof(uint8_t));
-    if constexpr ( IsSameType<TYPE_X, bfloat16_t>::value)
-    {
+    if constexpr (IsSameType<TYPE_X, bfloat16_t>::value) {
         pipe->InitBuffer(castBuf, this->tileDataNum * sizeof(float));
     }
-    if constexpr ( IsSameType<TYPE_X, int8_t>::value)
-    {
+    if constexpr (IsSameType<TYPE_X, int8_t>::value) {
         pipe->InitBuffer(castBuf, this->tileDataNum * sizeof(int16_t));
     }
 }
 
 template <typename TYPE_X, typename TYPE_Y, uint64_t BUFFER_NUM>
 __aicore__ inline void KernelIndexFillD<TYPE_X, TYPE_Y, BUFFER_NUM>::DoRunOp(int32_t offset)
-{    
+{
     LocalTensor<TYPE_X> xLocal = bindQue.template AllocTensor<TYPE_X>();
     LocalTensor<TYPE_X> assist1Local = xLocal[this->processDataNum];
     LocalTensor<TYPE_X> assist2Local = assist1Local[this->processDataNum];
@@ -100,32 +101,25 @@ __aicore__ inline void KernelIndexFillD<TYPE_X, TYPE_Y, BUFFER_NUM>::DoRunOp(int
     DataCopy(assist2Local, assist2Gm[offset], this->processDataNum);
     SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
-    if constexpr ( IsSameType<TYPE_X, bfloat16_t>::value)
-    {
+    if constexpr (IsSameType<TYPE_X, bfloat16_t>::value) {
         auto maskLocal = maskBuf.Get<uint8_t>();
         auto castLocal = castBuf.Get<float>();
         auto yLocalFp = xLocal.template ReinterpretCast<float>();
-        
+
         Cast(castLocal, assist1Local, RoundMode::CAST_NONE, this->processDataNum);
         CompareScalar(maskLocal, castLocal, (float)0.0, CMPMODE::GT, this->processDataNum);
         Cast(castLocal, xLocal, RoundMode::CAST_NONE, this->processDataNum);
         Cast(yLocalFp, assist2Local, RoundMode::CAST_NONE, this->processDataNum);
         Select(yLocalFp, maskLocal, castLocal, yLocalFp, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->processDataNum);
         Cast(yLocal, yLocalFp, RoundMode::CAST_RINT, this->processDataNum);
-    }
-    else if constexpr ( IsSameType<TYPE_X, float>::value || IsSameType<TYPE_X, half>::value)
-    {
+    } else if constexpr (IsSameType<TYPE_X, float>::value || IsSameType<TYPE_X, half>::value) {
         auto maskLocal = maskBuf.Get<uint8_t>();
         CompareScalar(maskLocal, assist1Local, (TYPE_X)0.0, CMPMODE::GT, this->processDataNum);
         Select(yLocal, maskLocal, xLocal, assist2Local, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->processDataNum);
-    }
-    else if constexpr ( IsSameType<TYPE_X, int32_t>::value)
-    {
+    } else if constexpr (IsSameType<TYPE_X, int32_t>::value) {
         Mul(xLocal, xLocal, assist1Local, this->processDataNum);
         Add(yLocal, xLocal, assist2Local, this->processDataNum);
-    }
-    else if constexpr ( IsSameType<TYPE_X, int8_t>::value)
-    {
+    } else if constexpr (IsSameType<TYPE_X, int8_t>::value) {
         auto castLocal = castBuf.Get<half>();
         auto yLocalHalf = xLocal.template ReinterpretCast<half>();
         Cast(castLocal, xLocal, RoundMode::CAST_NONE, this->processDataNum);
@@ -147,13 +141,12 @@ __aicore__ inline void KernelIndexFillD<TYPE_X, TYPE_Y, BUFFER_NUM>::Process()
     int32_t loopCount = this->tileNum - 1;
     this->processDataNum = this->tileDataNum;
     int32_t offset = 0;
-    for (int32_t i = 0; i < loopCount; i++, offset+=this->tileDataNum)
-    {
+    for (int32_t i = 0; i < loopCount; i++, offset += this->tileDataNum) {
         DoRunOp(offset);
     }
     this->processDataNum = this->tailDataNum;
     DoRunOp(offset);
 }
 
-} // namespace KernelIndexFillD
+} // namespace MyIndexFillD
 #endif // INDEX_FILL_D_H

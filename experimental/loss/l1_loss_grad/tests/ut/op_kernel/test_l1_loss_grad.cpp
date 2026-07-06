@@ -22,21 +22,15 @@
 #include "../../../op_kernel/l1_loss_grad.h"
 #include <cstdint>
 
-extern "C" __global__ __aicore__ void l1_loss_grad(
-    GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void l1_loss_grad(GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y,
+                                                   GM_ADDR workspace, GM_ADDR tiling);
 
 using namespace std;
 
 class l1_loss_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l1_loss_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l1_loss_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "l1_loss_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "l1_loss_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(l1_loss_grad_test, test_case_0)

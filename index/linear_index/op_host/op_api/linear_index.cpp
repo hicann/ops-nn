@@ -19,14 +19,14 @@
 
 using namespace op;
 
-static const std::initializer_list<op::DataType> AICORE_910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> AICORE_910B_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                                   op::DataType::DT_INT64};
 
 namespace l0op {
 OP_TYPE_REGISTER(LinearIndex);
 
-const aclTensor* LinearIndex(
-    const aclTensor* indices, const aclTensor* var, int64_t axis, bool combine, aclOpExecutor* executor)
+const aclTensor* LinearIndex(const aclTensor* indices, const aclTensor* var, int64_t axis, bool combine,
+                             aclOpExecutor* executor)
 {
     L0_DFX(LinearIndex, indices, var);
 
@@ -61,11 +61,10 @@ const aclTensor* LinearIndex(
     auto shapeTensor = executor->ConvertToTensor(shapeArray, ToOpDataType(ACL_INT32));
     CHECK_RET(shapeTensor != nullptr, nullptr);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        LinearIndex, OP_INPUT(indices, shapeTensor), OP_OUTPUT(index), OP_ATTR(axis, combine));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LinearIndexAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LinearIndex, OP_INPUT(indices, shapeTensor), OP_OUTPUT(index),
+                                           OP_ATTR(axis, combine));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LinearIndexAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return index;
 }
 } // namespace l0op

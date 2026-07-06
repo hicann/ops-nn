@@ -37,14 +37,8 @@ using namespace LpNormV2;
 
 class lp_norm_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "lp_norm_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "lp_norm_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "lp_norm_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "lp_norm_v2_test TearDown\n" << endl; }
 };
 
 std::string Shape2Str(const std::vector<int64_t>& shape)
@@ -264,4 +258,3 @@ TEST_F(lp_norm_v2_test, test_p_inf_float32)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
-

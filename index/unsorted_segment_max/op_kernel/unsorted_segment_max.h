@@ -39,8 +39,7 @@ __aicore__ inline constexpr T GetDtypeMin()
 // SIMT gather: return max of two values
 template <typename T>
 struct SimtGatherMaxValue {
-    __simt_callee__ __aicore__ inline SimtGatherMaxValue()
-    {}
+    __simt_callee__ __aicore__ inline SimtGatherMaxValue() {}
     __simt_callee__ __aicore__ inline T operator()(T midResP, T xUbLocalRes)
     {
         return midResP > xUbLocalRes ? midResP : xUbLocalRes;
@@ -50,8 +49,7 @@ struct SimtGatherMaxValue {
 // SIMT atomic: write max to GM
 template <typename T>
 struct SimtComputeSegmentMax {
-    __simt_callee__ __aicore__ inline SimtComputeSegmentMax()
-    {}
+    __simt_callee__ __aicore__ inline SimtComputeSegmentMax() {}
     __simt_callee__ __aicore__ inline void operator()(__gm__ T* outputGm, const uint64_t outputIndex, T value)
     {
         Simt::AtomicMax(outputGm + outputIndex, value);
@@ -61,17 +59,13 @@ struct SimtComputeSegmentMax {
 // Identity value for max reduction (min of type), used as F0/F3
 template <typename T>
 struct GetInitMinValue {
-    static __aicore__ inline constexpr T Get()
-    {
-        return GetDtypeMin<T>();
-    }
+    static __aicore__ inline constexpr T Get() { return GetDtypeMin<T>(); }
 };
 
 // GM initialization: fill with min value (F4)
 template <typename T>
 struct InitGmMinValue {
-    __aicore__ inline InitGmMinValue()
-    {}
+    __aicore__ inline InitGmMinValue() {}
     __aicore__ inline void operator()(GlobalTensor<T> yGmInit, uint64_t initCoreReal)
     {
         InitGlobalMemory(yGmInit, initCoreReal, GetDtypeMin<T>());
@@ -81,8 +75,7 @@ struct InitGmMinValue {
 // Vector Max operation (F5)
 template <typename T, typename D>
 struct ComputeMax {
-    __aicore__ inline ComputeMax()
-    {}
+    __aicore__ inline ComputeMax() {}
     __aicore__ inline void operator()(LocalTensor<T>& yLocal, LocalTensor<T>& xLocal, D dstOffset, D srcOffset, D cols)
     {
         AscendC::Max(yLocal[dstOffset], yLocal[dstOffset], xLocal[srcOffset], cols);
@@ -92,14 +85,10 @@ struct ComputeMax {
 // Set atomic max mode (F6)
 template <typename T>
 struct SetAtomicMaxOp {
-    __aicore__ inline SetAtomicMaxOp()
-    {}
-    __aicore__ inline void operator()()
-    {
-        AscendC::SetAtomicMax<T>();
-    }
+    __aicore__ inline SetAtomicMaxOp() {}
+    __aicore__ inline void operator()() { AscendC::SetAtomicMax<T>(); }
 };
 
-}
+} // namespace UnsortedSegment
 
 #endif // UNSORTED_SEGMENT_MAX_H

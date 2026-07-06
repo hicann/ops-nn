@@ -26,33 +26,21 @@ ge::graphStatus AdaptiveMaxPool3DGradScatterTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdaptiveMaxPool3DGradScatterTiling::IsCapable()
-{
-    return true;
-}
+bool AdaptiveMaxPool3DGradScatterTiling::IsCapable() { return true; }
 
 bool AdaptiveMaxPool3DGradScatterTiling::SetScatterTilingParams()
 {
-    return CalculateScatterTilingParams(
-        maxPoolGradParams,
-        maxPoolGradParams.doDim,
-        maxPoolGradParams.hoDim,
-        maxPoolGradParams.woDim,
-        maxPoolGradParams.xDtypeSize,
-        maxPoolGradParams.indexDtypeSize,
-        MAX_BLOCK_COUNT);
+    return CalculateScatterTilingParams(maxPoolGradParams, maxPoolGradParams.doDim, maxPoolGradParams.hoDim,
+                                        maxPoolGradParams.woDim, maxPoolGradParams.xDtypeSize,
+                                        maxPoolGradParams.indexDtypeSize, MAX_BLOCK_COUNT);
 }
 
 void AdaptiveMaxPool3DGradScatterTiling::SetOtherTilingParams()
 {
     SetCntTailTilingParams();
-    
-    CalculateRoundParams(
-        maxPoolGradParams,
-        maxPoolGradParams.isOverLap,
-        maxPoolGradParams.diDim,
-        maxPoolGradParams.hiDim,
-        maxPoolGradParams.wiDim);
+
+    CalculateRoundParams(maxPoolGradParams, maxPoolGradParams.isOverLap, maxPoolGradParams.diDim,
+                         maxPoolGradParams.hiDim, maxPoolGradParams.wiDim);
 }
 
 void AdaptiveMaxPool3DGradScatterTiling::SetScatterTilingData()
@@ -75,7 +63,7 @@ ge::graphStatus AdaptiveMaxPool3DGradScatterTiling::DoOpTiling()
     SetScatterTilingData();
     PrintTilingData();
     PrintScatterTilingData();
-    
+
     return ge::GRAPH_SUCCESS;
 }
 

@@ -12,29 +12,33 @@
  * \file conv3d_v2_base_tiling_template_tilingkey.h
  * \brief
  */
- 
+
 #ifndef OPS_CONV_OP_TILING_CONV3D_V2_BASE_TILINGKEY_H
 #define OPS_CONV_OP_TILING_CONV3D_V2_BASE_TILINGKEY_H
- 
+
 #include "conv/common/op_host/op_tiling/arch35/conv_template_utils.h"
 #include "conv/conv3d_v2/op_host/op_tiling/arch35/conv3d_v2_tiling.h"
 #include "conv/conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
- 
+
 class __attribute__((visibility("default"))) Conv3dV2BaseTilingKey {
 public:
-    Conv3dV2BaseTilingKey(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData,
-        ConvAscendcTilingFlag& flagInfo, ConvAscendcDescInfo& descInfo, ConvAscendcShapesInfo& shapeInfo,
-        NumBlocksRes& numBlocksRes, ConvOpsConstParams& convOpsConstParams) :
-        tilingData_(tilingData), flagInfo_(flagInfo), descInfo_(descInfo), shapeInfo_(shapeInfo),
-        numBlocksRes_(numBlocksRes), convOpsConstParams_(convOpsConstParams) {};
+    Conv3dV2BaseTilingKey(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData, ConvAscendcTilingFlag& flagInfo,
+                          ConvAscendcDescInfo& descInfo, ConvAscendcShapesInfo& shapeInfo, NumBlocksRes& numBlocksRes,
+                          ConvOpsConstParams& convOpsConstParams)
+        : tilingData_(tilingData),
+          flagInfo_(flagInfo),
+          descInfo_(descInfo),
+          shapeInfo_(shapeInfo),
+          numBlocksRes_(numBlocksRes),
+          convOpsConstParams_(convOpsConstParams){};
 
-    ~Conv3dV2BaseTilingKey() {};
- 
+    ~Conv3dV2BaseTilingKey(){};
+
     void GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPara);
- 
+
 private:
     uint64_t GetFmpTilingVal();
     uint64_t GetFmpTilingValMMode(const bool kAL1FullloadFlag);
@@ -44,7 +48,7 @@ private:
     uint64_t GetL0PingPongVal();
     uint64_t GetOutputOrderVal();
     void ReSetTilingKeyPara(ConvTilingKeyPara& tilingKeyPara);
- 
+
 private:
     Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData_;
     ConvAscendcTilingFlag flagInfo_;
@@ -53,7 +57,7 @@ private:
     NumBlocksRes numBlocksRes_;
     ConvOpsConstParams convOpsConstParams_;
 };
- 
-}
-}
+
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

@@ -53,8 +53,7 @@ static int64_t FindBinaryQuotient(int64_t len)
 namespace optiling {
 class BatchNormRARBlockSplitRTiling : public BatchNormRegbaseTilingBase {
 public:
-    explicit BatchNormRARBlockSplitRTiling(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context)
-    {}
+    explicit BatchNormRARBlockSplitRTiling(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context) {}
     ~BatchNormRARBlockSplitRTiling() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -73,10 +72,10 @@ protected:
         if (a_ * NUM_TWO >= static_cast<int64_t>(aicoreParams_.blockDim)) {
             return false;
         }
-        OP_LOGI(
-            context_->GetNodeName(),
-            "BatchNormRARBlockSplitRTiling IsCapable true! ready to use BatchNormRARBlockSplitRTiling (tilingkey: %lu) !",
-            TILINGKEY_RAR_BLOCK_SPLIT_R);
+        OP_LOGI(context_->GetNodeName(),
+                "BatchNormRARBlockSplitRTiling IsCapable true! ready to use BatchNormRARBlockSplitRTiling (tilingkey: "
+                "%lu) !",
+                TILINGKEY_RAR_BLOCK_SPLIT_R);
         return true;
     }
     // 3、计算数据切分TilingData
@@ -87,7 +86,9 @@ protected:
     ge::graphStatus PostTiling() override;
     void SetInputInfo();
     bool BinaryAddTiling(const int64_t binaryAddNum, int64_t& binaryAddK, int64_t& binaryAddLast);
-    int64_t UbSplit(int64_t r1BlockInner, int64_t r0BlockInner, int64_t ubFactor, int64_t& ubSplitAxis, int64_t& ubOuter, int64_t& ubInner, int64_t eleNumPerBlock);
+    int64_t UbSplit(int64_t r1BlockInner, int64_t r0BlockInner, int64_t ubFactor, int64_t& ubSplitAxis,
+                    int64_t& ubOuter, int64_t& ubInner, int64_t eleNumPerBlock);
+
 private:
     BatchNormRARBlockSplitRTilingData batchNormTilingData;
 };
@@ -105,8 +106,8 @@ void BatchNormRARBlockSplitRTiling::SetInputInfo()
     batchNormTilingData.set_momentumReverse(1 - exponentialAvgFactor_);
 }
 
-bool BatchNormRARBlockSplitRTiling::BinaryAddTiling(
-    const int64_t binaryAddNum, int64_t& binaryAddK, int64_t& binaryAddLast)
+bool BatchNormRARBlockSplitRTiling::BinaryAddTiling(const int64_t binaryAddNum, int64_t& binaryAddK,
+                                                    int64_t& binaryAddLast)
 {
     binaryAddK = 0;
     int64_t curBinaryAddNum = 1;
@@ -126,8 +127,9 @@ bool BatchNormRARBlockSplitRTiling::BinaryAddTiling(
     return true;
 }
 
-int64_t BatchNormRARBlockSplitRTiling::UbSplit(int64_t r1BlockInner, int64_t r0BlockInner, int64_t ubFactor, 
-                                                 int64_t& ubSplitAxis, int64_t& ubOuter, int64_t& ubInner, int64_t eleNumPerBlock)
+int64_t BatchNormRARBlockSplitRTiling::UbSplit(int64_t r1BlockInner, int64_t r0BlockInner, int64_t ubFactor,
+                                               int64_t& ubSplitAxis, int64_t& ubOuter, int64_t& ubInner,
+                                               int64_t eleNumPerBlock)
 {
     int64_t r0BlockInnerAlign = Ops::Base::CeilAlign(r0BlockInner, eleNumPerBlock);
 
@@ -147,7 +149,7 @@ int64_t BatchNormRARBlockSplitRTiling::UbSplit(int64_t r1BlockInner, int64_t r0B
 
         ubSplitAxis = 1;
         ubInner = std::min(Ops::Base::FloorDiv(ubFactor, r0BlockInnerAlign), a_); // 考虑r0需要对齐，避免ub用超
-        ubOuter = Ops::Base::CeilDiv(a_, ubInner);  
+        ubOuter = Ops::Base::CeilDiv(a_, ubInner);
 
         return r0BlockInner;
     } else {
@@ -161,7 +163,7 @@ int64_t BatchNormRARBlockSplitRTiling::UbSplit(int64_t r1BlockInner, int64_t r0B
         // 继续计算上述32B对齐的最大R可用空间对应的ubInner
         int64_t maxUbInnerFromAligned = Ops::Base::FloorDiv(maxAlignedRNum, r0BlockInner);
 
-        ubInner = std::min(maxUbInnerFromAligned, r1BlockInner); 
+        ubInner = std::min(maxUbInnerFromAligned, r1BlockInner);
 
         // 确保至少要处理1个元素
         ubInner = ubInner > 1 ? ubInner : 1;
@@ -201,9 +203,12 @@ ge::graphStatus BatchNormRARBlockSplitRTiling::DoOpTiling()
         usedCoreNums_ = blockOuter;
     }
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: blockSplitAxis is %lu !", blockSplitAxis);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerBlockOuter is %lu !", formerBlockOuter);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailBlockOuter is %lu !", tailBlockOuter);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: blockSplitAxis is %lu !",
+            blockSplitAxis);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerBlockOuter is %lu !",
+            formerBlockOuter);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailBlockOuter is %lu !",
+            tailBlockOuter);
     OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: blockInner is %lu !", blockInner);
     OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: usedCoreNums_ is %lu !", usedCoreNums_);
 
@@ -221,49 +226,62 @@ ge::graphStatus BatchNormRARBlockSplitRTiling::DoOpTiling()
         T2ElemSize = FP16_BYTE;
     }
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: class member blockSize_ is %lu !", blockSize_);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: class member blockSize_ is %lu !",
+            blockSize_);
     int64_t fp32EleNumPerBlock = blockSize_ / FP32_BYTE;
     int64_t patternAAlign = Ops::Base::CeilAlign(a_, fp32EleNumPerBlock);
 
-    int64_t runningMeanVarSize = Ops::Base::CeilAlign(a_, blockSize_ / T2ElemSize) * T2ElemSize * RUNNING_MEAN_VAR_BUFFER_DEFAULT_NUM;
+    int64_t runningMeanVarSize = Ops::Base::CeilAlign(a_, blockSize_ / T2ElemSize) * T2ElemSize *
+                                 RUNNING_MEAN_VAR_BUFFER_DEFAULT_NUM;
     if (useRunningMeanVar_) {
         runningMeanVarSize *= NUM_TWO;
     }
-    int64_t saveMeanRstdSize =  patternAAlign * static_cast<int64_t>(sizeof(float)) * MEAN_VAR_BUFFER_NUM;
-    int64_t betaGammaSize =  Ops::Base::CeilAlign(a_, blockSize_ / T2ElemSize) * T2ElemSize * BETA_GAMMA_BUFFER_NUM;
+    int64_t saveMeanRstdSize = patternAAlign * static_cast<int64_t>(sizeof(float)) * MEAN_VAR_BUFFER_NUM;
+    int64_t betaGammaSize = Ops::Base::CeilAlign(a_, blockSize_ / T2ElemSize) * T2ElemSize * BETA_GAMMA_BUFFER_NUM;
 
-    int64_t blockDimAlignSize =
-        Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.blockDim), fp32EleNumPerBlock) * FP32_BYTE;
-    int64_t tmpbuffer3AlignSize =
-        std::max(static_cast<int64_t>(aicoreParams_.blockDim) * patternAAlign, 
-                 static_cast<int64_t>(Ops::Base::CeilAlign(FIRST_VCADD_RESULT_MAX_NUM, fp32EleNumPerBlock))) * FP32_BYTE;
-    
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: runningMeanVarSize is %lu !", runningMeanVarSize);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: saveMeanRstdSize is %lu !", saveMeanRstdSize);
+    int64_t blockDimAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.blockDim), fp32EleNumPerBlock) *
+                                FP32_BYTE;
+    int64_t tmpbuffer3AlignSize = std::max(static_cast<int64_t>(aicoreParams_.blockDim) * patternAAlign,
+                                           static_cast<int64_t>(
+                                               Ops::Base::CeilAlign(FIRST_VCADD_RESULT_MAX_NUM, fp32EleNumPerBlock))) *
+                                  FP32_BYTE;
+
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: runningMeanVarSize is %lu !",
+            runningMeanVarSize);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: saveMeanRstdSize is %lu !",
+            saveMeanRstdSize);
     OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: betaGammaSize is %lu !", betaGammaSize);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: blockDimAlignSize is %lu !", blockDimAlignSize);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tmpbuffer3AlignSize is %lu !", tmpbuffer3AlignSize);
-    
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: blockDimAlignSize is %lu !",
+            blockDimAlignSize);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tmpbuffer3AlignSize is %lu !",
+            tmpbuffer3AlignSize);
+
     int64_t xSizePerUbFactor = elemSize * DOUBLE_BUFFER_NUM;
     int64_t ySizePerUbFactor = elemSize * DOUBLE_BUFFER_NUM;
     int64_t tmpMeanVarPerUbFactor = static_cast<int64_t>(sizeof(float)) * MEAN_VAR_BUFFER_NUM;
     int64_t countBuffer1PerUbFactor = static_cast<int64_t>(sizeof(float));
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: xSizePerUbFactor is %lu !", xSizePerUbFactor);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: ySizePerUbFactor is %lu !", ySizePerUbFactor);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tmpMeanVarPerUbFactor is %lu !", tmpMeanVarPerUbFactor);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: countBuffer1PerUbFactor is %lu !", countBuffer1PerUbFactor);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: xSizePerUbFactor is %lu !",
+            xSizePerUbFactor);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: ySizePerUbFactor is %lu !",
+            ySizePerUbFactor);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tmpMeanVarPerUbFactor is %lu !",
+            tmpMeanVarPerUbFactor);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: countBuffer1PerUbFactor is %lu !",
+            countBuffer1PerUbFactor);
 
-    int64_t ubSizeCanUse = static_cast<int64_t>(aicoreParams_.ubSize) - runningMeanVarSize - saveMeanRstdSize - betaGammaSize - blockDimAlignSize - tmpbuffer3AlignSize;
+    int64_t ubSizeCanUse = static_cast<int64_t>(aicoreParams_.ubSize) - runningMeanVarSize - saveMeanRstdSize -
+                           betaGammaSize - blockDimAlignSize - tmpbuffer3AlignSize;
     OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: ubSizeCanUse is %lu !", ubSizeCanUse);
-    OP_CHECK_IF(
-        ubSizeCanUse <= 0, OP_LOGI(context_->GetNodeName(), "ubSizeCanUse is not a positive number."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(ubSizeCanUse <= 0, OP_LOGI(context_->GetNodeName(), "ubSizeCanUse is not a positive number."),
+                return ge::GRAPH_PARAM_INVALID);
 
     // Step2: 根据ubSizeCanUse，算出ubFactor，并进行对齐操作
-    int64_t ubFactor = ubSizeCanUse / (xSizePerUbFactor + ySizePerUbFactor + tmpMeanVarPerUbFactor + countBuffer1PerUbFactor);
+    int64_t ubFactor = ubSizeCanUse /
+                       (xSizePerUbFactor + ySizePerUbFactor + tmpMeanVarPerUbFactor + countBuffer1PerUbFactor);
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: direct obtained ubFactor is %lu !", ubFactor);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: direct obtained ubFactor is %lu !",
+            ubFactor);
 
     ubFactor = Ops::Base::FloorAlign(ubFactor, blockSize_ / elemSize);
 
@@ -297,35 +315,44 @@ ge::graphStatus BatchNormRARBlockSplitRTiling::DoOpTiling()
     }
     int64_t formerCoreProcessRNum = 0;
     int64_t tailCoreProcessRNum = 0;
-    formerCoreProcessRNum = 
-        UbSplit(formerCoreR1BlockInner, formerCoreR0BlockInner, ubFactor, formerCoreUbSplitAxis, formerCoreUbOuter, formerCoreUbInner, blockSize_ / elemSize);
-    tailCoreProcessRNum = 
-        UbSplit(tailCoreR1BlockInner, tailCoreR0BlockInner, ubFactor, tailCoreUbSplitAxis, tailCoreUbOuter, tailCoreUbInner, blockSize_ / elemSize);
+    formerCoreProcessRNum = UbSplit(formerCoreR1BlockInner, formerCoreR0BlockInner, ubFactor, formerCoreUbSplitAxis,
+                                    formerCoreUbOuter, formerCoreUbInner, blockSize_ / elemSize);
+    tailCoreProcessRNum = UbSplit(tailCoreR1BlockInner, tailCoreR0BlockInner, ubFactor, tailCoreUbSplitAxis,
+                                  tailCoreUbOuter, tailCoreUbInner, blockSize_ / elemSize);
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreUbSplitAxis is %lu !", formerCoreUbSplitAxis);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreUbOuter is %lu !", formerCoreUbOuter);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreUbInner is %lu !\n", formerCoreUbInner);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreUbSplitAxis is %lu !", tailCoreUbSplitAxis);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreUbOuter is %lu !", tailCoreUbOuter);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreUbInner is %lu !\n\n", tailCoreUbInner);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreUbSplitAxis is %lu !",
+            formerCoreUbSplitAxis);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreUbOuter is %lu !",
+            formerCoreUbOuter);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreUbInner is %lu !\n",
+            formerCoreUbInner);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreUbSplitAxis is %lu !",
+            tailCoreUbSplitAxis);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreUbOuter is %lu !",
+            tailCoreUbOuter);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreUbInner is %lu !\n\n",
+            tailCoreUbInner);
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreProcessRNum is %lu !", formerCoreProcessRNum);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreProcessRNum is %lu !\n", tailCoreProcessRNum);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreProcessRNum is %lu !",
+            formerCoreProcessRNum);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreProcessRNum is %lu !\n",
+            tailCoreProcessRNum);
 
     int64_t formerCoreBinaryAddQuotient = FindBinaryQuotient(formerCoreProcessRNum);
     int64_t tailCoreBinaryAddQuotient = FindBinaryQuotient(tailCoreProcessRNum);
 
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreBinaryAddQuotient is %lu !", formerCoreBinaryAddQuotient);
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreBinaryAddQuotient is %lu !", tailCoreBinaryAddQuotient);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: formerCoreBinaryAddQuotient is %lu !",
+            formerCoreBinaryAddQuotient);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: tailCoreBinaryAddQuotient is %lu !",
+            tailCoreBinaryAddQuotient);
 
     int64_t lastBinaryAddQuotient = FindBinaryQuotient(usedCoreNums_);
     int64_t lastBinaryAddK = 0;
     int64_t lastBinaryAddLast = 0;
     auto res = BinaryAddTiling(lastBinaryAddQuotient, lastBinaryAddK, lastBinaryAddLast);
-    OP_CHECK_IF(
-        res == false,
-        OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling BinaryAddTiling param invalid"),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(res == false,
+                OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling BinaryAddTiling param invalid"),
+                return ge::GRAPH_PARAM_INVALID);
 
     batchNormTilingData.set_patternAAlign(patternAAlign);
     batchNormTilingData.set_blockSplitAxis(blockSplitAxis);
@@ -351,7 +378,8 @@ ge::graphStatus BatchNormRARBlockSplitRTiling::DoOpTiling()
 
 uint64_t BatchNormRARBlockSplitRTiling::GetTilingKey() const
 {
-    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling GetTilingKey tilingkey is %lu !", TILINGKEY_RAR_BLOCK_SPLIT_R);
+    OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling GetTilingKey tilingkey is %lu !",
+            TILINGKEY_RAR_BLOCK_SPLIT_R);
     return TILINGKEY_RAR_BLOCK_SPLIT_R;
 }
 
@@ -360,12 +388,12 @@ ge::graphStatus BatchNormRARBlockSplitRTiling::PostTiling()
     context_->SetBlockDim(usedCoreNums_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = WSP_RESERVED_SIZE + usedCoreNums_ * MEAN_AND_VAR_NODE_NUM * batchNormTilingData.get_patternAAlign() * FP32_BYTE;
+    currentWorkspace[0] = WSP_RESERVED_SIZE +
+                          usedCoreNums_ * MEAN_AND_VAR_NODE_NUM * batchNormTilingData.get_patternAAlign() * FP32_BYTE;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(batchNormTilingData.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     batchNormTilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormTilingData.GetDataSize());

@@ -21,9 +21,8 @@ template <typename IMPL, class A_TYPE, class B_TYPE, class C_TYPE, const auto& M
 class MMCustomCopyCubeOut {
     using DstT = typename C_TYPE::T;
     using SrcT = typename GetMmDstType<typename A_TYPE::T>::Type;
-    using FixpipeAdaptor =
-        AscendC::Impl::Detail::FixpipeParamsUtil<A_TYPE, C_TYPE, MM_CFG,
-            AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::GetFixpipeParamsType()>;
+    using FixpipeAdaptor = AscendC::Impl::Detail::FixpipeParamsUtil<
+        A_TYPE, C_TYPE, MM_CFG, AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::GetFixpipeParamsType()>;
 
     MATMUL_USE_MODULE(Context);
     MATMUL_USE_MODULE(MatmulQuantProcessor);
@@ -42,13 +41,13 @@ public:
     {
         if constexpr (ToMatmulConfig(MM_CFG).intraBlockPartSum) {
             if (!MATMUL_MODULE(MatmulSubBlockInfo)->GetFakeMsg()) {
-                CopyOutImpl<enSequentialWrite, const GlobalTensor<DstT>, true>(gm, co1Local, curRow, curCol, baseHeight,
-                    baseWidth, baseBlockHeight, baseBlockWidth);
+                CopyOutImpl<enSequentialWrite, const GlobalTensor<DstT>, true>(
+                    gm, co1Local, curRow, curCol, baseHeight, baseWidth, baseBlockHeight, baseBlockWidth);
                 return;
             }
         }
         CopyOutImpl<enSequentialWrite, const GlobalTensor<DstT>, false>(gm, co1Local, curRow, curCol, baseHeight,
-            baseWidth, baseBlockHeight, baseBlockWidth);
+                                                                        baseWidth, baseBlockHeight, baseBlockWidth);
     }
 
     template <bool enSequentialWrite = false, typename ScheduleContext = int>
@@ -57,27 +56,27 @@ public:
                                 int32_t baseBlockWidth, const ScheduleContext& context = 0)
     {
         if constexpr (FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_M) {
-            baseHeight = (baseHeight + 1) / 2 * 2;  // 指令要求m必须是偶数，向上对齐到2的倍数
+            baseHeight = (baseHeight + 1) / 2 * 2; // 指令要求m必须是偶数，向上对齐到2的倍数
         }
         CopyOutImpl<enSequentialWrite>(co2Local, co1Local, curRow, curCol, baseHeight, baseWidth, baseBlockHeight,
-            baseBlockWidth);
+                                       baseBlockWidth);
     }
 
 private:
     template <bool enSequentialWrite, class T, bool IS_INTRA_BLOCK = false>
-    __aicore__ inline void CopyOutImpl(const T& dst, const LocalTensor<SrcT>& co1Local, int32_t curRow,
-                                       int32_t curCol, int32_t baseHeight, int32_t baseWidth, int32_t baseBlockHeight,
+    __aicore__ inline void CopyOutImpl(const T& dst, const LocalTensor<SrcT>& co1Local, int32_t curRow, int32_t curCol,
+                                       int32_t baseHeight, int32_t baseWidth, int32_t baseBlockHeight,
                                        int32_t baseBlockWidth)
     {
         if constexpr (FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_M && PhyPosIsUB(C_TYPE::pos)) {
             ASCENDC_ASSERT((baseHeight % 2 == 0), // 校验tileHeight是否2对齐
-                {KERNEL_LOG(KERNEL_ERROR, "If split M when copy cube out, baseHeight must be even.");});
+                           { KERNEL_LOG(KERNEL_ERROR, "If split M when copy cube out, baseHeight must be even."); });
         }
         if constexpr (C_TYPE::format == CubeFormat::ND || C_TYPE::format == CubeFormat::ND_ALIGN) {
-            CopyOutNZ2ND<enSequentialWrite, T, IS_INTRA_BLOCK>(dst, co1Local, curRow, curCol, baseHeight,
-                baseWidth, baseBlockHeight, baseBlockWidth);
+            CopyOutNZ2ND<enSequentialWrite, T, IS_INTRA_BLOCK>(dst, co1Local, curRow, curCol, baseHeight, baseWidth,
+                                                               baseBlockHeight, baseBlockWidth);
         } else {
-            ASCENDC_ASSERT(false, {KERNEL_LOG(KERNEL_ERROR, "Copy: unsupport Matmul format type.");});
+            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "Copy: unsupport Matmul format type."); });
         }
     }
 
@@ -107,28 +106,32 @@ private:
     __aicore__ inline int64_t GetDstOffset(int32_t curRow, int32_t curCol, int32_t baseHeight, int32_t stride)
     {
         int64_t dstOffset = 0;
-        if constexpr (AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::IsSupportL0CToUB() && PhyPosIsUB(C_TYPE::pos)
-            && ((A_TYPE::ibShare && B_TYPE::ibShare) || FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_M)) {
+        if constexpr (AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::IsSupportL0CToUB() &&
+                      PhyPosIsUB(C_TYPE::pos) &&
+                      ((A_TYPE::ibShare && B_TYPE::ibShare) || FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_M)) {
             dstOffset = (static_cast<int64_t>(static_cast<int64_t>(
-                curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() * stride)) >> 1) +
-            static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
+                             curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() * stride)) >>
+                         1) +
+                        static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
         } else if constexpr (AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::IsSupportL0CToUB() &&
-            PhyPosIsUB(C_TYPE::pos) && FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_N) {
-            dstOffset =
-                static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() * stride) +
-                static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN() * baseHeight);
+                             PhyPosIsUB(C_TYPE::pos) && FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_N) {
+            dstOffset = static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() *
+                                             stride) +
+                        static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN() *
+                                             baseHeight);
             dstOffset = dstOffset >> 1;
         } else {
-            dstOffset =
-                static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() * stride) +
-                static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
+            dstOffset = static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() *
+                                             stride) +
+                        static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
         }
         return dstOffset;
     }
 
-    __aicore__ inline void SetFixpipeParams(FixpipeAdaptor& fixpipe) {
+    __aicore__ inline void SetFixpipeParams(FixpipeAdaptor& fixpipe)
+    {
         if constexpr (PhyPosIsUB(C_TYPE::pos) &&
-            AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::IsSupportL0CToUB()) {
+                      AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::IsSupportL0CToUB()) {
             fixpipe.SetSubBlockId(MATMUL_MODULE(MatmulSubBlockInfo)->GetSubBlockIdx());
             if constexpr (A_TYPE::ibShare && B_TYPE::ibShare) {
                 fixpipe.SetMcgShfMode(McgShfMode::DUAL_DST_SPLIT_M);
@@ -139,8 +142,8 @@ private:
     }
 
     template <class T>
-    __aicore__ inline void CopyTensor(const T& dst, const LocalTensor<SrcT>& co1Local,
-        FixpipeAdaptor& fixpipe, const int32_t curN = 0, const int32_t baseUseN = 0)
+    __aicore__ inline void CopyTensor(const T& dst, const LocalTensor<SrcT>& co1Local, FixpipeAdaptor& fixpipe,
+                                      const int32_t curN = 0, const int32_t baseUseN = 0)
     {
         if (MATMUL_MODULE(MatmulQuantProcessor)->IsQuantSenario()) {
             fixpipe.SetQuantMode(MATMUL_MODULE(MatmulQuantProcessor)->GetMatmulQuantMode());
@@ -188,11 +191,11 @@ private:
     {
         if constexpr (C_TYPE::layout == LayoutMode::SBNGD) {
             return MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoB() *
-                MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS1();
+                   MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS1();
         } else if constexpr (C_TYPE::layout == LayoutMode::BSNGD) {
             return MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS1();
         } else if constexpr (ToMatmulConfig(MM_CFG).isEnableChannelSplit && A_TYPE::format == CubeFormat::ND &&
-            C_TYPE::format == CubeFormat::NZ) {
+                             C_TYPE::format == CubeFormat::NZ) {
             return Ceil(MATMUL_MODULE(MatmulShapeInfo)->template GetOrgM<IS_INTRA_BLOCK>(), BLOCK_CUBE) * BLOCK_CUBE;
         } else {
             return MATMUL_MODULE(MatmulShapeInfo)->template GetOrgM<IS_INTRA_BLOCK>();
@@ -204,18 +207,17 @@ private:
     {
         if constexpr (C_TYPE::layout == LayoutMode::SBNGD) {
             return MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoG() *
-                MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS2() *
-                MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoN() *
-                MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoB();
+                   MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS2() *
+                   MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoN() *
+                   MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoB();
         } else if constexpr (C_TYPE::layout == LayoutMode::BSNGD) {
             return MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoG() *
-                MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS2() *
-                MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoN();
+                   MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoS2() *
+                   MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetCLayoutInfoN();
         } else {
             return MATMUL_MODULE(MatmulShapeInfo)->template GetOrgN<IS_INTRA_BLOCK>();
         }
     }
 };
 
-}  // namespace MatmulCommon
-
+} // namespace MatmulCommon

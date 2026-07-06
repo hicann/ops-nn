@@ -74,17 +74,16 @@ static Status ParseParamsMeanVarianceNormalization(const Message* op_src, ge::Op
 
 REGISTER_CUSTOM_OP("MVNV2")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::9::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::10::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::11::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::12::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::13::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::14::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::15::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::16::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::17::MeanVarianceNormalization"),
-         ge::AscendString("ai.onnx::18::MeanVarianceNormalization")})
+    .OriginOpType({ge::AscendString("ai.onnx::9::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::10::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::11::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::12::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::13::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::14::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::15::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::16::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::17::MeanVarianceNormalization"),
+                   ge::AscendString("ai.onnx::18::MeanVarianceNormalization")})
     .ParseParamsFn(ParseParamsMeanVarianceNormalization)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -109,8 +109,8 @@ private:
     bool OptimizeEdgeBasicBlock();
     bool GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
     bool GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
-    uint64_t CalculateCurrentPerf(
-        uint64_t mergeLen, uint64_t nTail, uint64_t mCnt, uint64_t nCnt, uint64_t& newTailMain);
+    uint64_t CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t mCnt, uint64_t nCnt,
+                                  uint64_t& newTailMain);
 
     /**
      * 将计算好的参数填入 Output 结构体

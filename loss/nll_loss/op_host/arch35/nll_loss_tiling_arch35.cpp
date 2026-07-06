@@ -68,11 +68,12 @@ std::map<ge::DataType, uint32_t> targetTypeKeyMap = {
     {ge::DT_UINT8, 30},
 };
 
-static inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
-  if (in_shape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return in_shape;
+static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
 }
 
 template <typename T>
@@ -149,13 +150,14 @@ static void Tiling4NLLLossSimt(gert::TilingContext* context, NLLLossACTilingPara
     if (tilingParams.xDims == INPUT_ONE_DIM || tilingParams.xDims == INPUT_TWO_DIM) {
         tilingParams.coreNumSum = CeilDiv(tilingParams.xDimN, static_cast<int64_t>(tilingParams.usedThread));
     } else if (tilingParams.xDims == INPUT_FOUR_DIM) {
-        tilingParams.coreNumSum = CeilDiv(
-            tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW,
-            static_cast<int64_t>(tilingParams.usedThread));
+        tilingParams.coreNumSum = CeilDiv(tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW,
+                                          static_cast<int64_t>(tilingParams.usedThread));
     }
     tilingParams.coreNum = std::min(tilingParams.coreNumSum, tilingParams.maxCoreNum);
-    tilingParams.dealingNumOneCore = (tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW) / static_cast<int64_t>(tilingParams.coreNum);
-    tilingParams.frontCore = (tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW) % static_cast<int64_t>(tilingParams.coreNum);
+    tilingParams.dealingNumOneCore = (tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW) /
+                                     static_cast<int64_t>(tilingParams.coreNum);
+    tilingParams.frontCore = (tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW) %
+                             static_cast<int64_t>(tilingParams.coreNum);
     tilingParams.dealingNumOnce = tilingParams.ubSize / tilingParams.dtypeSize;
     tilingParams.fullIndex = tilingParams.coreNumSum % tilingParams.coreNum;
     tilingParams.calNumInterBlock = LargestPowerOfTwo(tilingParams.coreNum);
@@ -169,10 +171,10 @@ static void Tiling4NLLLossSimd(gert::TilingContext* context, NLLLossACTilingPara
         tilingParams.usedLogicCore = CeilDiv(tilingParams.xDimN, tilingParams.mainReduceSize);
         tilingParams.tailSize = tilingParams.xDimN % tilingParams.mainReduceSize;
     } else if (tilingParams.xDims == INPUT_FOUR_DIM) {
-        tilingParams.usedLogicCore =
-            CeilDiv(tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW, tilingParams.mainReduceSize);
-        tilingParams.tailSize =
-            tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW % tilingParams.mainReduceSize;
+        tilingParams.usedLogicCore = CeilDiv(tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW,
+                                             tilingParams.mainReduceSize);
+        tilingParams.tailSize = tilingParams.xDimN * tilingParams.xDimH * tilingParams.xDimW %
+                                tilingParams.mainReduceSize;
     }
     if (tilingParams.tailSize == 0) {
         tilingParams.tailSize = tilingParams.mainReduceSize;
@@ -187,15 +189,16 @@ static void Tiling4NLLLossSimd(gert::TilingContext* context, NLLLossACTilingPara
     tilingParams.padSize = remain == 0 ? 0 : ALIGN_SIZE - remain;
     tilingParams.loopNum1 = std::pow(POW, static_cast<int32_t>(log2(tilingParams.loopInCore + 1)));
     tilingParams.tailNum1 = tilingParams.loopInCore + 1 - tilingParams.loopNum1;
-    tilingParams.tailMoveSize =
-        tilingParams.tailNum1 == 0 ? tilingParams.tailSize : tilingParams.mainReduceSize + tilingParams.tailSize;
-    tilingParams.tailMainReduceSize = std::pow(POW, static_cast<int32_t>(log2(tilingParams.tailMoveSize + tilingParams.padSize)));
+    tilingParams.tailMoveSize = tilingParams.tailNum1 == 0 ? tilingParams.tailSize :
+                                                             tilingParams.mainReduceSize + tilingParams.tailSize;
+    tilingParams.tailMainReduceSize = std::pow(
+        POW, static_cast<int32_t>(log2(tilingParams.tailMoveSize + tilingParams.padSize)));
     tilingParams.tailRemainSize = tilingParams.tailMoveSize + tilingParams.padSize - tilingParams.tailMainReduceSize;
     tilingParams.loopNum3 = std::pow(POW, static_cast<int32_t>(log2(tilingParams.loopInCore)));
     tilingParams.tailNum3 = tilingParams.loopInCore - tilingParams.loopNum3;
 
-    tilingParams.coreNum =
-        tilingParams.usedLogicCore > tilingParams.maxCoreNum ? tilingParams.maxCoreNum : tilingParams.usedLogicCore;
+    tilingParams.coreNum = tilingParams.usedLogicCore > tilingParams.maxCoreNum ? tilingParams.maxCoreNum :
+                                                                                  tilingParams.usedLogicCore;
 }
 
 static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t maxCoreNum, uint32_t maxThread)
@@ -223,65 +226,63 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     if (xShape.GetDimNum() == INPUT_ONE_DIM || xShape.GetDimNum() == INPUT_TWO_DIM) {
         auto nsize = xShape.GetDimNum() == 1 ? 1 : xShape.GetDim(0);
         if (targetShape.GetDim(0) < nsize) {
-            std::string reasonMsg =
-                "The 0th axis of input target must be greater than or equal to the elements " +
-                std::to_string(nsize) + " of input x, "
-                "where the elements of x indicates the number of axes that require normalization computation";
+            std::string reasonMsg = "The 0th axis of input target must be greater than or equal to the elements " +
+                                    std::to_string(nsize) +
+                                    " of input x, "
+                                    "where the elements of x indicates the number of axes that require normalization "
+                                    "computation";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
-                shapeMsg.c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x", shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
-        OP_CHECK_IF(
-            targetShape.GetDimNum() != 1,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "target",
-                std::to_string(targetShape.GetDimNum()).c_str(), "1D"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(targetShape.GetDimNum() != 1,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "target",
+                                                 std::to_string(targetShape.GetDimNum()).c_str(), "1D"),
+                    return ge::GRAPH_FAILED);
     } else if (xShape.GetDimNum() == INPUT_FOUR_DIM) {
         auto nsize = xShape.GetDim(0);
         auto hsize = xShape.GetDim(NUMBER_TWO);
         auto wsize = xShape.GetDim(NUMBER_THREE);
 
-        OP_CHECK_IF(
-            (xShape.GetShapeSize() < 0),
-            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "x", ToString(xShape).c_str(),
-                "greater than or equal to 0"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((xShape.GetShapeSize() < 0),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "x", ToString(xShape).c_str(),
+                                                  "greater than or equal to 0"),
+                    return ge::GRAPH_FAILED);
         if (targetShape.GetDim(0) < nsize) {
-            std::string reasonMsg =
-                "The 0th axis of input target must be greater than or equal to the N-dimension of input x, "
-                "where N is the 0th axis";
+            std::string
+                reasonMsg = "The 0th axis of input target must be greater than or equal to the N-dimension of input x, "
+                            "where N is the 0th axis";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
-                shapeMsg.c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x", shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         if (targetShape.GetDim(1) < hsize) {
-            std::string reasonMsg =
-                "The 1st axis of input target must be greater than or equal to the H-dimension of input x, "
-                "where H is the 2nd axis";
+            std::string
+                reasonMsg = "The 1st axis of input target must be greater than or equal to the H-dimension of input x, "
+                            "where H is the 2nd axis";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
-                shapeMsg.c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x", shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         if (targetShape.GetDim(NUMBER_TWO) < wsize) {
-            std::string reasonMsg =
-                "The 2nd axis of input target must be greater than or equal to the W-dimension of input x, "
-                "where W is the 3rd axis";
+            std::string
+                reasonMsg = "The 2nd axis of input target must be greater than or equal to the W-dimension of input x, "
+                            "where W is the 3rd axis";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
-                shapeMsg.c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x", shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
-        OP_CHECK_IF(
-            targetShape.GetDimNum() != 3,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "target",
-                std::to_string(targetShape.GetDimNum()).c_str(), "3D"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(targetShape.GetDimNum() != 3,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "target",
+                                                 std::to_string(targetShape.GetDimNum()).c_str(), "3D"),
+                    return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x",
-            std::to_string(xShape.GetDimNum()).c_str(), "1D, 2D or 4D");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()).c_str(),
+                                     "1D, 2D or 4D");
         return ge::GRAPH_FAILED;
     }
 
@@ -304,19 +305,17 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     }
     OP_CHECK_IF(
         xTypeKeyMap.count(xType) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ToString(xType).c_str(),
-            "FLOAT, FLOAT16 or BF16"),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ToString(xType).c_str(), "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
     tilingParams.dtypeSize = sizeof(xType);
 
     auto targetTensorType = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, targetTensorType);
     auto targetType = targetTensorType->GetDataType();
-    OP_CHECK_IF(
-        targetTypeKeyMap.count(targetType) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "target", ToString(targetType).c_str(),
-            "INT32, INT64 or UINT8"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(targetTypeKeyMap.count(targetType) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "target", ToString(targetType).c_str(),
+                                          "INT32, INT64 or UINT8"),
+                return ge::GRAPH_FAILED);
 
     auto weightShape = context->GetOptionalInputShape(WEIGHT_INDEX);
     if (weightShape == nullptr) {
@@ -339,8 +338,7 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     } else if (strcmp(reduction, "mean") == 0) {
         tilingParams.reduction = REDUCTION_MEAN;
     } else {
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "reduction", reduction,
-            "mean, sum or none");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "reduction", reduction, "mean, sum or none");
         return ge::GRAPH_FAILED;
     }
 
@@ -363,7 +361,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
 
     SetTilingData(tiling, tilingParams);
     context->SetBlockDim(tilingParams.coreNum);
-    const uint64_t tilingKeyTemp = GET_TPL_TILING_KEY(tilingParams.tilingKey, tilingParams.xDims, tilingParams.reduction);
+    const uint64_t tilingKeyTemp = GET_TPL_TILING_KEY(tilingParams.tilingKey, tilingParams.xDims,
+                                                      tilingParams.reduction);
     context->SetTilingKey(tilingKeyTemp);
     context->SetLocalMemorySize(ubSizePlatForm - DCACHE_SIZE);
     context->SetScheduleMode(1);
@@ -400,13 +399,11 @@ static ge::graphStatus TilingPrepareForNLLLoss(gert::TilingParseContext* context
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->maxCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->maxCoreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->maxCoreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."),
+                return ge::GRAPH_FAILED);
     compileInfo->maxThread = 2048U;
-    OP_CHECK_IF(
-        (compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The thread num is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The thread num is invalid."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 // register tiling inferface of the Nllloss op

@@ -16,13 +16,15 @@
 
 namespace ops {
 class BidirectionLSTMV2 : public OpDef {
-   public:
+public:
     explicit BidirectionLSTMV2(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND,})
+            .Format({
+                ge::FORMAT_ND,
+            })
             .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("init_h")
             .ParamType(REQUIRED)
@@ -43,7 +45,7 @@ class BidirectionLSTMV2 : public OpDef {
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND});            
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("b_ih")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
@@ -94,21 +96,11 @@ class BidirectionLSTMV2 : public OpDef {
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        this->Attr("num_layers")
-            .AttrType(OPTIONAL)
-            .Int(1);
-        this->Attr("isbias")
-            .AttrType(OPTIONAL)
-            .Bool(false);
-        this->Attr("batch_first")
-            .AttrType(OPTIONAL)
-            .Bool(false);
-        this->Attr("bidirection")
-            .AttrType(OPTIONAL)
-            .Bool(false);
-        this->Attr("packed")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("num_layers").AttrType(OPTIONAL).Int(1);
+        this->Attr("isbias").AttrType(OPTIONAL).Bool(false);
+        this->Attr("batch_first").AttrType(OPTIONAL).Bool(false);
+        this->Attr("bidirection").AttrType(OPTIONAL).Bool(false);
+        this->Attr("packed").AttrType(OPTIONAL).Bool(false);
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
@@ -122,4 +114,4 @@ class BidirectionLSTMV2 : public OpDef {
 };
 
 OP_ADD(BidirectionLSTMV2);
-}  // namespace ops
+} // namespace ops

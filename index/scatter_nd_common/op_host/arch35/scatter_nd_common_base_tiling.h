@@ -16,7 +16,6 @@
 #ifndef SCATTER_ND_COMMON_BASE_TILING_H
 #define SCATTER_ND_COMMON_BASE_TILING_H
 
-
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "op_common/op_host/util/math_util.h"
@@ -36,19 +35,14 @@ static constexpr uint32_t ONE = 1;
 static constexpr int64_t TWO = 2;
 
 struct ScatterNdCommonCompileInfo {
-  int64_t core_num;
-  int64_t ub_size;
+    int64_t core_num;
+    int64_t ub_size;
 };
 
-class ScatterNdCommonBaseTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class ScatterNdCommonBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ScatterNdCommonBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
-    ~ScatterNdCommonBaseTiling() override
-    {
-    }
+    explicit ScatterNdCommonBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~ScatterNdCommonBaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -59,8 +53,7 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    void DumpTilingInfo() override
-    {}
+    void DumpTilingInfo() override {}
 
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     ge::graphStatus GetCastType();
@@ -79,7 +72,8 @@ public:
     int64_t indicesAxis_ = 0;
     int64_t varInAxis_ = 1;
     int64_t afterAxis_ = 1;
-    uint64_t indiceCastMode_ = 0;  // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32 Cast uint8; 5:int64 Cast uint8.
+    uint64_t indiceCastMode_ = 0; // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32
+                                  // Cast uint8; 5:int64 Cast uint8.
     int64_t indiceCastDtypeSize_ = 0;
     uint64_t strideList_[OPTILING_MAX_RANK_COUNT] = {0};
     uint64_t outPutShape_[OPTILING_MAX_SHAPE_RANK] = {0};

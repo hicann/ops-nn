@@ -16,12 +16,9 @@
 #include "../../../scatter_reduce_common/op_host/arch35/scatter_reduce_common_tiling.h"
 
 namespace optiling {
-static ge::graphStatus Tiling4ScatterMin(gert::TilingContext* context)
-{
-    return ScatterReduceCommonTiling(context);
-}
+static ge::graphStatus Tiling4ScatterMin(gert::TilingContext* context) { return ScatterReduceCommonTiling(context); }
 
 IMPL_OP_OPTILING(ScatterMin)
     .Tiling(Tiling4ScatterMin)
     .TilingParse<ScatterReduceCompileInfo>(TilingPrepareForScatterReduce);
-}  // namespace optiling
+} // namespace optiling

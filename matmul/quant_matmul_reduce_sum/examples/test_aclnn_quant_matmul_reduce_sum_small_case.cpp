@@ -10,7 +10,7 @@
 
 /**
  * @brief 专门测试极小输出case（输出 < 32B）
- * 
+ *
  * 测试场景：
  * 1. 输出 < 32B（极小case）：触发 DataCopyPad 路径
  * 2. 输出 = 32B（边界case）：刚好对齐
@@ -66,9 +66,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -81,16 +80,14 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensorX2(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensorX2(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                      aclDataType dataType, aclTensor** tensor)
 {
     auto size = static_cast<uint64_t>(GetShapeSize(shape));
 
@@ -112,9 +109,8 @@ int CreateAclTensorX2(
     std::vector<int64_t> storageShape;
     storageShape.push_back(GetShapeSize(shape));
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_FRACTAL_NZ, storageShape.data(),
-        storageShape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_FRACTAL_NZ,
+                              storageShape.data(), storageShape.size(), *deviceAddr);
     return 0;
 }
 
@@ -130,12 +126,11 @@ void Finalize(int32_t deviceId, aclrtStream stream)
  * @param M, N: 输出形状为 {M, N}
  * @param testName: 测试名称
  */
-int TestSmallCase(int32_t deviceId, aclrtStream& stream, int64_t M, int64_t N, int64_t K,
-                  const char* testName, int64_t expectedOutputBytes)
+int TestSmallCase(int32_t deviceId, aclrtStream& stream, int64_t M, int64_t N, int64_t K, const char* testName,
+                  int64_t expectedOutputBytes)
 {
     LOG_PRINT("\n========== %s ==========\n", testName);
-    LOG_PRINT("Output shape: {%ld, %ld}, output size: %ld elements, %ld bytes\n", 
-              M, N, M * N, expectedOutputBytes);
+    LOG_PRINT("Output shape: {%ld, %ld}, output size: %ld elements, %ld bytes\n", M, N, M * N, expectedOutputBytes);
 
     // 使用 batch=1 简化测试
     int64_t b = 1;
@@ -162,8 +157,8 @@ int TestSmallCase(int32_t deviceId, aclrtStream& stream, int64_t M, int64_t N, i
     std::vector<int8_t> x1HostData(b * M * K, 1);
     std::vector<int8_t> x2HostData(b * K * N, 1);
     std::vector<float> x1ScaleHostData(b * M, 1.0f);
-    std::vector<uint16_t> x2ScaleHostData(N, 1);  // bfloat16
-    std::vector<uint16_t> outHostData(M * N, 0);  // bfloat16
+    std::vector<uint16_t> x2ScaleHostData(N, 1); // bfloat16
+    std::vector<uint16_t> outHostData(M * N, 0); // bfloat16
 
     // 创建tensors
     int ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_INT8, &x1);
@@ -203,9 +198,9 @@ int TestSmallCase(int32_t deviceId, aclrtStream& stream, int64_t M, int64_t N, i
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    ret = aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize(
-        x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, nullptr, transposeX1, transposeX2, 0, dims, false,
-        out, &workspaceSize, &executor);
+    ret = aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize(x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr,
+                                                            nullptr, nullptr, transposeX1, transposeX2, 0, dims, false,
+                                                            out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS,
               LOG_PRINT("aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
@@ -227,16 +222,16 @@ int TestSmallCase(int32_t deviceId, aclrtStream& stream, int64_t M, int64_t N, i
     // 获取输出结果
     auto size = GetShapeSize(outShape);
     std::vector<uint16_t> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     LOG_PRINT("Result: ");
     for (int64_t i = 0; i < size && i < 10; i++) {
         LOG_PRINT("[%ld]=%u ", i, resultData[i]);
     }
-    if (size > 10) LOG_PRINT("...");
+    if (size > 10)
+        LOG_PRINT("...");
     LOG_PRINT("\nTest PASSED!\n");
 
     return ACL_SUCCESS;
@@ -255,32 +250,27 @@ int main()
 
     // Case 1: 极小case - 输出 4 字节 (2个bfloat16元素) < 32B
     // M=1, N=2, K=1 -> output = 1*2 = 2 elements = 4 bytes
-    ret = TestSmallCase(deviceId, stream, 1, 2, 1, 
-                        "Case 1: 极小case (4 bytes < 32B)", 4);
+    ret = TestSmallCase(deviceId, stream, 1, 2, 1, "Case 1: 极小case (4 bytes < 32B)", 4);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Case 1 failed. ERROR: %d\n", ret); return ret);
 
     // Case 2: 极小case - 输出 16 字节 (8个bfloat16元素) < 32B
     // M=2, N=4, K=1 -> output = 2*4 = 8 elements = 16 bytes
-    ret = TestSmallCase(deviceId, stream, 2, 4, 1, 
-                        "Case 2: 极小case (16 bytes < 32B)", 16);
+    ret = TestSmallCase(deviceId, stream, 2, 4, 1, "Case 2: 极小case (16 bytes < 32B)", 16);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Case 2 failed. ERROR: %d\n", ret); return ret);
 
     // Case 3: 边界case - 输出刚好 32 字节 (16个bfloat16元素) = 32B
     // M=4, N=4, K=1 -> output = 4*4 = 16 elements = 32 bytes
-    ret = TestSmallCase(deviceId, stream, 4, 4, 1, 
-                        "Case 3: 边界case (32 bytes = 32B)", 32);
+    ret = TestSmallCase(deviceId, stream, 4, 4, 1, "Case 3: 边界case (32 bytes = 32B)", 32);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Case 3 failed. ERROR: %d\n", ret); return ret);
 
     // Case 4: 普通case - 输出 64 字节 (32个bfloat16元素) > 32B
     // M=4, N=8, K=1 -> output = 4*8 = 32 elements = 64 bytes
-    ret = TestSmallCase(deviceId, stream, 4, 8, 1, 
-                        "Case 4: 普通case (64 bytes > 32B)", 64);
+    ret = TestSmallCase(deviceId, stream, 4, 8, 1, "Case 4: 普通case (64 bytes > 32B)", 64);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Case 4 failed. ERROR: %d\n", ret); return ret);
 
     // Case 5: 极小case - 输出 30 字节 (15个bfloat16元素) < 32B
     // M=5, N=3, K=1 -> output = 5*3 = 15 elements = 30 bytes
-    ret = TestSmallCase(deviceId, stream, 5, 3, 1, 
-                        "Case 5: 极小case (30 bytes < 32B)", 30);
+    ret = TestSmallCase(deviceId, stream, 5, 3, 1, "Case 5: 极小case (30 bytes < 32B)", 30);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Case 5 failed. ERROR: %d\n", ret); return ret);
 
     LOG_PRINT("\n========================================\n");

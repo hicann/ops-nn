@@ -28,15 +28,9 @@
 
 class IndexFillD : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "IndexFillD SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "IndexFillD SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "IndexFillD TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "IndexFillD TearDown" << std::endl; }
 };
 
 TEST_F(IndexFillD, IndexFillD_infershape_case_1)
@@ -70,8 +64,7 @@ TEST_F(IndexFillD, IndexFillD_InferDtype_case_1)
                                   .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                                  .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                                   .InputDataTypes({&input_x_ref, &input_assist1_ref, &input_assist2_ref})
                                   .OutputDataTypes({&output_y_ref})
                                   .Build();

@@ -21,8 +21,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LeakyReluGrad);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                              op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -38,42 +38,38 @@ static bool IsAiCoreSupport(const aclTensor* self)
 }
 
 // AICPU算子kernel
-static const aclTensor* LeakyReluGradAICpu(
-    const aclTensor* gradOutput, const aclTensor* self, const float negativeSlope, const aclTensor* out,
-    aclOpExecutor* executor)
+static const aclTensor* LeakyReluGradAICpu(const aclTensor* gradOutput, const aclTensor* self,
+                                           const float negativeSlope, const aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(LeakyReluGradAICpu, gradOutput, self, negativeSlope, out);
     static internal::AicpuTaskSpace space("LeakyReluGrad", ge::DEPEND_IN_SHAPE, true);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        LeakyReluGrad, OP_ATTR_NAMES({"alpha"}), OP_INPUT(gradOutput, self), OP_OUTPUT(out), OP_ATTR(negativeSlope));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LeakyReluGradAICpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(LeakyReluGrad, OP_ATTR_NAMES({"alpha"}), OP_INPUT(gradOutput, self),
+                                          OP_OUTPUT(out), OP_ATTR(negativeSlope));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LeakyReluGradAICpu ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
     return out;
 }
 
 // AICORE算子kernel
-static const aclTensor* LeakyReluGradAICore(
-    const aclTensor* gradOutput, const aclTensor* self, const float negativeSlope, const aclTensor* out,
-    aclOpExecutor* executor)
+static const aclTensor* LeakyReluGradAICore(const aclTensor* gradOutput, const aclTensor* self,
+                                            const float negativeSlope, const aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(LeakyReluGradAICore, gradOutput, self, negativeSlope, out);
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(LeakyReluGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out), OP_ATTR(negativeSlope));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LeakyReluGradAICore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LeakyReluGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out),
+                                           OP_ATTR(negativeSlope));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LeakyReluGradAICore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* LeakyReluGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const float negativeSlope, aclOpExecutor* executor)
+const aclTensor* LeakyReluGrad(const aclTensor* gradOutput, const aclTensor* self, const float negativeSlope,
+                               aclOpExecutor* executor)
 {
     Shape broadcastShape;
     if (!BroadcastInferShape(gradOutput->GetViewShape(), self->GetViewShape(), broadcastShape)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return nullptr;
     }
     auto out = executor->AllocTensor(broadcastShape, self->GetDataType(), self->GetViewFormat());

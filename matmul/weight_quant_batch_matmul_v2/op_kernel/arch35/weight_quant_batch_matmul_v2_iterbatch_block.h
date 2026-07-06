@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -68,18 +68,21 @@ struct IterBatchOffsetParam {
 class WeightQuantBmmIterBatchBlock {
 public:
     __aicore__ inline WeightQuantBmmIterBatchBlock() {}
-    __aicore__ inline void Init(
-        const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData, uint32_t blockIdx);
+    __aicore__ inline void Init(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData,
+                                uint32_t blockIdx);
     __aicore__ inline void GetMultiBatchInfo(uint64_t loopIndex);
     __aicore__ inline void CalcGMOffset();
     __aicore__ inline void GetBroadcastBatchOffset(uint64_t b1Index, uint64_t b2Index, uint64_t b3Index);
+
 public:
     IterBatchTilingParam params_;
     IterBatchOffsetParam offset_;
     const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData_;
+
 protected:
     __aicore__ inline void UpdateBatchInfo();
     __aicore__ inline void GetBatchInfo(uint64_t batchNum);
+
 private:
     uint32_t blockIdx_;
 };
@@ -89,24 +92,24 @@ __aicore__ inline void WeightQuantBmmIterBatchBlock::Init(
 {
     tilingData_ = tilingData;
     blockIdx_ = blockIdx;
-    params_.singleASize =
-        static_cast<uint64_t>(tilingData_->matmulTiling.M) * static_cast<uint64_t>(tilingData_->matmulTiling.Ka);
-    params_.singleBSize =
-        static_cast<uint64_t>(tilingData_->matmulTiling.N) * static_cast<uint64_t>(tilingData_->matmulTiling.Kb);
-    params_.singleCSize =
-        static_cast<uint64_t>(tilingData_->matmulTiling.M) * static_cast<uint64_t>(tilingData_->matmulTiling.N);
+    params_.singleASize = static_cast<uint64_t>(tilingData_->matmulTiling.M) *
+                          static_cast<uint64_t>(tilingData_->matmulTiling.Ka);
+    params_.singleBSize = static_cast<uint64_t>(tilingData_->matmulTiling.N) *
+                          static_cast<uint64_t>(tilingData_->matmulTiling.Kb);
+    params_.singleCSize = static_cast<uint64_t>(tilingData_->matmulTiling.M) *
+                          static_cast<uint64_t>(tilingData_->matmulTiling.N);
 
     params_.useCoreNum = tilingData_->matmulTiling.usedCoreNum;
     params_.mainLoopPerCoreBatchNum = tilingData_->matmulTiling.BatchNum;
     params_.nBatchOutNum = Min(L0C_SIZE_256K / (tilingData_->matmulTiling.baseM * tilingData_->matmulTiling.baseN *
-                               tilingData_->matmulTiling.dbL0C * sizeof(int32_t)),
-                        static_cast<uint64_t>(tilingData_->matmulTiling.BatchNum));
+                                                tilingData_->matmulTiling.dbL0C * sizeof(int32_t)),
+                               static_cast<uint64_t>(tilingData_->matmulTiling.BatchNum));
     UpdateBatchInfo();
     params_.loopTimes = CeilDiv(params_.calcBatchNum, params_.mainLoopPerCoreBatchNum * params_.useCoreNum);
     params_.lastLoopAllBatchNum = params_.calcBatchNum % (params_.mainLoopPerCoreBatchNum * params_.useCoreNum);
-    params_.lastLoopAllBatchNum = params_.lastLoopAllBatchNum == 0
-                                      ? params_.mainLoopPerCoreBatchNum * params_.useCoreNum
-                                      : params_.lastLoopAllBatchNum;
+    params_.lastLoopAllBatchNum = params_.lastLoopAllBatchNum == 0 ?
+                                      params_.mainLoopPerCoreBatchNum * params_.useCoreNum :
+                                      params_.lastLoopAllBatchNum;
 
     params_.lastLoopPreCoreBatchNum = params_.lastLoopAllBatchNum / params_.useCoreNum;
     params_.lastLoopBlockNum = params_.lastLoopAllBatchNum % params_.useCoreNum;
@@ -250,4 +253,3 @@ __aicore__ inline void WeightQuantBmmIterBatchBlock::CalcGMOffset()
     offset_.offsetBias = 0;
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

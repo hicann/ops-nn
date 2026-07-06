@@ -23,11 +23,9 @@
 
 namespace optiling {
 
-class MaskedScatterWithPositionTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class MaskedScatterWithPositionTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaskedScatterWithPositionTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit MaskedScatterWithPositionTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -44,7 +42,8 @@ private:
     ge::graphStatus CheckInputShape();
     ge::graphStatus CheckDataType();
     bool CanBroadcastBAOrAB(const gert::Shape xShape, const gert::Shape maskShape);
-    void CanBroadcastBAOrABEqual(const std::vector<int64_t>& xShapeVec, const std::vector<int64_t>& maskShapeVec, const size_t len, bool& BA, bool& AB);
+    void CanBroadcastBAOrABEqual(const std::vector<int64_t>& xShapeVec, const std::vector<int64_t>& maskShapeVec,
+                                 const size_t len, bool& BA, bool& AB);
 
 private:
     const char* opName_ = "MaskedScatterWithPosition";

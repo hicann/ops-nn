@@ -4,11 +4,11 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file gelu_v2_tiling_arch35.h
  * \brief
  */
@@ -22,10 +22,9 @@
 namespace optiling {
 using namespace Ops::Base;
 
-class GeluV2Tiling
-{
+class GeluV2Tiling {
 public:
-    explicit GeluV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit GeluV2Tiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:
@@ -48,5 +47,5 @@ struct GeluV2CompileInfoArch35 {
     uint64_t ubSize = 0;
 };
 
-}  // namespace optiling
-#endif  // ACTIVATION_GELU_V2_OP_HOST_GELU_V2_TILING_ARCH35_H
+} // namespace optiling
+#endif // ACTIVATION_GELU_V2_OP_HOST_GELU_V2_TILING_ARCH35_H

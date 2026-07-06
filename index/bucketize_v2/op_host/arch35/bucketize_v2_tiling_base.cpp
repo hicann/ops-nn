@@ -60,8 +60,8 @@ int64_t BucketizeV2BaseTiling::GetUpLog2(int64_t n)
 
 bool BucketizeV2BaseTiling::IsInvalidType(const DataType dataType)
 {
-    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT64,
-                                                   ge::DT_INT32, ge::DT_INT16, ge::DT_INT8, ge::DT_UINT8};
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT64,
+                                                   ge::DT_INT32, ge::DT_INT16,   ge::DT_INT8, ge::DT_UINT8};
     bool dtypeInValid = (supportedDtype.count(dataType) == 0);
     return dtypeInValid;
 }
@@ -74,11 +74,12 @@ ge::graphStatus BucketizeV2BaseTiling::GetShapeAndDtype()
     xSize_ = xShape.GetShapeSize();
     auto inputXPtr = context_->GetRequiredInputDesc(INPUT_IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
-    xDtype_ = inputXPtr->GetDataType();    
+    xDtype_ = inputXPtr->GetDataType();
     xDtypeSize_ = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF(
-        xDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xDtype_).c_str(), "The dtype size of x must be greater than 0."),
+        xDtypeSize_ <= 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype_).c_str(),
+                                              "The dtype size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
 
     auto boundShapePtr = context_->GetRequiredInputShape(INPUT_BOUND_IDX);
@@ -86,44 +87,46 @@ ge::graphStatus BucketizeV2BaseTiling::GetShapeAndDtype()
     auto boundShape = boundShapePtr->GetStorageShape();
     boundSize_ = boundShape.GetShapeSize();
     size_t boundDim = boundShape.GetDimNum();
-    OP_CHECK_IF(
-        boundDim > 1, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "boundaries",
-            (std::to_string(boundDim) + "D").c_str(), "1D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(boundDim > 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "boundaries",
+                                             (std::to_string(boundDim) + "D").c_str(), "1D"),
+                return ge::GRAPH_FAILED);
 
     auto inputBoundPtr = context_->GetRequiredInputDesc(INPUT_BOUND_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputBoundPtr);
-    boundDtype_ = inputBoundPtr->GetDataType();    
+    boundDtype_ = inputBoundPtr->GetDataType();
     boundDtypeSize_ = ge::GetSizeByDataType(boundDtype_);
-    OP_CHECK_IF(
-        boundDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "boundaries",
-            Ops::Base::ToString(boundDtype_).c_str(), "The dtype size of boundaries must be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(boundDtypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "boundaries",
+                                                      Ops::Base::ToString(boundDtype_).c_str(),
+                                                      "The dtype size of boundaries must be greater than 0."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        boundDtype_ != xDtype_, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "boundaries and x",
-            (Ops::Base::ToString(boundDtype_) + " and " + Ops::Base::ToString(xDtype_)),
-            "The dtypes of boundaries and x must be the same."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(boundDtype_ != xDtype_,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context_->GetNodeName(), "boundaries and x",
+                    (Ops::Base::ToString(boundDtype_) + " and " + Ops::Base::ToString(xDtype_)),
+                    "The dtypes of boundaries and x must be the same."),
+                return ge::GRAPH_FAILED);
 
     auto yShapePtr = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
-    ySize_ = yShape.GetShapeSize();   
+    ySize_ = yShape.GetShapeSize();
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     yDtype_ = outputYPtr->GetDataType();
     yDtypeSize_ = ge::GetSizeByDataType(yDtype_);
     OP_CHECK_IF(
-        yDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y",
-            Ops::Base::ToString(yDtype_).c_str(), "The dtype size of y must be greater than 0."),
+        yDtypeSize_ <= 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y", Ops::Base::ToString(yDtype_).c_str(),
+                                              "The dtype size of y must be greater than 0."),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        IsInvalidType(xDtype_), 
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype_).c_str(),
-            "float16, float32, bfloat16, int8, int16, int32, int64, uint8"), 
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(IsInvalidType(xDtype_),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype_).c_str(),
+                                          "float16, float32, bfloat16, int8, int16, int32, int64, uint8"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -137,37 +140,25 @@ ge::graphStatus BucketizeV2BaseTiling::GetAttrsInfo()
     const bool* rightPtr = runtimeAttrs->GetAttrPointer<bool>(RIGHT_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, rightPtr);
     right_ = *rightPtr;
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus BucketizeV2BaseTiling::GetShapeAttrsInfo()
 {
     OP_CHECK_IF(GetAttrsInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetAttrsInfo fail."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetShapeAndDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetShapeAndDtype fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAndDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetShapeAndDtype fail."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool BucketizeV2BaseTiling::IsCapable()
-{
-    return true;
-}
+bool BucketizeV2BaseTiling::IsCapable() { return true; }
 
-ge::graphStatus BucketizeV2BaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BucketizeV2BaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus BucketizeV2BaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BucketizeV2BaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t BucketizeV2BaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t BucketizeV2BaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus BucketizeV2BaseTiling::GetWorkspaceSize()
 {
@@ -179,8 +170,5 @@ ge::graphStatus BucketizeV2BaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BucketizeV2BaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BucketizeV2BaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 } // namespace optiling

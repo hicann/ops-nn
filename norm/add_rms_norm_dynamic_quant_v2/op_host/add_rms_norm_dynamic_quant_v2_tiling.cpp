@@ -49,11 +49,10 @@ constexpr uint32_t SLICE_COL_LEN = 8864;
 
 bool CheckOptionalShapeExistingV2(const gert::StorageShape* smoothShape)
 {
-    OP_CHECK_IF(
-        nullptr == smoothShape, OP_LOGD("CheckOptionalShapeExistingV2", "Get nullptr smoothShape"), return false);
+    OP_CHECK_IF(nullptr == smoothShape, OP_LOGD("CheckOptionalShapeExistingV2", "Get nullptr smoothShape"),
+                return false);
     int64_t smoothShapeSize = smoothShape->GetOriginShape().GetShapeSize();
-    OP_CHECK_IF(
-        (smoothShapeSize <= 0),OP_LOGD("CheckOptionalShapeExistingV2", "Get empty smoothShape"), return false);
+    OP_CHECK_IF((smoothShapeSize <= 0), OP_LOGD("CheckOptionalShapeExistingV2", "Get empty smoothShape"), return false);
     return true;
 }
 
@@ -97,30 +96,25 @@ void AddRmsNormDynamicQuantV2TilingHelper::SetTilingDataAndTilingKeyAndWorkSpace
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = this->sysWorkspaceSize_ + usrSize;
 
-    OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata useCore_: %lu, smoothNum_: %u", this->useCore_,
-        this->smoothNum_);
-    OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata N: %lu, D:%lu, DAligned: %lu", numFirstDim_, numLastDim_,
-        numLastDimAligned_);
-    OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
-        firstDimPerCore_, firstDimPerCoreTail_);
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata useCore_: %lu, smoothNum_: %u", this->useCore_,
+            this->smoothNum_);
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata N: %lu, D:%lu, DAligned: %lu", numFirstDim_,
+            numLastDim_, numLastDimAligned_);
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
+            firstDimPerCore_, firstDimPerCoreTail_);
     OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerLoop_: %lu", firstDimPerLoop_);
-    OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace",
-        "Tilingdata lastDimSliceLen_: %lu, lastDimLoopNum_: %lu, lastDimSliceLenTail_: %lu", lastDimSliceLen_,
-        lastDimLoopNum_, lastDimSliceLenTail_);
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace",
+            "Tilingdata lastDimSliceLen_: %lu, lastDimLoopNum_: %lu, lastDimSliceLenTail_: %lu", lastDimSliceLen_,
+            lastDimLoopNum_, lastDimSliceLenTail_);
     OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata eps_: %f, avgFactor_: %f", eps_, avgFactor_);
-    OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey, usrSize);
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey,
+            usrSize);
 }
 
 bool AddRmsNormDynamicQuantV2TilingHelper::DoTiling()
 {
-    OP_CHECK_IF(
-        (nullptr == context_), OP_LOGE("AddRmsNormDynamicQuantV2Tiling", "Helper context_ get nullptr, return failed."),
-        return false);
+    OP_CHECK_IF((nullptr == context_),
+                OP_LOGE("AddRmsNormDynamicQuantV2Tiling", "Helper context_ get nullptr, return failed."), return false);
     OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"), return false);
     OP_CHECK_IF(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"), return false);
     OP_CHECK_IF(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"), return false);
@@ -135,9 +129,9 @@ bool AddRmsNormDynamicQuantV2TilingHelper::DoBlockTiling()
     this->useCore_ = Ops::Base::CeilDiv(this->numFirstDim_, this->firstDimPerCore_);
     this->firstDimPerCore_ = Ops::Base::CeilDiv(this->numFirstDim_, this->useCore_);
     this->firstDimPerCoreTail_ = this->numFirstDim_ - this->firstDimPerCore_ * (this->useCore_ - 1);
-    OP_LOGI(
-        "DoBlockTiling", "BlockTiling Factor: useCore_ is : %lu, firstDimPerCore_ is : %lu, firstDimPerCoreTail_ is : %lu",
-        this->useCore_, this->firstDimPerCore_, this->firstDimPerCoreTail_);
+    OP_LOGI("DoBlockTiling",
+            "BlockTiling Factor: useCore_ is : %lu, firstDimPerCore_ is : %lu, firstDimPerCoreTail_ is : %lu",
+            this->useCore_, this->firstDimPerCore_, this->firstDimPerCoreTail_);
     return true;
 }
 
@@ -158,26 +152,22 @@ bool AddRmsNormDynamicQuantV2TilingHelper::GetBaseInfo()
     if (epsPtr != nullptr) {
         this->eps_ = *epsPtr;
     }
-    OP_CHECK_IF(
-        this->eps_ <= 0, OP_LOGE(context_->GetNodeName(), "Epsilon less or equal than zero, please check."),
-        return false);
-    OP_CHECK_IF(
-        (this->ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."),
-        return false);
-    OP_CHECK_IF(
-        (this->socCoreNums_ <= 0),
-        OP_LOGE(context_->GetNodeName(), "socCoreNums_ less or equal than zero, please check."), return false);
+    OP_CHECK_IF(this->eps_ <= 0, OP_LOGE(context_->GetNodeName(), "Epsilon less or equal than zero, please check."),
+                return false);
+    OP_CHECK_IF((this->ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."),
+                return false);
+    OP_CHECK_IF((this->socCoreNums_ <= 0),
+                OP_LOGE(context_->GetNodeName(), "socCoreNums_ less or equal than zero, please check."), return false);
 
-    OP_LOGI(
-        "GetBaseInfo", "socCoreNum: %lu, ubSize: %lu, sysWorkspaceSize: %lu, epsilon: %f", this->socCoreNums_,
-        this->ubSize_, this->sysWorkspaceSize_, this->eps_);
+    OP_LOGI("GetBaseInfo", "socCoreNum: %lu, ubSize: %lu, sysWorkspaceSize: %lu, epsilon: %f", this->socCoreNums_,
+            this->ubSize_, this->sysWorkspaceSize_, this->eps_);
     return true;
 }
 
 bool AddRmsNormDynamicQuantV2TilingHelper::GetShapeInfo()
 {
-    OP_CHECK_IF(
-        CheckInputOutputShape() == false, OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."), return false);
+    OP_CHECK_IF(CheckInputOutputShape() == false, OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."),
+                return false);
     // no fp32 allowed here
     this->dtSize_ = SIZEOF_B16;
     auto xShape = context_->GetInputShape(X1_IDX)->GetStorageShape();
@@ -193,15 +183,12 @@ bool AddRmsNormDynamicQuantV2TilingHelper::GetShapeInfo()
     this->smoothNum_ += (smooth1Exist) ? 1 : 0;
     this->smoothNum_ += (smooth2Exist) ? 1 : 0;
 
-    OP_CHECK_IF(
-        (!smooth1Exist) && (smooth2Exist),
-        OP_LOGE(context_->GetNodeName(), "Smooth2 exist but smooth1 not exist, bad input."), return false);
-    OP_CHECK_IF(
-        (smooth1Exist && smooth1Shape->GetStorageShape() != gammaShape),
-        OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth1Shape."), return false);
-    OP_CHECK_IF(
-        (smooth2Exist && smooth2Shape->GetStorageShape() != gammaShape),
-        OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth2Shape."), return false);
+    OP_CHECK_IF((!smooth1Exist) && (smooth2Exist),
+                OP_LOGE(context_->GetNodeName(), "Smooth2 exist but smooth1 not exist, bad input."), return false);
+    OP_CHECK_IF((smooth1Exist && smooth1Shape->GetStorageShape() != gammaShape),
+                OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth1Shape."), return false);
+    OP_CHECK_IF((smooth2Exist && smooth2Shape->GetStorageShape() != gammaShape),
+                OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth2Shape."), return false);
 
     uint64_t numRowV2 = 1;
     uint64_t numColV2 = 1;
@@ -240,11 +227,10 @@ bool AddRmsNormDynamicQuantV2TilingHelper::CheckUbNormalTiling()
     int64_t rowCommons = coexistingRowsNum * this->numLastDimAligned_ + 2 * sizeof(float);
     int64_t rowStep = ubAvaliable / rowCommons;
     bool ret = (rowStep >= 1);
-    OP_LOGI(
-        this->context_->GetNodeName(),
-        "CheckUbNormalTiling, ret:%d, ubConst: %ld, ubAvaliable=%ld, coexistingRowsNum: %ld, rowStep: %ld, "
-        "rowCommons: %ld",
-        ret, ubConst, ubAvaliable, coexistingRowsNum, rowStep, rowCommons);
+    OP_LOGI(this->context_->GetNodeName(),
+            "CheckUbNormalTiling, ret:%d, ubConst: %ld, ubAvaliable=%ld, coexistingRowsNum: %ld, rowStep: %ld, "
+            "rowCommons: %ld",
+            ret, ubConst, ubAvaliable, coexistingRowsNum, rowStep, rowCommons);
     if (ret) {
         // No mutilN now. max RowStep = 16
         this->firstDimPerLoop_ = (rowStep <= MAX_ROW_STEP) ? rowStep : MAX_ROW_STEP;
@@ -345,26 +331,25 @@ bool AddRmsNormDynamicQuantV2TilingHelper::CheckInputOutputShape()
     size_t scale1DimNum = scale1Shape->GetStorageShape().GetDimNum();
     size_t scale2DimNum = scale2Shape->GetStorageShape().GetDimNum();
 
-    OP_LOGI(
-        this->context_->GetNodeName(),
-        "ShapeDim info: x1.dim=%zu, x2.dim=%zu, gamma.dim=%zu, y1.dim=%zu, y2.dim=%zu, y3.dim=%zu, y4.dim=%zu, "
-        "x.dim=%zu, scale1.dim=%zu, "
-        "scale2.dim=%zu",
-        x1DimNum, x2DimNum, gammaDimNum, y1DimNum, y2DimNum, y3DimNum, y4DimNum, xDimNum, scale1DimNum, scale2DimNum);
+    OP_LOGI(this->context_->GetNodeName(),
+            "ShapeDim info: x1.dim=%zu, x2.dim=%zu, gamma.dim=%zu, y1.dim=%zu, y2.dim=%zu, y3.dim=%zu, y4.dim=%zu, "
+            "x.dim=%zu, scale1.dim=%zu, "
+            "scale2.dim=%zu",
+            x1DimNum, x2DimNum, gammaDimNum, y1DimNum, y2DimNum, y3DimNum, y4DimNum, xDimNum, scale1DimNum,
+            scale2DimNum);
 
     bool hasZeroDimTensor = x1DimNum <= 0 || x2DimNum <= 0 || gammaDimNum <= 0;
     OP_CHECK_IF(
         (hasZeroDimTensor),
-        OP_LOGE(
-            this->context_->GetNodeName(),
-            "Input x1/x2/y1//x/scale1DimNum shape invaild, dim num should not be smaller or equal to zero."),
+        OP_LOGE(this->context_->GetNodeName(),
+                "Input x1/x2/y1//x/scale1DimNum shape invaild, dim num should not be smaller or equal to zero."),
         return false);
-    OP_CHECK_IF(
-        ((x1DimNum != x2DimNum)),
-        OP_LOGE(this->context_->GetNodeName(), "Input x1/x2 shape dims not equal. Tiling failed. "), return false);
-    OP_CHECK_IF(
-        ((gammaDimNum != 1)), OP_LOGE(this->context_->GetNodeName(), "gamma shape dims not equal to 1. Tiling failed."),
-        return false);
+    OP_CHECK_IF(((x1DimNum != x2DimNum)),
+                OP_LOGE(this->context_->GetNodeName(), "Input x1/x2 shape dims not equal. Tiling failed. "),
+                return false);
+    OP_CHECK_IF(((gammaDimNum != 1)),
+                OP_LOGE(this->context_->GetNodeName(), "gamma shape dims not equal to 1. Tiling failed."),
+                return false);
     return true;
 }
 

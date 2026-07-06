@@ -28,23 +28,17 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 
- using namespace std;
- 
-class MapIndexTiling : public testing::Test
-{
-protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MapIndexTiling SetUp" << std::endl;
-    }
+using namespace std;
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MapIndexTiling TearDown" << std::endl;
-    }
+class MapIndexTiling : public testing::Test {
+protected:
+    static void SetUpTestCase() { std::cout << "MapIndexTiling SetUp" << std::endl; }
+
+    static void TearDownTestCase() { std::cout << "MapIndexTiling TearDown" << std::endl; }
 };
 
-TEST_F(MapIndexTiling, test_tiling_pass_01) {
+TEST_F(MapIndexTiling, test_tiling_pass_01)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -78,10 +72,10 @@ TEST_F(MapIndexTiling, test_tiling_pass_01) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -115,8 +109,9 @@ TEST_F(MapIndexTiling, test_tiling_pass_01) {
         EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     }
 }
- 
-TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_dtype_fail_02) {
+
+TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_dtype_fail_02)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -150,10 +145,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_dtype_fail_02) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -188,7 +183,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_dtype_fail_02) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_y_dtype_fail_03) {
+TEST_F(MapIndexTiling, test_tiling_dtype_y_dtype_fail_03)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -222,10 +218,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_y_dtype_fail_03) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -260,7 +256,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_y_dtype_fail_03) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_03) {
+TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_03)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -294,10 +291,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_03) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{641}, {641}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -332,7 +329,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_03) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_y_shape_fail_04) {
+TEST_F(MapIndexTiling, test_tiling_dtype_y_shape_fail_04)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -366,10 +364,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_y_shape_fail_04) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{8}, {8}}; 
+    gert::StorageShape yShape = {{8}, {8}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -404,7 +402,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_y_shape_fail_04) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_05) {
+TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_05)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -438,10 +437,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_05) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64,1}, {64,1}}; 
+    gert::StorageShape xShape = {{64, 1}, {64, 1}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -476,7 +475,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_05) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_06) {
+TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_06)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -510,10 +510,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_06) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{25000}, {25000}}; 
+    gert::StorageShape xShape = {{25000}, {25000}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -548,7 +548,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_06) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_07) {
+TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_07)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -582,10 +583,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_07) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{19200}, {19200}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -620,7 +621,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_07) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_08) {
+TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_08)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -654,10 +656,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_08) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{240, 64}, {240, 64}};
     gert::StorageShape levelIndexShape = {{10}, {10}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -692,7 +694,8 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_08) {
     }
 }
 
-TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_09) {
+TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_09)
+{
     std::string opType("MapIndex");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -726,10 +729,10 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_09) {
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape xShape = {{64}, {64}}; 
+    gert::StorageShape xShape = {{64}, {64}};
     gert::StorageShape dataSeqShape = {{640}, {640}};
     gert::StorageShape levelIndexShape = {{12}, {12}};
-    gert::StorageShape yShape = {{1}, {1}}; 
+    gert::StorageShape yShape = {{1}, {1}};
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})

@@ -25,9 +25,8 @@ using namespace AscendC;
 
 #ifdef DTYPE_X
 // UT entry: non-template, DTYPE_X set via compile flag -DDTYPE_X=float/half
-extern "C" __global__ __aicore__ void hard_swish_grad_v2(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     NsHardSwishGradV2::HardSwishGradV2<DTYPE_X, 0> op;
@@ -37,9 +36,8 @@ extern "C" __global__ __aicore__ void hard_swish_grad_v2(
 #else
 // Device entry: template for TilingKey dispatch
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void hard_swish_grad_v2(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hard_swish_grad_v2(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, GM_ADDR workspace,
+                                              GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardSwishGradV2Arch35TilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSwishGradV2Arch35TilingData, tilingData, tiling);

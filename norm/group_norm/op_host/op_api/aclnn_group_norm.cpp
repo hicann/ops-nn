@@ -44,8 +44,8 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                             op::DataType::DT_FLOAT};
 
 static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
@@ -66,9 +66,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
-    const aclTensor* meanOut, const aclTensor* rstdOut)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
+                            const aclTensor* meanOut, const aclTensor* rstdOut)
 {
     // 检查self的数据类型是否在支持列表内
     auto supportList = GetDtypeSupportList();
@@ -100,27 +99,24 @@ static int64_t GetTensorNumel(const aclTensor* x, size_t startIdx)
 static bool CheckAttr(const aclTensor* self, int64_t C, int64_t group, double eps)
 {
     // 检查group是否大于0
-    OP_CHECK(
-        group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
-        return false);
+    OP_CHECK(group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
+             return false);
     // 检查C是否能被group整除
-    OP_CHECK(
-        C % group == 0,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected number of channels in input to be divisible by group, "
-            "but got input of shape %s and group=%ld.",
-            op::ToString(self->GetViewShape()).GetString(), group),
-        return false);
+    OP_CHECK(C % group == 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "Expected number of channels in input to be divisible by group, "
+                     "but got input of shape %s and group=%ld.",
+                     op::ToString(self->GetViewShape()).GetString(), group),
+             return false);
     // 检查eps是否大于0
-    OP_CHECK(
-        eps > 0.0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected eps to be greater than 0, got %lf.", eps), return false);
+    OP_CHECK(eps > 0.0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected eps to be greater than 0, got %lf.", eps),
+             return false);
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t C, int64_t HxW,
-    int64_t group, const aclTensor* out, const aclTensor* meanOut, const aclTensor* rstdOut)
+static bool CheckShape(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t C,
+                       int64_t HxW, int64_t group, const aclTensor* out, const aclTensor* meanOut,
+                       const aclTensor* rstdOut)
 {
     // 检查x维度是否大于等于2
     OP_CHECK_MIN_DIM(self, BN_MIN_SUPPORT_DIMS_NUMS, return false);
@@ -136,48 +132,40 @@ static bool CheckShape(
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(rstdOut, mvShape, return false);
 
     // 检查self的N维度元素数量是否等于入参N
-    OP_CHECK(
-        self->GetViewShape()[0] == N,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected self.shape[0] == N to be true, but got false."), return false);
+    OP_CHECK(self->GetViewShape()[0] == N,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected self.shape[0] == N to be true, but got false."), return false);
 
     // 检查self的C维度元素数量是否等于入参C
-    OP_CHECK(
-        self->GetViewShape()[1] == C,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected self.shape[1] == C to be true, but got false."), return false);
+    OP_CHECK(self->GetViewShape()[1] == C,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected self.shape[1] == C to be true, but got false."), return false);
 
     // 检查self除N, C维度外的元素数量是否等于HxW
-    OP_CHECK(
-        GetTensorNumel(self, TWO_DIM) == HxW,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected the size of self outside the N and C dimensions == HxW to be "
-            "true, but got false."),
-        return false);
+    OP_CHECK(GetTensorNumel(self, TWO_DIM) == HxW,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected the size of self outside the N and C dimensions == HxW to be "
+                                              "true, but got false."),
+             return false);
 
     // 检查self的元素数量是否等于 N * C * HxW
     int64_t selfShapeSize = GetTensorNumel(self, 0);
-    OP_CHECK(
-        selfShapeSize == N * C * HxW,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected self.numel() == N * C * HxW to be true, but got false."),
-        return false);
+    OP_CHECK(selfShapeSize == N * C * HxW,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected self.numel() == N * C * HxW to be true, but got false."),
+             return false);
 
     // 检查(gamma是否为空指针)或者(gamma维度是否为1且元素数量是否等于C)
     if (gamma != nullptr && (gamma->GetViewShape().GetDimNum() != 1 || gamma->GetViewShape()[0] != C)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected gamma to be a vector of size equal to the number of channels in "
-            "input, but got gamma of shape %s and input of shape %s.",
-            op::ToString(gamma->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected gamma to be a vector of size equal to the number of channels in "
+                "input, but got gamma of shape %s and input of shape %s.",
+                op::ToString(gamma->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
     // 检查(beta是否为空指针)或者(beta维度是否为1且元素数量是否等于C)
     if (beta != nullptr && (beta->GetViewShape().GetDimNum() != 1 || beta->GetViewShape()[0] != C)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected beta to be a vector of size equal to the number of channels in "
-            "input, but got beta of shape %s and input of shape %s.",
-            op::ToString(beta->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected beta to be a vector of size equal to the number of channels in "
+                "input, but got beta of shape %s and input of shape %s.",
+                op::ToString(beta->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
@@ -187,9 +175,8 @@ static bool CheckShape(
 static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of self and out should be equal, but got self [%s], out [%s]",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and out should be equal, but got self [%s], out [%s]",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -204,9 +191,9 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t C, int64_t HxW,
-    int64_t group, double eps, aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t N,
+                               int64_t C, int64_t HxW, int64_t group, double eps, aclTensor* out, aclTensor* meanOut,
+                               aclTensor* rstdOut)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull4Tensor(self, out, meanOut, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
@@ -252,14 +239,15 @@ static const aclTensor* GetBeta(const aclTensor* self, const aclTensor* beta, in
     return betaContiguous;
 }
 
-static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormOutCastProcess(
-    const aclTensor* x, const aclTensor* y, const aclTensor* mean, const aclTensor* variance, aclOpExecutor* executor)
+static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormOutCastProcess(const aclTensor* x, const aclTensor* y,
+                                                                              const aclTensor* mean,
+                                                                              const aclTensor* variance,
+                                                                              aclOpExecutor* executor)
 {
     aclTensor* yCast = const_cast<aclTensor*>(y);
     aclTensor* meanCast = const_cast<aclTensor*>(mean);
     aclTensor* varianceCast = const_cast<aclTensor*>(variance);
-    if (x->GetDataType() == op::DataType::DT_FLOAT16 &&
-        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_1001) {
+    if (x->GetDataType() == op::DataType::DT_FLOAT16 && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_1001) {
         yCast = const_cast<aclTensor*>(l0op::Cast(y, op::DataType::DT_FLOAT16, executor));
         meanCast = const_cast<aclTensor*>(l0op::Cast(mean, op::DataType::DT_FLOAT16, executor));
         varianceCast = const_cast<aclTensor*>(l0op::Cast(variance, op::DataType::DT_FLOAT16, executor));
@@ -277,8 +265,8 @@ static const aclTensor* ReshapeProcess(const aclTensor* self, int64_t N, int64_t
     return selfReshape;
 }
 
-static const aclTensor* RstdProcess(
-    const aclTensor* variance, int64_t N, int64_t group, double eps, aclOpExecutor* executor)
+static const aclTensor* RstdProcess(const aclTensor* variance, int64_t N, int64_t group, double eps,
+                                    aclOpExecutor* executor)
 {
     // 计算rstd
     FVector<float> valVector = {static_cast<float>(eps)};
@@ -315,10 +303,10 @@ static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGroupNormGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t C, int64_t HxW,
-    int64_t group, double eps, aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta,
+                                           int64_t N, int64_t C, int64_t HxW, int64_t group, double eps, aclTensor* out,
+                                           aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGroupNorm, DFX_IN(self, gamma, beta, N, C, HxW, group, eps), DFX_OUT(out, meanOut, rstdOut));
     // 固定写法，创建OpExecutor
@@ -353,12 +341,11 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
     // 根据芯片确定调用GroupNorm，还是GroupNormSilu
     std::tuple<aclTensor*, aclTensor*, aclTensor*> result;
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    bool isNormSocLists =
-        (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_2002 || Ops::NN::AclnnUtil::IsRegbase(npuArch));
+    bool isNormSocLists = (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_2002 ||
+                           Ops::NN::AclnnUtil::IsRegbase(npuArch));
     if (isNormSocLists) {
-        result = l0op::GroupNormSilu(
-            selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps), false,
-            uniqueExecutor.get());
+        result = l0op::GroupNormSilu(selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps),
+                                     false, uniqueExecutor.get());
     } else {
         const aclTensor* xCast = selfContiguous;
         const aclTensor* gammaCast = gammaContiguous;
@@ -373,13 +360,13 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
         }
 
         const bool isTraining = true;
-        auto resultGN = l0op::GroupNorm(
-            xCast, gammaCast, betaCast, N, group, static_cast<float>(eps), isTraining, uniqueExecutor.get());
+        auto resultGN = l0op::GroupNorm(xCast, gammaCast, betaCast, N, group, static_cast<float>(eps), isTraining,
+                                        uniqueExecutor.get());
         auto yResult = std::get<Y_INDEX>(resultGN);
         auto meanResult = std::get<MEAN_INDEX>(resultGN);
         auto varianceResult = std::get<RSTD_INDEX>(resultGN);
-        CHECK_RET(
-            (yResult != nullptr) && (meanResult != nullptr) && (varianceResult != nullptr), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET((yResult != nullptr) && (meanResult != nullptr) && (varianceResult != nullptr),
+                  ACLNN_ERR_INNER_NULLPTR);
 
         result = GroupNormOutCastProcess(selfContiguous, yResult, meanResult, varianceResult, uniqueExecutor.get());
     }

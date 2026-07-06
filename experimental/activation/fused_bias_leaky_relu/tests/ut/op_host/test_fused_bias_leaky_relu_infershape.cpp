@@ -18,15 +18,9 @@
 
 class FusedBiasLeakyReluInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FusedBiasLeakyRelu InferShape test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FusedBiasLeakyRelu InferShape test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FusedBiasLeakyRelu InferShape test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FusedBiasLeakyRelu InferShape test TearDown" << std::endl; }
 };
 
 TEST_F(FusedBiasLeakyReluInferShapeTest, infershape_test_case_1d)

@@ -20,7 +20,7 @@
 /*!
  * \file renorm_v2_tiling.cpp
  * \brief
-*/
+ */
 
 #include "log/log.h"
 #include "util/math_util.h"
@@ -53,12 +53,12 @@ struct RenormV2CompileInfoShapeInfo {
     uint64_t finalSmallTileNum{0};
     uint64_t finalBigTileNum{0};
     uint64_t tailBlockNum{0};
-    
+
     float p{2.0f};
     int64_t axis{0};
     uint64_t rows{0};
     uint64_t cols{0};
-    float max_norm{1.0f};      // 最大范数值
+    float max_norm{1.0f}; // 最大范数值
 };
 
 // 平台信息
@@ -82,36 +82,37 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context, RenormV2Co
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint32_t workspaceCount = 0;
     if (info.axis == 0) {
-        workspaceCount = info.rows;     // 按行规约
+        workspaceCount = info.rows; // 按行规约
     } else if (info.axis == 1) {
-        workspaceCount = info.cols;     // 按列规约
+        workspaceCount = info.cols; // 按列规约
     }
     size_t usrSize = workspaceCount * SLOT_STRIDE * sizeof(float); // 用户部分
-    size_t* currentWorkspace = context->GetWorkspaceSizes(1); // 通过框架获取workspace的指针，GetWorkspaceSizes入参为所需workspace的块数。当前限制使用一块。
+    size_t* currentWorkspace = context->GetWorkspaceSizes(
+        1); // 通过框架获取workspace的指针，GetWorkspaceSizes入参为所需workspace的块数。当前限制使用一块。
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
 
 // 形状属性
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize, RenormV2CompileInfoShapeInfo& info)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize,
+                                         RenormV2CompileInfoShapeInfo& info)
 {
-    OP_CHECK_IF(
-        context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
-        return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
+                return ge::GRAPH_FAILED);
+
     info.inputNum = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(context->GetInputDesc(0)->GetDataType(), typeLength);
     uint64_t inputLength = info.inputNum * typeLength;
-    
+
     if (info.inputNum == 0) {
         return ge::GRAPH_FAILED;
     }
-    
+
     info.inputBytes = inputLength / info.inputNum;
     auto dataType = context->GetInputDesc(0)->GetDataType();
     uint64_t ubDataNumber = UB_DATA_NUMBER_FLOAT;
-    
+
     switch (dataType) {
         case ge::DT_FLOAT16:
         case ge::DT_FLOAT:
@@ -120,15 +121,15 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
         default:
             return ge::GRAPH_FAILED;
     }
-    
+
     info.tileBlockNum = (ubSize / BUFFER_NUM / BLOCK_SIZE) / ubDataNumber;
     if (info.inputBytes == 0) {
         return ge::GRAPH_FAILED;
     }
-    
+
     info.tileDataNum = (info.tileBlockNum * BLOCK_SIZE) / info.inputBytes;
     info.inputLengthAlign32 = (((inputLength + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE);
-    
+
     // 获取属性参数
     auto attrs = context->GetAttrs();
     if (attrs) {
@@ -145,17 +146,17 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
             info.max_norm = *(attrs->GetFloat(2));
         }
     }
-    
+
     // 获取输入张量形状，假设是2D张量 [rows, cols]
     auto storageShape = context->GetInputShape(0)->GetStorageShape();
     if (storageShape.GetDimNum() != 2) {
         OP_LOGE(context, "RenormV2 only supports 2D tensor");
         return ge::GRAPH_FAILED;
     }
-    
+
     info.rows = storageShape.GetDim(0);
     info.cols = storageShape.GetDim(1);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -165,23 +166,23 @@ static ge::graphStatus CalculateCoreBlockNums(int64_t coreNum, RenormV2CompileIn
     if (0 == coreNum || 0 == info.tileBlockNum || 0 == info.inputBytes) {
         return ge::GRAPH_FAILED;
     }
-    
+
     uint64_t everyCoreInputBlockNum = info.inputLengthAlign32 / BLOCK_SIZE / coreNum;
     info.tailBlockNum = (info.inputLengthAlign32 / BLOCK_SIZE) % coreNum;
-    
+
     info.smallCoreDataNum = everyCoreInputBlockNum * BLOCK_SIZE / info.inputBytes;
     uint64_t smallTileNum = everyCoreInputBlockNum / info.tileBlockNum;
     info.finalSmallTileNum = (everyCoreInputBlockNum % info.tileBlockNum) == 0 ? smallTileNum : smallTileNum + 1;
     info.smallTailDataNum = info.smallCoreDataNum - (info.tileDataNum * smallTileNum);
     info.smallTailDataNum = info.smallTailDataNum == 0 ? info.tileDataNum : info.smallTailDataNum;
-    
+
     everyCoreInputBlockNum += 1;
     info.bigCoreDataNum = everyCoreInputBlockNum * BLOCK_SIZE / info.inputBytes;
     uint64_t bigTileNum = everyCoreInputBlockNum / info.tileBlockNum;
     info.finalBigTileNum = (everyCoreInputBlockNum % info.tileBlockNum) == 0 ? bigTileNum : bigTileNum + 1;
     info.bigTailDataNum = info.bigCoreDataNum - info.tileDataNum * bigTileNum;
     info.bigTailDataNum = info.bigTailDataNum == 0 ? info.tileDataNum : info.bigTailDataNum;
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -190,39 +191,39 @@ static ge::graphStatus RenormV2TilingFunc(gert::TilingContext* context)
 {
     RenormV2TilingData* tiling = context->GetTilingData<RenormV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(RenormV2TilingData), 0, sizeof(RenormV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
-    
+
+    OP_CHECK_IF(memset_s(tiling, sizeof(RenormV2TilingData), 0, sizeof(RenormV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+
     // 获取平台运行信息
     uint64_t ubSize;
     int64_t coreNum;
     ge::graphStatus ret = GetPlatformInfo(context, ubSize, coreNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-    
+
     // 获取输入数据信息
     RenormV2CompileInfoShapeInfo shapeInfo;
     ret = GetShapeAttrsInfo(context, ubSize, shapeInfo);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
-    
+
     // 计算coreNum
     if (shapeInfo.tileDataNum >= shapeInfo.inputNum) {
         coreNum = 1;
     } else {
-        // There is at least 32B of data on each core, satisfying several settings for several cores. 
+        // There is at least 32B of data on each core, satisfying several settings for several cores.
         // The maximum number of audits is the actual number of audits
-        coreNum = (static_cast<uint64_t>(coreNum) < shapeInfo.inputLengthAlign32 / BLOCK_SIZE) 
-                  ? coreNum : shapeInfo.inputLengthAlign32 / BLOCK_SIZE;
+        coreNum = (static_cast<uint64_t>(coreNum) < shapeInfo.inputLengthAlign32 / BLOCK_SIZE) ?
+                      coreNum :
+                      shapeInfo.inputLengthAlign32 / BLOCK_SIZE;
     }
-    
+
     // 计算每个core处理的数据块数
     ret = CalculateCoreBlockNums(coreNum, shapeInfo);
     if (ret != ge::GRAPH_SUCCESS) {
         OP_LOGE(context, "CalculateCoreBlockNums error");
         return ret;
     }
-    
+
     // 设置tiling数据
     tiling->smallCoreDataNum = static_cast<uint32_t>(shapeInfo.smallCoreDataNum);
     tiling->bigCoreDataNum = static_cast<uint32_t>(shapeInfo.bigCoreDataNum);
@@ -237,18 +238,18 @@ static ge::graphStatus RenormV2TilingFunc(gert::TilingContext* context)
     tiling->rows = static_cast<uint32_t>(shapeInfo.rows);
     tiling->cols = static_cast<uint32_t>(shapeInfo.cols);
     tiling->max_norm = static_cast<float>(shapeInfo.max_norm);
-    
+
     // 计算workspace大小
     ret = GetWorkspaceSize(context, shapeInfo);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
-    
+
     context->SetBlockDim(coreNum);
 
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingParseForRenormV2([[maybe_unused]] gert::TilingParseContext* context)
-{   
+{
     return ge::GRAPH_SUCCESS;
 }
 

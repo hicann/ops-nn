@@ -50,66 +50,57 @@ using matmul::MatmulImpl;
 using matmul::MatmulType;
 
 namespace WeightQuantBatchMatmulV2 {
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-class WeightQuantBatchMatMulV2MsdGroupKernel
-{
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+class WeightQuantBatchMatMulV2MsdGroupKernel {
     static constexpr int32_t SYNC_VECTOR_CUBE_P_FLAG = 2;
     static constexpr int32_t SYNC_VECTOR_CUBE_Q_FLAG = 3;
     static constexpr uint64_t GM_ADDR_ALIGN_BASIC_BLOCK = 512;
     static constexpr uint64_t GROUP_DIM = 32;
 
 public:
-    __aicore__ inline WeightQuantBatchMatMulV2MsdGroupKernel()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
-        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-        const WeightQuantBatchMatmulV2MsdGroupTilingData* tilingData, TPipe* tPipe);
+    __aicore__ inline WeightQuantBatchMatMulV2MsdGroupKernel() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                const WeightQuantBatchMatmulV2MsdGroupTilingData* tilingData, TPipe* tPipe);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void CopyInVector1(uint32_t m, uint32_t k);
     __aicore__ inline void ProcessVector1(uint32_t m, uint32_t k);
     __aicore__ inline void UnfoldAMatrix(uint32_t m, uint32_t k);
-    __aicore__ inline void ComputeAMatrixSum(
-        uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams, DataCopyParams& dataCopyParams,
-        BrcbRepeatParams& brcbRepeatParams);
-    __aicore__ inline void ComputeAMatrixMax(
-        uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams, DataCopyParams& dataCopyParams,
-        BrcbRepeatParams& brcbRepeatParams);
+    __aicore__ inline void ComputeAMatrixSum(uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams,
+                                             DataCopyParams& dataCopyParams, BrcbRepeatParams& brcbRepeatParams);
+    __aicore__ inline void ComputeAMatrixMax(uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams,
+                                             DataCopyParams& dataCopyParams, BrcbRepeatParams& brcbRepeatParams);
     __aicore__ inline void CopyOutVector1(uint32_t m, uint32_t k);
-    __aicore__ inline void ProcessCube(
-        uint32_t m, uint32_t cubeSingleCoreN, uint32_t idxN, uint32_t baseN, uint32_t realBaseN, uint32_t groupIdx,
-        uint32_t nloopIdx);
-    __aicore__ inline void CopyInVector3(
-        int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t nBaseOffset, uint32_t taskId);
-    __aicore__ inline void ProcessVector3(
-        int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t nBaseOffset, uint32_t groupLimit, uint32_t taskId);
+    __aicore__ inline void ProcessCube(uint32_t m, uint32_t cubeSingleCoreN, uint32_t idxN, uint32_t baseN,
+                                       uint32_t realBaseN, uint32_t groupIdx, uint32_t nloopIdx);
+    __aicore__ inline void CopyInVector3(int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t nBaseOffset,
+                                         uint32_t taskId);
+    __aicore__ inline void ProcessVector3(int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t nBaseOffset,
+                                          uint32_t groupLimit, uint32_t taskId);
     __aicore__ inline void MulOffsetVector3(int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t taskId);
 
-    __aicore__ inline void CopyInAndProcessVector4(
-        int64_t vecSingleCoreN, uint64_t groupIdx, uint64_t nOffset, uint32_t taskId, uint32_t groupLimit);
+    __aicore__ inline void CopyInAndProcessVector4(int64_t vecSingleCoreN, uint64_t groupIdx, uint64_t nOffset,
+                                                   uint32_t taskId, uint32_t groupLimit);
     __aicore__ inline void ProcessVector4MaxScale(int64_t vecSingleCoreN, uint64_t groupIdx);
     __aicore__ inline void CopyOutVector4(int32_t singleCoreRealN, uint32_t groupIdx, uint32_t groupLimit);
-    __aicore__ inline void ProcessMatmulResult(
-        uint64_t cOffset, uint64_t v4BaseM, uint64_t v4EndM, int64_t vecSingleCoreN);
+    __aicore__ inline void ProcessMatmulResult(uint64_t cOffset, uint64_t v4BaseM, uint64_t v4EndM,
+                                               int64_t vecSingleCoreN);
     __aicore__ inline void ProcessMatmulResultHalf(uint64_t cOffset, uint64_t v4EndM, int64_t vecSingleCoreN);
     __aicore__ inline void ProcessVector5(int32_t singleCoreRealN);
 
     __aicore__ inline void CopyInBL1(uint64_t wOffset, uint64_t singleCoreRealN, Nd2NzParams& nd2nzParams);
-    __aicore__ inline void CopyInBL1Nz(
-        const LocalTensor<int8_t>& bL1Tensor, uint64_t kOffset, uint64_t nOffset, uint64_t l1BaseKb,
-        uint64_t singleCoreRealN);
+    __aicore__ inline void CopyInBL1Nz(const LocalTensor<int8_t>& bL1Tensor, uint64_t kOffset, uint64_t nOffset,
+                                       uint64_t l1BaseKb, uint64_t singleCoreRealN);
     __aicore__ inline void CopyInAL1(uint64_t singleCoreRealK, uint64_t kOffset);
     __aicore__ inline void LaunchMatmul(uint64_t singleCoreRealN, uint64_t cOffset, uint64_t aOffset);
     __aicore__ inline void InitVector1Tensor();
     __aicore__ inline void InitVector3ToV5Tensor();
-    __aicore__ inline void InitGlobalBuffer(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR bias, GM_ADDR y,
-        GM_ADDR workspace);
+    __aicore__ inline void InitGlobalBuffer(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                            GM_ADDR bias, GM_ADDR y, GM_ADDR workspace);
 
     __aicore__ inline void InitScaleFactor()
     {
@@ -259,16 +250,13 @@ private:
     TEventID vector3EventIdVToMTE22 = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
 };
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    InitGlobalBuffer(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR bias, GM_ADDR y,
-        GM_ADDR workspace)
+    preciseType>::InitGlobalBuffer(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                   GM_ADDR bias, GM_ADDR y, GM_ADDR workspace)
 {
     xGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType*>(x), tiling_->mSize * tiling_->kSize);
     wGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(weight), tiling_->kSize * tiling_->nSize);
@@ -280,40 +268,38 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 
     // int4场景展开4份，但每份的size减半，总体空间占用等于2份的int8
-    uint64_t aUnfoldSize =
-        CeilDiv(2 * tiling_->mSize * tiling_->kSize, GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
-    uint64_t atomicAddSize =
-        CeilDiv(tiling_->mSize * tiling_->nSize, GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
-    uint64_t reduceSumSize =
-        CeilDiv(tiling_->mSize * groupNum_ * GROUP_DIM, GM_ADDR_ALIGN_BASIC_BLOCK) * GM_ADDR_ALIGN_BASIC_BLOCK;
+    uint64_t aUnfoldSize = CeilDiv(2 * tiling_->mSize * tiling_->kSize, GM_ADDR_ALIGN_BASIC_BLOCK) *
+                           GM_ADDR_ALIGN_BASIC_BLOCK;
+    uint64_t atomicAddSize = CeilDiv(tiling_->mSize * tiling_->nSize, GM_ADDR_ALIGN_BASIC_BLOCK) *
+                             GM_ADDR_ALIGN_BASIC_BLOCK;
+    uint64_t reduceSumSize = CeilDiv(tiling_->mSize * groupNum_ * GROUP_DIM, GM_ADDR_ALIGN_BASIC_BLOCK) *
+                             GM_ADDR_ALIGN_BASIC_BLOCK;
 
     aUnfoldGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ wType*>(workspace));
     aUnfoldGlobalS8_.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(workspace));
     workspaceReduceSumBrc_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + aUnfoldSize), reduceSumSize);
-    workspaceReduceMaxBrc_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ float*>(workspace + aUnfoldSize + reduceSumSize), reduceSumSize);
-    workspaceAtomicGlobal_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ float*>(workspace + aUnfoldSize + 2 * reduceSumSize), atomicAddSize);
+    workspaceReduceMaxBrc_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + aUnfoldSize + reduceSumSize),
+                                           reduceSumSize);
+    workspaceAtomicGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + aUnfoldSize + 2 * reduceSumSize),
+                                           atomicAddSize);
 
     // reduce sum和reduce max各需要占用一份reduceSumSize的空间
     workspaceCGlobal_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ preciseType*>(workspace + aUnfoldSize + atomicAddSize * sizeof(float) + 2 * reduceSumSize),
+        reinterpret_cast<__gm__ preciseType*>(workspace + aUnfoldSize + atomicAddSize * sizeof(float) +
+                                              2 * reduceSumSize),
         multiScaleTimes_ * tiling_->mSize * tiling_->nSize * DOUBLE_BUFFER_NUM * sizeof(preciseType));
 
     InitAtomicAddr(workspaceAtomicGlobal_, atomicAddSize, curBlockIdx_);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
-        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-        const WeightQuantBatchMatmulV2MsdGroupTilingData* tilingData, TPipe* tPipe)
+    preciseType>::Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
+                       GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                       const WeightQuantBatchMatmulV2MsdGroupTilingData* tilingData, TPipe* tPipe)
 {
     tiling_ = tilingData;
     pipe_ = tPipe;
@@ -345,13 +331,12 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     InitVector3ToV5Tensor();
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::InitVector1Tensor()
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::InitVector1Tensor()
 {
     aF32ReduceSumBrcTensor_ = tBuf_.Get<float>();                           // 0-7k分配给sum的broadCast结果
     aF32ReduceMaxBrcTensor_ = tBuf_.Get<float>()[7 * FLOAT_DATA_BENCHMARK]; // 7-14k分配给max的broadCast结果
@@ -366,13 +351,12 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::InitVector3ToV5Tensor()
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::InitVector3ToV5Tensor()
 {
     uint32_t offset = 0;
     uint32_t elements = 0;
@@ -427,13 +411,14 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::CopyInBL1(uint64_t wOffset, uint64_t singleCoreRealN, Nd2NzParams& nd2nzParams)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::CopyInBL1(uint64_t wOffset,
+                                                                                        uint64_t singleCoreRealN,
+                                                                                        Nd2NzParams& nd2nzParams)
 {
     if (IsSameType<wType, int4b_t>::value) {
         nd2nzParams.dValue = singleCoreRealN >> 1;
@@ -451,16 +436,13 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     inQueueBL1_.EnQue(bL1Tensor);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    CopyInBL1Nz(
-        const LocalTensor<int8_t>& bL1Tensor, uint64_t kOffset, uint64_t nOffset, uint64_t l1BaseKb,
-        uint64_t singleCoreRealN)
+    preciseType>::CopyInBL1Nz(const LocalTensor<int8_t>& bL1Tensor, uint64_t kOffset, uint64_t nOffset,
+                              uint64_t l1BaseKb, uint64_t singleCoreRealN)
 {
     uint64_t tilingKSizeNz = CeilAlign(tiling_->kSize, 16UL);
 
@@ -474,13 +456,13 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     DataCopy(bL1Tensor, wGlobal_[wOffset], dmaParams);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::CopyInAL1(uint64_t realSingleCoreK, uint64_t kOffset)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::CopyInAL1(uint64_t realSingleCoreK,
+                                                                                        uint64_t kOffset)
 {
     Nd2NzParams nd2nzParams;
     nd2nzParams.ndNum = 1;
@@ -506,13 +488,12 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     WaitFlag<HardEvent::MTE2_MTE1>(eventIdMte2ToMte1);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::CopyInVector1(uint32_t m, uint32_t k)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::CopyInVector1(uint32_t m, uint32_t k)
 {
     if (curBlockIdx_ >= tiling_->mSize) {
         return;
@@ -526,13 +507,12 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     PipeBarrier<PIPE_V>();
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::ProcessVector1(uint32_t m, uint32_t k)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::ProcessVector1(uint32_t m, uint32_t k)
 {
     if (curBlockIdx_ >= tiling_->mSize) {
         return;
@@ -567,16 +547,13 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     SetFlag<HardEvent::V_MTE3>(vector1EventIdVToMte3);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    ComputeAMatrixSum(
-        uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams, DataCopyParams& dataCopyParams,
-        BrcbRepeatParams& brcbRepeatParams)
+    preciseType>::ComputeAMatrixSum(uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams,
+                                    DataCopyParams& dataCopyParams, BrcbRepeatParams& brcbRepeatParams)
 {
     if (tiling_->groupSize == 128) {
         // groupSize为128的场景，先将128 reduce 至64(即FP32_MAX_MASK_SIZE)
@@ -584,21 +561,20 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
             maxAddReatParams);
         PipeBarrier<PIPE_V>();
         if (groupNum_ > 1) {
-            DataCopy(
-                aF32MultiScaleTensor_[FP32_MAX_MASK_SIZE], aF32MultiScaleTensor_[tiling_->groupSize], dataCopyParams);
+            DataCopy(aF32MultiScaleTensor_[FP32_MAX_MASK_SIZE], aF32MultiScaleTensor_[tiling_->groupSize],
+                     dataCopyParams);
             PipeBarrier<PIPE_V>();
         }
-        BlockReduceSum(
-            aF32MultiScaleTensor_, aF32MultiScaleTensor_, groupNum_, FP32_MAX_MASK_SIZE, 1, 1, VEC_REPEAT_MAX_STRIDE);
+        BlockReduceSum(aF32MultiScaleTensor_, aF32MultiScaleTensor_, groupNum_, FP32_MAX_MASK_SIZE, 1, 1,
+                       VEC_REPEAT_MAX_STRIDE);
 
     } else {
         BlockReduceSum(aF32MultiScaleTensor_, aF32Tensor_, groupNum_, FP32_MAX_MASK_SIZE, 1, 1, VEC_REPEAT_MAX_STRIDE);
     }
 
     PipeBarrier<PIPE_V>();
-    BlockReduceSum(
-        aF32MultiScaleTensor_, aF32MultiScaleTensor_, CeilDiv(groupNum_, FP32_BLOCK_SIZE), FP32_MAX_MASK_SIZE, 1, 1,
-        VEC_REPEAT_MAX_STRIDE);
+    BlockReduceSum(aF32MultiScaleTensor_, aF32MultiScaleTensor_, CeilDiv(groupNum_, FP32_BLOCK_SIZE),
+                   FP32_MAX_MASK_SIZE, 1, 1, VEC_REPEAT_MAX_STRIDE);
 
     PipeBarrier<PIPE_V>();
     Brcb(aF32ReduceSumBrcTensor_, aF32MultiScaleTensor_, CeilDiv(groupNum_, FP32_BLOCK_SIZE), brcbRepeatParams);
@@ -606,20 +582,17 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     TEventID eventIdVToMte3V1 = GetTPipePtr()->FetchEventID<HardEvent::V_MTE3>();
     SetFlag<HardEvent::V_MTE3>(eventIdVToMte3V1);
     WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3V1);
-    DataCopyPad2D(
-        workspaceReduceSumBrc_[curBlockIdx_ * groupNum_ * 8], aF32ReduceSumBrcTensor_, 1, groupNum_ * 8, groupNum_ * 8);
+    DataCopyPad2D(workspaceReduceSumBrc_[curBlockIdx_ * groupNum_ * 8], aF32ReduceSumBrcTensor_, 1, groupNum_ * 8,
+                  groupNum_ * 8);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    ComputeAMatrixMax(
-        uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams, DataCopyParams& dataCopyParams,
-        BrcbRepeatParams& brcbRepeatParams)
+    preciseType>::ComputeAMatrixMax(uint32_t m, uint32_t k, BinaryRepeatParams& maxAddReatParams,
+                                    DataCopyParams& dataCopyParams, BrcbRepeatParams& brcbRepeatParams)
 {
     Abs(aF32MultiScaleTensor_, aF32Tensor_, m * k);
     PipeBarrier<PIPE_V>();
@@ -629,17 +602,16 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
             groupNum_, maxAddReatParams);
         PipeBarrier<PIPE_V>();
         if (groupNum_ > 1) {
-            DataCopy(
-                aF32MultiScaleTensor_[FP32_MAX_MASK_SIZE], aF32MultiScaleTensor_[tiling_->groupSize], dataCopyParams);
+            DataCopy(aF32MultiScaleTensor_[FP32_MAX_MASK_SIZE], aF32MultiScaleTensor_[tiling_->groupSize],
+                     dataCopyParams);
             PipeBarrier<PIPE_V>();
         }
     }
-    BlockReduceMax(
-        aF32MultiScaleTensor_, aF32MultiScaleTensor_, groupNum_, FP32_MAX_MASK_SIZE, 1, 1, VEC_REPEAT_MAX_STRIDE);
+    BlockReduceMax(aF32MultiScaleTensor_, aF32MultiScaleTensor_, groupNum_, FP32_MAX_MASK_SIZE, 1, 1,
+                   VEC_REPEAT_MAX_STRIDE);
     PipeBarrier<PIPE_V>();
-    BlockReduceMax(
-        aF32MultiScaleTensor_, aF32MultiScaleTensor_, CeilDiv(groupNum_, FP32_BLOCK_SIZE), FP32_MAX_MASK_SIZE, 1, 1,
-        VEC_REPEAT_MAX_STRIDE);
+    BlockReduceMax(aF32MultiScaleTensor_, aF32MultiScaleTensor_, CeilDiv(groupNum_, FP32_BLOCK_SIZE),
+                   FP32_MAX_MASK_SIZE, 1, 1, VEC_REPEAT_MAX_STRIDE);
     PipeBarrier<PIPE_V>();
     Brcb(aF32ReduceMaxBrcTensor_, aF32MultiScaleTensor_, CeilDiv(groupNum_, FP32_BLOCK_SIZE), brcbRepeatParams);
     PipeBarrier<PIPE_V>();
@@ -647,18 +619,16 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     TEventID eventIdVToMte3V1 = GetTPipePtr()->FetchEventID<HardEvent::V_MTE3>();
     SetFlag<HardEvent::V_MTE3>(eventIdVToMte3V1);
     WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3V1);
-    DataCopyPad2D(
-        workspaceReduceMaxBrc_[curBlockIdx_ * groupNum_ * FP32_BLOCK_SIZE], aF32ReduceMaxBrcTensor_, 1,
-        groupNum_ * FP32_BLOCK_SIZE, groupNum_ * FP32_BLOCK_SIZE);
+    DataCopyPad2D(workspaceReduceMaxBrc_[curBlockIdx_ * groupNum_ * FP32_BLOCK_SIZE], aF32ReduceMaxBrcTensor_, 1,
+                  groupNum_ * FP32_BLOCK_SIZE, groupNum_ * FP32_BLOCK_SIZE);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::UnfoldAMatrix(uint32_t m, uint32_t k)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::UnfoldAMatrix(uint32_t m, uint32_t k)
 {
     uint32_t mainRepeatK = k / tiling_->groupSize;
     BinaryRepeatParams repeatParams;
@@ -699,30 +669,29 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::CopyOutVector1(uint32_t m, uint32_t k)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::CopyOutVector1(uint32_t m, uint32_t k)
 {
     if (curBlockIdx_ >= tiling_->mSize) {
         return;
     }
     WaitFlag<HardEvent::V_MTE3>(vector1EventIdVToMte3);
-    DataCopyPad2D(
-        aUnfoldGlobal_[curBlockIdx_ * multiScaleTimes_ * m * tiling_->kSize], aUnfoldLocal_, multiScaleTimes_ * m, k,
-        tiling_->kSize);
+    DataCopyPad2D(aUnfoldGlobal_[curBlockIdx_ * multiScaleTimes_ * m * tiling_->kSize], aUnfoldLocal_,
+                  multiScaleTimes_ * m, k, tiling_->kSize);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::LaunchMatmul(uint64_t singleCoreRealN, uint64_t cOffset, uint64_t kOffset)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::LaunchMatmul(uint64_t singleCoreRealN,
+                                                                                           uint64_t cOffset,
+                                                                                           uint64_t kOffset)
 {
     LocalTensor<wType> aL1Tensor = a1Tbuf_.template Get<wType>();
     LocalTensor<wType> bL1Tensor = inQueueBL1_.DeQue<wType>();
@@ -732,21 +701,23 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
         aTrans);
     mmObj.SetTensorB(bL1Tensor, bTrans);
 
-    mmObj.SetOrgShape(
-        multiScaleTimes_ * tiling_->mSize, tiling_->nSize, tiling_->kSize, tiling_->kSize, tiling_->nSize);
+    mmObj.SetOrgShape(multiScaleTimes_ * tiling_->mSize, tiling_->nSize, tiling_->kSize, tiling_->kSize,
+                      tiling_->nSize);
     mmObj.SetTail(multiScaleTimes_ * tiling_->mSize, singleCoreRealN, tiling_->groupSize);
     mmObj.IterateAll(workspaceCGlobal_[cOffset]);
     inQueueBL1_.FreeTensor(bL1Tensor);
     mmObj.End();
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::CopyInVector3(int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t nBaseOffset, uint32_t taskId)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::CopyInVector3(int32_t vecSingleCoreN,
+                                                                                            uint32_t groupIdx,
+                                                                                            uint32_t nBaseOffset,
+                                                                                            uint32_t taskId)
 {
     uint64_t globalOffset = groupIdx * tiling_->nSize + nBaseOffset;
     if (taskId > 0) {
@@ -767,13 +738,14 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     Cast(scaleF32Tensor_, scaleB16Tensor_, RoundMode::CAST_NONE, vecSingleCoreN);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::MulOffsetVector3(int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t taskId)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::MulOffsetVector3(int32_t vecSingleCoreN,
+                                                                                               uint32_t groupIdx,
+                                                                                               uint32_t taskId)
 {
     uint32_t mainRepeatN = vecSingleCoreN / FP32_MAX_MASK_SIZE;
     BinaryRepeatParams repeatParams;
@@ -786,9 +758,8 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
 
     if (taskId > 0) {
         for (uint32_t idxM = 0; idxM < tiling_->mSize; idxM++) {
-            MulAddDst(
-                offsetMnF32_[idxM * vecSingleCoreN], aF32ReduceSumTensorV3_[idxM * 8], offsetF32Tensor_,
-                256 / sizeof(float), mainRepeatN, repeatParams);
+            MulAddDst(offsetMnF32_[idxM * vecSingleCoreN], aF32ReduceSumTensorV3_[idxM * 8], offsetF32Tensor_,
+                      256 / sizeof(float), mainRepeatN, repeatParams);
         }
     } else {
         for (uint32_t idxM = 0; idxM < tiling_->mSize; idxM++) {
@@ -798,15 +769,16 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    ProcessVector3(
-        int32_t vecSingleCoreN, uint32_t groupIdx, uint32_t nBaseOffset, uint32_t groupLimit, uint32_t taskId)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::ProcessVector3(int32_t vecSingleCoreN,
+                                                                                             uint32_t groupIdx,
+                                                                                             uint32_t nBaseOffset,
+                                                                                             uint32_t groupLimit,
+                                                                                             uint32_t taskId)
 {
     if constexpr (!hasAntiQuantOffset) { // 无offset 无需后续流程
         return;
@@ -827,10 +799,9 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     MulOffsetVector3(vecSingleCoreN, groupIdx, taskId);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     preciseType>::ProcessVector4MaxScale(int64_t vecSingleCoreN, uint64_t groupIdx)
@@ -868,15 +839,13 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::
-    CopyInAndProcessVector4(
-        int64_t vecSingleCoreN, uint64_t groupIdx, uint64_t nOffset, uint32_t taskId, uint32_t groupLimit)
+    preciseType>::CopyInAndProcessVector4(int64_t vecSingleCoreN, uint64_t groupIdx, uint64_t nOffset, uint32_t taskId,
+                                          uint32_t groupLimit)
 {
     if (vecSingleCoreN <= 0) {
         if (groupIdx + 2 < groupLimit) {
@@ -929,10 +898,9 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     preciseType>::ProcessMatmulResultHalf(uint64_t cOffset, uint64_t v4EndM, int64_t vecSingleCoreN)
@@ -940,18 +908,16 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     uint64_t v4TailCSize = v4EndM * vecSingleCoreN;
     uint64_t mOffset = v4TailCSize;
     DataCopyPad2D(cTensor_, workspaceCGlobal_[cOffset], v4EndM, vecSingleCoreN, multiScaleTimes_ * tiling_->nSize);
-    DataCopyPad2D(
-        cTensor_[mOffset], workspaceCGlobal_[cOffset + tiling_->nSize], v4EndM, vecSingleCoreN,
-        multiScaleTimes_ * tiling_->nSize);
+    DataCopyPad2D(cTensor_[mOffset], workspaceCGlobal_[cOffset + tiling_->nSize], v4EndM, vecSingleCoreN,
+                  multiScaleTimes_ * tiling_->nSize);
     float multiFactor = multiFactor2_;
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     Axpy(cF16Tensor_, cF16Tensor_[mOffset], static_cast<half>(1.0f / multiFactor), v4TailCSize);
     mOffset += v4TailCSize;
-    DataCopyPad2D(
-        cTensor_[mOffset], workspaceCGlobal_[cOffset + 2 * tiling_->nSize], v4EndM, vecSingleCoreN,
-        multiScaleTimes_ * tiling_->nSize);
+    DataCopyPad2D(cTensor_[mOffset], workspaceCGlobal_[cOffset + 2 * tiling_->nSize], v4EndM, vecSingleCoreN,
+                  multiScaleTimes_ * tiling_->nSize);
     multiFactor *= multiFactor2_;
     PipeBarrier<PIPE_V>();
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -963,10 +929,9 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     Muls(cF32CastTensor_, cF32CastTensor_, 1.0f / multiFactor1_, v4TailCSize);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
 __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     preciseType>::ProcessMatmulResult(uint64_t cOffset, uint64_t v4BaseM, uint64_t v4EndM, int64_t vecSingleCoreN)
@@ -989,10 +954,9 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
                 WaitFlag<HardEvent::V_MTE2>(vector3EventIdVToMTE22);
             }
         }
-        DataCopyPad2D(
-            cTensor_[mOffset],
-            workspaceCGlobal_[cOffset + (v4BaseM * multiScaleTimes_ + multiScaleTimeIdx) * tiling_->nSize], tailM,
-            vecSingleCoreN, multiScaleTimes_ * tiling_->nSize);
+        DataCopyPad2D(cTensor_[mOffset],
+                      workspaceCGlobal_[cOffset + (v4BaseM * multiScaleTimes_ + multiScaleTimeIdx) * tiling_->nSize],
+                      tailM, vecSingleCoreN, multiScaleTimes_ * tiling_->nSize);
         event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -1000,12 +964,11 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
         Cast(cF32CastTensor_[mOffset], cTensor_[mOffset], RoundMode::CAST_NONE, v4TailCSize);
         PipeBarrier<PIPE_V>();
         if (multiScaleTimeIdx == 0) {
-            Muls(
-                cF32CastTensor_[mOffset], cF32CastTensor_[mOffset], static_cast<float>(1.0) / multiFactor, v4TailCSize);
+            Muls(cF32CastTensor_[mOffset], cF32CastTensor_[mOffset], static_cast<float>(1.0) / multiFactor,
+                 v4TailCSize);
         } else {
-            Axpy(
-                cF32CastTensor_[v4BaseCSize], cF32CastTensor_[mOffset], static_cast<float>(1.0) / multiFactor,
-                v4TailCSize);
+            Axpy(cF32CastTensor_[v4BaseCSize], cF32CastTensor_[mOffset], static_cast<float>(1.0) / multiFactor,
+                 v4TailCSize);
         }
 
         multiFactor *= multiFactor2_;
@@ -1019,13 +982,14 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::CopyOutVector4(int32_t singleCoreRealN, uint32_t groupIdx, uint32_t groupLimit)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::CopyOutVector4(int32_t singleCoreRealN,
+                                                                                             uint32_t groupIdx,
+                                                                                             uint32_t groupLimit)
 {
     if (singleCoreRealN <= 0) {
         return;
@@ -1040,8 +1004,8 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     AscendC::ProcessLock::GetProcessLock()->Write();
     isUsedProcessLock = true;
 #endif
-    DataCopyPad2D(
-        workspaceAtomicGlobal_[atomicWorkspaceOffset], offsetMnF32_, tiling_->mSize, singleCoreRealN, tiling_->nSize);
+    DataCopyPad2D(workspaceAtomicGlobal_[atomicWorkspaceOffset], offsetMnF32_, tiling_->mSize, singleCoreRealN,
+                  tiling_->nSize);
 #if defined(__CCE_KT_TEST__)
     if (isUsedProcessLock == true) {
         isUsedProcessLock = false;
@@ -1051,17 +1015,16 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     SetAtomicNone();
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::ProcessVector5(int32_t singleCoreRealN)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::ProcessVector5(int32_t singleCoreRealN)
 {
     uint64_t atomicWorkspaceOffset = vecNDimIdx_ * tiling_->vecSingleCoreN;
-    DataCopyPad2D(
-        resF32Tensor_, workspaceAtomicGlobal_[atomicWorkspaceOffset], tiling_->mSize, singleCoreRealN, tiling_->nSize);
+    DataCopyPad2D(resF32Tensor_, workspaceAtomicGlobal_[atomicWorkspaceOffset], tiling_->mSize, singleCoreRealN,
+                  tiling_->nSize);
     if (tiling_->hasBias) {
         DataCopyPad2D(biasTensor_, biasGlobal_[atomicWorkspaceOffset], 1, singleCoreRealN, tiling_->nSize);
     }
@@ -1086,9 +1049,8 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
 
         Add(resF32Tensor_, resF32Tensor_, biasFp32Tensor_, FP32_MAX_MASK_SIZE, repeatTimes, repeatParams);
         for (uint64_t mIdx = 1; mIdx < tiling_->mSize; mIdx++) {
-            AscendC::Add<float, false>(
-                resF32Tensor_[mIdx * singleCoreRealN], resF32Tensor_[mIdx * singleCoreRealN], biasFp32Tensor_,
-                FP32_MAX_MASK_SIZE, repeatTimes, repeatParams);
+            AscendC::Add<float, false>(resF32Tensor_[mIdx * singleCoreRealN], resF32Tensor_[mIdx * singleCoreRealN],
+                                       biasFp32Tensor_, FP32_MAX_MASK_SIZE, repeatTimes, repeatParams);
         }
         PipeBarrier<PIPE_V>();
     }
@@ -1106,13 +1068,12 @@ __aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    typename preciseType>
-__aicore__ inline void WeightQuantBatchMatMulV2MsdGroupKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    preciseType>::Process()
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          typename preciseType>
+__aicore__ inline void
+WeightQuantBatchMatMulV2MsdGroupKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset,
+                                       quantType, weightFormat, preciseType>::Process()
 {
     if ASCEND_IS_AIV {
         CopyInVector1(tiling_->vec1SingleCoreM, tiling_->kSize);

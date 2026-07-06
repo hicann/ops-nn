@@ -36,14 +36,10 @@ using namespace op;
 #define ACLNN_MAX_SHAPE_RANK 8
 
 // 支持的数据类型（arch35 / Ascend950 支持 FP16/FP32/BF16）
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                              DataType::DT_BF16};
 
-static bool IsDtypeSupported(DataType dtype)
-{
-    return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsDtypeSupported(DataType dtype) { return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST); }
 
 static bool HasEmptyTensor(const aclTensor* gradients, const aclTensor* features)
 {
@@ -97,8 +93,7 @@ static bool CheckShape(const aclTensor* gradients, const aclTensor* features, co
 
     // gradients 和 features shape 必须完全一致（REQ-5.3）
     if (gradients->GetViewShape() != features->GetViewShape()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "SoftsignBackward shape mismatch between gradients and features");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "SoftsignBackward shape mismatch between gradients and features");
         return false;
     }
     return true;
@@ -128,12 +123,9 @@ static aclnnStatus CheckParams(const aclTensor* gradients, const aclTensor* feat
 /**
  * @brief 第一段接口：计算 workspace 大小
  */
-extern "C" aclnnStatus aclnnSoftsignBackwardGetWorkspaceSize(
-    const aclTensor* gradients,
-    const aclTensor* features,
-    const aclTensor* out,
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnSoftsignBackwardGetWorkspaceSize(const aclTensor* gradients, const aclTensor* features,
+                                                             const aclTensor* out, uint64_t* workspaceSize,
+                                                             aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnSoftsignBackward, DFX_IN(gradients, features), DFX_OUT(out));
 
@@ -172,11 +164,8 @@ extern "C" aclnnStatus aclnnSoftsignBackwardGetWorkspaceSize(
 /**
  * @brief 第二段接口：执行计算
  */
-extern "C" aclnnStatus aclnnSoftsignBackward(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnSoftsignBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                             aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnSoftsignBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

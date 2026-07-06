@@ -18,12 +18,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
 
-enum ContiguousType
-{
-    CONTIGUOUS,
-    TRANSPOSE_LAST_TWO_DIMS,
-    NOT_CONTIGUOUS
-};
+enum ContiguousType { CONTIGUOUS, TRANSPOSE_LAST_TWO_DIMS, NOT_CONTIGUOUS };
 
 struct DualLevelQuantMatmulNzTestParam {
     string caseName;
@@ -61,29 +56,22 @@ struct DualLevelQuantMatmulNzTestParam {
     ContiguousType ctgsY = CONTIGUOUS;
 };
 
-class l2_dual_level_quant_batch_matmul_nz_test_950 : public testing::TestWithParam<DualLevelQuantMatmulNzTestParam>
-{
+class l2_dual_level_quant_batch_matmul_nz_test_950 : public testing::TestWithParam<DualLevelQuantMatmulNzTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_dual_level_quant_batch_matmul_nz_test_950 SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_950 SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_dual_level_quant_batch_matmul_nz_test_950 TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_950 TearDown" << endl; }
 };
 
 vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
     if (viewShape.size() < 2) { // 维度小于2维无法转Nz
-        throw invalid_argument(
-            "size of viewShape must >= 2 when create fractalNz shape, actual is " + viewShape.size());
+        throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
+                               viewShape.size());
     }
     if (dtype != ACL_INT8 && dtype != ACL_INT4 && dtype != ACL_INT32) {
-        throw invalid_argument(
-            "only support dtype int8/int4/int32 when create fractalNz shape, actual is " + static_cast<int32_t>(dtype));
+        throw invalid_argument("only support dtype int8/int4/int32 when create fractalNz shape, actual is " +
+                               static_cast<int32_t>(dtype));
     }
 
     // nd转Nz时会把viewShape最后2维拆成4维
@@ -114,9 +102,8 @@ vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
     return strides;
 }
 
-aclTensor* CreateAclTensor(
-    const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format, const vector<int64_t>& stride,
-    int64_t offset, const vector<int64_t>& originalShape)
+aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                           const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
 {
     vector<int64_t> storageShape;
     if (format == ACL_FORMAT_FRACTAL_NZ) {
@@ -125,9 +112,8 @@ aclTensor* CreateAclTensor(
         storageShape = originalShape;
     }
 
-    auto tensor = aclCreateTensor(
-        viewShape.data(), viewShape.size(), dtype, stride.data(), offset, format, storageShape.data(),
-        storageShape.size(), nullptr);
+    auto tensor = aclCreateTensor(viewShape.data(), viewShape.size(), dtype, stride.data(), offset, format,
+                                  storageShape.data(), storageShape.size(), nullptr);
     if (originalShape.size() == 3) { // 创建3维的tensor
         tensor->SetOriginalShape(op::Shape{originalShape[0], originalShape[1], originalShape[2]});
     } else if (originalShape.size() == 2) { // 创建2维的tensor
@@ -140,8 +126,8 @@ aclTensor* CreateAclTensor(
     return tensor;
 }
 
-aclTensor* CreateTensorDesc(
-    const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format, const ContiguousType& ctgsType)
+aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                            const ContiguousType& ctgsType)
 {
     vector<int64_t> strides;
     vector<int64_t> originalShape;
@@ -170,8 +156,8 @@ aclTensor* CreateTensorDesc(
         case NOT_CONTIGUOUS:
             sum = std::accumulate(viewShape.begin(), viewShape.end(), 0);
             if (sum <= 1) {
-                throw invalid_argument(
-                    "sum of viewShape must > 1 when ContiguousType is NOT_CONTIGUOUS, actual is " + viewShape.size());
+                throw invalid_argument("sum of viewShape must > 1 when ContiguousType is NOT_CONTIGUOUS, actual is " +
+                                       viewShape.size());
             }
             if (format == ACL_FORMAT_FRACTAL_NZ) {
                 throw invalid_argument("not support format is FRACTAL_NZ with NOT_CONTIGUOUS");
@@ -196,27 +182,26 @@ static void TestOneParamCase(const DualLevelQuantMatmulNzTestParam& param)
     std::cout << "run case start: " << param.caseName << std::endl;
     aclTensor* x1 = CreateTensorDesc(param.x1, param.x1Type, param.x1Format, param.ctgsX1);
     aclTensor* x2 = CreateTensorDesc(param.x2, param.x2Type, param.x2Format, param.ctgsX2);
-    aclTensor* x1Level0Scale =
-        CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Format, param.ctgsX1Level0Scale);
-    aclTensor* x1Level1Scale =
-        CreateTensorDesc(param.x1Level1Scale, param.x1Level1ScaleType, ACL_FORMAT_NCL, param.ctgsX1Level1Scale);
-    aclTensor* x2Level0Scale =
-        CreateTensorDesc(param.x2Level0Scale, param.x2Level0ScaleType, param.x1Format, param.ctgsX2Level0Scale);
-    clTensor* x2Level1Scale =
-        CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, ACL_FORMAT_NCL, param.ctgsX2Level1Scale);
+    aclTensor* x1Level0Scale = CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Format,
+                                                param.ctgsX1Level0Scale);
+    aclTensor* x1Level1Scale = CreateTensorDesc(param.x1Level1Scale, param.x1Level1ScaleType, ACL_FORMAT_NCL,
+                                                param.ctgsX1Level1Scale);
+    aclTensor* x2Level0Scale = CreateTensorDesc(param.x2Level0Scale, param.x2Level0ScaleType, param.x1Format,
+                                                param.ctgsX2Level0Scale);
+    clTensor* x2Level1Scale = CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, ACL_FORMAT_NCL,
+                                               param.ctgsX2Level1Scale);
     aclTensor* biasOptional = nullptr;
     if (param.isBiasOptionalNotNull) {
-        biasOptional =
-            CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.xFormat, param.ctgsBiasOptional);
+        biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.xFormat,
+                                        param.ctgsBiasOptional);
     }
     aclTensor* y = CreateTensorDesc(param.y, param.yType, param.xFormat, param.ctgsY);
 
     uint64_t workspaceSize = 0U;
     aclOpExecutor* exe = nullptr;
     aclnnStatus aclRet = aclnnDualLevelQuantMatmulWeightNzGetWorkspaceSize(
-        x1, x2, x1Level0Scale, x2Level0Scale, x1Level1Scale, x2Level1Scale, biasOptional,
-        param.transposeX1, param.transposeX2, param.level0GroupSize, param.level1GroupSize,
-        y, &workspaceSize, &exe);
+        x1, x2, x1Level0Scale, x2Level0Scale, x1Level1Scale, x2Level1Scale, biasOptional, param.transposeX1,
+        param.transposeX2, param.level0GroupSize, param.level1GroupSize, y, &workspaceSize, &exe);
     EXPECT_EQ(aclRet, param.expectRet);
     std::cout << "run case end:" << param.caseName << std::endl;
     if (param.expectRet == ACLNN_SUCCESS) {
@@ -231,39 +216,39 @@ TEST_P(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_generalTest)
 }
 
 static DualLevelQuantMatmulNzTestParam casesParamsAscend950[] = {
-    {"Ascend950_case_dual_a4w4_weight_nz",
-     {1, 7168},
-     {1536, 3584},
-     {1, 14},
-     {1, 112,2},
-     {14, 1536},
-     {11536, 112, 2},
-     {1536},
-     false,
-     true,
-     512,
-     32,
-     {1, 1536},
-     ACL_FLOAT4_E2M1,
-     ACL_INT8,
-     ACL_FLOAT,
-     ACL_FLOAT8_E8M0,
-     ACL_FLOAT,
-     ACL_FLOAT8_E8M0,
-     ACL_FLOAT,
-     ACL_FLOAT16,
-     ACL_FORMAT_ND,
-     ACL_FORMAT_FRACTAL_NZ,
-     true,
+    {
+        "Ascend950_case_dual_a4w4_weight_nz",
+        {1, 7168},
+        {1536, 3584},
+        {1, 14},
+        {1, 112, 2},
+        {14, 1536},
+        {11536, 112, 2},
+        {1536},
+        false,
+        true,
+        512,
+        32,
+        {1, 1536},
+        ACL_FLOAT4_E2M1,
+        ACL_INT8,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT16,
+        ACL_FORMAT_ND,
+        ACL_FORMAT_FRACTAL_NZ,
+        true,
     },
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    Ascend950_DualLevelQuantMatmulNz, l2_dual_level_quant_batch_matmul_nz_test_950,
-    testing::ValuesIn(casesParamsAscend950));
+INSTANTIATE_TEST_SUITE_P(Ascend950_DualLevelQuantMatmulNz, l2_dual_level_quant_batch_matmul_nz_test_950,
+                         testing::ValuesIn(casesParamsAscend950));
 
-static void ThreadFunc(
-    const DualLevelQuantMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
+static void ThreadFunc(const DualLevelQuantMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx,
+                       size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
@@ -286,6 +271,5 @@ TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
 {
     // 用3个线程测试
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
-    TestMultiThread(
-        casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(DualLevelQuantMatmulNzTestParam), 3);
+    TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(DualLevelQuantMatmulNzTestParam), 3);
 }

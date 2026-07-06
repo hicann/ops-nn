@@ -16,12 +16,12 @@
 #define CONV3D_BACKPROP_INPUT_V2_TILING_DATA_H
 #include <cstdint>
 
-namespace AscendC{
+namespace AscendC {
 // TConv3DInputV2Tiling对齐到第33行
 // TConv3DInputV2Tiling对齐到第33行
 // TConv3DInputV2Tiling对齐到第33行
 // TConv3DInputV2Tiling对齐到第33行
-struct TConv3DInputV2Tiling{
+struct TConv3DInputV2Tiling {
     uint32_t batch = 1;
     uint32_t cin = 1;
     uint32_t cout = 1;
@@ -105,5 +105,5 @@ struct Conv3DBackpropInputV2TilingData {
     TConv3DInputV2Tiling conv3DDxTiling;
 };
 
-}
-#endif  // CONV3D_BACKPROP_INPUT_V2_TILING_DATA_H
+} // namespace AscendC
+#endif // CONV3D_BACKPROP_INPUT_V2_TILING_DATA_H

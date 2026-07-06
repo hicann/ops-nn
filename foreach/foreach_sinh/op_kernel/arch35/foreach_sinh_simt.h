@@ -45,12 +45,10 @@ __simt_callee__ inline T ComputeSinh(T val)
  * @brief SIMT VF function: grid-stride parallel sinh for a single tensor
  */
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachSinhSimt(
-    __gm__ T* xPtr, __gm__ T* yPtr, int64_t elemCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachSinhSimt(__gm__ T* xPtr, __gm__ T* yPtr,
+                                                                              int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(
-             Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
+    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
          idx < static_cast<uint64_t>(elemCount);
          idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
         T val = xPtr[idx];
@@ -62,8 +60,7 @@ inline void OpForeachSinhSimt(
  * @brief Process entry: iterate over TensorList and dispatch each tensor to VF
  */
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y, const ForeachSinhTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachSinhTilingData* tilingData)
 {
     ListTensorDesc xList(reinterpret_cast<__gm__ void*>(x));
     ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
@@ -77,8 +74,7 @@ __aicore__ inline void Process(
         __gm__ T* xPtr = xList.GetDataPtr<T>(i);
         __gm__ T* yPtr = yList.GetDataPtr<T>(i);
 
-        Simt::VF_CALL<OpForeachSinhSimt<T>>(
-            Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+        Simt::VF_CALL<OpForeachSinhSimt<T>>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
     }
 }
 

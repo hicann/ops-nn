@@ -80,30 +80,23 @@ static constexpr int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
 static constexpr int64_t PPMATMUL_PRIORITY_M = 1024;
 static constexpr int64_t NO_BATCH_DIM_SUM = 2;
 
-static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
-                                                                         op::DataType::DT_INT8};
+static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4, op::DataType::DT_INT8};
 static const std::initializer_list<op::DataType> INT4_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
-                                                                         op::DataType::DT_INT32};
-static const std::initializer_list<op::DataType> OUT_TYPE_SUPPORT_LIST = {op::DataType::DT_INT8,
-                                                                          op::DataType::DT_FLOAT16,
-                                                                          op::DataType::DT_BF16,
-                                                                          op::DataType::DT_INT32};
-static const std::initializer_list<op::DataType> SCALE_TYPE_SUPPORT_LIST = {op::DataType::DT_UINT64,
-                                                                            op::DataType::DT_BF16,
-                                                                            op::DataType::DT_INT64,
-                                                                            op::DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> BIAS_TYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
-                                                                           op::DataType::DT_BF16,
-                                                                           op::DataType::DT_FLOAT16,
-                                                                           op::DataType::DT_FLOAT};
+                                                                           op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> OUT_TYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT8, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> SCALE_TYPE_SUPPORT_LIST = {
+    op::DataType::DT_UINT64, op::DataType::DT_BF16, op::DataType::DT_INT64, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> BIAS_TYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT32, op::DataType::DT_BF16, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> Y_SCALE_SUPPORT_LIST = {op::DataType::DT_UINT64};
 
-using TupleTensor = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *>;
-using TupleOptional = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
-                                 const aclTensor *, const int64_t &>;
-using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
-using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
-                              const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &, const int64_t &>;
+using TupleTensor = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>;
+using TupleOptional = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                                 const aclTensor*, const int64_t&>;
+using TupleInput = std::tuple<const aclTensor*, const aclTensor*>;
+using TupleQuant = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                              const aclTensor*, const aclTensor*, const int64_t&, const int64_t&>;
 using TupleAttr = std::tuple<bool, bool>;
 
 static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)
@@ -133,7 +126,7 @@ static inline bool isMx(const aclTensor* scale)
 }
 
 static inline bool isA8W4Msd(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
-    const aclTensor* pertokenScale)
+                             const aclTensor* pertokenScale)
 {
     if (x1 == nullptr || x2 == nullptr || scale == nullptr) {
         return false;
@@ -142,8 +135,8 @@ static inline bool isA8W4Msd(const aclTensor* x1, const aclTensor* x2, const acl
         return false;
     }
 
-    if (std::find(INT4_TYPE_SUPPORT_LIST.begin(), INT4_TYPE_SUPPORT_LIST.end(),
-        x2->GetDataType()) == INT4_TYPE_SUPPORT_LIST.end()) {
+    if (std::find(INT4_TYPE_SUPPORT_LIST.begin(), INT4_TYPE_SUPPORT_LIST.end(), x2->GetDataType()) ==
+        INT4_TYPE_SUPPORT_LIST.end()) {
         return false;
     }
 
@@ -158,7 +151,8 @@ static inline bool isA8W4Msd(const aclTensor* x1, const aclTensor* x2, const acl
     return true;
 }
 
-static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2Scale)
+{
     if (x1Scale == nullptr) {
         return false;
     }
@@ -169,12 +163,14 @@ static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2S
            x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
-static inline bool IsTCG(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+static inline bool IsTCG(const aclTensor* x1Scale, const aclTensor* x2Scale)
+{
     return x1Scale == nullptr && x2Scale != nullptr &&
            (x2Scale->GetDataType() == op::DataType::DT_BF16 || x2Scale->GetDataType() == op::DataType::DT_FLOAT16);
 }
 
-static inline int64_t SelectNzK0Value(op::DataType dataType, const bool isA8W4Float) {
+static inline int64_t SelectNzK0Value(op::DataType dataType, const bool isA8W4Float)
+{
     switch (dataType) {
         case op::DataType::DT_INT4:
             return NZ_K0_VALUE_INT4_TRANS;
@@ -195,18 +191,18 @@ template <typename T>
 static inline bool IsAligned(T num, T factor)
 {
     if (factor == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The divisor cannot be zero.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The divisor cannot be zero.");
         return false;
     }
     return num > 0 && num % factor == 0;
 }
 
-static inline bool IsFormatNZ(const aclTensor* tensor) {
+static inline bool IsFormatNZ(const aclTensor* tensor)
+{
     return tensor != nullptr &&
            (ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ ||
-           ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_4 ||
-           ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32);
+            ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_4 ||
+            ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32);
 }
 
 } // namespace quant_matmul_v4

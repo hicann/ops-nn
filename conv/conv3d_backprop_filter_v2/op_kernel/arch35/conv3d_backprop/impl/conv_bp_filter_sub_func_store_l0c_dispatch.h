@@ -19,9 +19,9 @@
 namespace ConvolutionBackpropFunc {
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForTransFormatNCDHW(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c,
-    bool enSequentialWrite = false)
+static __aicore__ inline void LoadL0c2GmForTransFormatNCDHW(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                            LocalTensor<typename Intf::L0cT>& l0c,
+                                                            bool enSequentialWrite = false)
 {
     if (!enSequentialWrite) {
         if constexpr (Intf::conv3ddwConfig.groupEnlarge) {
@@ -39,9 +39,9 @@ static __aicore__ inline void LoadL0c2GmForTransFormatNCDHW(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForTransFormatNDHWC(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c,
-    bool enSequentialWrite = false)
+static __aicore__ inline void LoadL0c2GmForTransFormatNDHWC(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                            LocalTensor<typename Intf::L0cT>& l0c,
+                                                            bool enSequentialWrite = false)
 {
     if (!enSequentialWrite) {
         if (self->ctx.dhwK_ == 1) {
@@ -57,9 +57,9 @@ static __aicore__ inline void LoadL0c2GmForTransFormatNDHWC(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForTransFormatDHWCN(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c,
-    bool enSequentialWrite = false)
+static __aicore__ inline void LoadL0c2GmForTransFormatDHWCN(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                            LocalTensor<typename Intf::L0cT>& l0c,
+                                                            bool enSequentialWrite = false)
 {
     if (!enSequentialWrite) {
         if (self->ctx.dhwK_ == 1) {
@@ -75,9 +75,9 @@ static __aicore__ inline void LoadL0c2GmForTransFormatDHWCN(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForTransFormat(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c,
-    bool enSequentialWrite = false)
+static __aicore__ inline void LoadL0c2GmForTransFormat(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                       LocalTensor<typename Intf::L0cT>& l0c,
+                                                       bool enSequentialWrite = false)
 {
     if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
         LoadL0c2GmForTransFormatNCDHW(self, output, l0c, enSequentialWrite);
@@ -89,8 +89,8 @@ static __aicore__ inline void LoadL0c2GmForTransFormat(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2Gm(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
+static __aicore__ inline void LoadL0c2Gm(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                         uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
     LocalTensor<typename Intf::L0cT> l0c;
     if (self->ctx.l0cPingPongFlag_) {

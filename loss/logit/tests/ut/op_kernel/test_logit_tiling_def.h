@@ -20,7 +20,6 @@
 // #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct LogitTilingDataTest {
     int32_t elementNum = 8;
     float eps = -1.0;
@@ -33,6 +32,6 @@ inline void ILogitTilingData(uint8_t* tiling, LogitTilingDataTest* const_data)
 }
 
 #define GET_TILING_DATA(tilingData, tilingPointer) \
-    LogitTilingDataTest tilingData;                    \
+    LogitTilingDataTest tilingData;                \
     ILogitTilingData(tilingPointer, &tilingData)
 #endif

@@ -21,10 +21,10 @@
 namespace optiling {
 using namespace Ops::NN::Optiling;
 constexpr uint32_t LAYER_NORM_TILING_KEY_BASE = 2000000000;
-constexpr uint32_t LAYER_NORM_TILING_KEY_BF16_DTYPE = 200000000; 
+constexpr uint32_t LAYER_NORM_TILING_KEY_BF16_DTYPE = 200000000;
 constexpr uint32_t LAYER_NORM_TILING_KEY_FP16_DTYPE = 300000000;
 constexpr uint32_t LAYER_NORM_TILING_KEY_FP32_DTYPE = 400000000;
-constexpr uint32_t LAYER_NORM_TILING_KEY_FAST = 10000000;   // 0: fast; 1:slice
+constexpr uint32_t LAYER_NORM_TILING_KEY_FAST = 10000000; // 0: fast; 1:slice
 
 constexpr uint32_t LAYER_NORM_HALF_SIZE = 2;
 constexpr uint32_t LAYER_NORM_FP32_SIZE = 4;
@@ -45,8 +45,9 @@ size_t roundDownReg(size_t size, size_t divisor)
     return size / divisor * divisor;
 }
 
-uint32_t GetDataTypeSize(ge::DataType XType) {
-    if (XType == ge::DataType::DT_BF16 || XType == ge::DataType::DT_FLOAT16){
+uint32_t GetDataTypeSize(ge::DataType XType)
+{
+    if (XType == ge::DataType::DT_BF16 || XType == ge::DataType::DT_FLOAT16) {
         return LAYER_NORM_HALF_SIZE;
     } else if (XType == ge::DataType::DT_FLOAT) {
         return LAYER_NORM_FP32_SIZE;
@@ -54,8 +55,9 @@ uint32_t GetDataTypeSize(ge::DataType XType) {
     return LAYER_NORM_FP32_SIZE;
 }
 
-uint32_t GetDataTypeKey(ge::DataType XType) {
-    if (XType == ge::DataType::DT_BF16){
+uint32_t GetDataTypeKey(ge::DataType XType)
+{
+    if (XType == ge::DataType::DT_BF16) {
         return LAYER_NORM_TILING_KEY_BF16_DTYPE;
     } else if (XType == ge::DataType::DT_FLOAT16) {
         return LAYER_NORM_TILING_KEY_FP16_DTYPE;
@@ -68,18 +70,18 @@ uint32_t GetDataTypeKey(ge::DataType XType) {
 ge::graphStatus LayerNormQuantRegTiling::GetTilingSliceInfo()
 {
     uint32_t singleRowSizePerElem = fp32BufNum * sizeof(uint32_t) + fp16BufNum * dtypeSize; // 3*4 + 2*2  --  3*4 + 2*4
-    uint32_t multiRowSizePerElem = fp16BufNumForMulRow * dtypeSize + i8BufNumForMulRow * sizeof(uint8_t); // 2*2 +1  --  2*4 +1
+    uint32_t multiRowSizePerElem = fp16BufNumForMulRow * dtypeSize +
+                                   i8BufNumForMulRow * sizeof(uint8_t); // 2*2 +1  --  2*4 +1
 
     OP_CHECK_IF(colsAligned > (UINT_MAX / (singleRowSizePerElem + multiRowSizePerElem)),
-                    OP_LOGE(context->GetNodeName(), "RowBufferSize invalid!"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "RowBufferSize invalid!"), return ge::GRAPH_FAILED);
     uint32_t singleRowBufferSize = singleRowSizePerElem * colsAligned;
     uint32_t multiRowBufferSize = multiRowSizePerElem * colsAligned;
 
     if ((maxUbSize - MEAN_AND_VAR_SIZE) < (singleRowBufferSize + multiRowBufferSize)) {
         uint32_t oneRepeatElemCount = 256U / dtypeSize;
         uint32_t elemSize = roundDownReg((maxUbSize - MEAN_AND_VAR_SIZE) / (singleRowSizePerElem + multiRowSizePerElem),
-                                      oneRepeatElemCount);
+                                         oneRepeatElemCount);
         tilingData.set_sliceNum(CeilDiv(numCol, elemSize));
         tilingData.set_sliceSize(elemSize);
         tilingData.set_tailSliceSize(numCol - (tilingData.get_sliceNum() - 1) * elemSize);
@@ -113,15 +115,15 @@ ge::graphStatus LayerNormQuantRegTiling::DoTiling()
     auto eps = attrs->GetAttrPointer<float>(EPSILON_ATTR_INDEX);
     this->tilingData.set_epsStr(*eps);
 
-    ge::graphStatus ret =
-        PostLayerNormPtrFunc<LayerNormQuantRegTilingData>(&this->tilingData, this->layerNormPtrCon, this->context);
-    if (ret == ge::GRAPH_FAILED) {  // OP_TILING_CHECK_STATUS_RETURN(ret);
+    ge::graphStatus ret = PostLayerNormPtrFunc<LayerNormQuantRegTilingData>(&this->tilingData, this->layerNormPtrCon,
+                                                                            this->context);
+    if (ret == ge::GRAPH_FAILED) { // OP_TILING_CHECK_STATUS_RETURN(ret);
         return ret;
     }
 
-    this->maxUbSize = layerNormPtrCon.maxUbSize;  // maxUb
+    this->maxUbSize = layerNormPtrCon.maxUbSize; // maxUb
     this->numCol = layerNormPtrCon.numCol;
-    this->colsAligned = (this->numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;  // 对齐后
+    this->colsAligned = (this->numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE; // 对齐后
 
     auto XDesc = context->GetInputDesc(0);
     auto XType = ge::DT_FLOAT;
@@ -133,15 +135,16 @@ ge::graphStatus LayerNormQuantRegTiling::DoTiling()
     GetTilingBasicInfo();
     GetTilingSliceInfo();
 
-    if (tilingData.get_sliceNum() == 1) { 
-        uint64_t totalMemNeed =
-            static_cast<uint64_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum * colsAligned;
-        OP_CHECK_IF(colsAligned > (UINT_MAX / FP16_OTHER_USED),
-                        OP_LOGE(context->GetNodeName(), "sumData is invalid!"), return ge::GRAPH_FAILED);
+    if (tilingData.get_sliceNum() == 1) {
+        uint64_t totalMemNeed = static_cast<uint64_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum *
+                                colsAligned;
+        OP_CHECK_IF(colsAligned > (UINT_MAX / FP16_OTHER_USED), OP_LOGE(context->GetNodeName(), "sumData is invalid!"),
+                    return ge::GRAPH_FAILED);
         uint32_t sumData = (layerNormPtrCon.maxUbSize - NUM_TEMP_BUF -
-                           static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) / dtypeSize;
-        OP_CHECK_IF(CeilDiv(totalMemNeed, static_cast<uint64_t>(sumData)) > UINT_MAX ,
-                        OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"), return ge::GRAPH_FAILED);
+                            static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) /
+                           dtypeSize;
+        OP_CHECK_IF(CeilDiv(totalMemNeed, static_cast<uint64_t>(sumData)) > UINT_MAX,
+                    OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"), return ge::GRAPH_FAILED);
         ret = CheckSplit(&tilingData, totalMemNeed, static_cast<uint64_t>(sumData), layerNormPtrCon, context);
         if (ret == ge::GRAPH_FAILED) {
             return ret;
@@ -157,7 +160,7 @@ ge::graphStatus LayerNormQuantRegTiling::DoTiling()
     uint64_t tilingKey = LAYER_NORM_TILING_KEY_BASE;
     tilingKey += dtypeKey;
     tilingKey += tilingData.get_sliceNum() == 1 ? LAYER_NORM_TILING_KEY_FAST : 0;
-    context->SetTilingKey(tilingKey);  // 2000000000 + 100000000 + 10000000
+    context->SetTilingKey(tilingKey); // 2000000000 + 100000000 + 10000000
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
@@ -174,7 +177,7 @@ void LayerNormQuantRegTiling::PrintTilingRegBaseData()
     OP_LOGD(context, "numCore is %u", tilingData.get_numCore());
     OP_LOGD(context, "numLastDim is %u", tilingData.get_numLastDim());
     OP_LOGD(context, "colsAligned is %u", tilingData.get_colsAligned());
-    OP_LOGD(context, "numFirstDim is %u", tilingData.get_numFirstDim());   
+    OP_LOGD(context, "numFirstDim is %u", tilingData.get_numFirstDim());
     OP_LOGD(context, "nlFirstdimPerCore is %u", tilingData.get_nlFirstdimPerCore());
     OP_LOGD(context, "lFirstdimPerCore is %u", tilingData.get_lFirstdimPerCore());
     OP_LOGD(context, "firstDimPerTimes is %u", tilingData.get_firstDimPerTimes());
@@ -189,4 +192,4 @@ void LayerNormQuantRegTiling::PrintTilingRegBaseData()
     OP_LOGD(context, "End LayerNormQuantRegTiling printing");
 }
 
-}   // namespace optiling
+} // namespace optiling

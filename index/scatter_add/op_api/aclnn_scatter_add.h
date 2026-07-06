@@ -58,4 +58,4 @@ ACLNN_API aclnnStatus aclnnScatterAdd(void* workspace, uint64_t workspaceSize, a
 }
 #endif
 
-#endif  // OP_API_INC_SCATTER_OUT_H_
+#endif // OP_API_INC_SCATTER_OUT_H_

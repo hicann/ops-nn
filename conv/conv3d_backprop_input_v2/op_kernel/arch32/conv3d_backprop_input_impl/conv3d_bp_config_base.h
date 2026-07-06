@@ -22,8 +22,7 @@ using namespace AscendC;
 
 namespace Convolution3DBackprop {
 
-enum class CubeFormat
-{
+enum class CubeFormat {
     NDC1HWC0,
     NDHWC,
     NCDHW,
@@ -65,12 +64,7 @@ struct ConvType {
     using Type = T;                              // Convolution输入或输出的数据类型
 };
 
-enum class B2Condition : uint8_t
-{
-    BASEK_LT_HKWK = 0,
-    BASEK_GE_HKWK,
-    HKWK_EQ_ONE
-};
+enum class B2Condition : uint8_t { BASEK_LT_HKWK = 0, BASEK_GE_HKWK, HKWK_EQ_ONE };
 
 struct Conv3dConfig {
     // loadB2Condition含义:
@@ -115,8 +109,7 @@ struct ConvBpContext {
     constexpr static auto posD = D::pos;
 
     using ContextData = struct _ {
-        __aicore__ inline _()
-        {}
+        __aicore__ inline _() {}
     };
 };
 

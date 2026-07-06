@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_max_pool3d_with_argmax_v2.cpp
  * \brief
  */
@@ -29,24 +29,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
-    GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(GM_ADDR x, GM_ADDR y, GM_ADDR indices,
+                                                                GM_ADDR workspace, GM_ADDR tiling);
 
 class max_pool3d_with_argmax_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "max_pool3d_with_argmax_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "max_pool3d_with_argmax_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "max_pool3d_with_argmax_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "max_pool3d_with_argmax_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_no_expand_no_pad_float32)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 24;
     size_t inputByteSize = 1 * 16 * 32 * 32 * 32 * sizeof(float);
     size_t outByteSize = 1 * 16 * 16 * 16 * 16 * sizeof(float);
@@ -62,8 +56,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_no_expand_no_pad_float32)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2NoExpandIndicesTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2NoExpandIndicesTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2NoExpandIndicesTilingData*>(tiling);
     tilingDatafromBin->nc = 16;
     tilingDatafromBin->dx = 32;
     tilingDatafromBin->hx = 32;
@@ -119,7 +113,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_no_expand_no_pad_float32)
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_no_expand_with_pad_float32)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 2;
     size_t inputByteSize = 1 * 1 * 6 * 6 * 6 * sizeof(float);
     size_t outByteSize = 1 * 1 * 4 * 4 * 4 * sizeof(float);
@@ -135,8 +129,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_no_expand_with_pad_float32)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2NoExpandIndicesTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2NoExpandIndicesTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2NoExpandIndicesTilingData*>(tiling);
     tilingDatafromBin->nc = 1;
     tilingDatafromBin->dx = 6;
     tilingDatafromBin->hx = 6;
@@ -192,7 +186,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_no_expand_with_pad_float32)
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_dhwContinue_dhw_bigger_than_10240)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 1;
     size_t inputByteSize = 1 * 1 * 12 * 32 * 32 * sizeof(float);
     size_t outByteSize = 1 * 1 * 1 * 1 * 1 * sizeof(float);
@@ -208,8 +202,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_dhwC
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 12;
     tilingDatafromBin->inputShapes[1] = 32;
     tilingDatafromBin->inputShapes[2] = 32;
@@ -246,8 +240,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_dhwC
 }
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_dhwContinue_dhw_smaller_than_10240)
-{   
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+{
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 1;
     size_t inputByteSize = 1 * 1 * 8 * 32 * 32 * sizeof(float);
     size_t outByteSize = 1 * 1 * 1 * 1 * 1 * sizeof(float);
@@ -263,8 +257,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_dhwC
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 8;
     tilingDatafromBin->inputShapes[1] = 32;
     tilingDatafromBin->inputShapes[2] = 32;
@@ -302,7 +296,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_dhwC
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_hwContinue_dhw_smaller_than_10240)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 6;
     size_t inputByteSize = 1 * 1 * 3 * 64 * 32 * sizeof(float);
     size_t outByteSize = 1 * 1 * 2 * 4 * 1 * sizeof(float);
@@ -318,8 +312,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_hwCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 3;
     tilingDatafromBin->inputShapes[1] = 64;
     tilingDatafromBin->inputShapes[2] = 32;
@@ -357,7 +351,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float32_with_hwCo
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float16_with_hwContinue_hw_bigger_than_10240)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 4;
     size_t inputByteSize = 1 * 1 * 9 * 4409 * 3 * sizeof(half);
     size_t outByteSize = 1 * 1 * 4 * 1 * 1 * sizeof(half);
@@ -373,8 +367,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float16_with_hwCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 9;
     tilingDatafromBin->inputShapes[1] = 4409;
     tilingDatafromBin->inputShapes[2] = 3;
@@ -412,7 +406,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float16_with_hwCo
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float16_with_hwContinue_hw_smaller_than_10240_padding)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 8;
     size_t inputByteSize = 1 * 1 * 40 * 69 * 35 * sizeof(half);
     size_t outByteSize = 1 * 1 * 2 * 4 * 1 * sizeof(half);
@@ -428,8 +422,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float16_with_hwCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 40;
     tilingDatafromBin->inputShapes[1] = 69;
     tilingDatafromBin->inputShapes[2] = 35;
@@ -467,7 +461,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_float16_with_hwCo
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wContinue_dhw_smaller_than_10240_padding)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 10;
     size_t inputByteSize = 1 * 1 * 8 * 78 * 11 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 1 * 5 * 1 * 2 * sizeof(bfloat16_t);
@@ -483,8 +477,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 8;
     tilingDatafromBin->inputShapes[1] = 78;
     tilingDatafromBin->inputShapes[2] = 11;
@@ -522,7 +516,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wContinue_w_bigger_than_10240)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 9;
     size_t inputByteSize = 1 * 1 * 3 * 3 * 10245 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 1 * 3 * 3 * 1 * sizeof(bfloat16_t);
@@ -538,8 +532,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 3;
     tilingDatafromBin->inputShapes[1] = 3;
     tilingDatafromBin->inputShapes[2] = 10245;
@@ -592,8 +586,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 9;
     tilingDatafromBin->inputShapes[1] = 4409;
     tilingDatafromBin->inputShapes[2] = 9;
@@ -646,8 +640,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelTilingData*>(tiling);
     tilingDatafromBin->inputShapes[0] = 99;
     tilingDatafromBin->inputShapes[1] = 60;
     tilingDatafromBin->inputShapes[2] = 74;
@@ -685,7 +679,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float32_int32_NCDHW_600001)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 20;
     size_t inputByteSize = 4 * 30 * 14 * 8 * 14 * sizeof(float);
     size_t outByteSize = 4 * 30 * 7 * 2 * 3 * sizeof(float);
@@ -701,8 +695,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float32_int32_NCDHW_60
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2SimtTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2SimtTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2SimtTilingData* tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2SimtTilingData*>(
+        tiling);
     tilingDatafromBin->threadNums = 256;
     tilingDatafromBin->blockNums = 20;
     tilingDatafromBin->nDim = 4;
@@ -740,7 +734,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float32_int32_NCDHW_60
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float16_NCDHW_600002)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 19;
     size_t inputByteSize = 21 * 21 * 15 * 24 * 4 * sizeof(half);
     size_t outByteSize = 21 * 4 * 2 * 7 * 4 * sizeof(half);
@@ -756,8 +750,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float16_NCDHW_600002)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2SimtTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2SimtTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2SimtTilingData* tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2SimtTilingData*>(
+        tiling);
     tilingDatafromBin->threadNums = 256;
     tilingDatafromBin->blockNums = 19;
     tilingDatafromBin->nDim = 21;
@@ -795,7 +789,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_simt_float16_NCDHW_600002)
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_no_split)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 20;
     size_t inputByteSize = 1 * 1 * 14 * 12 * 122 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 1 * 1 * 1 * 1 * sizeof(bfloat16_t);
@@ -811,8 +805,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_no_split)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
     tilingDatafromBin->dInDim = 14;
     tilingDatafromBin->hInDim = 12;
     tilingDatafromBin->wInDim = 122;
@@ -852,7 +846,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_no_split)
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_d)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 20;
     size_t inputByteSize = 1 * 1 * 3 * 6 * 62000 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 1 * 4 * 3 * 336 * sizeof(bfloat16_t);
@@ -868,8 +862,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_d)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
     tilingDatafromBin->dInDim = 3;
     tilingDatafromBin->hInDim = 6;
     tilingDatafromBin->wInDim = 62000;
@@ -909,7 +903,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_d)
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dh)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 20;
     size_t inputByteSize = 1 * 2 * 10 * 512 * 141 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 2 * 7 * 8 * 5 * sizeof(bfloat16_t);
@@ -925,8 +919,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dh)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
     tilingDatafromBin->dInDim = 10;
     tilingDatafromBin->hInDim = 512;
     tilingDatafromBin->wInDim = 141;
@@ -966,7 +960,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dh)
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dhw)
 {
-    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 20;
     size_t inputByteSize = 1 * 8 * 32 * 32 * 256 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 8 * 9 * 9 * 65 * sizeof(bfloat16_t);
@@ -982,8 +976,8 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dhw)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
+    MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*
+        tilingDatafromBin = reinterpret_cast<MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData*>(tiling);
     tilingDatafromBin->dInDim = 32;
     tilingDatafromBin->hInDim = 32;
     tilingDatafromBin->wInDim = 256;

@@ -12,7 +12,8 @@
  * \file euclidean_norm_def.cpp
  * \brief EuclideanNorm 算子定义
  *
- * y = sqrt( sum( x^2 ) ) along axes ；reduce 类算子，按 sum reducer 路径实例化，pre-elewise=square、post-elewise=sqrt+Cast。
+ * y = sqrt( sum( x^2 ) ) along axes ；reduce 类算子，按 sum reducer
+ * 路径实例化，pre-elewise=square、post-elewise=sqrt+Cast。
  */
 #include "register/op_def_registry.h"
 
@@ -29,14 +30,12 @@ public:
         //   y dtype 与 x 一致。
         this->Input("x")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16,
-                       ge::DT_BF16,    ge::DT_BF16,
-                       ge::DT_FLOAT,   ge::DT_FLOAT,
-                       ge::DT_INT32,   ge::DT_INT32})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
         // 输入 axes：列出要 reduce 的维度的 1-D 整数张量。
         //   infershape 和 tiling 都依赖 axes 的实际数值（否则推不出 output shape、做不出合轴决策），
@@ -46,26 +45,22 @@ public:
         this->Input("axes")
             .ParamType(REQUIRED)
             .ValueDepend(OPTIONAL)
-            .DataType({ge::DT_INT32, ge::DT_INT64,
-                       ge::DT_INT32, ge::DT_INT64,
-                       ge::DT_INT32, ge::DT_INT64,
-                       ge::DT_INT32, ge::DT_INT64})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
+                       ge::DT_INT64})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
         // 输出 y：dtype 与 x 一致；shape 由 keep_dims 与 axes 共同决定（infershape 阶段算出）。
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16,
-                       ge::DT_BF16,    ge::DT_BF16,
-                       ge::DT_FLOAT,   ge::DT_FLOAT,
-                       ge::DT_INT32,   ge::DT_INT32})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
         // Attr keep_dims：true 时 reduce 后的轴保留为 size 1；false 时从 output shape 中删除。
         //   按 IR 注册顺序，索引 0。

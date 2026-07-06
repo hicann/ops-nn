@@ -18,7 +18,7 @@
 #ifndef K_MAX_SHAPE_DIM
 #define K_MAX_SHAPE_DIM 0
 #endif
-#if ASC_DEVKIT_MAJOR >=9
+#if ASC_DEVKIT_MAJOR >= 9
 #include "basic_api/kernel_vec_intf.h"
 #else
 #include "kernel_operator.h"
@@ -33,38 +33,37 @@ constexpr int32_t HELP_BUFFER_SIZE = 256;
 constexpr int32_t GATHER_ENABLE_SIZE = 512;
 
 template <typename INDICES_T, const bool NIS>
-class Gatherv2GaAllLoad
-{
+class Gatherv2GaAllLoad {
 public:
-    __aicore__ inline Gatherv2GaAllLoad(TPipe *pipe): pipe_(pipe){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, const GatherV2GaAllLoadTilingData* tilingData);
+    __aicore__ inline Gatherv2GaAllLoad(TPipe* pipe) : pipe_(pipe){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y,
+                                const GatherV2GaAllLoadTilingData* tilingData);
     __aicore__ inline void GenIndexBuf();
     __aicore__ inline void Process();
     __aicore__ inline void IndicesProcess(int32_t indicesNumPro, int32_t indicesNumOffset);
     __aicore__ inline void xProcess(int32_t gaCoreOffset, int32_t gaNumPro);
-    __aicore__ inline void yProcess(
-        int32_t indicesNumPro, int32_t indicesNumOffset, int32_t gaNumPro, int32_t gaCoreOffset);
-    __aicore__ inline void GatherProcess(
-        int32_t indicesUbOffset, int32_t indicesNumCurPro, __local_mem__ int32_t* indicesAddr,
-        __local_mem__ int8_t* xAddr, __local_mem__ int8_t* yAddr);
+    __aicore__ inline void yProcess(int32_t indicesNumPro, int32_t indicesNumOffset, int32_t gaNumPro,
+                                    int32_t gaCoreOffset);
+    __aicore__ inline void GatherProcess(int32_t indicesUbOffset, int32_t indicesNumCurPro,
+                                         __local_mem__ int32_t* indicesAddr, __local_mem__ int8_t* xAddr,
+                                         __local_mem__ int8_t* yAddr);
     __aicore__ inline void FixIndices(__local_mem__ INDICES_T* indicesAddr, int32_t indicesNumPro);
     __aicore__ inline void CopyInIndices(LocalTensor<INDICES_T>& indicesLocal, int32_t burstLen, int32_t coreOffset);
     __aicore__ inline void CopyInX(LocalTensor<int8_t>& xLocal, int32_t gaCoreOffset, int32_t gaNumPro);
     __aicore__ inline void CopyOutY(int32_t nBurst, int32_t indicesCoreOffset, int32_t pCoreOffset, int32_t gaNumPro);
-    __aicore__ inline void GatherProcessVfWithGA(
-        int32_t indicesNumCurPro, uint16_t gaNumPro, __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
-        __local_mem__ int8_t* yAddr);
-    __aicore__ inline void GatherProcessWithGA2(
-        int32_t indicesNumCurPro, uint16_t gaNumPro, __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
-        __local_mem__ int8_t* yAddr);
+    __aicore__ inline void GatherProcessVfWithGA(int32_t indicesNumCurPro, uint16_t gaNumPro,
+                                                 __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
+                                                 __local_mem__ int8_t* yAddr);
+    __aicore__ inline void GatherProcessWithGA2(int32_t indicesNumCurPro, uint16_t gaNumPro,
+                                                __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
+                                                __local_mem__ int8_t* yAddr);
     __aicore__ inline void InitializationX(int32_t xBufGaNum);
 
 private:
     GlobalTensor<int8_t> xGm_;
     GlobalTensor<INDICES_T> indicesGm_;
     GlobalTensor<int8_t> yGm_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     TBuf<QuePosition::VECCALC> xBuf_;
     TBuf<QuePosition::VECCALC> indicesBuf_;
     TBuf<QuePosition::VECCALC> tmpIndexBuf_;
@@ -82,8 +81,8 @@ private:
 };
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::Init(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, const GatherV2GaAllLoadTilingData* tilingData)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y,
+                                                               const GatherV2GaAllLoadTilingData* tilingData)
 {
     tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
@@ -113,7 +112,8 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::Init(
     pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER, tilingData_->yBufferSize);
 }
 
-__simd_vf__ inline void GenIndexBufVF(__ubuf__ int32_t* helpAddr, int32_t colFactor) {
+__simd_vf__ inline void GenIndexBufVF(__ubuf__ int32_t* helpAddr, int32_t colFactor)
+{
     AscendC::MicroAPI::RegTensor<int32_t> v0;
     AscendC::MicroAPI::RegTensor<int32_t> v1;
     AscendC::MicroAPI::RegTensor<int32_t> vd1;
@@ -141,8 +141,8 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GenIndexBuf()
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::IndicesProcess(
-    int32_t indicesNumPro, int32_t indicesNumOffset)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::IndicesProcess(int32_t indicesNumPro,
+                                                                         int32_t indicesNumOffset)
 {
     event_t eventIdMTE3toMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMTE3toMTE2);
@@ -169,8 +169,9 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::xProcess(int32_t gaCor
     CopyInX(xLocal, gaCoreOffset, gaNumPro);
 }
 
-
-__simd_vf__ inline void InitializationXVF(__ubuf__ int8_t* xAddr, uint32_t aSizeAligned, uint32_t gaOffset, uint16_t computeSize, uint16_t repeatimes, int32_t xBufGaNum) {
+__simd_vf__ inline void InitializationXVF(__ubuf__ int8_t* xAddr, uint32_t aSizeAligned, uint32_t gaOffset,
+                                          uint16_t computeSize, uint16_t repeatimes, int32_t xBufGaNum)
+{
     AscendC::MicroAPI::RegTensor<int8_t> zeroConstReg;
     AscendC::MicroAPI::Duplicate(zeroConstReg, int8_t(0));
     MicroAPI::MaskReg preg;
@@ -199,8 +200,8 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::InitializationX(int32_
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::yProcess(
-    int32_t indicesNumPro, int32_t indicesNumOffset, int32_t gaNumPro, int32_t gaCoreOffset)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::yProcess(int32_t indicesNumPro, int32_t indicesNumOffset,
+                                                                   int32_t gaNumPro, int32_t gaCoreOffset)
 {
     event_t eventIdMTE2toV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
@@ -229,8 +230,7 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::yProcess(
             int32_t indicesUbOffset = y * indicesNumToDealWithGa;
             __local_mem__ int32_t* curIndicesAddr = (__local_mem__ int32_t*)indicesAddr + indicesUbOffset;
             if (enableGather_) {
-                GatherProcessWithGA2(
-                    indicesNumCurPro, gaNumPro, (__local_mem__ int32_t*)curIndicesAddr, xAddr, yAddr);
+                GatherProcessWithGA2(indicesNumCurPro, gaNumPro, (__local_mem__ int32_t*)curIndicesAddr, xAddr, yAddr);
             } else {
                 GatherProcessVfWithGA(indicesNumCurPro, gaNumPro, (__local_mem__ int32_t*)curIndicesAddr, xAddr, yAddr);
             }
@@ -245,13 +245,13 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::yProcess(
             for (int32_t y = 0; y < yloopCount; y++) {
                 LocalTensor<int8_t> yLocal = yQueue_.AllocTensor<int8_t>();
                 __local_mem__ int8_t* yAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
-                int32_t indicesNumCurPro =
-                    y == (yloopCount - 1) ? indicesNumPro - (yloopCount - 1) * yBufANum : yBufANum;
+                int32_t indicesNumCurPro = y == (yloopCount - 1) ? indicesNumPro - (yloopCount - 1) * yBufANum :
+                                                                   yBufANum;
                 int32_t indicesUbOffset = y * yBufANum;
-                __local_mem__ int8_t* xAddrWithOffset =
-                    xAddr + gaIndex * (tilingData_->gSize + 1) * tilingData_->aSizeAligned;
-                GatherProcess(
-                    indicesUbOffset, indicesNumCurPro, (__local_mem__ int32_t*)indicesAddr, xAddrWithOffset, yAddr);
+                __local_mem__ int8_t* xAddrWithOffset = xAddr +
+                                                        gaIndex * (tilingData_->gSize + 1) * tilingData_->aSizeAligned;
+                GatherProcess(indicesUbOffset, indicesNumCurPro, (__local_mem__ int32_t*)indicesAddr, xAddrWithOffset,
+                              yAddr);
                 yQueue_.EnQue<int8_t>(yLocal);
                 CopyOutY(indicesNumCurPro, indicesNumOffset + y * yBufANum, gaCoreOffset + gaIndex, 1);
             }
@@ -259,8 +259,11 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::yProcess(
     }
 }
 
-__simd_vf__ inline void GatherProcessVF(__ubuf__ int8_t* xAddr, __ubuf__ int8_t* curYAddr, __ubuf__ int32_t* curIndicesAddr, int32_t indicesNumCurPro,
-                                        uint16_t computeSize, uint16_t repeatimes, uint32_t aSize, uint32_t aSizeAligned) {
+__simd_vf__ inline void GatherProcessVF(__ubuf__ int8_t* xAddr, __ubuf__ int8_t* curYAddr,
+                                        __ubuf__ int32_t* curIndicesAddr, int32_t indicesNumCurPro,
+                                        uint16_t computeSize, uint16_t repeatimes, uint32_t aSize,
+                                        uint32_t aSizeAligned)
+{
     MicroAPI::RegTensor<int8_t> vregTemp;
     MicroAPI::MaskReg preg;
 
@@ -279,9 +282,11 @@ __simd_vf__ inline void GatherProcessVF(__ubuf__ int8_t* xAddr, __ubuf__ int8_t*
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcess(
-    int32_t indicesUbOffset, int32_t indicesNumCurPro, __local_mem__ int32_t* indicesAddr, __local_mem__ int8_t* xAddr,
-    __local_mem__ int8_t* yAddr)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcess(int32_t indicesUbOffset,
+                                                                        int32_t indicesNumCurPro,
+                                                                        __local_mem__ int32_t* indicesAddr,
+                                                                        __local_mem__ int8_t* xAddr,
+                                                                        __local_mem__ int8_t* yAddr)
 {
     uint16_t computeSize = Ops::Base::GetVRegSize();
     uint16_t repeatimes = (tilingData_->aSize + computeSize - 1) / computeSize;
@@ -292,9 +297,10 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcess(
     GatherProcessVF(xAddr, curYAddr, curIndicesAddr, indicesNumCurPro, computeSize, repeatimes, aSize, aSizeAligned);
 }
 
-
-__simd_vf__ inline void RepeatOneVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr, int32_t indicesNumCurPro,
-                                    uint16_t gaNumPro, uint32_t aSize, uint32_t aSizeAligned, uint32_t gaOffset, uint32_t yOffset) {
+__simd_vf__ inline void RepeatOneVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr,
+                                    int32_t indicesNumCurPro, uint16_t gaNumPro, uint32_t aSize, uint32_t aSizeAligned,
+                                    uint32_t gaOffset, uint32_t yOffset)
+{
     MicroAPI::RegTensor<int8_t> vregTemp;
     MicroAPI::MaskReg preg;
 
@@ -314,8 +320,11 @@ __simd_vf__ inline void RepeatOneVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ i
     }
 }
 
-__simd_vf__ inline void RepeatOtherVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr, int32_t indicesNumCurPro,
-                                    uint16_t gaNumPro, uint32_t aSize, uint32_t aSizeAligned, uint32_t gaOffset, uint32_t yOffset, uint16_t repeatimes, uint16_t computeSize) {
+__simd_vf__ inline void RepeatOtherVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr,
+                                      int32_t indicesNumCurPro, uint16_t gaNumPro, uint32_t aSize,
+                                      uint32_t aSizeAligned, uint32_t gaOffset, uint32_t yOffset, uint16_t repeatimes,
+                                      uint16_t computeSize)
+{
     MicroAPI::RegTensor<int8_t> vregTemp;
     MicroAPI::MaskReg preg;
 
@@ -339,9 +348,11 @@ __simd_vf__ inline void RepeatOtherVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcessVfWithGA(
-    int32_t indicesNumCurPro, uint16_t gaNumPro, __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
-    __local_mem__ int8_t* yAddr)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcessVfWithGA(int32_t indicesNumCurPro,
+                                                                                uint16_t gaNumPro,
+                                                                                __local_mem__ int32_t* curIndicesAddr,
+                                                                                __local_mem__ int8_t* xAddr,
+                                                                                __local_mem__ int8_t* yAddr)
 {
     uint16_t computeSize = Ops::Base::GetVRegSize();
     uint16_t repeatimes = (tilingData_->aSize + computeSize - 1) / computeSize;
@@ -353,13 +364,16 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcessVfWithGA(
     if (repeatimes == 1) {
         RepeatOneVF(curIndicesAddr, xAddr, yAddr, indicesNumCurPro, gaNumPro, aSize, aSizeAligned, gaOffset, yOffset);
     } else {
-        RepeatOtherVF(curIndicesAddr, xAddr, yAddr, indicesNumCurPro, gaNumPro, aSize, aSizeAligned, gaOffset, yOffset, repeatimes, computeSize);
+        RepeatOtherVF(curIndicesAddr, xAddr, yAddr, indicesNumCurPro, gaNumPro, aSize, aSizeAligned, gaOffset, yOffset,
+                      repeatimes, computeSize);
     }
 }
 
-
-__simd_vf__ inline void GatherProcessWithGA2VF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr, __ubuf__ uint32_t* helpAddr, uint32_t gaOffset, uint32_t yOffset, uint16_t vRegBlockNum, uint16_t indicesLoopNum,
-                                    uint16_t aAlignedLoopNum, uint16_t aNumPerLoop, uint16_t pLoopNum, uint32_t blockStride, int32_t yInnerOffset, uint32_t tailANum)
+__simd_vf__ inline void GatherProcessWithGA2VF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr,
+                                               __ubuf__ int8_t* yAddr, __ubuf__ uint32_t* helpAddr, uint32_t gaOffset,
+                                               uint32_t yOffset, uint16_t vRegBlockNum, uint16_t indicesLoopNum,
+                                               uint16_t aAlignedLoopNum, uint16_t aNumPerLoop, uint16_t pLoopNum,
+                                               uint32_t blockStride, int32_t yInnerOffset, uint32_t tailANum)
 {
     MicroAPI::RegTensor<uint32_t> indicesReg;
     MicroAPI::RegTensor<uint32_t> upIndex;
@@ -384,8 +398,7 @@ __simd_vf__ inline void GatherProcessWithGA2VF(__ubuf__ int32_t* curIndicesAddr,
 
                 MicroAPI::Add(indicesReg, indicesReg, curUpIndex, preg);
                 MicroAPI::DataCopyGather(vd0, curXAddr, indicesReg, preg);
-                MicroAPI::DataCopy<int32_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY>(
-                    curYAddr, vd0, blockStride, preg);
+                MicroAPI::DataCopy<int32_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY>(curYAddr, vd0, blockStride, preg);
                 indicesAddr += vRegBlockNum;
                 curYAddr += yInnerOffset;
             }
@@ -402,9 +415,11 @@ __simd_vf__ inline void GatherProcessWithGA2VF(__ubuf__ int32_t* curIndicesAddr,
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcessWithGA2(
-    int32_t indicesNumCurPro, uint16_t gaNumPro, __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
-    __local_mem__ int8_t* yAddr)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcessWithGA2(int32_t indicesNumCurPro,
+                                                                               uint16_t gaNumPro,
+                                                                               __local_mem__ int32_t* curIndicesAddr,
+                                                                               __local_mem__ int8_t* xAddr,
+                                                                               __local_mem__ int8_t* yAddr)
 {
     constexpr uint16_t b32DtypeSize = 4;
     uint32_t ubBlockSize = Ops::Base::GetUbBlockSize();
@@ -428,11 +443,12 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::GatherProcessWithGA2(
     uint32_t tailANum = tailIndices * aNumPerLoop;
 
     GatherProcessWithGA2VF(curIndicesAddr, xAddr, yAddr, helpAddr, gaOffset, yOffset, vRegBlockNum, indicesLoopNum,
-                                    aAlignedLoopNum, aNumPerLoop, pLoopNum, blockStride, yInnerOffset, tailANum);
+                           aAlignedLoopNum, aNumPerLoop, pLoopNum, blockStride, yInnerOffset, tailANum);
 }
 
 template <typename INDICES_T, const bool NIS>
-__simd_vf__ inline void FixIndicesVF(__ubuf__ INDICES_T* indicesAddr, int32_t indicesNumPro, int32_t aSizeAligned, int32_t gatherDimSize, uint16_t computeSizeT, uint16_t repeatimes)
+__simd_vf__ inline void FixIndicesVF(__ubuf__ INDICES_T* indicesAddr, int32_t indicesNumPro, int32_t aSizeAligned,
+                                     int32_t gatherDimSize, uint16_t computeSizeT, uint16_t repeatimes)
 {
     AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
     AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
@@ -476,8 +492,8 @@ __simd_vf__ inline void FixIndicesVF(__ubuf__ INDICES_T* indicesAddr, int32_t in
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::FixIndices(
-    __local_mem__ INDICES_T* indicesAddr, int32_t indicesNumPro)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::FixIndices(__local_mem__ INDICES_T* indicesAddr,
+                                                                     int32_t indicesNumPro)
 {
     int32_t aSizeAligned = tilingData_->aSizeAligned;
     if (enableGather_) {
@@ -492,8 +508,8 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::FixIndices(
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyInIndices(
-    LocalTensor<INDICES_T>& indicesLocal, int32_t burstLen, int32_t coreOffset)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyInIndices(LocalTensor<INDICES_T>& indicesLocal,
+                                                                        int32_t burstLen, int32_t coreOffset)
 {
     DataCopyPadExtParams<INDICES_T> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -510,8 +526,8 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyInIndices(
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyInX(
-    LocalTensor<int8_t>& xLocal, int32_t gaCoreOffset, int32_t gaNumPro)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyInX(LocalTensor<int8_t>& xLocal, int32_t gaCoreOffset,
+                                                                  int32_t gaNumPro)
 {
     LoopModeParams loopModeParamsT1;
     loopModeParamsT1.loop1Size = gaNumPro;
@@ -535,15 +551,15 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyInX(
     dataCoptExtParams.srcStride = 0;
     dataCoptExtParams.dstStride = (tilingData_->aSizeAligned - tilingData_->aSize) / Ops::Base::GetUbBlockSize();
 
-    DataCopyPad(
-        xLocal[tilingData_->aSizeAligned], xGm_[(xGmOffset_ + gaCoreOffset) * tilingData_->gSize * tilingData_->aSize],
-        dataCoptExtParams, dataCopyPadExtParams);
+    DataCopyPad(xLocal[tilingData_->aSizeAligned],
+                xGm_[(xGmOffset_ + gaCoreOffset) * tilingData_->gSize * tilingData_->aSize], dataCoptExtParams,
+                dataCopyPadExtParams);
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyOutY(
-    int32_t nBurst, int32_t indicesCoreOffset, int32_t pCoreOffset, int32_t gaNumPro)
+__aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyOutY(int32_t nBurst, int32_t indicesCoreOffset,
+                                                                   int32_t pCoreOffset, int32_t gaNumPro)
 {
     LoopModeParams loopModeParamsT1;
     loopModeParamsT1.loop1Size = gaNumPro;
@@ -561,11 +577,9 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::CopyOutY(
     dataCoptExtParams.dstStride = 0;
 
     LocalTensor<int8_t> yLocal = yQueue_.DeQue<int8_t>();
-    DataCopyPad(
-        yGm_
-            [((xGmOffset_ + pCoreOffset) * tilingData_->indicesSize + indicesGmOffset_ + indicesCoreOffset) *
-             tilingData_->aSize],
-        yLocal, dataCoptExtParams);
+    DataCopyPad(yGm_[((xGmOffset_ + pCoreOffset) * tilingData_->indicesSize + indicesGmOffset_ + indicesCoreOffset) *
+                     tilingData_->aSize],
+                yLocal, dataCoptExtParams);
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
     yQueue_.FreeTensor(yLocal);
 }

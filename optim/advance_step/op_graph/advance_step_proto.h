@@ -26,14 +26,26 @@ namespace ge {
 
 *@par Inputs:
 * Six inputs, including:
-*@li input_tokens: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64 type. Format is ND.
-*@li sampled_token_ids: A 2-D input tensor. When spec_token and accepted_num are None, the first dim equal to num_queries and the second dim equal to one. When spec_token and accepted_num are NOT None, the first dim equal to num_seqs and the second dim equal to spec_num+1. Must be int64 type.
+*@li input_tokens: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When
+spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64
+type. Format is ND.
+*@li sampled_token_ids: A 2-D input tensor. When spec_token and accepted_num are None, the first dim equal to
+num_queries and the second dim equal to one. When spec_token and accepted_num are NOT None, the first dim equal to
+num_seqs and the second dim equal to spec_num+1. Must be int64 type.
 * Must be int64 type. Format is ND.
-*@li input_positions: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Format is ND.
-*@li seq_lens: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64 type. Format is ND.
-*@li slot_mapping: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64 type. Format is ND.
-*@li block_tables: When spec_token and accepted_num are None, A 1-D input tensor, and length equal to num_seqs. When spec_token and accepted_num are NOT None, A 2-D input tensor, the first dim equal to num_seqs and the second dim equal to spec_num+1. Must be int64 type. Format is ND.
-*@li spec_token: A 2-D optional input tensor, which the first dim equal to num_seqs and the second dim equal to spec_num. Must be int64 type. Format is ND.
+*@li input_positions: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When
+spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Format is ND.
+*@li seq_lens: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When spec_token
+and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64 type. Format
+is ND.
+*@li slot_mapping: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When
+spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64
+type. Format is ND.
+*@li block_tables: When spec_token and accepted_num are None, A 1-D input tensor, and length equal to num_seqs. When
+spec_token and accepted_num are NOT None, A 2-D input tensor, the first dim equal to num_seqs and the second dim equal
+to spec_num+1. Must be int64 type. Format is ND.
+*@li spec_token: A 2-D optional input tensor, which the first dim equal to num_seqs and the second dim equal to
+spec_num. Must be int64 type. Format is ND.
 *@li accepted_num: A 1-D optional input tensor, and length equal to num_seqs. Must be int64 type. Format is ND. \n
 
 *@par Attributes:

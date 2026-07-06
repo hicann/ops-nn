@@ -34,30 +34,26 @@ using namespace std;
 using namespace ge;
 
 class SyncBNTrainingUpdateTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SyncBNTrainingUpdateTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SyncBNTrainingUpdateTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SyncBNTrainingUpdateTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SyncBNTrainingUpdateTiling TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tiling_data) {
-  auto data = tiling_data->GetData();
-  string result;
-  for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
-    result += std::to_string((reinterpret_cast<const int64_t *>(tiling_data->GetData())[i / sizeof(int64_t)]));
-    result += " ";
-  }
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
+    auto data = tiling_data->GetData();
+    string result;
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
+        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -72,8 +68,8 @@ static void InitPlatForm(
     platformInfo.Init();
 }
 
-
-TEST_F(SyncBNTrainingUpdateTiling, SyncBNTrainingUpdaeTiling_001) {
+TEST_F(SyncBNTrainingUpdateTiling, SyncBNTrainingUpdaeTiling_001)
+{
     std::string op_type("SyncBNTrainingUpdate");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -83,7 +79,8 @@ TEST_F(SyncBNTrainingUpdateTiling, SyncBNTrainingUpdaeTiling_001) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape Shape = {{1000}, {1000}};;    
+    gert::StorageShape Shape = {{1000}, {1000}};
+    ;
     Ops::Base::ElewiseCompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;

@@ -22,15 +22,9 @@ using namespace std;
 
 class DeformableConv2dTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeformableConv2dTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeformableConv2dTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeformableConv2dTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeformableConv2dTiling TearDown" << std::endl; }
 };
 
 TEST_F(DeformableConv2dTiling, DeformableConv2dTiling_ascendc_001)
@@ -86,14 +80,13 @@ TEST_F(DeformableConv2dTiling, DeformableConv2dTiling_ascendc_001)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeAttrs(
-                          {{"kernel_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"stride", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"deformable_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"modulated", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"kernel_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"stride", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"deformable_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"modulated", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -164,14 +157,13 @@ TEST_F(DeformableConv2dTiling, DeformableConv2dTiling_ascendc_002)
                       .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeAttrs(
-                          {{"kernel_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"stride", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"deformable_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"modulated", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"kernel_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"stride", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"deformable_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"modulated", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -242,14 +234,13 @@ TEST_F(DeformableConv2dTiling, DeformableConv2dTiling_ascendc_003)
                       .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeAttrs(
-                          {{"kernel_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"stride", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"deformable_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"modulated", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"kernel_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"stride", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"deformable_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"modulated", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

@@ -18,9 +18,10 @@
 using namespace AscendC;
 using namespace AdvanceStepNs;
 
-extern "C" __global__ __aicore__ void advance_step(
-    GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
-    GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void advance_step(GM_ADDR input_tokens, GM_ADDR sampled_token_ids,
+                                                   GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
+                                                   GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num,
+                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 
@@ -29,16 +30,14 @@ extern "C" __global__ __aicore__ void advance_step(
 #if __CCE_AICORE__ == 220
     if (TILING_KEY_IS(1)) {
         KernelAdvanceStep<int64_t> op;
-        op.Init(
-            input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, userWs,
-            &tilingData);
+        op.Init(input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, userWs,
+                &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(2)) {
         TPipe Pipe;
         KernelAdvanceStepSpec<int64_t> op;
-        op.Init(
-            input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, spec_token,
-            accepted_num, userWs, &tilingData, &Pipe);
+        op.Init(input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, spec_token,
+                accepted_num, userWs, &tilingData, &Pipe);
         op.Process();
     }
 

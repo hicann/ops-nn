@@ -35,8 +35,8 @@ constexpr uint64_t TILING_KEY_ZEROING_Y = 40000;
 constexpr int64_t SIMT_MAX_THREAD_NUM = 2048;           // SIMT每核能启动多少线程，目前定为2048
 constexpr int64_t SIMT_DCACHE_SIZE = 65536LL;           // SIMT要占用掉UB中的64k空间作为DCache
 constexpr int64_t RESERVED_WORKSPACE_SIZE = 16777216LL; // Workspace为AscendC框架要预留16M空间
-constexpr int64_t ONE_CORE_MIN_COPY_BYTES =
-    16384LL; // 每个Core至少应该DataCopy多少字节数，小于这个数量直接单核拷贝，这里设置为16k
+constexpr int64_t
+    ONE_CORE_MIN_COPY_BYTES = 16384LL; // 每个Core至少应该DataCopy多少字节数，小于这个数量直接单核拷贝，这里设置为16k
 constexpr int64_t SIZEOF_B32 = sizeof(float);
 constexpr int64_t ALIGNED_B32_ELEM_NUM = 32LL / SIZEOF_B32; // 每32字节块，有8个B32元素，用于对齐UB内的数据
 constexpr int64_t INT32_MAX_INTEGER = 2147483647LL;
@@ -69,13 +69,9 @@ constexpr int64_t DIM0_x1_SHAPE = 2;
 namespace Ops::NN::Optiling {
 class SparseTensorDenseMatMulTilingArch35 : public TilingBaseClass {
 public:
-    explicit SparseTensorDenseMatMulTilingArch35(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit SparseTensorDenseMatMulTilingArch35(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -86,10 +82,7 @@ protected:
         return true;
     }
     ge::graphStatus DoOpTiling() override;
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
@@ -237,20 +230,18 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetPlatformInfo()
     socVersion_ = ascendcPlatform.GetSocVersion();
     // maxThreadNum（该平台信息参数仅赋值，目前未使用）
     maxThreadNum_ = SIMT_MAX_THREAD_NUM;
-    OP_CHECK_IF(
-        maxThreadNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get platform maxThreadNum."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maxThreadNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get platform maxThreadNum."),
+                return ge::GRAPH_FAILED);
     // aivCoreNum
     aivCoreNum_ = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
-    OP_CHECK_IF(
-        aivCoreNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get platform aivCoreNum."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(aivCoreNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get platform aivCoreNum."),
+                return ge::GRAPH_FAILED);
     // ubSize
     uint64_t ubsz;
     ascendcPlatform.GetCoreMemSize(CoreMemType::UB, ubsz);
     ubSize_ = static_cast<int64_t>(ubsz);
-    OP_CHECK_IF(
-        ubSize_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get platform ubSize."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get platform ubSize."),
+                return ge::GRAPH_FAILED);
     // 计算实际可用的UB空间（这里仅扣除给SIMT预留的DCACHE大小）
     availUbSize_ = ubSize_ - SIMT_DCACHE_SIZE;
 
@@ -370,15 +361,9 @@ uint64_t SparseTensorDenseMatMulTilingArch35::GetTilingKey() const
     return tilingKey;
 }
 
-inline bool SparseTensorDenseMatMulTilingArch35::IsEmptyOutput() const
-{
-    return m_ == 0 || p_ == 0;
-}
+inline bool SparseTensorDenseMatMulTilingArch35::IsEmptyOutput() const { return m_ == 0 || p_ == 0; }
 
-inline bool SparseTensorDenseMatMulTilingArch35::IsZeroingOutput() const
-{
-    return n_ == 0;
-}
+inline bool SparseTensorDenseMatMulTilingArch35::IsZeroingOutput() const { return n_ == 0; }
 
 inline bool SparseTensorDenseMatMulTilingArch35::IsValuesTypeB16() const
 {
@@ -391,9 +376,8 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetValueDependTensorInfo()
     OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::GetValueDependTensorInfo()");
 
     auto* tensorX1ShapePtr = context_->GetInputTensor(IDX_INPUT_X1_SHAPE);
-    OP_CHECK_IF(
-        tensorX1ShapePtr == nullptr, OP_LOGE(context_->GetNodeName(), "Failed to get ValueDepend input x1_shape"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorX1ShapePtr == nullptr,
+                OP_LOGE(context_->GetNodeName(), "Failed to get ValueDepend input x1_shape"), return ge::GRAPH_FAILED);
     const int64_t* x1ShapeData = tensorX1ShapePtr->GetData<int64_t>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, x1ShapeData);
     x1Row_ = static_cast<int64_t>(*x1ShapeData);
@@ -410,16 +394,15 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     auto x1IndicesRanks = static_cast<int64_t>(x1IndicesShape_.GetDimNum());
     OP_CHECK_IF(
         x1IndicesRanks != RANKS_X1_INDICES,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x1_indices", 
-            std::to_string(x1IndicesRanks).c_str(), std::to_string(RANKS_X1_INDICES).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x1_indices", std::to_string(x1IndicesRanks).c_str(),
+                                     std::to_string(RANKS_X1_INDICES).c_str()),
         return ge::GRAPH_FAILED);
     auto x1IndicesDim0 = static_cast<int64_t>(x1IndicesShape_.GetDim(0));
     auto x1IndicesDim1 = static_cast<int64_t>(x1IndicesShape_.GetDim(1));
     if (x1IndicesDim1 != DIM1_X1_INDICES) {
         std::string reasonMsg = "The 1st axis of input x1_indices must be " + std::to_string(DIM1_X1_INDICES);
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "x1_indices", ToString(x1IndicesShape_).c_str(), reasonMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1_indices", ToString(x1IndicesShape_).c_str(),
+                                              reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -427,9 +410,8 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     auto x1ValuesRanks = static_cast<int64_t>(x1ValuesShape_.GetDimNum());
     OP_CHECK_IF(
         x1ValuesRanks != RANKS_X1_VALUES,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x1_values", 
-            std::to_string(x1ValuesRanks).c_str(), std::to_string(RANKS_X1_VALUES).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x1_values", std::to_string(x1ValuesRanks).c_str(),
+                                     std::to_string(RANKS_X1_VALUES).c_str()),
         return ge::GRAPH_FAILED);
     auto x1valuesDim0 = static_cast<int64_t>(x1ValuesShape_.GetDim(0));
     if (x1valuesDim0 != x1IndicesDim0) {
@@ -442,27 +424,23 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
 
     // x1_shape
     auto x1ShapeRanks = static_cast<int64_t>(x1ShapeShape_.GetDimNum());
-    OP_CHECK_IF(
-        x1ShapeRanks != RANKS_X1_SHAPE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x1_shape", std::to_string(x1ShapeRanks).c_str(),
-            std::to_string(RANKS_X1_SHAPE).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x1ShapeRanks != RANKS_X1_SHAPE,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x1_shape", std::to_string(x1ShapeRanks).c_str(),
+                                             std::to_string(RANKS_X1_SHAPE).c_str()),
+                return ge::GRAPH_FAILED);
     auto x1ShapeDim0 = static_cast<int64_t>(x1ShapeShape_.GetDim(0));
     if (x1ShapeDim0 != DIM0_x1_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE(
-            context_->GetNodeName(), "x1_shape", std::to_string(x1ShapeDim0).c_str(),
-            std::to_string(DIM0_x1_SHAPE).c_str());
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x1_shape", std::to_string(x1ShapeDim0).c_str(),
+                                      std::to_string(DIM0_x1_SHAPE).c_str());
         return ge::GRAPH_FAILED;
     }
 
     // x2
     auto x2Ranks = static_cast<int64_t>(x2Shape_.GetDimNum());
-    OP_CHECK_IF(
-        x2Ranks != RANKS_X2,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), 
-            "x2", std::to_string(x2Ranks).c_str(), std::to_string(RANKS_X2).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x2Ranks != RANKS_X2,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x2", std::to_string(x2Ranks).c_str(),
+                                             std::to_string(RANKS_X2).c_str()),
+                return ge::GRAPH_FAILED);
     // 对x2的dim0、dim1的check延后到GetAndCheckInputParams，因为要先取得m、n的值
 
     return ge::GRAPH_SUCCESS;
@@ -472,38 +450,34 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputDTypes()
 {
     OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::CheckInputDTypes()");
 
-    static const std::unordered_set<ge::DataType> SUPPORTED_INDICES_DTYPES = {
-        ge::DataType::DT_INT32, ge::DataType::DT_INT64};
+    static const std::unordered_set<ge::DataType> SUPPORTED_INDICES_DTYPES = {ge::DataType::DT_INT32,
+                                                                              ge::DataType::DT_INT64};
     static const std::unordered_set<ge::DataType> SUPPORTED_VALUES_DTYPES = {
         ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT, ge::DataType::DT_INT32};
 
     // x1_indices
-    OP_CHECK_IF(
-        SUPPORTED_INDICES_DTYPES.count(x1IndicesDType_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x1_indices", ToString(x1IndicesDType_).c_str(), "INT32 or INT64"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SUPPORTED_INDICES_DTYPES.count(x1IndicesDType_) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x1_indices", ToString(x1IndicesDType_).c_str(),
+                                          "INT32 or INT64"),
+                return ge::GRAPH_FAILED);
 
     // x1_values
-    OP_CHECK_IF(
-        SUPPORTED_VALUES_DTYPES.count(x1ValuesDType_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x1_values", ToString(x1ValuesDType_).c_str(), "FLOAT16, FLOAT or INT32"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SUPPORTED_VALUES_DTYPES.count(x1ValuesDType_) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x1_values", ToString(x1ValuesDType_).c_str(),
+                                          "FLOAT16, FLOAT or INT32"),
+                return ge::GRAPH_FAILED);
 
     // x1_shape
     OP_CHECK_IF(
         x1ShapeDType_ != ge::DataType::DT_INT64,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x1_shape", ToString(x1ShapeDType_).c_str(), "INT64"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x1_shape", ToString(x1ShapeDType_).c_str(), "INT64"),
         return ge::GRAPH_FAILED);
 
     // x2
     if (x2DType_ != x1ValuesDType_) {
         std::string dtypeMsg = ToString(x2DType_) + " and " + ToString(x1ValuesDType_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "x2 and x1_values", dtypeMsg.c_str(),
-            "The dtypes of input x2 and input x1_values must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x2 and x1_values", dtypeMsg.c_str(),
+                                               "The dtypes of input x2 and input x1_values must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -524,25 +498,28 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
     if (adjointB_) {
         if (x2Col != n_) {
             std::string shapeMsg = x1OriginMatrix + " and " + x2OriginMatrix;
-            std::string reasonMsg =
-                "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not match the N-axis of x1, "
-                "where the N-axis of x2 is the 1st dim of x2's original shape, and the N-axis of x1 is the " +
-                std::string(adjointA_?"0th":"1st") + " dim of x1's original shape."
-                "Currently, x2 needs to be transposed before matrix multiplication";
+            std::string reasonMsg = "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not "
+                                    "match the N-axis of x1, "
+                                    "where the N-axis of x2 is the 1st dim of x2's original shape, and the N-axis of "
+                                    "x1 is the " +
+                                    std::string(adjointA_ ? "0th" : "1st") +
+                                    " dim of x1's original shape."
+                                    "Currently, x2 needs to be transposed before matrix multiplication";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2", shapeMsg.c_str(),
-                reasonMsg.c_str());
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         p_ = static_cast<int64_t>(x2Row);
     } else {
         if (x2Row != n_) {
             std::string shapeMsg = x1OriginMatrix + " and " + x2OriginMatrix;
-            std::string reasonMsg =
-                "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not match the N-axis of x1, "
-                "where the N-axis of x2 is the 0th dim of x2's original shape, and the N-axis of x1 is the " +
-                std::string(adjointA_?"0th":"1st") + " dim of x1's original shape";
+            std::string reasonMsg = "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not "
+                                    "match the N-axis of x1, "
+                                    "where the N-axis of x2 is the 0th dim of x2's original shape, and the N-axis of "
+                                    "x1 is the " +
+                                    std::string(adjointA_ ? "0th" : "1st") + " dim of x1's original shape";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2", shapeMsg.c_str(),
-                reasonMsg.c_str());
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         p_ = static_cast<int64_t>(x2Col);
@@ -553,59 +530,61 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
     if (nnz_ < 0 || nnz_ >= INT32_MAX_INTEGER) {
         std::string reasonMsg = "The 0th axis of input x1_indices must be in the range of [0, INT32_MAX)";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1_indices", ToString(x1IndicesShape_).c_str(),
-            reasonMsg.c_str());
+                                              reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
-    if (m_ < 0 || n_ < 0 || p_ < 0 || m_ >= INT32_MAX_INTEGER || n_ >= INT32_MAX_INTEGER || p_ >= INT32_MAX_INTEGER){
+    if (m_ < 0 || n_ < 0 || p_ < 0 || m_ >= INT32_MAX_INTEGER || n_ >= INT32_MAX_INTEGER || p_ >= INT32_MAX_INTEGER) {
         std::string shapeMsg = x1Matrix + " and " + x2Matrix;
         std::string reasonMsg = "The m, n and p (derived from x1 matrix [m, n] and x2 matrix [n, p]) "
-            "must be in the range of [0, INT32_MAX)";
+                                "must be in the range of [0, INT32_MAX)";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2", shapeMsg.c_str(),
-            reasonMsg.c_str());
+                                               reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
-    if(p_ > 0) {
+    if (p_ > 0) {
         if (m_ >= INT32_MAX_FLOATING / p_) {
             std::string shapeMsg = x1Matrix + " and " + x2Matrix;
-            std::string reasonMsg =
-                "The total element count of resulting matrix (product of x1 and x2) must not exceed INT32_MAX, "
-                "but now it is m * p (" + std::to_string(m_) + " * " + std::to_string(p_) +
-                "), which is derived from x1 matrix [m, n] and x2 matrix [n, p])";
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2",
-                shapeMsg.c_str(), reasonMsg.c_str());
+            std::string reasonMsg = "The total element count of resulting matrix (product of x1 and x2) must not "
+                                    "exceed INT32_MAX, "
+                                    "but now it is m * p (" +
+                                    std::to_string(m_) + " * " + std::to_string(p_) +
+                                    "), which is derived from x1 matrix [m, n] and x2 matrix [n, p])";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2", shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         if (n_ >= INT32_MAX_FLOATING / p_) {
-            std::string reasonMsg =
-                "The total element count of x2 matrix must not exceed INT32_MAX, "
-                "but now it is n * p (" + std::to_string(n_) + " * " + std::to_string(p_) +
-                "), which is derived from x2 matrix [n, p])";
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2",
-                x2Matrix.c_str(), reasonMsg.c_str());
+            std::string reasonMsg = "The total element count of x2 matrix must not exceed INT32_MAX, "
+                                    "but now it is n * p (" +
+                                    std::to_string(n_) + " * " + std::to_string(p_) +
+                                    "), which is derived from x2 matrix [n, p])";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2", x2Matrix.c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         if (nnz_ >= INT32_MAX_INTEGER / p_) {
             std::string shapeMsg = x2Matrix + " and " + ToString(x1IndicesShape_);
-            std::string reasonMsg =
-                "The compute workload of matrix multiplication from x1 and x2 must not exceed INT32_MAX, "
-                "but now it is nnz * p (" + std::to_string(nnz_) + " * " + std::to_string(p_) +
-                "), where p is derived from x2 matrix [n, p], "
-                "and nnz (i.e., the number of non-zero elements of x1) is the 0th dim of input x1_indices";
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x2 and x1_indices",
-                shapeMsg.c_str(), reasonMsg.c_str());
+            std::string
+                reasonMsg = "The compute workload of matrix multiplication from x1 and x2 must not exceed INT32_MAX, "
+                            "but now it is nnz * p (" +
+                            std::to_string(nnz_) + " * " + std::to_string(p_) +
+                            "), where p is derived from x2 matrix [n, p], "
+                            "and nnz (i.e., the number of non-zero elements of x1) is the 0th dim of input x1_indices";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x2 and x1_indices", shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
 
     if ((m_ > 0 && static_cast<double>(nnz_) / m_ > n_) || (n_ > 0 && static_cast<double>(nnz_) / n_ > m_)) {
         std::string shapeMsg = ToString(x1IndicesShape_);
-        std::string reasonMsg = "nnz cannot be greater than m * n, where m and n is derived from x1 matrix [m, n]: "
-            + x1Matrix +
-            ", and nnz (i.e., the number of non-zero elements of x1) is the 1st dim of input x1_indices";
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "x1_indices", shapeMsg.c_str(), reasonMsg.c_str());
+        std::string
+            reasonMsg = "nnz cannot be greater than m * n, where m and n is derived from x1 matrix [m, n]: " +
+                        x1Matrix +
+                        ", and nnz (i.e., the number of non-zero elements of x1) is the 1st dim of input x1_indices";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1_indices", shapeMsg.c_str(),
+                                              reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -618,17 +597,17 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputShapes()
 
     // y ranks
     auto yRanks = static_cast<int64_t>(yShape_.GetDimNum());
-    OP_CHECK_IF(
-        yRanks != RANKS_Y,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y", 
-            std::to_string(yRanks).c_str(), std::to_string(RANKS_Y).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yRanks != RANKS_Y,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y", std::to_string(yRanks).c_str(),
+                                             std::to_string(RANKS_Y).c_str()),
+                return ge::GRAPH_FAILED);
 
     // y dims
     auto yDim0 = static_cast<int64_t>(yShape_.GetDim(0));
     if (yDim0 != m_) {
         std::string shapeMsg = ToString(yShape_) + " and [" + std::to_string(m_) + ", " + std::to_string(n_) + "]";
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and x1_shape", shapeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "y and x1_shape", shapeMsg.c_str(),
             "The 1st axis of output y must be equal to m (derived from x1 matrix [m, n])");
         return ge::GRAPH_FAILED;
     }
@@ -636,7 +615,8 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputShapes()
     auto yDim1 = static_cast<int64_t>(yShape_.GetDim(1));
     if (yDim1 != p_) {
         std::string shapeMsg = ToString(yShape_) + " and [" + std::to_string(n_) + ", " + std::to_string(p_) + "]";
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and x2", shapeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "y and x2", shapeMsg.c_str(),
             "The 2nd axis of output y must be equal to p (derived from x2 matrix [n, p])");
         return ge::GRAPH_FAILED;
     }
@@ -650,9 +630,8 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputDTypes()
 
     if (yDType_ != x1ValuesDType_) {
         std::string dtypeMsg = ToString(yDType_) + " and " + ToString(x1ValuesDType_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "y and x1_values", dtypeMsg.c_str(), 
-            "The dtypes of output y and input x1_values must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and x1_values", dtypeMsg.c_str(),
+                                               "The dtypes of output y and input x1_values must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -689,8 +668,8 @@ void SparseTensorDenseMatMulTilingArch35::TilingForCompute()
     // 用元素总数，每核线程数，计算需要启动多少核（SIMT计算用）
     computeTotalElemNum_ = nnz_ * p_;
     computePerCoreThreadNum_ = SIMT_MAX_THREAD_NUM;
-    computeUsedCoreNum_ =
-        std::min<int64_t>(Ops::Base::CeilDiv(computeTotalElemNum_, computePerCoreThreadNum_), aivCoreNum_);
+    computeUsedCoreNum_ = std::min<int64_t>(Ops::Base::CeilDiv(computeTotalElemNum_, computePerCoreThreadNum_),
+                                            aivCoreNum_);
 }
 
 void SparseTensorDenseMatMulTilingArch35::TilingForOutput()
@@ -710,21 +689,19 @@ void SparseTensorDenseMatMulTilingArch35::TilingForOutput()
 
     // 计算一次ubLoop能处理多少元素：可用ub大小/每个元素大小（32位）/TQUE数目（2个，in和out）/每个TQue的Buffer数目（DB=2）/
     // 元素数目对齐到32字节（这里是FloorDiv）
-    int64_t oneUbLoopMaxElemNum =
-        availUbSize_ / SIZEOF_B32 / OUT_TQUE_NUM / OUT_BUFFER_NUM / ALIGNED_B32_ELEM_NUM * ALIGNED_B32_ELEM_NUM;
+    int64_t oneUbLoopMaxElemNum = availUbSize_ / SIZEOF_B32 / OUT_TQUE_NUM / OUT_BUFFER_NUM / ALIGNED_B32_ELEM_NUM *
+                                  ALIGNED_B32_ELEM_NUM;
 
     // 计算非尾核的tiling
-    outFormerCoreUbFactor_ = std::min(
-        initAndOutFormerCoreElemNum_,
-        oneUbLoopMaxElemNum); // 非尾核心一次Loop要么处理所有元素，要么能处理多少处理多少
+    outFormerCoreUbFactor_ = std::min(initAndOutFormerCoreElemNum_,
+                                      oneUbLoopMaxElemNum); // 非尾核心一次Loop要么处理所有元素，要么能处理多少处理多少
     outFormerCoreUbLoopTimes_ = Ops::Base::CeilDiv(initAndOutFormerCoreElemNum_, outFormerCoreUbFactor_);
-    outFormerCoreUbTailFactor_ =
-        initAndOutFormerCoreElemNum_ - (outFormerCoreUbLoopTimes_ - 1) * outFormerCoreUbFactor_;
+    outFormerCoreUbTailFactor_ = initAndOutFormerCoreElemNum_ -
+                                 (outFormerCoreUbLoopTimes_ - 1) * outFormerCoreUbFactor_;
 
     // 计算尾核的tiling
-    outTailCoreUbFactor_ = std::min(
-        initAndOutTailCoreElemNum_,
-        oneUbLoopMaxElemNum); // 非尾核心一次Loop要么处理所有元素，要么能处理多少处理多少
+    outTailCoreUbFactor_ = std::min(initAndOutTailCoreElemNum_,
+                                    oneUbLoopMaxElemNum); // 非尾核心一次Loop要么处理所有元素，要么能处理多少处理多少
     outTailCoreUbLoopTimes_ = Ops::Base::CeilDiv(initAndOutTailCoreElemNum_, outTailCoreUbFactor_);
     outTailCoreUbTailFactor_ = initAndOutTailCoreElemNum_ - (outTailCoreUbLoopTimes_ - 1) * outTailCoreUbFactor_;
 }
@@ -808,7 +785,7 @@ void SparseTensorDenseMatMulTilingArch35::LogTilingInfo() const
     OP_LOGI(context_->GetNodeName(), "%s", ss.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(
-    SparseTensorDenseMatMul, SparseTensorDenseMatMulTilingArch35, SPARSE_TENSOR_DENSE_MAT_MUL_TILING_ARCH35_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(SparseTensorDenseMatMul, SparseTensorDenseMatMulTilingArch35,
+                             SPARSE_TENSOR_DENSE_MAT_MUL_TILING_ARCH35_PRIORITY);
 
 } // namespace Ops::NN::Optiling

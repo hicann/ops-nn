@@ -1,12 +1,12 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file common.h
@@ -36,7 +36,7 @@
  * @param [out] fileSize: file size
  * @return read result
  */
-bool ReadFile(const std::string &filePath, size_t fileSize, void *buffer, size_t bufferSize);
+bool ReadFile(const std::string& filePath, size_t fileSize, void* buffer, size_t bufferSize);
 
 /**
  * @brief Write data to file
@@ -45,6 +45,6 @@ bool ReadFile(const std::string &filePath, size_t fileSize, void *buffer, size_t
  * @param [in] size: size to write
  * @return write result
  */
-bool WriteFile(const std::string &filePath, const void *buffer, size_t size);
+bool WriteFile(const std::string& filePath, const void* buffer, size_t size);
 
 #endif // COMMON_H

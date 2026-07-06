@@ -90,10 +90,10 @@ static std::vector<QuantBatchMatmulV4TilingMsdTestParam> GetParams()
     return params;
 }
 namespace {
-    void InitPlatformInfo(const std::string &socVersion,  string &compileInfoStr)
-    {
-        if (socVersion.compare("Ascend910B4") == 0) {
-            compileInfoStr = R"({
+void InitPlatformInfo(const std::string& socVersion, string& compileInfoStr)
+{
+    if (socVersion.compare("Ascend910B4") == 0) {
+        compileInfoStr = R"({
                 "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
                                 "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
                                 "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -101,11 +101,11 @@ namespace {
                                 "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": aicNum,
                                 "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore"}
                                 })";
-        }
     }
 }
+} // namespace
 
-static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
+static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam& param)
 {
     std::cout << "run case " << param.caseName << std::endl;
     std::vector<string> testParam;
@@ -213,7 +213,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aivNum));
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
     if (param.socVersion.compare("Ascend910B4") == 0) {
-            aicoreSpec["cube_freq"] = "1650";
+        aicoreSpec["cube_freq"] = "1650";
     }
 
     // platform info
@@ -222,17 +222,17 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     optiling::QuantBatchMatmulV4CompileInfo compileInfo;
 
     auto kernelHold = gert::KernelRunContextFaker()
-                            .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
-                            .Outputs({&compileInfo})
-                            .Build();
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
 
     std::string opType("QuantBatchMatmulV4");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
@@ -260,7 +260,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
                       .Workspace(workspace)
                       .SetOpType(opType)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -291,6 +291,6 @@ TEST_P(TestQuantBatchMatmulV4TilingMsd, generalTest)
 }
 
 // format: platform
-//         caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype biasDtype x1ScaleDtype x2ScaleDtype yScaleDtype yOffset yDtype aicNum aivNum
-//         bolckdim, result, tilingkey
+//         caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype biasDtype x1ScaleDtype x2ScaleDtype
+//         yScaleDtype yOffset yDtype aicNum aivNum bolckdim, result, tilingkey
 INSTANTIATE_TEST_CASE_P(MMA8W4MSD, TestQuantBatchMatmulV4TilingMsd, testing::ValuesIn(GetParams()));

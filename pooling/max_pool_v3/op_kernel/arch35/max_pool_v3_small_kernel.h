@@ -44,10 +44,10 @@ public:
 private:
     template <typename M, typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
-    __aicore__ inline void CopyInMultiRowsSparse(
-        int64_t offset, const ComputeParam& param, int32_t inCols, int64_t colsInUb, int64_t channelStride);
-    __aicore__ inline void CopyInMultiRows(
-        int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t colsInUb);
+    __aicore__ inline void CopyInMultiRowsSparse(int64_t offset, const ComputeParam& param, int32_t inCols,
+                                                 int64_t colsInUb, int64_t channelStride);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
+                                           uint32_t colsInUb);
     __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen);
     template <typename M, typename U>
     __aicore__ inline void ComputeMultiRow(const ComputeParam& param);
@@ -58,13 +58,9 @@ private:
     template <typename M, typename U>
     __aicore__ inline void ComputeSingleKernel(const ComputeParam& param);
     template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(
-        uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements, uint32_t wIn, uint32_t hStride,
-        uint32_t wStride, LocalTensor<U>& indexLocal);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements,
+                                          uint32_t wIn, uint32_t hStride, uint32_t wStride, LocalTensor<U>& indexLocal);
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -166,8 +162,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::BaseCompute()
                             rowStart * tilingData_->wInDim + colStart;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->hOutDim * tilingData_->wOutDim +
                             hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
-        int64_t inRows =
-            tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim : (rows - 1) * sH + tilingData_->kH;
+        int64_t inRows = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim :
+                                                                  (rows - 1) * sH + tilingData_->kH;
         int64_t inCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + tilingData_->kW;
         ComputeParam param = {n, inRows, colsInUb, rows, cols, sH, sW, batchElementsIn};
         if (isSparse) {
@@ -192,8 +188,9 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::BaseCompute()
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3SmallKernel<T>::CopyInMultiRowsSparse(
-    int64_t offset, const ComputeParam& param, int32_t inCols, int64_t colsInUb, int64_t channelStride)
+__aicore__ inline void MaxPoolV3SmallKernel<T>::CopyInMultiRowsSparse(int64_t offset, const ComputeParam& param,
+                                                                      int32_t inCols, int64_t colsInUb,
+                                                                      int64_t channelStride)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyExtParams extParams;
@@ -238,8 +235,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::CopyInMultiRowsSparse(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3SmallKernel<T>::CopyInMultiRows(
-    int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t colsInUb)
+__aicore__ inline void MaxPoolV3SmallKernel<T>::CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount,
+                                                                int64_t blockLen, uint32_t colsInUb)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     int64_t channelStride = blockCount * colsInUb;
@@ -269,8 +266,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::CopyInMultiRows(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3SmallKernel<T>::CopyMaxOut(
-    int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen)
+__aicore__ inline void MaxPoolV3SmallKernel<T>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
+                                                           int64_t blockLen)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -284,9 +281,9 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::CopyMaxOut(
 
 template <typename T>
 template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void MaxPoolV3SmallKernel<T>::GenGatherIndex(
-    uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements, uint32_t wIn, uint32_t hStride, uint32_t wStride,
-    LocalTensor<U>& indexLocal)
+__aicore__ inline void MaxPoolV3SmallKernel<T>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut,
+                                                               uint32_t batchElements, uint32_t wIn, uint32_t hStride,
+                                                               uint32_t wStride, LocalTensor<U>& indexLocal)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         GenGatherIndexSingleRow<U>(wStride, indexLocal);
@@ -333,9 +330,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeMultiBatch(const ComputeP
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        MaxPoolSplitBatch<T, U>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride, oneLoopElements,
-            tailLoopElements);
+        MaxPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride,
+                                oneLoopElements, tailLoopElements);
     }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -377,9 +373,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeMultiRow(const ComputePar
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        MaxPoolSplitH<T, U>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, param.inCols, oneLoopStrideH,
-            oneLoopElements, tailLoopElements);
+        MaxPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, param.inCols,
+                            oneLoopStrideH, oneLoopElements, tailLoopElements);
     }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -426,9 +421,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeSingleRow(const ComputePa
         {
             MicroAPI::RegTensor<U> v0;
             MicroAPI::DataCopy(v0, indexAddr);
-            MaxPoolSplitW<M, U>(
-                dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, param.inCols, num,
-                tailW);
+            MaxPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                param.inCols, num, tailW);
         }
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
@@ -438,9 +432,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeSingleRow(const ComputePa
             {
                 MicroAPI::RegTensor<U> v0;
                 MicroAPI::DataCopy(v0, indexAddr);
-                MaxPoolSplitW<M, U>(
-                    dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, param.inCols, num,
-                    tailW);
+                MaxPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                    param.inCols, num, tailW);
             }
         }
     }
@@ -479,84 +472,77 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeSingleKernel(const Comput
 
     switch (regNum) {
         case 1:
-            MaxPoolSingleKernelCommon<T, U, ONE>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, ONE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 2:
-            MaxPoolSingleKernelCommon<T, U, TWO>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, TWO>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 3:
-            MaxPoolSingleKernelCommon<T, U, THREE>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, THREE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                   oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                   tailLoopElements);
             break;
         case 4:
-            MaxPoolSingleKernelCommon<T, U, FOUR>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, FOUR>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                  oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 5:
-            MaxPoolSingleKernelCommon<T, U, FIVE>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, FIVE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                  oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 6:
-            MaxPoolSingleKernelCommon<T, U, SIX>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, SIX>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 7:
-            MaxPoolSingleKernelCommon<T, U, SEVEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, SEVEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                   oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                   tailLoopElements);
             break;
         case 8:
-            MaxPoolSingleKernelCommon<T, U, EIGHT>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, EIGHT>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                   oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                   tailLoopElements);
             break;
         case 9:
-            MaxPoolSingleKernelCommon<T, U, NINE>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, NINE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                  oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 10:
-            MaxPoolSingleKernelCommon<T, U, TEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, TEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements);
             break;
         case 11:
-            MaxPoolSingleKernelCommon<T, U, ELEVEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, ELEVEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                    oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                    tailLoopElements);
             break;
         case 12:
-            MaxPoolSingleKernelCommon<T, U, TWELVE>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, TWELVE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                    oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                    tailLoopElements);
             break;
         case 13:
-            MaxPoolSingleKernelCommon<T, U, THIRTEEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, THIRTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                      oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                      tailLoopElements);
             break;
         case 14:
-            MaxPoolSingleKernelCommon<T, U, FOURTEEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, FOURTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                      oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                      tailLoopElements);
             break;
         case 15:
-            MaxPoolSingleKernelCommon<T, U, FIFTEEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, FIFTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                     oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                     tailLoopElements);
             break;
         case 16:
-            MaxPoolSingleKernelCommon<T, U, SIXTEEN>(
-                dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH,
-                oneLoopStrideW, tailLoopElements);
+            MaxPoolSingleKernelCommon<T, U, SIXTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                     oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                     tailLoopElements);
             break;
     }
     inputQue_.FreeTensor<M>(xLocal);

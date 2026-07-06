@@ -26,21 +26,18 @@ class MatMulV3TilingHelper {
 public:
     static void ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
     static void CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
-    static MatMulV3L0C2Out GetL0C2Out(
-        const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, const MatMulV3RunInfo& runInfo);
-    static uint64_t GetStepSmallK(
-        bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
-    static void AdjustBL1TilingCommon(
-        uint64_t aBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-        MatMulV3RunInfo& runInfo);
-    static void AdjustAL1TilingCommon(
-        uint64_t bBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-        MatMulV3RunInfo& runInfo);
+    static MatMulV3L0C2Out GetL0C2Out(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                      const MatMulV3RunInfo& runInfo);
+    static uint64_t GetStepSmallK(bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                  MatMulV3RunInfo& runInfo);
+    static void AdjustBL1TilingCommon(uint64_t aBatchDimAll, const MatmulV3CompileInfo& compileInfo,
+                                      const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
+    static void AdjustAL1TilingCommon(uint64_t bBatchDimAll, const MatmulV3CompileInfo& compileInfo,
+                                      const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
     static void ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo);
     static bool IsSelfNonContiguous(const gert::TilingContext* context);
-    static void GetRebalanceBlock(
-        const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo,
-        const gert::TilingContext* context);
+    static void GetRebalanceBlock(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                  MatMulV3RunInfo& runInfo, const gert::TilingContext* context);
     static double GetHbmBW(fe::PlatFormInfos* platformInfo);
     static double GetL2BW(fe::PlatFormInfos* platformInfo);
     static double GetCoreFreq(fe::PlatFormInfos* platformInfo);

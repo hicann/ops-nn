@@ -19,25 +19,25 @@
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
 
-
 using namespace AscendC;
 
-#define EXTEND_CONV_TRANSPOSE_RUN_OP(...)                       \
-    do {                                                        \
-        __VA_ARGS__ op;                                         \
-        op.Init(filter, x, y, workSpace, &tilingData, bias, scale);\
-        op.Process();                                           \
+#define EXTEND_CONV_TRANSPOSE_RUN_OP(...)                           \
+    do {                                                            \
+        __VA_ARGS__ op;                                             \
+        op.Init(filter, x, y, workSpace, &tilingData, bias, scale); \
+        op.Process();                                               \
     } while (0)
 
-#define EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(...)          \
-    do {                                                        \
-        __VA_ARGS__ opVecTranspose;                             \
-        opVecTranspose.Init(filter, workSpace, &tilingData);    \
-        opVecTranspose.Process();                               \
-        opVecTranspose.Destroy();                               \
+#define EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(...)       \
+    do {                                                     \
+        __VA_ARGS__ opVecTranspose;                          \
+        opVecTranspose.Init(filter, workSpace, &tilingData); \
+        opVecTranspose.Process();                            \
+        opVecTranspose.Destroy();                            \
     } while (0)
 
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling, uint8_t loadB1Condition>
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
+          uint8_t loadB1Condition>
 __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                  GM_ADDR scale, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
@@ -73,15 +73,16 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
 
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         EXTEND_CONV_TRANSPOSE_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,
-                                                     DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode, groupConvMode,
-                                                     loadB1Condition, false, DTYPE_SCALE, FORMAT_SCALE>);
+                                                     DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode,
+                                                     groupConvMode, loadB1Condition, false, DTYPE_SCALE, FORMAT_SCALE>);
     } else if constexpr ((isBasicBlockTiling == true) && (loadB1Condition == TPL_VEC_TO_L1_C04)) {
         EXTEND_CONV_TRANSPOSE_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,
-                                                      DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode, groupConvMode,
-                                                      TPL_GM_TO_L1, true, DTYPE_SCALE, FORMAT_SCALE>);
+                                                      DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode,
+                                                      groupConvMode, TPL_GM_TO_L1, true, DTYPE_SCALE, FORMAT_SCALE>);
     } else {
-        EXTEND_CONV_TRANSPOSE_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,
-                                                      DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode, groupConvMode,
-                                                      loadB1Condition, false, DTYPE_SCALE, FORMAT_SCALE>);
+        EXTEND_CONV_TRANSPOSE_RUN_OP(
+            Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
+                             loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition, false, DTYPE_SCALE,
+                             FORMAT_SCALE>);
     }
 }

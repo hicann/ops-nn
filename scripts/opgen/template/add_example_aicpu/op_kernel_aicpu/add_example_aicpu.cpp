@@ -20,26 +20,27 @@ const uint32_t kFirstInputIndex = 0;
 const uint32_t kSecondInputIndex = 1;
 const uint32_t kSuccess = 0;
 const uint32_t kParamInvalid = 1;
-}  // namespace
+} // namespace
 
 namespace aicpu {
-uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx) {
-  Tensor* input0 = ctx.Input(kFirstInputIndex);
-  Tensor* input1 = ctx.Input(kSecondInputIndex);
-  Tensor* output = ctx.Output(0);
+uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx)
+{
+    Tensor* input0 = ctx.Input(kFirstInputIndex);
+    Tensor* input1 = ctx.Input(kSecondInputIndex);
+    Tensor* output = ctx.Output(0);
 
-  if (input0 == nullptr || input1 == nullptr || output == nullptr) {
-    KERNEL_LOG_ERROR("Invalid argument");
-    return kParamInvalid;
-  }
+    if (input0 == nullptr || input1 == nullptr || output == nullptr) {
+        KERNEL_LOG_ERROR("Invalid argument");
+        return kParamInvalid;
+    }
 
-  if (input0->GetDataSize() == 0 || input1->GetDataSize() == 0) {
-    return kSuccess;
-  }
+    if (input0->GetDataSize() == 0 || input1->GetDataSize() == 0) {
+        return kSuccess;
+    }
 
-  // 继续补充算子计算逻辑
+    // 继续补充算子计算逻辑
 }
 
 REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
 
-}  // namespace aicpu
+} // namespace aicpu

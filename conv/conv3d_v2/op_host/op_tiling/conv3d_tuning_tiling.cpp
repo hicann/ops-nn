@@ -11,11 +11,10 @@
 #include "conv3d_tuning_tiling.h"
 
 namespace tuningtiling {
-DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3D, Conv3DInputArgs, aDtype, bDtype, cDtype, biasDtype, aShapeN, aShapeD,
-                              aShapeH, aShapeW, bShapeN, bShapeC, bShapeD, bShapeH, bShapeW, cShapeD,
-                              cShapeH, cShapeW, aFormat, bFormat, cFormat, groups, strideD,
-                              strideH, strideW, dilationD, dilationH, dilationW, padHead, padTail, padTop,
-                              padBottom, padLeft, padRight, biasFlag);
+DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3D, Conv3DInputArgs, aDtype, bDtype, cDtype, biasDtype, aShapeN, aShapeD, aShapeH,
+                                 aShapeW, bShapeN, bShapeC, bShapeD, bShapeH, bShapeW, cShapeD, cShapeH, cShapeW,
+                                 aFormat, bFormat, cFormat, groups, strideD, strideH, strideW, dilationD, dilationH,
+                                 dilationW, padHead, padTail, padTop, padBottom, padLeft, padRight, biasFlag);
 
 REGISTER_TUNING_TILING_CLASS(Conv3D, Conv3DTunerTiling);
-}  // namespace tuningtiling
+} // namespace tuningtiling

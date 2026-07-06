@@ -24,9 +24,9 @@ using namespace AscendC;
 // -------------------------------------------------------------------------
 
 template <typename T>
-__aicore__ inline void KernelSigmoidCrossEntropyWithLogitsV2<T>::Init(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR weight, GM_ADDR posWeight, GM_ADDR loss,
-    SigmoidCrossEntropyWithLogitsV2TilingData tiling)
+__aicore__ inline void KernelSigmoidCrossEntropyWithLogitsV2<T>::Init(GM_ADDR predict, GM_ADDR target, GM_ADDR weight,
+                                                                      GM_ADDR posWeight, GM_ADDR loss,
+                                                                      SigmoidCrossEntropyWithLogitsV2TilingData tiling)
 {
     this->tiling = tiling;
     coreOffset = tiling.tileNum * tiling.tileLength * GetBlockIdx();
@@ -249,8 +249,10 @@ __aicore__ inline void KernelSigmoidCrossEntropyWithLogitsV2<T>::CopyOut(int32_t
 // -------------------------------------------------------------------------
 // 入口函数：使用 DTYPE_PREDICT 进行模板实例化
 // -------------------------------------------------------------------------
-extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_v2(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR weight, GM_ADDR posWeight, GM_ADDR loss, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_v2(GM_ADDR predict, GM_ADDR target,
+                                                                           GM_ADDR weight, GM_ADDR posWeight,
+                                                                           GM_ADDR loss, GM_ADDR workspace,
+                                                                           GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SigmoidCrossEntropyWithLogitsV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SigmoidCrossEntropyWithLogitsV2TilingData, tiling_data, tiling);

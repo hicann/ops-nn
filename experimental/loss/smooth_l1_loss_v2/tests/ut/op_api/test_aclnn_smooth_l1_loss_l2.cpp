@@ -24,15 +24,9 @@ using namespace std;
 
 class smooth_l1_loss : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "smooth_l1_loss_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "smooth_l1_loss_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "smooth_l1_loss_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "smooth_l1_loss_test TearDown" << endl; }
 };
 
 TEST_F(smooth_l1_loss, smooth_l1_loss_fp16_none)

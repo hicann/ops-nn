@@ -32,14 +32,15 @@ namespace ge {
 * @par Attributes:
 * @li round_mode: An optional string. Defaults to "rint".
 * Support "rint", "round", "floor".
-* @li dst_type: An optional int. Declare the output y dtype. 
+* @li dst_type: An optional int. Declare the output y dtype.
 * Support DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN or DT_FLOAT8_E5M2. Defaults to DT_FLOAT4_E2M1.
 * @li scale_alg: An optional int. The algorithm for the scale in quantization. Default to 0.
-* Support DT_FLOAT4_E2M1/DT_FLOAT4_E1M2/DT_FLOAT8_E4M3FN/DT_FLOAT8_E5M2(OCP Microscaling Formats (Mx) Specification, count 0) 
+* Support DT_FLOAT4_E2M1/DT_FLOAT4_E1M2/DT_FLOAT8_E4M3FN/DT_FLOAT8_E5M2(OCP Microscaling Formats (Mx) Specification,
+count 0)
 * or DT_FLOAT4_E2M1(Dynamic Dtype Range, count 2).
 * @li dst_type_max: Takes effect when scale_alg=2, with a default value of 0.0, where 0.0 presents max_type as the
 maximum value of the dst_type.
-* If other numeric values are provides, the scale must be computed based on the input value. 
+* If other numeric values are provides, the scale must be computed based on the input value.
 * Currently supported valid values are 0.0/6.0/7.0.
 
 * @par Outputs:

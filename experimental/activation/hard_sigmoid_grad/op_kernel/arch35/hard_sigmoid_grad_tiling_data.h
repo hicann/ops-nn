@@ -17,11 +17,11 @@
 #define _HARD_SIGMOID_GRAD_TILING_DATA_H_
 
 struct HardSigmoidGradTilingData {
-    int64_t totalLength = 0;    // total number of elements
-    int64_t blockFactor = 0;    // elements per core
-    int64_t ubFactor = 0;       // elements per UB tile
-    float alpha = 0.16666666f;  // alpha parameter
-    float beta = 0.5f;          // beta parameter
+    int64_t totalLength = 0;   // total number of elements
+    int64_t blockFactor = 0;   // elements per core
+    int64_t ubFactor = 0;      // elements per UB tile
+    float alpha = 0.16666666f; // alpha parameter
+    float beta = 0.5f;         // beta parameter
 };
 
 #endif

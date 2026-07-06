@@ -59,9 +59,15 @@ inline void ScatterNdUpdateArch32Tiling::SetTilingKeyMode()
     tilingContext_->SetTilingKey(tilingKey_);
 }
 
-inline bool ScatterNdUpdateArch32Tiling::IsLinearIndex(uint64_t totalLength) const { return totalLength <= MAX_LENGTH_INT32; }
+inline bool ScatterNdUpdateArch32Tiling::IsLinearIndex(uint64_t totalLength) const
+{
+    return totalLength <= MAX_LENGTH_INT32;
+}
 
-inline bool ScatterNdUpdateArch32Tiling::IsSort(uint64_t totalLength) const { return totalLength <= MAX_FLOAT_EXPRESS_INT32; }
+inline bool ScatterNdUpdateArch32Tiling::IsSort(uint64_t totalLength) const
+{
+    return totalLength <= MAX_FLOAT_EXPRESS_INT32;
+}
 
 inline void ScatterNdUpdateArch32Tiling::Tiling4LinearIndex(uint64_t indexRow, uint64_t indexDim)
 {
@@ -71,7 +77,8 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4LinearIndex(uint64_t indexRow, u
         indicesMask_[i] = strides;
         strides *= varRefShape.GetDim(i);
     }
-    uint64_t coeff = isInt64Indices_ ? (2 * indexDim + LINEAR_INDEX_COEFF_OFFSET) : (indexDim + LINEAR_INDEX_COEFF_OFFSET);
+    uint64_t coeff = isInt64Indices_ ? (2 * indexDim + LINEAR_INDEX_COEFF_OFFSET) :
+                                       (indexDim + LINEAR_INDEX_COEFF_OFFSET);
     uint64_t maxBlockLength = ubSize_ / coeff / sizeof(int);
     blockLength_ = (maxBlockLength / ALIGNED_SIZE) * ALIGNED_SIZE;
     blockLength_ = std::min(blockLength_, (uint64_t)SORT_BLOCK_LENGTH);
@@ -101,8 +108,9 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4Scatter(uint64_t totalLength)
     frontRow_ = tailRow_ + 1;
     frontNum_ = totalLength % coreNum_;
     tailNum_ = tailRow_ == 0 ? 0 : coreNum_ - frontNum_;
-    ubLengthForUpdates_ =
-        ((ubSize_ - SORT_BLOCK_LENGTH * SORT_USE_GM_NUM * sizeof(int)) / ALIGNED_SIZE * ALIGNED_SIZE) / dataTypeSize_;
+    ubLengthForUpdates_ = ((ubSize_ - SORT_BLOCK_LENGTH * SORT_USE_GM_NUM * sizeof(int)) / ALIGNED_SIZE *
+                           ALIGNED_SIZE) /
+                          dataTypeSize_;
     scatterAlignLength_ = (scatterLength_ + scatterAlignNum - 1) & ~(scatterAlignNum - 1);
     formDim_ = scatterAlignLength_ / ubLengthForUpdates_;
 
@@ -173,7 +181,8 @@ inline uint64_t ScatterNdUpdateArch32Tiling::Tiling4HpScatterShape()
 inline void ScatterNdUpdateArch32Tiling::Tiling4HpIndexTile(uint64_t updateUbBytes)
 {
     uint64_t ubForIndex = (ubSize_ > updateUbBytes) ? (ubSize_ - updateUbBytes) : 0;
-    uint64_t coeff = isInt64Indices_ ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) : (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
+    uint64_t coeff = isInt64Indices_ ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) :
+                                       (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
     if (coeff == 0) {
         coeff = 1;
     }
@@ -230,9 +239,8 @@ inline ge::graphStatus ScatterNdUpdateArch32Tiling::HandleViewStride()
         int64_t dimSize = varShape.GetDim(dim);
         int64_t actualStride = stride->GetStride(dim);
         if (dimSize > 1 && actualStride != static_cast<int64_t>(expectedStride)) {
-            OP_LOGE_FOR_INVALID_STRIDE(
-                tilingContext_->GetNodeType(), "var", std::to_string(actualStride).c_str(),
-                std::to_string(expectedStride).c_str());
+            OP_LOGE_FOR_INVALID_STRIDE(tilingContext_->GetNodeType(), "var", std::to_string(actualStride).c_str(),
+                                       std::to_string(expectedStride).c_str());
             return ge::GRAPH_FAILED;
         }
         expectedStride *= static_cast<uint64_t>(dimSize);
@@ -326,8 +334,8 @@ ge::graphStatus ScatterNdUpdateArch32Tiling::SetKernelTiling()
     tilingData_.hpTiling.set_hpScatterTileTail(hpScatterTileTail_);
     tilingData_.hpTiling.set_hpRowBytesAligned(hpRowBytesAligned_);
     tilingData_.hpTiling.set_hpRowsPerBatch(hpRowsPerBatch_);
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     TilingDataPrint();
     return ge::GRAPH_SUCCESS;
@@ -357,14 +365,13 @@ static ge::graphStatus TilingParseForScatterNdUpdateArch32(gert::TilingParseCont
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = ubSize;
-    OP_CHECK_IF(
-        (compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

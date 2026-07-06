@@ -21,14 +21,8 @@ using namespace std;
 
 class l2_trans_quant_param_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_trans_quant_param_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_trans_quant_param_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_trans_quant_param_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_trans_quant_param_test TearDown" << endl; }
 };
 
 TEST_F(l2_trans_quant_param_test, ascend910B2_test_normal_input1)

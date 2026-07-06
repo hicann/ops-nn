@@ -133,7 +133,7 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
     // 参数设置
     bool activateLeft = true;
     char* roundModeOptional = const_cast<char*>("rint");
-    int64_t dstDtype = 36;  // FLOAT8_E4M3FN
+    int64_t dstDtype = 36; // FLOAT8_E4M3FN
     int64_t scaleAlg = 1;  // cuBLAS
     double maxDtypeValue = 0.0;
 
@@ -150,7 +150,8 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建 groupIndex aclTensor
-    ret = CreateAclTensor(groupIndexHostData, groupIndexShape, &groupIndexDeviceAddr, aclDataType::ACL_INT64, &groupIndex);
+    ret = CreateAclTensor(groupIndexHostData, groupIndexShape, &groupIndexDeviceAddr, aclDataType::ACL_INT64,
+                          &groupIndex);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> groupIndexTensorPtr(groupIndex, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> groupIndexDeviceAddrPtr(groupIndexDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -162,7 +163,8 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建 mxscale1Out aclTensor
-    ret = CreateAclTensor(mxscale1OutHostData, mxscale1OutShape, &mxscale1OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscale1Out);
+    ret = CreateAclTensor(mxscale1OutHostData, mxscale1OutShape, &mxscale1OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &mxscale1Out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscale1OutTensorPtr(mxscale1Out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscale1OutDeviceAddrPtr(mxscale1OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -174,7 +176,8 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建 mxscale2Out aclTensor
-    ret = CreateAclTensor(mxscale2OutHostData, mxscale2OutShape, &mxscale2OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscale2Out);
+    ret = CreateAclTensor(mxscale2OutHostData, mxscale2OutShape, &mxscale2OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &mxscale2Out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscale2OutTensorPtr(mxscale2Out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscale2OutDeviceAddrPtr(mxscale2OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -185,8 +188,10 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
 
     // 调用aclnnSwigluBackwardMxQuantWithDualAxis第一段接口（带 groupIndex 输入）
     ret = aclnnSwigluBackwardMxQuantWithDualAxisGetWorkspaceSize(x, yGrad, groupIndex, activateLeft, roundModeOptional,
-        scaleAlg, dstDtype, maxDtypeValue, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluBackwardMxQuantWithDualAxisGetWorkspaceSize failed. ERROR: %d\n", ret);
+                                                                 scaleAlg, dstDtype, maxDtypeValue, y1Out, mxscale1Out,
+                                                                 y2Out, mxscale2Out, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS,
+              LOG_PRINT("aclnnSwigluBackwardMxQuantWithDualAxisGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -200,7 +205,8 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
 
     // 调用aclnnSwigluBackwardMxQuantWithDualAxis第二段接口
     ret = aclnnSwigluBackwardMxQuantWithDualAxis(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluBackwardMxQuantWithDualAxis failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluBackwardMxQuantWithDualAxis failed. ERROR: %d\n", ret);
+              return ret);
 
     // （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -212,14 +218,12 @@ int aclnnSwigluBackwardMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& st
     std::vector<uint8_t> y1OutData(size1, 0);
     std::vector<uint8_t> y2OutData(size2, 0);
 
-    ret = aclrtMemcpy(y1OutData.data(), y1OutData.size() * sizeof(uint8_t), y1OutDeviceAddr,
-                      size1 * sizeof(uint8_t), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y1Out from device to host failed. ERROR: %d\n", ret);
-              return ret);
-    ret = aclrtMemcpy(y2OutData.data(), y2OutData.size() * sizeof(uint8_t), y2OutDeviceAddr,
-                      size2 * sizeof(uint8_t), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y2Out from device to host failed. ERROR: %d\n", ret);
-              return ret);
+    ret = aclrtMemcpy(y1OutData.data(), y1OutData.size() * sizeof(uint8_t), y1OutDeviceAddr, size1 * sizeof(uint8_t),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y1Out from device to host failed. ERROR: %d\n", ret); return ret);
+    ret = aclrtMemcpy(y2OutData.data(), y2OutData.size() * sizeof(uint8_t), y2OutDeviceAddr, size2 * sizeof(uint8_t),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y2Out from device to host failed. ERROR: %d\n", ret); return ret);
 
     // 打印部分输出结果
     LOG_PRINT("y1Out first 10 elements:\n");
@@ -242,7 +246,7 @@ int main()
     aclrtStream stream;
     auto ret = aclnnSwigluBackwardMxQuantWithDualAxisTest(deviceId, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluBackwardMxQuantWithDualAxisTest failed. ERROR: %d\n", ret);
-        return ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

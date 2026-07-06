@@ -21,20 +21,13 @@
 
 using namespace std;
 using namespace op;
-class l2_batch_matmul_weight_nz_test : public testing::Test
-{
+class l2_batch_matmul_weight_nz_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "batch_matmul_weight_nz_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "batch_matmul_weight_nz_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "batch_matmul_weight_nz_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "batch_matmul_weight_nz_test TearDown" << endl; }
     static void BatchMatMulCommonTest(TensorDesc a_desc, TensorDesc b_desc, TensorDesc out_desc,
-                                         aclnnStatus expect_status, int8_t cubeMathType = KEEP_DTYPE)
+                                      aclnnStatus expect_status, int8_t cubeMathType = KEEP_DTYPE)
     {
         auto ut = OP_API_UT(aclnnBatchMatMulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cubeMathType);
 
@@ -44,7 +37,7 @@ protected:
         EXPECT_EQ(aclRet, expect_status);
         // SAMPLE: precision simulate
         if (expect_status == ACL_SUCCESS) {
-            ut.TestPrecision();  // soc version  2. 二段接口
+            ut.TestPrecision(); // soc version  2. 二段接口
         }
     }
 };

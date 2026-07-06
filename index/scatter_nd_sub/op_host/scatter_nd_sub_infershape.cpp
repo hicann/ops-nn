@@ -66,4 +66,4 @@ static ge::graphStatus InferShapeScatterNdSub(gert::InferShapeContext* context)
 }
 
 IMPL_OP_INFERSHAPE(ScatterNdSub).InferShape(InferShapeScatterNdSub);
-}  // namespace ops
+} // namespace ops

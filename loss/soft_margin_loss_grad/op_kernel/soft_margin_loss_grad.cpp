@@ -25,9 +25,8 @@ using TilingData4 = SoftMarginLossGradTilingData<SMLG_RANK_4>;
 using TilingData8 = SoftMarginLossGradTilingData<SMLG_RANK_8>;
 
 template <int RANK>
-__global__ __aicore__ void soft_margin_loss_grad(
-    GM_ADDR self, GM_ADDR target, GM_ADDR grad_output,
-    GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void soft_margin_loss_grad(GM_ADDR self, GM_ADDR target, GM_ADDR grad_output, GM_ADDR out,
+                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
     GM_ADDR ins[3] = {self, target, grad_output};
     GM_ADDR outs[1] = {out};

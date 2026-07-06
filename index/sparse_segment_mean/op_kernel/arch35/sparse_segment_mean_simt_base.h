@@ -42,8 +42,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtGet
     uint32_t blockId, int64_t outterSize, uint32_t blockNums, uint32_t segmentNum, __gm__ uint32_t* segment_offset,
     __gm__ SEGMENTIDS_T* segment_ids)
 {
-    for (int64_t i = blockId * blockDim.x + threadIdx.x; i < outterSize + 1;
-         i = i + blockNums * blockDim.x) {
+    for (int64_t i = blockId * blockDim.x + threadIdx.x; i < outterSize + 1; i = i + blockNums * blockDim.x) {
         const SEGMENTIDS_T curId = (i < outterSize) ? Clip(segment_ids[i], segmentNum) : segmentNum;
         const SEGMENTIDS_T prevId = (i == 0) ? SEGMENTIDS_T(-1) : Clip(segment_ids[i - 1], segmentNum);
 
@@ -105,9 +104,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLoo
     }
 }
 
-__simt_callee__ __aicore__ inline float BinaryAdd(
-    float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY, uint32_t threadIdxX, uint32_t threadNumX,
-    __local_mem__ float* tmpLocal, uint32_t threadIdxZ)
+__simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY,
+                                                  uint32_t threadIdxX, uint32_t threadNumX,
+                                                  __local_mem__ float* tmpLocal, uint32_t threadIdxZ)
 {
     // Binary add in the thread_y
     for (uint32_t k = threadNumY / 2; k > 0; k /= 2) {
@@ -147,9 +146,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_SMALL) inline void S
             bool valid = xValid && yValid;
             float value = valid ? x[inputIdx] : float(0);
 
-            value = BinaryAdd(
-                value, blockDim.y, valid, threadIdxY, threadIdxX, blockDim.x, tmpLocal,
-                threadIdxZ);
+            value = BinaryAdd(value, blockDim.y, valid, threadIdxY, threadIdxX, blockDim.x, tmpLocal, threadIdxZ);
 
             // thready_0 is the reduce sum
             if (threadIdxY == 0 && xValid) {

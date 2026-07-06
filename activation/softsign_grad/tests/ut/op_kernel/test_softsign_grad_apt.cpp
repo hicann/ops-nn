@@ -20,8 +20,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void softsign_grad(
-    GM_ADDR gradients, GM_ADDR features, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void softsign_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR output,
+                                                    GM_ADDR workspace, GM_ADDR tiling);
 
 class SoftsignGradKernelTest : public testing::Test {
 protected:

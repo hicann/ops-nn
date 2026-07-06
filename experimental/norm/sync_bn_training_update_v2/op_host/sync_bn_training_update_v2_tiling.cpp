@@ -34,7 +34,7 @@
 namespace optiling {
 
 constexpr uint32_t BUFFER_NUM = 2;
-constexpr uint64_t DATA_CACHE_CLEAN_NEED = 64;//64b
+constexpr uint64_t DATA_CACHE_CLEAN_NEED = 64; // 64b
 constexpr uint64_t UB_DATA_NUMBER_32 = 64;
 
 struct SyncBnTrainingUpdateV2CompileInfo {};
@@ -84,11 +84,11 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context, SyncBnTrai
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize, SyncBnTrainingUpdateV2ShapeInfo& info)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize,
+                                         SyncBnTrainingUpdateV2ShapeInfo& info)
 {
-    OP_CHECK_IF(
-        context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
+                return ge::GRAPH_FAILED);
     info.inputNum = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(context->GetInputDesc(0)->GetDataType(), typeLength);
@@ -99,9 +99,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
     info.inputBytes = inputLength / info.inputNum;
     auto dataType = context->GetInputDesc(0)->GetDataType();
     uint64_t ubDataNumber = UB_DATA_NUMBER_32;
-    OP_CHECK_IF(
-        dataType != ge::DT_FLOAT, OP_LOGE(context, "dataType is error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataType != ge::DT_FLOAT, OP_LOGE(context, "dataType is error"), return ge::GRAPH_FAILED);
     info.tileBlockNum = (ubSize / BUFFER_NUM / info.blockSize) / ubDataNumber;
     if (info.inputBytes == 0) {
         return ge::GRAPH_FAILED;
@@ -110,9 +108,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
     info.inputLengthAlign32 = (((inputLength + info.blockSize - 1) / info.blockSize) * info.blockSize);
 
     auto attrs = context->GetAttrs();
-    info.momentum = 0.9f;  // 默认值
-    if(attrs != nullptr) {
-        if (attrs->GetFloat(0) != nullptr ) {
+    info.momentum = 0.9f; // 默认值
+    if (attrs != nullptr) {
+        if (attrs->GetFloat(0) != nullptr) {
             info.momentum = *(attrs->GetFloat(0));
         }
     }
@@ -123,11 +121,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(int64_t coreNum, SyncBnTrainingUpdateV2ShapeInfo& info, gert::TilingContext* context)
-{   
-    OP_CHECK_IF(
-        0 == coreNum || 0 == info.tileBlockNum || 0 == info.inputBytes, OP_LOGE(context, "input is null"),
-        return ge::GRAPH_FAILED);
+static ge::graphStatus CalculateCoreBlockNums(int64_t coreNum, SyncBnTrainingUpdateV2ShapeInfo& info,
+                                              gert::TilingContext* context)
+{
+    OP_CHECK_IF(0 == coreNum || 0 == info.tileBlockNum || 0 == info.inputBytes, OP_LOGE(context, "input is null"),
+                return ge::GRAPH_FAILED);
     uint64_t everyCoreInputBlockNum = info.inputLengthAlign32 / info.blockSize / coreNum;
     info.tailBlockNum = (info.inputLengthAlign32 / info.blockSize) % coreNum;
     info.smallCoreDataNum = everyCoreInputBlockNum * info.blockSize / info.inputBytes;
@@ -167,16 +165,16 @@ static ge::graphStatus SyncBnTrainingUpdateV2TilingFunc(gert::TilingContext* con
     //计算coreNum
     if (shapeInfo.tileDataNum >= shapeInfo.inputNum) {
         coreNum = 1;
-    }
-    else {
-        // There is at least 32B of data on each core, satisfying several settings for several cores. The maximum number of audits is the actual number of audits
-        coreNum = (static_cast<uint64_t>(coreNum) < shapeInfo.inputLengthAlign32 / shapeInfo.blockSize) ? coreNum : shapeInfo.inputLengthAlign32 / shapeInfo.blockSize;
+    } else {
+        // There is at least 32B of data on each core, satisfying several settings for several cores. The maximum number
+        // of audits is the actual number of audits
+        coreNum = (static_cast<uint64_t>(coreNum) < shapeInfo.inputLengthAlign32 / shapeInfo.blockSize) ?
+                      coreNum :
+                      shapeInfo.inputLengthAlign32 / shapeInfo.blockSize;
     }
     //计算每个core处理的数据块数
     ret = CalculateCoreBlockNums(coreNum, shapeInfo, context);
-    OP_CHECK_IF(
-        ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateCoreBlockNums is error"),
-        return ret);
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateCoreBlockNums is error"), return ret);
     //设置tiling数据
     tiling->smallCoreDataNum = static_cast<uint32_t>(shapeInfo.smallCoreDataNum);
     tiling->bigCoreDataNum = static_cast<uint32_t>(shapeInfo.bigCoreDataNum);
@@ -194,7 +192,8 @@ static ge::graphStatus SyncBnTrainingUpdateV2TilingFunc(gert::TilingContext* con
     tiling->Wdim = static_cast<uint32_t>(shapeInfo.Wdim);
 
     //计算workspace大小
-    OP_CHECK_IF(GetWorkspaceSize(context, shapeInfo) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context, shapeInfo) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(coreNum);
     // 设置tilingKey.
     uint32_t tilingKey = 0;
@@ -204,10 +203,12 @@ static ge::graphStatus SyncBnTrainingUpdateV2TilingFunc(gert::TilingContext* con
 }
 
 static ge::graphStatus TilingParseForSyncBnTrainingUpdateV2([[maybe_unused]] gert::TilingParseContext* context)
-{   
+{
     return ge::GRAPH_SUCCESS;
 }
 
 // tiling注册入口.
-IMPL_OP_OPTILING(SyncBnTrainingUpdateV2).Tiling(SyncBnTrainingUpdateV2TilingFunc).TilingParse<SyncBnTrainingUpdateV2CompileInfo>(TilingParseForSyncBnTrainingUpdateV2);
+IMPL_OP_OPTILING(SyncBnTrainingUpdateV2)
+    .Tiling(SyncBnTrainingUpdateV2TilingFunc)
+    .TilingParse<SyncBnTrainingUpdateV2CompileInfo>(TilingParseForSyncBnTrainingUpdateV2);
 } // namespace optiling

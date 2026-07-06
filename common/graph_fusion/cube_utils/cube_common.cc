@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -29,16 +29,16 @@ const std::string kUnitListName = "unit_list";
 const std::string kFuncList = "_func_list";
 const std::string kDependUnits = "_depend_unit";
 const std::string kClipRelu = "clip_relu";
-constexpr char const *kCast = "Cast";
-constexpr char const *kRelu = "Relu";
-constexpr char const *kRelu6 = "Relu6";
-constexpr char const *kTransData = "TransData";
-constexpr char const *kConst = "Const";
+constexpr char const* kCast = "Cast";
+constexpr char const* kRelu = "Relu";
+constexpr char const* kRelu6 = "Relu6";
+constexpr char const* kTransData = "TransData";
+constexpr char const* kConst = "Const";
 constexpr uint32_t kMaxConfigMatchSize = 5;
 constexpr uint32_t kTranConfigIndex = 3;
 constexpr uint32_t kTranConfigSecondIndex = 4;
 const ge::AscendString kAscendSatuateModeAsc("ge.satuateMode");
-}
+} // namespace
 const std::string kPatternConv = "conv_pattern";
 const std::string kPatternRelu = "relu_pattern";
 const std::string kPatternQuant = "quant_pattern";
@@ -122,7 +122,7 @@ const std::string ATTR_NAME_SRC_FORMAT = "src_format";
 const std::string ATTR_NAME_DST_FORMAT = "dst_format";
 const std::string UNSQUEEZE_V2 = "UnsqueezeV2";
 const std::string AXIS_ATTR_NAME = "axis";
-const std::string ATTR_SCALE = "scale"; 
+const std::string ATTR_SCALE = "scale";
 const std::string ATTR_OFFSET = "offset";
 
 const size_t kPostCubeNodeLimited = 2;
@@ -172,138 +172,120 @@ const ge::AscendString kAscendUnitListAsc(kUnitList.c_str());
 const ge::AscendString kAscendEltwiseModeAsc(kEltwiseMode.c_str());
 
 const std::vector<std::string> kSupportPostCubeCubeTypeVec = {kDepthwiseConv2D,
-                                                             CONV2D,
-                                                             kConv3D,
-                                                             kMatMul,
-                                                             kMatMulV2,
-                                                             kMatMulV3,
-                                                             kConv2DBackpropInputD,
-                                                             DECONVOLUTION,
-                                                             kConv2DTransposeD,
-                                                             kConv2DTranspose,
-                                                             kConv2DBackpropFilterD,
-                                                             kConv3DTransposeD,
-                                                             kConv3DBackpropInputD,
-                                                             kBatchMatMul,
-                                                             kBatchMatMulV2,
-                                                             kBatchMatMulV3,
-                                                             kFullyConnection,
-                                                             kDepthwiseConv2DBackpropFilterD,
-                                                             kDepthwiseConv2DBackpropInputD,
-                                                             kMerge};
-const std::unordered_set<std::string> kSupportMultipleOutputCubeSet = {CONV2D,
-                                                                       kDepthwiseConv2D};
-const std::unordered_set<std::string> kMatMulSet = {kMatMul,
-                                                    kMatMulV2,
-                                                    kMatMulV3,
-                                                    kBatchMatMul,
-                                                    kBatchMatMulV2};
-const std::unordered_set<std::string> kAtomicWriteCubeSet = {kConv2DBackpropFilterD,
-                                                             kDepthwiseConv2DBackpropFilterD};
-const std::unordered_set<std::string> kCandidateReluTypes = {kPRelu,
-                                                             RELU6,
-                                                             LEAKY_RELU,
-                                                             RELU};
-const std::unordered_set<ge::Format> kMatmulNotSupportPostCubeFormatSet = {ge::FORMAT_ND,
-                                                                          ge::FORMAT_NCHW,
-                                                                          ge::FORMAT_NHWC,
-                                                                          ge::FORMAT_HWCN,
-                                                                          ge::FORMAT_NCDHW};
-const std::unordered_set<std::string> CUBE_ABLE_COMPRESS_SET = {CONV2D,
-                                                                kMatMulV2,
-                                                                kFullyConnection,
-                                                                kConv2DTransposeD};
-const unordered_set<std::string> kCubeCompressOpList = {kConv2DCompress,
-                                                        kFullyConnectionCompress,
-                                                        kMatMulV2Compress,
-                                                        kConv2DTransposeDCompress,
-                                                        kBatchMatMulCompress};
+                                                              CONV2D,
+                                                              kConv3D,
+                                                              kMatMul,
+                                                              kMatMulV2,
+                                                              kMatMulV3,
+                                                              kConv2DBackpropInputD,
+                                                              DECONVOLUTION,
+                                                              kConv2DTransposeD,
+                                                              kConv2DTranspose,
+                                                              kConv2DBackpropFilterD,
+                                                              kConv3DTransposeD,
+                                                              kConv3DBackpropInputD,
+                                                              kBatchMatMul,
+                                                              kBatchMatMulV2,
+                                                              kBatchMatMulV3,
+                                                              kFullyConnection,
+                                                              kDepthwiseConv2DBackpropFilterD,
+                                                              kDepthwiseConv2DBackpropInputD,
+                                                              kMerge};
+const std::unordered_set<std::string> kSupportMultipleOutputCubeSet = {CONV2D, kDepthwiseConv2D};
+const std::unordered_set<std::string> kMatMulSet = {kMatMul, kMatMulV2, kMatMulV3, kBatchMatMul, kBatchMatMulV2};
+const std::unordered_set<std::string> kAtomicWriteCubeSet = {kConv2DBackpropFilterD, kDepthwiseConv2DBackpropFilterD};
+const std::unordered_set<std::string> kCandidateReluTypes = {kPRelu, RELU6, LEAKY_RELU, RELU};
+const std::unordered_set<ge::Format> kMatmulNotSupportPostCubeFormatSet = {
+    ge::FORMAT_ND, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NCDHW};
+const std::unordered_set<std::string> CUBE_ABLE_COMPRESS_SET = {CONV2D, kMatMulV2, kFullyConnection, kConv2DTransposeD};
+const unordered_set<std::string> kCubeCompressOpList = {kConv2DCompress, kFullyConnectionCompress, kMatMulV2Compress,
+                                                        kConv2DTransposeDCompress, kBatchMatMulCompress};
 const std::map<std::string, std::string> kPostCubeInstruction2OpTypeMap{{"requant", kAscendRequant},
-                                                                       {"quant", kAscendQuant},
-                                                                       {"dequant", kAscendDequant},
-                                                                       {"cast", kCast},
-                                                                       {"add", kAdd},
-                                                                       {"nz2nd", kTransData},
-                                                                       {"anti_sub", kAscendAntiQuant},
-                                                                       {"anti_add", kAscendAntiQuant},
-                                                                       {"sub", kSub},
-                                                                       {"normal_relu", kRelu},
-                                                                       {"scalar_relu", kLeakyRelu},
-                                                                       {"vector_relu", kPRelu},
-                                                                       {"clip_relu", kRelu6},
-                                                                       {"sigmoid", kSigmoid},
-                                                                       {"elu", kElu},
-                                                                       {"tanh", kTanh}};
-const std::array<PostCubeAbilityAttr,
-    static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)> kPostCubeAbilityAttrs {
-        kSupportPostEltwiseBroadcast, kSupportMultipleOutput, kUseGmAtomicAdd, kNodeCantAccess
-};
+                                                                        {"quant", kAscendQuant},
+                                                                        {"dequant", kAscendDequant},
+                                                                        {"cast", kCast},
+                                                                        {"add", kAdd},
+                                                                        {"nz2nd", kTransData},
+                                                                        {"anti_sub", kAscendAntiQuant},
+                                                                        {"anti_add", kAscendAntiQuant},
+                                                                        {"sub", kSub},
+                                                                        {"normal_relu", kRelu},
+                                                                        {"scalar_relu", kLeakyRelu},
+                                                                        {"vector_relu", kPRelu},
+                                                                        {"clip_relu", kRelu6},
+                                                                        {"sigmoid", kSigmoid},
+                                                                        {"elu", kElu},
+                                                                        {"tanh", kTanh}};
+const std::array<PostCubeAbilityAttr, static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)>
+    kPostCubeAbilityAttrs{kSupportPostEltwiseBroadcast, kSupportMultipleOutput, kUseGmAtomicAdd, kNodeCantAccess};
 
 const std::vector<std::string> kSupportPostCubeUtilFuncCubeTypeVec = {CONV2D};
 
-PostCubeUnit::~PostCubeUnit() {
-  dependunits_.clear();
-  dependunitsindex_.clear();
-  opnodes_.clear();
+PostCubeUnit::~PostCubeUnit()
+{
+    dependunits_.clear();
+    dependunitsindex_.clear();
+    opnodes_.clear();
 }
 
-PostCubeNodeInfo::~PostCubeNodeInfo() {
-  node_topost_cubelist_.clear();
-}
+PostCubeNodeInfo::~PostCubeNodeInfo() { node_topost_cubelist_.clear(); }
 
-ge::DataType PostCubeComm::TranferString(const std::string &configstr) {
-  if (configstr == "s4") {
-    return ge::DT_INT4;
-  } else if (configstr == "s8") {
-    return ge::DT_INT8;
-  } else if (configstr == "s16") {
-    return ge::DT_INT16;
-  } else if (configstr == "s32") {
-    return ge::DT_INT32;
-  } else if (configstr == "s64") {
-    return ge::DT_INT64;
-  } else if (configstr == "u8") {
-    return ge::DT_UINT8;
-  } else if (configstr == "u16") {
-    return ge::DT_UINT16;
-  } else if (configstr == "u32") {
-    return ge::DT_UINT32;
-  } else if (configstr == "u64") {
-    return ge::DT_UINT64;
-  } else if (configstr == "f16") {
-    return ge::DT_FLOAT16;
-  } else if (configstr == "bf16") {
-    return ge::DT_BF16;
-  } else if (configstr == "f32") {
-    return ge::DT_FLOAT;
-  }
-  return ge::DT_UNDEFINED;
-}
-
-CONFIGDTYPE PostCubeComm::TransFerConfig2Dtype(const std::string &configstr) {
-  CONFIGDTYPE ret;
-  ret.has_output_dtype = false;
-  ret.input_dtype = ge::DT_UNDEFINED;
-  ret.output_dtype = ge::DT_UNDEFINED;
-  if (configstr.size() >= kMaxConfigMatchSize) {
-    std::string tmpsubstr = configstr.substr(0, kTranConfigIndex);
-    if (tmpsubstr == "f32" || tmpsubstr == "f16" || tmpsubstr == "s32") {
-      if (configstr.at(kTranConfigIndex) == '2') {
-        std::string secondstr = configstr.substr(kTranConfigSecondIndex);
-        ret.has_output_dtype = true;
-        ret.input_dtype = TranferString(tmpsubstr);
-        ret.output_dtype = TranferString(secondstr);
-      } else {
-        ret.input_dtype = TranferString(tmpsubstr);
-      }
+ge::DataType PostCubeComm::TranferString(const std::string& configstr)
+{
+    if (configstr == "s4") {
+        return ge::DT_INT4;
+    } else if (configstr == "s8") {
+        return ge::DT_INT8;
+    } else if (configstr == "s16") {
+        return ge::DT_INT16;
+    } else if (configstr == "s32") {
+        return ge::DT_INT32;
+    } else if (configstr == "s64") {
+        return ge::DT_INT64;
+    } else if (configstr == "u8") {
+        return ge::DT_UINT8;
+    } else if (configstr == "u16") {
+        return ge::DT_UINT16;
+    } else if (configstr == "u32") {
+        return ge::DT_UINT32;
+    } else if (configstr == "u64") {
+        return ge::DT_UINT64;
+    } else if (configstr == "f16") {
+        return ge::DT_FLOAT16;
+    } else if (configstr == "bf16") {
+        return ge::DT_BF16;
+    } else if (configstr == "f32") {
+        return ge::DT_FLOAT;
     }
-  } else {
-    ret.input_dtype = TranferString(configstr);
-  }
-  return ret;
+    return ge::DT_UNDEFINED;
 }
 
-bool PostCubeComm::ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext &context) {
+CONFIGDTYPE PostCubeComm::TransFerConfig2Dtype(const std::string& configstr)
+{
+    CONFIGDTYPE ret;
+    ret.has_output_dtype = false;
+    ret.input_dtype = ge::DT_UNDEFINED;
+    ret.output_dtype = ge::DT_UNDEFINED;
+    if (configstr.size() >= kMaxConfigMatchSize) {
+        std::string tmpsubstr = configstr.substr(0, kTranConfigIndex);
+        if (tmpsubstr == "f32" || tmpsubstr == "f16" || tmpsubstr == "s32") {
+            if (configstr.at(kTranConfigIndex) == '2') {
+                std::string secondstr = configstr.substr(kTranConfigSecondIndex);
+                ret.has_output_dtype = true;
+                ret.input_dtype = TranferString(tmpsubstr);
+                ret.output_dtype = TranferString(secondstr);
+            } else {
+                ret.input_dtype = TranferString(tmpsubstr);
+            }
+        }
+    } else {
+        ret.input_dtype = TranferString(configstr);
+    }
+    return ret;
+}
+
+bool PostCubeComm::ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext& context)
+{
     ge::AscendString satuate_mode;
     ge::graphStatus status = ge::GRAPH_FAILED;
 // 90000000U 对应 ge-compiler 版本号 9.0.0，由以下公式计算得出：
@@ -330,431 +312,470 @@ bool PostCubeComm::ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext &
     return (status == ge::GRAPH_SUCCESS && satuate_mode == kAscendInfNanAsc);
 }
 
-bool PostCubeComm::ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans,
-    std::vector<std::string> &unit_list, std::map<std::string, std::vector<std::string>> &depends_list,
-    std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &post_cube_map) {
-  fe::PlatFormInfos platform_infos;
-  fe::OptionalInfos optional_infos;
-  if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(
-                                          platform_infos, optional_infos) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_W("PostCube", "Fail to get platform info without soc version.");
-    return false;
-  }
-  // inputmap first key is startwith "Intrinsic_fix_pipe_" second post_cube config value
-  std::map<std::string, std::vector<std::string>> input_map = optional_infos.GetFixPipeDtypeMap();
-  for (auto &iter : input_map[kPostCubeConfigKey + kUnitListName]) {
-    if (skip_trans && iter == kPostTransform) {
-      continue;
+bool PostCubeComm::ReadPlatFormConfig(
+    const ge::CustomPassContext& context, const bool& skip_trans, std::vector<std::string>& unit_list,
+    std::map<std::string, std::vector<std::string>>& depends_list,
+    std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>>& post_cube_map)
+{
+    fe::PlatFormInfos platform_infos;
+    fe::OptionalInfos optional_infos;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_infos, optional_infos) !=
+        ge::GRAPH_SUCCESS) {
+        OPS_LOG_W("PostCube", "Fail to get platform info without soc version.");
+        return false;
     }
-    std::vector<std::string> &oplist = input_map[kPostCubeConfigKey + iter + kFuncList];
-    std::map<std::string, std::vector<CONFIGDTYPE>> outputinnermap;
-    for (auto &opname : oplist) {
-      if (opname == kClipRelu) {
-        if (ShouldSkipClipReluBySatuateMode(context)) {
-          continue;
+    // inputmap first key is startwith "Intrinsic_fix_pipe_" second post_cube config value
+    std::map<std::string, std::vector<std::string>> input_map = optional_infos.GetFixPipeDtypeMap();
+    for (auto& iter : input_map[kPostCubeConfigKey + kUnitListName]) {
+        if (skip_trans && iter == kPostTransform) {
+            continue;
         }
-      }
-      std::string outstring;
-      auto item = kPostCubeInstruction2OpTypeMap.find(opname);
-      if (item != kPostCubeInstruction2OpTypeMap.end()) {
-        outstring = item->second;
-      }
-      vector<std::string> &dtypelist = input_map[kPostCubeConfigKey + iter + "_" + opname];
-      std::vector<CONFIGDTYPE> outputsinner;
-      for (auto &dtype : dtypelist) {
-        CONFIGDTYPE dtypestr = TransFerConfig2Dtype(dtype);
-        outputsinner.push_back(dtypestr);
-      }
-      outputinnermap.emplace(make_pair(outstring, outputsinner));
+        std::vector<std::string>& oplist = input_map[kPostCubeConfigKey + iter + kFuncList];
+        std::map<std::string, std::vector<CONFIGDTYPE>> outputinnermap;
+        for (auto& opname : oplist) {
+            if (opname == kClipRelu) {
+                if (ShouldSkipClipReluBySatuateMode(context)) {
+                    continue;
+                }
+            }
+            std::string outstring;
+            auto item = kPostCubeInstruction2OpTypeMap.find(opname);
+            if (item != kPostCubeInstruction2OpTypeMap.end()) {
+                outstring = item->second;
+            }
+            vector<std::string>& dtypelist = input_map[kPostCubeConfigKey + iter + "_" + opname];
+            std::vector<CONFIGDTYPE> outputsinner;
+            for (auto& dtype : dtypelist) {
+                CONFIGDTYPE dtypestr = TransFerConfig2Dtype(dtype);
+                outputsinner.push_back(dtypestr);
+            }
+            outputinnermap.emplace(make_pair(outstring, outputsinner));
+        }
+        std::vector<std::string>& depends_units = input_map[kPostCubeConfigKey + iter + kDependUnits];
+        depends_list.emplace(make_pair(iter, depends_units));
+        post_cube_map.emplace(make_pair(iter, outputinnermap));
+        unit_list.push_back(iter);
     }
-    std::vector<std::string> &depends_units = input_map[kPostCubeConfigKey + iter + kDependUnits];
-    depends_list.emplace(make_pair(iter, depends_units));
-    post_cube_map.emplace(make_pair(iter, outputinnermap));
-    unit_list.push_back(iter);
-  }
-  return true;
+    return true;
 }
 
-ge::graphStatus PostCubeComm::CheckPeerOutNode(const ge::GNodePtr &vectornode, const uint32_t &input_index) {
-  OPS_LOG_D("PostCube", "name = %s type = %s index = %d", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString(), input_index);
-  ge::TensorDesc input_desc;
-  if (vectornode->GetInputDesc(input_index, input_desc) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("PostCube", "GetInputDesc() = failed");
-    return ge::GRAPH_FAILED;
-  }
-
-  auto cube_node = vectornode->GetInDataNodesAndPortIndexs(input_index);
-  if (cube_node.first == nullptr) {
-    OPS_LOG_D("PostCube", "GetInDataNodes() = null");
-    return ge::GRAPH_FAILED;
-  }
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::GNodePtr PostCubeComm::GetConstNode(const ge::GNodePtr &vectornode, uint32_t &depth) {
-  if (vectornode == nullptr) {
-    return nullptr;
-  }
-  OPS_LOG_D("PostCube", "name = %s type = %s depth = %d", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString(), depth);
-  if (depth >= kMaxDepth) {
-    return nullptr;
-  }
-  if (GNodeGetType(vectornode) == kAscendConstantAsc) {
-    OPS_LOG_D("PostCube", "name = %s type = %s is constant", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString());
-    return vectornode;
-  } else {
-    if (CheckPeerOutNode(vectornode, 0) == ge::GRAPH_SUCCESS) {
-      depth++;
-      auto node = vectornode->GetInDataNodesAndPortIndexs(0);
-      OPS_LOG_D("PostCube", "name = %s type = %s depth = %d", GNodeGetName(node.first).GetString(), GNodeGetType(node.first).GetString(), depth);
-      return GetConstNode(node.first, depth);
+ge::graphStatus PostCubeComm::CheckPeerOutNode(const ge::GNodePtr& vectornode, const uint32_t& input_index)
+{
+    OPS_LOG_D("PostCube", "name = %s type = %s index = %d", GNodeGetName(vectornode).GetString(),
+              GNodeGetType(vectornode).GetString(), input_index);
+    ge::TensorDesc input_desc;
+    if (vectornode->GetInputDesc(input_index, input_desc) != ge::GRAPH_SUCCESS) {
+        OPS_LOG_D("PostCube", "GetInputDesc() = failed");
+        return ge::GRAPH_FAILED;
     }
-    return nullptr;
-  }
+
+    auto cube_node = vectornode->GetInDataNodesAndPortIndexs(input_index);
+    if (cube_node.first == nullptr) {
+        OPS_LOG_D("PostCube", "GetInDataNodes() = null");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
-ge::GNodePtr PostCubeComm::GetConstNode(const ge::GNodePtr &vectornode) {
-  if (CheckPeerOutNode(vectornode, 1) != ge::GRAPH_SUCCESS) {
-    return nullptr;
-  }
-  auto input_node = vectornode->GetInDataNodesAndPortIndexs(1);
-  if (GNodeGetType(input_node.first) == kAscendConstantAsc) {
-    return input_node.first;
-  }
-  uint32_t depth = 0;
-  return GetConstNode(input_node.first, depth);
+ge::GNodePtr PostCubeComm::GetConstNode(const ge::GNodePtr& vectornode, uint32_t& depth)
+{
+    if (vectornode == nullptr) {
+        return nullptr;
+    }
+    OPS_LOG_D("PostCube", "name = %s type = %s depth = %d", GNodeGetName(vectornode).GetString(),
+              GNodeGetType(vectornode).GetString(), depth);
+    if (depth >= kMaxDepth) {
+        return nullptr;
+    }
+    if (GNodeGetType(vectornode) == kAscendConstantAsc) {
+        OPS_LOG_D("PostCube", "name = %s type = %s is constant", GNodeGetName(vectornode).GetString(),
+                  GNodeGetType(vectornode).GetString());
+        return vectornode;
+    } else {
+        if (CheckPeerOutNode(vectornode, 0) == ge::GRAPH_SUCCESS) {
+            depth++;
+            auto node = vectornode->GetInDataNodesAndPortIndexs(0);
+            OPS_LOG_D("PostCube", "name = %s type = %s depth = %d", GNodeGetName(node.first).GetString(),
+                      GNodeGetType(node.first).GetString(), depth);
+            return GetConstNode(node.first, depth);
+        }
+        return nullptr;
+    }
+}
+
+ge::GNodePtr PostCubeComm::GetConstNode(const ge::GNodePtr& vectornode)
+{
+    if (CheckPeerOutNode(vectornode, 1) != ge::GRAPH_SUCCESS) {
+        return nullptr;
+    }
+    auto input_node = vectornode->GetInDataNodesAndPortIndexs(1);
+    if (GNodeGetType(input_node.first) == kAscendConstantAsc) {
+        return input_node.first;
+    }
+    uint32_t depth = 0;
+    return GetConstNode(input_node.first, depth);
 }
 
 template <typename T>
-bool PostCubeComm::JudgedataImpl(uint8_t *data, const size_t &data_size) {
-  T *shape_data = const_cast<T *>(reinterpret_cast<const T *>(data));
-  for (size_t i = 0; i < static_cast<size_t>(data_size / sizeof(T)); i++) {
-    if (shape_data[i] < 0) {
-      OPS_LOG_D("PostCube", "shape_data = %f", static_cast<float>(shape_data[i]));
-      return false;
+bool PostCubeComm::JudgedataImpl(uint8_t* data, const size_t& data_size)
+{
+    T* shape_data = const_cast<T*>(reinterpret_cast<const T*>(data));
+    for (size_t i = 0; i < static_cast<size_t>(data_size / sizeof(T)); i++) {
+        if (shape_data[i] < 0) {
+            OPS_LOG_D("PostCube", "shape_data = %f", static_cast<float>(shape_data[i]));
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
-bool PostCubeComm::JudegedataUInt64(uint8_t *data, const size_t &data_size) {
-  uint64_t *shape_data = const_cast<uint64_t *>(reinterpret_cast<const uint64_t *>(data));
-  for (size_t i = 0; i < static_cast<size_t>(data_size / sizeof(uint64_t)); i++) {
-    uint32_t scale_deq = GET_DEQUANT_SCALE_DEQ(shape_data[i]);
-    float scale = 0;
-    if (memcpy_s(&scale, sizeof(scale), &scale_deq, sizeof(uint32_t)) != 0) {
-      return false;
+bool PostCubeComm::JudegedataUInt64(uint8_t* data, const size_t& data_size)
+{
+    uint64_t* shape_data = const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(data));
+    for (size_t i = 0; i < static_cast<size_t>(data_size / sizeof(uint64_t)); i++) {
+        uint32_t scale_deq = GET_DEQUANT_SCALE_DEQ(shape_data[i]);
+        float scale = 0;
+        if (memcpy_s(&scale, sizeof(scale), &scale_deq, sizeof(uint32_t)) != 0) {
+            return false;
+        }
+        if (scale < 0) {
+            return false;
+        }
     }
-    if (scale < 0) {
-      return false;
-    }
-  }
-  return true;
+    return true;
 }
 
-bool PostCubeComm::JudgedataFp16(uint8_t *data, const size_t &data_size) {
-  ops::fp16_t *shape_data = const_cast<ops::fp16_t *>(reinterpret_cast<const ops::fp16_t *>(data));
-  for (size_t i = 0; i < (data_size / sizeof(int16_t)); i++) {
-    if (shape_data[i].ToInt16() < 0) {
-      return false;
+bool PostCubeComm::JudgedataFp16(uint8_t* data, const size_t& data_size)
+{
+    ops::fp16_t* shape_data = const_cast<ops::fp16_t*>(reinterpret_cast<const ops::fp16_t*>(data));
+    for (size_t i = 0; i < (data_size / sizeof(int16_t)); i++) {
+        if (shape_data[i].ToInt16() < 0) {
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
-bool PostCubeComm::Judgedata(uint8_t *data, const size_t &data_size, const ge::DataType &data_type) {
-  if (data == nullptr || data_size == 0) {
-    return false;
-  }
-  if (data_type == ge::DT_UINT64) {
-    return JudegedataUInt64(data, data_size);
-  } else if (data_type == ge::DT_FLOAT16) {
-    return JudgedataFp16(data, data_size);
-  } else {
-    switch (data_type) {
-      case ge::DT_INT32:
-        return JudgedataImpl<int32_t>(data, data_size);
-      case ge::DT_FLOAT:
-        return JudgedataImpl<float>(data, data_size);
-      case ge::DT_DOUBLE:
-        return JudgedataImpl<double>(data, data_size);
-      case ge::DT_INT8:
-        return JudgedataImpl<int8_t>(data, data_size);
-      case ge::DT_INT16:
-        return JudgedataImpl<int16_t>(data, data_size);
-      case ge::DT_BOOL:
-        return JudgedataImpl<int8_t>(data, data_size);
-      case ge::DT_UINT8:
-      case ge::DT_UINT16:
-      case ge::DT_UINT32:
-        return true;
-      default:
+bool PostCubeComm::Judgedata(uint8_t* data, const size_t& data_size, const ge::DataType& data_type)
+{
+    if (data == nullptr || data_size == 0) {
         return false;
     }
-  }
-}
-
-bool PostCubeComm::CheckConstValueData(const ge::GNodePtr &vectornode) {
-  auto const_node = GetConstNode(vectornode);
-  if (const_node == nullptr) {
-    OPS_LOG_D("PostCube", "Node[%s, %s] does not have const input.", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString());
-    return false;
-  }
-  ge::TensorDesc cur_tensor_desc;
-  if (const_node->GetOutputDesc(0, cur_tensor_desc) != ge::GRAPH_SUCCESS) {
-    return false;
-  }
-  ge::Tensor weight_value;
-  GNodeGetAttr(const_node, kAttrNameWeight, weight_value);
-  auto datatype = cur_tensor_desc.GetDataType();
-  OPS_LOG_D("PostCube", "datatype = %d", static_cast<uint32_t>(datatype));
-  return Judgedata(const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(weight_value.GetData())),
-                   weight_value.GetSize(), datatype);
-}
-
-bool PostCubeComm::CheckIsInVector(const std::vector<PostCubeNodeInfo> &m_opnodes, const uint32_t &index) {
-  return index < m_opnodes.size();
-}
-
-ge::GNodePtr PostCubeComm::GetMergeNodeByCube(const ge::GNodePtr &node_ptr) {
-  ge::GNodePtr merge_node = GetMergeNode(node_ptr);
-  if (merge_node == nullptr) {
-    return nullptr;
-  }
-  if (!CheckMergeInput(merge_node)) {
-    return nullptr;
-  }
-  return merge_node;
-}
-
-ge::GNodePtr PostCubeComm::GetMergeNode(const ge::GNodePtr &node_ptr) {
-  for (size_t idx = 0; idx < node_ptr->GetOutputsSize(); ++idx) {
-    auto outputNodesPairs = node_ptr->GetOutDataNodesAndPortIndexs(idx);
-    for (const auto &outputPair : outputNodesPairs) {
-      if (GNodeGetType(outputPair.first) == kAscendMergeAsc) {
-        return outputPair.first;
-      }
+    if (data_type == ge::DT_UINT64) {
+        return JudegedataUInt64(data, data_size);
+    } else if (data_type == ge::DT_FLOAT16) {
+        return JudgedataFp16(data, data_size);
+    } else {
+        switch (data_type) {
+            case ge::DT_INT32:
+                return JudgedataImpl<int32_t>(data, data_size);
+            case ge::DT_FLOAT:
+                return JudgedataImpl<float>(data, data_size);
+            case ge::DT_DOUBLE:
+                return JudgedataImpl<double>(data, data_size);
+            case ge::DT_INT8:
+                return JudgedataImpl<int8_t>(data, data_size);
+            case ge::DT_INT16:
+                return JudgedataImpl<int16_t>(data, data_size);
+            case ge::DT_BOOL:
+                return JudgedataImpl<int8_t>(data, data_size);
+            case ge::DT_UINT8:
+            case ge::DT_UINT16:
+            case ge::DT_UINT32:
+                return true;
+            default:
+                return false;
+        }
     }
-  }
-
-  return nullptr;
 }
 
-bool PostCubeComm::CheckMergeInput(const ge::GNodePtr &merge_node) {
-  if (CheckPeerOutNode(merge_node, 0) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("PostCube", "name = %s type = %s hast input 0node ", GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
-    return false;
-  }
-  if (CheckPeerOutNode(merge_node, 1) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("PostCube", "name = %s type = %s hast input 1 node", GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
-    return false;
-  }
-  auto inputnode0 = merge_node->GetInDataNodesAndPortIndexs(0);
-  auto inputnode1 = merge_node->GetInDataNodesAndPortIndexs(1);
-  if (CUBE_ABLE_COMPRESS_SET.count(std::string(GNodeGetType(inputnode0.first).GetString())) == 0 &&
-      kCubeCompressOpList.count(std::string(GNodeGetType(inputnode0.first).GetString())) == 0) {
-    return false;
-  }
-  if (CUBE_ABLE_COMPRESS_SET.count(std::string(GNodeGetType(inputnode1.first).GetString())) == 0 &&
-      kCubeCompressOpList.count(std::string(GNodeGetType(inputnode1.first).GetString())) == 0) {
-    return false;
-  }
-  OPS_LOG_D("PostCube", "GetPostCubeCubeType cube canbe replace name = %s type = %s",
-          GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
-  return true;
-}
-
-PostCubeCubeType PostCubeComm::GetPostCubeCubeType(const ge::GNodePtr &node_ptr) {
-  bool fake_cube = false;
-  GNodeGetAttr(node_ptr, kAttrFakeCubeNode, fake_cube);
-  if (fake_cube) {
-    return PostCubeCubeType::Cube;
-  }
-  std::string node_type(GNodeGetType(node_ptr).GetString());
-  auto iter = std::find(kSupportPostCubeCubeTypeVec.begin(), kSupportPostCubeCubeTypeVec.end(), node_type);
-  if (iter == kSupportPostCubeCubeTypeVec.end()) {
-    OPS_LOG_D("PostCube", "GetPostCubeCubeType isn't node name = %s type = %s", GNodeGetName(node_ptr).GetString(), node_type.c_str());
-    return PostCubeCubeType::NotCube;
-  }
-  auto merge_node = GetMergeNodeByCube(node_ptr);
-  if (merge_node == nullptr) {
-    return PostCubeCubeType::Cube;
-  }
-  return PostCubeCubeType::CubeMerge;
-}
-
-bool PostCubeComm::IsEltwiseNode(const ge::GNodePtr &node) {
-  const std::string op_type = GNodeGetType(node).GetString();
-  if (op_type == ELTWISE || op_type == kAdd || op_type == kSub) {
-    return true;
-  }
-  return false;
-}
-
-void PostCubeComm::SetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type) {
-  PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
-  GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
-  post_cube_ability_attr = post_cube_ability_attr | kPostCubeAbilityAttrs[static_cast<size_t>(post_cube_ability_type)];
-  int64_t tmp_int = post_cube_ability_attr;
-  GNodeSetAttr(node_ptr, kSupportPostCubeAbility, tmp_int);
-}
-
-void PostCubeComm::UnSetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr,
-                                           const PostCubeAbilityType &post_cube_ability_type) {
-  PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
-  GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
-  post_cube_ability_attr = post_cube_ability_attr & (~(1 << static_cast<size_t>(post_cube_ability_type)));
-  int64_t tmp_int = post_cube_ability_attr;
-  GNodeSetAttr(node_ptr, kSupportPostCubeAbility, tmp_int);
-}
-
-bool PostCubeComm::CheckPostCubeAbilityAttr(const ge::GNodePtr &node_ptr,
-                                           const PostCubeAbilityType &post_cube_ability_type) {
-  PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
-  GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
-  return ((post_cube_ability_attr >> static_cast<size_t>(post_cube_ability_type)) & 1) == 1;
-}
-
-bool PostCubeComm::HasControlEdge(const ge::GNodePtr &src_node_ptr, const ge::GNodePtr &dst_node_ptr) {
-  if (src_node_ptr == nullptr || dst_node_ptr == nullptr) {
-    return false;
-  }
-  bool src_res = false;
-  for (const auto &it : src_node_ptr->GetOutControlNodes()) {
-    if (it == dst_node_ptr) {
-      src_res = true;
-      break;
-    }
-  }
-  bool dst_res = false;
-  for (const auto &it : dst_node_ptr->GetInControlNodes()) {
-    if (it == src_node_ptr) {
-      dst_res = true;
-      break;
-    }
-  }
-  return src_res && dst_res;
-}
-
-std::string PostCubeComm::GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec) {
-  std::string result;
-  size_t size = data_type_vec.size();
-  for (size_t i = 0; i < size; ++i) {
-    std::string data_type = ge::TypeUtils::DataTypeToSerialString(data_type_vec[i]);
-    result += data_type;
-    if (i != size - 1) {
-      result += ",";
-    }
-  }
-  return result;
-}
-
-ge::graphStatus PostCubeComm::GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr &head_node) {
-  bool supportOut2L1Dn2Nz = false;
-  if (!PostCubeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) {
-    return ge::GRAPH_NOT_CHANGED;
-  }
-
-  bool isConv2DFlag = PostCubeComm::GetConv2DOpType(head_node);
-  if (supportOut2L1Dn2Nz && isConv2DFlag) {
-    return ge::GRAPH_SUCCESS;
-  }
-  return ge::GRAPH_FAILED;
-}
-
-bool PostCubeComm::GetSupportDN2NZSoc(bool &supportOut2L1Dn2Nz)
+bool PostCubeComm::CheckConstValueData(const ge::GNodePtr& vectornode)
 {
-  // do soc check
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optionalInfo;
-  if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("PostCube", "ConvFusionPassUtils", "Can't get platformInfo.");
-    return false;
-  }
-  supportOut2L1Dn2Nz = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_data_move_out2l1_dn2nz") !=
-    platformInfo.ai_core_intrinsic_dtype_map.end();
-  return true;
-}
-
-bool PostCubeComm::GetConv2DOpType(const ge::GNodePtr &head_node) {
-  // head_node null already check in Fusion
-  if (GNodeGetType(head_node) != kAscendConv2DAsc) {
-    return false;
-  }
-  return true;
-}
-
-ge::graphStatus PostCubeComm::GetPostCubeUtilFuncSupportFlag(const ge::GNodePtr &head_node) {
-  bool supportOut2L1Dn2Nz = false;
-  if (!PostCubeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) { // regardless of which version, always be true
-    return ge::GRAPH_NOT_CHANGED; // get platform failed
-  }
-  if (!supportOut2L1Dn2Nz) {
-    return ge::GRAPH_SUCCESS;
-  }
-
-  bool isInPostCubeUtilFuncOpWhiteListFlag = false;
-  const std::string op_type = GNodeGetType(head_node).GetString();
-  auto iter = std::find(kSupportPostCubeUtilFuncCubeTypeVec.begin(), kSupportPostCubeUtilFuncCubeTypeVec.end(),
-                        op_type);
-  if (iter != kSupportPostCubeUtilFuncCubeTypeVec.end()) {
-    OPS_LOG_D("PostCube", "Op in SupportPostCubeUtilFuncCubeTypeVec is node name = %s type = %s",
-            GNodeGetName(head_node).GetString(), op_type.c_str());
-    isInPostCubeUtilFuncOpWhiteListFlag = true;
-  }
-  if (!isInPostCubeUtilFuncOpWhiteListFlag) {
-    return ge::GRAPH_NOT_CHANGED;
-  }
-  return ge::GRAPH_SUCCESS;
-}
-
-uint32_t PostCubeComm::GetOutDataNodesSize(const ge::GNodePtr &node) {
-  uint32_t res = 0;
-  for (size_t idx = 0; idx < node->GetOutputsSize(); ++idx) {
-    const auto outputNodesPairs = node->GetOutDataNodesAndPortIndexs(idx);
-    res += outputNodesPairs.size();
-  }
-  return res;
-}
-
-bool PostCubeComm::IsShapeEqual(const ge::Shape &shape1, const ge::Shape &shape2) {
-  if (shape1.GetDimNum() != shape2.GetDimNum()) {
-    return false;
-  }
-  for (size_t i = 0; i < shape1.GetDimNum(); ++i) {
-    if (shape1.GetDim(i) != shape2.GetDim(i)) {
-      return false;
+    auto const_node = GetConstNode(vectornode);
+    if (const_node == nullptr) {
+        OPS_LOG_D("PostCube", "Node[%s, %s] does not have const input.", GNodeGetName(vectornode).GetString(),
+                  GNodeGetType(vectornode).GetString());
+        return false;
     }
-  }
-  return true;
+    ge::TensorDesc cur_tensor_desc;
+    if (const_node->GetOutputDesc(0, cur_tensor_desc) != ge::GRAPH_SUCCESS) {
+        return false;
+    }
+    ge::Tensor weight_value;
+    GNodeGetAttr(const_node, kAttrNameWeight, weight_value);
+    auto datatype = cur_tensor_desc.GetDataType();
+    OPS_LOG_D("PostCube", "datatype = %d", static_cast<uint32_t>(datatype));
+    return Judgedata(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(weight_value.GetData())),
+                     weight_value.GetSize(), datatype);
 }
 
-std::string PostCubeComm::ShapeToString(const ge::Shape &shape) {
-  if (shape.GetDimNum() == 0) {
-    return "";
-  }
-  std::stringstream ss;
-  ss << shape.GetDim(0);
-  for (size_t i = 1UL; i < shape.GetDimNum(); ++i) {
-    ss << ", " << shape.GetDim(i);
-  }
-  return ss.str();
+bool PostCubeComm::CheckIsInVector(const std::vector<PostCubeNodeInfo>& m_opnodes, const uint32_t& index)
+{
+    return index < m_opnodes.size();
 }
 
-std::vector<string> PostCubeComm::Split(const string &str, const string &pattern) {
-  std::vector<string> res_vec;
-  if (str.empty()) {
+ge::GNodePtr PostCubeComm::GetMergeNodeByCube(const ge::GNodePtr& node_ptr)
+{
+    ge::GNodePtr merge_node = GetMergeNode(node_ptr);
+    if (merge_node == nullptr) {
+        return nullptr;
+    }
+    if (!CheckMergeInput(merge_node)) {
+        return nullptr;
+    }
+    return merge_node;
+}
+
+ge::GNodePtr PostCubeComm::GetMergeNode(const ge::GNodePtr& node_ptr)
+{
+    for (size_t idx = 0; idx < node_ptr->GetOutputsSize(); ++idx) {
+        auto outputNodesPairs = node_ptr->GetOutDataNodesAndPortIndexs(idx);
+        for (const auto& outputPair : outputNodesPairs) {
+            if (GNodeGetType(outputPair.first) == kAscendMergeAsc) {
+                return outputPair.first;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+bool PostCubeComm::CheckMergeInput(const ge::GNodePtr& merge_node)
+{
+    if (CheckPeerOutNode(merge_node, 0) != ge::GRAPH_SUCCESS) {
+        OPS_LOG_D("PostCube", "name = %s type = %s hast input 0node ", GNodeGetName(merge_node).GetString(),
+                  GNodeGetType(merge_node).GetString());
+        return false;
+    }
+    if (CheckPeerOutNode(merge_node, 1) != ge::GRAPH_SUCCESS) {
+        OPS_LOG_D("PostCube", "name = %s type = %s hast input 1 node", GNodeGetName(merge_node).GetString(),
+                  GNodeGetType(merge_node).GetString());
+        return false;
+    }
+    auto inputnode0 = merge_node->GetInDataNodesAndPortIndexs(0);
+    auto inputnode1 = merge_node->GetInDataNodesAndPortIndexs(1);
+    if (CUBE_ABLE_COMPRESS_SET.count(std::string(GNodeGetType(inputnode0.first).GetString())) == 0 &&
+        kCubeCompressOpList.count(std::string(GNodeGetType(inputnode0.first).GetString())) == 0) {
+        return false;
+    }
+    if (CUBE_ABLE_COMPRESS_SET.count(std::string(GNodeGetType(inputnode1.first).GetString())) == 0 &&
+        kCubeCompressOpList.count(std::string(GNodeGetType(inputnode1.first).GetString())) == 0) {
+        return false;
+    }
+    OPS_LOG_D("PostCube", "GetPostCubeCubeType cube canbe replace name = %s type = %s",
+              GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
+    return true;
+}
+
+PostCubeCubeType PostCubeComm::GetPostCubeCubeType(const ge::GNodePtr& node_ptr)
+{
+    bool fake_cube = false;
+    GNodeGetAttr(node_ptr, kAttrFakeCubeNode, fake_cube);
+    if (fake_cube) {
+        return PostCubeCubeType::Cube;
+    }
+    std::string node_type(GNodeGetType(node_ptr).GetString());
+    auto iter = std::find(kSupportPostCubeCubeTypeVec.begin(), kSupportPostCubeCubeTypeVec.end(), node_type);
+    if (iter == kSupportPostCubeCubeTypeVec.end()) {
+        OPS_LOG_D("PostCube", "GetPostCubeCubeType isn't node name = %s type = %s", GNodeGetName(node_ptr).GetString(),
+                  node_type.c_str());
+        return PostCubeCubeType::NotCube;
+    }
+    auto merge_node = GetMergeNodeByCube(node_ptr);
+    if (merge_node == nullptr) {
+        return PostCubeCubeType::Cube;
+    }
+    return PostCubeCubeType::CubeMerge;
+}
+
+bool PostCubeComm::IsEltwiseNode(const ge::GNodePtr& node)
+{
+    const std::string op_type = GNodeGetType(node).GetString();
+    if (op_type == ELTWISE || op_type == kAdd || op_type == kSub) {
+        return true;
+    }
+    return false;
+}
+
+void PostCubeComm::SetPostCubeAbilityAttr(const ge::GNodePtr& node_ptr,
+                                          const PostCubeAbilityType& post_cube_ability_type)
+{
+    PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
+    GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
+    post_cube_ability_attr = post_cube_ability_attr |
+                             kPostCubeAbilityAttrs[static_cast<size_t>(post_cube_ability_type)];
+    int64_t tmp_int = post_cube_ability_attr;
+    GNodeSetAttr(node_ptr, kSupportPostCubeAbility, tmp_int);
+}
+
+void PostCubeComm::UnSetPostCubeAbilityAttr(const ge::GNodePtr& node_ptr,
+                                            const PostCubeAbilityType& post_cube_ability_type)
+{
+    PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
+    GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
+    post_cube_ability_attr = post_cube_ability_attr & (~(1 << static_cast<size_t>(post_cube_ability_type)));
+    int64_t tmp_int = post_cube_ability_attr;
+    GNodeSetAttr(node_ptr, kSupportPostCubeAbility, tmp_int);
+}
+
+bool PostCubeComm::CheckPostCubeAbilityAttr(const ge::GNodePtr& node_ptr,
+                                            const PostCubeAbilityType& post_cube_ability_type)
+{
+    PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
+    GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
+    return ((post_cube_ability_attr >> static_cast<size_t>(post_cube_ability_type)) & 1) == 1;
+}
+
+bool PostCubeComm::HasControlEdge(const ge::GNodePtr& src_node_ptr, const ge::GNodePtr& dst_node_ptr)
+{
+    if (src_node_ptr == nullptr || dst_node_ptr == nullptr) {
+        return false;
+    }
+    bool src_res = false;
+    for (const auto& it : src_node_ptr->GetOutControlNodes()) {
+        if (it == dst_node_ptr) {
+            src_res = true;
+            break;
+        }
+    }
+    bool dst_res = false;
+    for (const auto& it : dst_node_ptr->GetInControlNodes()) {
+        if (it == src_node_ptr) {
+            dst_res = true;
+            break;
+        }
+    }
+    return src_res && dst_res;
+}
+
+std::string PostCubeComm::GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec)
+{
+    std::string result;
+    size_t size = data_type_vec.size();
+    for (size_t i = 0; i < size; ++i) {
+        std::string data_type = ge::TypeUtils::DataTypeToSerialString(data_type_vec[i]);
+        result += data_type;
+        if (i != size - 1) {
+            result += ",";
+        }
+    }
+    return result;
+}
+
+ge::graphStatus PostCubeComm::GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr& head_node)
+{
+    bool supportOut2L1Dn2Nz = false;
+    if (!PostCubeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) {
+        return ge::GRAPH_NOT_CHANGED;
+    }
+
+    bool isConv2DFlag = PostCubeComm::GetConv2DOpType(head_node);
+    if (supportOut2L1Dn2Nz && isConv2DFlag) {
+        return ge::GRAPH_SUCCESS;
+    }
+    return ge::GRAPH_FAILED;
+}
+
+bool PostCubeComm::GetSupportDN2NZSoc(bool& supportOut2L1Dn2Nz)
+{
+    // do soc check
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
+        ge::GRAPH_SUCCESS) {
+        OPS_LOG_D("PostCube", "ConvFusionPassUtils", "Can't get platformInfo.");
+        return false;
+    }
+    supportOut2L1Dn2Nz = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_data_move_out2l1_dn2nz") !=
+                         platformInfo.ai_core_intrinsic_dtype_map.end();
+    return true;
+}
+
+bool PostCubeComm::GetConv2DOpType(const ge::GNodePtr& head_node)
+{
+    // head_node null already check in Fusion
+    if (GNodeGetType(head_node) != kAscendConv2DAsc) {
+        return false;
+    }
+    return true;
+}
+
+ge::graphStatus PostCubeComm::GetPostCubeUtilFuncSupportFlag(const ge::GNodePtr& head_node)
+{
+    bool supportOut2L1Dn2Nz = false;
+    if (!PostCubeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) { // regardless of which version, always be true
+        return ge::GRAPH_NOT_CHANGED;                            // get platform failed
+    }
+    if (!supportOut2L1Dn2Nz) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    bool isInPostCubeUtilFuncOpWhiteListFlag = false;
+    const std::string op_type = GNodeGetType(head_node).GetString();
+    auto iter = std::find(kSupportPostCubeUtilFuncCubeTypeVec.begin(), kSupportPostCubeUtilFuncCubeTypeVec.end(),
+                          op_type);
+    if (iter != kSupportPostCubeUtilFuncCubeTypeVec.end()) {
+        OPS_LOG_D("PostCube", "Op in SupportPostCubeUtilFuncCubeTypeVec is node name = %s type = %s",
+                  GNodeGetName(head_node).GetString(), op_type.c_str());
+        isInPostCubeUtilFuncOpWhiteListFlag = true;
+    }
+    if (!isInPostCubeUtilFuncOpWhiteListFlag) {
+        return ge::GRAPH_NOT_CHANGED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+uint32_t PostCubeComm::GetOutDataNodesSize(const ge::GNodePtr& node)
+{
+    uint32_t res = 0;
+    for (size_t idx = 0; idx < node->GetOutputsSize(); ++idx) {
+        const auto outputNodesPairs = node->GetOutDataNodesAndPortIndexs(idx);
+        res += outputNodesPairs.size();
+    }
+    return res;
+}
+
+bool PostCubeComm::IsShapeEqual(const ge::Shape& shape1, const ge::Shape& shape2)
+{
+    if (shape1.GetDimNum() != shape2.GetDimNum()) {
+        return false;
+    }
+    for (size_t i = 0; i < shape1.GetDimNum(); ++i) {
+        if (shape1.GetDim(i) != shape2.GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string PostCubeComm::ShapeToString(const ge::Shape& shape)
+{
+    if (shape.GetDimNum() == 0) {
+        return "";
+    }
+    std::stringstream ss;
+    ss << shape.GetDim(0);
+    for (size_t i = 1UL; i < shape.GetDimNum(); ++i) {
+        ss << ", " << shape.GetDim(i);
+    }
+    return ss.str();
+}
+
+std::vector<string> PostCubeComm::Split(const string& str, const string& pattern)
+{
+    std::vector<string> res_vec;
+    if (str.empty()) {
+        return res_vec;
+    }
+    string str_and_pattern = str + pattern;
+    size_t pos = str_and_pattern.find(pattern);
+    size_t size = str_and_pattern.size();
+    while (pos != string::npos) {
+        string sub_str = str_and_pattern.substr(0, pos);
+        res_vec.push_back(sub_str);
+        str_and_pattern = str_and_pattern.substr(pos + pattern.size(), size);
+        pos = str_and_pattern.find(pattern);
+    }
     return res_vec;
-  }
-  string str_and_pattern = str + pattern;
-  size_t pos = str_and_pattern.find(pattern);
-  size_t size = str_and_pattern.size();
-  while (pos != string::npos) {
-    string sub_str = str_and_pattern.substr(0, pos);
-    res_vec.push_back(sub_str);
-    str_and_pattern = str_and_pattern.substr(pos + pattern.size(), size);
-    pos = str_and_pattern.find(pattern);
-  }
-  return res_vec;
 }
-}  // namespace ops
+} // namespace ops

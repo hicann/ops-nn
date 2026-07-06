@@ -25,13 +25,12 @@ using namespace AscendC;
 template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DGAMMA>
 class RegbaseDxFullLoad {
 public:
-     __aicore__ inline RegbaseDxFullLoad(TPipe* pipe, const RmsNormGradRegbaseDxTilingData* tilingData)
+    __aicore__ inline RegbaseDxFullLoad(TPipe* pipe, const RmsNormGradRegbaseDxTilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma, __gm__ uint8_t* dx,
-        __gm__ uint8_t* dgamma)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma,
+                                __gm__ uint8_t* dx, __gm__ uint8_t* dgamma)
     {
         uint32_t coreIdx = GetBlockIdx();
         usedCoreNum_ = tiling_->usedCoreNumDx;
@@ -42,8 +41,8 @@ public:
         rows_ = tiling_->rows;
         blockFactor_ = tiling_->blockFactorDx;
 
-        colsAlignBlock_ =
-            IsSameType<T_X, float>::value ? AlignUp(cols_, FLOAT_NUM_BLOCK) : AlignUp(cols_, HALF_NUM_BLOCK);
+        colsAlignBlock_ = IsSameType<T_X, float>::value ? AlignUp(cols_, FLOAT_NUM_BLOCK) :
+                                                          AlignUp(cols_, HALF_NUM_BLOCK);
         colsAlign2VL_ = AlignUp(cols_, FLOAT_NUM_2VL);
 
         ubFactor_ = UB_FACTOR_DX_FULL_LOAD;
@@ -156,7 +155,8 @@ public:
                     } else {
                         RegTensor<T_X> dxRegB16;
                         Cast<T_X, float, castTraitB322B16>(dxRegB16, dxReg, maskReg);
-                        DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxRegB16, maskReg);
+                        DataCopy<T_X, StoreDist::DIST_PACK_B32>(
+                            dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxRegB16, maskReg);
                     }
                 }
             }
@@ -229,7 +229,8 @@ public:
                     uint32_t sreg = colsTail;
                     for (uint16_t i = 0; i < repeatCount; i++) {
                         maskReg = UpdateMask<float>(sreg);
-                        DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + cols + i * oneRepeat), srcReg, maskReg);
+                        DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + cols + i * oneRepeat), srcReg,
+                                 maskReg);
                     }
                 }
             }

@@ -13,8 +13,8 @@
 #include "mish_grad_v2.h"
 
 template <typename D_T_X>
-__global__ __aicore__ void mish_grad_v2(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void mish_grad_v2(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace,
+                                        GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(MishGradV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(MishGradV2TilingData, tilingData, tiling);

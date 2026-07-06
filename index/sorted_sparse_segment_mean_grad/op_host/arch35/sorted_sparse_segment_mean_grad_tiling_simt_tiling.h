@@ -12,23 +12,20 @@
  * \file sorted_sparse_segment_mean_grad_tiling_simt_tiling.h
  * \brief
  */
- 
+
 #ifndef SORTED_SPARSE_SEGMENT_MEAN_GRAD_SIMT_TILING_H_
 #define SORTED_SPARSE_SEGMENT_MEAN_GRAD_SIMT_TILING_H_
 
 #include "sorted_sparse_segment_mean_grad_tiling_base.h"
-#include "index/sorted_sparse_segment_mean_grad/op_kernel/arch35/sorted_sparse_segment_mean_grad_struct.h" 
+#include "index/sorted_sparse_segment_mean_grad/op_kernel/arch35/sorted_sparse_segment_mean_grad_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 
-class SortedSparseSegmentMeanGradSimtTiling : public SortedSparseSegmentMeanGradBaseTiling
-{
+class SortedSparseSegmentMeanGradSimtTiling : public SortedSparseSegmentMeanGradBaseTiling {
 public:
     explicit SortedSparseSegmentMeanGradSimtTiling(gert::TilingContext* context)
         : SortedSparseSegmentMeanGradBaseTiling(context)
-    {
-    }
+    {}
 
     ~SortedSparseSegmentMeanGradSimtTiling() override = default;
 
@@ -40,7 +37,7 @@ private:
     void CalcThreadTiling();
     void CalcBlockTiling();
     void CalcSegIndexThreadTiling(int32_t& threadNumX, int32_t& threadNumY, int64_t num);
-    
+
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
@@ -61,6 +58,6 @@ private:
     bool isSmallInner_ = false;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

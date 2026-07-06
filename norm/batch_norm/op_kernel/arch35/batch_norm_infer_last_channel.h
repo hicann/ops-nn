@@ -17,8 +17,7 @@
 #define NORM_BATCH_NORM_INFER_LAST_CHANNEL_H
 
 #include "batch_norm_base.h"
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
 
 using AscendC::MicroAPI::LoadDist;
@@ -28,8 +27,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T1, typename T2>
-class BatchNormInferLastChannel
-{
+class BatchNormInferLastChannel {
 public:
     __aicore__ inline BatchNormInferLastChannel(){};
 
@@ -87,8 +85,8 @@ public:
             // mean、var只在沿B轴每列首行时搬出
             bool needCopyOut = curRowIdx == 0;
 
-            int64_t curTileBLen =
-                curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail : tilingData_->tileBlockBLen;
+            int64_t curTileBLen = curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail :
+                                                                           tilingData_->tileBlockBLen;
 
             int64_t curTileALen = tilingData_->tileBlockALen;
             int64_t ubStrideT = 0;
@@ -246,8 +244,8 @@ private:
                 // load var mean
                 LoadTwoTensorForDtypeT<T2>(var, mean, varLocal, meanLocal, pregMaskFp32, pregMaskFp32, offset, offset);
 
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load gamma、beta
@@ -333,6 +331,6 @@ private:
     GlobalTensor<T2> reserveSpace1Gm_;
     GlobalTensor<T2> reserveSpace2Gm_;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_INFER_LAST_CHANNEL_H

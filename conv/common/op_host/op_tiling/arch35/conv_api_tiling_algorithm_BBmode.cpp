@@ -24,20 +24,25 @@ void ConvTilingAlgorithmBBmode::AdjustM()
     uint64_t hwOut = tilingIns_->shapeInfo.orgHo * tilingIns_->shapeInfo.orgWo;
     uint64_t fCut = conv2DBasicBlockInfoPtr->batch * CeilDiv(hwOut, conv2DBasicBlockInfoPtr->mTile);
     if (tilingIns_->enableInnerBatch) {
-        fCut = CeilDiv(CeilDiv(conv2DBasicBlockInfoPtr->batch * CeilDiv(hwOut, tilingIns_->cubeInfo.m0) *
-            tilingIns_->cubeInfo.m0, conv2DBasicBlockInfoPtr->mTile), tilingIns_->innerBatch);
+        fCut = CeilDiv(
+            CeilDiv(conv2DBasicBlockInfoPtr->batch * CeilDiv(hwOut, tilingIns_->cubeInfo.m0) * tilingIns_->cubeInfo.m0,
+                    conv2DBasicBlockInfoPtr->mTile),
+            tilingIns_->innerBatch);
     }
     uint64_t fMapped = CeilDiv(fCut, conv2DBasicBlockInfoPtr->fDim); // max fmap cuts in one singleCore
-    fActive = CeilDiv(fCut, fMapped); // active cores
+    fActive = CeilDiv(fCut, fMapped);                                // active cores
     // max m cuts in one singleCore
-    uint64_t mMappedHoWo = !tilingIns_->enableInnerBatch ? conv2DBasicBlockInfoPtr->fDim * fMapped /
-        conv2DBasicBlockInfoPtr->batch : static_cast<uint64_t>(1);
+    uint64_t mMappedHoWo = !tilingIns_->enableInnerBatch ?
+                               conv2DBasicBlockInfoPtr->fDim * fMapped / conv2DBasicBlockInfoPtr->batch :
+                               static_cast<uint64_t>(1);
     uint64_t mTileAdjusted = CeilDiv(hwOut, tilingIns_->cubeInfo.m0 * mMappedHoWo) * tilingIns_->cubeInfo.m0;
     uint64_t mCutAdjusted = CeilDiv(hwOut, mTileAdjusted);
     uint64_t fCutAdjusted = conv2DBasicBlockInfoPtr->batch * mCutAdjusted;
     if (tilingIns_->enableInnerBatch) {
-        fCutAdjusted = CeilDiv(CeilDiv(conv2DBasicBlockInfoPtr->batch * CeilDiv(hwOut, tilingIns_->cubeInfo.m0) *
-            tilingIns_->cubeInfo.m0, mTileAdjusted), tilingIns_->innerBatch);
+        fCutAdjusted = CeilDiv(
+            CeilDiv(conv2DBasicBlockInfoPtr->batch * CeilDiv(hwOut, tilingIns_->cubeInfo.m0) * tilingIns_->cubeInfo.m0,
+                    mTileAdjusted),
+            tilingIns_->innerBatch);
     }
     uint64_t fActiveAdjusted = CeilDiv(fCutAdjusted, CeilDiv(fCutAdjusted, conv2DBasicBlockInfoPtr->fDim));
     if (fActiveAdjusted >= fActive) {
@@ -52,17 +57,21 @@ void ConvTilingAlgorithmBBmode::AdjustM()
 void ConvTilingAlgorithmBBmode::AdjustN()
 {
     // active cores
-    nActive = CeilDiv(conv2DBasicBlockInfoPtr->nCut, CeilDiv(conv2DBasicBlockInfoPtr->nCut,
-        conv2DBasicBlockInfoPtr->nDim));
-    uint64_t nTileAdjusted = CeilDiv(tilingIns_->shapeInfo.orgCo, CeilDiv(conv2DBasicBlockInfoPtr->nCut,
-        conv2DBasicBlockInfoPtr->nDim) * conv2DBasicBlockInfoPtr->nDim * tilingIns_->cubeInfo.n0) *
-        tilingIns_->cubeInfo.n0;
+    nActive = CeilDiv(conv2DBasicBlockInfoPtr->nCut,
+                      CeilDiv(conv2DBasicBlockInfoPtr->nCut, conv2DBasicBlockInfoPtr->nDim));
+    uint64_t nTileAdjusted = CeilDiv(tilingIns_->shapeInfo.orgCo,
+                                     CeilDiv(conv2DBasicBlockInfoPtr->nCut, conv2DBasicBlockInfoPtr->nDim) *
+                                         conv2DBasicBlockInfoPtr->nDim * tilingIns_->cubeInfo.n0) *
+                             tilingIns_->cubeInfo.n0;
     // fixpipe buffer limit
-    nTileAdjusted = tilingIns_->shapeInfo.channelWiseCoeff > 0 ? min((tilingIns_->platformInfo.fbSize /
-        static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE)) /
-        tilingIns_->cubeInfo.n0 * tilingIns_->cubeInfo.n0, nTileAdjusted) : nTileAdjusted;
+    nTileAdjusted = tilingIns_->shapeInfo.channelWiseCoeff > 0 ?
+                        min((tilingIns_->platformInfo.fbSize /
+                             static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE)) /
+                                tilingIns_->cubeInfo.n0 * tilingIns_->cubeInfo.n0,
+                            nTileAdjusted) :
+                        nTileAdjusted;
     nTileAdjusted = tilingIns_->hasBias ? min((tilingIns_->platformInfo.btSize / this->biasDTypeSize), nTileAdjusted) :
-        nTileAdjusted; // bias table limit
+                                          nTileAdjusted; // bias table limit
     uint64_t nCutAdjusted = CeilDiv(tilingIns_->shapeInfo.orgCo, nTileAdjusted);
     // adjusted active cores
     uint64_t nActiveAdjusted = CeilDiv(nCutAdjusted, CeilDiv(nCutAdjusted, conv2DBasicBlockInfoPtr->nDim));
@@ -72,40 +81,46 @@ void ConvTilingAlgorithmBBmode::AdjustN()
         nActive = nActiveAdjusted;
     } else {
         nTileAdjusted = static_cast<uint64_t>(conv2DBasicBlockInfoPtr->nTile);
-        nTileAdjusted = tilingIns_->shapeInfo.channelWiseCoeff > 0 ? min((tilingIns_->platformInfo.fbSize /
-            static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE)), nTileAdjusted) :
-            nTileAdjusted;
+        nTileAdjusted = tilingIns_->shapeInfo.channelWiseCoeff > 0 ?
+                            min((tilingIns_->platformInfo.fbSize /
+                                 static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE)),
+                                nTileAdjusted) :
+                            nTileAdjusted;
         nTileAdjusted = tilingIns_->hasBias ? min((tilingIns_->platformInfo.btSize / this->biasDTypeSize),
-            nTileAdjusted) : nTileAdjusted; // bias table limit
+                                                  nTileAdjusted) :
+                                              nTileAdjusted; // bias table limit
         conv2DBasicBlockInfoPtr->nTile = static_cast<uint32_t>(nTileAdjusted);
         conv2DBasicBlockInfoPtr->nCut = static_cast<uint32_t>(nCutAdjusted);
     }
 }
 
-uint64_t ConvTilingAlgorithmBBmode::InferHiL1(uint32_t multiMTileSize) const{
+uint64_t ConvTilingAlgorithmBBmode::InferHiL1(uint32_t multiMTileSize) const
+{
     uint64_t inputHoL1 = static_cast<uint64_t>(multiMTileSize) / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2;
     uint64_t khDilated = CalcKhDilated(tilingIns_->shapeInfo.singlekH, tilingIns_->attrInfo.dilationH);
     uint64_t inputHiL1 = Conv2DInferHiL1(inputHoL1, khDilated, tilingIns_->shapeInfo.orgHi,
-        tilingIns_->attrInfo.strideH);
+                                         tilingIns_->attrInfo.strideH);
     return inputHiL1 * tilingIns_->shapeInfo.orgWi;
 }
 
 void ConvTilingAlgorithmBBmode::CalcCoreUtilization() const
 {
-    conv2DBasicBlockInfoPtr->coreUtilization = static_cast<float>(fActive) * static_cast<float>(nActive) / 
-        (static_cast<float>(conv2DBasicBlockInfoPtr->aicoreNum) / static_cast<float>(conv2DBasicBlockInfoPtr->groupDim));
+    conv2DBasicBlockInfoPtr->coreUtilization = static_cast<float>(fActive) * static_cast<float>(nActive) /
+                                               (static_cast<float>(conv2DBasicBlockInfoPtr->aicoreNum) /
+                                                static_cast<float>(conv2DBasicBlockInfoPtr->groupDim));
 }
 
 void ConvTilingAlgorithmBBmode::TryBiasAndScaleFullLoad(const int64_t& usedL1Size)
 {
     preSetFullLoadFlag.biasFullLoad = false;
     preSetFullLoadFlag.fixpFullLoad = false;
-    int64_t biasL1FullLoadExtraSize = tilingIns_->hasBias ?
-        (tilingIns_->shapeInfo.singleCo - static_cast<int64_t>(conv2DBasicBlockInfoPtr->nTile)) *
-        this->biasDTypeSize : 0;
-    int64_t scaleL1FullLoadExtraSize =
-        (tilingIns_->shapeInfo.singleCo - static_cast<int64_t>(conv2DBasicBlockInfoPtr->nTile)) *
-        tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE;
+    int64_t biasL1FullLoadExtraSize = tilingIns_->hasBias ? (tilingIns_->shapeInfo.singleCo -
+                                                             static_cast<int64_t>(conv2DBasicBlockInfoPtr->nTile)) *
+                                                                this->biasDTypeSize :
+                                                            0;
+    int64_t scaleL1FullLoadExtraSize = (tilingIns_->shapeInfo.singleCo -
+                                        static_cast<int64_t>(conv2DBasicBlockInfoPtr->nTile)) *
+                                       tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE;
     if (usedL1Size - biasL1FullLoadExtraSize - scaleL1FullLoadExtraSize >= 0) {
         preSetFullLoadFlag.biasFullLoad = true;
         preSetFullLoadFlag.fixpFullLoad = true;
@@ -132,30 +147,36 @@ void ConvTilingAlgorithmBBmode::CalcMNFullLoadFlag() const
 {
     conv2DBasicBlockInfoPtr->fCut = conv2DBasicBlockInfoPtr->mCut * conv2DBasicBlockInfoPtr->batch;
     if (tilingIns_->enableInnerBatch) {
-        conv2DBasicBlockInfoPtr->fCut = CeilDiv(CeilDiv(conv2DBasicBlockInfoPtr->batch *
-        CeilDiv(tilingIns_->shapeInfo.orgHo * tilingIns_->shapeInfo.orgWo, tilingIns_->cubeInfo.m0) *
-        tilingIns_->cubeInfo.m0, conv2DBasicBlockInfoPtr->mTile), tilingIns_->innerBatch);
+        conv2DBasicBlockInfoPtr->fCut = CeilDiv(
+            CeilDiv(conv2DBasicBlockInfoPtr->batch *
+                        CeilDiv(tilingIns_->shapeInfo.orgHo * tilingIns_->shapeInfo.orgWo, tilingIns_->cubeInfo.m0) *
+                        tilingIns_->cubeInfo.m0,
+                    conv2DBasicBlockInfoPtr->mTile),
+            tilingIns_->innerBatch);
     }
     conv2DBasicBlockInfoPtr->mAl1FullLoad = (conv2DBasicBlockInfoPtr->fCut > conv2DBasicBlockInfoPtr->fDim) ? false :
-        true;
+                                                                                                              true;
     conv2DBasicBlockInfoPtr->nBl1FullLoad = (conv2DBasicBlockInfoPtr->nCut > conv2DBasicBlockInfoPtr->nDim) ? false :
-        true;
+                                                                                                              true;
 }
 
 void ConvTilingAlgorithmBBmode::CalcAvalibleL1Size()
 {
-    uint64_t biasL1Size = tilingIns_->hasBias ?
-        (conv2DBasicBlockInfoPtr->biasFullLoad ? tilingIns_->shapeInfo.singleCo * this->biasDTypeSize :
-        conv2DBasicBlockInfoPtr->nTile * this->biasDTypeSize) : 0;
+    uint64_t biasL1Size = tilingIns_->hasBias ? (conv2DBasicBlockInfoPtr->biasFullLoad ?
+                                                     tilingIns_->shapeInfo.singleCo * this->biasDTypeSize :
+                                                     conv2DBasicBlockInfoPtr->nTile * this->biasDTypeSize) :
+                                                0;
     uint64_t scaleL1Size = (conv2DBasicBlockInfoPtr->fixpFullLoad ?
-        tilingIns_->shapeInfo.singleCo * tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE:
-        conv2DBasicBlockInfoPtr->nTile * tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE);
+                                tilingIns_->shapeInfo.singleCo * tilingIns_->shapeInfo.channelWiseCoeff *
+                                    FP16_DTYPE_SIZE :
+                                conv2DBasicBlockInfoPtr->nTile * tilingIns_->shapeInfo.channelWiseCoeff *
+                                    FP16_DTYPE_SIZE);
     availableL1Size = tilingIns_->platformInfo.l1Size - biasL1Size - scaleL1Size;
 
     fmapL1FullLoadSize = tilingIns_->shapeInfo.orgHi * tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.orgCi *
-        conv2DBasicBlockInfoPtr->batch / conv2DBasicBlockInfoPtr->fDim * fMapDTypeSize;
+                         conv2DBasicBlockInfoPtr->batch / conv2DBasicBlockInfoPtr->fDim * fMapDTypeSize;
     weightL1FullLoadSize = tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * tilingIns_->shapeInfo.orgCi *
-        tilingIns_->shapeInfo.orgCo / conv2DBasicBlockInfoPtr->nDim * weightDTypeSize;
+                           tilingIns_->shapeInfo.orgCo / conv2DBasicBlockInfoPtr->nDim * weightDTypeSize;
 }
 
 void ConvTilingAlgorithmBBmode::CalcWeightCoeff()
@@ -177,11 +198,14 @@ void ConvTilingAlgorithmBBmode::CalcWeightCoeff()
 double ConvTilingAlgorithmBBmode::CalcL1LoadScore() const
 {
     uint64_t aEffectiveSize = tilingIns_->shapeInfo.orgHi * tilingIns_->shapeInfo.orgWi *
-        conv2DBasicBlockInfoPtr->batch;
+                              conv2DBasicBlockInfoPtr->batch;
     uint64_t bEffectiveSize = tilingIns_->shapeInfo.orgCo * tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW *
-        weightCoeff;
-    double l1LoadScoreTemp = l1ScoreBase + static_cast<double>(1.0) / (aEffectiveSize / (tilingIns_->shapeInfo.orgkH *
-        tilingIns_->shapeInfo.orgkW) * mRepeats + bEffectiveSize * nRepeats);
+                              weightCoeff;
+    double l1LoadScoreTemp = l1ScoreBase +
+                             static_cast<double>(1.0) /
+                                 (aEffectiveSize / (tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW) *
+                                      mRepeats +
+                                  bEffectiveSize * nRepeats);
     return l1LoadScoreTemp;
 }
 
@@ -293,7 +317,8 @@ void ConvTilingAlgorithmBBmode::CalcBestL1LoadStratgy()
     CalcWeightCoeff();
 
     // secondly, try different K fullLoad sence. (not excceed L1Size and record best load strategy)
-    if (singleCi1xC0 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW <= MAX_16_BIT_NUM) { // PostK Limit
+    if (singleCi1xC0 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW <=
+        MAX_16_BIT_NUM) { // PostK Limit
         // 1> kAl1FullLoad && kBl1FullLoad
         TryKABFullLoadL1Stratgy();
 
@@ -311,23 +336,29 @@ void ConvTilingAlgorithmBBmode::CalcBestL1LoadStratgy()
 bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadStrategy(ConvTilingAlgorithmBBmode* bbPtr)
 {
     bbPtr->mRepeats = bbPtr->conv2DBasicBlockInfoPtr->nCut;
-    bbPtr->nRepeats = !bbPtr->tilingIns_->enableInnerBatch ? bbPtr->conv2DBasicBlockInfoPtr->batch *
-        bbPtr->conv2DBasicBlockInfoPtr->mCut : CeilDiv(CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch *
-        CeilDiv(static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.orgHo * bbPtr->tilingIns_->shapeInfo.orgWo),
-        bbPtr->tilingIns_->cubeInfo.m0) * bbPtr->tilingIns_->cubeInfo.m0, bbPtr->conv2DBasicBlockInfoPtr->mTile),
-        bbPtr->tilingIns_->innerBatch);
+    bbPtr->nRepeats = !bbPtr->tilingIns_->enableInnerBatch ?
+                          bbPtr->conv2DBasicBlockInfoPtr->batch * bbPtr->conv2DBasicBlockInfoPtr->mCut :
+                          CeilDiv(CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch *
+                                              CeilDiv(static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.orgHo *
+                                                                            bbPtr->tilingIns_->shapeInfo.orgWo),
+                                                      bbPtr->tilingIns_->cubeInfo.m0) *
+                                              bbPtr->tilingIns_->cubeInfo.m0,
+                                          bbPtr->conv2DBasicBlockInfoPtr->mTile),
+                                  bbPtr->tilingIns_->innerBatch);
     bbPtr->l1ScoreBase = L1_SCORE_BASE_0_POINTS;
     return true;
 }
 
 // ========= K all Full Load L1 Load Strategy =========
-bool ConvTilingAlgorithmBBmode::GetL1LoadStrategyForKFullLoadCommon() {
+bool ConvTilingAlgorithmBBmode::GetL1LoadStrategyForKFullLoadCommon()
+{
     dbA = conv2DBasicBlockInfoPtr->mAl1FullLoad && preSetFullLoadFlag.kAl1FullLoad ? 1 : DOUBLE_BUFFER_NUM;
     dbB = conv2DBasicBlockInfoPtr->nBl1FullLoad && preSetFullLoadFlag.kBl1FullLoad ? 1 : DOUBLE_BUFFER_NUM;
 
     tmpL1TilingParams.kAL1 = singleCi1xC0;
     tmpL1TilingParams.kBL1 = singleCi1xC0 * tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW;
-    uint64_t usedAL1Size = dbA * fMapDTypeSize * conv2DBasicBlockInfoPtr->mIn * tilingIns_->innerBatch * tmpL1TilingParams.kAL1;
+    uint64_t usedAL1Size = dbA * fMapDTypeSize * conv2DBasicBlockInfoPtr->mIn * tilingIns_->innerBatch *
+                           tmpL1TilingParams.kAL1;
     uint64_t usedBL1Size = dbB * weightDTypeSize * conv2DBasicBlockInfoPtr->nTile * tmpL1TilingParams.kBL1;
     if (!CheckL1SpaceEnough(usedAL1Size, usedBL1Size)) {
         return false;
@@ -354,11 +385,15 @@ bool ConvTilingAlgorithmBBmode::KAndNoneFullLoad::GetL1LoadStrategy(ConvTilingAl
     }
 
     bbPtr->mRepeats = bbPtr->conv2DBasicBlockInfoPtr->nDim;
-    bbPtr->nRepeats = !bbPtr->tilingIns_->enableInnerBatch ? bbPtr->conv2DBasicBlockInfoPtr->batch *
-        bbPtr->conv2DBasicBlockInfoPtr->mCut : CeilDiv(CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch *
-        CeilDiv(static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.orgHo * bbPtr->tilingIns_->shapeInfo.orgWo),
-        bbPtr->tilingIns_->cubeInfo.m0) * bbPtr->tilingIns_->cubeInfo.m0, bbPtr->conv2DBasicBlockInfoPtr->mTile),
-        bbPtr->tilingIns_->innerBatch);
+    bbPtr->nRepeats = !bbPtr->tilingIns_->enableInnerBatch ?
+                          bbPtr->conv2DBasicBlockInfoPtr->batch * bbPtr->conv2DBasicBlockInfoPtr->mCut :
+                          CeilDiv(CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch *
+                                              CeilDiv(static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.orgHo *
+                                                                            bbPtr->tilingIns_->shapeInfo.orgWo),
+                                                      bbPtr->tilingIns_->cubeInfo.m0) *
+                                              bbPtr->tilingIns_->cubeInfo.m0,
+                                          bbPtr->conv2DBasicBlockInfoPtr->mTile),
+                                  bbPtr->tilingIns_->innerBatch);
     bbPtr->l1ScoreBase = L1_SCORE_BASE_5_POINTS;
     return true;
 }
@@ -370,15 +405,19 @@ void ConvTilingAlgorithmBBmode::GetL1LoadStrategyOneInputFullLoad()
     this->l1ScoreBase = L1_SCORE_BASE_4_POINTS;
 }
 // ========= Nfirst L1 Load Strategy =========
-bool ConvTilingAlgorithmBBmode::GetL1LoadStrategyForNFirstCommon() {
+bool ConvTilingAlgorithmBBmode::GetL1LoadStrategyForNFirstCommon()
+{
     dbA = conv2DBasicBlockInfoPtr->mAl1FullLoad && preSetFullLoadFlag.kAl1FullLoad ? 1 : DOUBLE_BUFFER_NUM;
     dbB = conv2DBasicBlockInfoPtr->nBl1FullLoad && preSetFullLoadFlag.kBl1FullLoad ? 1 : DOUBLE_BUFFER_NUM;
 
     tmpL1TilingParams.kAL1 = singleCi1xC0;
-    uint64_t usedAL1Size = dbA * fMapDTypeSize * tmpL1TilingParams.mAL1Value * tmpL1TilingParams.kAL1 * tilingIns_->innerBatch;
+    uint64_t usedAL1Size = dbA * fMapDTypeSize * tmpL1TilingParams.mAL1Value * tmpL1TilingParams.kAL1 *
+                           tilingIns_->innerBatch;
     // weight not full load, resever space size
-    uint64_t usedBL1Size = max(tilingIns_->platformInfo.l0BSize, static_cast<uint64_t>(conv2DBasicBlockInfoPtr->nTile *
-        tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * tilingIns_->cubeInfo.k0 * weightDTypeSize));
+    uint64_t usedBL1Size = max(
+        tilingIns_->platformInfo.l0BSize,
+        static_cast<uint64_t>(conv2DBasicBlockInfoPtr->nTile * tilingIns_->shapeInfo.orgkH *
+                              tilingIns_->shapeInfo.orgkW * tilingIns_->cubeInfo.k0 * weightDTypeSize));
     if (!CheckL1SpaceEnough(usedAL1Size, usedBL1Size)) {
         return false;
     }
@@ -403,22 +442,29 @@ bool ConvTilingAlgorithmBBmode::FmapKFullLoad::GetL1LoadStrategy(ConvTilingAlgor
     }
 
     bbPtr->mRepeats = bbPtr->conv2DBasicBlockInfoPtr->nDim;
-    bbPtr->nRepeats = !bbPtr->tilingIns_->enableInnerBatch ? bbPtr->conv2DBasicBlockInfoPtr->batch *
-        bbPtr->conv2DBasicBlockInfoPtr->mCut : CeilDiv(CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch *
-        CeilDiv(static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.orgHo * bbPtr->tilingIns_->shapeInfo.orgWo),
-        bbPtr->tilingIns_->cubeInfo.m0) * bbPtr->tilingIns_->cubeInfo.m0, bbPtr->conv2DBasicBlockInfoPtr->mTile),
-        bbPtr->tilingIns_->innerBatch);
+    bbPtr->nRepeats = !bbPtr->tilingIns_->enableInnerBatch ?
+                          bbPtr->conv2DBasicBlockInfoPtr->batch * bbPtr->conv2DBasicBlockInfoPtr->mCut :
+                          CeilDiv(CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->batch *
+                                              CeilDiv(static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.orgHo *
+                                                                            bbPtr->tilingIns_->shapeInfo.orgWo),
+                                                      bbPtr->tilingIns_->cubeInfo.m0) *
+                                              bbPtr->tilingIns_->cubeInfo.m0,
+                                          bbPtr->conv2DBasicBlockInfoPtr->mTile),
+                                  bbPtr->tilingIns_->innerBatch);
     bbPtr->l1ScoreBase = L1_SCORE_BASE_3_POINTS;
     return true;
 }
 // ========= Mfirst L1 Load Strategy =========
-bool ConvTilingAlgorithmBBmode::GetL1LoadStrategyForMFirstCommon() {
+bool ConvTilingAlgorithmBBmode::GetL1LoadStrategyForMFirstCommon()
+{
     dbA = conv2DBasicBlockInfoPtr->mAl1FullLoad && preSetFullLoadFlag.kAl1FullLoad ? 1 : DOUBLE_BUFFER_NUM;
     dbB = conv2DBasicBlockInfoPtr->nBl1FullLoad && preSetFullLoadFlag.kBl1FullLoad ? 1 : DOUBLE_BUFFER_NUM;
 
     tmpL1TilingParams.kBL1 = singleCi1xC0 * tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW;
-    uint64_t usedAL1Size = max(tilingIns_->platformInfo.l0ASize, static_cast<uint64_t>(conv2DBasicBlockInfoPtr->mIn *
-        tilingIns_->innerBatch * tilingIns_->cubeInfo.k0 * fMapDTypeSize)); // fmap not full load, resever space size
+    uint64_t usedAL1Size = max(
+        tilingIns_->platformInfo.l0ASize,
+        static_cast<uint64_t>(conv2DBasicBlockInfoPtr->mIn * tilingIns_->innerBatch * tilingIns_->cubeInfo.k0 *
+                              fMapDTypeSize)); // fmap not full load, resever space size
     uint64_t usedBL1Size = dbB * weightDTypeSize * tmpL1TilingParams.nBL1Value * tmpL1TilingParams.kBL1;
     if (!CheckL1SpaceEnough(usedAL1Size, usedBL1Size)) {
         return false;
@@ -472,21 +518,22 @@ int64_t ConvTilingAlgorithmBBmode::Process()
 int64_t ConvTilingAlgorithmBBmode::GetL1Tiling(ConvTilingAlgorithmBBmode* bbPtr)
 {
     CalcAvalibleL1Size();
-    fmapL1FullLoadSize = bbPtr->conv2DBasicBlockInfoPtr->mIn * singleCi1xC0 * fMapDTypeSize * tilingIns_->innerBatch; // MultiM=1时Fmap全载大小
+    fmapL1FullLoadSize = bbPtr->conv2DBasicBlockInfoPtr->mIn * singleCi1xC0 * fMapDTypeSize *
+                         tilingIns_->innerBatch; // MultiM=1时Fmap全载大小
     weightL1FullLoadSize = tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * singleCi1xC0 *
-        bbPtr->conv2DBasicBlockInfoPtr->nTile * weightDTypeSize;  //  MultiN=1时Weight全载大小
+                           bbPtr->conv2DBasicBlockInfoPtr->nTile * weightDTypeSize; //  MultiN=1时Weight全载大小
 
     // set default mAL1Value and nBL1Value
     bbPtr->l1TilingParams.mAL1Value = bbPtr->conv2DBasicBlockInfoPtr->mIn;
     bbPtr->l1TilingParams.nBL1Value = bbPtr->conv2DBasicBlockInfoPtr->nTile;
-    if (bbPtr->conv2DBasicBlockInfoPtr->mTile >=  tilingIns_->shapeInfo.singleM) {
+    if (bbPtr->conv2DBasicBlockInfoPtr->mTile >= tilingIns_->shapeInfo.singleM) {
         conv2DBasicBlockInfoPtr->mAl1FullLoad = true;
     }
 
     // KABL1 FullLoad
     if (conv2DBasicBlockInfoPtr->kAl1FullLoad && conv2DBasicBlockInfoPtr->kBl1FullLoad) {
         GetKABFullLoadL1TilingParams();
-    // Fmap resides in L1, iterateMNOrder == ITER_N_FST
+        // Fmap resides in L1, iterateMNOrder == ITER_N_FST
     } else if (conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_N_FST) {
         if (conv2DBasicBlockInfoPtr->kAl1FullLoad && conv2DBasicBlockInfoPtr->mAl1FullLoad) {
             l1LoadStrategyType = L1LoadStrategyType::FMAP_FULL_LOAD;
@@ -495,7 +542,7 @@ int64_t ConvTilingAlgorithmBBmode::GetL1Tiling(ConvTilingAlgorithmBBmode* bbPtr)
         } else {
             l1LoadStrategyType = L1LoadStrategyType::N_FIRST_K_SPLIT;
         }
-    // Weight resides in L1, iterateMNOrder == ITER_M_FST
+        // Weight resides in L1, iterateMNOrder == ITER_M_FST
     } else {
         if (conv2DBasicBlockInfoPtr->kBl1FullLoad && conv2DBasicBlockInfoPtr->nBl1FullLoad) {
             l1LoadStrategyType = L1LoadStrategyType::WEIGHT_FULL_LOAD;
@@ -532,16 +579,17 @@ void ConvTilingAlgorithmBBmode::CheckL0CDoubleBuffer()
         this->dbValue.pbCL0 = DOUBLE_BUFFER_NUM;
     }
     bool kFullLoadFlag = kL0 == tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 *
-        tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
+                                    tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.singlekH *
+                                    tilingIns_->shapeInfo.singlekW;
     if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleM) <= mL0 &&
         tilingIns_->innerBatch >= static_cast<uint64_t>(tilingIns_->shapeInfo.singleBatch)) {
         this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
     }
- 
+
     if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleCo) <= nL0) {
         this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
     }
- 
+
     if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM && kFullLoadFlag) {
         if (tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST) {
             this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
@@ -564,8 +612,9 @@ void ConvTilingAlgorithmBBmode::GetKL0() const
     uint64_t l0ASize = tilingIns_->platformInfo.l0ASize;
     uint64_t l0BSize = tilingIns_->platformInfo.l0BSize;
     uint64_t kL0Max = min(l0ASize / fMapDTypeSize / DOUBLE_BUFFER_NUM / conv2DBasicBlockInfoPtr->mTile /
-        tilingIns_->innerBatch, l0BSize / weightDTypeSize / DOUBLE_BUFFER_NUM /
-        conv2DBasicBlockInfoPtr->nTile) / tilingIns_->cubeInfo.k0;
+                              tilingIns_->innerBatch,
+                          l0BSize / weightDTypeSize / DOUBLE_BUFFER_NUM / conv2DBasicBlockInfoPtr->nTile) /
+                      tilingIns_->cubeInfo.k0;
     vector<uint64_t> factors;
     CalcCommFactor(kL1, kL0Max, factors);
     auto maxFactorPtr = max_element(factors.begin(), factors.end());
@@ -579,12 +628,14 @@ void ConvTilingAlgorithmBBmode::GetKL0() const
 void ConvTilingAlgorithmBBmode::SetL1TilingRes()
 {
     tilingIns_->l1TilingInfo.kAL1 = this->l1TilingParams.kAL1 * tilingIns_->shapeInfo.orgkH *
-        tilingIns_->shapeInfo.orgkW;
+                                    tilingIns_->shapeInfo.orgkW;
     tilingIns_->l1TilingInfo.kBL1 = this->l1TilingParams.kBL1;
     tilingIns_->l1TilingInfo.mAL1 = conv2DBasicBlockInfoPtr->mAl1FullLoad ?
-        tilingIns_->shapeInfo.singleM1 * tilingIns_->cubeInfo.m0 : this->multiM * conv2DBasicBlockInfoPtr->mTile;
+                                        tilingIns_->shapeInfo.singleM1 * tilingIns_->cubeInfo.m0 :
+                                        this->multiM * conv2DBasicBlockInfoPtr->mTile;
     tilingIns_->l1TilingInfo.nBL1 = conv2DBasicBlockInfoPtr->nBl1FullLoad ?
-        tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 : this->multiN * conv2DBasicBlockInfoPtr->nTile;
+                                        tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 :
+                                        this->multiN * conv2DBasicBlockInfoPtr->nTile;
     tilingIns_->l1TilingInfo.iterateMNOrder = conv2DBasicBlockInfoPtr->iterateMNOrder;
     tilingIns_->l1TilingInfo.biasFullLoadFlag = conv2DBasicBlockInfoPtr->biasFullLoad;
     tilingIns_->l1TilingInfo.fixpParamsFullLoadFlag = conv2DBasicBlockInfoPtr->fixpFullLoad;
@@ -597,40 +648,41 @@ void ConvTilingAlgorithmBBmode::SetL0TilingRes()
     tilingIns_->l0TilingInfo.nL0 = conv2DBasicBlockInfoPtr->nTile;
 }
 
-void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingBothFullLoad(
-    ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxMAL1Iter, uint64_t maxNBL1Iter) const
+void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingBothFullLoad(ConvTilingAlgorithmBBmode* bbPtr,
+                                                                                     uint64_t maxMAL1Iter,
+                                                                                     uint64_t maxNBL1Iter) const
 {
     bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
     bbPtr->multiM = maxMAL1Iter;
     bbPtr->multiN = maxNBL1Iter;
-    bbPtr->l1TilingParams.mAL1Value = min(static_cast<uint64_t>(bbPtr->multiM) *
-        bbPtr->conv2DBasicBlockInfoPtr->mIn,
+    bbPtr->l1TilingParams.mAL1Value = min(
+        static_cast<uint64_t>(bbPtr->multiM) * bbPtr->conv2DBasicBlockInfoPtr->mIn,
         static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.orgHi * bbPtr->tilingIns_->shapeInfo.orgWi));
-    bbPtr->l1TilingParams.nBL1Value = min(static_cast<uint64_t>(bbPtr->multiN) *
-        bbPtr->conv2DBasicBlockInfoPtr->nTile, static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo));
+    bbPtr->l1TilingParams.nBL1Value = min(static_cast<uint64_t>(bbPtr->multiN) * bbPtr->conv2DBasicBlockInfoPtr->nTile,
+                                          static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo));
 }
 
-void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingFmapFullLoad(
-    ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxMAL1Iter) const
+void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingFmapFullLoad(ConvTilingAlgorithmBBmode* bbPtr,
+                                                                                     uint64_t maxMAL1Iter) const
 {
     bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
     bbPtr->multiM = maxMAL1Iter;
     bbPtr->multiN = 1;
-    bbPtr->l1TilingParams.mAL1Value = min(static_cast<uint64_t>(bbPtr->multiM) *
-        bbPtr->conv2DBasicBlockInfoPtr->mIn,
+    bbPtr->l1TilingParams.mAL1Value = min(
+        static_cast<uint64_t>(bbPtr->multiM) * bbPtr->conv2DBasicBlockInfoPtr->mIn,
         static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.orgHi * bbPtr->tilingIns_->shapeInfo.orgWi));
     bbPtr->l1TilingParams.nBL1Value = bbPtr->conv2DBasicBlockInfoPtr->nTile;
 }
 
-void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingWeightFullLoad(
-    ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxNBL1Iter) const
+void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingWeightFullLoad(ConvTilingAlgorithmBBmode* bbPtr,
+                                                                                       uint64_t maxNBL1Iter) const
 {
     bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
     bbPtr->multiM = 1;
     bbPtr->multiN = maxNBL1Iter;
     bbPtr->l1TilingParams.mAL1Value = bbPtr->conv2DBasicBlockInfoPtr->mIn;
-    bbPtr->l1TilingParams.nBL1Value = min(static_cast<uint64_t>(bbPtr->multiN) *
-        bbPtr->conv2DBasicBlockInfoPtr->nTile, static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo));
+    bbPtr->l1TilingParams.nBL1Value = min(static_cast<uint64_t>(bbPtr->multiN) * bbPtr->conv2DBasicBlockInfoPtr->nTile,
+                                          static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo));
 }
 
 void ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingWithoutFullLoad(
@@ -648,30 +700,32 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingParams(C
     // KAL1 and KBL1 fullLoad set
     bbPtr->l1TilingParams.kAL1 = bbPtr->singleCi1xC0;
     bbPtr->l1TilingParams.kBL1 = bbPtr->singleCi1xC0 * bbPtr->tilingIns_->shapeInfo.orgkH *
-        bbPtr->tilingIns_->shapeInfo.orgkW;
+                                 bbPtr->tilingIns_->shapeInfo.orgkW;
 
     uint64_t maxNBL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->nCut, bbPtr->conv2DBasicBlockInfoPtr->nDim);
     // 单core上weight放BB的Multi1大小
     int64_t weightLoadBBSizeMultix1 = min(bbPtr->conv2DBasicBlockInfoPtr->nTile,
-        static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.singleCo)) *
-        bbPtr->singleCi1xC0 * bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW *
-        bbPtr->weightDTypeSize; 
-     // 单core上weight放BB的总大小
+                                          static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.singleCo)) *
+                                      bbPtr->singleCi1xC0 * bbPtr->tilingIns_->shapeInfo.orgkH *
+                                      bbPtr->tilingIns_->shapeInfo.orgkW * bbPtr->weightDTypeSize;
+    // 单core上weight放BB的总大小
     int64_t singleBBWeightSize = min(maxNBL1Iter * bbPtr->conv2DBasicBlockInfoPtr->nTile,
-        static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo)) * bbPtr->singleCi1xC0 *
-        bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW * bbPtr->weightDTypeSize;
+                                     static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo)) *
+                                 bbPtr->singleCi1xC0 * bbPtr->tilingIns_->shapeInfo.orgkH *
+                                 bbPtr->tilingIns_->shapeInfo.orgkW * bbPtr->weightDTypeSize;
 
     uint64_t maxMAL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->mCut, bbPtr->conv2DBasicBlockInfoPtr->mDim);
     // 单core上fmap放BB的Multi1大小
-    int64_t fmapLoadSizeMultix1 = bbPtr->conv2DBasicBlockInfoPtr->mIn * bbPtr->singleCi1xC0 * bbPtr->fMapDTypeSize * bbPtr->tilingIns_->innerBatch;
+    int64_t fmapLoadSizeMultix1 = bbPtr->conv2DBasicBlockInfoPtr->mIn * bbPtr->singleCi1xC0 * bbPtr->fMapDTypeSize *
+                                  bbPtr->tilingIns_->innerBatch;
     // 单core上fmap放BB的总大小
     int64_t singleBBFmapSize = maxMAL1Iter * fmapLoadSizeMultix1;
 
     OP_LOGD(bbPtr->tilingIns_->nodeType,
-        "singleBBFmapSize: %lu, singleBBWeightSize: %lu, fmapSizeMultix1: %lu, weightBBSizeMultix1: %lu",
-        singleBBFmapSize, singleBBWeightSize, fmapLoadSizeMultix1, weightLoadBBSizeMultix1);
-    if (GetAOrBFullLoadL1TilingParams(bbPtr, fmapLoadSizeMultix1, weightLoadBBSizeMultix1,
-                                      singleBBFmapSize, singleBBWeightSize)) {
+            "singleBBFmapSize: %lu, singleBBWeightSize: %lu, fmapSizeMultix1: %lu, weightBBSizeMultix1: %lu",
+            singleBBFmapSize, singleBBWeightSize, fmapLoadSizeMultix1, weightLoadBBSizeMultix1);
+    if (GetAOrBFullLoadL1TilingParams(bbPtr, fmapLoadSizeMultix1, weightLoadBBSizeMultix1, singleBBFmapSize,
+                                      singleBBWeightSize)) {
         return true;
     }
 
@@ -681,9 +735,11 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetL1LoadTilingParams(C
     return false;
 }
 
-bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1TilingParams(
-    ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1, int64_t weightLoadBBSizeMultix1,
-    int64_t singleBBFmapSize, int64_t singleBBWeightSize) const
+bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1TilingParams(ConvTilingAlgorithmBBmode* bbPtr,
+                                                                                       int64_t fmapLoadSizeMultix1,
+                                                                                       int64_t weightLoadBBSizeMultix1,
+                                                                                       int64_t singleBBFmapSize,
+                                                                                       int64_t singleBBWeightSize) const
 {
     uint64_t maxMAL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->mCut, bbPtr->conv2DBasicBlockInfoPtr->mDim);
     uint64_t maxNBL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->nCut, bbPtr->conv2DBasicBlockInfoPtr->nDim);
@@ -692,7 +748,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1Tiling
         GetL1LoadTilingBothFullLoad(bbPtr, maxMAL1Iter, maxNBL1Iter);
         return true;
     }
-    if (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_N_FST){
+    if (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_N_FST) {
         // Fmap fullLoad in L1
         if (singleBBFmapSize + weightLoadBBSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) <=
             bbPtr->availableL1Size) {
@@ -700,20 +756,21 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetAOrBFullLoadL1Tiling
             return true;
         }
         // weight fullLoad in L1
-        else if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <= bbPtr->availableL1Size) {
+        else if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <=
+                 bbPtr->availableL1Size) {
             GetL1LoadTilingWeightFullLoad(bbPtr, maxNBL1Iter);
             return true;
         }
-    }
-    else{
+    } else {
         // weight fullLoad in L1
-        if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <= bbPtr->availableL1Size) {
+        if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) + singleBBWeightSize <=
+            bbPtr->availableL1Size) {
             GetL1LoadTilingWeightFullLoad(bbPtr, maxNBL1Iter);
             return true;
         }
         // Fmap fullLoad in L1
         else if (singleBBFmapSize + weightLoadBBSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) <=
-            bbPtr->availableL1Size) {
+                 bbPtr->availableL1Size) {
             GetL1LoadTilingFmapFullLoad(bbPtr, maxMAL1Iter);
             return true;
         }
@@ -726,7 +783,8 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyKFullLoad::GetNoneFullLoadL1Tiling
 {
     // 4. No one FullLoad, DB on
     if (fmapLoadSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) +
-        weightLoadBBSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) <= bbPtr->availableL1Size) {
+            weightLoadBBSizeMultix1 * static_cast<int64_t>(DOUBLE_BUFFER_NUM) <=
+        bbPtr->availableL1Size) {
         GetL1LoadTilingWithoutFullLoad(bbPtr);
         return true;
     }
@@ -747,17 +805,20 @@ void ConvTilingAlgorithmBBmode::GetKABFullLoadL1TilingParams()
     this->l1TilingParams.kBL1 = singleCi1xC0 * tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW;
 
     // singlecore fmap fullload size
-    int64_t singleCoreFmapSize  = CeilDiv(tilingIns_->shapeInfo.orgHi * tilingIns_->shapeInfo.orgWi * 
-        conv2DBasicBlockInfoPtr->batch, conv2DBasicBlockInfoPtr->fDim) * singleCi1xC0 ;
+    int64_t singleCoreFmapSize = CeilDiv(tilingIns_->shapeInfo.orgHi * tilingIns_->shapeInfo.orgWi *
+                                             conv2DBasicBlockInfoPtr->batch,
+                                         conv2DBasicBlockInfoPtr->fDim) *
+                                 singleCi1xC0;
     // singlecore weight fullload size
-    int64_t singleCoreWeightSize = tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * 
-        CeilDiv(tilingIns_->shapeInfo.singleCo, conv2DBasicBlockInfoPtr->nDim) * singleCi1xC0;
+    int64_t singleCoreWeightSize = tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW *
+                                   CeilDiv(tilingIns_->shapeInfo.singleCo, conv2DBasicBlockInfoPtr->nDim) *
+                                   singleCi1xC0;
 
     if (conv2DBasicBlockInfoPtr->mAl1FullLoad && conv2DBasicBlockInfoPtr->nBl1FullLoad) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
         this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
-        if (this->tilingIns_->enableInnerBatch && this->tilingIns_->innerBatch <
-            static_cast<uint32_t>(this->tilingIns_->shapeInfo.singleBatch)) {
+        if (this->tilingIns_->enableInnerBatch &&
+            this->tilingIns_->innerBatch < static_cast<uint32_t>(this->tilingIns_->shapeInfo.singleBatch)) {
             this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
         this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
@@ -765,8 +826,8 @@ void ConvTilingAlgorithmBBmode::GetKABFullLoadL1TilingParams()
     } else if (conv2DBasicBlockInfoPtr->mAl1FullLoad) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
         this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
-        if (this->tilingIns_->enableInnerBatch && this->tilingIns_->innerBatch <
-            static_cast<uint32_t>(this->tilingIns_->shapeInfo.singleBatch)) {
+        if (this->tilingIns_->enableInnerBatch &&
+            this->tilingIns_->innerBatch < static_cast<uint32_t>(this->tilingIns_->shapeInfo.singleBatch)) {
             this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
         l1LoadStrategyType = L1LoadStrategyType::K_AND_MAL1_FULL_LOAD;
@@ -775,8 +836,9 @@ void ConvTilingAlgorithmBBmode::GetKABFullLoadL1TilingParams()
         this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
         l1LoadStrategyType = L1LoadStrategyType::K_AND_NBL1_FULL_LOAD;
     } else {
-        conv2DBasicBlockInfoPtr->iterateMNOrder = singleCoreFmapSize > singleCoreWeightSize ? 
-            IterateMNOrder::ITER_M_FST : IterateMNOrder::ITER_N_FST;
+        conv2DBasicBlockInfoPtr->iterateMNOrder = singleCoreFmapSize > singleCoreWeightSize ?
+                                                      IterateMNOrder::ITER_M_FST :
+                                                      IterateMNOrder::ITER_N_FST;
         l1LoadStrategyType = L1LoadStrategyType::K_AND_NONE_FULL_LOAD;
     }
 }
@@ -787,22 +849,24 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyNFirst::GetL1LoadTilingParams(Conv
     bbPtr->l1TilingParams.kAL1 = bbPtr->singleCi1xC0;
 
     auto aL1size = bbPtr->l1TilingParams.kAL1 * bbPtr->l1TilingParams.mAL1Value * bbPtr->dbValue.pbAL1 *
-        bbPtr->fMapDTypeSize * bbPtr->tilingIns_->innerBatch;
+                   bbPtr->fMapDTypeSize * bbPtr->tilingIns_->innerBatch;
     bbPtr->availableL1Size -= aL1size;
     // Fmap resides in L1, BL1 DB ON
     int64_t cinBL1FullLoadSize = bbPtr->singleCi1xC0;
-    int64_t cinBL1 = min((bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->weightDTypeSize) /
-        (static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkH) *
-        static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkW)) /
-        static_cast<int64_t>(DOUBLE_BUFFER_NUM) / static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->nTile)),
+    int64_t cinBL1 = min(
+        (bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->weightDTypeSize) /
+         (static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkH) *
+          static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkW)) /
+         static_cast<int64_t>(DOUBLE_BUFFER_NUM) / static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->nTile)),
         cinBL1FullLoadSize); // 这个场景放大KBL1, MultiN=1，所以用nTile
     if (cinBL1 < bbPtr->tilingIns_->cubeInfo.k0) {
         bbPtr->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
         bbPtr->bL1DBNeedClose = true;
         cinBL1 = min((bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->weightDTypeSize) /
-            (static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkH) *
-            static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkW)) /
-            static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->nTile)), cinBL1FullLoadSize);
+                      (static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkH) *
+                       static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkW)) /
+                      static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->nTile)),
+                     cinBL1FullLoadSize);
     }
     cinBL1 = FloorAlign(cinBL1, bbPtr->tilingIns_->cubeInfo.k0);
     if (cinBL1 <= 0) {
@@ -818,14 +882,15 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyNFirst::GetL1LoadTilingParams(Conv
 bool ConvTilingAlgorithmBBmode::FmapFullLoad::GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr)
 {
     bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
-    if (bbPtr->tilingIns_->enableInnerBatch && bbPtr->tilingIns_->innerBatch <
-        static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.singleBatch)) {
+    if (bbPtr->tilingIns_->enableInnerBatch &&
+        bbPtr->tilingIns_->innerBatch < static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.singleBatch)) {
         bbPtr->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
     }
     uint64_t maxMAL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->mCut, bbPtr->conv2DBasicBlockInfoPtr->mDim);
     bbPtr->multiM = maxMAL1Iter;
     bbPtr->multiN = 1;
-    bbPtr->l1TilingParams.mAL1Value = min(static_cast<uint64_t>(bbPtr->multiM) * bbPtr->conv2DBasicBlockInfoPtr->mIn,
+    bbPtr->l1TilingParams.mAL1Value = min(
+        static_cast<uint64_t>(bbPtr->multiM) * bbPtr->conv2DBasicBlockInfoPtr->mIn,
         static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.orgHi * bbPtr->tilingIns_->shapeInfo.orgWi));
     bbPtr->l1TilingParams.nBL1Value = bbPtr->conv2DBasicBlockInfoPtr->nTile;
 
@@ -849,21 +914,23 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyMFirst::GetL1LoadTilingParams(Conv
 {
     // KAL1 fullLoad set
     bbPtr->l1TilingParams.kBL1 = bbPtr->singleCi1xC0 * bbPtr->tilingIns_->shapeInfo.orgkH *
-        bbPtr->tilingIns_->shapeInfo.orgkW;
+                                 bbPtr->tilingIns_->shapeInfo.orgkW;
 
     int64_t kAL1FullLoadSize = bbPtr->singleCi1xC0;
     int64_t bL1size = bbPtr->l1TilingParams.kBL1 * bbPtr->l1TilingParams.nBL1Value * bbPtr->dbValue.pbBL1 *
-        bbPtr->weightDTypeSize;
+                      bbPtr->weightDTypeSize;
     bbPtr->availableL1Size -= bL1size;
     // Fmap resides in L1, AL1 DB ON
     int64_t cinAL1 = min((bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->mIn) /
-        static_cast<int64_t>(DOUBLE_BUFFER_NUM) / static_cast<int64_t>(bbPtr->fMapDTypeSize) /
-        bbPtr->tilingIns_->innerBatch), kAL1FullLoadSize);
+                          static_cast<int64_t>(DOUBLE_BUFFER_NUM) / static_cast<int64_t>(bbPtr->fMapDTypeSize) /
+                          bbPtr->tilingIns_->innerBatch),
+                         kAL1FullLoadSize);
     if (cinAL1 < bbPtr->tilingIns_->cubeInfo.k0) {
         bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         bbPtr->aL1DBNeedClose = true;
         cinAL1 = min((bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->mIn) /
-            static_cast<int64_t>(bbPtr->fMapDTypeSize) / bbPtr->tilingIns_->innerBatch), kAL1FullLoadSize);
+                      static_cast<int64_t>(bbPtr->fMapDTypeSize) / bbPtr->tilingIns_->innerBatch),
+                     kAL1FullLoadSize);
     }
     cinAL1 = FloorAlign(cinAL1, bbPtr->tilingIns_->cubeInfo.k0);
     if (cinAL1 <= 0) {
@@ -883,7 +950,7 @@ bool ConvTilingAlgorithmBBmode::WeightFullLoad::GetL1LoadTilingParams(ConvTiling
     bbPtr->multiN = maxNBL1Iter;
     bbPtr->multiM = 1;
     bbPtr->l1TilingParams.nBL1Value = min(static_cast<uint64_t>(bbPtr->multiN) * bbPtr->conv2DBasicBlockInfoPtr->nTile,
-        static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo));
+                                          static_cast<uint64_t>(bbPtr->tilingIns_->shapeInfo.singleCo));
     bbPtr->l1TilingParams.mAL1Value = bbPtr->conv2DBasicBlockInfoPtr->mIn;
     bool ret = L1LoadStrategyMFirst::GetL1LoadTilingParams(bbPtr);
     return ret;
@@ -930,13 +997,13 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadTilingParams(ConvTilingAlgor
         bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
     }
     uint32_t cinL1 = 0;
-    const vector<pair<int, int>> iterations = {{DOUBLE_BUFFER_NUM, DOUBLE_BUFFER_NUM},
-        {(bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ?
-            DOUBLE_BUFFER_NUM : SINGLE_BUFFER_NUM,
-            (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ?
-            SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM},
-        {SINGLE_BUFFER_NUM, SINGLE_BUFFER_NUM}
-    };
+    const vector<pair<int, int>> iterations = {
+        {DOUBLE_BUFFER_NUM, DOUBLE_BUFFER_NUM},
+        {(bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ? DOUBLE_BUFFER_NUM :
+                                                                                          SINGLE_BUFFER_NUM,
+         (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ? SINGLE_BUFFER_NUM :
+                                                                                          DOUBLE_BUFFER_NUM},
+        {SINGLE_BUFFER_NUM, SINGLE_BUFFER_NUM}};
     for (uint64_t i = 0; i < iterations.size(); i++) {
         pair<int, int> pbABL1 = iterations[i];
         bbPtr->dbValue.pbAL1 = pbABL1.first;
@@ -960,41 +1027,42 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadTilingParams(ConvTilingAlgor
     if (cinTile <= bbPtr->tilingIns_->cubeInfo.k0 || cinTile == bbPtr->singleCi1xC0) {
         cinTile = cinL1;
     }
-    uint32_t kAL1Max = static_cast<uint32_t>(MAX_16_BIT_NUM / (bbPtr->tilingIns_->shapeInfo.singlekH *
-        bbPtr->tilingIns_->shapeInfo.singlekW));
+    uint32_t kAL1Max = static_cast<uint32_t>(
+        MAX_16_BIT_NUM / (bbPtr->tilingIns_->shapeInfo.singlekH * bbPtr->tilingIns_->shapeInfo.singlekW));
     if (cinTile >= kAL1Max) {
         DivideAndAlign(cinTile, kAL1Max, bbPtr->tilingIns_->cubeInfo.k0);
     }
     bbPtr->l1TilingParams.kAL1 = cinTile;
-    bbPtr->l1TilingParams.kBL1 = cinTile * bbPtr->tilingIns_->shapeInfo.orgkH *
-        bbPtr->tilingIns_->shapeInfo.orgkW;
+    bbPtr->l1TilingParams.kBL1 = cinTile * bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW;
     return MultiLoadKAllSplit(bbPtr);
 }
 
 int64_t ConvTilingAlgorithmBBmode::KAllSplit::GetCinL1(ConvTilingAlgorithmBBmode* bbPtr) const
 {
-    auto cinL1 = FloorAlign((bbPtr->availableL1Size) /
-        (bbPtr->conv2DBasicBlockInfoPtr->mIn * bbPtr->fMapDTypeSize * bbPtr->dbValue.pbAL1 *
-        bbPtr->tilingIns_->innerBatch + bbPtr->conv2DBasicBlockInfoPtr->nTile *
-        bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW * 
-        bbPtr->weightDTypeSize * bbPtr->dbValue.pbBL1), bbPtr->tilingIns_->cubeInfo.k0);
+    auto cinL1 = FloorAlign(
+        (bbPtr->availableL1Size) /
+            (bbPtr->conv2DBasicBlockInfoPtr->mIn * bbPtr->fMapDTypeSize * bbPtr->dbValue.pbAL1 *
+                 bbPtr->tilingIns_->innerBatch +
+             bbPtr->conv2DBasicBlockInfoPtr->nTile * bbPtr->tilingIns_->shapeInfo.orgkH *
+                 bbPtr->tilingIns_->shapeInfo.orgkW * bbPtr->weightDTypeSize * bbPtr->dbValue.pbBL1),
+        bbPtr->tilingIns_->cubeInfo.k0);
     return cinL1;
 }
 
 bool ConvTilingAlgorithmBBmode::KAllSplit::MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr,
-    const Kl1MultiAxis& kL1MultiAxis) const
+                                                              const Kl1MultiAxis& kL1MultiAxis) const
 {
     bool ret = false;
     if (kL1MultiAxis == Kl1MultiAxis::KAL1) {
         bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
         auto bL1size = bbPtr->l1TilingParams.kBL1 * bbPtr->l1TilingParams.nBL1Value * bbPtr->dbValue.pbBL1 *
-            bbPtr->weightDTypeSize;
+                       bbPtr->weightDTypeSize;
         bbPtr->availableL1Size -= bL1size;
         ret = MultiLoadKL1(bbPtr, Kl1MultiAxis::KAL1);
     } else {
         bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
         auto aL1size = bbPtr->l1TilingParams.kAL1 * bbPtr->l1TilingParams.mAL1Value * bbPtr->dbValue.pbAL1 *
-            bbPtr->fMapDTypeSize * bbPtr->tilingIns_->innerBatch;
+                       bbPtr->fMapDTypeSize * bbPtr->tilingIns_->innerBatch;
         bbPtr->availableL1Size -= aL1size;
         ret = MultiLoadKL1(bbPtr, Kl1MultiAxis::KBL1);
     }
@@ -1002,7 +1070,7 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::MultiLoadKAllSplit(ConvTilingAlgorith
 }
 
 bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgorithmBBmode* bbPtr,
-    const Kl1MultiAxis& kL1MultiAxis) const
+                                                                 const Kl1MultiAxis& kL1MultiAxis) const
 {
     if (kL1MultiAxis == Kl1MultiAxis::INVALID) {
         return false;
@@ -1012,16 +1080,18 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
     if (kL1MultiAxis == Kl1MultiAxis::KAL1) {
         // when you decide to scale KAL1, this means that KAL1 has to have double buffer
         l1TempSize = bbPtr->l1TilingParams.kAL1 * bbPtr->l1TilingParams.mAL1Value * bbPtr->fMapDTypeSize *
-            bbPtr->dbValue.pbAL1 * bbPtr->tilingIns_->innerBatch;
+                     bbPtr->dbValue.pbAL1 * bbPtr->tilingIns_->innerBatch;
         // DB ON cannot Load in L1
         int64_t maxsingleCoreFmapSize = static_cast<int64_t>(bbPtr->l1TilingParams.mAL1Value * bbPtr->singleCi1xC0 *
-            bbPtr->fMapDTypeSize) * static_cast<int64_t>(bbPtr->tilingIns_->innerBatch);
+                                                             bbPtr->fMapDTypeSize) *
+                                        static_cast<int64_t>(bbPtr->tilingIns_->innerBatch);
         if (l1TempSize > min(bbPtr->availableL1Size, bbPtr->fmapL1FullLoadSize)) { // multi is 1
             l1TempSize /= bbPtr->dbValue.pbAL1;
             bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
 
             if (bbPtr->l1TilingParams.kAL1 * bbPtr->tilingIns_->shapeInfo.singlekH *
-                bbPtr->tilingIns_->shapeInfo.singlekW > MAX_16_BIT_NUM) {
+                    bbPtr->tilingIns_->shapeInfo.singlekW >
+                MAX_16_BIT_NUM) {
                 OP_LOGD(bbPtr->tilingIns_->nodeType, "Exceeded kStartPos limit");
                 return false;
             }
@@ -1032,18 +1102,18 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
             return true;
         }
         // DB ON can Load in L1, try to find the max K value
-        uint64_t kAL1Multi = FindMaxProductUnderLimit(l1TempSize, min(bbPtr->availableL1Size,
-            maxsingleCoreFmapSize));
-        uint64_t kAL1MultiMax = MAX_16_BIT_NUM / (bbPtr->tilingIns_->shapeInfo.singlekH *
-            bbPtr->tilingIns_->shapeInfo.singlekW);
+        uint64_t kAL1Multi = FindMaxProductUnderLimit(l1TempSize, min(bbPtr->availableL1Size, maxsingleCoreFmapSize));
+        uint64_t kAL1MultiMax = MAX_16_BIT_NUM /
+                                (bbPtr->tilingIns_->shapeInfo.singlekH * bbPtr->tilingIns_->shapeInfo.singlekW);
 
         bbPtr->l1TilingParams.kAL1 *= min(kAL1Multi, kAL1MultiMax);
     } else if (kL1MultiAxis == Kl1MultiAxis::KBL1) {
         // when you decide to scale KBL1, this means that KBL1 has to have double buffer
         l1TempSize = bbPtr->l1TilingParams.kBL1 * bbPtr->l1TilingParams.nBL1Value * bbPtr->weightDTypeSize *
-            bbPtr->dbValue.pbBL1;
-        int64_t maxSingleCoreWeightSize = bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW * 
-            bbPtr->l1TilingParams.nBL1Value * bbPtr->singleCi1xC0 * bbPtr->weightDTypeSize;
+                     bbPtr->dbValue.pbBL1;
+        int64_t maxSingleCoreWeightSize = bbPtr->tilingIns_->shapeInfo.orgkH * bbPtr->tilingIns_->shapeInfo.orgkW *
+                                          bbPtr->l1TilingParams.nBL1Value * bbPtr->singleCi1xC0 *
+                                          bbPtr->weightDTypeSize;
         // DB ON cannot Load in L1
         if (l1TempSize > min(bbPtr->availableL1Size, bbPtr->weightL1FullLoadSize)) { // multi is 1
             l1TempSize /= bbPtr->dbValue.pbBL1;
@@ -1057,20 +1127,20 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
         }
         // DB ON can Load in L1, try to find the max K value
         bbPtr->l1TilingParams.kBL1 *= FindMaxProductUnderLimit(l1TempSize,
-            min(bbPtr->availableL1Size, maxSingleCoreWeightSize));
+                                                               min(bbPtr->availableL1Size, maxSingleCoreWeightSize));
     }
     return true;
 }
 
 void ConvTilingAlgorithmBBmode::UpdateFinalFullLoadFlag()
 {
-    if (!tilingIns_->enableInnerBatch && static_cast<int64_t>(this->multiM * conv2DBasicBlockInfoPtr->mTile) >= tilingIns_->shapeInfo.singleM) {
+    if (!tilingIns_->enableInnerBatch &&
+        static_cast<int64_t>(this->multiM * conv2DBasicBlockInfoPtr->mTile) >= tilingIns_->shapeInfo.singleM) {
         conv2DBasicBlockInfoPtr->mAl1FullLoad = true;
-    }
-    else if (tilingIns_->enableInnerBatch && tilingIns_->innerBatch >= static_cast<uint32_t>(tilingIns_->shapeInfo.singleBatch)) {
+    } else if (tilingIns_->enableInnerBatch &&
+               tilingIns_->innerBatch >= static_cast<uint32_t>(tilingIns_->shapeInfo.singleBatch)) {
         conv2DBasicBlockInfoPtr->mAl1FullLoad = true;
-    }
-    else {
+    } else {
         conv2DBasicBlockInfoPtr->mAl1FullLoad = false;
     }
 
@@ -1086,8 +1156,8 @@ void ConvTilingAlgorithmBBmode::UpdateFinalFullLoadFlag()
         conv2DBasicBlockInfoPtr->kAl1FullLoad = false;
     }
 
-    if (static_cast<int64_t>(l1TilingParams.kBL1) == static_cast<int64_t>(singleCi1xC0) *
-        tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW) {
+    if (static_cast<int64_t>(l1TilingParams.kBL1) ==
+        static_cast<int64_t>(singleCi1xC0) * tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW) {
         conv2DBasicBlockInfoPtr->kBl1FullLoad = true;
     } else {
         conv2DBasicBlockInfoPtr->kBl1FullLoad = false;
@@ -1099,9 +1169,11 @@ void ConvTilingAlgorithmBBmode::UpdateFinalFullLoadFlag()
 void ConvTilingAlgorithmBBmode::UpdateFinalDb()
 {
     const uint8_t pbAL1Temp = (conv2DBasicBlockInfoPtr->kAl1FullLoad && conv2DBasicBlockInfoPtr->mAl1FullLoad) ?
-        SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
+                                  SINGLE_BUFFER_NUM :
+                                  DOUBLE_BUFFER_NUM;
     const uint8_t pbBL1Temp = (conv2DBasicBlockInfoPtr->kBl1FullLoad && conv2DBasicBlockInfoPtr->nBl1FullLoad) ?
-        SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
+                                  SINGLE_BUFFER_NUM :
+                                  DOUBLE_BUFFER_NUM;
     dbValue.pbAL1 = aL1DBNeedClose ? SINGLE_BUFFER_NUM : pbAL1Temp;
     dbValue.pbBL1 = bL1DBNeedClose ? SINGLE_BUFFER_NUM : pbBL1Temp;
 }

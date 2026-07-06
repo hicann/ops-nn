@@ -17,12 +17,11 @@
 
 using namespace AscendC;
 
-#define TILING_KEY_BOOL      101
-#define TILING_KEY_COMMON    200
+#define TILING_KEY_BOOL 101
+#define TILING_KEY_COMMON 200
 
-
-extern "C" __global__ __aicore__ void index_fill_d(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2,
-                                                    GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void index_fill_d(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y,
+                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
     GM_ADDR userWS = GetUserWorkspace(workspace);
     if (userWS == nullptr) {

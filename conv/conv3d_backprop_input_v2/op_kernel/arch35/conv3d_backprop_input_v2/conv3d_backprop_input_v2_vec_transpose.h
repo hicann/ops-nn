@@ -19,7 +19,7 @@
 #include "conv3d_backprop_input_v2_tiling_data.h"
 
 namespace AscendC {
-namespace DxVecTranspose{
+namespace DxVecTranspose {
 static constexpr uint8_t SYNC_MODE0 = 0;
 static constexpr uint8_t SYNC_MODE2 = 2;
 static constexpr uint16_t SYNC_AIV_ONLY_ALL_DET_FLAG = 2;
@@ -56,11 +56,11 @@ protected:
     uint32_t curCoutCnt_ = 0;
     uint32_t curCin1Cnt_ = 0;
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
     {
         cout_ = tilingData->conv3DDxTiling.cout;
         cin_ = tilingData->conv3DDxTiling.cin;
-        cin0_ = 16; // cin0固定是16
+        cin0_ = 16;                      // cin0固定是16
         cin1_ = (cin_ + cin0_ - 1) >> 4; // 4: 16是2的4次方
         cin0Tail_ = cin_ - (cin1_ - 1) * cin0_;
         // 暂不支持切dkhkwk_，dkhkwk_上限为halfUBSize/sizeofFp32/cin0=1984
@@ -74,8 +74,8 @@ protected:
             dkhkwkAlign_ = dkhkwkSizeAlign_ >> 1; // 1：filterType is 16bit, sizeof(16bit)=4=2^1
         }
         totalCnt_ = static_cast<uint64_t>(cout_) * static_cast<uint64_t>(cin1_); // 一共处理多少个cin0_*dkhkwk_
-        if (totalCnt_ < GetBlockNum() * MULTIPLE_AIV_TO_AIC) { // vec视角
-            usedCoreNum_ = (totalCnt_ + 1) >> 1; // cube视角
+        if (totalCnt_ < GetBlockNum() * MULTIPLE_AIV_TO_AIC) {                   // vec视角
+            usedCoreNum_ = (totalCnt_ + 1) >> 1;                                 // cube视角
         } else {
             usedCoreNum_ = GetBlockNum();
         }
@@ -92,11 +92,12 @@ protected:
     __aicore__ inline void CopyInToUB()
     {
         LocalTensor<filterType> vecInBuf_ = vecInQueue_.template AllocTensor<filterType>();
-        uint64_t srcGmOffset = static_cast<uint64_t>(curCoutCnt_) * cin_ * dkhkwk_ + static_cast<uint64_t>(curCin1Cnt_) * cin0_ * dkhkwk_;
+        uint64_t srcGmOffset = static_cast<uint64_t>(curCoutCnt_) * cin_ * dkhkwk_ +
+                               static_cast<uint64_t>(curCin1Cnt_) * cin0_ * dkhkwk_;
 
         DataCopyExtParams loadGm2UbParams;
-        loadGm2UbParams.srcStride = 0; // GM 单位为Byte，变量的数据类型int64_t
-        loadGm2UbParams.dstStride = 0; // UB 单位为32Byte，变量的数据类型int64_t
+        loadGm2UbParams.srcStride = 0;          // GM 单位为Byte，变量的数据类型int64_t
+        loadGm2UbParams.dstStride = 0;          // UB 单位为32Byte，变量的数据类型int64_t
         loadGm2UbParams.blockLen = dkhkwkSize_; // 单位为Byte，变量的数据类型uint32_t
         loadGm2UbParams.blockCount = cin0_;
         if (curCin1Cnt_ == cin1_ - 1) {
@@ -104,19 +105,21 @@ protected:
         }
         uint8_t rightPadPoint = static_cast<uint8_t>(dkhkwkAlign_ - dkhkwk_);
         if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
-            std::is_same<filterType, int8_t>::value) {
+                      std::is_same<filterType, int8_t>::value) {
             // 指令不支持hifloat8_t,fp8_e4m3fn_t，用uint8_t伪装
             DataCopyPadExtParams<uint8_t> padExtParams{true, 0, rightPadPoint, 0};
             DataCopyPad<uint8_t, PaddingMode::Normal>(vecInBuf_.template ReinterpretCast<uint8_t>(),
-                filterGm_.template ReinterpretCast<uint8_t>()[srcGmOffset], loadGm2UbParams, padExtParams);
+                                                      filterGm_.template ReinterpretCast<uint8_t>()[srcGmOffset],
+                                                      loadGm2UbParams, padExtParams);
         } else {
             DataCopyPadExtParams<filterType> padExtParams{true, 0, rightPadPoint, 0};
-            DataCopyPad<filterType, PaddingMode::Normal>(vecInBuf_, filterGm_[srcGmOffset], loadGm2UbParams, padExtParams);
+            DataCopyPad<filterType, PaddingMode::Normal>(vecInBuf_, filterGm_[srcGmOffset], loadGm2UbParams,
+                                                         padExtParams);
         }
         vecInQueue_.EnQue(vecInBuf_);
     }
 
-    __aicore__ inline void InitTransDataTo5DParams(TransDataTo5HDParams &transDataParams)
+    __aicore__ inline void InitTransDataTo5DParams(TransDataTo5HDParams& transDataParams)
     {
         transDataParams.dstHighHalf = false;
         transDataParams.srcHighHalf = false;
@@ -126,12 +129,16 @@ protected:
             transDataParams.srcRepStride = 0; // 单位 dataBlock
         } else {
             if constexpr (std::is_same<filterType, float>::value) { // 单位 dataBlock
-                transDataParams.dstRepStride = (cin0_ * 8 * sizeof(filterType)) >> POWER_5; // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
+                transDataParams.dstRepStride = (cin0_ * 8 * sizeof(filterType)) >>
+                                               POWER_5; // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
             } else if constexpr (std::is_same<filterType, bfloat16_t>::value || std::is_same<filterType, half>::value) {
-                transDataParams.dstRepStride = (cin0_ * 16 * sizeof(filterType)) >> POWER_5; // 16: 16bit数据VNCHWCONV一个dataBlock是16个point
-            } else if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
-                std::is_same<filterType, int8_t>::value) {
-                transDataParams.dstRepStride = (cin0_ * 64 * sizeof(filterType)) >> POWER_5; // 64: 8bit时需要用到高低位，一次高低位完成2个dataBlock
+                transDataParams.dstRepStride = (cin0_ * 16 * sizeof(filterType)) >>
+                                               POWER_5; // 16: 16bit数据VNCHWCONV一个dataBlock是16个point
+            } else if constexpr (std::is_same<filterType, hifloat8_t>::value ||
+                                 std::is_same<filterType, fp8_e4m3fn_t>::value ||
+                                 std::is_same<filterType, int8_t>::value) {
+                transDataParams.dstRepStride = (cin0_ * 64 * sizeof(filterType)) >>
+                                               POWER_5; // 64: 8bit时需要用到高低位，一次高低位完成2个dataBlock
             }
             transDataParams.srcRepStride = 1; // 单位 dataBlock
         }
@@ -146,7 +153,7 @@ protected:
         uint64_t dstLocalList[16]; // 16: VNCHWCONV一次处理16个dataBlock，此处必须是立即数
         uint64_t srcLocalList[16]; // 16: VNCHWCONV一次处理16个dataBlock，此处必须是立即数
         uint64_t dstCount = 0;
-        if constexpr(std::is_same<filterType, float>::value) {
+        if constexpr (std::is_same<filterType, float>::value) {
             for (int i = 0; i < cin0_; i++) {
                 dstCount = (i >> 1) * cin0_ + (i & 1) * 8; // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
@@ -156,11 +163,11 @@ protected:
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
                 dstCount += cin0_;
             }
-        } else if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
-            std::is_same<filterType, int8_t>::value) {
+        } else if constexpr (std::is_same<filterType, hifloat8_t>::value ||
+                             std::is_same<filterType, fp8_e4m3fn_t>::value || std::is_same<filterType, int8_t>::value) {
             for (int i = 0; i < cin0_; i++) {
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
-                dstCount += DATA_BLOCK_SIZE;    // 8bit 需要数据VNCHWCONV一个dataBlock是32个point
+                dstCount += DATA_BLOCK_SIZE; // 8bit 需要数据VNCHWCONV一个dataBlock是32个point
             }
         }
 
@@ -171,12 +178,12 @@ protected:
         }
 
         if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
-            std::is_same<filterType, int8_t>::value) {
+                      std::is_same<filterType, int8_t>::value) {
             TransDataTo5HD<uint8_t>(dstLocalList, srcLocalList, transDataParams);
             transDataParams.srcHighHalf = true;
             for (int i = 0; i < cin0_; i++) {
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
-                dstCount += DATA_BLOCK_SIZE;    // 8bit 需要数据VNCHWCONV一个dataBlock是32个point
+                dstCount += DATA_BLOCK_SIZE; // 8bit 需要数据VNCHWCONV一个dataBlock是32个point
             }
             TransDataTo5HD<uint8_t>(dstLocalList, srcLocalList, transDataParams);
         } else {
@@ -189,21 +196,22 @@ protected:
     __aicore__ inline void CopyOutToGm()
     {
         LocalTensor<filterType> vecOutBuf_ = vecOutQueue_.template DeQue<filterType>();
-        uint64_t dstGmOffset = static_cast<uint64_t>(curCoutCnt_) * dkhkwk_ * cin1_ * cin0_ + static_cast<uint64_t>(curCin1Cnt_) * cin0_;
+        uint64_t dstGmOffset = static_cast<uint64_t>(curCoutCnt_) * dkhkwk_ * cin1_ * cin0_ +
+                               static_cast<uint64_t>(curCin1Cnt_) * cin0_;
         if constexpr (std::is_same<filterType, hifloat8_t>::value || std::is_same<filterType, fp8_e4m3fn_t>::value ||
-            std::is_same<filterType, int8_t>::value) {
+                      std::is_same<filterType, int8_t>::value) {
             // 8bit时，转置完后最内轴c0为32，而真实有效数据量为16，因此需排除无效部分，只写出有效部分
             DataCopyExtParams loadUb2GmParams;
             loadUb2GmParams.srcStride = (DATA_BLOCK_SIZE - cin0_) >> POWER_5; // 单位为 32B
-            loadUb2GmParams.dstStride = (cin1_ * cin0_ - cin0_) * sizeof(filterType) ;
+            loadUb2GmParams.dstStride = (cin1_ * cin0_ - cin0_) * sizeof(filterType);
             loadUb2GmParams.blockLen = cin0_ * sizeof(filterType);
             loadUb2GmParams.blockCount = dkhkwk_;
             DataCopyPad<filterType>(ubOutGm_[dstGmOffset], vecOutBuf_, loadUb2GmParams);
         } else {
             DataCopyParams loadUb2GmParams;
-            loadUb2GmParams.srcStride = 0; // 单位为 32B
+            loadUb2GmParams.srcStride = 0;                                                         // 单位为 32B
             loadUb2GmParams.dstStride = ((cin1_ * cin0_ - cin0_) * sizeof(filterType)) >> POWER_5; // 单位为 32B
-            loadUb2GmParams.blockLen = (cin0_ * sizeof(filterType)) >> POWER_5; // 单位为 32B
+            loadUb2GmParams.blockLen = (cin0_ * sizeof(filterType)) >> POWER_5;                    // 单位为 32B
             loadUb2GmParams.blockCount = dkhkwk_;
             DataCopy<filterType>(ubOutGm_[dstGmOffset], vecOutBuf_, loadUb2GmParams);
         }
@@ -213,7 +221,7 @@ protected:
     __aicore__ inline void VecNotifyCube()
     {
 #if (__NPU_ARCH__ == 5102)
-        ffts_cross_core_sync(PIPE_MTE3, GetffstMsg(0x0, SYNC_AIV_AIC_DET_FLAG));  // don't support mode 0
+        ffts_cross_core_sync(PIPE_MTE3, GetffstMsg(0x0, SYNC_AIV_AIC_DET_FLAG)); // don't support mode 0
         wait_flag_dev(PIPE_MTE3, SYNC_AIV_AIC_DET_FLAG);
         AscendC::TQueSync<PIPE_MTE3, PIPE_MTE2> sync;
         sync.SetFlag((event_t)SYNC_AIV_AIC_DET_FLAG);
@@ -223,13 +231,15 @@ protected:
         CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(SYNC_AIV_AIC_DET_FLAG);
 #endif
     }
+
 public:
     __aicore__ inline Conv3dDxVecTranspose() {}
-    __aicore__ inline void Init(GM_ADDR filter, GM_ADDR workSpace, const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR filter, GM_ADDR workSpace,
+                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
     {
         InitTilingData(tilingData);
-        filterGm_.SetGlobalBuffer((__gm__ filterType *)filter); // ub输入数据
-        ubOutGm_.SetGlobalBuffer((__gm__ filterType *)workSpace); // ub输出数据
+        filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);   // ub输入数据
+        ubOutGm_.SetGlobalBuffer((__gm__ filterType*)workSpace); // ub输出数据
         uint32_t halfUbSize = TOTAL_UB_SIZE / HALF_FACTOR;
         tPipe_.InitBuffer(vecInQueue_, 1, halfUbSize);
         tPipe_.InitBuffer(vecOutQueue_, 1, halfUbSize);
@@ -268,4 +278,4 @@ public:
 } // namespace DxVecTranspose
 } // namespace AscendC
 
-#endif  // CONV3D_BACKPROP_INPUT_V2_VEC_TRANSPOSE_ADVANCE_H
+#endif // CONV3D_BACKPROP_INPUT_V2_VEC_TRANSPOSE_ADVANCE_H

@@ -25,29 +25,28 @@
 #include "platform/soc_spec.h"
 
 namespace {
-    constexpr uint32_t SYS_RESERVED_UB = uint32_t(16 * 1024);
-    constexpr uint32_t SELECT_RESERVED_UB = uint32_t(8 * 1024);
-    constexpr uint32_t DIM_ONE = 1;
-    constexpr uint32_t DIM_TWO = 2;
-    constexpr int32_t SORTED_VALUE_INPUT_INDEX = 0;
-    constexpr int32_t SORTED_INDICES_INPUT_INDEX = 1;
-    constexpr int32_t P_INPUT_INDEX = 2;
-    constexpr int32_t K_INPUT_INDEX = 3;
-    constexpr uint32_t DIM_INDEX0 = 0;
-    constexpr uint32_t FLOAT_BYTES = 4;
-    static std::map<ge::DataType, uint32_t> DTYPE_MAP = {{ge::DT_BF16, 2}, {ge::DT_FLOAT16, 1}, {ge::DT_FLOAT, 0}};
-    static std::map<ge::DataType, uint32_t> DATATYPE_LEN_MAP = {
-        {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}, {ge::DT_FLOAT, 4}};
-    const static uint32_t SYS_WORKSPACESIZE = uint32_t(16 * 1024 * 1024);
+constexpr uint32_t SYS_RESERVED_UB = uint32_t(16 * 1024);
+constexpr uint32_t SELECT_RESERVED_UB = uint32_t(8 * 1024);
+constexpr uint32_t DIM_ONE = 1;
+constexpr uint32_t DIM_TWO = 2;
+constexpr int32_t SORTED_VALUE_INPUT_INDEX = 0;
+constexpr int32_t SORTED_INDICES_INPUT_INDEX = 1;
+constexpr int32_t P_INPUT_INDEX = 2;
+constexpr int32_t K_INPUT_INDEX = 3;
+constexpr uint32_t DIM_INDEX0 = 0;
+constexpr uint32_t FLOAT_BYTES = 4;
+static std::map<ge::DataType, uint32_t> DTYPE_MAP = {{ge::DT_BF16, 2}, {ge::DT_FLOAT16, 1}, {ge::DT_FLOAT, 0}};
+static std::map<ge::DataType, uint32_t> DATATYPE_LEN_MAP = {{ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}, {ge::DT_FLOAT, 4}};
+const static uint32_t SYS_WORKSPACESIZE = uint32_t(16 * 1024 * 1024);
 
-    constexpr uint32_t DATA_PER_BLOCK_B32 = 8;
-    constexpr uint32_t BYTES_B32 = 4;
-    constexpr uint32_t BLOCK_BYTES = 32;
-    constexpr uint32_t K_VALUE_MAX = 1024;
-    constexpr uint32_t ONLY_TOP_P_KEY = 2;
-    constexpr uint32_t ONLY_TOP_K_KEY = 1;
-    constexpr uint32_t BATCH_MODE = 1;
-    constexpr uint32_t ONLY_TOP_950_MAX_CORENUM = 48;
+constexpr uint32_t DATA_PER_BLOCK_B32 = 8;
+constexpr uint32_t BYTES_B32 = 4;
+constexpr uint32_t BLOCK_BYTES = 32;
+constexpr uint32_t K_VALUE_MAX = 1024;
+constexpr uint32_t ONLY_TOP_P_KEY = 2;
+constexpr uint32_t ONLY_TOP_K_KEY = 1;
+constexpr uint32_t BATCH_MODE = 1;
+constexpr uint32_t ONLY_TOP_950_MAX_CORENUM = 48;
 } // namespace
 
 namespace optiling {
@@ -56,6 +55,7 @@ public:
     explicit ApplyTopKTopPWithSortedTiling(gert::TilingContext* context) : tilingcontext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
+
 private:
     ApplyTopKTopPWithSortedTilingData tilingData;
     gert::TilingContext* tilingcontext = nullptr;
@@ -76,7 +76,7 @@ private:
         return b == 0 ? a : a / b * b;
     }
 
-    const char *opName_ = nullptr;
+    const char* opName_ = nullptr;
     uint32_t coreNum_ = 0;
     uint32_t calUbSize_ = 0;
     uint32_t batchSize_ = 0;
@@ -98,7 +98,8 @@ private:
     NpuArch socVersion_;
 };
 
-ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape() {
+ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape()
+{
     auto sortedValueShapePtr = tilingcontext->GetInputShape(SORTED_VALUE_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingcontext, sortedValueShapePtr);
     auto sortedValueShape = sortedValueShapePtr->GetStorageShape();
@@ -154,7 +155,8 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyTopKTopPWithSortedTiling::Init() {
+ge::graphStatus ApplyTopKTopPWithSortedTiling::Init()
+{
     opName_ = tilingcontext->GetNodeName();
     OP_LOGD(opName_, "TilingForApplyTopKTopPWithSorted init.");
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingcontext->GetPlatformInfo());
@@ -176,17 +178,17 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::Init() {
     return ge::GRAPH_SUCCESS;
 }
 
-void ApplyTopKTopPWithSortedTiling::SetTilingKey() {
+void ApplyTopKTopPWithSortedTiling::SetTilingKey()
+{
     tilingKey_ += onlyTopK_;
     tilingKey_ += onlyTopP_;
     tilingcontext->SetTilingKey(tilingKey_);
     tilingcontext->SetScheduleMode(BATCH_MODE);
-
 }
 
 void ApplyTopKTopPWithSortedTiling::GetUsedCore()
 {
-    if (socVersion_ == NpuArch::DAV_3510 && tilingKey_ == ONLY_TOP_P_KEY){
+    if (socVersion_ == NpuArch::DAV_3510 && tilingKey_ == ONLY_TOP_P_KEY) {
         coreNum_ = coreNum_ > ONLY_TOP_950_MAX_CORENUM ? ONLY_TOP_950_MAX_CORENUM : coreNum_;
     }
     if (coreNum_ > 0) {
@@ -208,15 +210,15 @@ void ApplyTopKTopPWithSortedTiling::CalDataPerCore()
     tailUbFactorElement_ = tailUbFactorElement_ == uint32_t(0) ? ubFactorElement_ : tailUbFactorElement_;
     tailUbFactorElementAligned_ = CeilAlign(tailUbFactorElement_, dataPerBlock);
 
-    uint32_t sortedValueBytes = ubFactorElementAligned_ * inputDataTypeByte + K_VALUE_MAX  * inputDataTypeByte;
-    uint32_t sortedIndicesBytes = ubFactorElementAligned_ * BYTES_B32 + K_VALUE_MAX  * BYTES_B32;
+    uint32_t sortedValueBytes = ubFactorElementAligned_ * inputDataTypeByte + K_VALUE_MAX * inputDataTypeByte;
+    uint32_t sortedIndicesBytes = ubFactorElementAligned_ * BYTES_B32 + K_VALUE_MAX * BYTES_B32;
     uint32_t pBytes = dataPerBlock * inputDataTypeByte;
     uint32_t kBytes = DATA_PER_BLOCK_B32 * BYTES_B32;
     uint32_t outTensorBytes = ubFactorElementAligned_ * inputDataTypeByte;
 
     calUbSize_ = calUbSize_ - sortedValueBytes - sortedIndicesBytes - pBytes - kBytes - outTensorBytes;
     if (onlyTopP_ > 0) {
-        calUbSize_ =  static_cast<uint32_t>(platformUbSize_);
+        calUbSize_ = static_cast<uint32_t>(platformUbSize_);
     }
 }
 
@@ -267,7 +269,8 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::RunKernelTiling()
     OP_LOGD(opName_, "tilingKey: %u.", tilingKey_);
     uint32_t syncWorkspaceSize = SYS_WORKSPACESIZE;
     size_t* currentWorkspace = tilingcontext->GetWorkspaceSizes(1);
-    currentWorkspace[0] = onlyTopP_ > 0 ? syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES : syncWorkspaceSize + batchSize_ * FLOAT_BYTES;
+    currentWorkspace[0] = onlyTopP_ > 0 ? syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES :
+                                          syncWorkspaceSize + batchSize_ * FLOAT_BYTES;
 
     tilingData.SaveToBuffer(tilingcontext->GetRawTilingData()->GetData(),
                             tilingcontext->GetRawTilingData()->GetCapacity());
@@ -303,8 +306,7 @@ static ge::graphStatus TilingPrepareForApplyTopKTopPWithSorted(gert::TilingParse
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(compileInfo->ubSizePlatForm <= 0,
-                OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+    OP_CHECK_IF(compileInfo->ubSizePlatForm <= 0, OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;

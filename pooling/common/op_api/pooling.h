@@ -8,17 +8,15 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_POOLING_OP_H_
 #define PTA_NPU_OP_API_INC_LEVEL0_OP_POOLING_OP_H_
 
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Pooling5Hd(const aclTensor *x, const aclTensor *weight, int64_t mode, bool globalPooling,
-                            const aclIntArray *window, const aclIntArray *stride,
-                            const aclIntArray *pad, const int64_t ceilMode,
-                            const char *dataFormat, aclOpExecutor *executor);
+const aclTensor* Pooling5Hd(const aclTensor* x, const aclTensor* weight, int64_t mode, bool globalPooling,
+                            const aclIntArray* window, const aclIntArray* stride, const aclIntArray* pad,
+                            const int64_t ceilMode, const char* dataFormat, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_POOLING_OP_H_

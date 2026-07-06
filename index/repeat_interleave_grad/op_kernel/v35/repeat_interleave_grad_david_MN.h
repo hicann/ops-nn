@@ -24,8 +24,7 @@ namespace RepeatInterleaveGrad {
 using namespace AscendC;
 
 template <typename DataT, typename PromoteDataT, typename IndexT>
-class RepeatInterleaveGradDavidMN
-{
+class RepeatInterleaveGradDavidMN {
 public:
     constexpr static int32_t DOUBLE_BUFFER = 2;
     constexpr static uint64_t BLOCK_SIZE_BYTE = platform::GetUbBlockSize();
@@ -36,27 +35,25 @@ public:
     constexpr static float INIT_FLOAT_VALUE = 0.0;
 
 public:
-    __aicore__ inline RepeatInterleaveGradDavidMN(TPipe& pipe) : pipe_(pipe)
-    {}
+    __aicore__ inline RepeatInterleaveGradDavidMN(TPipe& pipe) : pipe_(pipe) {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
-        const RepeatInterleaveGradDavidTilingData* __restrict tiling);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace,
+                                const RepeatInterleaveGradDavidTilingData* __restrict tiling);
 
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ProcessRepeatBlock(int32_t repeatFactor, LocalTensor<IndexT>& curRepeat);
     __aicore__ inline void ProcessZeroR(int64_t outputDataOffset, int32_t dim);
-    __aicore__ inline void BinaryRedeuceSum(
-        int64_t inputDataOffset, int64_t outputDataOffset, int32_t dim0, int32_t dim1);
-    __aicore__ inline void SingleRedeuceSum(
-        int64_t inputDataOffset, int64_t outputDataOffset, int32_t dimR, int32_t dimA);
+    __aicore__ inline void BinaryRedeuceSum(int64_t inputDataOffset, int64_t outputDataOffset, int32_t dim0,
+                                            int32_t dim1);
+    __aicore__ inline void SingleRedeuceSum(int64_t inputDataOffset, int64_t outputDataOffset, int32_t dimR,
+                                            int32_t dimA);
     __aicore__ inline void CopyOut(const GlobalTensor<DataT>& dst, LocalTensor<PromoteDataT>& ubRes, int32_t dimA);
     template <bool isRight>
-    __aicore__ inline void CopyInData(
-        int64_t index, LocalTensor<DataT>& ubTensor, LocalTensor<PromoteDataT>& computeTensor, int64_t inputDataOffset,
-        int32_t dim0, int32_t dim1);
+    __aicore__ inline void CopyInData(int64_t index, LocalTensor<DataT>& ubTensor,
+                                      LocalTensor<PromoteDataT>& computeTensor, int64_t inputDataOffset, int32_t dim0,
+                                      int32_t dim1);
     __aicore__ inline void UpdateCacheAux(const int64_t cacheID, const int64_t stride, const int64_t count);
 
 private:
@@ -253,8 +250,8 @@ __aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>:
 }
 
 template <typename DataT, typename PromoteDataT, typename IndexT>
-__aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>::ProcessZeroR(
-    int64_t outputDataOffset, int32_t dim)
+__aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>::ProcessZeroR(int64_t outputDataOffset,
+                                                                                              int32_t dim)
 {
     Duplicate<PromoteDataT>(computeRes_, INIT_FLOAT_VALUE, dim);
     CopyOut(yGm_[outputDataOffset], computeRes_, dim);
@@ -403,12 +400,13 @@ __aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>:
 }
 
 template <typename DataT, typename PromoteDataT, typename IndexT>
-__aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>::UpdateCacheAux(
-    const int64_t cacheID, const int64_t stride, const int64_t count)
+__aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>::UpdateCacheAux(const int64_t cacheID,
+                                                                                                const int64_t stride,
+                                                                                                const int64_t count)
 {
     // count A轴的大小 * VL
-    uint16_t outerLoopTimes =
-        ops::CeilDiv(static_cast<int64_t>(count * sizeof(PromoteDataT)), static_cast<int64_t>(platform::GetVRegSize()));
+    uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(PromoteDataT)),
+                                           static_cast<int64_t>(platform::GetVRegSize()));
     uint16_t innerLoopTimes = cacheID;
     uint32_t outerLoopStride = ELEMENT_ONE_REPEAT_COMPUTE;
     uint32_t innerLoopStride = stride; // cacahe的每一个idex的块的大小， A轴的大小

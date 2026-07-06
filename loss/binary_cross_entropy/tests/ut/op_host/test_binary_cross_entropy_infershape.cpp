@@ -17,15 +17,9 @@
 
 class binary_cross_entropy : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "binary_cross_entropy Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "binary_cross_entropy Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "binary_cross_entropy Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "binary_cross_entropy Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(binary_cross_entropy, binary_cross_entropy_infershape_diff_test)

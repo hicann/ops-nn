@@ -41,8 +41,8 @@ graphStatus InferShape4SwigluGroup(gert::InferShapeContext* context)
 
     int64_t xRank = static_cast<int64_t>(xShape->GetDimNum());
     OP_CHECK_IF(xRank < 1,
-        OP_LOGE(context->GetNodeName(), "The rank of x should be greater than 0, but is %ld.", xRank),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "The rank of x should be greater than 0, but is %ld.", xRank),
+                return ge::GRAPH_FAILED);
     int64_t splitDim = xRank - 1;
 
     *yShape = *xShape;
@@ -51,10 +51,10 @@ graphStatus InferShape4SwigluGroup(gert::InferShapeContext* context)
     }
 
     OP_CHECK_IF(xShape->GetDim(splitDim) < 0 || xShape->GetDim(splitDim) % NUM_TWO != 0,
-        OP_LOGE(context->GetNodeName(),
-                "The last dimension of x should be non-negative and divisible by 2, but got %ld.",
-                xShape->GetDim(splitDim)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(),
+                        "The last dimension of x should be non-negative and divisible by 2, but got %ld.",
+                        xShape->GetDim(splitDim)),
+                return ge::GRAPH_FAILED);
 
     yShape->SetDim(splitDim, xShape->GetDim(splitDim) / NUM_TWO);
 
@@ -71,7 +71,5 @@ graphStatus InferDtype4SwigluGroup(gert::InferDataTypeContext* context)
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SwigluGroup)
-    .InferShape(InferShape4SwigluGroup)
-    .InferDataType(InferDtype4SwigluGroup);
+IMPL_OP_INFERSHAPE(SwigluGroup).InferShape(InferShape4SwigluGroup).InferDataType(InferDtype4SwigluGroup);
 } // namespace ops

@@ -29,9 +29,8 @@ extern "C" {
  * @param [out] executor Executor used by the second-stage interface.
  * @return aclnnStatus ACL_SUCCESS on success, otherwise an error code.
  */
-ACLNN_API aclnnStatus aclnnGatherV2GetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGatherV2GetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                                    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief Executes aclnnGatherV2 with the workspace and executor returned by aclnnGatherV2GetWorkspaceSize.
@@ -42,8 +41,8 @@ ACLNN_API aclnnStatus aclnnGatherV2GetWorkspaceSize(
  * @param [in] stream Runtime stream.
  * @return aclnnStatus ACL_SUCCESS on success, otherwise an error code.
  */
-ACLNN_API aclnnStatus
-aclnnGatherV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGatherV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

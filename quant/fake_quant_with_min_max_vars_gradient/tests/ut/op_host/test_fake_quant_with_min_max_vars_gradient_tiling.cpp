@@ -64,15 +64,9 @@ using namespace ut_util;
 
 class FakeQuantWithMinMaxVarsGradientTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsGradientTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FakeQuantWithMinMaxVarsGradientTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsGradientTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FakeQuantWithMinMaxVarsGradientTilingTest TearDown" << std::endl; }
 };
 
 // Mirror of FakeQuantWithMinMaxVarsGradientTilingData for raw-buffer deserialization.
@@ -84,7 +78,7 @@ struct FakeQuantWithMinMaxVarsGradientTilingDataMirror {
     int64_t blockTailFactor;
     int64_t baseLen;
     int64_t numBits;
-    bool    narrowRange;
+    bool narrowRange;
 };
 
 struct FakeQuantWithMinMaxVarsGradientCompileInfo {
@@ -92,9 +86,8 @@ struct FakeQuantWithMinMaxVarsGradientCompileInfo {
     uint64_t ubSize = 0;
 };
 
-static void InitPlatform(
-    fe::PlatFormInfos& platform_info, map<string, string>& soc_infos, map<string, string>& aicore_spec,
-    map<string, string>& intrinsics)
+static void InitPlatform(fe::PlatFormInfos& platform_info, map<string, string>& soc_infos,
+                         map<string, string>& aicore_spec, map<string, string>& intrinsics)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -110,15 +103,10 @@ static void InitPlatform(
     platform_info.Init();
 }
 
-static void DoTilingCase(
-    int64_t numBits, bool narrowRange,
-    const gert::StorageShape& gradShape,
-    const gert::StorageShape& xShape,
-    const gert::StorageShape& minShape,
-    const gert::StorageShape& maxShape,
-    ge::graphStatus expected,
-    bool checkTilingData = false,
-    ge::DataType ioDtype = ge::DT_FLOAT)
+static void DoTilingCase(int64_t numBits, bool narrowRange, const gert::StorageShape& gradShape,
+                         const gert::StorageShape& xShape, const gert::StorageShape& minShape,
+                         const gert::StorageShape& maxShape, ge::graphStatus expected, bool checkTilingData = false,
+                         ge::DataType ioDtype = ge::DT_FLOAT)
 {
     fe::PlatFormInfos platform_info;
     map<string, string> soc_infos;
@@ -149,19 +137,19 @@ static void DoTilingCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // TilingParse simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -174,10 +162,9 @@ static void DoTilingCase(
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 3)
                       .IrInstanceNum({1, 1, 1, 1})
-                      .InputShapes({const_cast<gert::StorageShape*>(&gradShape),
-                                    const_cast<gert::StorageShape*>(&xShape),
-                                    const_cast<gert::StorageShape*>(&minShape),
-                                    const_cast<gert::StorageShape*>(&maxShape)})
+                      .InputShapes(
+                          {const_cast<gert::StorageShape*>(&gradShape), const_cast<gert::StorageShape*>(&xShape),
+                           const_cast<gert::StorageShape*>(&minShape), const_cast<gert::StorageShape*>(&maxShape)})
                       .OutputShapes({const_cast<gert::StorageShape*>(&outYShape),
                                      const_cast<gert::StorageShape*>(&outMinShape),
                                      const_cast<gert::StorageShape*>(&outMaxShape)})
@@ -211,7 +198,7 @@ static void DoTilingCase(
         int64_t totalLen = 1;
         auto xDims = xShape.GetStorageShape();
         if (xDims.GetDimNum() == 0) {
-            totalLen = 1;  // rank-0 scalar
+            totalLen = 1; // rank-0 scalar
         } else {
             totalLen = 1;
             for (size_t i = 0; i < xDims.GetDimNum(); ++i) {
@@ -519,13 +506,9 @@ TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_case_19_narrow_3d)
 // ============================================================
 
 // Helper: run tiling and return raw TilingData bytes
-static std::vector<uint8_t> RunTilingAndCapture(
-    int64_t numBits, bool narrowRange,
-    const gert::StorageShape& gradShape,
-    const gert::StorageShape& xShape,
-    const gert::StorageShape& minShape,
-    const gert::StorageShape& maxShape,
-    ge::DataType ioDtype = ge::DT_FLOAT)
+static std::vector<uint8_t> RunTilingAndCapture(int64_t numBits, bool narrowRange, const gert::StorageShape& gradShape,
+                                                const gert::StorageShape& xShape, const gert::StorageShape& minShape,
+                                                const gert::StorageShape& maxShape, ge::DataType ioDtype = ge::DT_FLOAT)
 {
     fe::PlatFormInfos platform_info;
     map<string, string> soc_infos;
@@ -553,19 +536,19 @@ static std::vector<uint8_t> RunTilingAndCapture(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>());
 
@@ -576,10 +559,9 @@ static std::vector<uint8_t> RunTilingAndCapture(
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 3)
                       .IrInstanceNum({1, 1, 1, 1})
-                      .InputShapes({const_cast<gert::StorageShape*>(&gradShape),
-                                    const_cast<gert::StorageShape*>(&xShape),
-                                    const_cast<gert::StorageShape*>(&minShape),
-                                    const_cast<gert::StorageShape*>(&maxShape)})
+                      .InputShapes(
+                          {const_cast<gert::StorageShape*>(&gradShape), const_cast<gert::StorageShape*>(&xShape),
+                           const_cast<gert::StorageShape*>(&minShape), const_cast<gert::StorageShape*>(&maxShape)})
                       .OutputShapes({const_cast<gert::StorageShape*>(&outYShape),
                                      const_cast<gert::StorageShape*>(&outMinShape),
                                      const_cast<gert::StorageShape*>(&outMaxShape)})

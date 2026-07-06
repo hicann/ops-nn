@@ -29,15 +29,9 @@ namespace {
 // ----------------EmbeddingHashTableApplyAdamW-------------------
 class EmbeddingHashTableApplyAdamWProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingHashTableApplyAdamW Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingHashTableApplyAdamW Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingHashTableApplyAdamW Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingHashTableApplyAdamW Proto Test TearDown" << std::endl; }
 };
 
 //   pass cases
@@ -70,10 +64,9 @@ TEST_F(EmbeddingHashTableApplyAdamWProtoTest, embedding_hash_table_apply_adam_w_
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(13, 5)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&table_handle_shape, &keys_shape, &m_shape, &v_shape, &beta1_power_shape, &beta2_power_shape,
-                           &lr_shape, &weight_decay_shape, &beta1_shape, &beta2_shape, &epsilon_shape, &grad_shape,
-                           &max_grad_norm_shape})
+                      .InputShapes({&table_handle_shape, &keys_shape, &m_shape, &v_shape, &beta1_power_shape,
+                                    &beta2_power_shape, &lr_shape, &weight_decay_shape, &beta1_shape, &beta2_shape,
+                                    &epsilon_shape, &grad_shape, &max_grad_norm_shape})
                       .OutputShapes({&m_shape, &v_shape, &beta1_power_shape, &beta2_power_shape, &max_grad_norm_shape})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -93,11 +86,10 @@ TEST_F(EmbeddingHashTableApplyAdamWProtoTest, embedding_hash_table_apply_adam_w_
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                           {"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);

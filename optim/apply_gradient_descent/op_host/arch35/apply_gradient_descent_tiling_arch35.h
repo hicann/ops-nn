@@ -28,10 +28,9 @@ struct ApplyGradientDescentCompileInfo {
     uint64_t ubSize;
 };
 
-class ApplyGradientDescentTiling
-{
+class ApplyGradientDescentTiling {
 public:
-    explicit ApplyGradientDescentTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ApplyGradientDescentTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
     ApplyGradientDescentNs::ApplyGradientDescentTilingData* tiling = nullptr;
 
@@ -50,5 +49,5 @@ private:
     ge::DataType alphaDtype = ge::DT_FLOAT;
     ge::DataType deltaDtype = ge::DT_FLOAT;
 };
-}  // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_APPLY_GRADIENT_DESCENT_TILING_H
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_APPLY_GRADIENT_DESCENT_TILING_H

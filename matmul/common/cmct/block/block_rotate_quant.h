@@ -24,12 +24,10 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
-    class BiasType_, class TileCopy_>
-class BlockMmad<
-    DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
-    AscendC::Std::enable_if_t<AscendC::Std::is_base_of_v<MatmulRotateQuant<>, DispatchPolicy_>>> {
+template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+          class BiasType_, class TileCopy_>
+class BlockMmad<DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
+                AscendC::Std::enable_if_t<AscendC::Std::is_base_of_v<MatmulRotateQuant<>, DispatchPolicy_>>> {
 public:
     using L0cType = float;
     using AType = AType_;
@@ -108,9 +106,9 @@ public:
         subBlockId_ = 0;
     }
 
-    __aicore__ inline void CopyInA1(
-        const AscendC::GlobalTensor<A_T>& aGlobal, const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1,
-        uint64_t curKL1, uint64_t srcDValue)
+    __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal,
+                                    const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1, uint64_t curKL1,
+                                    uint64_t srcDValue)
     {
         AscendC::Nd2NzParams nd2nzParams;
         nd2nzParams.ndNum = 1;
@@ -126,9 +124,8 @@ public:
         AscendC::DataCopy(al1Local, aGlobal, nd2nzParams);
     }
 
-    __aicore__ inline void CopyInB1(
-        const AscendC::GlobalTensor<B_T>& rotGlobal, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
-        uint64_t curKL1)
+    __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T>& rotGlobal,
+                                    const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1, uint64_t curKL1)
     {
         AscendC::Nd2NzParams nd2nzParams;
         nd2nzParams.ndNum = 1;
@@ -144,9 +141,8 @@ public:
         AscendC::DataCopy(bl1Local, rotGlobal, nd2nzParams);
     }
 
-    __aicore__ inline void CopyInA2(
-        const AscendC::LocalTensor<A_T>& a2Local, const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1,
-        uint64_t mL0, uint64_t kL0, uint64_t mStartPosition)
+    __aicore__ inline void CopyInA2(const AscendC::LocalTensor<A_T>& a2Local, const AscendC::LocalTensor<A_T>& al1Local,
+                                    uint64_t curML1, uint64_t mL0, uint64_t kL0, uint64_t mStartPosition)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
         loadDataParams.mStartPosition = mStartPosition;
@@ -159,9 +155,8 @@ public:
         AscendC::LoadData<A_T>(a2Local, al1Local, loadDataParams);
     }
 
-    __aicore__ inline void CopyInB2(
-        const AscendC::LocalTensor<B_T>& b2Local, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curKL1,
-        uint64_t nL0, uint64_t kL0)
+    __aicore__ inline void CopyInB2(const AscendC::LocalTensor<B_T>& b2Local, const AscendC::LocalTensor<B_T>& bl1Local,
+                                    uint64_t curKL1, uint64_t nL0, uint64_t kL0)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
         loadDataParams.mStartPosition = 0;
@@ -174,9 +169,9 @@ public:
         AscendC::LoadData(b2Local, bl1Local, loadDataParams);
     }
 
-    __aicore__ inline void CopyOut(
-        const AscendC::LocalTensor<C_T>& dstLocal, const AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
-        uint64_t baseN, uint64_t ubOffset)
+    __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& dstLocal,
+                                   const AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN,
+                                   uint64_t ubOffset)
     {
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         uint64_t c0 = AscendC::BLOCK_CUBE;
@@ -195,9 +190,8 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void operator()(
-        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> rotGlobal, TupleL1L0Shape tileShape,
-        bool isFirstRound)
+    __aicore__ inline void operator()(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
+                                      AscendC::GlobalTensor<B_T> rotGlobal, TupleL1L0Shape tileShape, bool isFirstRound)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
@@ -215,8 +209,8 @@ public:
         uint64_t al1Offset = (l0PingPong_ & 0x1) * aL1OneBuffer_;
         uint64_t bl1Offset = aL1OneBuffer_ * NUM_TWO;
         if (b_ > 1) {
-            bL1OneBuffer_ =
-                Cmct::Gemm::Align(curKL1, AscendC::BLOCK_CUBE) * Cmct::Gemm::Align(curNL1, AscendC::BLOCK_CUBE);
+            bL1OneBuffer_ = Cmct::Gemm::Align(curKL1, AscendC::BLOCK_CUBE) *
+                            Cmct::Gemm::Align(curNL1, AscendC::BLOCK_CUBE);
             bl1Offset += (l0PingPong_ & 0x1) * bL1OneBuffer_;
         }
 

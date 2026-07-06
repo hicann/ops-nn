@@ -34,8 +34,7 @@ struct IndexCompileInfo {
 
 class IndexTilingCommon : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit IndexTilingCommon(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit IndexTilingCommon(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetPlatformInfo() override
@@ -43,9 +42,8 @@ protected:
         auto platformPtr = context_->GetPlatformInfo();
         if (platformPtr == nullptr) {
             auto compileInfoPtr = static_cast<const IndexCompileInfo*>(context_->GetCompileInfo());
-            OP_CHECK_IF(
-                compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                        return ge::GRAPH_FAILED);
             coreNum_ = compileInfoPtr->core_num;
             ubSize_ = compileInfoPtr->ubSize;
         } else {
@@ -55,26 +53,16 @@ protected:
             ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
             ubSize_ = ubSizePlatform;
         }
-        OP_CHECK_IF(
-            coreNum_ == static_cast<uint64_t>(0), OP_LOGE(context_->GetNodeName(), "coreNum is 0"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(coreNum_ == static_cast<uint64_t>(0), OP_LOGE(context_->GetNodeName(), "coreNum is 0"),
+                    return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
 
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
 
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
 
     ge::graphStatus GetWorkspaceSize() override
     {

@@ -29,8 +29,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr uint64_t UB_SIZE_BYTES = 192ULL * 1024; // 192KB
@@ -80,10 +80,10 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 //   total <= ubSize
 static uint32_t ComputeFp32TileLength(uint64_t ubSize)
 {
-    constexpr uint32_t TYPE_SIZE = 4;         // sizeof(float)
-    constexpr uint32_t BUFFER_NUM = 5;        // 2(in) + 2(out) + 1(tmp)
-    constexpr uint32_t CMP_ALIGN = 256;       // cmpMask 256B alignment
-    constexpr uint32_t ELEM_ALIGN = 64;       // Compare requires 256B = 64 fp32 elements
+    constexpr uint32_t TYPE_SIZE = 4;                // sizeof(float)
+    constexpr uint32_t BUFFER_NUM = 5;               // 2(in) + 2(out) + 1(tmp)
+    constexpr uint32_t CMP_ALIGN = 256;              // cmpMask 256B alignment
+    constexpr uint32_t ELEM_ALIGN = 64;              // Compare requires 256B = 64 fp32 elements
     constexpr uint64_t SELECT_RESERVE = 8ULL * 1024; // 8KB for Select mode2
 
     if (ubSize <= SELECT_RESERVE) {
@@ -118,9 +118,9 @@ static uint32_t ComputeFp32TileLength(uint64_t ubSize)
 //   total <= ubSize
 static uint32_t ComputeFp16TileLength(uint64_t ubSize)
 {
-    constexpr uint32_t BYTES_PER_ELEM = 16;   // 4*2(in) + 4*2(out) + 4(cast) + 4(tmp)
+    constexpr uint32_t BYTES_PER_ELEM = 16; // 4*2(in) + 4*2(out) + 4(cast) + 4(tmp)
     constexpr uint32_t CMP_ALIGN = 256;
-    constexpr uint32_t ELEM_ALIGN = 64;       // Compare 256B alignment (fp32 compute)
+    constexpr uint32_t ELEM_ALIGN = 64;              // Compare 256B alignment (fp32 compute)
     constexpr uint64_t SELECT_RESERVE = 8ULL * 1024; // 8KB for Select mode2
 
     if (ubSize <= SELECT_RESERVE) {
@@ -144,8 +144,7 @@ static uint32_t ComputeFp16TileLength(uint64_t ubSize)
     return maxTile;
 }
 
-static ge::graphStatus GetInputInfo(gert::TilingContext* context,
-                                    int64_t& totalLength, ge::DataType& dataType,
+static ge::graphStatus GetInputInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType,
                                     float& beta, float& threshold)
 {
     auto inputX = context->GetInputShape(0);
@@ -157,7 +156,7 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
 
-    const gert::RuntimeAttrs *attrs = context->GetAttrs();
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     beta = (attrs->GetAttrPointer<float>(0) != nullptr) ? *(attrs->GetAttrPointer<float>(0)) : 1.0f;
     threshold = (attrs->GetAttrPointer<float>(1) != nullptr) ? *(attrs->GetAttrPointer<float>(1)) : 20.0f;
@@ -166,17 +165,15 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context,
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context,
-                                         ge::DataType dataType, float beta, float threshold)
+static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataType dataType, float beta,
+                                         float threshold)
 {
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     SoftplusV2TilingData* tiling = context->GetTilingData<SoftplusV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     tiling->beta = beta;
     tiling->threshold = threshold;
     tiling->invBeta = SafeInvBeta(beta);
@@ -208,16 +205,13 @@ static int64_t ComputeUsedCoreNum(int64_t totalLength, ge::DataType dataType, in
     return CeilDiv(totalLength, blockFactor);
 }
 
-static ge::graphStatus FillTilingData(gert::TilingContext* context,
-                                      int64_t totalLength, int64_t usedCoreNum,
-                                      uint32_t tileLength, ge::DataType dataType,
-                                      float beta, float threshold)
+static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t totalLength, int64_t usedCoreNum,
+                                      uint32_t tileLength, ge::DataType dataType, float beta, float threshold)
 {
     SoftplusV2TilingData* tiling = context->GetTilingData<SoftplusV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     int64_t effectiveCoreNum = usedCoreNum;
     if (effectiveCoreNum < 1) {
@@ -233,7 +227,8 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context,
     context->SetBlockDim(usedCoreNum);
 
     OP_LOGI(context, "totalLength:%ld blockFactor:%d tileLength:%ld beta:%f threshold:%f invBeta:%f",
-        tiling->totalLength, tiling->blockFactor, tiling->tileLength, tiling->beta, tiling->threshold, tiling->invBeta);
+            tiling->totalLength, tiling->blockFactor, tiling->tileLength, tiling->beta, tiling->threshold,
+            tiling->invBeta);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX);
@@ -245,17 +240,15 @@ static ge::graphStatus SoftplusV2TilingFunc(gert::TilingContext* context)
     // 1. Platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Input info (shape, dtype, attrs)
     int64_t totalLength;
     ge::DataType dataType;
     float beta, threshold;
-    OP_CHECK_IF(
-        GetInputInfo(context, totalLength, dataType, beta, threshold) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetInputInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetInputInfo(context, totalLength, dataType, beta, threshold) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetInputInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Empty tensor early return
     if (totalLength == 0) {
@@ -263,9 +256,8 @@ static ge::graphStatus SoftplusV2TilingFunc(gert::TilingContext* context)
     }
 
     // 4. Workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 5. Compute tileLength and multi-core split
     uint32_t tileLength = ComputeTileLength(dataType, ubSize);
@@ -282,8 +274,6 @@ static ge::graphStatus TilingParseForSoftplusV2([[maybe_unused]] gert::TilingPar
 
 struct SoftplusV2CompileInfo {};
 
-IMPL_OP_OPTILING(SoftplusV2)
-    .Tiling(SoftplusV2TilingFunc)
-    .TilingParse<SoftplusV2CompileInfo>(TilingParseForSoftplusV2);
+IMPL_OP_OPTILING(SoftplusV2).Tiling(SoftplusV2TilingFunc).TilingParse<SoftplusV2CompileInfo>(TilingParseForSoftplusV2);
 
 } // namespace optiling

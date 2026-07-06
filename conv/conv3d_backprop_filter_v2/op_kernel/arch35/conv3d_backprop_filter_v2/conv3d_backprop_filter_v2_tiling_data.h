@@ -82,6 +82,6 @@ struct TConv3DDwTiling {
 struct Conv3DBackpropFilterV2TilingData {
     TConv3DDwTiling dwTiling;
 };
-}  // namespace conv_bp_v2_kernel
-}
-#endif  // CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H
+} // namespace conv_bp_v2_kernel
+} // namespace AscendC
+#endif // CONV3D_BACKPROP_FILTER_V2_TILING_DATA_H

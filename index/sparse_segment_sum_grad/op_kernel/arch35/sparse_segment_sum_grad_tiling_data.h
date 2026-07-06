@@ -21,11 +21,11 @@
 #define SPARSE_SEGMENT_SUM_GRAD_TILING_DATA_H
 
 struct SparseSegmentSumGradTilingData {
-    int64_t N;                    // segment 条目数 (= len(indices) = len(segment_ids))
-    int64_t innerSize;            // grad 内层维度乘积 (= product(grad.shape[1:]))
-    int64_t outputDim0;           // output 第一维大小
-    int64_t totalOutputElements;  // output 总元素数 (= outputDim0 * innerSize)
-    int32_t needCoreNum;          // 实际使用核数
+    int64_t N;                   // segment 条目数 (= len(indices) = len(segment_ids))
+    int64_t innerSize;           // grad 内层维度乘积 (= product(grad.shape[1:]))
+    int64_t outputDim0;          // output 第一维大小
+    int64_t totalOutputElements; // output 总元素数 (= outputDim0 * innerSize)
+    int32_t needCoreNum;         // 实际使用核数
 };
 
 #endif // SPARSE_SEGMENT_SUM_GRAD_TILING_DATA_H

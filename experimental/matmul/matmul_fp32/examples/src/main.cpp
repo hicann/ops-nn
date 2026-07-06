@@ -1,12 +1,12 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file main.cpp
@@ -46,7 +46,7 @@ OperatorDesc CreateOpDesc()
     return opDesc;
 }
 
-bool SetInputData(OpRunner &runner)
+bool SetInputData(OpRunner& runner)
 {
     size_t fileSize = 0;
     ReadFile("../input/input_a.bin", fileSize, runner.GetInputBuffer<void>(0), runner.GetInputSize(0));
@@ -56,7 +56,7 @@ bool SetInputData(OpRunner &runner)
     return true;
 }
 
-bool ProcessOutputData(OpRunner &runner)
+bool ProcessOutputData(OpRunner& runner)
 {
     WriteFile("../output/output_z.bin", runner.GetOutputBuffer<void>(0), runner.GetOutputSize(0));
     INFO_LOG("Write output success");
@@ -155,7 +155,7 @@ bool RunOp()
     return true;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     if (!InitResource()) {
         ERROR_LOG("Init resource failed");

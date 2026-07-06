@@ -24,8 +24,8 @@ template <typename T>
 class AscendQuantV2PerChannelFP16 : public AscendQuantV2Base<T> {
 public:
     __aicore__ inline AscendQuantV2PerChannelFP16(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const AscendQuantV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const AscendQuantV2TilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
@@ -63,9 +63,8 @@ public:
             gmXOffset_ = blockIdx_ * tilingData_.blockFactor;
             gmSOffset_ = blockIdx_ * tilingData_.blockFactor;
         } else {
-            gmXOffset_ =
-                (blockIdx_ / tilingData_.blockUnion * tilingData_.dim1 +
-                 blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
+            gmXOffset_ = (blockIdx_ / tilingData_.blockUnion * tilingData_.dim1 +
+                          blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
             gmSOffset_ = blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor;
         }
 
@@ -254,8 +253,8 @@ template <typename T>
 class AscendQuantV2PerTensorFP16 : public AscendQuantV2Base<T> {
 public:
     __aicore__ inline AscendQuantV2PerTensorFP16(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const AscendQuantV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const AscendQuantV2TilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));

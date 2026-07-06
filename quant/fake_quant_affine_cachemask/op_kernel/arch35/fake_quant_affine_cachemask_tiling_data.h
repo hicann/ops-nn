@@ -19,30 +19,30 @@
 
 struct FakeQuantAffineCachemaskTilingDataArch35 {
     // === 总览 ===
-    int64_t numCore         = 0;   // 实际开核数（kernel `if (blockIdx >= numCore) return;`）
-    int64_t mode            = 0;   // 0=PT, 1=PC, 2=PC_NDDMA, 3=PH（占位）
+    int64_t numCore = 0; // 实际开核数（kernel `if (blockIdx >= numCore) return;`）
+    int64_t mode = 0;    // 0=PT, 1=PC, 2=PC_NDDMA, 3=PH（占位）
 
     // === 合轴后 shape ===
-    int64_t dim0            = 1;   // PT=1; PC=∏前 n-1 轴; PH=∏前 axis 轴
-    int64_t dim1            = 0;   // PT=∏xShape; PC=x[-1]; PH=x[axis]
-    int64_t dim2            = 1;   // PT=1; PC=1; PH=∏后 axis 轴
+    int64_t dim0 = 1; // PT=1; PC=∏前 n-1 轴; PH=∏前 axis 轴
+    int64_t dim1 = 0; // PT=∏xShape; PC=x[-1]; PH=x[axis]
+    int64_t dim2 = 1; // PT=1; PC=1; PH=∏后 axis 轴
 
     // === 切核 ===
-    int64_t blockAxis       = 0;   // PT=1; PC ∈ {0,1}; PH ∈ {0,1,2}
-    int64_t blockUnion      = 1;   // PT/PC=1; PH=1 / actCore/dim0 / actCore/(dim0×dim1)
-    int64_t blockFactor     = 0;   // 每核处理量（首核 & 中间核）
-    int64_t blockTailFactor = 0;   // 最后一核处理量（保证非 0）
+    int64_t blockAxis = 0;       // PT=1; PC ∈ {0,1}; PH ∈ {0,1,2}
+    int64_t blockUnion = 1;      // PT/PC=1; PH=1 / actCore/dim0 / actCore/(dim0×dim1)
+    int64_t blockFactor = 0;     // 每核处理量（首核 & 中间核）
+    int64_t blockTailFactor = 0; // 最后一核处理量（保证非 0）
 
     // === UB 切分 ===
-    int64_t ubAxis          = 0;   // PT=1; PC ∈ {0,1}; PH ∈ {0,1,2}
-    int64_t baseN           = 1;   // PT=1; PC ∈ {1, maxN}; PH ∈ {1, dim1, maxN}
-    int64_t baseLen         = 0;   // UB tile 列数
+    int64_t ubAxis = 0;  // PT=1; PC ∈ {0,1}; PH ∈ {0,1,2}
+    int64_t baseN = 1;   // PT=1; PC ∈ {1, maxN}; PH ∈ {1, dim1, maxN}
+    int64_t baseLen = 0; // UB tile 列数
 
     // === 业务参数 ===
-    int64_t hasZeroPoint    = 1;   // 0/1
-    int64_t axis            = 0;   // 用户原始 axis（归一化后）
-    int64_t quantMin        = -128;
-    int64_t quantMax        = 127;
+    int64_t hasZeroPoint = 1; // 0/1
+    int64_t axis = 0;         // 用户原始 axis（归一化后）
+    int64_t quantMin = -128;
+    int64_t quantMax = 127;
 };
 
 #endif // FAKE_QUANT_AFFINE_CACHEMASK_TILING_DATA_H

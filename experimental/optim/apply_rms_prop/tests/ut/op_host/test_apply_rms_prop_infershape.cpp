@@ -38,32 +38,25 @@ using namespace gert;
 
 class ApplyRmsPropInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyRmsPropInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyRmsPropInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyRmsPropInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyRmsPropInfershape TearDown" << std::endl; }
 };
 
 // 构造 4 输入 + 3 输出的 InferShape 上下文（方案 B：scalar 改为 attr，不参与 InferShape）
-static InfershapeContextPara MakeInfershapePara(
-    const gert::StorageShape& tensorShape)
+static InfershapeContextPara MakeInfershapePara(const gert::StorageShape& tensorShape)
 {
     std::vector<InfershapeContextPara::TensorDescription> inputs;
-    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND);  // var
-    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND);  // ms
-    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND);  // mom
-    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND);  // grad
+    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND); // var
+    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND); // ms
+    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND); // mom
+    inputs.emplace_back(tensorShape, ge::DT_FLOAT, ge::FORMAT_ND); // grad
 
     gert::StorageShape outShape({}, {});
     std::vector<InfershapeContextPara::TensorDescription> outputs;
-    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND);  // var_out
-    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND);  // ms_out
-    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND);  // mom_out
+    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND); // var_out
+    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND); // ms_out
+    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND); // mom_out
 
     return InfershapeContextPara("ApplyRmsProp", inputs, outputs);
 }
@@ -73,9 +66,7 @@ TEST_F(ApplyRmsPropInfershape, S001_BasicShape4D)
 {
     gert::StorageShape shape({32, 4, 4, 4}, {32, 4, 4, 4});
     auto para = MakeInfershapePara(shape);
-    std::vector<std::vector<int64_t>> expect = {
-        {32, 4, 4, 4}, {32, 4, 4, 4}, {32, 4, 4, 4}
-    };
+    std::vector<std::vector<int64_t>> expect = {{32, 4, 4, 4}, {32, 4, 4, 4}, {32, 4, 4, 4}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
@@ -84,9 +75,7 @@ TEST_F(ApplyRmsPropInfershape, S002_1D_Shape)
 {
     gert::StorageShape shape({1024}, {1024});
     auto para = MakeInfershapePara(shape);
-    std::vector<std::vector<int64_t>> expect = {
-        {1024}, {1024}, {1024}
-    };
+    std::vector<std::vector<int64_t>> expect = {{1024}, {1024}, {1024}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
@@ -95,9 +84,7 @@ TEST_F(ApplyRmsPropInfershape, S003_DynamicShape)
 {
     gert::StorageShape shape({1, -1, -1, 64}, {1, -1, -1, 64});
     auto para = MakeInfershapePara(shape);
-    std::vector<std::vector<int64_t>> expect = {
-        {1, -1, -1, 64}, {1, -1, -1, 64}, {1, -1, -1, 64}
-    };
+    std::vector<std::vector<int64_t>> expect = {{1, -1, -1, 64}, {1, -1, -1, 64}, {1, -1, -1, 64}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
@@ -107,23 +94,22 @@ TEST_F(ApplyRmsPropInfershape, S003_DynamicShape)
 
 // 构造 4 输入 + 3 输出，允许自定义每个 tensor 的 shape（用于 shape 不一致场景）
 // 方案 B：scalar 改为 attr，因此 UT 只需处理 var/ms/mom/grad 4 个 tensor。
-static InfershapeContextPara MakeInfershapeParaCustom(
-    const gert::StorageShape& varShape,
-    const gert::StorageShape& msShape,
-    const gert::StorageShape& momShape,
-    const gert::StorageShape& gradShape)
+static InfershapeContextPara MakeInfershapeParaCustom(const gert::StorageShape& varShape,
+                                                      const gert::StorageShape& msShape,
+                                                      const gert::StorageShape& momShape,
+                                                      const gert::StorageShape& gradShape)
 {
     std::vector<InfershapeContextPara::TensorDescription> inputs;
-    inputs.emplace_back(varShape,  ge::DT_FLOAT, ge::FORMAT_ND);  // var
-    inputs.emplace_back(msShape,   ge::DT_FLOAT, ge::FORMAT_ND);  // ms
-    inputs.emplace_back(momShape,  ge::DT_FLOAT, ge::FORMAT_ND);  // mom
-    inputs.emplace_back(gradShape, ge::DT_FLOAT, ge::FORMAT_ND);  // grad
+    inputs.emplace_back(varShape, ge::DT_FLOAT, ge::FORMAT_ND);  // var
+    inputs.emplace_back(msShape, ge::DT_FLOAT, ge::FORMAT_ND);   // ms
+    inputs.emplace_back(momShape, ge::DT_FLOAT, ge::FORMAT_ND);  // mom
+    inputs.emplace_back(gradShape, ge::DT_FLOAT, ge::FORMAT_ND); // grad
 
     gert::StorageShape outShape({}, {});
     std::vector<InfershapeContextPara::TensorDescription> outputs;
-    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND);  // var_out
-    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND);  // ms_out
-    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND);  // mom_out
+    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND); // var_out
+    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND); // ms_out
+    outputs.emplace_back(outShape, ge::DT_FLOAT, ge::FORMAT_ND); // mom_out
 
     return InfershapeContextPara("ApplyRmsProp", inputs, outputs);
 }
@@ -131,8 +117,8 @@ static InfershapeContextPara MakeInfershapeParaCustom(
 // S_004 ms shape 与 var 不一致 → FAIL
 TEST_F(ApplyRmsPropInfershape, S004_Err_MsShape_Mismatch)
 {
-    gert::StorageShape varShape   ({32, 4, 4, 4}, {32, 4, 4, 4});
-    gert::StorageShape badMsShape ({32, 4, 4, 8}, {32, 4, 4, 8});
+    gert::StorageShape varShape({32, 4, 4, 4}, {32, 4, 4, 4});
+    gert::StorageShape badMsShape({32, 4, 4, 8}, {32, 4, 4, 8});
     auto para = MakeInfershapeParaCustom(varShape, badMsShape, varShape, varShape);
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
@@ -140,8 +126,8 @@ TEST_F(ApplyRmsPropInfershape, S004_Err_MsShape_Mismatch)
 // S_005 mom shape 与 var 不一致 → FAIL
 TEST_F(ApplyRmsPropInfershape, S005_Err_MomShape_Mismatch)
 {
-    gert::StorageShape varShape    ({16, 16}, {16, 16});
-    gert::StorageShape badMomShape ({16, 32}, {16, 32});
+    gert::StorageShape varShape({16, 16}, {16, 16});
+    gert::StorageShape badMomShape({16, 32}, {16, 32});
     auto para = MakeInfershapeParaCustom(varShape, varShape, badMomShape, varShape);
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
@@ -149,8 +135,8 @@ TEST_F(ApplyRmsPropInfershape, S005_Err_MomShape_Mismatch)
 // S_006 grad shape 与 var 不一致 → FAIL
 TEST_F(ApplyRmsPropInfershape, S006_Err_GradShape_Mismatch)
 {
-    gert::StorageShape varShape     ({1024}, {1024});
-    gert::StorageShape badGradShape ({512}, {512});
+    gert::StorageShape varShape({1024}, {1024});
+    gert::StorageShape badGradShape({512}, {512});
     auto para = MakeInfershapeParaCustom(varShape, varShape, varShape, badGradShape);
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
@@ -159,8 +145,8 @@ TEST_F(ApplyRmsPropInfershape, S006_Err_GradShape_Mismatch)
 //   保留用例仍然对 grad shape 做不一致校验，覆盖相同错误分支
 TEST_F(ApplyRmsPropInfershape, S007_Err_LrRank_Invalid)
 {
-    gert::StorageShape varShape  ({8, 8}, {8, 8});
-    gert::StorageShape badShape  ({2, 3}, {2, 3});
+    gert::StorageShape varShape({8, 8}, {8, 8});
+    gert::StorageShape badShape({2, 3}, {2, 3});
     // grad 与 var shape 不一致 → FAIL（方案 B 保护）
     auto para = MakeInfershapeParaCustom(varShape, varShape, varShape, badShape);
     ExecuteTestCase(para, ge::GRAPH_FAILED);
@@ -168,8 +154,8 @@ TEST_F(ApplyRmsPropInfershape, S007_Err_LrRank_Invalid)
 
 TEST_F(ApplyRmsPropInfershape, S008_Err_EpsilonRank_Invalid)
 {
-    gert::StorageShape varShape  ({64}, {64});
-    gert::StorageShape badShape  ({2}, {2});
+    gert::StorageShape varShape({64}, {64});
+    gert::StorageShape badShape({2}, {2});
     auto para = MakeInfershapeParaCustom(varShape, varShape, varShape, badShape);
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
@@ -177,12 +163,10 @@ TEST_F(ApplyRmsPropInfershape, S008_Err_EpsilonRank_Invalid)
 // S_009 基础 shape = [8,16]（方案 B 取代原 scalar rho rank=1 场景）
 TEST_F(ApplyRmsPropInfershape, S009_ScalarRho_Rank1Dim1_IsValid)
 {
-    gert::StorageShape varShape ({8, 16}, {8, 16});
+    gert::StorageShape varShape({8, 16}, {8, 16});
     auto para = MakeInfershapeParaCustom(varShape, varShape, varShape, varShape);
-    std::vector<std::vector<int64_t>> expect = {
-        {8, 16}, {8, 16}, {8, 16}
-    };
+    std::vector<std::vector<int64_t>> expect = {{8, 16}, {8, 16}, {8, 16}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-}  // namespace ApplyRmsPropUT
+} // namespace ApplyRmsPropUT

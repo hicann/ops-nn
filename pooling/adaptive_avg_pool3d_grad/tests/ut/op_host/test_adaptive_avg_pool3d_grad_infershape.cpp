@@ -24,18 +24,11 @@
 using namespace ge;
 using namespace op;
 
-class AdaptiveAvgPool3DGradInferShapeTest : public testing::Test
-{
+class AdaptiveAvgPool3DGradInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3DGrad InferShape Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3DGrad InferShape Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3DGrad InferShape Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3DGrad InferShape Test TearDown" << std::endl; }
 };
 
 TEST_F(AdaptiveAvgPool3DGradInferShapeTest, adaptive_avg_pool3d_grad_infershape_test01)
@@ -51,9 +44,7 @@ TEST_F(AdaptiveAvgPool3DGradInferShapeTest, adaptive_avg_pool3d_grad_infershape_
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}
-                      })
+                      .NodeAttrs({{"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
                       .InputShapes({&yGradShape, &xShape})
                       .OutputShapes({&xGradShape})
                       .Build();
@@ -76,9 +67,7 @@ TEST_F(AdaptiveAvgPool3DGradInferShapeTest, adaptive_avg_pool3d_grad_infershape_
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}
-                      })
+                      .NodeAttrs({{"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
                       .InputShapes({&yGradShape, &xShape})
                       .OutputShapes({&xGradShape})
                       .Build();

@@ -38,10 +38,9 @@ using namespace AscendC;
 template <typename T>
 class ForeachDivScalar {
 public:
-    __aicore__ inline ForeachDivScalar() {};
+    __aicore__ inline ForeachDivScalar(){};
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
-                                 const ForeachDivScalarTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, const ForeachDivScalarTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -53,7 +52,7 @@ private:
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> inputQueue;
     TQue<QuePosition::VECOUT, 1> outputQueue;
-    TBuf<QuePosition::VECCALC> bf16TmpBuf_;  // Pre-allocated buffer for bf16 intermediate fp32
+    TBuf<QuePosition::VECCALC> bf16TmpBuf_; // Pre-allocated buffer for bf16 intermediate fp32
 
     const ForeachDivScalarTilingData* tilingData_ = nullptr;
     float scalarReciprocalF32_ = 0.0f;
@@ -66,9 +65,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachDivScalar<T>::Init(
-    GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
-    const ForeachDivScalarTilingData* tilingData)
+__aicore__ inline void ForeachDivScalar<T>::Init(GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
+                                                 const ForeachDivScalarTilingData* tilingData)
 {
     tilingData_ = tilingData;
     ubFactor_ = tilingData->ubFactor;
@@ -107,13 +105,23 @@ __aicore__ inline void ForeachDivScalar<T>::Init(
             int32_t dexp = static_cast<int32_t>((dbits >> 52) & 0x7FF);
             uint64_t dmant = dbits & 0x000FFFFFFFFFFFFFULL;
             uint32_t fbits;
-            if (dexp == 0) { fbits = sign << 31; }  // zero/subnormal -> zero
-            else if (dexp == 0x7FF) { fbits = (sign << 31) | 0x7F800000 | static_cast<uint32_t>(dmant >> 29); }  // inf/nan
+            if (dexp == 0) {
+                fbits = sign << 31;
+            } // zero/subnormal -> zero
+            else if (dexp == 0x7FF) {
+                fbits = (sign << 31) | 0x7F800000 | static_cast<uint32_t>(dmant >> 29);
+            } // inf/nan
             else {
                 int32_t fexp = dexp - 1023 + 127;
-                if (fexp >= 255) { fbits = (sign << 31) | 0x7F800000; }  // overflow -> inf
-                else if (fexp <= 0) { fbits = sign << 31; }  // underflow -> zero
-                else { fbits = (sign << 31) | (static_cast<uint32_t>(fexp) << 23) | static_cast<uint32_t>(dmant >> 29); }
+                if (fexp >= 255) {
+                    fbits = (sign << 31) | 0x7F800000;
+                } // overflow -> inf
+                else if (fexp <= 0) {
+                    fbits = sign << 31;
+                } // underflow -> zero
+                else {
+                    fbits = (sign << 31) | (static_cast<uint32_t>(fexp) << 23) | static_cast<uint32_t>(dmant >> 29);
+                }
             }
             scalarVal = *reinterpret_cast<float*>(&fbits);
         } else if (tilingData->scalarDtype == 1) {
@@ -136,13 +144,15 @@ __aicore__ inline void ForeachDivScalar<T>::Process()
     uint32_t tensorNum = tilingData_->tensorNum;
     int64_t totalElements = tilingData_->totalElements;
     int64_t blockIdx = GetBlockIdx();
-    int64_t blockFactor = tilingData_->blockFactor;  // elements per core
+    int64_t blockFactor = tilingData_->blockFactor; // elements per core
 
     // Element-granularity multi-core splitting
     int64_t coreStartElem = blockIdx * blockFactor;
     int64_t coreEndElem = coreStartElem + blockFactor;
-    if (coreEndElem > totalElements) coreEndElem = totalElements;
-    if (coreStartElem >= totalElements) return;
+    if (coreEndElem > totalElements)
+        coreEndElem = totalElements;
+    if (coreStartElem >= totalElements)
+        return;
 
     // Compute cumulative offsets dynamically (tensorOffsets removed from TilingData)
     int64_t tStart = 0;
@@ -167,15 +177,14 @@ __aicore__ inline void ForeachDivScalar<T>::Process()
         inGM.SetGlobalBuffer(xDataPtr, tLen);
         outGM.SetGlobalBuffer(yDataPtr, tLen);
 
-        int64_t localOffset = overlapStart - tStart;  // offset within this tensor
+        int64_t localOffset = overlapStart - tStart; // offset within this tensor
         int64_t processLen = overlapEnd - overlapStart;
 
         // UB tile loop to process the overlap portion
         int64_t loopCount = (processLen + ubFactor_ - 1) / ubFactor_;
         for (int64_t i = 0; i < loopCount; i++) {
             int64_t tileOffset = i * ubFactor_;
-            int64_t currentNum = (i == loopCount - 1)
-                ? (processLen - ubFactor_ * i) : ubFactor_;
+            int64_t currentNum = (i == loopCount - 1) ? (processLen - ubFactor_ * i) : ubFactor_;
             CopyIn(inGM, localOffset + tileOffset, currentNum);
             Compute(currentNum);
             CopyOut(outGM, localOffset + tileOffset, currentNum);

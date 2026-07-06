@@ -26,18 +26,11 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class LpNormV2DavidTiling : public testing::Test
-{
+class LpNormV2DavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LpNormV2DavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LpNormV2DavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LpNormV2DavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LpNormV2DavidTiling TearDown" << std::endl; }
 };
 
 TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling1_difftype)
@@ -83,11 +76,10 @@ TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling1_difftype)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -153,11 +145,10 @@ TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling2_difftype)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -223,11 +214,10 @@ TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling3_difftype)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();

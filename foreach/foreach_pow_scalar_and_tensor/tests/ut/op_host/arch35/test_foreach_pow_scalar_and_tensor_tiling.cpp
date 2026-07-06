@@ -27,18 +27,12 @@ using namespace ut_util;
 
 class ForeachPowScalarAndTensorArch35TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachPowScalarAndTensorArch35TilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachPowScalarAndTensorArch35TilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachPowScalarAndTensorArch35TilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ForeachPowScalarAndTensorArch35TilingTest TearDown" << std::endl; }
 };
 
-static void DoCase(std::initializer_list<int64_t> xShape,
-                   ge::DataType scalarDt, ge::DataType tensorDt, uint64_t expectKey)
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType scalarDt, ge::DataType tensorDt,
+                   uint64_t expectKey)
 {
     fe::PlatFormInfos pf;
     std::map<std::string, std::string> soc, ai, intr;
@@ -59,9 +53,11 @@ static void DoCase(std::initializer_list<int64_t> xShape,
     ASSERT_NE(tilingParseFn, nullptr);
 
     std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -74,15 +70,19 @@ static void DoCase(std::initializer_list<int64_t> xShape,
     gert::StorageShape yS = {xShape, xShape};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
-    auto th = gert::TilingContextFaker().NodeIoNum(2, 1).IrInstanceNum({1, 1})
-        .InputShapes({&sS, &xS}).OutputShapes({&yS})
-        .CompileInfo(&ci).PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, scalarDt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, tensorDt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, tensorDt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
-        .Build();
+    auto th = gert::TilingContextFaker()
+                  .NodeIoNum(2, 1)
+                  .IrInstanceNum({1, 1})
+                  .InputShapes({&sS, &xS})
+                  .OutputShapes({&yS})
+                  .CompileInfo(&ci)
+                  .PlatformInfo(reinterpret_cast<char*>(&pf))
+                  .NodeInputTd(0, scalarDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeInputTd(1, tensorDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, tensorDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .TilingData(param.get())
+                  .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
+                  .Build();
     auto* ctx = th.GetContext<gert::TilingContext>();
     ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -98,24 +98,20 @@ static void DoCase(std::initializer_list<int64_t> xShape,
 
 TEST_F(ForeachPowScalarAndTensorArch35TilingTest, foreach_pow_scalar_and_tensor_float32)
 {
-    DoCase({4, 4}, ge::DT_FLOAT, ge::DT_FLOAT,
-           GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_FP32));
+    DoCase({4, 4}, ge::DT_FLOAT, ge::DT_FLOAT, GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_FP32));
 }
 
 TEST_F(ForeachPowScalarAndTensorArch35TilingTest, foreach_pow_scalar_and_tensor_float16)
 {
-    DoCase({4, 4}, ge::DT_FLOAT, ge::DT_FLOAT16,
-           GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_FP16));
+    DoCase({4, 4}, ge::DT_FLOAT, ge::DT_FLOAT16, GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_FP16));
 }
 
 TEST_F(ForeachPowScalarAndTensorArch35TilingTest, foreach_pow_scalar_and_tensor_int32)
 {
-    DoCase({4, 4}, ge::DT_INT64, ge::DT_INT32,
-           GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_INT64_INT32));
+    DoCase({4, 4}, ge::DT_INT64, ge::DT_INT32, GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_INT64_INT32));
 }
 
 TEST_F(ForeachPowScalarAndTensorArch35TilingTest, foreach_pow_scalar_and_tensor_bfloat16)
 {
-    DoCase({4, 4}, ge::DT_FLOAT, ge::DT_BF16,
-           GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_BF16));
+    DoCase({4, 4}, ge::DT_FLOAT, ge::DT_BF16, GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_BF16));
 }

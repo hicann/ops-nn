@@ -35,14 +35,14 @@ static const int32_t SELF_SUPPORT_MIN_DIMS = 2;
 }
 
 // 根据API定义，需要列出self和out所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static inline bool CheckNotNull(
-    const aclTensor* self, const aclScalar* p, const aclScalar* maxNorm, const aclTensor* out)
+static inline bool CheckNotNull(const aclTensor* self, const aclScalar* p, const aclScalar* maxNorm,
+                                const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(p, return false);
@@ -55,9 +55,10 @@ static inline bool CheckNotNull(
 static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     // 检查self的数据类型是否在renorm算子的输入支持列表内
-    const std::initializer_list<op::DataType> currentDtypeSupportList =
-        GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B ? ASCEND910B_DTYPE_SUPPORT_LIST :
-                                                                             ASCEND910_DTYPE_SUPPORT_LIST;
+    const std::initializer_list<op::DataType> currentDtypeSupportList = GetCurrentPlatformInfo().GetSocVersion() >=
+                                                                                SocVersion::ASCEND910B ?
+                                                                            ASCEND910B_DTYPE_SUPPORT_LIST :
+                                                                            ASCEND910_DTYPE_SUPPORT_LIST;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, currentDtypeSupportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, currentDtypeSupportList, return false);
     OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
@@ -69,9 +70,8 @@ static inline bool CheckRenormFormat(const aclTensor* self, const aclTensor* out
 {
     // 需要根据算子实际情况添加校验
     if (self->GetViewFormat() != out->GetViewFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, self [%s], out [%s].",
-            op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, self [%s], out [%s].",
+                op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString());
         return false;
     }
 
@@ -117,16 +117,16 @@ static bool CheckValue(const aclTensor* self, const aclScalar* p, int64_t dim, c
 
     // 检查maxNorm是否在[0, +∞]范围内
     if (maxNorm->ToFloat() < 0.0f) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "maxNorm should be greater than 0, but now maxNorm is [%f].", maxNorm->ToFloat());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "maxNorm should be greater than 0, but now maxNorm is [%f].",
+                maxNorm->ToFloat());
         return false;
     }
 
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclScalar* p, int64_t dim, const aclScalar* maxNorm, aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* p, int64_t dim, const aclScalar* maxNorm,
+                               aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, p, maxNorm, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -146,9 +146,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnRenormGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* p, int64_t dim, const aclScalar* maxNorm, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRenormGetWorkspaceSize(const aclTensor* self, const aclScalar* p, int64_t dim,
+                                        const aclScalar* maxNorm, aclTensor* out, uint64_t* workspaceSize,
+                                        aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -222,13 +222,12 @@ aclnnStatus aclnnRenorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* 
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceRenormGetWorkspaceSize(
-    aclTensor* selfRef, const aclScalar* p, int64_t dim, const aclScalar* maxNorm, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnInplaceRenormGetWorkspaceSize(aclTensor* selfRef, const aclScalar* p, int64_t dim,
+                                               const aclScalar* maxNorm, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor)
 {
     aclTensor* out = selfRef;
-    return aclnnRenormGetWorkspaceSize(
-        selfRef, p, dim, maxNorm, out, workspaceSize, executor);
+    return aclnnRenormGetWorkspaceSize(selfRef, p, dim, maxNorm, out, workspaceSize, executor);
 }
 
 aclnnStatus aclnnInplaceRenorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)

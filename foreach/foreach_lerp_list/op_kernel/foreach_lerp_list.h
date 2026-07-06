@@ -42,9 +42,8 @@ constexpr float FLOAT_NUM_NEG = -0.5f;
 constexpr float FLOAT_NUM_POS = 0.5;
 constexpr float FLOAT_NUM_ONE = 1.0;
 
-__aicore__ inline void GenerateMask(
-    LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
-    LocalTensor<uint8_t>& maskLocal, LocalTensor<float> absSrc, uint32_t elementCount)
+__aicore__ inline void GenerateMask(LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
+                                    LocalTensor<uint8_t>& maskLocal, LocalTensor<float> absSrc, uint32_t elementCount)
 {
     uint32_t alignedCount = (elementCount + ELEMENT_PER_REPEAT - 1) / ELEMENT_PER_REPEAT * ELEMENT_PER_REPEAT;
     PipeBarrier<PIPE_V>();
@@ -65,13 +64,12 @@ __aicore__ inline void SyncVToS()
 }
 
 template <typename T>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<T>& weightLocal, LocalTensor<T>& yLocal,
-        LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
-        LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<T>& weightLocal,
+                                   LocalTensor<T>& yLocal, LocalTensor<float>& float32Tensor,
+                                   LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
+                                   LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = 0;
         uint32_t castTimesRemainder = 0;
@@ -84,27 +82,25 @@ public:
         }
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            ComputePerCast(
-                x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
-                maxCastDataCount, i, maxCastDataCount);
+            ComputePerCast(x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
+                           maxCastDataCount, i, maxCastDataCount);
         }
 
         if (castTimesRemainder > 0) {
-            ComputePerCast(
-                x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
-                maxCastDataCount, castTimes, castTimesRemainder);
+            ComputePerCast(x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
+                           maxCastDataCount, castTimes, castTimesRemainder);
         }
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<T>& weightLocal, LocalTensor<T>& yLocal,
-        LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
-        LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, uint16_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<T>& weightLocal,
+                                          LocalTensor<T>& yLocal, LocalTensor<float>& float32Tensor,
+                                          LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
+                                          LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, uint16_t index,
+                                          int64_t dataCount)
     {
-        ComputePerCastInner(
-            x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount,
-            index, maxCastDataCount);
+        ComputePerCastInner(x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
+                            maxCastDataCount, index, maxCastDataCount);
 
         uint32_t totalRepeatCnt = dataCount / ELEMENT_PER_REPEAT;
         uint32_t totalRepeatCntRemainder = dataCount % ELEMENT_PER_REPEAT; // should calc
@@ -113,32 +109,32 @@ private:
         uint32_t offset = 0;
         uint32_t batchElementCount = MAX_REPEATS * ELEMENT_PER_REPEAT;
         for (uint32_t i = 0; i < repeatBatchCnt; i++) {
-            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset,
-                batchElementCount, MAX_REPEATS);
+            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset, batchElementCount,
+                        MAX_REPEATS);
             offset += batchElementCount;
         }
         if (repeatBatchCntRemainder > 0) {
             uint32_t remElementCount = repeatBatchCntRemainder * ELEMENT_PER_REPEAT;
-            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset,
-                remElementCount, repeatBatchCntRemainder);
+            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset, remElementCount,
+                        repeatBatchCntRemainder);
             offset += remElementCount;
         }
         if (totalRepeatCntRemainder > 0) {
             SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset,
-                totalRepeatCntRemainder, 1);
+                        totalRepeatCntRemainder, 1);
         }
 
         PipeBarrier<PIPE_V>();
-        Cast(
-            yLocal[index * maxCastDataCount], float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE],
-            RoundMode::CAST_RINT, dataCount);
+        Cast(yLocal[index * maxCastDataCount], float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE],
+             RoundMode::CAST_RINT, dataCount);
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputePerCastInner(
-        LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<T>& weightLocal, LocalTensor<T>& yLocal,
-        LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
-        LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, uint16_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCastInner(LocalTensor<T>& x1Local, LocalTensor<T>& x2Local,
+                                               LocalTensor<T>& weightLocal, LocalTensor<T>& yLocal,
+                                               LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1,
+                                               LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal,
+                                               uint32_t maxCastDataCount, uint16_t index, int64_t dataCount)
     {
         // y = x1 +  weightVal * (x2 - x1)
         PipeBarrier<PIPE_V>();
@@ -146,9 +142,8 @@ private:
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor[maxCastDataCount], x2Local[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
-        Cast(
-            float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], weightLocal[index * maxCastDataCount],
-            RoundMode::CAST_NONE, dataCount);
+        Cast(float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], weightLocal[index * maxCastDataCount],
+             RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
         Sub(float32Tensor[maxCastDataCount], float32Tensor[maxCastDataCount], float32Tensor, dataCount);
         PipeBarrier<PIPE_V>();
@@ -164,9 +159,8 @@ private:
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor[maxCastDataCount], x2Local[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
-        Cast(
-            float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], weightLocal[index * maxCastDataCount],
-            RoundMode::CAST_NONE, dataCount);
+        Cast(float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], weightLocal[index * maxCastDataCount],
+             RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
         Duplicate<float>(lerpLocal1, FLOAT_NUM_ONE, dataCount);
         PipeBarrier<PIPE_V>();
@@ -179,31 +173,29 @@ private:
         Sub(float32Tensor[maxCastDataCount], float32Tensor[maxCastDataCount], float32Tensor, dataCount);
     }
 
-    __aicore__ inline void SelectBatch(
-        LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
-        LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, uint32_t offset,
-        uint32_t elementCount, uint32_t repeatCount)
+    __aicore__ inline void SelectBatch(LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1,
+                                       LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal,
+                                       uint32_t maxCastDataCount, uint32_t offset, uint32_t elementCount,
+                                       uint32_t repeatCount)
     {
-        GenerateMask(lerpLocal1, lerpLocal2, maskLocal,
-            float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO + offset], elementCount);
+        GenerateMask(lerpLocal1, lerpLocal2, maskLocal, float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO + offset],
+                     elementCount);
         SyncVToS();
-        Select(
-            float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], maskLocal[0],
-            float32Tensor[maxCastDataCount + offset],
-            float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-            ELEMENT_PER_REPEAT, repeatCount, {1, 1, 1, 8, 8, 8});
+        Select(float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], maskLocal[0],
+               float32Tensor[maxCastDataCount + offset], float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset],
+               SELMODE::VSEL_TENSOR_TENSOR_MODE, ELEMENT_PER_REPEAT, repeatCount, {1, 1, 1, 8, 8, 8});
         PipeBarrier<PIPE_V>();
     }
 };
 
 template <>
-class InnerComputer<float>
-{
+class InnerComputer<float> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<float>& x1Local, LocalTensor<float>& x2Local, LocalTensor<float>& weightLocal,
-        LocalTensor<float>& yLocal, LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1,
-        LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<float>& x1Local, LocalTensor<float>& x2Local,
+                                   LocalTensor<float>& weightLocal, LocalTensor<float>& yLocal,
+                                   LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1,
+                                   LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal,
+                                   uint32_t maxCastDataCount, int64_t dataCount)
     {
         // y = x1 +  weightVal * (x2 - x1)
         PipeBarrier<PIPE_V>();
@@ -214,8 +206,8 @@ public:
         Add(yLocal, yLocal, x1Local, dataCount);
         PipeBarrier<PIPE_V>();
 
-        ComputeInner(
-            x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal, dataCount);
+        ComputeInner(x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
+                     dataCount);
 
         uint32_t totalRepeatCnt = dataCount / ELEMENT_PER_REPEAT;
         uint32_t totalRepeatCntRemainder = dataCount % ELEMENT_PER_REPEAT;
@@ -224,27 +216,28 @@ public:
         uint32_t offset = 0;
         uint32_t batchElementCount = MAX_REPEATS * ELEMENT_PER_REPEAT;
         for (uint32_t i = 0; i < repeatBatchCnt; i++) {
-            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset,
-                batchElementCount, MAX_REPEATS);
+            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset, batchElementCount,
+                        MAX_REPEATS);
             offset += batchElementCount;
         }
         if (repeatBatchCntRemainder > 0) {
             uint32_t remElementCount = repeatBatchCntRemainder * ELEMENT_PER_REPEAT;
-            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset,
-                remElementCount, repeatBatchCntRemainder);
+            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset, remElementCount,
+                        repeatBatchCntRemainder);
             offset += remElementCount;
         }
         if (totalRepeatCntRemainder > 0) {
             SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset,
-                totalRepeatCntRemainder, 1);
+                        totalRepeatCntRemainder, 1);
         }
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeInner(
-        LocalTensor<float>& x1Local, LocalTensor<float>& x2Local, LocalTensor<float>& weightLocal,
-        LocalTensor<float>& yLocal, LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1,
-        LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal, int64_t dataCount)
+    __aicore__ inline void ComputeInner(LocalTensor<float>& x1Local, LocalTensor<float>& x2Local,
+                                        LocalTensor<float>& weightLocal, LocalTensor<float>& yLocal,
+                                        LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1,
+                                        LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal,
+                                        int64_t dataCount)
     {
         // y = x2 - (x2 - x1) * (1 - weight)
         PipeBarrier<PIPE_V>();
@@ -260,29 +253,25 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void SelectBatch(
-        LocalTensor<float>& yLocal, LocalTensor<float>& x2Local, LocalTensor<float>& weightLocal,
-        LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
-        LocalTensor<uint8_t>& maskLocal, uint32_t offset,
-        uint32_t elementCount, uint32_t repeatCount)
+    __aicore__ inline void SelectBatch(LocalTensor<float>& yLocal, LocalTensor<float>& x2Local,
+                                       LocalTensor<float>& weightLocal, LocalTensor<float>& lerpLocal1,
+                                       LocalTensor<float>& lerpLocal2, LocalTensor<uint8_t>& maskLocal, uint32_t offset,
+                                       uint32_t elementCount, uint32_t repeatCount)
     {
         GenerateMask(lerpLocal1, lerpLocal2, maskLocal, weightLocal[offset], elementCount);
         SyncVToS();
-        Select(
-            yLocal[offset], maskLocal[0], x2Local[offset], yLocal[offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-            ELEMENT_PER_REPEAT, repeatCount, {1, 1, 1, 8, 8, 8});
+        Select(yLocal[offset], maskLocal[0], x2Local[offset], yLocal[offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
+               ELEMENT_PER_REPEAT, repeatCount, {1, 1, 1, 8, 8, 8});
         PipeBarrier<PIPE_V>();
     }
 };
 
 template <typename T>
-class ForeachLerpListND
-{
+class ForeachLerpListND {
 public:
     __aicore__ inline ForeachLerpListND(){};
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace,
-        const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -294,8 +283,8 @@ private:
     __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
     __aicore__ inline void SingleTensorProcess(int64_t dataCount, LocalTensor<float>& float32Tensor);
     __aicore__ inline void CopyIn(uint16_t index, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void ComputeAndCopyOut(
-        uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder);
+    __aicore__ inline void ComputeAndCopyOut(uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                             bool isRemainder);
     __aicore__ inline __gm__ T* GetTensorAddr(uint16_t index, GM_ADDR gmAddr);
 
 private:
@@ -335,8 +324,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachLerpListND<T>::Init(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachLerpListND<T>::Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace,
+                                                  const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     x1TensorPtr = x1;
@@ -474,8 +463,8 @@ __aicore__ inline void ForeachLerpListND<T>::CopyIn(uint16_t index, int64_t data
 }
 
 template <typename T>
-__aicore__ inline void ForeachLerpListND<T>::ComputeAndCopyOut(
-    uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+__aicore__ inline void ForeachLerpListND<T>::ComputeAndCopyOut(uint16_t index, int64_t dataCount,
+                                                               LocalTensor<float>& float32Tensor, bool isRemainder)
 {
     LocalTensor<T> x1Local = x1Queue.DeQue<T>();
     LocalTensor<T> x2Local = x2Queue.DeQue<T>();
@@ -488,9 +477,8 @@ __aicore__ inline void ForeachLerpListND<T>::ComputeAndCopyOut(
     LocalTensor<float> lerpLocal2 = lerpLocal[lerpOffset];
 
     InnerComputer<T> computer;
-    computer.Compute(
-        x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount,
-        dataCount);
+    computer.Compute(x1Local, x2Local, weightLocal, yLocal, float32Tensor, lerpLocal1, lerpLocal2, maskLocal,
+                     maxCastDataCount, dataCount);
 
     yQueue.EnQue<T>(yLocal);
     x1Queue.FreeTensor(x1Local);

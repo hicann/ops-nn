@@ -19,26 +19,26 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 namespace {
-    constexpr uint32_t BUFFER_NUM = 2;
-    constexpr uint32_t INDEX_0 = 0;
-    constexpr uint32_t INDEX_1 = 1;
-    constexpr uint32_t INDEX_2 = 2;
-    constexpr uint32_t INDEX_3 = 3;
-    constexpr uint32_t IN_BYTE_SIZE = 4;
-    constexpr uint32_t OUT_BYTE_SIZE = 2;
-    constexpr uint32_t TBUF_BYTE_SIZE = 32;
-    constexpr uint32_t SIZE_2 = 2;
-    constexpr uint32_t SIZE_4 = 4;
-    constexpr uint32_t SIZE_8 = 8;
-    constexpr uint32_t SIZE_16 = 16;
-    constexpr uint32_t SIZE_32 = 32;
-    constexpr uint32_t SIZE_64 = 64;
-    constexpr uint32_t SIZE_128 = 128;
-    constexpr uint32_t SIZE_256 = 256;
-    constexpr uint32_t SIZE_512 = 512;
-    constexpr uint32_t SIZE_65535 = 65535;
-    constexpr uint32_t SIZE_BASE_TASK_MAX = 65536 * 3;
-}
+constexpr uint32_t BUFFER_NUM = 2;
+constexpr uint32_t INDEX_0 = 0;
+constexpr uint32_t INDEX_1 = 1;
+constexpr uint32_t INDEX_2 = 2;
+constexpr uint32_t INDEX_3 = 3;
+constexpr uint32_t IN_BYTE_SIZE = 4;
+constexpr uint32_t OUT_BYTE_SIZE = 2;
+constexpr uint32_t TBUF_BYTE_SIZE = 32;
+constexpr uint32_t SIZE_2 = 2;
+constexpr uint32_t SIZE_4 = 4;
+constexpr uint32_t SIZE_8 = 8;
+constexpr uint32_t SIZE_16 = 16;
+constexpr uint32_t SIZE_32 = 32;
+constexpr uint32_t SIZE_64 = 64;
+constexpr uint32_t SIZE_128 = 128;
+constexpr uint32_t SIZE_256 = 256;
+constexpr uint32_t SIZE_512 = 512;
+constexpr uint32_t SIZE_65535 = 65535;
+constexpr uint32_t SIZE_BASE_TASK_MAX = 65536 * 3;
+} // namespace
 
 struct FusedLinearCrossEntropyLossGradMemFriendlyTilingData {
     TCubeTiling mm0Tiling;
@@ -134,14 +134,14 @@ struct FusedLinearCrossEntropyLossGradHighPerfTilingData {
 #define DTYPE_TARGET_MASK bool
 #define DTYPE_MASKED_TARGET int32_t
 #define COPY_TILING_WITH_STRUCT(tiling_struct, src_ptr, dst_ptr) \
-    tiling_struct dst_ptr##_obj; \
-    tiling_struct *dst_ptr = &dst_ptr##_obj; \
+    tiling_struct dst_ptr##_obj;                                 \
+    tiling_struct* dst_ptr = &dst_ptr##_obj;                     \
     memcpy(dst_ptr, src_ptr, sizeof(tiling_struct))
 
 #define GET_TILING_DATA_PTR_WITH_STRUCT(tiling_struct, dst_ptr, tiling_ptr) \
-    tiling_struct dst_ptr##_obj; \
-    tiling_struct *dst_ptr = &dst_ptr##_obj; \
+    tiling_struct dst_ptr##_obj;                                            \
+    tiling_struct* dst_ptr = &dst_ptr##_obj;                                \
     memcpy(dst_ptr, tiling_ptr, sizeof(tiling_struct))
 
-#endif  // FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_TILING_DATA_DEF_H
-#endif  // __CCE_KT_TEST__
+#endif // FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_TILING_DATA_DEF_H
+#endif // __CCE_KT_TEST__

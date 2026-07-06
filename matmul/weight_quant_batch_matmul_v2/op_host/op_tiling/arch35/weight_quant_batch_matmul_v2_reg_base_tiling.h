@@ -18,8 +18,7 @@
 #include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 namespace optiling {
-class WeightQuantBatchMatmulV2RegBase : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2RegBase : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2RegBase(gert::TilingContext* context) : WeightQuantBatchMatmulV2Tiling(context)
     {
@@ -34,18 +33,12 @@ public:
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     void PrintCVTilingData(bool debugLevel) const;
     ge::graphStatus PostTiling() override;
-    const wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams GetTilingData() const
-    {
-        return *tilingData_;
-    }
+    const wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams GetTilingData() const { return *tilingData_; }
     std::unique_ptr<wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams> tilingData_ = nullptr;
     size_t tilingDataSize_ = sizeof(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams);
 
@@ -64,4 +57,3 @@ private:
     ge::graphStatus InstantiateTilingData();
 };
 } // namespace optiling
-

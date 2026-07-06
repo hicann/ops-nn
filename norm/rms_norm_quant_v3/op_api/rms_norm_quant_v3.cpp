@@ -35,9 +35,8 @@ const std::array<aclTensor*, RMS_NORM_QUANT_V3_OUT_NUM> RmsNormQuantV3(
     const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, const aclTensor* betaOptional,
     double epsilon, bool divMode, int32_t dstType, bool outputRstd, aclTensor* rstdOut, aclOpExecutor* executor)
 {
-    L0_DFX(
-        RmsNormQuantV3, x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional,
-        epsilon, divMode, dstType, outputRstd);
+    L0_DFX(RmsNormQuantV3, x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional,
+           epsilon, divMode, dstType, outputRstd);
 
     aclTensor* y1 = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
     aclTensor* y2 = y1;
@@ -48,8 +47,7 @@ const std::array<aclTensor*, RMS_NORM_QUANT_V3_OUT_NUM> RmsNormQuantV3(
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         RmsNormQuantV3,
         OP_INPUT(x, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, betaOptional),
-        OP_OUTPUT(y1, y2, rstdOut),
-        OP_ATTR(static_cast<float>(epsilon), divMode, dstType, outputRstd));
+        OP_OUTPUT(y1, y2, rstdOut), OP_ATTR(static_cast<float>(epsilon), divMode, dstType, outputRstd));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RmsNormQuantV3 ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::array<aclTensor*, RMS_NORM_QUANT_V3_OUT_NUM>{nullptr, nullptr};

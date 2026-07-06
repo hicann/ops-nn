@@ -64,5 +64,5 @@ TILING_DATA_FIELD_DEF_STRUCT(SoftMaxTiling, tailSoftmaxTilingData);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaskedSoftmaxWithRelPosBias, MaskedSoftmaxWithRelPosBiasTilingData)
-} // optiling
+} // namespace optiling
 #endif

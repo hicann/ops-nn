@@ -39,4 +39,4 @@ static ge::graphStatus InferShape4FakeQuantWithMinMaxVars(gert::InferShapeContex
 
 IMPL_OP_INFERSHAPE(FakeQuantWithMinMaxVars).InferShape(InferShape4FakeQuantWithMinMaxVars);
 
-}  // namespace ops
+} // namespace ops

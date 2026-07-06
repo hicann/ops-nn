@@ -22,7 +22,7 @@
 /*!
  * \file relu_v2.cpp
  * \brief
-*/
+ */
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -30,15 +30,16 @@ class ReluV2 : public OpDef {
 public:
     explicit ReluV2(const char* name) : OpDef(name)
     {
-        this->Input("x")                                       // 输入x定义
-            .ParamType(REQUIRED)                                // 必选输入
-            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16, ge::DT_FLOAT16,ge::DT_BF16})             // 支持数据类型
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})             // 支持format格式
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}) // 未确定大小shape对应format格式
-            .AutoContiguous();                                  // 内存自动连续化
-        this->Output("y") // 输出y定义
+        this->Input("x")                                                                         // 输入x定义
+            .ParamType(REQUIRED)                                                                 // 必选输入
+            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16, ge::DT_FLOAT16, ge::DT_BF16})   // 支持数据类型
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}) // 支持format格式
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND}) // 未确定大小shape对应format格式
+            .AutoContiguous();                   // 内存自动连续化
+        this->Output("y")                        // 输出y定义
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16, ge::DT_FLOAT16,ge::DT_BF16})
+            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16, ge::DT_FLOAT16, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
@@ -50,7 +51,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "relu_v2");    // 这里制定的值会对应到kernel入口文件名.cpp
+            .ExtendCfgInfo("opFile.value", "relu_v2");        // 这里制定的值会对应到kernel入口文件名.cpp
         this->AICore().AddConfig("ascend910b", aicoreConfig); // 其他的soc版本补充部分配置项
     }
 };

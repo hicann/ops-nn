@@ -37,4 +37,3 @@ protected:
 };
 } // namespace fused_matmul
 } // namespace optiling
-

@@ -85,16 +85,8 @@ enum class TILING_TYPE : uint32_t {
     NORMAL_BIG_N_SPECIAL_REDUCE,
     SINGLE_ROW_LESS_TENSOR
 };
-enum class BIAS_TYPE : uint32_t {
-    NO_BIAS,
-    BROADCAST_BIAS,
-    PRESENT_BIAS
-};
-enum class DATA_TYPE : uint32_t {
-    FP16 = 1,
-    FP32 = 2,
-    BF16 = 3
-};
+enum class BIAS_TYPE : uint32_t { NO_BIAS, BROADCAST_BIAS, PRESENT_BIAS };
+enum class DATA_TYPE : uint32_t { FP16 = 1, FP32 = 2, BF16 = 3 };
 
 /**
  * TILING TRY WITH OPTIONS BUFFER_NUMBER AND ENABLE_X_OUT BY FOLLOW SEQUENCE:
@@ -145,9 +137,9 @@ enum class DATA_TYPE : uint32_t {
  * DT_FLOAT*64 + UB_RESERVED)) / (DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*2*BN + DT*(BIAS_BROADCAST?1:0)*BN +
  * DT_FLOAT*3)
  */
-inline TILING_TYPE AddLayerNormTilingImpl(
-    uint64_t maxUbSize, ge::DataType dataType, ge::DataType betagammaDataType, int32_t bufferNum, int64_t numCol,
-    bool enableXOut, enum BIAS_TYPE biasType, int64_t& rowPerTime, int64_t& colPerTime, bool is310P)
+inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataType, ge::DataType betagammaDataType,
+                                          int32_t bufferNum, int64_t numCol, bool enableXOut, enum BIAS_TYPE biasType,
+                                          int64_t& rowPerTime, int64_t& colPerTime, bool is310P)
 {
     int dtSize = GetSizeByDataType(dataType);
     int betagammaDtSize = GetSizeByDataType(betagammaDataType);
@@ -155,8 +147,8 @@ inline TILING_TYPE AddLayerNormTilingImpl(
 
     bool isAllInputFP16 = (dataType == ge::DT_FLOAT16) && (betagammaDataType == ge::DT_FLOAT16);
     bool isAllInputFP32 = (dataType == ge::DT_FLOAT) && (betagammaDataType == ge::DT_FLOAT);
-    bool isXB16GammaB32 =
-        ((dataType == ge::DT_FLOAT16) || (dataType == ge::DT_BF16)) && (betagammaDataType == ge::DT_FLOAT);
+    bool isXB16GammaB32 = ((dataType == ge::DT_FLOAT16) || (dataType == ge::DT_BF16)) &&
+                          (betagammaDataType == ge::DT_FLOAT);
     bool isNoBias = (biasType == BIAS_TYPE::NO_BIAS);
     bool isBroadcastBias = (biasType == BIAS_TYPE::BROADCAST_BIAS);
     int biasNum = isBroadcastBias ? 1 : 0;
@@ -180,12 +172,11 @@ inline TILING_TYPE AddLayerNormTilingImpl(
         auto preRowReduceBufSize = sizeof(float) * 64;                          // y_buf
         auto transposeBufSize = sizeof(int16_t) * 2 * 16 * 16 * 8; // transposeSrcBuf/transposeDstBuf shape=16*16*8 fp16
         auto orBufSize = sizeof(int16_t) * 16;                     // orBufINT16 size is one block
-        auto tmpRow =
-            static_cast<double>(
-                static_cast<unsigned long>(maxUbSize) -
-                (betaGammaBufSize + static_cast<unsigned long>(UB_RESERVED_BYTE) + transposeBufSize + orBufSize)) /
-            static_cast<double>(
-                static_cast<unsigned long>(preRowInputOutputBufSize) + preRowTmpBufSize + preRowReduceBufSize);
+        auto tmpRow = static_cast<double>(static_cast<unsigned long>(maxUbSize) -
+                                          (betaGammaBufSize + static_cast<unsigned long>(UB_RESERVED_BYTE) +
+                                           transposeBufSize + orBufSize)) /
+                      static_cast<double>(static_cast<unsigned long>(preRowInputOutputBufSize) + preRowTmpBufSize +
+                                          preRowReduceBufSize);
         bool enouthForSpecialReduce = tmpRow > 1 && tmpRow <= CUBE_MAX_ELEM_FP32;
         if (enouthForSpecialReduce) {
             rowPerTime = floor(tmpRow);
@@ -208,11 +199,10 @@ inline TILING_TYPE AddLayerNormTilingImpl(
         auto preRowTmpBufSize = sizeof(float) * 2 * numColAligned;                                  // x_buf/z_buf
         auto preRowReduceBufSize = sizeof(float) * 64;                                              // y_buf
         auto brcbBufSize = sizeof(float) * 64 * 8; // brcb need 8 elem align
-        auto tmpRow =
-            static_cast<double>(
-                static_cast<unsigned long>(maxUbSize) - (betaGammaBufSize + static_cast<unsigned long>(biasBufSize) +
-                                                         static_cast<unsigned long>(UB_RESERVED_BYTE) + brcbBufSize)) /
-            static_cast<double>(preRowInputOutputBufSize + preRowTmpBufSize + preRowReduceBufSize);
+        auto tmpRow = static_cast<double>(static_cast<unsigned long>(maxUbSize) -
+                                          (betaGammaBufSize + static_cast<unsigned long>(biasBufSize) +
+                                           static_cast<unsigned long>(UB_RESERVED_BYTE) + brcbBufSize)) /
+                      static_cast<double>(preRowInputOutputBufSize + preRowTmpBufSize + preRowReduceBufSize);
         if (tmpRow > 1) {
             rowPerTime = floor(tmpRow);
             colPerTime = numCol;
@@ -220,26 +210,25 @@ inline TILING_TYPE AddLayerNormTilingImpl(
         }
     }
     // try 910 normal tiling case:
-    auto tmpRow =
-        static_cast<double>(
-            static_cast<long>(maxUbSize) -
-            (static_cast<long>(betagammaDtSize) * 2L * static_cast<long>(numColAligned) * static_cast<long>(bufferNum) +
-             static_cast<long>(dtSize) * static_cast<long>(biasNum) * static_cast<long>(numColAligned) *
-                 static_cast<long>(bufferNum) +
-             4L * 64L + static_cast<long>(UB_RESERVED_BYTE))) /
-        static_cast<double>(
-            dtSize * (3 + additionalOutputNum) * numColAligned * bufferNum + 4 * 2 * bufferNum + 4 * 3 * numColAligned);
+    auto tmpRow = static_cast<double>(static_cast<long>(maxUbSize) -
+                                      (static_cast<long>(betagammaDtSize) * 2L * static_cast<long>(numColAligned) *
+                                           static_cast<long>(bufferNum) +
+                                       static_cast<long>(dtSize) * static_cast<long>(biasNum) *
+                                           static_cast<long>(numColAligned) * static_cast<long>(bufferNum) +
+                                       4L * 64L + static_cast<long>(UB_RESERVED_BYTE))) /
+                  static_cast<double>(dtSize * (3 + additionalOutputNum) * numColAligned * bufferNum +
+                                      4 * 2 * bufferNum + 4 * 3 * numColAligned);
     // try normal tiling special case, 2 is fp16 or bf16 dtype size
     bool isSpecialTiling = (!is310P) && (isBroadcastBias) && isAllInputFP16;
     // beta, gamma, bias on ub, count(beta, gamma) = 2, mul(4, 64) required by mean and rstd
-    int64_t ubCacheSize = sizeof(float) * 2 * numColAligned * bufferNum +
-                          dtSize * numColAligned * bufferNum + 4 * 64 + UB_RESERVED_BYTE;
+    int64_t ubCacheSize = sizeof(float) * 2 * numColAligned * bufferNum + dtSize * numColAligned * bufferNum + 4 * 64 +
+                          UB_RESERVED_BYTE;
     // ubsize for one row compute, we have 3 TQue and 2 fp32 TBuf, and count(mean, rstd) = 2 TQues, which size is 4
     // Bytes
     int64_t preRowSize = dtSize * 3 * numColAligned * bufferNum + sizeof(float) * 2 * bufferNum +
                          sizeof(float) * 2 * numColAligned;
-    double tmpRowSpecial =
-        (static_cast<double>(maxUbSize) - static_cast<double>(ubCacheSize)) / (static_cast<double>(preRowSize));
+    double tmpRowSpecial = (static_cast<double>(maxUbSize) - static_cast<double>(ubCacheSize)) /
+                           (static_cast<double>(preRowSize));
     // apply BetterUB opt when Normal tiling process 1.x rows per loop and Normal Special process 2.0 rows per loop.
     bool normalSpecialTiling = isSpecialTiling && tmpRow < 2.0 && tmpRow > 0.0 && tmpRowSpecial > 2.0;
     if (normalSpecialTiling) {
@@ -256,9 +245,9 @@ inline TILING_TYPE AddLayerNormTilingImpl(
     int64_t singleRowQueSize = static_cast<int64_t>(dtSize) * (3L + static_cast<int64_t>(additionalOutputNum)) * 1L *
                                static_cast<int64_t>(numCol) * static_cast<int64_t>(bufferNum);
     // 2 tmp TBuf + 2 weight TBuf, fp32 dtsize is 4.
-    int64_t singleRowBufSize =
-        (4L * 2L + static_cast<int64_t>(betagammaDtSize) * 2L * static_cast<int64_t>(bufferNum)) *
-        static_cast<int64_t>(numCol);
+    int64_t singleRowBufSize = (4L * 2L +
+                                static_cast<int64_t>(betagammaDtSize) * 2L * static_cast<int64_t>(bufferNum)) *
+                               static_cast<int64_t>(numCol);
     // 64 for rep elements, fp32 dtsize is 4.
     int64_t singleRowConstSize = static_cast<int64_t>(4 * 1 * 2 * bufferNum + 4 * 64 + UB_RESERVED_BYTE);
     uint64_t tmpUbSize = static_cast<uint64_t>(singleRowQueSize + singleRowBufSize + singleRowConstSize);
@@ -290,8 +279,8 @@ inline TILING_TYPE AddLayerNormTilingImpl(
         auto oneRowMeanRstdBufSize = 4 * 1 * 2 * bufferNum;
         auto oneRowTmpBufSize = 4 * 2 * numCol;
         auto oneRowReduceBufSize = 4 * 64;
-        tmpUbSize = static_cast<uint32_t>(
-            oneRowX1X2YBufSize + oneRowMeanRstdBufSize + oneRowTmpBufSize + oneRowReduceBufSize + UB_RESERVED_BYTE);
+        tmpUbSize = static_cast<uint32_t>(oneRowX1X2YBufSize + oneRowMeanRstdBufSize + oneRowTmpBufSize +
+                                          oneRowReduceBufSize + UB_RESERVED_BYTE);
         if (tmpUbSize < maxUbSize) {
             rowPerTime = 1U;
             colPerTime = numCol;
@@ -306,8 +295,8 @@ inline TILING_TYPE AddLayerNormTilingImpl(
         auto oneRowMeanRstdBufSize2 = 4 * 1 * 2;
         auto oneRowTmpBufSize2 = 4 * 2 * numCol;
         auto oneRowReduceBufSize2 = 4 * 64;
-        tmpUbSize = static_cast<uint32_t>(
-            oneRowX1X2YBufSize2 + oneRowMeanRstdBufSize2 + oneRowTmpBufSize2 + oneRowReduceBufSize2 + UB_RESERVED_BYTE);
+        tmpUbSize = static_cast<uint32_t>(oneRowX1X2YBufSize2 + oneRowMeanRstdBufSize2 + oneRowTmpBufSize2 +
+                                          oneRowReduceBufSize2 + UB_RESERVED_BYTE);
         if (tmpUbSize < maxUbSize) {
             rowPerTime = 1U;
             colPerTime = numCol;
@@ -329,8 +318,8 @@ inline TILING_TYPE AddLayerNormTilingImpl(
                            static_cast<int64_t>(dtSize * biasNum * bufferNum) * static_cast<int64_t>(numCol) +
                            static_cast<int64_t>(dtSize * 2 * bufferNum) + 4 * static_cast<int64_t>(numCol) +
                            static_cast<int64_t>(4 * 64 + UB_RESERVED_BYTE);
-    double tmpCol =
-        static_cast<double>(static_cast<int64_t>(maxUbSize) - ubConstSlice) / static_cast<double>(ubColNumSlice);
+    double tmpCol = static_cast<double>(static_cast<int64_t>(maxUbSize) - ubConstSlice) /
+                    static_cast<double>(ubColNumSlice);
     if (tmpCol > MINIMUM_COLUMN_SLICE) {
         colPerTime = floor(tmpCol);
         if (colPerTime % numPerBlock != 0U) { // colPerTime should be 32 align
@@ -359,14 +348,14 @@ inline TILING_TYPE AddLayerNormTilingImpl(
 
 static bool CheckDimLimit(size_t x1DimNum, size_t gammaDimNum)
 {
-    OP_CHECK_IF(
-        x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
-        OP_LOGE_FOR_INVALID_SHAPEDIM("CheckDimLimit", "x1",
-            std::to_string(x1DimNum).c_str(), "within the range [1, 8]"), return false);
-    OP_CHECK_IF(
-        gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
-        OP_LOGE_FOR_INVALID_SHAPEDIM("CheckDimLimit", "gamma",
-            std::to_string(gammaDimNum).c_str(), "within the range [1, 8]"), return false);
+    OP_CHECK_IF(x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
+                OP_LOGE_FOR_INVALID_SHAPEDIM("CheckDimLimit", "x1", std::to_string(x1DimNum).c_str(),
+                                             "within the range [1, 8]"),
+                return false);
+    OP_CHECK_IF(gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
+                OP_LOGE_FOR_INVALID_SHAPEDIM("CheckDimLimit", "gamma", std::to_string(gammaDimNum).c_str(),
+                                             "within the range [1, 8]"),
+                return false);
     return true;
 }
 
@@ -398,16 +387,15 @@ static inline bool CheckEqualsAll(std::initializer_list<T> eleList)
 static inline bool HasNoZero(const gert::StorageShape* shapePtr, size_t shapeDim)
 {
     for (uint32_t i = 0; i < shapeDim; i++) {
-        if(shapePtr->GetStorageShape().GetDim(i) == 0) {
+        if (shapePtr->GetStorageShape().GetDim(i) == 0) {
             return false;
         }
     }
     return true;
 }
 
-static inline bool CheckX1GammaMean(
-    const gert::StorageShape* x1Shape, const gert::StorageShape* gammaShape, const gert::StorageShape* meanShape,
-    size_t x1DimNum, size_t gammaDimNum)
+static inline bool CheckX1GammaMean(const gert::StorageShape* x1Shape, const gert::StorageShape* gammaShape,
+                                    const gert::StorageShape* meanShape, size_t x1DimNum, size_t gammaDimNum)
 {
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
@@ -415,7 +403,8 @@ static inline bool CheckX1GammaMean(
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 "AddLayerNorm", "gamma and x1",
                 (Ops::Base::ToString(gammaShape->GetStorageShape()) + " and " +
-                 Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
+                 Ops::Base::ToString(x1Shape->GetStorageShape()))
+                    .c_str(),
                 ("The " + std::to_string(i) + " dim of gamma should be equal to the " +
                  std::to_string(x1DimNum - gammaDimNum + i) + " dim of x1")
                     .c_str()),
@@ -423,23 +412,22 @@ static inline bool CheckX1GammaMean(
     }
     for (uint32_t i = 0; i < x1DimNum; i++) {
         if (i < x1DimNum - gammaDimNum) {
-            OP_CHECK_IF(
-                meanShape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    "AddLayerNorm", "mean and x1",
-                    (Ops::Base::ToString(meanShape->GetStorageShape()) + " and " +
-                     Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
-                    ("The " + std::to_string(i) + " dim of mean should be equal to the " + std::to_string(i) +
-                     " dim of x1")
-                        .c_str()),
-                return false);
+            OP_CHECK_IF(meanShape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i),
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            "AddLayerNorm", "mean and x1",
+                            (Ops::Base::ToString(meanShape->GetStorageShape()) + " and " +
+                             Ops::Base::ToString(x1Shape->GetStorageShape()))
+                                .c_str(),
+                            ("The " + std::to_string(i) + " dim of mean should be equal to the " + std::to_string(i) +
+                             " dim of x1")
+                                .c_str()),
+                        return false);
         } else {
-            OP_CHECK_IF(
-                meanShape->GetStorageShape().GetDim(i) != 1,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    "AddLayerNorm", "mean", Ops::Base::ToString(meanShape->GetStorageShape()).c_str(),
-                    ("The " + std::to_string(i) + " dim of mean should be equal to 1").c_str()),
-                return false);
+            OP_CHECK_IF(meanShape->GetStorageShape().GetDim(i) != 1,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            "AddLayerNorm", "mean", Ops::Base::ToString(meanShape->GetStorageShape()).c_str(),
+                            ("The " + std::to_string(i) + " dim of mean should be equal to 1").c_str()),
+                        return false);
         }
     }
     return true;
@@ -455,7 +443,8 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
     const gert::StorageShape* meanShape = context->GetOutputShape(OUTPUT_MEAN_INDEX);
     const gert::StorageShape* rstdShape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
     const gert::StorageShape* xShape = context->GetOutputShape(OUTPUT_X_INDEX);
-    OP_CHECK_IF(!CheckNotNullAll({x1Shape, x2Shape, gammaShape, betaShape, yShape, meanShape, rstdShape, xShape}), OP_LOGE("CheckAddLn", "In/Out have Null."), return false);
+    OP_CHECK_IF(!CheckNotNullAll({x1Shape, x2Shape, gammaShape, betaShape, yShape, meanShape, rstdShape, xShape}),
+                OP_LOGE("CheckAddLn", "In/Out have Null."), return false);
     size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
@@ -464,8 +453,10 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
     size_t meanDimNum = meanShape->GetStorageShape().GetDimNum();
     size_t rstdDimNum = rstdShape->GetStorageShape().GetDimNum();
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
-    OP_LOGI("CheckAddLn", "x1 DimNum = %zu, x2 DimNum = %zu, gamma DimNum = %zu, beta DimNum = %zu.", x1DimNum, x2DimNum, gammaDimNum, betaDimNum);
-    OP_LOGI("CheckAddLn", "y DimNum = %zu, mean DimNum = %zu, rstd DimNum = %zu, x DimNum = %zu.", yDimNum, meanDimNum, rstdDimNum, xDimNum);
+    OP_LOGI("CheckAddLn", "x1 DimNum = %zu, x2 DimNum = %zu, gamma DimNum = %zu, beta DimNum = %zu.", x1DimNum,
+            x2DimNum, gammaDimNum, betaDimNum);
+    OP_LOGI("CheckAddLn", "y DimNum = %zu, mean DimNum = %zu, rstd DimNum = %zu, x DimNum = %zu.", yDimNum, meanDimNum,
+            rstdDimNum, xDimNum);
     OP_CHECK_IF(!CheckDimLimit(x1DimNum, gammaDimNum), OP_LOGE("CheckAddLn", "Bad Input DimNum."), return false);
     OP_CHECK_IF(
         !CheckEqualsAll<size_t>({x1DimNum, x2DimNum, yDimNum, xDimNum, meanDimNum, rstdDimNum}),
@@ -484,72 +475,73 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
                 .c_str(),
             "The shape dims of x1, gamma and beta should be greater than 0"),
         return false);
-    OP_CHECK_IF(
-        x1DimNum < gammaDimNum,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context->GetNodeName(), "x1 and gamma",
-            (std::to_string(x1DimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
-            "The shape dim of x1 should not be less than the shape dim of gamma"),
-        return false);
+    OP_CHECK_IF(x1DimNum < gammaDimNum,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "x1 and gamma",
+                    (std::to_string(x1DimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
+                    "The shape dim of x1 should not be less than the shape dim of gamma"),
+                return false);
     bool equalX1Shape = CheckEqualsAll<const gert::StorageShape>({*(x1Shape), *(x2Shape), *(yShape), *(xShape)});
     bool equalGammaShape = CheckEqualsAll<const gert::StorageShape>({*(gammaShape), *(betaShape)});
     bool equalReduceShape = CheckEqualsAll<const gert::StorageShape>({*(meanShape), *(rstdShape)});
-    OP_CHECK_IF(
-        !equalX1Shape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "x1, x2, y and x",
-            (Ops::Base::ToString(x1Shape->GetStorageShape()) + ", " + Ops::Base::ToString(x2Shape->GetStorageShape()) +
-             ", " + Ops::Base::ToString(yShape->GetStorageShape()) + " and " +
-             Ops::Base::ToString(xShape->GetStorageShape())).c_str(),
-            "The shapes of x1, x2, y and x should be the same"),
-        return false);
-    OP_CHECK_IF(
-        !equalGammaShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "gamma and beta",
-            (Ops::Base::ToString(gammaShape->GetStorageShape()) + " and " +
-             Ops::Base::ToString(betaShape->GetStorageShape())).c_str(),
-            "The shapes of gamma and beta should be the same"),
-        return false);
-    OP_CHECK_IF(
-        !equalReduceShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "mean and rstd",
-            (Ops::Base::ToString(meanShape->GetStorageShape()) + " and " +
-             Ops::Base::ToString(rstdShape->GetStorageShape())).c_str(),
-            "The shapes of mean and rstd should be the same"),
-        return false);
-    OP_CHECK_IF(
-        !CheckX1GammaMean(x1Shape, gammaShape, meanShape, x1DimNum, gammaDimNum),
-        OP_LOGE("CheckAddLn", "Shape x1/gamma/mean check failed."), return false);
+    OP_CHECK_IF(!equalX1Shape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x1, x2, y and x",
+                                                       (Ops::Base::ToString(x1Shape->GetStorageShape()) + ", " +
+                                                        Ops::Base::ToString(x2Shape->GetStorageShape()) + ", " +
+                                                        Ops::Base::ToString(yShape->GetStorageShape()) + " and " +
+                                                        Ops::Base::ToString(xShape->GetStorageShape()))
+                                                           .c_str(),
+                                                       "The shapes of x1, x2, y and x should be the same"),
+                return false);
+    OP_CHECK_IF(!equalGammaShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma and beta",
+                                                       (Ops::Base::ToString(gammaShape->GetStorageShape()) + " and " +
+                                                        Ops::Base::ToString(betaShape->GetStorageShape()))
+                                                           .c_str(),
+                                                       "The shapes of gamma and beta should be the same"),
+                return false);
+    OP_CHECK_IF(!equalReduceShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "mean and rstd",
+                                                       (Ops::Base::ToString(meanShape->GetStorageShape()) + " and " +
+                                                        Ops::Base::ToString(rstdShape->GetStorageShape()))
+                                                           .c_str(),
+                                                       "The shapes of mean and rstd should be the same"),
+                return false);
+    OP_CHECK_IF(!CheckX1GammaMean(x1Shape, gammaShape, meanShape, x1DimNum, gammaDimNum),
+                OP_LOGE("CheckAddLn", "Shape x1/gamma/mean check failed."), return false);
     bool x1ShapeEmpty = !HasNoZero(x1Shape, x1DimNum);
     bool gammaShapeEmpty = !HasNoZero(gammaShape, gammaDimNum);
     bool meanShapeEmpty = !HasNoZero(meanShape, meanDimNum);
     if (x1ShapeEmpty && !meanShapeEmpty) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "x1 and mean",
-            (Ops::Base::ToString(x1Shape->GetStorageShape()) + " and " +
-             Ops::Base::ToString(meanShape->GetStorageShape())).c_str(),
-            "When x1 is an empty tensor, mean should also be an empty tensor");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x1 and mean",
+                                               (Ops::Base::ToString(x1Shape->GetStorageShape()) + " and " +
+                                                Ops::Base::ToString(meanShape->GetStorageShape()))
+                                                   .c_str(),
+                                               "When x1 is an empty tensor, mean should also be an empty tensor");
         return false;
     }
     OP_CHECK_IF(x1ShapeEmpty,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1",
-            Ops::Base::ToString(x1Shape->GetStorageShape()).c_str(), "x1 cannot be an empty tensor"), return false);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1",
+                                                      Ops::Base::ToString(x1Shape->GetStorageShape()).c_str(),
+                                                      "x1 cannot be an empty tensor"),
+                return false);
     OP_CHECK_IF(gammaShapeEmpty,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
-            Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(), "gamma cannot be an empty tensor"), return false);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
+                                                      Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(),
+                                                      "gamma cannot be an empty tensor"),
+                return false);
     OP_CHECK_IF(meanShapeEmpty,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "mean",
-            Ops::Base::ToString(meanShape->GetStorageShape()).c_str(), "mean cannot be an empty tensor"), return false);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "mean",
+                                                      Ops::Base::ToString(meanShape->GetStorageShape()).c_str(),
+                                                      "mean cannot be an empty tensor"),
+                return false);
     return true;
 }
 
 static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        !CheckInputShape4AddLayerNorm(context), OP_LOGE(context, "Input shape invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShape4AddLayerNorm(context), OP_LOGE(context, "Input shape invalid."),
+                return ge::GRAPH_FAILED);
     AddLayerNormTilingData tiling;
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -559,7 +551,8 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     float eps = *epsPtr;
 
     const bool* enableAdditionalOutputPtr = attrs->GetBool(1);
-    OP_CHECK_IF(nullptr == enableAdditionalOutputPtr, OP_LOGE(context, "Get required attr enableAdditionalOutputPtr failed. "), return false);
+    OP_CHECK_IF(nullptr == enableAdditionalOutputPtr,
+                OP_LOGE(context, "Get required attr enableAdditionalOutputPtr failed. "), return false);
     auto enableAdditionalOutput = *enableAdditionalOutputPtr;
     tiling.set_eps(eps);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
@@ -630,16 +623,14 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     }
     OP_LOGI("AddLayerNorm", "Bias Type is %u", static_cast<uint32_t>(biasType));
 
-    auto tilingType = AddLayerNormTilingImpl(
-        maxUbSize, dataType, betagammaDataType, bufferNum, numCol, enableAdditionalOutput, biasType, rowPerTime,
-        colPerTime, is310P);
+    auto tilingType = AddLayerNormTilingImpl(maxUbSize, dataType, betagammaDataType, bufferNum, numCol,
+                                             enableAdditionalOutput, biasType, rowPerTime, colPerTime, is310P);
     if (rowPerTime > firstdimPerCore) {
         rowPerTime = firstdimPerCore;
     }
     tiling.set_firstDimPerTime(rowPerTime);
     int64_t colMoveCnt = CEIL_DIV(numCol, colPerTime);
-    int64_t colTail =
-        (numCol % colPerTime == 0U) ? colPerTime : (numCol % colPerTime);
+    int64_t colTail = (numCol % colPerTime == 0U) ? colPerTime : (numCol % colPerTime);
     OP_CHECK_IF(dataTypeSize == 0,
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(dataType),
                                                       "The dtype size of x1 must be greater than 0."),
@@ -656,9 +647,7 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
         if (colTail < blockElementNum) {
             auto colSliceNum = CEIL_DIV(numCol, colPerTime);
             colPerTime = CEIL_DIV(numCol, (colSliceNum * blockElementNum)) * blockElementNum;
-            colTail = (numCol % colPerTime == 0U) ?
-                                 colPerTime :
-                                 (numCol % colPerTime);
+            colTail = (numCol % colPerTime == 0U) ? colPerTime : (numCol % colPerTime);
         }
     }
     tiling.set_lastDimPerTime(colPerTime);
@@ -718,12 +707,8 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     OP_LOGD("AddLayerNorm", "numRow = %ld", numRow);
     OP_LOGD("AddLayerNorm", "numCol = %ld", numCol);
     OP_LOGD("AddLayerNorm", "workspaceSize = %ld, numCore = %ld", workspaceSize, numCore);
-    OP_LOGD(
-        "AddLayerNorm", "firstDimPerCore = %ld",
-        CEIL_DIV(numRow, numCore));
-    OP_LOGD(
-        "AddLayerNorm", "firstDimPerCoreTail = %ld",
-        (numRow - nlFirstdimPerCoreNum * numCore - 1U));
+    OP_LOGD("AddLayerNorm", "firstDimPerCore = %ld", CEIL_DIV(numRow, numCore));
+    OP_LOGD("AddLayerNorm", "firstDimPerCoreTail = %ld", (numRow - nlFirstdimPerCoreNum * numCore - 1U));
     OP_LOGD("AddLayerNorm", "tempAve = %f", tempAve);
     OP_LOGD("AddLayerNorm", "rowPerTime = %ld", rowPerTime);
     OP_LOGD("AddLayerNorm", "colPerTime = %ld", colPerTime);
@@ -746,8 +731,7 @@ static ge::graphStatus TilingAddLayerNorm(gert::TilingContext* context)
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto curArch = ascendcPlatform.GetCurNpuArch();
-    bool isAscendRegbase = (IsRegbaseSocVersion(context) ||
-                         curArch == NpuArch::DAV_5102) ? true : false;
+    bool isAscendRegbase = (IsRegbaseSocVersion(context) || curArch == NpuArch::DAV_5102) ? true : false;
     if (isAscendRegbase) {
         OP_LOGD(context, "AddLayerNorm Regbase tiling start");
         AddLayerNormRegbaseTiling addLayerNormTiling(context);
@@ -767,19 +751,15 @@ static ge::graphStatus TilingPrepare4AddLayerNorm(gert::TilingParseContext* cont
     compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
     compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isAscend950_ =
-        (IsRegbaseSocVersion(context) ||
-         npuArch == NpuArch::DAV_5102) ? true : false;
+    compileInfo->isAscend950_ = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102) ? true : false;
     uint64_t ubSizePlatform;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     compileInfo->ubSize_ = ubSizePlatform;
     compileInfo->vecRegSize_ = Ops::Base::GetVRegSize(context);
     compileInfo->blockSize_ = Ops::Base::GetUbBlockSize(context);
-    OP_LOGD(
-        context,
-        "aivCoreNum %ld, ubSize %lu, blockSize %ld, vecRegSize %ld, sysWorkspaceSize %ld, isAscend950 %d",
-        compileInfo->aivCoreNum_, compileInfo->ubSize_, compileInfo->blockSize_, compileInfo->vecRegSize_,
-        compileInfo->sysWorkspaceSize_, compileInfo->isAscend950_);
+    OP_LOGD(context, "aivCoreNum %ld, ubSize %lu, blockSize %ld, vecRegSize %ld, sysWorkspaceSize %ld, isAscend950 %d",
+            compileInfo->aivCoreNum_, compileInfo->ubSize_, compileInfo->blockSize_, compileInfo->vecRegSize_,
+            compileInfo->sysWorkspaceSize_, compileInfo->isAscend950_);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -23,15 +23,9 @@
 
 class ConfusionSoftmaxGradInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ConfusionSoftmaxGradTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ConfusionSoftmaxGradTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ConfusionSoftmaxGradTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ConfusionSoftmaxGradTest TearDown" << std::endl; }
 };
 
 TEST_F(ConfusionSoftmaxGradInfershapeTest, confusion_softmax_grad_infershape_test_0)

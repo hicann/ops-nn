@@ -24,5 +24,5 @@ struct WeightQuantBatchMatmulExperimentTilingData {
     TCubeTiling matmulTiling;
 };
 #pragma pack(pop)
-}  // namespace WeightQuantBatchMatmulExperimental
+} // namespace WeightQuantBatchMatmulExperimental
 #endif

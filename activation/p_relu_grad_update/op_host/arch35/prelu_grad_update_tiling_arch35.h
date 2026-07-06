@@ -23,8 +23,7 @@ using namespace Ops::NN::Optiling;
 
 namespace optiling {
 
-class PReluGradUpdateTiling : public TilingBaseClass
-{
+class PReluGradUpdateTiling : public TilingBaseClass {
 public:
     explicit PReluGradUpdateTiling(gert::TilingContext* context) : TilingBaseClass(context){};
 

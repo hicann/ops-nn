@@ -9,7 +9,7 @@
  */
 
 /**
-  * NOTE: Portions of this code were AI-generated and have been
+ * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
 
@@ -37,14 +37,10 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool IsDtypeSupported(DataType dtype)
-{
-    return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsDtypeSupported(DataType dtype) { return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST); }
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 {
@@ -74,9 +70,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
     auto formatOut = out->GetStorageFormat();
 
     if (IsPrivateFormat(formatSelf) || IsPrivateFormat(formatOut)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Private format not supported: self=%d, out=%d",
-                static_cast<int>(formatSelf), static_cast<int>(formatOut));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format not supported: self=%d, out=%d", static_cast<int>(formatSelf),
+                static_cast<int>(formatOut));
         return false;
     }
     return true;
@@ -113,11 +108,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnSoftsignGetWorkspaceSize(
-    const aclTensor* self,
-    const aclTensor* out,
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnSoftsignGetWorkspaceSize(const aclTensor* self, const aclTensor* out,
+                                                     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnSoftsign, DFX_IN(self), DFX_OUT(out));
 
@@ -147,11 +139,8 @@ extern "C" aclnnStatus aclnnSoftsignGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnSoftsign(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnSoftsign(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnSoftsign);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

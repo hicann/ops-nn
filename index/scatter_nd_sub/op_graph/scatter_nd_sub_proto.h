@@ -43,6 +43,6 @@ REG_OP(ScatterNdSub)
     .OUTPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_UINT8}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterNdSub)
-}
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ND_SUB_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ND_SUB_H_

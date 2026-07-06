@@ -49,109 +49,153 @@ constexpr uint32_t NANPROP_FALSE = 0;
 constexpr uint32_t NANPROP_TRUE = 1;
 
 extern "C" __global__ __aicore__ void max_pool_with_argmax(GM_ADDR x, GM_ADDR y, GM_ADDR argmax, GM_ADDR workspace,
-                                                              GM_ADDR tiling)
+                                                           GM_ADDR tiling)
 {
     TPipe pipeBase;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
     if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_NHWC_BIG_C)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800001", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, NANPROP_FALSE> op(&pipeBase, &tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800001",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, NANPROP_FALSE> op(
+            &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_NHWC_BIG_C_PAD)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800002", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, NANPROP_FALSE> op(&pipeBase, &tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800002",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, NANPROP_FALSE> op(
+            &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_NHWC_BIG_C_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800011", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, NANPROP_TRUE> op(&pipeBase, &tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800011",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, NANPROP_TRUE> op(
+            &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_NHWC_BIG_C_PAD_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800012", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, NANPROP_TRUE> op(&pipeBase, &tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800012",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, NANPROP_TRUE> op(
+            &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_NHWC_SMALL_C)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700001", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700001",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
         MaxPoolWithArgmaxSmallCNameSpace::MaxPoolWithArgmaxSmallC<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, NANPROP_FALSE> op(
             &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.MaxPoolWithArgmaxSmallCProcess();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_NHWC_SMALL_C_PAD)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700002", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700002",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
         MaxPoolWithArgmaxSmallCNameSpace::MaxPoolWithArgmaxSmallC<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, NANPROP_FALSE> op(
             &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.MaxPoolWithArgmaxSmallCProcess();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_NHWC_SMALL_C_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700011", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700011",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
         MaxPoolWithArgmaxSmallCNameSpace::MaxPoolWithArgmaxSmallC<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, NANPROP_TRUE> op(
             &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.MaxPoolWithArgmaxSmallCProcess();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_NHWC_SMALL_C_PAD_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700012", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700012",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
         MaxPoolWithArgmaxSmallCNameSpace::MaxPoolWithArgmaxSmallC<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, NANPROP_TRUE> op(
             &pipeBase, &tilingDataIn);
         op.Init(x, y, argmax);
         op.MaxPoolWithArgmaxSmallCProcess();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT32_NCHW)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500001", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, false, NANPROP_FALSE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500001",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, false, NANPROP_FALSE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT32_NHWC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500002", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, false, NANPROP_FALSE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500002",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, false, NANPROP_FALSE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT32_NCHW_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500101", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, false, NANPROP_TRUE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500101",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, false, NANPROP_TRUE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT32_NHWC_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500102", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, false, NANPROP_TRUE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500102",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, false, NANPROP_TRUE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT64_NCHW)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500011", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, true, NANPROP_FALSE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500011",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, true, NANPROP_FALSE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT64_NHWC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500012", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, true, NANPROP_FALSE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500012",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, true, NANPROP_FALSE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT64_NCHW_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500111", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, true, NANPROP_TRUE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500111",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NCHW, true, NANPROP_TRUE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_TILING_KEY_SIMT_INT64_NHWC_NANPROP)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500112", MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData, tilingDataIn, tiling);
-        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, true, NANPROP_TRUE> op(&tilingDataIn);
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500112",
+                                      MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolWithArgmaxSimtNamespace::MaxPoolWithArgmaxSimt<DTYPE_X, DTYPE_ARGMAX, NHWC, true, NANPROP_TRUE> op(
+            &tilingDataIn);
         op.Init(x, y, argmax);
         op.Process();
     }

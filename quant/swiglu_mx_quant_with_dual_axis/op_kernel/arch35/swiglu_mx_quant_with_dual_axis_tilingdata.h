@@ -16,18 +16,17 @@
 #ifndef OPS_NN_SWIGLU_MX_QUANT_WITH_DUAL_AXIS_TILINGDATA_H
 #define OPS_NN_SWIGLU_MX_QUANT_WITH_DUAL_AXIS_TILINGDATA_H
 
-
 struct SwigluMxQuantWithDualAxisTilingData {
-    int64_t usedCoreNum;            // 实际使用核数（kernel 侧视为 totalCoreNum）
-    int64_t dstType;                // 输出量化类型
-    int64_t activateLeft;           // 1=左激活, 0=右激活
-    int64_t dimM;                   // 总行数
-    int64_t dimN;                   // N（SwiGLU 输出列数 = x 列数 / 2）
-    int64_t numGroups;              // group 数量
-    int64_t blockW;                 // 列方向基本块宽度=256
-    int64_t splitBlockH;            // 行方向基本块高度=64
-    int64_t dimNBlockNum;           // N 方向切分基本块数 = ceil(N/blockW)
-    int64_t dimNTail;               // N 方向尾块列数
+    int64_t usedCoreNum;  // 实际使用核数（kernel 侧视为 totalCoreNum）
+    int64_t dstType;      // 输出量化类型
+    int64_t activateLeft; // 1=左激活, 0=右激活
+    int64_t dimM;         // 总行数
+    int64_t dimN;         // N（SwiGLU 输出列数 = x 列数 / 2）
+    int64_t numGroups;    // group 数量
+    int64_t blockW;       // 列方向基本块宽度=256
+    int64_t splitBlockH;  // 行方向基本块高度=64
+    int64_t dimNBlockNum; // N 方向切分基本块数 = ceil(N/blockW)
+    int64_t dimNTail;     // N 方向尾块列数
 };
 
 #endif // OPS_NN_SWIGLU_MX_QUANT_WITH_DUAL_AXIS_TILINGDATA_H

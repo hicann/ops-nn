@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file axpy.h
-* \brief
-*/
+ * \file axpy.h
+ * \brief
+ */
 
 #ifndef OP_API_INC_LEVEL0_OP_AXPY_OP_H_
 #define OP_API_INC_LEVEL0_OP_AXPY_OP_H_
@@ -20,8 +20,9 @@
 
 namespace l0op {
 const aclTensor* Axpy(const aclTensor* self, const aclTensor* other, float alpha, aclOpExecutor* executor);
-__attribute__((weak)) const aclTensor* AxpyInplace(const aclTensor* self, const aclTensor* other, float alpha, aclOpExecutor* executor);
+__attribute__((weak)) const aclTensor* AxpyInplace(const aclTensor* self, const aclTensor* other, float alpha,
+                                                   aclOpExecutor* executor);
 
-}
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_OP_AXPY_OP_H_
+#endif // OP_API_INC_LEVEL0_OP_AXPY_OP_H_

@@ -42,29 +42,21 @@ const std::string COMPILE_INFO_JSON = R"({
 
 class Relu6GradTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Relu6GradTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Relu6GradTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Relu6GradTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Relu6GradTilingTest TearDown" << std::endl; }
 };
 
 // Run a single tiling case. Both inputs share the same dtype; output dtype
 // equals input dtype. Returns the tiling function status so callers can
 // assert either SUCCESS or FAILED depending on what they're testing.
-static ge::graphStatus RunTiling(
-    ge::DataType gradDtype, ge::DataType featDtype, ge::DataType outDtype,
-    gert::StorageShape& gShape, gert::StorageShape& fShape, gert::StorageShape& outShape)
+static ge::graphStatus RunTiling(ge::DataType gradDtype, ge::DataType featDtype, ge::DataType outDtype,
+                                 gert::StorageShape& gShape, gert::StorageShape& fShape, gert::StorageShape& outShape)
 {
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {
-        {"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(COMPILE_INFO_JSON.c_str(), soc_infos, aicore_spec, intrinsics);
 
     fe::PlatFormInfos platform_info;
@@ -77,22 +69,21 @@ static ge::graphStatus RunTiling(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(OP_TYPE.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(OP_TYPE.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_JSON.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(COMPILE_INFO_JSON.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     EXPECT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     EXPECT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);

@@ -129,28 +129,24 @@ constexpr int32_t MAX_SUPPORT_DIMS_NUMS = 8;
 
 constexpr uint32_t BUFFER_ATTENUATION = 2;
 
-enum class ForeachInputType : uint8_t
-{
+enum class ForeachInputType : uint8_t {
     TYPE_TENSORS = 0,        // only tensor type
     TYPE_SCALARS_TENSOR = 1, // include scalarlist type
     TYPE_SCALAR = 2          // include scalar type
 };
 
-enum class ForeachReturnType : uint8_t
-{
+enum class ForeachReturnType : uint8_t {
     TYPE_BASE = 0,    // inplace or return
     TYPE_INPLACE = 1, // only inplace
 };
-class ForeachCommonTiling
-{
+class ForeachCommonTiling {
 public:
-    explicit ForeachCommonTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ForeachCommonTiling(gert::TilingContext* context) : tilingContext(context){};
     /**
      ** function: Init
      */
-    ge::graphStatus Init(
-        uint8_t theCode = 0, ForeachInputType inputType = ForeachInputType::TYPE_TENSORS,
-        ForeachReturnType returnType = ForeachReturnType::TYPE_BASE)
+    ge::graphStatus Init(uint8_t theCode = 0, ForeachInputType inputType = ForeachInputType::TYPE_TENSORS,
+                         ForeachReturnType returnType = ForeachReturnType::TYPE_BASE)
     {
         opCode = theCode;
         opInputType = inputType;
@@ -206,9 +202,8 @@ public:
     ge::graphStatus RunBigKernelTiling()
     {
         // checke op info
-        OP_CHECK_IF(
-            CheckOpInfo() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext->GetNodeName(), "CheckOpInfo failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckOpInfo() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext->GetNodeName(), "CheckOpInfo failed."),
+                    return ge::GRAPH_FAILED);
 
         auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
 
@@ -247,9 +242,8 @@ public:
         uint32_t needCoreNum = 0;
         if (platformInfo != nullptr) {
             // checke op info
-            OP_CHECK_IF(
-                CheckOpInfo() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext->GetNodeName(), "CheckOpInfo failed."),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(CheckOpInfo() != ge::GRAPH_SUCCESS,
+                        OP_LOGE(tilingContext->GetNodeName(), "CheckOpInfo failed."), return ge::GRAPH_FAILED);
             auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
             ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
             needCoreNum = GetNeedCoreNum(ascendcPlatform.GetCoreNumAiv());
@@ -273,13 +267,12 @@ public:
     }
 
 private:
-
     ge::graphStatus CheckForeachCopyDtype(ge::DataType dstDtype)
     {
         if (dstDtype != dstDataType) {
-            OP_LOGE_FOR_INVALID_DTYPE(
-                tilingContext->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(dstDataType).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+                                      ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
+                                      ge::TypeUtils::DataTypeToSerialString(dstDataType).c_str());
             return ge::GRAPH_FAILED;
         }
         if (dataType == dstDtype) {
@@ -294,12 +287,12 @@ private:
         } else if (dataType == ge::DT_BF16 && dstDtype == ge::DT_FLOAT) {
             return ge::GRAPH_SUCCESS;
         } else {
-            std::string reasonMsg =
-                "The dtype of y must be the same as x "
-                "when the dtypes of x and y are not within the supported floating-point combinations: x is float16 or "
-                "bf16 and y is float, or x is float and y is float16 or bf16";
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                tilingContext->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(), reasonMsg);
+            std::string reasonMsg = "The dtype of y must be the same as x "
+                                    "when the dtypes of x and y are not within the supported floating-point "
+                                    "combinations: x is float16 or "
+                                    "bf16 and y is float, or x is float and y is float16 or bf16";
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "y",
+                                                  ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(), reasonMsg);
             return ge::GRAPH_FAILED;
         }
     }
@@ -320,41 +313,39 @@ private:
 
         for (uint32_t i = 0; i < totalTensorCount; i++) {
             auto tempDesc = tilingContext->GetOutputDesc(i);
-            OP_CHECK_IF(
-                tempDesc == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The output %u desc is null.", i),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(tempDesc == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The output %u desc is null.", i),
+                        return ge::GRAPH_FAILED);
             auto dstDtype = tempDesc->GetDataType();
             if (opCode == FOREACH_COPY_OP_CODE) {
-                OP_CHECK_IF(
-                    CheckForeachCopyDtype(dstDtype) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext->GetNodeName(), "The tensor %u of output datatype should meet the conditions with input.", i),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(CheckForeachCopyDtype(dstDtype) != ge::GRAPH_SUCCESS,
+                            OP_LOGE(tilingContext->GetNodeName(),
+                                    "The tensor %u of output datatype should meet the conditions with input.", i),
+                            return ge::GRAPH_FAILED);
             } else {
                 OP_CHECK_IF(
                     dstDtype != dataType,
-                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                        tilingContext->GetNodeName(), "y",
-                        ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
-                        "The dtype of y must be same as x"),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "y",
+                                                          ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
+                                                          "The dtype of y must be same as x"),
                     return ge::GRAPH_FAILED);
             }
             auto srcShape = tilingContext->GetDynamicInputShape(inputIndexZero, i);
-            OP_CHECK_IF(
-                srcShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The input %u shape is null.", i),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(srcShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The input %u shape is null.", i),
+                        return ge::GRAPH_FAILED);
             auto dstShape = tilingContext->GetOutputShape(i);
-            OP_CHECK_IF(
-                dstShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The output %u shape is null.", i),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(dstShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The output %u shape is null.", i),
+                        return ge::GRAPH_FAILED);
             if (srcShape->GetStorageShape() != dstShape->GetStorageShape() &&
-                    srcShape->GetStorageShape().GetShapeSize() > dstShape->GetStorageShape().GetShapeSize()) {
-                std::string reasonMsg = "The shape size of " + std::to_string(i) +
-                                    "th tensor in tensor list y should be greater than or equal to that of the tensor "
-                                    "in the same position of the another tensor list x";
+                srcShape->GetStorageShape().GetShapeSize() > dstShape->GetStorageShape().GetShapeSize()) {
+                std::string
+                    reasonMsg = "The shape size of " + std::to_string(i) +
+                                "th tensor in tensor list y should be greater than or equal to that of the tensor "
+                                "in the same position of the another tensor list x";
                 OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
                     tilingContext->GetNodeName(), "x and y",
                     (std::to_string(srcShape->GetStorageShape().GetShapeSize()) + " and " +
-                     std::to_string(dstShape->GetStorageShape().GetShapeSize())).c_str(),
+                     std::to_string(dstShape->GetStorageShape().GetShapeSize()))
+                        .c_str(),
                     reasonMsg.c_str());
                 return ge::GRAPH_FAILED;
             }
@@ -372,23 +363,19 @@ private:
             irIndex = static_cast<size_t>(0);
         }
         auto scalarShape = tilingContext->GetRequiredInputShape(irIndex);
-        OP_CHECK_IF(
-            scalarShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The scalar shape is null."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(scalarShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The scalar shape is null."),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             scalarShape->GetStorageShape().GetShapeSize() != 1,
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                tilingContext->GetNodeName(), "scalar",
-                std::to_string(scalarShape->GetStorageShape().GetShapeSize()).c_str(), "1"),
+            OP_LOGE_FOR_INVALID_SHAPESIZE(tilingContext->GetNodeName(), "scalar",
+                                          std::to_string(scalarShape->GetStorageShape().GetShapeSize()).c_str(), "1"),
             return ge::GRAPH_FAILED);
         // check max dim
-        OP_CHECK_IF(
-            scalarShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(
-                tilingContext->GetNodeName(), "scalar",
-                std::to_string(scalarShape->GetStorageShape().GetDimNum()).c_str(),
-                "less than or equal to 8"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(scalarShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext->GetNodeName(), "scalar",
+                                                 std::to_string(scalarShape->GetStorageShape().GetDimNum()).c_str(),
+                                                 "less than or equal to 8"),
+                    return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -399,22 +386,18 @@ private:
     {
         size_t irIndex = inputTensorsNum;
         auto scalarsShape = tilingContext->GetRequiredInputShape(irIndex);
-        OP_CHECK_IF(
-            scalarsShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The scalar shape is null."),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            scalarsShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(
-                tilingContext->GetNodeName(), "scalars",
-                std::to_string(scalarsShape->GetStorageShape().GetDimNum()).c_str(),
-                "less than or equal to 8"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(scalarsShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The scalar shape is null."),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(scalarsShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext->GetNodeName(), "scalars",
+                                                 std::to_string(scalarsShape->GetStorageShape().GetDimNum()).c_str(),
+                                                 "less than or equal to 8"),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             scalarsShape->GetStorageShape().GetShapeSize() != totalTensorCount,
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                tilingContext->GetNodeName(), "scalars",
-                std::to_string(scalarsShape->GetStorageShape().GetShapeSize()).c_str(),
-                (std::to_string(totalTensorCount)).c_str()),
+            OP_LOGE_FOR_INVALID_SHAPESIZE(tilingContext->GetNodeName(), "scalars",
+                                          std::to_string(scalarsShape->GetStorageShape().GetShapeSize()).c_str(),
+                                          (std::to_string(totalTensorCount)).c_str()),
             return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
@@ -432,19 +415,16 @@ private:
 
         for (size_t tensorIndex = 0; tensorIndex < totalTensorCount; ++tensorIndex) {
             auto x1Shape = tilingContext->GetDynamicInputShape(inputIndexZero, tensorIndex);
-            OP_CHECK_IF(
-                x1Shape == nullptr,
-                OP_LOGE(tilingContext->GetNodeName(), "The input %lu shape is null.", inputIndexZero),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(x1Shape == nullptr,
+                        OP_LOGE(tilingContext->GetNodeName(), "The input %lu shape is null.", inputIndexZero),
+                        return ge::GRAPH_FAILED);
 
             // check max dim
-            OP_CHECK_IF(
-                x1Shape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
-                OP_LOGE_FOR_INVALID_SHAPEDIM(
-                    tilingContext->GetNodeName(), "x/x1",
-                    std::to_string(x1Shape->GetStorageShape().GetDimNum()).c_str(),
-                    "less than or equal to 8"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(x1Shape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
+                        OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext->GetNodeName(), "x/x1",
+                                                     std::to_string(x1Shape->GetStorageShape().GetDimNum()).c_str(),
+                                                     "less than or equal to 8"),
+                        return ge::GRAPH_FAILED);
 
             // check tensorlist input shape consistent
             for (size_t listId = static_cast<size_t>(inputIndexZero) + 1U;
@@ -456,10 +436,10 @@ private:
                     std::string reasonMsg = "The shapes of " + std::to_string(tensorIndex) +
                                             "th tensor in tensor list input " + std::to_string(listId) + " and input " +
                                             std::to_string(inputIndexZero) + " must be the same";
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        tilingContext->GetNodeName(), ("input " + std::to_string(listId)).c_str(), errMsg.c_str(),
-                        reasonMsg.c_str());
-                        return ge::GRAPH_FAILED;
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(),
+                                                          ("input " + std::to_string(listId)).c_str(), errMsg.c_str(),
+                                                          reasonMsg.c_str());
+                    return ge::GRAPH_FAILED;
                 }
             }
         }
@@ -477,31 +457,27 @@ private:
             inputTensorsNum++;
         }
         auto computeNodeInfo = tilingContext->GetComputeNodeInfo();
-        OP_CHECK_IF(
-            computeNodeInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetComputeNodeInfo failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeNodeInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetComputeNodeInfo failed."),
+                    return ge::GRAPH_FAILED);
 
         auto anchorInstanceInfo = computeNodeInfo->GetInputInstanceInfo(startIndex);
-        OP_CHECK_IF(
-            anchorInstanceInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetInputInstanceInfo failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(anchorInstanceInfo == nullptr,
+                    OP_LOGE(tilingContext->GetNodeName(), "GetInputInstanceInfo failed."), return ge::GRAPH_FAILED);
         size_t xSize = anchorInstanceInfo->GetInstanceNum();
 
         for (uint64_t i = startIndex + 1U; i < static_cast<uint64_t>(inputTensorsNum); i++) {
             auto tempAnchorInstanceInfo = computeNodeInfo->GetInputInstanceInfo(i);
-            OP_CHECK_IF(
-                tempAnchorInstanceInfo == nullptr,
-                OP_LOGE(tilingContext->GetNodeName(), "GetInputInstanceInfo failed."), return ge::GRAPH_FAILED);
+            OP_CHECK_IF(tempAnchorInstanceInfo == nullptr,
+                        OP_LOGE(tilingContext->GetNodeName(), "GetInputInstanceInfo failed."), return ge::GRAPH_FAILED);
             size_t otherSize = tempAnchorInstanceInfo->GetInstanceNum();
-            if (otherSize != xSize){
+            if (otherSize != xSize) {
                 std::string otherName = "x" + std::to_string(i + 1);
-                std::string paramName = "x1 and "+ otherName;
+                std::string paramName = "x1 and " + otherName;
                 std::string errMsg = std::to_string(xSize) + " and " + std::to_string(otherSize);
-                std::string reasonMsg = "The tensorNums of dynamic input tensor lists x1 and " + otherName + " must be the same";
-                OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
-                    tilingContext->GetNodeName(), paramName,
-                    errMsg.c_str(),
-                    reasonMsg.c_str());
+                std::string reasonMsg = "The tensorNums of dynamic input tensor lists x1 and " + otherName +
+                                        " must be the same";
+                OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(tilingContext->GetNodeName(), paramName, errMsg.c_str(),
+                                                           reasonMsg.c_str());
                 return ge::GRAPH_FAILED;
             }
         }
@@ -514,9 +490,8 @@ private:
     ge::graphStatus CheckOpInfo()
     {
         auto computeNodeInfo = tilingContext->GetComputeNodeInfo();
-        OP_CHECK_IF(
-            computeNodeInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetComputeNodeInfo failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeNodeInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetComputeNodeInfo failed."),
+                    return ge::GRAPH_FAILED);
 
         auto inputTensorsNum = computeNodeInfo->GetIrInputsNum();
         if (opInputType != ForeachInputType::TYPE_TENSORS) {
@@ -524,32 +499,29 @@ private:
         }
 
         // check tensors num
-        OP_CHECK_IF(
-            CheckInputTensorlistSize(static_cast<size_t>(inputTensorsNum)),
-            OP_LOGE(tilingContext->GetNodeName(), "CheckInputTensorlistSize failed."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckInputTensorlistSize(static_cast<size_t>(inputTensorsNum)),
+                    OP_LOGE(tilingContext->GetNodeName(), "CheckInputTensorlistSize failed."), return ge::GRAPH_FAILED);
 
         // check shape
-        OP_CHECK_IF(
-            CheckInputTensorlistShape(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext->GetNodeName(), "CheckInputTensorlistShape failed."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckInputTensorlistShape(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext->GetNodeName(), "CheckInputTensorlistShape failed."),
+                    return ge::GRAPH_FAILED);
         if (opInputType == ForeachInputType::TYPE_SCALAR) {
-            OP_CHECK_IF(
-                CheckScalarTenorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
-                OP_LOGE(tilingContext->GetNodeName(), "CheckScalarTenorShapeInfo failed."), return ge::GRAPH_FAILED);
+            OP_CHECK_IF(CheckScalarTenorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
+                        OP_LOGE(tilingContext->GetNodeName(), "CheckScalarTenorShapeInfo failed."),
+                        return ge::GRAPH_FAILED);
         }
         if (opInputType == ForeachInputType::TYPE_SCALARS_TENSOR) {
-            OP_CHECK_IF(
-                CheckScalarsTenorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
-                OP_LOGE(tilingContext->GetNodeName(), "CheckScalarsTenorShapeInfo failed."), return ge::GRAPH_FAILED);
+            OP_CHECK_IF(CheckScalarsTenorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
+                        OP_LOGE(tilingContext->GetNodeName(), "CheckScalarsTenorShapeInfo failed."),
+                        return ge::GRAPH_FAILED);
         }
-        OP_CHECK_IF(
-            CheckOutputShapeAndDtype() != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext->GetNodeName(), "CheckOutputShapeAndDtype failed."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckOutputShapeAndDtype() != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext->GetNodeName(), "CheckOutputShapeAndDtype failed."), return ge::GRAPH_FAILED);
 
         // check tensor list dtype
-        OP_CHECK_IF(
-            CheckTensorListDtype(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext->GetNodeName(), "CheckTensorListDtype() failed."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckTensorListDtype(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext->GetNodeName(), "CheckTensorListDtype() failed."), return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -565,19 +537,16 @@ private:
         }
 
         auto computeNodeInfo = tilingContext->GetComputeNodeInfo();
-        OP_CHECK_IF(
-            computeNodeInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetComputeNodeInfo failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeNodeInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetComputeNodeInfo failed."),
+                    return ge::GRAPH_FAILED);
         for (uint64_t i = startIndex; i < inputTensorsNum; i++) {
             auto anchorInstanceInfo = computeNodeInfo->GetInputInstanceInfo(i);
-            OP_CHECK_IF(
-                anchorInstanceInfo == nullptr, OP_LOGE(tilingContext->GetNodeName(), "GetInputInstanceInfo failed."),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(anchorInstanceInfo == nullptr,
+                        OP_LOGE(tilingContext->GetNodeName(), "GetInputInstanceInfo failed."), return ge::GRAPH_FAILED);
             for (uint32_t j = 0; j < totalTensorCount; j++) {
                 auto tempDesc = tilingContext->GetDynamicInputDesc(i, j);
-                OP_CHECK_IF(
-                    tempDesc == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The input %u desc is null.", j),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(tempDesc == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The input %u desc is null.", j),
+                            return ge::GRAPH_FAILED);
                 auto checkDtype = tempDesc->GetDataType();
                 // Determine whether all data types are consistent.
                 if (dataType == ge::DT_UNDEFINED) {
@@ -588,8 +557,10 @@ private:
                         tilingContext->GetNodeName(), paramName.c_str(),
                         ge::TypeUtils::DataTypeToSerialString(checkDtype).c_str(),
                         ("The dtypes of all tensors in the tensor list must be the same. "
-                         "Currently, the dtype of the " + std::to_string(j) + "th tensor is inconsistent with that (" +
-                         ge::TypeUtils::DataTypeToSerialString(dataType) + ") of other tensors").c_str());
+                         "Currently, the dtype of the " +
+                         std::to_string(j) + "th tensor is inconsistent with that (" +
+                         ge::TypeUtils::DataTypeToSerialString(dataType) + ") of other tensors")
+                            .c_str());
                     return ge::GRAPH_FAILED;
                 }
             }
@@ -801,9 +772,8 @@ private:
                                                              canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
         } else if (opCode == SOLO_LOG2_OP_CODE) { // foreach_log2
             uint32_t extraBuf = 0;                // need extra space
-            GetLog2TmpBufferFactorSize(
-                dataTypeSize, extraBuf, LOG2_HALF_FOR_LOG2, LOG2_FLOAT_FOR_LOG2,
-                LOG2_BASIC_FOR_LOG2); // reuse source is true
+            GetLog2TmpBufferFactorSize(dataTypeSize, extraBuf, LOG2_HALF_FOR_LOG2, LOG2_FLOAT_FOR_LOG2,
+                                       LOG2_BASIC_FOR_LOG2); // reuse source is true
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
             if (dataType == ge::DT_BF16) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
@@ -926,7 +896,8 @@ private:
                 calcPro = TAN_FLOAT_CALC_PROC;
             }
             uint32_t extraBuffer = calcPro * static_cast<uint32_t>(dataTypeSize) * TAN_BASIC_BLOCK_SIZE * 8U;
-            while (static_cast<uint32_t>(ubSizePlatForm) <= static_cast<uint32_t>(tilingData.GetDataSize() + extraBuffer)) {
+            while (static_cast<uint32_t>(ubSizePlatForm) <=
+                   static_cast<uint32_t>(tilingData.GetDataSize() + extraBuffer)) {
                 extraBuffer = extraBuffer / BUFFER_ATTENUATION;
             }
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize() - extraBuffer);
@@ -979,7 +950,8 @@ private:
                 calcPro = ATAN_FLOAT_CALC_PROC;
             }
             uint32_t extraBuffer = calcPro * static_cast<uint32_t>(dataTypeSize) * ATAN_BASIC_BLOCK_SIZE * 8U;
-            while (static_cast<uint32_t>(ubSizePlatForm) <= static_cast<uint32_t>(tilingData.GetDataSize() + extraBuffer)) {
+            while (static_cast<uint32_t>(ubSizePlatForm) <=
+                   static_cast<uint32_t>(tilingData.GetDataSize() + extraBuffer)) {
                 extraBuffer = extraBuffer / BUFFER_ATTENUATION;
             }
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize() - extraBuffer);
@@ -1197,17 +1169,16 @@ private:
         tilingData.set_tensorStartOffsetList(tensorStartOffsetList);
         tilingData.set_tensorEndOffsetList(tensorEndOffsetList);
 
-        tilingData.SaveToBuffer(
-            tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+        tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                                tilingContext->GetRawTilingData()->GetCapacity());
         tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     }
 
     /**
      ** function: GetLog2TmpBufferFactorSize
      */
-    void GetLog2TmpBufferFactorSize(
-        const uint32_t typeSize, uint32_t& extraBuf, uint32_t log2Half = LOG2_HALF_FOR_LOG2,
-        uint32_t log2Float = LOG2_FLOAT_FOR_LOG2, uint32_t log2Basic = LOG2_BASIC_FOR_LOG2)
+    void GetLog2TmpBufferFactorSize(const uint32_t typeSize, uint32_t& extraBuf, uint32_t log2Half = LOG2_HALF_FOR_LOG2,
+                                    uint32_t log2Float = LOG2_FLOAT_FOR_LOG2, uint32_t log2Basic = LOG2_BASIC_FOR_LOG2)
     {
         auto caclFactor = (typeSize == sizeof(float)) ? log2Float : log2Half;
         extraBuf = log2Basic * caclFactor * typeSize;

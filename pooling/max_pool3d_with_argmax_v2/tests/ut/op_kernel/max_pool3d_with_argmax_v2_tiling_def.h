@@ -422,62 +422,70 @@ inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2TilingData* con
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2NoSplitTilingData* constData)
 {
-    memcpy_s(constData,sizeof(MaxPool3DWithArgmaxV2NoSplitTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2NoSplitTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2NoSplitTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2NoSplitTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2SplitDTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SplitDTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2SplitDTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SplitDTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2SplitDTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2SplitHTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SplitHTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2SplitHTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SplitHTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2SplitHTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2SplitWTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SplitWTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2SplitWTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SplitWTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2SplitWTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2HugeKernelTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2HugeKernelTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2HugeKernelTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2HugeKernelTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2HugeKernelTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2NoExpandIndicesTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2NoExpandIndicesTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2NoExpandIndicesTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2NoExpandIndicesTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2BigKernelTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2BigKernelTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2BigKernelTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2BigKernelTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2BigKernelTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2GatherTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2GatherTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2GatherTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2GatherTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2GatherTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* const_data)
 {
-    memcpy_s(const_data, sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData));
+    memcpy_s(const_data, sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData));
 }
 
 inline void InitTilingData(uint8_t* tiling, MaxPool3DWithArgmaxV2SimtTilingData* constData)
 {
-    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SimtTilingData), tiling, sizeof(MaxPool3DWithArgmaxV2SimtTilingData));
+    memcpy_s(constData, sizeof(MaxPool3DWithArgmaxV2SimtTilingData), tiling,
+             sizeof(MaxPool3DWithArgmaxV2SimtTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)  \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
     MaxPool3DWithArgmaxV2TilingData tiling_data; \
     InitTilingData(tiling_arg, &tiling_data)
 
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
     tiling_struct tiling_data;                                              \
     InitTilingData(tiling_arg, &tiling_data)
-
-
 
 #endif

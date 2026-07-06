@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file conv3d_transpose_v2_arch35.h
  * \brief
@@ -22,25 +21,25 @@
 
 using namespace AscendC;
 
-#define CONV3D_DX_OP_VECTRANSPOSE(...)                 \
-    do {                                                        \
-        __VA_ARGS__ opVecTranspose;                                 \
-        opVecTranspose.Init(filter, workSpace, &tilingData);    \
-        opVecTranspose.Process();                               \
-        opVecTranspose.Destroy();                               \
+#define CONV3D_DX_OP_VECTRANSPOSE(...)                       \
+    do {                                                     \
+        __VA_ARGS__ opVecTranspose;                          \
+        opVecTranspose.Init(filter, workSpace, &tilingData); \
+        opVecTranspose.Process();                            \
+        opVecTranspose.Destroy();                            \
     } while (0)
 
-#define CONV3D_DX_TRANSPOSE_RUN_OP(...)        \
-    do {                                                \
-        __VA_ARGS__ op;                                     \
-        op.Init(filter, x, y, usrWsp, &tilingData, bias);     \
-        op.Process();                                   \
+#define CONV3D_DX_TRANSPOSE_RUN_OP(...)                   \
+    do {                                                  \
+        __VA_ARGS__ op;                                   \
+        op.Init(filter, x, y, usrWsp, &tilingData, bias); \
+        op.Process();                                     \
     } while (0)
 
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling, uint8_t loadB1Condition>
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
+          uint8_t loadB1Condition>
 __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-                                                          GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace,
-                                                          GM_ADDR tiling)
+                                                      GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -73,17 +72,17 @@ __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADD
     }
 
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
-        CONV3D_DX_TRANSPOSE_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X,
-                                                   DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                                   loadB2Condition, kernelSplitMode, groupConvMode>);
+        CONV3D_DX_TRANSPOSE_RUN_OP(
+            Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
+                            loadB2Condition, kernelSplitMode, groupConvMode>);
     } else if constexpr ((isBasicBlockTiling == true) && (loadB1Condition == TPL_VEC_TO_L1_C04)) {
-        CONV3D_DX_TRANSPOSE_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X,
-                                                    DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                                    loadB2Condition, kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true>);
+        CONV3D_DX_TRANSPOSE_RUN_OP(
+            Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
+                             loadB2Condition, kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true>);
     } else {
-        CONV3D_DX_TRANSPOSE_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X,
-                                                    DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                                    loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition>);
+        CONV3D_DX_TRANSPOSE_RUN_OP(
+            Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
+                             loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition>);
     }
 }
-#endif  // CONV3D_TRANSPOSE_V2_ARCH_35_H
+#endif // CONV3D_TRANSPOSE_V2_ARCH_35_H

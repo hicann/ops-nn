@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_sigmoid_proto.h"
 
-class ForeachSigmoidTest : public testing::Test
-{
+class ForeachSigmoidTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSigmoid SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSigmoid SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSigmoid TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSigmoid TearDown" << std::endl; }
 };
 
 TEST_F(ForeachSigmoidTest, infer_shape_known_success)

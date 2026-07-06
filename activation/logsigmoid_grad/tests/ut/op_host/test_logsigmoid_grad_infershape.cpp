@@ -24,15 +24,9 @@ using namespace ge;
 
 class LogSigmoidGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LogSigmoidGradTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LogSigmoidGradTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LogSigmoidGradTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LogSigmoidGradTest TearDown" << std::endl; }
 };
 
 TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_float16)
@@ -40,8 +34,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_float16)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                               shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
@@ -58,8 +52,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_float32)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 128}, {1, 256}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {128, 256}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {128, 256}, ge::FORMAT_ND,
+                                               shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
@@ -76,8 +70,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_bf16)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 64}, {1, 64}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_BF16, ge::FORMAT_ND, {64, 64}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_BF16, ge::FORMAT_ND, {64, 64}, ge::FORMAT_ND,
+                                               shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
@@ -94,8 +88,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_3d)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 32}, {1, 64}, {1, 128}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {32, 64, 128}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {32, 64, 128},
+                                               ge::FORMAT_ND, shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
@@ -110,8 +104,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_4d_nchw)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 2}, {1, 64}, {112, 112}, {112, 112}};
-    auto tensor_desc = create_desc_shape_range(
-        {-1, -1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_NCHW, {2, 64, 112, 112}, ge::FORMAT_NCHW, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_NCHW, {2, 64, 112, 112},
+                                               ge::FORMAT_NCHW, shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
@@ -126,8 +120,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_5d)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 2}, {1, 4}, {8, 8}, {16, 16}, {32, 32}};
-    auto tensor_desc = create_desc_shape_range(
-        {-1, -1, -1, -1, -1}, ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 4, 8, 16, 32}, ge::FORMAT_NCDHW, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1, -1, -1, -1}, ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 4, 8, 16, 32},
+                                               ge::FORMAT_NCDHW, shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
@@ -172,8 +166,8 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_test_large)
     ge::op::LogSigmoidGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1024, 1024}, {1024, 1024}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {1024, 1024}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {1024, 1024}, ge::FORMAT_ND,
+                                               shape_range);
     op.UpdateInputDesc("grads", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);

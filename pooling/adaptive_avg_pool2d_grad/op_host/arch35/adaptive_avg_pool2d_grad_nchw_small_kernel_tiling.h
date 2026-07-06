@@ -88,8 +88,8 @@ public:
 
     ~AdaptiveAvgPool2dGradTilingSmallKernel() override {}
 
-    AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35* tilingData =
-        context_->GetTilingData<AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35>();
+    AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35* tilingData = context_->GetTilingData<
+        AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35>();
 
 protected:
     ge::graphStatus DoOpTiling() override;
@@ -116,37 +116,26 @@ protected:
 
     void SearchBestTiling();
 
-    bool ExhaustiveSearchBestTiling(
-        int64_t computeVl, int64_t ncSearchMax,
-        int64_t& bestHighAxisInner, int64_t& bestHOutputInner, int64_t& bestWOutputInner,
-        int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
-        int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
-        int64_t& bestBufferSize, long double& bestCost, bool& found);
+    bool ExhaustiveSearchBestTiling(int64_t computeVl, int64_t ncSearchMax, int64_t& bestHighAxisInner,
+                                    int64_t& bestHOutputInner, int64_t& bestWOutputInner, int64_t& bestBlockNum,
+                                    int64_t& bestUsedCoreNum, int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
+                                    int64_t& bestBufferSize, long double& bestCost, bool& found);
 
-    long double EvalTilingCandidate(
-        int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail,
-        int64_t highAxisPadding,
-        int64_t hOutputInner, int64_t hOutputOuter,
-        int64_t wOutputInner, int64_t wOutputOuter,
-        int64_t blockNum, int64_t computeVl,
-        int64_t normalCoreProcessNum);
+    long double EvalTilingCandidate(int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail,
+                                    int64_t highAxisPadding, int64_t hOutputInner, int64_t hOutputOuter,
+                                    int64_t wOutputInner, int64_t wOutputOuter, int64_t blockNum, int64_t computeVl,
+                                    int64_t normalCoreProcessNum);
 
-    long double AddCostPenalties(
-        long double cost, int64_t highAxisInner, int64_t highAxisOuter,
-        int64_t highAxisTail,
-        int64_t hOutputInner, int64_t wOutputInner,
-        int64_t blockNum, int64_t computeVl,
-        int64_t normalCoreProcessNum, int64_t oneBlockWork);
+    long double AddCostPenalties(long double cost, int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail,
+                                 int64_t hOutputInner, int64_t wOutputInner, int64_t blockNum, int64_t computeVl,
+                                 int64_t normalCoreProcessNum, int64_t oneBlockWork);
 
-    bool TryRecordBetterTiling(
-        long double cost, int64_t hOutputInner, int64_t wOutputInner,
-        int64_t blockNum, int64_t usedCoreNum,
-        int64_t highAxisInner, int64_t highAxisPadding, int64_t highAxisTail,
-        int64_t& bestHighAxisInner, int64_t& bestHOutputInner, int64_t& bestWOutputInner,
-        int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
-        int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
-        int64_t& bestBufferSize, long double& bestCost,
-        bool& found);
+    bool TryRecordBetterTiling(long double cost, int64_t hOutputInner, int64_t wOutputInner, int64_t blockNum,
+                               int64_t usedCoreNum, int64_t highAxisInner, int64_t highAxisPadding,
+                               int64_t highAxisTail, int64_t& bestHighAxisInner, int64_t& bestHOutputInner,
+                               int64_t& bestWOutputInner, int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
+                               int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail, int64_t& bestBufferSize,
+                               long double& bestCost, bool& found);
 
     void ApplyCoarseFallback();
 

@@ -16,9 +16,11 @@
 namespace l0op {
 constexpr size_t GROUPED_QUANT_MAX_OUT_NUM = 2;
 
-const std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM> GroupedQuantMax(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, aclOpExecutor* executor);
+const std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM> GroupedQuantMax(const aclTensor* x, const aclTensor* scale,
+                                                                        const aclTensor* groupList,
+                                                                        const char* roundMode, int64_t dstType,
+                                                                        const aclTensor* y, const aclTensor* amax,
+                                                                        aclOpExecutor* executor);
 
 } // namespace l0op
 

@@ -34,21 +34,15 @@ struct MaxPoolGradWithArgmaxCompileInfo {
 
 class MaxPoolGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPoolGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPoolGradTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTilingTestCase(
-    gert::StorageShape x1Shape, gert::StorageShape x2Shape, gert::StorageShape gradShape, gert::StorageShape yShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string padding, std::string data_format,
-    ge::DataType dtype, ge::graphStatus expect_status)
+static void ExecuteTilingTestCase(gert::StorageShape x1Shape, gert::StorageShape x2Shape, gert::StorageShape gradShape,
+                                  gert::StorageShape yShape, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+                                  std::string padding, std::string data_format, ge::DataType dtype,
+                                  ge::graphStatus expect_status)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -77,21 +71,21 @@ static void ExecuteTilingTestCase(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs(std::vector<void*>{&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs(std::vector<void*>{&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -114,11 +108,10 @@ static void ExecuteTilingTestCase(
                       .NodeInputTd(1, dtype, format, format)
                       .NodeInputTd(2, dtype, format, format)
                       .NodeOutputTd(0, dtype, format, format)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -145,9 +138,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_unsupported_dtype_int32)
     gert::StorageShape x2Shape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape gradShape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape yShape = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_INT32,
-        ge::GRAPH_FAILED);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW",
+                          ge::DT_INT32, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_unsupported_dtype_double)
@@ -156,9 +148,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_unsupported_dtype_double)
     gert::StorageShape x2Shape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape gradShape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape yShape = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_DOUBLE,
-        ge::GRAPH_FAILED);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW",
+                          ge::DT_DOUBLE, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_invalid_padding_mode)
@@ -167,9 +158,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_invalid_padding_mode)
     gert::StorageShape x2Shape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape gradShape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape yShape = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "INVALID_PAD", "NCHW", ge::DT_FLOAT,
-        ge::GRAPH_FAILED);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "INVALID_PAD", "NCHW",
+                          ge::DT_FLOAT, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_invalid_dim_num)
@@ -179,9 +169,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_invalid_dim_num)
     gert::StorageShape x2Shape = {{1, 2, 2}, {1, 2, 2}};
     gert::StorageShape gradShape = {{1, 2, 2}, {1, 2, 2}};
     gert::StorageShape yShape = {{1, 4, 4}, {1, 4, 4}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_FLOAT,
-        ge::GRAPH_FAILED);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW",
+                          ge::DT_FLOAT, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_grad_shape_mismatch)
@@ -191,9 +180,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_fail_grad_shape_mismatch)
     gert::StorageShape x2Shape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape gradShape = {{1, 1, 3, 3}, {1, 1, 3, 3}};
     gert::StorageShape yShape = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_FLOAT,
-        ge::GRAPH_FAILED);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW",
+                          ge::DT_FLOAT, ge::GRAPH_FAILED);
 }
 
 // ============================================================
@@ -206,9 +194,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp32_valid_nchw)
     gert::StorageShape x2Shape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape gradShape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape yShape = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_FLOAT,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW",
+                          ge::DT_FLOAT, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp16_same_nchw)
@@ -217,9 +204,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp16_same_nchw)
     gert::StorageShape x2Shape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
     gert::StorageShape gradShape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
     gert::StorageShape yShape = {{2, 3, 8, 8}, {2, 3, 8, 8}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "SAME", "NCHW", ge::DT_FLOAT16,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "SAME", "NCHW",
+                          ge::DT_FLOAT16, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_bf16_valid_nchw)
@@ -228,9 +214,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_bf16_valid_nchw)
     gert::StorageShape x2Shape = {{1, 8, 8, 8}, {1, 8, 8, 8}};
     gert::StorageShape gradShape = {{1, 8, 8, 8}, {1, 8, 8, 8}};
     gert::StorageShape yShape = {{1, 8, 16, 16}, {1, 8, 16, 16}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_BF16,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 2, 2, 1}, {1, 2, 2, 1}, "VALID", "NCHW", ge::DT_BF16,
+                          ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp32_same_nchw_large)
@@ -239,9 +224,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp32_same_nchw_large)
     gert::StorageShape x2Shape = {{4, 16, 16, 16}, {4, 16, 16, 16}};
     gert::StorageShape gradShape = {{4, 16, 16, 16}, {4, 16, 16, 16}};
     gert::StorageShape yShape = {{4, 16, 32, 32}, {4, 16, 32, 32}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 3, 3, 1}, {1, 2, 2, 1}, "SAME", "NCHW", ge::DT_FLOAT,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 3, 3, 1}, {1, 2, 2, 1}, "SAME", "NCHW", ge::DT_FLOAT,
+                          ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp16_valid_nchw_k3)
@@ -250,9 +234,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp16_valid_nchw_k3)
     gert::StorageShape x2Shape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape gradShape = {{1, 1, 2, 2}, {1, 1, 2, 2}};
     gert::StorageShape yShape = {{1, 1, 8, 8}, {1, 1, 8, 8}};
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape, {1, 3, 3, 1}, {1, 3, 3, 1}, "VALID", "NCHW", ge::DT_FLOAT16,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 3, 3, 1}, {1, 3, 3, 1}, "VALID", "NCHW",
+                          ge::DT_FLOAT16, ge::GRAPH_SUCCESS);
 }
 
 // ============================================================
@@ -266,14 +249,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_fp16_valid_nchw_
     gert::StorageShape gradShape = {{1, 4, 4, 4}, {1, 4, 4, 4}};
     gert::StorageShape yShape = {{1, 4, 64, 64}, {1, 4, 64, 64}};
 
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape,
-        {1, 1, 16, 16},
-        {1, 1, 16, 16},
-        "VALID",
-        "NCHW",
-        ge::DT_FLOAT16,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 1, 16, 16}, {1, 1, 16, 16}, "VALID", "NCHW",
+                          ge::DT_FLOAT16, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_bf16_valid_nchw_k20_s10)
@@ -283,14 +260,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_bf16_valid_nchw_
     gert::StorageShape gradShape = {{1, 4, 7, 7}, {1, 4, 7, 7}};
     gert::StorageShape yShape = {{1, 4, 80, 80}, {1, 4, 80, 80}};
 
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape,
-        {1, 1, 20, 20},
-        {1, 1, 10, 10},
-        "VALID",
-        "NCHW",
-        ge::DT_BF16,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 1, 20, 20}, {1, 1, 10, 10}, "VALID", "NCHW",
+                          ge::DT_BF16, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_bf16_same_nchw_k18_10_large_w)
@@ -300,14 +271,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_bf16_same_nchw_k
     gert::StorageShape gradShape = {{4, 4, 15, 285}, {4, 4, 15, 285}};
     gert::StorageShape yShape = {{4, 4, 150, 3417}, {4, 4, 150, 3417}};
 
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape,
-        {1, 1, 18, 10},
-        {1, 1, 10, 12},
-        "SAME",
-        "NCHW",
-        ge::DT_BF16,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 1, 18, 10}, {1, 1, 10, 12}, "SAME", "NCHW",
+                          ge::DT_BF16, ge::GRAPH_SUCCESS);
 }
 
 // ============================================================
@@ -321,14 +286,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_valid_nch
     gert::StorageShape gradShape = {{2, 16, 32, 64}, {2, 16, 32, 64}};
     gert::StorageShape yShape = {{2, 16, 64, 128}, {2, 16, 64, 128}};
 
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape,
-        {1, 1, 2, 2},
-        {1, 1, 2, 2},
-        "VALID",
-        "NCHW",
-        ge::DT_FLOAT,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 1, 2, 2}, {1, 1, 2, 2}, "VALID", "NCHW",
+                          ge::DT_FLOAT, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_valid_nchw_k3_5_s2_4)
@@ -338,14 +297,8 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_valid_nch
     gert::StorageShape gradShape = {{1, 32, 17, 34}, {1, 32, 17, 34}};
     gert::StorageShape yShape = {{1, 32, 35, 137}, {1, 32, 35, 137}};
 
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape,
-        {1, 1, 3, 5},
-        {1, 1, 2, 4},
-        "VALID",
-        "NCHW",
-        ge::DT_FLOAT,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 1, 3, 5}, {1, 1, 2, 4}, "VALID", "NCHW",
+                          ge::DT_FLOAT, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_same_nchw_k2_s2_odd_shape)
@@ -355,12 +308,6 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_same_nchw
     gert::StorageShape gradShape = {{1, 24, 17, 33}, {1, 24, 17, 33}};
     gert::StorageShape yShape = {{1, 24, 33, 65}, {1, 24, 33, 65}};
 
-    ExecuteTilingTestCase(
-        x1Shape, x2Shape, gradShape, yShape,
-        {1, 1, 2, 2},
-        {1, 1, 2, 2},
-        "SAME",
-        "NCHW",
-        ge::DT_FLOAT,
-        ge::GRAPH_SUCCESS);
+    ExecuteTilingTestCase(x1Shape, x2Shape, gradShape, yShape, {1, 1, 2, 2}, {1, 1, 2, 2}, "SAME", "NCHW", ge::DT_FLOAT,
+                          ge::GRAPH_SUCCESS);
 }

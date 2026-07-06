@@ -34,8 +34,8 @@ constexpr int64_t DIGIT_2 = 2;
 template <typename T1, typename T2, const uint32_t IS_PAD = 0>
 class MaxPoolWithArgmaxV3NhwCKernel {
 public:
-    __aicore__ inline MaxPoolWithArgmaxV3NhwCKernel(
-        TPipe* pipe, const MaxPoolWithArgmaxV3NhwcTilingData* __restrict tiling)
+    __aicore__ inline MaxPoolWithArgmaxV3NhwCKernel(TPipe* pipe,
+                                                    const MaxPoolWithArgmaxV3NhwcTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR argmax);
@@ -50,11 +50,11 @@ public:
     __aicore__ inline void CopyResultToUb(__local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal);
 
     template <const bool IS_SPLIT_KERNEL>
-    __aicore__ inline void MaxPoolAndArgmaxV3VF(
-        __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal);
+    __aicore__ inline void MaxPoolAndArgmaxV3VF(__local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal,
+                                                __local_mem__ T2* argmaxLocal);
     template <const bool IS_SPLIT_KERNEL>
-    __aicore__ inline void MaxPoolAndArgmaxV3VFForPad(
-        __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal);
+    __aicore__ inline void MaxPoolAndArgmaxV3VFForPad(__local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal,
+                                                      __local_mem__ T2* argmaxLocal);
     __aicore__ inline void CopyOut();
 
     TPipe* pipe_;
@@ -71,8 +71,9 @@ public:
     uint32_t blockIdx_ = 0;
 
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
-    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK =
-        BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ? BLOCK_SIZE / sizeof(T1) : BLOCK_SIZE / sizeof(T2);
+    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK = BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ?
+                                                             BLOCK_SIZE / sizeof(T1) :
+                                                             BLOCK_SIZE / sizeof(T2);
     constexpr static int64_t VREG_LENGTH_DATA_NUM_T2 = platform::GetVRegSize() / sizeof(T2);
 
     // tilingdata
@@ -308,8 +309,8 @@ template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::InitHelpBuf()
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     __VEC_SCOPE__
     {
@@ -325,12 +326,12 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::InitHelpBu
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyResultToUb(
-    __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
+__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyResultToUb(__local_mem__ T1* maxValueLocal,
+                                                                                     __local_mem__ T2* argmaxLocal)
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     __VEC_SCOPE__
     {
@@ -385,8 +386,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Process()
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Compute(
-    __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
+__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Compute(__local_mem__ T1* maxValueLocal,
+                                                                              __local_mem__ T2* argmaxLocal)
 {
     LocalTensor<T1> xLocal = inputQue_.DeQue<T1>();
     __local_mem__ T1* xAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
@@ -413,8 +414,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
     __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     int64_t nOutputActual = nOutputActual_;
     int64_t hOutputActual = hOutputActual_;
@@ -524,8 +525,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
     __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
     int64_t nOutputActual = nOutputActual_;
     int64_t hOutputActual = hOutputActual_;
     int64_t wOutputActual = wOutputActual_;
@@ -668,9 +669,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyOut()
         copyOutParamT.srcStride = (cOutputActualAlign_ - cOutputActual_) * sizeof(T1) / BLOCK_SIZE;
         copyOutParamT.dstStride = 0;
 
-        DataCopyPad(
-            yGm_[nOutputAxisOffset_ + hOutputAxisOffset_ + wOutputAxisOffset_ + cOutputAxisOffset_], maxValueLocal,
-            copyOutParamT);
+        DataCopyPad(yGm_[nOutputAxisOffset_ + hOutputAxisOffset_ + wOutputAxisOffset_ + cOutputAxisOffset_],
+                    maxValueLocal, copyOutParamT);
     }
 
     {
@@ -679,9 +679,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyOut()
         copyOutParamT.blockLen = cOutputActual_ * sizeof(T2);
         copyOutParamT.srcStride = (cOutputActualAlign_ - cOutputActual_) * sizeof(T2) / BLOCK_SIZE;
         copyOutParamT.dstStride = 0;
-        DataCopyPad(
-            argmaxGm_[nOutputAxisOffset_ + hOutputAxisOffset_ + wOutputAxisOffset_ + cOutputAxisOffset_], argmaxLocal,
-            copyOutParamT);
+        DataCopyPad(argmaxGm_[nOutputAxisOffset_ + hOutputAxisOffset_ + wOutputAxisOffset_ + cOutputAxisOffset_],
+                    argmaxLocal, copyOutParamT);
     }
     maxValueQue_.FreeTensor(maxValueLocal);
     argmaxQue_.FreeTensor(argmaxLocal);

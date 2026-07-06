@@ -23,9 +23,10 @@
 
 using namespace BatchNormGradV3;
 
-extern "C" __global__ __aicore__ void batch_norm_grad_v3(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR running_mean, GM_ADDR running_var, GM_ADDR save_mean,
-    GM_ADDR save_rstd, GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void batch_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR running_mean,
+                                                         GM_ADDR running_var, GM_ADDR save_mean, GM_ADDR save_rstd,
+                                                         GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias, GM_ADDR workspace,
+                                                         GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

@@ -27,11 +27,10 @@ using namespace AvgPool3DGradUtils;
 template <typename T>
 class AvgPool3DGradScatter : public AvgPool3DGradBase<T> {
 public:
-    __aicore__ inline AvgPool3DGradScatter()
-    {}
+    __aicore__ inline AvgPool3DGradScatter() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace);
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData,
+                                GM_ADDR workspace);
 
     __aicore__ inline void InitUbBuffer(GM_ADDR grads, GM_ADDR output, GM_ADDR workspace);
 
@@ -47,8 +46,8 @@ public:
 };
 
 template <typename T>
-__aicore__ inline void AvgPool3DGradScatter<T>::Init(
-    GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
+__aicore__ inline void AvgPool3DGradScatter<T>::Init(GM_ADDR grads, GM_ADDR output,
+                                                     const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
 {
     this->InitParams(tilingData);
     this->InitUbBuffer(grads, output, workspace);
@@ -192,12 +191,12 @@ __aicore__ inline void AvgPool3DGradScatter<T>::Compute(int64_t ncShape)
 }
 
 template <typename T>
-__aicore__ inline void AvgPool3DGradScatter<T>::CopyOut(
-    int64_t d, int64_t h, int64_t w, int64_t copyOutLen, int64_t ncShape)
+__aicore__ inline void AvgPool3DGradScatter<T>::CopyOut(int64_t d, int64_t h, int64_t w, int64_t copyOutLen,
+                                                        int64_t ncShape)
 {
     // ubIndex --> 第几列
-    auto dstGmOffset =
-        this->ncCoreIdx * (this->inD * this->inH * this->inW) + d * (this->inH * this->inW) + h * this->inW + w;
+    auto dstGmOffset = this->ncCoreIdx * (this->inD * this->inH * this->inW) + d * (this->inH * this->inW) +
+                       h * this->inW + w;
     if (this->IsOverlap) {
         SetAtomicAdd<float>();
     }

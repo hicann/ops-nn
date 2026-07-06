@@ -21,25 +21,13 @@
 using namespace op;
 using namespace std;
 
-enum Reduction
-{
-    None,
-    Mean,
-    Sum,
-    END
-};
+enum Reduction { None, Mean, Sum, END };
 
 class l2_l1_loss_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l1_loss_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l1_loss_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l1_loss_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l1_loss_backward_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_01_float_nd_none)
@@ -259,24 +247,24 @@ TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_13_input_out_nullptr)
     auto tensorDesc = TensorDesc({10, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     int64_t reduction = Reduction::None;
 
-    auto ut_l = OP_API_UT(
-        aclnnL1LossBackward, INPUT((aclTensor*)nullptr, tensorDesc, tensorDesc, reduction), OUTPUT(tensorDesc));
+    auto ut_l = OP_API_UT(aclnnL1LossBackward, INPUT((aclTensor*)nullptr, tensorDesc, tensorDesc, reduction),
+                          OUTPUT(tensorDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut_l.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut_r = OP_API_UT(
-        aclnnL1LossBackward, INPUT(tensorDesc, (aclTensor*)nullptr, tensorDesc, reduction), OUTPUT(tensorDesc));
+    auto ut_r = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc, (aclTensor*)nullptr, tensorDesc, reduction),
+                          OUTPUT(tensorDesc));
     aclRet = ut_r.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut_ta = OP_API_UT(
-        aclnnL1LossBackward, INPUT(tensorDesc, tensorDesc, (aclTensor*)nullptr, reduction), OUTPUT(tensorDesc));
+    auto ut_ta = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc, tensorDesc, (aclTensor*)nullptr, reduction),
+                           OUTPUT(tensorDesc));
     aclRet = ut_ta.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut_o = OP_API_UT(
-        aclnnL1LossBackward, INPUT(tensorDesc, tensorDesc, tensorDesc, reduction), OUTPUT((aclTensor*)nullptr));
+    auto ut_o = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc, tensorDesc, tensorDesc, reduction),
+                          OUTPUT((aclTensor*)nullptr));
     aclRet = ut_o.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
@@ -333,19 +321,19 @@ TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_18_aclnnL1LossBackward_inpu
     auto tensorDesc2 = TensorDesc({7, 8, 9, 10}, ACL_INT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     int64_t reduction = Reduction::None;
 
-    auto ut_grad =
-        OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc9, tensorDesc1, tensorDesc1, reduction), OUTPUT(tensorDesc2));
+    auto ut_grad = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc9, tensorDesc1, tensorDesc1, reduction),
+                             OUTPUT(tensorDesc2));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut_grad.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-    auto ut_self =
-        OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc9, tensorDesc1, reduction), OUTPUT(tensorDesc2));
+    auto ut_self = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc9, tensorDesc1, reduction),
+                             OUTPUT(tensorDesc2));
     aclRet = ut_self.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-    auto ut_tar =
-        OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc1, tensorDesc9, reduction), OUTPUT(tensorDesc1));
+    auto ut_tar = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc1, tensorDesc9, reduction),
+                            OUTPUT(tensorDesc1));
     aclRet = ut_tar.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -405,19 +393,19 @@ TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_22_aclnnL1LossBackward_inpu
     auto tensorDesc2 = TensorDesc({7, 8, 9, 10}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     int64_t reduction = Reduction::None;
 
-    auto ut_grad =
-        OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc9, tensorDesc1, tensorDesc1, reduction), OUTPUT(tensorDesc2));
+    auto ut_grad = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc9, tensorDesc1, tensorDesc1, reduction),
+                             OUTPUT(tensorDesc2));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut_grad.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-    auto ut_self =
-        OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc9, tensorDesc1, reduction), OUTPUT(tensorDesc2));
+    auto ut_self = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc9, tensorDesc1, reduction),
+                             OUTPUT(tensorDesc2));
     aclRet = ut_self.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-    auto ut_tar =
-        OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc1, tensorDesc9, reduction), OUTPUT(tensorDesc2));
+    auto ut_tar = OP_API_UT(aclnnL1LossBackward, INPUT(tensorDesc1, tensorDesc1, tensorDesc9, reduction),
+                            OUTPUT(tensorDesc2));
     aclRet = ut_tar.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

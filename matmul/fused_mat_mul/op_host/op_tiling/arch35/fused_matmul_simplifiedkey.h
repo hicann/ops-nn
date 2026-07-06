@@ -29,9 +29,8 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
     static constexpr int32_t BIAS_INDEX = 2;
     static constexpr int32_t INPUT_X3 = 3;
     OP_LOGI(context->GetNodeName(), "Enter genSimplifiedKey.");
-    OP_TILING_CHECK(
-        simplifiedKey == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "simplifiedKey is null"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(simplifiedKey == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "simplifiedKey is null"),
+                    return ge::GRAPH_FAILED);
 
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(INPUT_X1));
     OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(INPUT_X2));
@@ -82,13 +81,11 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
         return ge::GRAPH_FAILED;
     }
 
-    OP_TILING_CHECK(
-        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "len of simplifiedKey exceeds max length."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "len of simplifiedKey exceeds max length."),
+                    return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 } // namespace fused_matmul
 } // namespace optiling
-

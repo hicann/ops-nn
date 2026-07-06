@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_pow_list_proto.h"
 
-class ForeachPowListTest : public testing::Test
-{
+class ForeachPowListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachPowList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachPowList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachPowList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachPowList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachPowListTest, infer_shape_known_success)

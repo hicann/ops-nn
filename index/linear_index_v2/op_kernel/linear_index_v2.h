@@ -25,23 +25,19 @@ struct integralConstant {
 using true_type = integralConstant<bool, true>;
 using false_type = integralConstant<bool, false>;
 template <typename, typename>
-struct isSame : public false_type {
-};
+struct isSame : public false_type {};
 template <typename Tp>
-struct isSame<Tp, Tp> : public true_type {
-};
+struct isSame<Tp, Tp> : public true_type {};
 
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t BLOCK_SIZE = 32;
 
 template <typename T>
-class LinearIndexKernelV2
-{
+class LinearIndexKernelV2 {
 public:
     __aicore__ inline LinearIndexKernelV2() = delete;
-    __aicore__ inline LinearIndexKernelV2(
-        GM_ADDR indexList, GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output, GM_ADDR workSpace,
-        const LinearIndexV2TilingData& tiling, TPipe& pipe)
+    __aicore__ inline LinearIndexKernelV2(GM_ADDR indexList, GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output,
+                                          GM_ADDR workSpace, const LinearIndexV2TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling, indexList);
         SetGmAddr(stride, valueSize, output, tiling);
@@ -102,8 +98,8 @@ private:
         pipe.InitBuffer(remainQue_, BUFFER_NUM, idxAlignNum * sizeof(float));
     }
 
-    __aicore__ inline void SetGmAddr(
-        GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output, const LinearIndexV2TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output,
+                                     const LinearIndexV2TilingData& tiling)
     {
         valueSizeGm_.SetGlobalBuffer((__gm__ int*)valueSize);
         strideGm_.SetGlobalBuffer((__gm__ int*)stride);
@@ -118,16 +114,15 @@ private:
         LocalTensor<int> strideLocal = strideQue_.AllocTensor<int>();
         LocalTensor<int> valueSizeLocal = valueSizeQue_.AllocTensor<int>();
         uint32_t copyNum = formerFlag ? formerDataNum_ : tailDataNum_;
-        int64_t addrOffset =
-            formerFlag ? formerDataNum_ * curTimes : formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
+        int64_t addrOffset = formerFlag ? formerDataNum_ * curTimes :
+                                          formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
         DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(copyNum * sizeof(T)), 0, 0, 0};
         DataCopyExtParams strideCopyParams{1, static_cast<uint32_t>(sizeof(int)), 0, 0, 0};
         DataCopyPadExtParams<int32_t> padParams{true, 0, 0, 0};
         if constexpr (IS_CAST_INT) {
             DataCopyPadExtParams<uint32_t> uPadParams{true, 0, 0, 0};
-            DataCopyPadGm2UBImpl(
-                (__ubuf__ uint32_t*)indexLocal.GetPhyAddr(), (__gm__ uint32_t*)indexGm_[addrOffset].GetPhyAddr(),
-                idxCopyParams, uPadParams);
+            DataCopyPadGm2UBImpl((__ubuf__ uint32_t*)indexLocal.GetPhyAddr(),
+                                 (__gm__ uint32_t*)indexGm_[addrOffset].GetPhyAddr(), idxCopyParams, uPadParams);
         } else {
             DataCopyPadExtParams<T> uPadParams{true, 0, 0, 0};
             DataCopyPad(indexLocal, indexGm_[addrOffset], idxCopyParams, uPadParams);
@@ -182,8 +177,8 @@ private:
     {
         LocalTensor<int> indexOutLocal = indexOutQue_.DeQue<int>();
         uint32_t copyNum = formerFlag ? formerDataNum_ : tailDataNum_;
-        int64_t addrOffset =
-            formerFlag ? formerDataNum_ * curTimes : formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
+        int64_t addrOffset = formerFlag ? formerDataNum_ * curTimes :
+                                          formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
         DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(copyNum * sizeof(int)), 0, 0, 0};
         SetAtomicAdd<int32_t>();
         DataCopyPad(outputGm_[addrOffset], indexOutLocal, idxCopyParams);

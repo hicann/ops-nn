@@ -18,11 +18,11 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnMishBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self,
-                                                        aclTensor *gradInput, uint64_t *workspaceSize,
-                                                        aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnMishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                        aclTensor* gradInput, uint64_t* workspaceSize,
+                                                        aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnMishBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+ACLNN_API aclnnStatus aclnnMishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                         const aclrtStream stream);
 
 #ifdef __cplusplus

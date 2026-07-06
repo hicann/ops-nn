@@ -19,14 +19,14 @@
 class FakeQuantWithMinMaxArgsGradientTilingData {
 public:
     // ---- elewise tiling ----
-    int64_t totalLen;          // 总元素数
-    int64_t numCore;           // 实际使用核数
-    int64_t blockFactor;       // 普通核每核元素数
-    int64_t blockTailFactor;   // 尾核元素数
-    int64_t baseLen;           // 单次 Compute 元素数（基本单元）
+    int64_t totalLen;        // 总元素数
+    int64_t numCore;         // 实际使用核数
+    int64_t blockFactor;     // 普通核每核元素数
+    int64_t blockTailFactor; // 尾核元素数
+    int64_t baseLen;         // 单次 Compute 元素数（基本单元）
     // ---- nudge constants for gradient (only need bounds) ----
-    float   nudgedMin;
-    float   nudgedMax;
+    float nudgedMin;
+    float nudgedMax;
 };
 
 #endif // FAKE_QUANT_WITH_MIN_MAX_ARGS_GRADIENT_TILINGDATA_H_

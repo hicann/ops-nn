@@ -22,10 +22,7 @@ class KernelDuaQuantizeAddLayerNormSingleRow {
 #define IS_ADDITIONAL_OUTPUT_ENABLE (1 == 1)
 #define IS_MODE_MUL_SCALE ((TILING_KEY % 10) == 1)
 public:
-    __aicore__ inline KernelDuaQuantizeAddLayerNormSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelDuaQuantizeAddLayerNormSingleRow(TPipe* pipe) { Ppipe = pipe; }
     __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     {
         if (y > 0) {
@@ -33,23 +30,14 @@ public:
         }
         return 0;
     }
-    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-    {
-        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-    }
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
-    {
-        return x < y ? x : y;
-    }
-    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
-    {
-        return x > y ? x : y;
-    }
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales1, __gm__ uint8_t* scales2, __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2,
-        __gm__ uint8_t* y1, __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* workspace,
-        const DuaQuantizeAddLayerNormTilingData* tiling)
+    __aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
+    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
+    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales1, __gm__ uint8_t* scales2,
+                                __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2, __gm__ uint8_t* y1,
+                                __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* workspace,
+                                const DuaQuantizeAddLayerNormTilingData* tiling)
     {
         numCore = tiling->numCore;
         numLastDim = tiling->numLastDim;
@@ -249,9 +237,8 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            numLastDim);
+        Cast(constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             numLastDim);
         PipeBarrier<PIPE_V>();
         Cast(y1Local, constsTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, numLastDim);
         quantizeOutQue.EnQue(y1Local);
@@ -301,9 +288,8 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            numLastDim);
+        Cast(constsTensor.ReinterpretCast<half>(), constsTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             numLastDim);
         PipeBarrier<PIPE_V>();
         Cast(y2Local, constsTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, numLastDim);
         quantizeOutQue.EnQue(y2Local);

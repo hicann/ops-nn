@@ -14,7 +14,6 @@
  */
 #include "common/op_host/conv_backprop_infershape.h"
 
-
 namespace Ops {
 namespace NN {
 namespace Conv {
@@ -36,15 +35,18 @@ static ge::graphStatus InferShapeForDepthwiseConv2DBackpropFilter(gert::InferSha
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("", "Get %s failed", "context"), return ge::GRAPH_FAILED);
     auto y_shape = context->GetOutputShape(0);
     OP_CHECK_IF(y_shape == nullptr, CUBE_INNER_ERR_REPORT("", "Get %s failed", "y shape"), return ge::GRAPH_FAILED);
-    
+
     const auto runtime_attrs = context->GetAttrs();
-    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs"),
+                return ge::GRAPH_FAILED);
     if (runtime_attrs->GetAttrNum() <= FROM_DEPTHWISE_INDEX) {
         return ret;
     }
 
     const bool* from_depthwise = runtime_attrs->GetAttrPointer<bool>(FROM_DEPTHWISE_INDEX);
-    OP_CHECK_IF(from_depthwise == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs from_depthwise"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(from_depthwise == nullptr,
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs from_depthwise"),
+                return ge::GRAPH_FAILED);
 
     if (!*from_depthwise) {
         return ge::GRAPH_SUCCESS;
@@ -52,7 +54,8 @@ static ge::graphStatus InferShapeForDepthwiseConv2DBackpropFilter(gert::InferSha
 
     OP_LOGD(context->GetNodeName(), "transfer from DepthwiseConv2DBackpropFilter, need to reset y shape");
     const auto y_desc = context->GetOutputDesc(0);
-    OP_CHECK_IF(y_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y desc is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(y_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y desc is null"),
+                return ge::GRAPH_FAILED);
     const auto y_format = y_desc->GetOriginFormat();
     if (y_format == ge::FORMAT_NCDHW) {
         y_shape->SetDim(NCDHW_N_INDEX, y_shape->GetDim(NCDHW_N_INDEX) * y_shape->GetDim(NCDHW_C_INDEX));
@@ -69,9 +72,8 @@ static ge::graphStatus InferShapeForDepthwiseConv2DBackpropFilter(gert::InferSha
 static ge::graphStatus InferShapeForConv3DBackpropFilter(gert::InferShapeContext* context)
 {
     auto const_tensor = context->GetInputTensor(1);
-    OP_CHECK_IF(
-        const_tensor == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null tensor"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null tensor"),
+                return ge::GRAPH_FAILED);
     size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
 
     auto ret = ge::GRAPH_SUCCESS;
@@ -88,13 +90,12 @@ static ge::graphStatus InferDataTypeForConv3DBackpropFilterV2(gert::InferDataTyp
 {
     OP_LOGD(context->GetNodeName(), "InferDataTypeForConv3DBackpropFilterV2 enter");
     ge::graphStatus ret = context->SetOutputDataType(0, ge::DT_FLOAT);
-    OP_CHECK_IF(
-        ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "[InferDataType] Failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "[InferDataType] Failed."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InferDataTypeForConv3DBackpropFilterV2 enter");
     return ge::GRAPH_SUCCESS;
 }
-}  // namespace Conv
+} // namespace Conv
 
 IMPL_OP_INFERSHAPE(Conv3DBackpropFilterV2)
     .InferShape(Ops::NN::Conv::InferShapeForConv3DBackpropFilter)
@@ -103,5 +104,5 @@ IMPL_OP_INFERSHAPE(Conv3DBackpropFilterV2)
     .PrivateAttr("padding", "")
     .PrivateAttr("_op_impl_mode_enum", 0L)
     .PrivateAttr("from_depthwise", false);
-}  // namespace NN
-}  // namespace Ops
+} // namespace NN
+} // namespace Ops

@@ -20,7 +20,7 @@ extern "C" {
 /**
  * @brief aclnnAdaLayerNormGetWorkspaceSize
  */
-ACLNN_API aclnnStatus aclnnAdaLayerNormGetWorkspaceSize(const aclTensor* x, const aclTensor* scale, 
+ACLNN_API aclnnStatus aclnnAdaLayerNormGetWorkspaceSize(const aclTensor* x, const aclTensor* scale,
                                                         const aclTensor* shift, const aclTensor* weightOptional,
                                                         const aclTensor* biasOptional, double epsilon, aclTensor* out,
                                                         uint64_t* workspaceSize, aclOpExecutor** executor);
@@ -28,7 +28,7 @@ ACLNN_API aclnnStatus aclnnAdaLayerNormGetWorkspaceSize(const aclTensor* x, cons
 /*
  * @brief aclnnAdaLayerNorm
  */
-ACLNN_API aclnnStatus aclnnAdaLayerNorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, 
+ACLNN_API aclnnStatus aclnnAdaLayerNorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                         aclrtStream stream);
 
 #ifdef __cplusplus

@@ -18,17 +18,17 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnReluGetWorkspaceSize(
-    const aclTensor *self, const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnReluGetWorkspaceSize(const aclTensor* self, const aclTensor* out, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnRelu(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                const aclrtStream stream);
 
-ACLNN_API aclnnStatus aclnnInplaceReluGetWorkspaceSize(
-    aclTensor *selfRef, uint64_t *workspaceSize, aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnInplaceReluGetWorkspaceSize(aclTensor* selfRef, uint64_t* workspaceSize,
+                                                       aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnInplaceRelu(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnInplaceRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       const aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -25,15 +25,13 @@ enum class ForeachSubListTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_sub_list(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_sub_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachSubListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachSubListTilingData, tilingData, tiling);
 
-    const __gm__ ForeachSubListTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachSubListTilingData*>(tiling);
+    const __gm__ ForeachSubListTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachSubListTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_FLOAT)) {
         NsForeachSubList::Process<float>(x1, x2, alpha, y, tilingGm);

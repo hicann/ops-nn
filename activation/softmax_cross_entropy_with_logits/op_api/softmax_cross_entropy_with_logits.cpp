@@ -25,22 +25,23 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SoftmaxCrossEntropyWithLogits);
 
-std::tuple<aclTensor*, aclTensor*> SoftmaxCrossEntropyWithLogits(const aclTensor *features, const aclTensor *labels, aclOpExecutor *executor) {
-  L0_DFX(SoftmaxCrossEntropyWithLogits, features, labels);
-  // 获取 features 的 shape
-  const auto& featShape = features->GetViewShape();
-  op::Shape lossShape({featShape.GetDim(0)});
-  // 分配输出 Tensor
-  auto loss = executor->AllocTensor(lossShape, features->GetDataType());
-  auto backprop = executor->AllocTensor(featShape, features->GetDataType());  // backprop 仍保持原 shape
-  if (loss == nullptr || backprop == nullptr) {
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc loss or backprop tensor failed.");
-    return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
-  }
-  // 注册 AICORE 执行任务
-  ADD_TO_LAUNCHER_LIST_AICORE(
-    SoftmaxCrossEntropyWithLogits, OP_INPUT(features, labels), OP_OUTPUT(loss, backprop));
-  return std::tuple<aclTensor*, aclTensor*>(loss, backprop);
+std::tuple<aclTensor*, aclTensor*> SoftmaxCrossEntropyWithLogits(const aclTensor* features, const aclTensor* labels,
+                                                                 aclOpExecutor* executor)
+{
+    L0_DFX(SoftmaxCrossEntropyWithLogits, features, labels);
+    // 获取 features 的 shape
+    const auto& featShape = features->GetViewShape();
+    op::Shape lossShape({featShape.GetDim(0)});
+    // 分配输出 Tensor
+    auto loss = executor->AllocTensor(lossShape, features->GetDataType());
+    auto backprop = executor->AllocTensor(featShape, features->GetDataType()); // backprop 仍保持原 shape
+    if (loss == nullptr || backprop == nullptr) {
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc loss or backprop tensor failed.");
+        return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
+    }
+    // 注册 AICORE 执行任务
+    ADD_TO_LAUNCHER_LIST_AICORE(SoftmaxCrossEntropyWithLogits, OP_INPUT(features, labels), OP_OUTPUT(loss, backprop));
+    return std::tuple<aclTensor*, aclTensor*>(loss, backprop);
 }
 
-}  // namespace l0op
+} // namespace l0op

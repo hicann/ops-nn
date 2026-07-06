@@ -16,21 +16,17 @@
 
 class tset_sparse_softmax_cross_entropy_with_logits_infershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "sparse_softmax_cross_entropy_with_logits SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "sparse_softmax_cross_entropy_with_logits SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "sparse_softmax_cross_entropy_with_logits TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "sparse_softmax_cross_entropy_with_logits TearDown" << std::endl; }
 };
 
 TEST_F(tset_sparse_softmax_cross_entropy_with_logits_infershape, test_infershape_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSoftmaxCrossEntropyWithLogits"), nullptr);
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSoftmaxCrossEntropyWithLogits")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance()
+                              .GetOpImpl("SparseSoftmaxCrossEntropyWithLogits")
+                              ->infer_shape;
     ASSERT_NE(inferShapeFunc, nullptr);
     gert::StorageShape featuresShape = {{96, 256}, {96, 256}};
     gert::StorageShape labelsShape = {{96}, {96}};
@@ -38,11 +34,11 @@ TEST_F(tset_sparse_softmax_cross_entropy_with_logits_infershape, test_infershape
     gert::StorageShape backpropShape = {{96, 256}, {96, 256}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(2, 2)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&featuresShape, &labelsShape})
-        .OutputShapes({&lossShape, &backpropShape})
-        .Build();
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&featuresShape, &labelsShape})
+                      .OutputShapes({&lossShape, &backpropShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

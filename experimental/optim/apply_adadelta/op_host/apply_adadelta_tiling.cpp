@@ -36,10 +36,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
@@ -96,10 +96,7 @@ static ge::graphStatus ParseScalarAttrs(gert::TilingContext* context, ApplyAdade
     OP_CHECK_NULL_WITH_CONTEXT(context, rhoPtr);
     const float* epsPtr = attrs->GetFloat(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsPtr);
-    OP_CHECK_IF(
-        *epsPtr <= 0.0f,
-        OP_LOGE(context, "epsilon must be > 0, got %f", *epsPtr),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*epsPtr <= 0.0f, OP_LOGE(context, "epsilon must be > 0, got %f", *epsPtr), return ge::GRAPH_FAILED);
     tiling->lr = *lrPtr;
     tiling->rho = *rhoPtr;
     tiling->oneMinusRho = 1.0f - *rhoPtr;
@@ -107,21 +104,19 @@ static ge::graphStatus ParseScalarAttrs(gert::TilingContext* context, ApplyAdade
     return ge::GRAPH_SUCCESS;
 }
 
-static int64_t ComputeSplit(ApplyAdadeltaTilingData* tiling, ge::DataType dataType,
-                            uint64_t ubSize, int64_t coreNum, int64_t ubBlockSize, uint64_t& bufferMode)
+static int64_t ComputeSplit(ApplyAdadeltaTilingData* tiling, ge::DataType dataType, uint64_t ubSize, int64_t coreNum,
+                            int64_t ubBlockSize, uint64_t& bufferMode)
 {
     tiling->blockFactor = CeilAlign(CeilDiv(tiling->totalNum, coreNum), ubBlockSize);
     int64_t usedCoreNum = CeilDiv(tiling->totalNum, tiling->blockFactor);
     bufferMode = (tiling->totalNum > MIN_SPLIT_THRESHOLD) ? 1 : 0;
     int64_t slots = GetTensorSlots(dataType, bufferMode);
-    constexpr int64_t elemBytes = 4;  // Internal computation in fp32
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
+    constexpr int64_t elemBytes = 4; // Internal computation in fp32
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
     return usedCoreNum;
 }
 
-static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context,
-                                           int64_t& totalNum, ge::DataType& dataType)
+static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t& totalNum, ge::DataType& dataType)
 {
     auto varShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
@@ -154,14 +149,12 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, uint32_t 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InitTilingData(gert::TilingContext* context,
-                                      int64_t totalNum, ApplyAdadeltaTilingData*& tiling)
+static ge::graphStatus InitTilingData(gert::TilingContext* context, int64_t totalNum, ApplyAdadeltaTilingData*& tiling)
 {
     tiling = context->GetTilingData<ApplyAdadeltaTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK, OP_LOGE(context, "set tiling data error"),
+                return ge::GRAPH_FAILED);
     tiling->totalNum = totalNum;
     return ge::GRAPH_SUCCESS;
 }
@@ -170,19 +163,16 @@ static ge::graphStatus ApplyAdadeltaTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalNum = 0;
     ge::DataType dataType = ge::DT_FLOAT;
-    OP_CHECK_IF(
-        GetShapeAndDataType(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAndDataType error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAndDataType(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAndDataType error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        SetWorkspace(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetWorkspace error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetWorkspace error"),
+                return ge::GRAPH_FAILED);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     if (totalNum == 0) {
@@ -190,16 +180,14 @@ static ge::graphStatus ApplyAdadeltaTilingFunc(gert::TilingContext* context)
     }
 
     ApplyAdadeltaTilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        InitTilingData(context, totalNum, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, totalNum, tiling) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
 
     uint64_t bufferMode = 0;
     int64_t usedCoreNum = ComputeSplit(tiling, dataType, ubSize, coreNum, GetUbBlockSize(context), bufferMode);
 
-    OP_CHECK_IF(
-        ParseScalarAttrs(context, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ParseScalarAttrs error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ParseScalarAttrs(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ParseScalarAttrs error"),
+                return ge::GRAPH_FAILED);
 
     context->SetBlockDim(usedCoreNum);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX, static_cast<uint32_t>(bufferMode));

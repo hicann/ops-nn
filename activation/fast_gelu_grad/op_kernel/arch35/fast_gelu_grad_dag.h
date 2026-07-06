@@ -19,8 +19,8 @@ using namespace Ops::Base;
 
 template <class T>
 struct FastGeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
-    __aicore__ inline FastGeluGradCustom(
-        LocalTensor<T>& dst, LocalTensor<T>& src1, LocalTensor<T>& src2, uint32_t count)
+    __aicore__ inline FastGeluGradCustom(LocalTensor<T>& dst, LocalTensor<T>& src1, LocalTensor<T>& src2,
+                                         uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);
@@ -44,8 +44,8 @@ struct FastGeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> temp1Reg;
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> temp2Reg;
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> divRes;
-            static constexpr AscendC::MicroAPI::DivSpecificMode mode = {
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, true};
+            static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING,
+                                                                        true};
             AscendC::MicroAPI::MaskReg mask;
             AscendC::MicroAPI::Duplicate(constantOne, value3);
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {

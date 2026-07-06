@@ -32,8 +32,8 @@ constexpr uint32_t BROADCAST_DIM2 = 2;
 constexpr uint32_t BROADCAST_AXIS1 = 1;
 
 template <typename T>
-__aicore__ inline void DataCopyIn(
-    const AscendC::LocalTensor<T>& dst, const AscendC::GlobalTensor<T>& src, uint32_t count)
+__aicore__ inline void DataCopyIn(const AscendC::LocalTensor<T>& dst, const AscendC::GlobalTensor<T>& src,
+                                  uint32_t count)
 {
     AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -41,24 +41,24 @@ __aicore__ inline void DataCopyIn(
 }
 
 template <typename T>
-__aicore__ inline void DataCopyOut(
-    const AscendC::GlobalTensor<T>& dst, const AscendC::LocalTensor<T>& src, uint32_t count)
+__aicore__ inline void DataCopyOut(const AscendC::GlobalTensor<T>& dst, const AscendC::LocalTensor<T>& src,
+                                   uint32_t count)
 {
     AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
-    
+
     AscendC::DataCopyPad(dst, src, copyParams);
 }
 
 template <typename T, typename T1>
-__aicore__ inline void CastF16ToFp32(
-    const AscendC::LocalTensor<T>& dst, const AscendC::LocalTensor<T1>& src, uint32_t count)
+__aicore__ inline void CastF16ToFp32(const AscendC::LocalTensor<T>& dst, const AscendC::LocalTensor<T1>& src,
+                                     uint32_t count)
 {
     AscendC::Cast(dst, src, AscendC::RoundMode::CAST_NONE, count);
 }
 
 template <typename T, typename T1>
-__aicore__ inline void CastFp32ToF16(
-    const AscendC::LocalTensor<T>& dst, const AscendC::LocalTensor<T1>& src, uint32_t count)
+__aicore__ inline void CastFp32ToF16(const AscendC::LocalTensor<T>& dst, const AscendC::LocalTensor<T1>& src,
+                                     uint32_t count)
 {
     if constexpr (AscendC::IsSameType<T, half>::value) {
         Cast(dst, src, AscendC::RoundMode::CAST_NONE, count);
@@ -75,8 +75,8 @@ __aicore__ inline void PipeSync()
     AscendC::WaitFlag<hardEvent>(eventID);
 }
 
-__aicore__ inline float PowS(
-    const AscendC::LocalTensor<float>& dst, float srcScalar, const AscendC::LocalTensor<float>& src)
+__aicore__ inline float PowS(const AscendC::LocalTensor<float>& dst, float srcScalar,
+                             const AscendC::LocalTensor<float>& src)
 {
     AscendC::Power<float>(dst, srcScalar, src);
     PipeSync<AscendC::HardEvent::V_S>();
@@ -85,6 +85,6 @@ __aicore__ inline float PowS(
     return ret;
 }
 
-}
+} // namespace ApplyAdamWQuantNS
 
 #endif // _APPLY_ADAM_W_QUANT_BASE_H_

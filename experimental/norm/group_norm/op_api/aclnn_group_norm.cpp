@@ -31,12 +31,11 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
+                                                                       op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
-    const aclTensor* meanOut, const aclTensor* rstdOut)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
+                            const aclTensor* meanOut, const aclTensor* rstdOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     if (gamma != nullptr) {
@@ -60,37 +59,35 @@ static int64_t GetTensorNumel(const aclTensor* x, size_t startIdx)
     return numel;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t n, int64_t c, int64_t hxw,
-    int64_t group, const aclTensor* out, const aclTensor* meanOut, const aclTensor* rstdOut)
+static bool CheckShape(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t n, int64_t c,
+                       int64_t hxw, int64_t group, const aclTensor* out, const aclTensor* meanOut,
+                       const aclTensor* rstdOut)
 {
     OP_CHECK_MIN_DIM(self, BN_MIN_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(out, self, return false);
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(meanOut, op::Shape({n, group}), return false);
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(rstdOut, op::Shape({n, group}), return false);
-    OP_CHECK(
-        self->GetViewShape()[0] == n, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self.shape[0] must equal N."), return false);
-    OP_CHECK(
-        self->GetViewShape()[1] == c, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self.shape[1] must equal C."), return false);
-    OP_CHECK(
-        GetTensorNumel(self, 2) == hxw, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tail numel must equal HxW."), return false);
+    OP_CHECK(self->GetViewShape()[0] == n, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self.shape[0] must equal N."),
+             return false);
+    OP_CHECK(self->GetViewShape()[1] == c, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self.shape[1] must equal C."),
+             return false);
+    OP_CHECK(GetTensorNumel(self, 2) == hxw, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tail numel must equal HxW."),
+             return false);
     if (gamma != nullptr) {
-        OP_CHECK(
-            gamma->GetViewShape().GetDimNum() == 1 && gamma->GetViewShape()[0] == c,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gamma shape should be [C]."), return false);
+        OP_CHECK(gamma->GetViewShape().GetDimNum() == 1 && gamma->GetViewShape()[0] == c,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gamma shape should be [C]."), return false);
     }
     if (beta != nullptr) {
-        OP_CHECK(
-            beta->GetViewShape().GetDimNum() == 1 && beta->GetViewShape()[0] == c,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta shape should be [C]."), return false);
+        OP_CHECK(beta->GetViewShape().GetDimNum() == 1 && beta->GetViewShape()[0] == c,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta shape should be [C]."), return false);
     }
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t n, int64_t c, int64_t hxw,
-    int64_t group, double eps, aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t n,
+                               int64_t c, int64_t hxw, int64_t group, double eps, aclTensor* out, aclTensor* meanOut,
+                               aclTensor* rstdOut)
 {
     CHECK_RET(CheckNotNull4Tensor(self, out, meanOut, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, gamma, beta, out, meanOut, rstdOut), ACLNN_ERR_PARAM_INVALID);
@@ -120,14 +117,13 @@ static const aclTensor* GetBeta(const aclTensor* self, const aclTensor* beta, in
     return l0op::ZerosLike(betaTensor, executor);
 }
 
-aclnnStatus aclnnGroupNormGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* gammaOptional, const aclTensor* betaOptional, int64_t n, int64_t c,
-    int64_t hxw, int64_t group, double eps, aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTensor* gammaOptional,
+                                           const aclTensor* betaOptional, int64_t n, int64_t c, int64_t hxw,
+                                           int64_t group, double eps, aclTensor* out, aclTensor* meanOut,
+                                           aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnGroupNorm, DFX_IN(self, gammaOptional, betaOptional, n, c, hxw, group, eps),
-        DFX_OUT(out, meanOut, rstdOut));
+    L2_DFX_PHASE_1(aclnnGroupNorm, DFX_IN(self, gammaOptional, betaOptional, n, c, hxw, group, eps),
+                   DFX_OUT(out, meanOut, rstdOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     auto ret = CheckParams(self, gammaOptional, betaOptional, n, c, hxw, group, eps, out, meanOut, rstdOut);
@@ -146,8 +142,8 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
     auto betaContiguous = GetBeta(selfContiguous, betaOptional, c, uniqueExecutor.get());
     CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto result = l0op::GroupNorm(
-        selfContiguous, gammaContiguous, betaContiguous, n, group, static_cast<float>(eps), uniqueExecutor.get());
+    auto result = l0op::GroupNorm(selfContiguous, gammaContiguous, betaContiguous, n, group, static_cast<float>(eps),
+                                  uniqueExecutor.get());
     auto y = std::get<0>(result);
     auto mean = std::get<1>(result);
     auto rstd = std::get<2>(result);

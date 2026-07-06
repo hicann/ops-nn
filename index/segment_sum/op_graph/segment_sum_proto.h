@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_SEGMENT_SUM_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_SEGMENT_SUM_H_
 #include "graph/operator_reg.h"
@@ -42,5 +42,5 @@ REG_OP(SegmentSum)
     .OUTPUT(y, TensorType::NumberType())
     .OP_END_FACTORY_REG(SegmentSum)
 
-}
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SEGMENT_SUM_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SEGMENT_SUM_H_

@@ -23,7 +23,7 @@ extern "C" {
  * @domain aclnn_ops_train
  *
  * 算子功能：计算输入x和目标y中每个元素之间的均方误差。
- *  
+ *
  * @param [in] self: npu device侧的aclTensor。
  * @param [in] target: npu device侧的aclTensor。
  * @param [in] reduction: host侧的int64。
@@ -54,4 +54,4 @@ ACLNN_API aclnnStatus aclnnMseLossOut(void* workspace, uint64_t workspaceSize, a
 }
 #endif
 
-#endif  // OP_API_INC_MSE_LOSS_OUT_H_
+#endif // OP_API_INC_MSE_LOSS_OUT_H_

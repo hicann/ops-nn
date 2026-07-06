@@ -21,14 +21,11 @@
 using namespace AscendC;
 
 template <typename T>
-class KernelAdaptiveAvgPool3DGradFloat
-{
+class KernelAdaptiveAvgPool3DGradFloat {
 public:
-    __aicore__ inline KernelAdaptiveAvgPool3DGradFloat()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data,
-        TPipe* tmpPipe)
+    __aicore__ inline KernelAdaptiveAvgPool3DGradFloat() {}
+    __aicore__ inline void Init(GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace,
+                                const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data, TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();
@@ -184,9 +181,8 @@ private:
         for (uint64_t kd = istartD; kd < iendD; kd++) {
             for (uint64_t kh = istartH; kh < iendH; kh++) {
                 for (uint64_t kw = istartW; kw < iendW; kw++) {
-                    DataCopyPad(
-                        outputGradGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncNum],
-                        outputLocal[yNum * ncAlign], {(uint16_t)1, (uint32_t)(ncNum * sizeof(T)), 0, 0, 0});
+                    DataCopyPad(outputGradGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncNum],
+                                outputLocal[yNum * ncAlign], {(uint16_t)1, (uint32_t)(ncNum * sizeof(T)), 0, 0, 0});
                 }
             }
         }

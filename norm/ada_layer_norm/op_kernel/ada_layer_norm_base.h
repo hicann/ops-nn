@@ -24,21 +24,21 @@ template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
 class AdaLayerNormND {
 public:
     __aicore__ inline AdaLayerNormND(){};
-    __aicore__ inline void Init(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData);
-    __aicore__ inline void InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData);
-    __aicore__ inline void InitQuant(const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData *tilingData);
+    __aicore__ inline void Init(const GmAddr* gmAddr, const AdaLayerNormTilingData* tilingData);
+    __aicore__ inline void InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData* tilingData);
+    __aicore__ inline void InitQuant(const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void InitTensor();
     __aicore__ inline void InitEventId();
     __aicore__ inline void ReleaseEventId();
-    __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData *tilingData);
+    __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData* tilingData);
     __aicore__ inline void SliceProcess();
     __aicore__ inline void FastProcess();
 
-    __aicore__ inline void ComputeMean(int64_t dataCount, float &meanValue);
-    __aicore__ inline void ComputeVar(int64_t dataCount, float meanValue, float &varValue);
+    __aicore__ inline void ComputeMean(int64_t dataCount, float& meanValue);
+    __aicore__ inline void ComputeVar(int64_t dataCount, float meanValue, float& varValue);
     __aicore__ inline void BaseSliceCompute(int64_t rowIdx, int64_t batchIdx, float meanValue, float rstdValue);
     __aicore__ inline void QuantSliceCompute(int64_t rowIdx, int64_t batchIdx, float meanValue, float rstdValue);
     __aicore__ inline void ComputeSliceNorm(float meanValue, float rstdValue, int64_t dataCount);
@@ -119,7 +119,8 @@ private:
 };
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::Init(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::Init(const GmAddr* gmAddr,
+                                                                            const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(tmpBuf, TENSOR_NUM * DATA_COUNT * sizeof(float));
@@ -134,7 +135,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::Init(cons
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::InitV2(const GmAddr* gmAddr,
+                                                                              const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(tmpBuf, TENSOR_NUM * DATA_COUNT * sizeof(float));
@@ -152,8 +154,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::InitV2(co
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::InitQuant(const GmAddr* gmAddr, GM_ADDR workspace,
-    const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::InitQuant(
+    const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(tmpBuf, TENSOR_NUM * DATA_COUNT * sizeof(float) + DATA_COUNT * sizeof(int8_t));
@@ -190,7 +192,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::Process()
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ParseTilingData(const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ParseTilingData(
+    const AdaLayerNormTilingData* tilingData)
 {
     int32_t blockNum = HALF_BLOCK_NUM;
     if constexpr (std::is_same_v<X_DTYPE, float>) {
@@ -365,6 +368,6 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ReleaseEv
     pipe.ReleaseEventID<HardEvent::MTE3_S>(eventIdMte3ToS);
     pipe.ReleaseEventID<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
 }
-}  // namespace AdaLayerNormNS
+} // namespace AdaLayerNormNS
 
-#endif  // ADA_LAYER_NORM_BASE_H
+#endif // ADA_LAYER_NORM_BASE_H

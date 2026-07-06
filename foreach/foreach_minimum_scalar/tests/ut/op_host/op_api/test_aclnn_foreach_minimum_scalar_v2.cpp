@@ -25,13 +25,14 @@ using namespace std;
 
 class l2_foreach_minimum_scalar_v2_test : public testing::Test {
 protected:
-  static void SetUpTestCase() { cout << "foreach_minimum_scalar_test SetUp" << endl; }
+    static void SetUpTestCase() { cout << "foreach_minimum_scalar_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "foreach_minimum_scalar_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "foreach_minimum_scalar_test TearDown" << endl; }
 };
 
 // dtype DOUBLE
-TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2foreach_minimum_v2_test_double) {
+TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2foreach_minimum_v2_test_double)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -47,7 +48,8 @@ TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2foreach_minimum_v2_test_dou
 }
 
 // out and self different dtype
-TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_dtype_different) {
+TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_dtype_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -63,7 +65,8 @@ TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_dt
 }
 
 // out and self different shape
-TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_shape_different) {
+TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_shape_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 6}};
@@ -78,7 +81,8 @@ TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_sh
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_foreach_minimum_scalar_v2_test, ascend910B2_foreach_minimum_scalar_v2_test_dtype_fp32) {
+TEST_F(l2_foreach_minimum_scalar_v2_test, ascend910B2_foreach_minimum_scalar_v2_test_dtype_fp32)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -93,7 +97,8 @@ TEST_F(l2_foreach_minimum_scalar_v2_test, ascend910B2_foreach_minimum_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-TEST_F(l2_foreach_minimum_scalar_v2_test, ascend910B2_foreach_minimum_scalar_v2_test_dtype_fp16) {
+TEST_F(l2_foreach_minimum_scalar_v2_test, ascend910B2_foreach_minimum_scalar_v2_test_dtype_fp16)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -125,7 +130,8 @@ TEST_F(l2_foreach_minimum_scalar_v2_test, ascend910B2_foreach_minimum_scalar_v2_
 }*/
 
 // private format
-TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_) {
+TEST_F(l2_foreach_minimum_scalar_v2_test, Ascend910B2_foreach_minimum_v2_test_)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};

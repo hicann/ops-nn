@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -20,20 +20,13 @@
 
 using namespace std;
 
-extern "C" void layer_norm_grad(
-    uint8_t* dy, uint8_t* x, uint8_t* variance, uint8_t* mean, uint8_t* gamma, uint8_t* dx, uint8_t* dgamma, uint8_t* dbeta,
-    uint8_t* workspace, uint8_t* tiling);
+extern "C" void layer_norm_grad(uint8_t* dy, uint8_t* x, uint8_t* variance, uint8_t* mean, uint8_t* gamma, uint8_t* dx,
+                                uint8_t* dgamma, uint8_t* dbeta, uint8_t* workspace, uint8_t* tiling);
 
 class layer_norm_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "layer_norm_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(layer_norm_grad_test, test_case_float32_recompute)
@@ -66,8 +59,7 @@ TEST_F(layer_norm_grad_test, test_case_float32_recompute)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    LayerNormGradTilingDataRecompute* tilingDatafromBin =
-        reinterpret_cast<LayerNormGradTilingDataRecompute*>(tiling);
+    LayerNormGradTilingDataRecompute* tilingDatafromBin = reinterpret_cast<LayerNormGradTilingDataRecompute*>(tiling);
 
     tilingDatafromBin->row = 1;
     tilingDatafromBin->col = 1024;
@@ -118,9 +110,8 @@ TEST_F(layer_norm_grad_test, test_case_float32_recompute)
     uint32_t blockDim = tilingDatafromBin->backwardBlockDim;
 
     ICPU_SET_TILING_KEY(500);
-    ICPU_RUN_KF(
-        layer_norm_grad, blockDim, dy, x, variance, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_grad, blockDim, dy, x, variance, mean, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -165,8 +156,8 @@ TEST_F(layer_norm_grad_test, test_case_float32_big_m)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    LayerNormGradTilingDataGroupedReduceBigM* tilingDatafromBin =
-        reinterpret_cast<LayerNormGradTilingDataGroupedReduceBigM*>(tiling);
+    LayerNormGradTilingDataGroupedReduceBigM*
+        tilingDatafromBin = reinterpret_cast<LayerNormGradTilingDataGroupedReduceBigM*>(tiling);
 
     tilingDatafromBin->row = 10000;
     tilingDatafromBin->col = 256;
@@ -212,9 +203,8 @@ TEST_F(layer_norm_grad_test, test_case_float32_big_m)
     uint32_t blockDim = 64;
 
     ICPU_SET_TILING_KEY(600);
-    ICPU_RUN_KF(
-        layer_norm_grad, blockDim, dy, x, variance, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_grad, blockDim, dy, x, variance, mean, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -259,8 +249,8 @@ TEST_F(layer_norm_grad_test, test_case_float32_big_n)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    LayerNormGradTilingDataGroupedReduceBigN* tilingDatafromBin =
-        reinterpret_cast<LayerNormGradTilingDataGroupedReduceBigN*>(tiling);
+    LayerNormGradTilingDataGroupedReduceBigN*
+        tilingDatafromBin = reinterpret_cast<LayerNormGradTilingDataGroupedReduceBigN*>(tiling);
 
     tilingDatafromBin->row = 256;
     tilingDatafromBin->col = 10000;
@@ -278,7 +268,7 @@ TEST_F(layer_norm_grad_test, test_case_float32_big_n)
     tilingDatafromBin->gammaBetaResultCacheID = 1;
     tilingDatafromBin->gammaBetaNfactor = 160;
     tilingDatafromBin->gammaBetaMfactor = 64;
-    
+
     tilingDatafromBin->backwardBlockDim = 64;
     tilingDatafromBin->backwardNPerBlock = 156;
     tilingDatafromBin->backwardNRem = 16;
@@ -312,9 +302,8 @@ TEST_F(layer_norm_grad_test, test_case_float32_big_n)
     uint32_t blockDim = tilingDatafromBin->backwardBlockDim;
 
     ICPU_SET_TILING_KEY(700);
-    ICPU_RUN_KF(
-        layer_norm_grad, blockDim, dy, x, variance, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_grad, blockDim, dy, x, variance, mean, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);

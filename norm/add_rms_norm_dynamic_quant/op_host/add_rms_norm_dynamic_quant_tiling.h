@@ -98,12 +98,7 @@ struct AddRmsNormDynamicQuantCompileInfo {
     uint64_t maxUbSize = 0;
 };
 
-enum class UB_TILING_POLICY : std::int32_t
-{
-    NORMAL,
-    SINGLE_ROW,
-    SLICE_D
-};
+enum class UB_TILING_POLICY : std::int32_t { NORMAL, SINGLE_ROW, SLICE_D };
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -117,8 +112,7 @@ inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
 
 class AddRmsNormDynamicQuantTilingHelper {
 public:
-    explicit AddRmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context)
-    {}
+    explicit AddRmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context) {}
 
     ~AddRmsNormDynamicQuantTilingHelper() = default;
     bool DoTiling();
@@ -214,15 +208,14 @@ public:
     explicit AddRmsNormDynamicQuantRegbaseTiling(gert::TilingContext* tilingContext)
         : Ops::NN::Optiling::TilingBaseClass(tilingContext)
     {}
-    ~AddRmsNormDynamicQuantRegbaseTiling() override
-    {}
+    ~AddRmsNormDynamicQuantRegbaseTiling() override {}
 
     const string nodeName = "AddRmsNormDynamicQuantRegbase";
     AddRmsNormDynamicQuantRegbaseTilingData tilingData;
     AddRmsNormDynamicQuantRegbaseTilingParams tilingParams;
 
-    ge::graphStatus CheckDtypeVaild(
-        ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
+    ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList,
+                                    string srcName);
     bool CheckShapeNull();
     bool CheckOptionalInput();
     bool CheckInputShapeDim();
@@ -232,9 +225,8 @@ public:
     ge::graphStatus SetInputParams();
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
     int64_t CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower);
-    uint64_t CalUsedSize(
-        uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign, 
-        int64_t firstVcaddLength);
+    uint64_t CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign,
+                         int64_t firstVcaddLength);
     ge::graphStatus SetTilingParams();
     void SetTilingData();
     void PrintTilingData();
@@ -264,13 +256,12 @@ public:
     explicit AddRmsNormDynamicQuantEmptyTiling(gert::TilingContext* tilingContext)
         : Ops::NN::Optiling::TilingBaseClass(tilingContext)
     {}
-    ~AddRmsNormDynamicQuantEmptyTiling() override
-    {}
+    ~AddRmsNormDynamicQuantEmptyTiling() override {}
 
     const string nodeName_ = "AddRmsNormDynamicQuantEmpty";
 
-    ge::graphStatus CheckDtypeVaild(
-        ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
+    ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList,
+                                    string srcName);
     bool CheckShapeNull();
     bool CheckOptionalInput();
     bool CheckInputShapeDim();

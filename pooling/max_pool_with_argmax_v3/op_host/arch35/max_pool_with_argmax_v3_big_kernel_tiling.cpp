@@ -39,7 +39,7 @@ bool MaxPoolWithArgmaxV3BigKernelTiling::IsCapable()
     int64_t dtypeSize = ge::GetSizeByDataType(dtype);
     if (dtypeSize <= 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dtypeSize", std::to_string(dtypeSize).c_str(),
-            "dtypeSize derived from the dtype of x must be greater than 0");
+                                              "dtypeSize derived from the dtype of x must be greater than 0");
         return false;
     }
     maxCount_ = maxCount_ / dtypeSize;

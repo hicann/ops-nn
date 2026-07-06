@@ -27,7 +27,7 @@ namespace strategy {
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> TransposeBatchMatMulPrioritiesMap = {
-    { NpuArch::DAV_3510, { strategy::BASE} },
+    {NpuArch::DAV_3510, {strategy::BASE}},
 };
 
 inline std::vector<int32_t> GetTransposeBatchMatMulPriorities(NpuArch NpuArch)
@@ -38,7 +38,6 @@ inline std::vector<int32_t> GetTransposeBatchMatMulPriorities(NpuArch NpuArch)
     }
     return priorities;
 };
-}
-}
-}
-
+} // namespace strategy
+} // namespace transpose_batch_mat_mul_advanced
+} // namespace optiling

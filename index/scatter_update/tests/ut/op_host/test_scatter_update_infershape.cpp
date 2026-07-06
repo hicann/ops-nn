@@ -18,15 +18,9 @@
 
 class ScatterUpdateInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ScatterUpdateInferShapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ScatterUpdateInferShapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ScatterUpdateInferShapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ScatterUpdateInferShapeTest TearDown" << std::endl; }
 };
 
 TEST_F(ScatterUpdateInferShapeTest, infer_shape_2d_float)

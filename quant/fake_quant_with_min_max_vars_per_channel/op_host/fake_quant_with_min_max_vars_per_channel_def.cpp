@@ -71,4 +71,4 @@ public:
     }
 };
 OP_ADD(FakeQuantWithMinMaxVarsPerChannel);
-}  // namespace ops
+} // namespace ops

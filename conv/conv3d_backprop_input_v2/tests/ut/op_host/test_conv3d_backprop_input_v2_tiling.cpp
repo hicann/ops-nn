@@ -34,7 +34,7 @@
 using namespace std;
 using namespace ge;
 
-namespace{
+namespace {
 extern std::string GetTestSuiteName();
 extern std::string GetTestCaseName();
 
@@ -114,20 +114,20 @@ static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     Ops::NN::Conv::Conv3DBackpropV2CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(param.compile_info.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(param.compile_info.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
     GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
-    map<string, string> soc_version_infos = {
-        {"SoC_version", param.soc_version}, {"Short_SoC_version", param.short_soc_version}};
+    map<string, string> soc_version_infos = {{"SoC_version", param.soc_version},
+                                             {"Short_SoC_version", param.short_soc_version}};
 
     std::string op_type("Conv3DBackpropInputV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -137,10 +137,10 @@ static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     if (param.parse_result) {
         ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::TilingParseContext>()), ge::GRAPH_SUCCESS);
     } else {
@@ -1017,14 +1017,14 @@ static Conv3DBpInputV2TilingTestParam general_24_core_num_cases_params[] = {
      {1, 1, 1, 255, 255},
      1,
      "NCDHW",
-0,
-      "",
-      0,
-      true,
-      false,
-      24,
-      512,
-      " "},
+     0,
+     "",
+     0,
+     true,
+     false,
+     24,
+     512,
+     " "},
     {"Conv3d_bp_input_strides_batch_invalid",
      "Ascend910B2",
      "Ascend910B",
@@ -1090,8 +1090,8 @@ static Conv3DBpInputV2TilingTestParam general_24_core_num_cases_params[] = {
      0,
      ""}};
 
-static void ThreadFunc(
-    const Conv3DBpInputV2TilingTestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
+static void ThreadFunc(const Conv3DBpInputV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,
+                       size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
@@ -1110,24 +1110,19 @@ static void TestMultiThread(const Conv3DBpInputV2TilingTestParam* params, size_t
     }
 }
 
-TEST_P(Conv3DBackpropInputV2TilingRunTime2, general_cases)
-{
-    TestOneParamCase(GetParam());
-}
+TEST_P(Conv3DBackpropInputV2TilingRunTime2, general_cases) { TestOneParamCase(GetParam()); }
 
 TEST_F(Conv3DBackpropInputV2TilingRunTime2, general_cases_params_multi_thread)
 {
-    TestMultiThread(
-        general_20_core_num_cases_params,
-        sizeof(general_20_core_num_cases_params) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
-    TestMultiThread(
-        general_24_core_num_cases_params,
-        sizeof(general_24_core_num_cases_params) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
+    TestMultiThread(general_20_core_num_cases_params,
+                    sizeof(general_20_core_num_cases_params) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
+    TestMultiThread(general_24_core_num_cases_params,
+                    sizeof(general_24_core_num_cases_params) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    MilanBinary, Conv3DBackpropInputV2TilingRunTime2, testing::ValuesIn(general_20_core_num_cases_params));
-INSTANTIATE_TEST_CASE_P(
-    MilanBinary2, Conv3DBackpropInputV2TilingRunTime2, testing::ValuesIn(general_24_core_num_cases_params));
+INSTANTIATE_TEST_CASE_P(MilanBinary, Conv3DBackpropInputV2TilingRunTime2,
+                        testing::ValuesIn(general_20_core_num_cases_params));
+INSTANTIATE_TEST_CASE_P(MilanBinary2, Conv3DBackpropInputV2TilingRunTime2,
+                        testing::ValuesIn(general_24_core_num_cases_params));
 
 } // namespace

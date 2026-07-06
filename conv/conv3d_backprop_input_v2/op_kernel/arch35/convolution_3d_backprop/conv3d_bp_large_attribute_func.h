@@ -21,8 +21,8 @@
 namespace Convolution3DBackpropFunc {
 
 template <class Intf>
-static __aicore__ inline bool ComputeForWkLoop(Intf *self, uint32_t kwDilation,
-    uint32_t woExpand, int32_t woStartIdx, int64_t curWkIdx)
+static __aicore__ inline bool ComputeForWkLoop(Intf* self, uint32_t kwDilation, uint32_t woExpand, int32_t woStartIdx,
+                                               int64_t curWkIdx)
 {
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK) {
         return true;
@@ -30,41 +30,47 @@ static __aicore__ inline bool ComputeForWkLoop(Intf *self, uint32_t kwDilation,
 
     self->ctx.load3d_.mStartPt = 0; // 切hwk时，会精确到加载wo的第一个点，load3d无需跳过
     self->ctx.curWkIdx_ = curWkIdx;
-    self->ctx.curWoLeftIdx_ = kwDilation - curWkIdx * self->ctx.tiling_->dilationW -
-        1 - self->ctx.tiling_->backpropPadLeft + woStartIdx; // 计算当前wk 对应wo开始位置
+    self->ctx.curWoLeftIdx_ = kwDilation - curWkIdx * self->ctx.tiling_->dilationW - 1 -
+                              self->ctx.tiling_->backpropPadLeft + woStartIdx; // 计算当前wk 对应wo开始位置
     uint32_t skipLeftWoSize = self->ctx.curWoLeftIdx_ > 0 ? self->ctx.curWoLeftIdx_ : 0;
-    int32_t woRightIdx = self->ctx.curWoLeftIdx_ + self->ctx.baseUseM_;  // 计算当前wk 对应wo结束位置
+    int32_t woRightIdx = self->ctx.curWoLeftIdx_ + self->ctx.baseUseM_; // 计算当前wk 对应wo结束位置
     if (self->ctx.curWoLeftIdx_ >= static_cast<int32_t>(woExpand) || woRightIdx <= 0) {
         return false;
     }
-    self->ctx.curWoRightIdx_ = woRightIdx < woExpand ? woRightIdx - woExpand :
-        self->ctx.baseUseM_ - woExpand + skipLeftWoSize; // 计算准确的反向padright大小
+    self->ctx.curWoRightIdx_ = woRightIdx < woExpand ?
+                                   woRightIdx - woExpand :
+                                   self->ctx.baseUseM_ - woExpand + skipLeftWoSize; // 计算准确的反向padright大小
     uint32_t skipRightWoSize = self->ctx.curWoRightIdx_ < 0 ? abs(self->ctx.curWoRightIdx_) : 0;
-    self->ctx.realWoSize_ = self->ctx.tiling_->wo -  DivCeil(skipLeftWoSize, self->ctx.tiling_->strideW) -
-        DivCeil(skipRightWoSize, self->ctx.tiling_->strideW);
-    if (self->ctx.realWoSize_ <= 0){
+    self->ctx.realWoSize_ = self->ctx.tiling_->wo - DivCeil(skipLeftWoSize, self->ctx.tiling_->strideW) -
+                            DivCeil(skipRightWoSize, self->ctx.tiling_->strideW);
+    if (self->ctx.realWoSize_ <= 0) {
         return false;
     }
     return true;
 }
 
 template <class Intf, bool hasBias>
-static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
-    LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
+static __aicore__ inline void ComputeForTilingHkWk(Intf* self, LocalTensor<typename Intf::SrcAT>& l0a,
+                                                   LocalTensor<typename Intf::SrcBT>& l0b,
+                                                   LocalTensor<typename Intf::L0cT>& l0c, uint8_t& l0PingPongFlag)
 {
     bool isFirstDHWk = true;
     int32_t curHoIdx = self->ctx.curHoIdx_;
     uint32_t khDilation = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
     uint32_t kwDilation = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
     uint32_t woExpand = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
-    int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) % self->ctx.tiling_->wi; // M循环的起始Wi位置
+    int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) %
+                         self->ctx.tiling_->wi; // M循环的起始Wi位置
     uint32_t curMStartPt = self->ctx.load3d_.mStartPt;
-    for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_; curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
+    for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_;
+         curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             self->ctx.groupIterIdx_ = 0;
         }
         int64_t curDoutIdx = 0;
-        if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {continue;}
+        if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {
+            continue;
+        }
 
         self->ctx.curHoIdx_ += khDilation - 1; //计算，每一行hk对应的curHoIdx
         for (uint64_t curHkIdx = 0; curHkIdx < self->ctx.tiling_->hk; curHkIdx++) { // dilation时跳过空洞部分
@@ -74,8 +80,11 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
                 uint32_t realStartHo = self->ctx.curHoIdx_ < 0 ? 0 : self->ctx.curHoIdx_;
                 uint32_t realEndHoIdx = endHoIdx > self->ctx.hoExpand_ ? self->ctx.hoExpand_ : endHoIdx;
                 self->ctx.curHoSize_ = realEndHoIdx - realStartHo;
-                if (realStartHo % self->ctx.tiling_->strideH != 0 && (realStartHo % self->ctx.tiling_->strideH + self->ctx.curHoSize_ - 1 < self->ctx.tiling_->strideH)) {
-                    self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; // 前放大补零部分不计算，需更新curHoIdx，且需要跳过空洞部分
+                if (realStartHo % self->ctx.tiling_->strideH != 0 &&
+                    (realStartHo % self->ctx.tiling_->strideH + self->ctx.curHoSize_ - 1 <
+                     self->ctx.tiling_->strideH)) {
+                    self->ctx.curHoIdx_ -= self->ctx.tiling_
+                                               ->dilationH; // 前放大补零部分不计算，需更新curHoIdx，且需要跳过空洞部分
                     continue;
                 }
             } else {
@@ -92,7 +101,8 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
                 if (!ComputeForWkLoop<Intf>(self, kwDilation, woExpand, woStartIdx, curWkIdx)) {
                     continue;
                 }
-                ComputeForKIter<Intf, hasBias, false>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDHWk, l0PingPongFlag);
+                ComputeForKIter<Intf, hasBias, false>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDHWk,
+                                                      l0PingPongFlag);
                 isFirstDHWk = false;
             }
             self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; //计算一行Hk后需更新curHoIdx，且需要跳过空洞部分
@@ -105,7 +115,7 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateWkComputeStatus(Intf *self)
+static __aicore__ inline void UpdateWkComputeStatus(Intf* self)
 {
     if (!self->ctx.needComputeFlag_) {
         // 其他方向要跳过计算，K可以不判断了
@@ -115,12 +125,12 @@ static __aicore__ inline void UpdateWkComputeStatus(Intf *self)
     uint32_t kwDilation = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
     uint32_t woExpand = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
     int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) %
-        self->ctx.tiling_->wi; // M循环的起始Wi位置
+                         self->ctx.tiling_->wi; // M循环的起始Wi位置
     bool isKNeedCompute = false;
-    for (int64_t curWkIdx = 0; curWkIdx < self->ctx.tiling_->wk; curWkIdx++) {      
-        int32_t curWoLeftIdx = kwDilation - curWkIdx * self->ctx.tiling_->dilationW -
-            1 - self->ctx.tiling_->backpropPadLeft + woStartIdx; // 计算当前wk 对应wo开始位置
-        int32_t woRightIdx = curWoLeftIdx + self->ctx.baseUseM_;  // 计算当前wk 对应wo结束位置
+    for (int64_t curWkIdx = 0; curWkIdx < self->ctx.tiling_->wk; curWkIdx++) {
+        int32_t curWoLeftIdx = kwDilation - curWkIdx * self->ctx.tiling_->dilationW - 1 -
+                               self->ctx.tiling_->backpropPadLeft + woStartIdx; // 计算当前wk 对应wo开始位置
+        int32_t woRightIdx = curWoLeftIdx + self->ctx.baseUseM_;                // 计算当前wk 对应wo结束位置
         if (curWoLeftIdx >= static_cast<int32_t>(woExpand) || woRightIdx <= 0) {
             continue;
         }
@@ -136,7 +146,7 @@ static __aicore__ inline void UpdateWkComputeStatus(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateHkComputeStatus(Intf *self)
+static __aicore__ inline void UpdateHkComputeStatus(Intf* self)
 {
     if (!self->ctx.needComputeFlag_) {
         // 其他方向要跳过计算，K可以不判断了
@@ -172,5 +182,5 @@ static __aicore__ inline void UpdateHkComputeStatus(Intf *self)
         UpdateWkComputeStatus<Intf>(self);
     }
 }
-}  // namespace Convolution3DBackpropFunc
+} // namespace Convolution3DBackpropFunc
 #endif

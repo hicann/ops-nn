@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_mul_list_proto.h"
 
-class ForeachMulListTest : public testing::Test
-{
+class ForeachMulListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMulList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMulList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMulList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMulList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMulListTest, infer_shape_known_success)

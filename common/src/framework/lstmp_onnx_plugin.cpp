@@ -14,23 +14,15 @@
 using namespace ge;
 using json = nlohmann::json;
 namespace domi {
-static Status ParseOnnxParamsLSTMP(const ge::Operator& op_src, ge::Operator& op_dest)
-{
-    return SUCCESS;
-}
+static Status ParseOnnxParamsLSTMP(const ge::Operator& op_src, ge::Operator& op_dest) { return SUCCESS; }
 
 REGISTER_CUSTOM_OP("LSTMP")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::LSTMP"), 
-                   ge::AscendString("ai.onnx::9::LSTMP"),
-                   ge::AscendString("ai.onnx::10::LSTMP"), 
-                   ge::AscendString("ai.onnx::11::LSTMP"),
-                   ge::AscendString("ai.onnx::12::LSTMP"), 
-                   ge::AscendString("ai.onnx::13::LSTMP"),
-                   ge::AscendString("ai.onnx::14::LSTMP"), 
-                   ge::AscendString("ai.onnx::15::LSTMP"),
-                   ge::AscendString("ai.onnx::16::LSTMP"), 
-                   ge::AscendString("ai.onnx::18::LSTMP")})
+    .OriginOpType({ge::AscendString("ai.onnx::8::LSTMP"), ge::AscendString("ai.onnx::9::LSTMP"),
+                   ge::AscendString("ai.onnx::10::LSTMP"), ge::AscendString("ai.onnx::11::LSTMP"),
+                   ge::AscendString("ai.onnx::12::LSTMP"), ge::AscendString("ai.onnx::13::LSTMP"),
+                   ge::AscendString("ai.onnx::14::LSTMP"), ge::AscendString("ai.onnx::15::LSTMP"),
+                   ge::AscendString("ai.onnx::16::LSTMP"), ge::AscendString("ai.onnx::18::LSTMP")})
     .ParseParamsByOperatorFn(ParseOnnxParamsLSTMP)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

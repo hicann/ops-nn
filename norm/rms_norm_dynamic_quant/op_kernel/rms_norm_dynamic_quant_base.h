@@ -21,8 +21,7 @@
 template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelRmsNormDynamicQuantBase {
 public:
-    __aicore__ inline KernelRmsNormDynamicQuantBase()
-    {}
+    __aicore__ inline KernelRmsNormDynamicQuantBase() {}
 
     __aicore__ inline void InitBaseParams(const RmsNormDynamicQuantTilingData* tiling)
     {
@@ -64,8 +63,7 @@ public:
         this->outQuantFlag = tiling->outQuant1Flag;
     }
 
-    __aicore__ inline void InitInGlobalTensors(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta)
+    __aicore__ inline void InitInGlobalTensors(GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta)
     {
         xGm.SetGlobalBuffer((__gm__ T*)(x) + blockIdx_ * this->gmOffset_);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma);
@@ -85,8 +83,7 @@ public:
         outScaleGm.SetGlobalBuffer((__gm__ float*)outScale + blockIdx_ * this->firstDimPerCore);
     }
 
-    __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace)
-    {}
+    __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace) {}
 
 protected:
     GlobalTensor<T> xGm;

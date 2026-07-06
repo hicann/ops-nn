@@ -32,7 +32,8 @@ namespace ge {
 * @li grad: A Tensor of the same type as "var", for the gradient . \n
 
 *@par Attributes:
-*use_locking: An optional bool. Defaults to "False". If "True", updating of the "var" and "accum" *tensors will be protected by a lock; otherwise the behavior is undefined, but may exhibit less *contention . \n
+*use_locking: An optional bool. Defaults to "False". If "True", updating of the "var" and "accum" *tensors will be
+protected by a lock; otherwise the behavior is undefined, but may exhibit less *contention . \n
 
 *@par Outputs:
 *var: A mutable tensor. Must have the same type as input "var" . \n
@@ -50,5 +51,5 @@ REG_OP(ApplyProximalAdagrad)
     .OUTPUT(var, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyProximalAdagrad)
-}
+} // namespace ge
 #endif

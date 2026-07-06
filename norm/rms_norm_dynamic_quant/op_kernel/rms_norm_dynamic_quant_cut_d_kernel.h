@@ -16,14 +16,10 @@
 template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelRmsNormDynamicQuantSliceD : public KernelRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelRmsNormDynamicQuantSliceD(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelRmsNormDynamicQuantSliceD(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
-        GM_ADDR workspace, const RmsNormDynamicQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const RmsNormDynamicQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x, gamma, smooth, beta);
@@ -119,8 +115,8 @@ private:
         scalesQue.FreeTensor(scalesOut);
     }
 
-    __aicore__ inline void CopyInSmoothNorm(
-        LocalTensor<float>& dstLocal, int32_t rowGmOffset, int32_t elementCount, float localMaxVal)
+    __aicore__ inline void CopyInSmoothNorm(LocalTensor<float>& dstLocal, int32_t rowGmOffset, int32_t elementCount,
+                                            float localMaxVal)
     {
         LocalTensor<T> smoothLocal = inRowsQue.template AllocTensor<T>();
         if (this->smoothExist) {
@@ -135,8 +131,8 @@ private:
         inRowsQue.FreeTensor(smoothLocal);
     }
 
-    __aicore__ inline void ComputeRmsNormAndSmoothMax(
-        int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount, float rstdLocalTemp)
+    __aicore__ inline void ComputeRmsNormAndSmoothMax(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount,
+                                                      float rstdLocalTemp)
     {
         LocalTensor<T> xLocalIn = inRowsQue.template AllocTensor<T>();
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
@@ -201,8 +197,8 @@ private:
         inRowsQue.EnQue(x32Local);
     }
 
-    __aicore__ inline float FindSliceMax(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, int32_t elementCount)
+    __aicore__ inline float FindSliceMax(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                         int32_t elementCount)
     {
         Abs(tmpTensor, srcTensor, elementCount);
         PipeBarrier<PIPE_V>();

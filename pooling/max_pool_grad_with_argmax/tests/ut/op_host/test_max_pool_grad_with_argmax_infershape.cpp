@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 #include <iostream>
 #include "exe_graph/runtime/storage_format.h"
@@ -36,15 +36,9 @@ std::string Shape2String(const T& shape)
 
 class MaxPoolGradWithArgmaxInfer : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolGradWithArgmaxInferTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolGradWithArgmaxInferTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "max_pool_grad_with_argmax__infer_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "max_pool_grad_with_argmax__infer_test TearDown" << std::endl; }
 };
 
 TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_00)
@@ -62,12 +56,11 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_00)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2 ,1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -96,10 +89,10 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_inferdtype_test_01)
                                   .OutputDataTypes({&output_ref})
                                   .NodeAttrs(
                                       {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                      {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2 ,1})},
-                                      {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                      {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                                       {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
@@ -123,12 +116,11 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_02)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2 ,1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -153,12 +145,11 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_03)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2 ,1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -187,10 +178,10 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_inferdtype_test_04)
                                   .OutputDataTypes({&output_ref})
                                   .NodeAttrs(
                                       {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                      {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2 ,1})},
-                                      {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                                      {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                       {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
@@ -198,6 +189,5 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_inferdtype_test_04)
         EXPECT_EQ(context->GetOutputDataType(0), output_ref);
     }
 }
-
 
 } // namespace

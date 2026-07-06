@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file scatter.h
  * \brief
@@ -21,6 +21,6 @@
 namespace l0op {
 const aclTensor* Scatter(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
                          aclOpExecutor* executor);
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_SCATTER_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SCATTER_OP_H_

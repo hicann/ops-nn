@@ -19,7 +19,8 @@
 
 namespace l0op {
 const aclTensor* MishGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor);
-const aclTensor* MishGradWithTanhX(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* tanhx, aclOpExecutor* executor);
-}
+const aclTensor* MishGradWithTanhX(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* tanhx,
+                                   aclOpExecutor* executor);
+} // namespace l0op
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_MISH_GRAD_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_MISH_GRAD_OP_H_

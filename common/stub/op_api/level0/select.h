@@ -13,10 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SelectV2(const aclTensor *condition,
-                          const aclTensor *x1,
-                          const aclTensor *x2,
-                          aclOpExecutor *executor);
+const aclTensor* SelectV2(const aclTensor* condition, const aclTensor* x1, const aclTensor* x2,
+                          aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SELECT_OP_H_

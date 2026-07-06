@@ -51,16 +51,12 @@ static Status ParseParamsAdaptiveMaxPool2d(const Message* op_src, ge::Operator& 
 // register AdaptiveMaxPool2d op info to GE
 REGISTER_CUSTOM_OP("AdaptiveMaxPool2d")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("aten::adaptive_max_pool2d"), 
-                   ge::AscendString("ai.onnx::8::AdaptiveMaxPool2d"),
-                   ge::AscendString("ai.onnx::9::AdaptiveMaxPool2d"), 
-                   ge::AscendString("ai.onnx::10::AdaptiveMaxPool2d"),
-                   ge::AscendString("ai.onnx::11::AdaptiveMaxPool2d"), 
-                   ge::AscendString("ai.onnx::12::AdaptiveMaxPool2d"),
-                   ge::AscendString("ai.onnx::13::AdaptiveMaxPool2d"), 
-                   ge::AscendString("ai.onnx::14::AdaptiveMaxPool2d"),
-                   ge::AscendString("ai.onnx::15::AdaptiveMaxPool2d"), 
-                   ge::AscendString("ai.onnx::16::AdaptiveMaxPool2d")})
+    .OriginOpType(
+        {ge::AscendString("aten::adaptive_max_pool2d"), ge::AscendString("ai.onnx::8::AdaptiveMaxPool2d"),
+         ge::AscendString("ai.onnx::9::AdaptiveMaxPool2d"), ge::AscendString("ai.onnx::10::AdaptiveMaxPool2d"),
+         ge::AscendString("ai.onnx::11::AdaptiveMaxPool2d"), ge::AscendString("ai.onnx::12::AdaptiveMaxPool2d"),
+         ge::AscendString("ai.onnx::13::AdaptiveMaxPool2d"), ge::AscendString("ai.onnx::14::AdaptiveMaxPool2d"),
+         ge::AscendString("ai.onnx::15::AdaptiveMaxPool2d"), ge::AscendString("ai.onnx::16::AdaptiveMaxPool2d")})
     .ParseParamsFn(ParseParamsAdaptiveMaxPool2d)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

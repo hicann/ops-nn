@@ -19,12 +19,13 @@ extern "C" {
 /**
  * @brief aclnnGroupedDynamicMxQuantV2的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
- * 
+ *
  * @param [in] x: 待进行GroupedDynamicMxQuant计算的入参。npu device侧的aclTensor，
  * 数据类型支持float16, bfloat16, 数据格式支持ND，支持非连续的Tensor。
  * @param [in] groupIndex: npu device侧的aclTensor，数据类型支持int32
  * @param [in] roundMode:  host侧的aclScalar，数据类型string，仅支持 "rint"
- * @param [in] dstType:  host侧的aclScalar, 数据类型int, 输入范围为{35, 36}，分别对应输出y的数据类型为{35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN}
+ * @param [in] dstType:  host侧的aclScalar, 数据类型int, 输入范围为{35, 36}，分别对应输出y的数据类型为{35: FLOAT8_E5M2,
+ * 36: FLOAT8_E4M3FN}
  * @param [in] blocksize:  host侧的aclScalar, 数据类型int，仅支持 "32"
  * @param [in] scaleAlg:  host侧的aclScalar, 数据类型int，仅支持 "0"和 "1"
  * @param [in] dstTypeMax:  host侧的aclScalar, 数据类型double，仅支持 "0.0"和 "6.0-12.0"
@@ -37,8 +38,9 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 __attribute__((visibility("default"))) aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, int64_t blocksize, int64_t scaleAlg,
-    double dstTypeMax, const aclTensor* y, const aclTensor* mxscale, uint64_t* workspaceSize, aclOpExecutor** executor);
+    const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, int64_t blocksize,
+    int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale, uint64_t* workspaceSize,
+    aclOpExecutor** executor);
 
 /**
  * @brief aclnnGroupedDynamicMxQuantV2的第二段接口，用于执行计算。
@@ -48,11 +50,12 @@ __attribute__((visibility("default"))) aclnnStatus aclnnGroupedDynamicMxQuantV2G
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-__attribute__((visibility("default"))) aclnnStatus aclnnGroupedDynamicMxQuantV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+__attribute__((visibility("default"))) aclnnStatus aclnnGroupedDynamicMxQuantV2(void* workspace, uint64_t workspaceSize,
+                                                                                aclOpExecutor* executor,
+                                                                                aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // ACLNN_GROUPED_DYNAMIC_MX_QUANT_V2_H_
+#endif // ACLNN_GROUPED_DYNAMIC_MX_QUANT_V2_H_

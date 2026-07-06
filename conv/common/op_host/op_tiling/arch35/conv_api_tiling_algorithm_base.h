@@ -18,13 +18,7 @@
 #include "conv_api_tiling_base.h"
 
 namespace conv_tiling {
-enum class L1TilingMode {
-    FULL_LOAD_BL1 = 0,
-    FULL_LOAD_AL1,
-    ALL_FULL_LOAD,
-    NONE_FULL_LOAD,
-    INVALID
-};
+enum class L1TilingMode { FULL_LOAD_BL1 = 0, FULL_LOAD_AL1, ALL_FULL_LOAD, NONE_FULL_LOAD, INVALID };
 
 struct PBufferParams {
     uint8_t pbAL1 = SINGLE_BUFFER_NUM;
@@ -37,7 +31,7 @@ struct PBufferParams {
 
 class ConvTilingAlgorithmBase {
 public:
-    explicit ConvTilingAlgorithmBase(ConvTilingBase *tilingIns);
+    explicit ConvTilingAlgorithmBase(ConvTilingBase* tilingIns);
     virtual ~ConvTilingAlgorithmBase() = default;
     virtual int64_t Process() = 0;
 

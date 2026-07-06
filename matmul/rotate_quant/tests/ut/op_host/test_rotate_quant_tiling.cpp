@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <iostream>
 #include <vector>
 #include <string>
@@ -49,15 +49,9 @@ struct RotateQuantData {
 
 class TilingRotateQuant : public ::testing::TestWithParam<RotateQuantData> {
 protected:
-    void SetUp() override
-    {
-        std::cout << "TilingRotateQuant SetUp" << std::endl;
-    }
+    void SetUp() override { std::cout << "TilingRotateQuant SetUp" << std::endl; }
 
-    void TearDown() override
-    {
-        std::cout << "TilingRotateQuant TearDown" << std::endl;
-    }
+    void TearDown() override { std::cout << "TilingRotateQuant TearDown" << std::endl; }
 };
 
 TEST_P(TilingRotateQuant, rotate_quant_tiling)
@@ -89,19 +83,19 @@ TEST_P(TilingRotateQuant, rotate_quant_tiling)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -111,22 +105,21 @@ TEST_P(TilingRotateQuant, rotate_quant_tiling)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(8192);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .SetOpType("RotateQuant")
-            .NodeIoNum(2, 2)
-            .IrInstanceNum({1, 1})
-            .InputShapes({&test_params.x_shape, &test_params.rot_shape})
-            .OutputShapes({&test_params.y_shape, &test_params.scale_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, test_params.xDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, test_params.xDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, test_params.yDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("RotateQuant")
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&test_params.x_shape, &test_params.rot_shape})
+                      .OutputShapes({&test_params.y_shape, &test_params.scale_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, test_params.xDataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, test_params.xDataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, test_params.yDataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -147,122 +140,103 @@ TEST_P(TilingRotateQuant, rotate_quant_tiling)
 
 const auto RotateQuantTestCases = ::testing::Values(
     // 0: BF16 + INT8, small shape
-    RotateQuantData{
-        {{4, 256}, {4, 256}},
-        {{64, 64}, {64, 64}},
-        {{4, 256}, {4, 256}},
-        {{4}, {4}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_4_64",
-        ge::GRAPH_SUCCESS,
-        0,  // BF16 tiling key
-        true
-    },
+    RotateQuantData{{{4, 256}, {4, 256}},
+                    {{64, 64}, {64, 64}},
+                    {{4, 256}, {4, 256}},
+                    {{4}, {4}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_4_64",
+                    ge::GRAPH_SUCCESS,
+                    0, // BF16 tiling key
+                    true},
     // 1: FP16 + INT8
-    RotateQuantData{
-        {{4, 256}, {4, 256}},
-        {{64, 64}, {64, 64}},
-        {{4, 256}, {4, 256}},
-        {{4}, {4}},
-        ge::DT_FLOAT16,
-        ge::DT_INT8,
-        "fp16_int8_4_64",
-        ge::GRAPH_SUCCESS,
-        0,  // FP16 tiling key
-        true
-    },
+    RotateQuantData{{{4, 256}, {4, 256}},
+                    {{64, 64}, {64, 64}},
+                    {{4, 256}, {4, 256}},
+                    {{4}, {4}},
+                    ge::DT_FLOAT16,
+                    ge::DT_INT8,
+                    "fp16_int8_4_64",
+                    ge::GRAPH_SUCCESS,
+                    0, // FP16 tiling key
+                    true},
     // 2: BF16 + INT8, larger shape
-    RotateQuantData{
-        {{16, 256}, {16, 256}},
-        {{256, 256}, {256, 256}},
-        {{16, 256}, {16, 256}},
-        {{16}, {16}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_16_256",
-        ge::GRAPH_SUCCESS,
-        0,
-        true
-    },
+    RotateQuantData{{{16, 256}, {16, 256}},
+                    {{256, 256}, {256, 256}},
+                    {{16, 256}, {16, 256}},
+                    {{16}, {16}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_16_256",
+                    ge::GRAPH_SUCCESS,
+                    0,
+                    true},
     // 3: BF16 + INT8, K=1024
-    RotateQuantData{
-        {{8, 1024}, {8, 1024}},
-        {{1024, 1024}, {1024, 1024}},
-        {{8, 1024}, {8, 1024}},
-        {{8}, {8}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_8_1024",
-        ge::GRAPH_SUCCESS,
-        0,
-        true
-    },
+    RotateQuantData{{{8, 1024}, {8, 1024}},
+                    {{1024, 1024}, {1024, 1024}},
+                    {{8, 1024}, {8, 1024}},
+                    {{8}, {8}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_8_1024",
+                    ge::GRAPH_SUCCESS,
+                    0,
+                    true},
     // 4: BF16 + INT8, K=1024
-    RotateQuantData{
-        {{8, 1024}, {8, 1024}},
-        {{1024, 1024}, {1024, 1024}},
-        {{8, 1024}, {8, 1024}},
-        {{8}, {8}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_8_1024",
-        ge::GRAPH_SUCCESS,
-        0,
-        true
-    },
+    RotateQuantData{{{8, 1024}, {8, 1024}},
+                    {{1024, 1024}, {1024, 1024}},
+                    {{8, 1024}, {8, 1024}},
+                    {{8}, {8}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_8_1024",
+                    ge::GRAPH_SUCCESS,
+                    0,
+                    true},
     // 5: BF16 + INT8, K=16
-    RotateQuantData{
-        {{32, 256}, {32, 256}},
-        {{16, 16}, {16, 16}},
-        {{32, 256}, {32, 256}},
-        {{32}, {32}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_32_16",
-        ge::GRAPH_SUCCESS,
-        0,
-        true
-    },
+    RotateQuantData{{{32, 256}, {32, 256}},
+                    {{16, 16}, {16, 16}},
+                    {{32, 256}, {32, 256}},
+                    {{32}, {32}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_32_16",
+                    ge::GRAPH_SUCCESS,
+                    0,
+                    true},
     // 6: BF16 + INT8, N not divisible by K (should fail)
-    RotateQuantData{
-        {{4, 100}, {4, 100}},
-        {{64, 64}, {64, 64}},
-        {{4, 100}, {4, 100}},
-        {{4}, {4}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_n_not_divisible_by_k",
-        ge::GRAPH_FAILED,
-        0,
-        false
-    },
+    RotateQuantData{{{4, 100}, {4, 100}},
+                    {{64, 64}, {64, 64}},
+                    {{4, 100}, {4, 100}},
+                    {{4}, {4}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_n_not_divisible_by_k",
+                    ge::GRAPH_FAILED,
+                    0,
+                    false},
     // 7: FP16 + INT8, M=1
-    RotateQuantData{
-        {{1, 256}, {1, 256}},
-        {{64, 64}, {64, 64}},
-        {{1, 256}, {1, 256}},
-        {{1}, {1}},
-        ge::DT_FLOAT16,
-        ge::DT_INT8,
-        "fp16_int8_1_64",
-        ge::GRAPH_SUCCESS,
-        0,
-        true
-    },
+    RotateQuantData{{{1, 256}, {1, 256}},
+                    {{64, 64}, {64, 64}},
+                    {{1, 256}, {1, 256}},
+                    {{1}, {1}},
+                    ge::DT_FLOAT16,
+                    ge::DT_INT8,
+                    "fp16_int8_1_64",
+                    ge::GRAPH_SUCCESS,
+                    0,
+                    true},
     // 8: BF16 + INT8, N=K*2 (numBlocks=2)
-    RotateQuantData{
-        {{4, 128}, {4, 128}},
-        {{64, 64}, {64, 64}},
-        {{4, 128}, {4, 128}},
-        {{4}, {4}},
-        ge::DT_BF16,
-        ge::DT_INT8,
-        "bf16_int8_4_128_blocks2",
-        ge::GRAPH_SUCCESS,
-        0,
-        true
-    }
-);
+    RotateQuantData{{{4, 128}, {4, 128}},
+                    {{64, 64}, {64, 64}},
+                    {{4, 128}, {4, 128}},
+                    {{4}, {4}},
+                    ge::DT_BF16,
+                    ge::DT_INT8,
+                    "bf16_int8_4_128_blocks2",
+                    ge::GRAPH_SUCCESS,
+                    0,
+                    true});
 
 INSTANTIATE_TEST_SUITE_P(RotateQuantTilingCases, TilingRotateQuant, RotateQuantTestCases);

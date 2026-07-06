@@ -67,25 +67,26 @@ size_t roundDown(size_t size, size_t divisor)
 
 ge::graphStatus LayerNormQuantTiling::GetTilingSliceInfo()
 {
-    uint32_t singleRowSizePerElem = fp32BufNum * sizeof(uint32_t) + fp16BufNum * sizeof(uint16_t); // 3*4 + 2*2  -->  3*4 + 2*2
-    uint32_t multiRowSizePerElem = fp16BufNumForMulRow * sizeof(uint16_t) + i8BufNumForMulRow * sizeof(uint8_t); // 2*2 +1
+    uint32_t singleRowSizePerElem = fp32BufNum * sizeof(uint32_t) +
+                                    fp16BufNum * sizeof(uint16_t); // 3*4 + 2*2  -->  3*4 + 2*2
+    uint32_t multiRowSizePerElem = fp16BufNumForMulRow * sizeof(uint16_t) +
+                                   i8BufNumForMulRow * sizeof(uint8_t); // 2*2 +1
 
     OP_CHECK_IF(colsAligned > (UINT_MAX / (singleRowSizePerElem + multiRowSizePerElem)),
-                    OP_LOGE(context->GetNodeName(), "RowBufferSize invalid!"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "RowBufferSize invalid!"), return ge::GRAPH_FAILED);
     uint32_t singleRowBufferSize = singleRowSizePerElem * colsAligned;
     uint32_t multiRowBufferSize = multiRowSizePerElem * colsAligned;
 
     if ((maxUbSize - MEAN_AND_VAR_SIZE) < (singleRowBufferSize + multiRowBufferSize)) {
         uint32_t oneRepeatElemCount = 256U / 2;
         uint32_t elementSize = roundDown((maxUbSize - MEAN_AND_VAR_SIZE) / (singleRowSizePerElem + multiRowSizePerElem),
-                                      oneRepeatElemCount);
+                                         oneRepeatElemCount);
         uint32_t tailSize = numCol - (CeilDiv(numCol, elementSize) - 1) * elementSize;
         while (tailSize < BLOCK_SIZE) {
             elementSize = elementSize - BLOCK_SIZE;
             tailSize = numCol - (CeilDiv(numCol, elementSize) - 1) * elementSize;
         }
-        
+
         tilingData.set_sliceNum(CeilDiv(numCol, elementSize));
         tilingData.set_sliceSize(elementSize);
         tilingData.set_tailSliceSize(tailSize);
@@ -120,29 +121,28 @@ ge::graphStatus LayerNormQuantTiling::startTiling()
     auto eps = attrs->GetAttrPointer<float>(EPSILON_ATTR_INDEX);
     this->tilingData.set_epsStr(*eps);
 
-    ge::graphStatus ret =
-        PostLayerNormPtrFunc<LayerNormQuantTilingData>(&this->tilingData, this->layerNormPtrCon, this->context);
-    if (ret == ge::GRAPH_FAILED) { 
+    ge::graphStatus ret = PostLayerNormPtrFunc<LayerNormQuantTilingData>(&this->tilingData, this->layerNormPtrCon,
+                                                                         this->context);
+    if (ret == ge::GRAPH_FAILED) {
         return ret;
     }
 
-    this->maxUbSize = layerNormPtrCon.maxUbSize;  // maxUb
+    this->maxUbSize = layerNormPtrCon.maxUbSize; // maxUb
     this->numCol = layerNormPtrCon.numCol;
-    this->colsAligned = (this->numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;  // 对齐后
+    this->colsAligned = (this->numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE; // 对齐后
     GetTilingBasicInfo();
     GetTilingSliceInfo();
 
-    if (tilingData.get_sliceNum() == 1) { 
-        uint64_t totalMemNeed =
-            static_cast<uint64_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum * colsAligned;
-        OP_CHECK_IF(colsAligned > (UINT_MAX / FP16_OTHER_USED),
-                        OP_LOGE(context->GetNodeName(), "sumData is invalid!"),
-                        return ge::GRAPH_FAILED);
+    if (tilingData.get_sliceNum() == 1) {
+        uint64_t totalMemNeed = static_cast<uint64_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum *
+                                colsAligned;
+        OP_CHECK_IF(colsAligned > (UINT_MAX / FP16_OTHER_USED), OP_LOGE(context->GetNodeName(), "sumData is invalid!"),
+                    return ge::GRAPH_FAILED);
         uint32_t sumData = (layerNormPtrCon.maxUbSize - NUM_TEMP_BUF -
-                           static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) / LAYER_NORM_HALF_SIZE;
+                            static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) /
+                           LAYER_NORM_HALF_SIZE;
         OP_CHECK_IF(CeilDiv(totalMemNeed, static_cast<uint64_t>(sumData)) > UINT_MAX,
-                        OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"), return ge::GRAPH_FAILED);
         ret = CheckSplit(&tilingData, totalMemNeed, static_cast<uint64_t>(sumData), layerNormPtrCon, context);
         if (ret == ge::GRAPH_FAILED) {
             return ret;
@@ -162,7 +162,7 @@ ge::graphStatus LayerNormQuantTiling::startTiling()
     uint64_t tilingKey = LAYER_NORM_TILING_KEY_BASE;
     tilingKey += XType == ge::DataType::DT_BF16 ? LAYER_NORM_TILING_KEY_DTYPE : 0;
     tilingKey += tilingData.get_sliceNum() == 1 ? LAYER_NORM_TILING_KEY_FAST : 0;
-    context->SetTilingKey(tilingKey);  // 2000000000 + 100000000 + 10000000
+    context->SetTilingKey(tilingKey); // 2000000000 + 100000000 + 10000000
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
@@ -176,8 +176,7 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         auto npuArch = ascendcPlatform.GetCurNpuArch();
-        useRegbase = (IsRegbaseSocVersion(context) ||
-                      npuArch == NpuArch::DAV_5102);
+        useRegbase = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102);
     } else {
         auto compileInfo = reinterpret_cast<const Tiling4LayerNormQuantCompileInfo*>(context->GetCompileInfo());
         OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -189,10 +188,9 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
 static ge::graphStatus Tiling4LayerNormQuant(gert::TilingContext* context)
 {
     bool useRegbase = false;
-    OP_CHECK_IF(
-        CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Check SocInfo Failed"), return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Check SocInfo Failed"),
+                return ge::GRAPH_FAILED);
+
     if (useRegbase) {
         LayerNormQuantRegTiling Regobject(context);
         auto ret = Regobject.DoTiling();
@@ -223,19 +221,15 @@ static ge::graphStatus TilingPrepare4LayerNormQuant(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-                    OP_LOGE(context->GetNodeName(), "Get core num failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "Get core num failed"),
+                return ge::GRAPH_FAILED);
 
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isRegbase =
-        (IsRegbaseSocVersion(context) ||
-         npuArch == NpuArch::DAV_5102) ? true : false;
+    compileInfo->isRegbase = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102) ? true : false;
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-                    OP_LOGE(context->GetNodeName(), "Get ub size failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Get ub size failed"),
+                return ge::GRAPH_FAILED);
 
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     OP_LOGD(context, "TilingPrepare4LayerNormQuant exit.");
@@ -247,4 +241,4 @@ IMPL_OP_OPTILING(LayerNormQuant)
     .Tiling(Tiling4LayerNormQuant)
     .TilingParse<Tiling4LayerNormQuantCompileInfo>(TilingPrepare4LayerNormQuant);
 
-}   // namespace optiling
+} // namespace optiling

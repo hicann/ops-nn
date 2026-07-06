@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SiluGrad(const aclTensor *gradOutput, const aclTensor *self, aclOpExecutor *executor);
-}  // namespace l0op
+const aclTensor* SiluGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif

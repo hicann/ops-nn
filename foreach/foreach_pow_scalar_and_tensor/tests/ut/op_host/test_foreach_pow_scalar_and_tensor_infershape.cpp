@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_pow_scalar_and_tensor_proto.h"
 
-class ForeachPowScalarAndTensorTest : public testing::Test
-{
+class ForeachPowScalarAndTensorTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachPowScalarAndTensor SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachPowScalarAndTensor SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachPowScalarAndTensor TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachPowScalarAndTensor TearDown" << std::endl; }
 };
 
 TEST_F(ForeachPowScalarAndTensorTest, infer_shape_known_success)
@@ -82,8 +75,9 @@ TEST_F(ForeachPowScalarAndTensorTest, infer_shape_known_success)
 
 TEST_F(ForeachPowScalarAndTensorTest, infer_dtype_test_1)
 {
-    auto infer_datatype_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachPowScalarAndTensor")->infer_datatype;
+    auto infer_datatype_func = gert::OpImplRegistry::GetInstance()
+                                   .GetOpImpl("ForeachPowScalarAndTensor")
+                                   ->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);
     // alpha
     ge::DataType x_dtype_0 = ge::DT_FLOAT16;

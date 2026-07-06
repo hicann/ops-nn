@@ -20,15 +20,9 @@
 
 class Relu6ProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "relu6 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "relu6 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "relu6 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "relu6 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(Relu6ProtoTest, relu6_infershape_float16_test)

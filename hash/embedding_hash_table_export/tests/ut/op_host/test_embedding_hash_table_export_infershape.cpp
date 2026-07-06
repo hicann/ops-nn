@@ -29,15 +29,9 @@ namespace {
 // ----------------EmbeddingHashTableExport-------------------
 class EmbeddingHashTableExportProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingHashTableExport Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingHashTableExport Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingHashTableExport Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingHashTableExport Proto Test TearDown" << std::endl; }
 };
 
 //   pass cases
@@ -59,24 +53,22 @@ TEST_F(EmbeddingHashTableExportProtoTest, embedding_hash_table_export_infer_shap
     // outputs
     gert::StorageShape out_shape{{20}, {20}};
 
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(4, 4)
-            .IrInstanceNum({1, 1, 1, 1})
-            .InputShapes({&in_shape, &in_shape, &in_shape, &in_shape})
-            .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape})
-            .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(2, ge::DT_UINT8, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"export_mode", Ops::NN::AnyValue::CreateFrom<string>("all")},
-                 {"filtered_export_flag", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-            .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 4)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&in_shape, &in_shape, &in_shape, &in_shape})
+                      .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_UINT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"export_mode", Ops::NN::AnyValue::CreateFrom<string>("all")},
+                                  {"filtered_export_flag", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

@@ -16,11 +16,11 @@
 #define _SHRINK_TILING_DATA_H_
 
 struct ShrinkTilingData {
-    int64_t totalNum = 0;      // Total number of elements
-    int64_t blockFactor = 0;   // Elements processed per core
-    int64_t ubFactor = 0;      // Elements processed per UB loop (aligned to 256B)
-    float lambd = 0.5f;        // Threshold (preprocessed to non-negative); matches IR default
-    float bias = 0.0f;         // Offset/bias parameter; matches IR default
+    int64_t totalNum = 0;    // Total number of elements
+    int64_t blockFactor = 0; // Elements processed per core
+    int64_t ubFactor = 0;    // Elements processed per UB loop (aligned to 256B)
+    float lambd = 0.5f;      // Threshold (preprocessed to non-negative); matches IR default
+    float bias = 0.0f;       // Offset/bias parameter; matches IR default
 };
 
 #endif // _SHRINK_TILING_DATA_H_

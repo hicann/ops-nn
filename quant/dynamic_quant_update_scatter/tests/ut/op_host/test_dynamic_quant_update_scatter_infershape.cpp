@@ -23,15 +23,9 @@
 namespace {
 class DynamicQuantUpdateScatter : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicQuantUpdateScatter InferShape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicQuantUpdateScatter InferShape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicQuantUpdateScatter InferShape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicQuantUpdateScatter InferShape TearDown" << std::endl; }
 };
 
 TEST_F(DynamicQuantUpdateScatter, DynamicQuantUpdateScatter_infershape_case_0)
@@ -137,10 +131,10 @@ TEST_F(DynamicQuantUpdateScatter, DynamicQuantUpdateScatter_InferDtype_case_0)
                                   .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"reduce", Ops::NN::AnyValue::CreateFrom<std::string>("update")},
-                                       {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
-                                  .InputDataTypes({&input_var, &input_var_scale, &input_indices, &input_updates, &input_smooth_scales})
+                                  .NodeAttrs({{"reduce", Ops::NN::AnyValue::CreateFrom<std::string>("update")},
+                                              {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
+                                  .InputDataTypes({&input_var, &input_var_scale, &input_indices, &input_updates,
+                                                   &input_smooth_scales})
                                   .OutputDataTypes({&output_var, &output_var_scale})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -181,10 +175,10 @@ TEST_F(DynamicQuantUpdateScatter, DynamicQuantUpdateScatter_InferDtype_case_1)
                                   .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"reduce", Ops::NN::AnyValue::CreateFrom<std::string>("update")},
-                                       {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
-                                  .InputDataTypes({&input_var, &input_var_scale, &input_indices, &input_updates, &input_smooth_scales})
+                                  .NodeAttrs({{"reduce", Ops::NN::AnyValue::CreateFrom<std::string>("update")},
+                                              {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                                  .InputDataTypes({&input_var, &input_var_scale, &input_indices, &input_updates,
+                                                   &input_smooth_scales})
                                   .OutputDataTypes({&output_var, &output_var_scale})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();

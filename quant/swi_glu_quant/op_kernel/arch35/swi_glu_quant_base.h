@@ -41,38 +41,31 @@ struct XxGluSingleTileOffsetParam {
     uint64_t tmpVecGmOffset;
 };
 
-enum class QuantType : uint8_t {
-    STATIC_PER_TENSOR = 0,
-    STATIC_PER_CHANNEL
-};
+enum class QuantType : uint8_t { STATIC_PER_TENSOR = 0, STATIC_PER_CHANNEL };
 
 class SwiGluQuantBase {
 public:
-    __aicore__ inline SwiGluQuantBase()
-    {}
+    __aicore__ inline SwiGluQuantBase() {}
 
-    __aicore__ inline void ParseTilingData(const SwiGluQuantTilingData *tilingData)
+    __aicore__ inline void ParseTilingData(const SwiGluQuantTilingData* tilingData)
     {
-        tilingData_.groupLen = tilingData->groupLen;            // group的长度
-        tilingData_.rowLen = tilingData->rowLen;                // 多少行数据
-        tilingData_.colLen = tilingData->colLen;                // 列数，对输入x的一半
-        tilingData_.rowLenPerHeadCore = tilingData->rowLenPerHeadCore;  // 每核处理的行数
-        tilingData_.rowLenPerTailCore = tilingData->rowLenPerTailCore;  // 每核处理的行数
-        tilingData_.basicRowLenHeadCore = tilingData->basicRowLenHeadCore;      // 每次计算的行数
-        tilingData_.basicRowLenTailCore = tilingData->basicRowLenTailCore;      // 每次计算的行数
-        tilingData_.basicColLen = tilingData->basicColLen;      // 每次计算的列数
-        tilingData_.headCoreNum = tilingData->headCoreNum;      // 使用的head核数
-        tilingData_.realCoreNum = tilingData->realCoreNum;      // 使用的核数
+        tilingData_.groupLen = tilingData->groupLen;                       // group的长度
+        tilingData_.rowLen = tilingData->rowLen;                           // 多少行数据
+        tilingData_.colLen = tilingData->colLen;                           // 列数，对输入x的一半
+        tilingData_.rowLenPerHeadCore = tilingData->rowLenPerHeadCore;     // 每核处理的行数
+        tilingData_.rowLenPerTailCore = tilingData->rowLenPerTailCore;     // 每核处理的行数
+        tilingData_.basicRowLenHeadCore = tilingData->basicRowLenHeadCore; // 每次计算的行数
+        tilingData_.basicRowLenTailCore = tilingData->basicRowLenTailCore; // 每次计算的行数
+        tilingData_.basicColLen = tilingData->basicColLen;                 // 每次计算的列数
+        tilingData_.headCoreNum = tilingData->headCoreNum;                 // 使用的head核数
+        tilingData_.realCoreNum = tilingData->realCoreNum;                 // 使用的核数
         tilingData_.activateLeft = tilingData->activateLeft;
         tilingData_.groupListType = tilingData->groupListType;
         tilingData_.hasGroup = tilingData->hasGroup;
         tilingData_.dstType = tilingData->dstType;
     }
 
-    __aicore__ inline void InitBaseBuffer()
-    {
-        pPipe->InitBuffer(tmpConstBuffer, MAX_VALUE_NUM * sizeof(float));
-    }
+    __aicore__ inline void InitBaseBuffer() { pPipe->InitBuffer(tmpConstBuffer, MAX_VALUE_NUM * sizeof(float)); }
 
     __aicore__ inline void DuplicateConst()
     {
@@ -86,12 +79,9 @@ public:
         return y == 0 ? 0 : (x + y - 1) / y;
     }
 
-    __aicore__ inline float GetMax(float a, float b)
-    {
-        return a > b ? a : b;
-    }
+    __aicore__ inline float GetMax(float a, float b) { return a > b ? a : b; }
 
-    template<typename T>
+    template <typename T>
     __aicore__ inline T AlignUp(T num, T div)
     {
         return (div == 0) ? 0 : (num + div - 1) / div * div;
@@ -141,8 +131,8 @@ protected:
         smoothIsPad = (smoothRightPadding > 0);
     }
 
-    __aicore__ inline void CopyOut(uint64_t splitCopyoutOffset, DataCopyParams &splitCopyoutParams,
-         uint32_t ridx, uint32_t basicRowLenCal)
+    __aicore__ inline void CopyOut(uint64_t splitCopyoutOffset, DataCopyParams& splitCopyoutParams, uint32_t ridx,
+                                   uint32_t basicRowLenCal)
     {
         LocalTensor<int8_t> outLocal = outQueueY.DeQue<int8_t>();
 
@@ -160,14 +150,15 @@ protected:
         outQueueY.FreeTensor(outLocal);
 
         LocalTensor<float> scaleLocal = scaleQueue.DeQue<float>();
-        DataCopyParams copyParams1{ 1, (uint16_t)(basicRowLenCal * sizeof(float)), 0, 0 };
+        DataCopyParams copyParams1{1, (uint16_t)(basicRowLenCal * sizeof(float)), 0, 0};
 
         DataCopyPad(scale_Gm[baseRow + basicRowLen * ridx], scaleLocal, copyParams1);
         scaleQueue.FreeTensor(scaleLocal);
     }
 
-    __aicore__ inline void CastQuantOut(LocalTensor<float> &tempFp32, LocalTensor<int32_t> &tempInt32, LocalTensor<half> &tempHalf,
-         LocalTensor<int8_t> &outLocal, int32_t i) {
+    __aicore__ inline void CastQuantOut(LocalTensor<float>& tempFp32, LocalTensor<int32_t>& tempInt32,
+                                        LocalTensor<half>& tempHalf, LocalTensor<int8_t>& outLocal, int32_t i)
+    {
         Cast(tempInt32, tempFp32, RoundMode::CAST_RINT, basicColLen);
         PipeBarrier<PIPE_V>();
         SetDeqScale(static_cast<half>(1.0));
@@ -187,7 +178,7 @@ protected:
     }
 
 protected:
-    TPipe *pPipe = nullptr;
+    TPipe* pPipe = nullptr;
     /* tiling data */
     SwiGluQuantTilingData tilingData_;
 
@@ -217,7 +208,7 @@ protected:
 
     uint32_t coreIdx;
     uint32_t rowLoop = 1;
-    uint32_t baseRow = 0;     // 记录开始处理的行数
+    uint32_t baseRow = 0; // 记录开始处理的行数
     uint16_t basicRowLenCal;
     uint32_t mergedColLen;
     uint64_t tileLength;
@@ -258,5 +249,5 @@ protected:
 
     uint64_t splitCopyoutOffset;
 };
-}  // namespace SwiGluQuantOpt
-#endif  // SwiGluQuantBase
+} // namespace SwiGluQuantOpt
+#endif // SwiGluQuantBase

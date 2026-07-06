@@ -19,9 +19,9 @@ struct ScatterNonAliasingAddTilingData {
     int64_t totalScatters;
     int64_t updateDataNum;
     int32_t K;
-    int32_t reserved;       // padding to align strides array
+    int32_t reserved; // padding to align strides array
     int64_t strides[MAX_STRIDES];
-    int64_t reservedTail;   // tail padding to match opParaSize (112 bytes)
+    int64_t reservedTail; // tail padding to match opParaSize (112 bytes)
 };
 
 #endif

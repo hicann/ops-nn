@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-__attribute__((weak)) const std::tuple<aclTensor*, aclTensor*> KthValue(
-    const aclTensor *self, int64_t k, int64_t dim, aclOpExecutor *executor);
+__attribute__((weak)) const std::tuple<aclTensor*, aclTensor*> KthValue(const aclTensor* self, int64_t k, int64_t dim,
+                                                                        aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_KTH_VALUE_OP_H_

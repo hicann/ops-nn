@@ -58,14 +58,12 @@ static ge::graphStatus InferShape4ApplyFtrl(gert::InferShapeContext* context)
     const gert::Shape* accumShape = context->GetInputShape(kIdxAccum);
     const gert::Shape* linearShape = context->GetInputShape(kIdxLinear);
     const gert::Shape* gradShape = context->GetInputShape(kIdxGrad);
-    if (varShape == nullptr || accumShape == nullptr || linearShape == nullptr ||
-        gradShape == nullptr) {
+    if (varShape == nullptr || accumShape == nullptr || linearShape == nullptr || gradShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
 
     // MED-3: the four element-wise tensors must share the exact same shape.
-    if (!ShapeEqual(varShape, accumShape) || !ShapeEqual(varShape, linearShape) ||
-        !ShapeEqual(varShape, gradShape)) {
+    if (!ShapeEqual(varShape, accumShape) || !ShapeEqual(varShape, linearShape) || !ShapeEqual(varShape, gradShape)) {
         return ge::GRAPH_FAILED;
     }
 
@@ -83,8 +81,6 @@ static ge::graphStatus InferDataType4ApplyFtrl(gert::InferDataTypeContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ApplyFtrl)
-    .InferShape(InferShape4ApplyFtrl)
-    .InferDataType(InferDataType4ApplyFtrl);
+IMPL_OP_INFERSHAPE(ApplyFtrl).InferShape(InferShape4ApplyFtrl).InferDataType(InferDataType4ApplyFtrl);
 
-}  // namespace ops
+} // namespace ops

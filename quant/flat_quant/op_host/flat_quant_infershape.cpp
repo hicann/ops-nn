@@ -37,9 +37,7 @@ constexpr float ZERO_FLOAT = 0.0f;
 constexpr float SIX_FLOAT = 6.0f;
 constexpr float TWELVE_FLOAT = 12.0f;
 
-static bool IsFloatEqual(float a, float b) {
-    return std::abs(a - b) <= std::numeric_limits<float>::epsilon();
-}
+static bool IsFloatEqual(float a, float b) { return std::abs(a - b) <= std::numeric_limits<float>::epsilon(); }
 
 static bool IsFlatQuantMxFp4DavidSupport()
 {
@@ -83,9 +81,8 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
         if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_TWO) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);
         }
-        OP_CHECK_IF(
-            xShape->GetDim(FLATQUANT_N_IDX) % FLATQUANT_N_IS_EVEN == 1, OP_LOGE(context, "dim N must be even number"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xShape->GetDim(FLATQUANT_N_IDX) % FLATQUANT_N_IS_EVEN == 1,
+                    OP_LOGE(context, "dim N must be even number"), return ge::GRAPH_FAILED);
 
         if (outxDtype != nullptr) {
             int32_t dstDtype = *outxDtype;

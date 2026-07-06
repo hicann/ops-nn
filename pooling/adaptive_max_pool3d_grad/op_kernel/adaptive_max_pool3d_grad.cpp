@@ -25,8 +25,8 @@ using namespace AdaptiveMaxPool3DGrad;
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 using namespace AdaptiveMaxPool3dGradOp;
 template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t INDEX_DTYPE = TPL_INT32>
-__global__ __aicore__ void adaptive_max_pool3d_grad(
-    GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void adaptive_max_pool3d_grad(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y,
+                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;
@@ -57,9 +57,9 @@ __global__ __aicore__ void adaptive_max_pool3d_grad(
         op.Init(x, grad, argmax, y, workspace, &tilingData); \
         op.Process();                                        \
     } while (0)
-    
-extern "C" __global__ __aicore__ void adaptive_max_pool3d_grad(
-    GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+
+extern "C" __global__ __aicore__ void adaptive_max_pool3d_grad(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y,
+                                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;

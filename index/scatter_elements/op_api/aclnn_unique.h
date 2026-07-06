@@ -67,4 +67,4 @@ ACLNN_API aclnnStatus aclnnUnique(void* workspace, uint64_t workspaceSize, aclOp
 }
 #endif
 
-#endif  // OP_API_INC_UNIQUE_H_
+#endif // OP_API_INC_UNIQUE_H_

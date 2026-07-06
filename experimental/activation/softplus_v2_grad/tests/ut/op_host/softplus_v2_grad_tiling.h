@@ -24,6 +24,6 @@ struct SoftplusV2GradCompileInfo {
     int64_t ubSize = 0;
     bool isRegbase = false;
 };
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SOFTPLUS_V2_GRAD_TILING_DEF_H
+#endif // SOFTPLUS_V2_GRAD_TILING_DEF_H

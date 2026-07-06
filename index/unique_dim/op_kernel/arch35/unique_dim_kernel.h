@@ -19,7 +19,7 @@
 // ============================================================
 // Shape output helpers (shared between kernel class and apt entry)
 // ============================================================
-__aicore__ inline void FillEmptyShapeValues(LocalTensor<uint64_t> &shapeTensor)
+__aicore__ inline void FillEmptyShapeValues(LocalTensor<uint64_t>& shapeTensor)
 {
     shapeTensor.SetValue(SHAPE0_SIZE_IDX, UINT64_SHAPE_DIM_ONE);
     shapeTensor.SetValue(SHAPE0_DIM0_IDX, 0);
@@ -29,7 +29,7 @@ __aicore__ inline void FillEmptyShapeValues(LocalTensor<uint64_t> &shapeTensor)
     shapeTensor.SetValue(SHAPE2_DIM0_IDX, 0);
 }
 
-__aicore__ inline void SetShapeCopyParams(DataCopyExtParams &params)
+__aicore__ inline void SetShapeCopyParams(DataCopyExtParams& params)
 {
     params.blockCount = 1;
     params.blockLen = SHAPE_LEN * sizeof(uint64_t);
@@ -43,10 +43,10 @@ __aicore__ inline void SetShapeCopyParams(DataCopyExtParams &params)
 template <typename T, bool RETURN_INVERSE, bool RETURN_COUNTS>
 class UniqueDimKernel {
 public:
-    __aicore__ inline UniqueDimKernel(TPipe *pipe) : pipe_(pipe) {}
+    __aicore__ inline UniqueDimKernel(TPipe* pipe) : pipe_(pipe) {}
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inverseOut, GM_ADDR countsOut,
-                                GM_ADDR shapeOut, GM_ADDR workspace, const UniqueDimTilingData *tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR valueOut, GM_ADDR inverseOut, GM_ADDR countsOut, GM_ADDR shapeOut,
+                                GM_ADDR workspace, const UniqueDimTilingData* tiling)
     {
         coreId_ = GetBlockIdx();
         coreNum_ = GetBlockNum();
@@ -83,19 +83,19 @@ public:
             coreLen_ = numInp_ - coreStart_;
         }
 
-        inputFlatGm_.SetGlobalBuffer((__gm__ T *)(x));
-        valueOutGm_.SetGlobalBuffer((__gm__ T *)(valueOut));
-        inverseOutGm_.SetGlobalBuffer((__gm__ int64_t *)(inverseOut));
-        countsOutGm_.SetGlobalBuffer((__gm__ int64_t *)(countsOut));
-        shapeOutGm_.SetGlobalBuffer((__gm__ uint64_t *)(shapeOut));
+        inputFlatGm_.SetGlobalBuffer((__gm__ T*)(x));
+        valueOutGm_.SetGlobalBuffer((__gm__ T*)(valueOut));
+        inverseOutGm_.SetGlobalBuffer((__gm__ int64_t*)(inverseOut));
+        countsOutGm_.SetGlobalBuffer((__gm__ int64_t*)(countsOut));
+        shapeOutGm_.SetGlobalBuffer((__gm__ uint64_t*)(shapeOut));
 
         ws_ = workspace;
-        indicesGm_.SetGlobalBuffer((__gm__ uint32_t *)(ws_ + tiling->indicesOffset));
-        sortBufGm_.SetGlobalBuffer((__gm__ uint32_t *)(ws_ + tiling->sortBufOffset));
-        flagsGm_.SetGlobalBuffer((__gm__ uint32_t *)(ws_ + tiling->flagsOffset));
-        positionsGm_.SetGlobalBuffer((__gm__ uint32_t *)(ws_ + tiling->positionsOffset));
-        partialSumGm_.SetGlobalBuffer((__gm__ uint32_t *)(ws_ + tiling->partialSumOffset));
-        globalPrefixGm_.SetGlobalBuffer((__gm__ uint32_t *)(ws_ + tiling->globalPrefixOffset));
+        indicesGm_.SetGlobalBuffer((__gm__ uint32_t*)(ws_ + tiling->indicesOffset));
+        sortBufGm_.SetGlobalBuffer((__gm__ uint32_t*)(ws_ + tiling->sortBufOffset));
+        flagsGm_.SetGlobalBuffer((__gm__ uint32_t*)(ws_ + tiling->flagsOffset));
+        positionsGm_.SetGlobalBuffer((__gm__ uint32_t*)(ws_ + tiling->positionsOffset));
+        partialSumGm_.SetGlobalBuffer((__gm__ uint32_t*)(ws_ + tiling->partialSumOffset));
+        globalPrefixGm_.SetGlobalBuffer((__gm__ uint32_t*)(ws_ + tiling->globalPrefixOffset));
 
         // UB single buffer: 2 * tileSize * 8B = 8KB (fits __local_mem__ limit)
         // First half [0..tileSize-1] = bufA, second half [tileSize..2*tileSize-1] = bufB
@@ -104,12 +104,12 @@ public:
         pipe_->InitBuffer(ubBuf_, 2 * sortBufUbSize);
 
         // Cache UB pointer for Simt (single pointer, halves via index offset)
-        ubBufPtr64_ = (__local_mem__ int64_t *)ubBuf_.Get<int64_t>().GetPhyAddr();
+        ubBufPtr64_ = (__local_mem__ int64_t*)ubBuf_.Get<int64_t>().GetPhyAddr();
 
         int64_t shapeBufSize = CeilAlign(SHAPE_LEN * sizeof(uint64_t), blockSize);
         pipe_->InitBuffer(shapeBuf_, shapeBufSize);
 
-        effectiveInputFlat_ = (__gm__ T *)inputFlatGm_.GetPhyAddr();
+        effectiveInputFlat_ = (__gm__ T*)inputFlatGm_.GetPhyAddr();
     }
 
     __aicore__ inline void Process()
@@ -161,7 +161,7 @@ private:
 
     __aicore__ inline int64_t Min64(int64_t a, int64_t b) { return a < b ? a : b; }
 
-    __aicore__ inline void SplitWorkByCore(int64_t total, int64_t &myStart, int64_t &myLen)
+    __aicore__ inline void SplitWorkByCore(int64_t total, int64_t& myStart, int64_t& myLen)
     {
         int64_t perCore = CeilDiv64(total, coreNum_);
         myStart = coreId_ * perCore;
@@ -186,10 +186,7 @@ private:
     // ============================================================
     __aicore__ inline void Phase0_InitIndices()
     {
-        asc_vf_call<SimtInitIndices>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_,
-            (__gm__ uint32_t *)indicesGm_.GetPhyAddr());
+        asc_vf_call<SimtInitIndices>(dim3(blockDimX_), coreStart_, coreLen_, (__gm__ uint32_t*)indicesGm_.GetPhyAddr());
     }
 
     // ============================================================
@@ -208,14 +205,10 @@ private:
         SplitWorkByCore(total, myStart, myLen);
 
         if (myLen > 0) {
-            asc_vf_call<SimtTransposeDim<T>>(
-                dim3(GM_BLOCK_DIM),
-                myStart, myLen,
-                outerSize_, numInp_, innerSize_,
-                effectiveInputFlat_,
-                (__gm__ T *)(ws_ + transposeDstOffset_));
+            asc_vf_call<SimtTransposeDim<T>>(dim3(GM_BLOCK_DIM), myStart, myLen, outerSize_, numInp_, innerSize_,
+                                             effectiveInputFlat_, (__gm__ T*)(ws_ + transposeDstOffset_));
         }
-        effectiveInputFlat_ = (__gm__ T *)(ws_ + transposeDstOffset_);
+        effectiveInputFlat_ = (__gm__ T*)(ws_ + transposeDstOffset_);
         SyncAll();
     }
 
@@ -237,12 +230,9 @@ private:
 
         // valueOut [numOut, outerSize, innerSize] → workspace [outerSize, numOut, innerSize]
         if (myLen > 0) {
-            asc_vf_call<SimtTransposeDim<T>>(
-                dim3(GM_BLOCK_DIM),
-                myStart, myLen,
-                numOut, outerSize_, innerSize_,
-                (__gm__ T *)valueOutGm_.GetPhyAddr(),
-                (__gm__ T *)(ws_ + transposeDstOffset_));
+            asc_vf_call<SimtTransposeDim<T>>(dim3(GM_BLOCK_DIM), myStart, myLen, numOut, outerSize_, innerSize_,
+                                             (__gm__ T*)valueOutGm_.GetPhyAddr(),
+                                             (__gm__ T*)(ws_ + transposeDstOffset_));
         }
         SyncAll();
 
@@ -251,11 +241,8 @@ private:
         int64_t copyStart, copyLen;
         SplitWorkByCore(totalCopy, copyStart, copyLen);
         if (copyLen > 0) {
-            asc_vf_call<SimtCopyFlat<T>>(
-                dim3(GM_BLOCK_DIM),
-                copyStart, copyLen,
-                (__gm__ T *)(ws_ + transposeDstOffset_),
-                (__gm__ T *)valueOutGm_.GetPhyAddr());
+            asc_vf_call<SimtCopyFlat<T>>(dim3(GM_BLOCK_DIM), copyStart, copyLen, (__gm__ T*)(ws_ + transposeDstOffset_),
+                                         (__gm__ T*)valueOutGm_.GetPhyAddr());
         }
         SyncAll();
     }
@@ -273,13 +260,8 @@ private:
 
         // Single VF_CALL: sort tiles in UB + multi-round merge on GM
         asc_vf_call<SimtPhase1AllInOne<T>>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_, tileSize_, numLocalTiles,
-            (__gm__ uint32_t *)indicesGm_.GetPhyAddr(),
-            (__gm__ uint32_t *)sortBufGm_.GetPhyAddr(),
-            effectiveInputFlat_,
-            rowLen_,
-            ubBufPtr64_);
+            dim3(blockDimX_), coreStart_, coreLen_, tileSize_, numLocalTiles, (__gm__ uint32_t*)indicesGm_.GetPhyAddr(),
+            (__gm__ uint32_t*)sortBufGm_.GetPhyAddr(), effectiveInputFlat_, rowLen_, ubBufPtr64_);
     }
 
     // ============================================================
@@ -292,15 +274,11 @@ private:
         int64_t tailLen = numInp_ - tailOff;
         if (tailLen > 0) {
             if (coreId_ == 0) {
-                __gm__ uint32_t *tailSrc = (round % 2 == 0) ?
-                    (__gm__ uint32_t *)indicesGm_.GetPhyAddr() :
-                    (__gm__ uint32_t *)sortBufGm_.GetPhyAddr();
-                __gm__ uint32_t *tailDst = (round % 2 == 0) ?
-                    (__gm__ uint32_t *)sortBufGm_.GetPhyAddr() :
-                    (__gm__ uint32_t *)indicesGm_.GetPhyAddr();
-                asc_vf_call<SimtCopyRange>(
-                    dim3(blockDimX_),
-                    tailOff, tailOff + tailLen, tailSrc, tailDst);
+                __gm__ uint32_t* tailSrc = (round % 2 == 0) ? (__gm__ uint32_t*)indicesGm_.GetPhyAddr() :
+                                                              (__gm__ uint32_t*)sortBufGm_.GetPhyAddr();
+                __gm__ uint32_t* tailDst = (round % 2 == 0) ? (__gm__ uint32_t*)sortBufGm_.GetPhyAddr() :
+                                                              (__gm__ uint32_t*)indicesGm_.GetPhyAddr();
+                asc_vf_call<SimtCopyRange>(dim3(blockDimX_), tailOff, tailOff + tailLen, tailSrc, tailDst);
             }
             PipeBarrier<PIPE_ALL>();
             SyncAll();
@@ -317,11 +295,9 @@ private:
             int64_t copyStart = coreId_ * copyPerCore;
             int64_t copyEnd = Min64(copyStart + copyPerCore, numInp_);
             if (copyStart < copyEnd) {
-                asc_vf_call<SimtCopyRange>(
-                    dim3(blockDimX_),
-                    copyStart, copyEnd,
-                    (__gm__ uint32_t *)sortBufGm_.GetPhyAddr(),
-                    (__gm__ uint32_t *)indicesGm_.GetPhyAddr());
+                asc_vf_call<SimtCopyRange>(dim3(blockDimX_), copyStart, copyEnd,
+                                           (__gm__ uint32_t*)sortBufGm_.GetPhyAddr(),
+                                           (__gm__ uint32_t*)indicesGm_.GetPhyAddr());
             }
             PipeBarrier<PIPE_ALL>();
             SyncAll();
@@ -340,12 +316,10 @@ private:
         while (width < numInp_) {
             int64_t numPairs = CeilDiv64(numInp_, 2 * width);
 
-            __gm__ uint32_t *src = (round % 2 == 0) ?
-                (__gm__ uint32_t *)indicesGm_.GetPhyAddr() :
-                (__gm__ uint32_t *)sortBufGm_.GetPhyAddr();
-            __gm__ uint32_t *dst = (round % 2 == 0) ?
-                (__gm__ uint32_t *)sortBufGm_.GetPhyAddr() :
-                (__gm__ uint32_t *)indicesGm_.GetPhyAddr();
+            __gm__ uint32_t* src = (round % 2 == 0) ? (__gm__ uint32_t*)indicesGm_.GetPhyAddr() :
+                                                      (__gm__ uint32_t*)sortBufGm_.GetPhyAddr();
+            __gm__ uint32_t* dst = (round % 2 == 0) ? (__gm__ uint32_t*)sortBufGm_.GetPhyAddr() :
+                                                      (__gm__ uint32_t*)indicesGm_.GetPhyAddr();
 
             for (int64_t p = 0; p < numPairs; p++) {
                 int64_t mergeStart = p * 2 * width;
@@ -353,13 +327,8 @@ private:
                 int64_t mergeEnd = Min64(mergeStart + 2 * width, numInp_);
 
                 if (mergeMid < mergeEnd) {
-                    asc_vf_call<SimtMergePathPair<T>>(
-                        dim3(blockDimX_),
-                        coreId_, coreNum_,
-                        mergeStart, mergeMid, mergeEnd,
-                        src, dst,
-                        effectiveInputFlat_,
-                        rowLen_);
+                    asc_vf_call<SimtMergePathPair<T>>(dim3(blockDimX_), coreId_, coreNum_, mergeStart, mergeMid,
+                                                      mergeEnd, src, dst, effectiveInputFlat_, rowLen_);
                 }
                 PipeBarrier<PIPE_ALL>();
                 SyncAll();
@@ -379,13 +348,9 @@ private:
     // ============================================================
     __aicore__ inline void Phase3_AdjacentDiff()
     {
-        asc_vf_call<SimtAdjacentDiff<T>>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_,
-            (__gm__ uint32_t *)indicesGm_.GetPhyAddr(),
-            (__gm__ uint32_t *)flagsGm_.GetPhyAddr(),
-            effectiveInputFlat_,
-            rowLen_);
+        asc_vf_call<SimtAdjacentDiff<T>>(dim3(blockDimX_), coreStart_, coreLen_,
+                                         (__gm__ uint32_t*)indicesGm_.GetPhyAddr(),
+                                         (__gm__ uint32_t*)flagsGm_.GetPhyAddr(), effectiveInputFlat_, rowLen_);
     }
 
     // ============================================================
@@ -394,35 +359,25 @@ private:
     __aicore__ inline void Phase4_PrefixSum()
     {
         int64_t psStride = MAGIC_GM_PAGE_SIZE / sizeof(uint32_t);
-        asc_vf_call<SimtLocalScan>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_,
-            (__gm__ uint32_t *)flagsGm_.GetPhyAddr(),
-            coreId_,
-            (__gm__ uint32_t *)partialSumGm_.GetPhyAddr(),
-            psStride);
+        asc_vf_call<SimtLocalScan>(dim3(blockDimX_), coreStart_, coreLen_, (__gm__ uint32_t*)flagsGm_.GetPhyAddr(),
+                                   coreId_, (__gm__ uint32_t*)partialSumGm_.GetPhyAddr(), psStride);
         SyncAll();
 
         if (coreId_ == 0) {
-            asc_vf_call<SimtGlobalPrefixScan>(
-                dim3(blockDimX_),
-                coreNum_, psStride,
-                (__gm__ uint32_t *)partialSumGm_.GetPhyAddr(),
-                (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr());
+            asc_vf_call<SimtGlobalPrefixScan>(dim3(blockDimX_), coreNum_, psStride,
+                                              (__gm__ uint32_t*)partialSumGm_.GetPhyAddr(),
+                                              (__gm__ uint32_t*)globalPrefixGm_.GetPhyAddr());
         }
 
         SyncAll();
 
         // Read totalUnique from globalPrefix[coreNum] (written by SimtGlobalPrefixScan, flushed by MTE3_S)
-        __gm__ uint32_t *gpPtr = (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr();
+        __gm__ uint32_t* gpPtr = (__gm__ uint32_t*)globalPrefixGm_.GetPhyAddr();
         totalUnique_ = static_cast<int64_t>(gpPtr[coreNum_]);
 
-        asc_vf_call<SimtAddGlobalPrefix>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_,
-            (__gm__ uint32_t *)flagsGm_.GetPhyAddr(),
-            coreId_,
-            (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr());
+        asc_vf_call<SimtAddGlobalPrefix>(dim3(blockDimX_), coreStart_, coreLen_,
+                                         (__gm__ uint32_t*)flagsGm_.GetPhyAddr(), coreId_,
+                                         (__gm__ uint32_t*)globalPrefixGm_.GetPhyAddr());
         SyncAll();
     }
 
@@ -432,11 +387,8 @@ private:
     __aicore__ inline void Phase5_ScatterInverse()
     {
         asc_vf_call<SimtScatterInverse>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_,
-            (__gm__ uint32_t *)indicesGm_.GetPhyAddr(),
-            (__gm__ uint32_t *)flagsGm_.GetPhyAddr(),
-            (__gm__ int64_t *)inverseOutGm_.GetPhyAddr());
+            dim3(blockDimX_), coreStart_, coreLen_, (__gm__ uint32_t*)indicesGm_.GetPhyAddr(),
+            (__gm__ uint32_t*)flagsGm_.GetPhyAddr(), (__gm__ int64_t*)inverseOutGm_.GetPhyAddr());
     }
 
     // ============================================================
@@ -445,24 +397,18 @@ private:
     __aicore__ inline void Phase6_UniqueDetectAndGather()
     {
         int64_t returnCountsFlag = RETURN_COUNTS ? 1 : 0;
-        asc_vf_call<SimtUniqueDetect>(
-            dim3(blockDimX_),
-            coreStart_, coreLen_,
-            (__gm__ uint32_t *)indicesGm_.GetPhyAddr(),
-            (__gm__ uint32_t *)flagsGm_.GetPhyAddr(),
-            (__gm__ uint32_t *)sortBufGm_.GetPhyAddr(),
-            (__gm__ uint32_t *)positionsGm_.GetPhyAddr(),
-            returnCountsFlag);
+        asc_vf_call<SimtUniqueDetect>(dim3(blockDimX_), coreStart_, coreLen_, (__gm__ uint32_t*)indicesGm_.GetPhyAddr(),
+                                      (__gm__ uint32_t*)flagsGm_.GetPhyAddr(),
+                                      (__gm__ uint32_t*)sortBufGm_.GetPhyAddr(),
+                                      (__gm__ uint32_t*)positionsGm_.GetPhyAddr(), returnCountsFlag);
 
         if (coreId_ == 0) {
-            asc_vf_call<SimtWriteValue>(
-                dim3(blockDimX_),
-                (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr(),
-                coreNum_, static_cast<uint32_t>(totalUnique_));
+            asc_vf_call<SimtWriteValue>(dim3(blockDimX_), (__gm__ uint32_t*)globalPrefixGm_.GetPhyAddr(), coreNum_,
+                                        static_cast<uint32_t>(totalUnique_));
         }
         SyncAll();
 
-        __gm__ uint32_t *gpPtr2 = (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr();
+        __gm__ uint32_t* gpPtr2 = (__gm__ uint32_t*)globalPrefixGm_.GetPhyAddr();
         int64_t numOut = static_cast<int64_t>(gpPtr2[coreNum_]);
 
         // Split the gather over total output elements (numOut * rowLen) so all
@@ -473,23 +419,16 @@ private:
         SplitWorkByCore(gatherTotal, eStart, eLen);
 
         if (eLen > 0) {
-            asc_vf_call<SimtGatherRows<T>>(
-                dim3(GM_BLOCK_DIM),
-                eStart, eLen,
-                (__gm__ uint32_t *)sortBufGm_.GetPhyAddr(),
-                effectiveInputFlat_,
-                (__gm__ T *)valueOutGm_.GetPhyAddr(),
-                rowLen_);
+            asc_vf_call<SimtGatherRows<T>>(dim3(GM_BLOCK_DIM), eStart, eLen, (__gm__ uint32_t*)sortBufGm_.GetPhyAddr(),
+                                           effectiveInputFlat_, (__gm__ T*)valueOutGm_.GetPhyAddr(), rowLen_);
         }
 
         numOut_ = numOut;
 
         if constexpr (RETURN_COUNTS) {
             if (coreId_ == 0) {
-                asc_vf_call<SimtWriteValue>(
-                    dim3(blockDimX_),
-                    (__gm__ uint32_t *)positionsGm_.GetPhyAddr(),
-                    numOut, static_cast<uint32_t>(numInp_));
+                asc_vf_call<SimtWriteValue>(dim3(blockDimX_), (__gm__ uint32_t*)positionsGm_.GetPhyAddr(), numOut,
+                                            static_cast<uint32_t>(numInp_));
             }
             SyncAll();
         } else {
@@ -507,11 +446,9 @@ private:
         int64_t cntStart = coreId_ * cntPerCore;
         int64_t cntEnd = Min64(cntStart + cntPerCore, numOut);
         if (cntStart < cntEnd) {
-            asc_vf_call<SimtComputeCounts>(
-                dim3(blockDimX_),
-                cntStart, cntEnd,
-                (__gm__ uint32_t *)positionsGm_.GetPhyAddr(),
-                (__gm__ int64_t *)countsOutGm_.GetPhyAddr());
+            asc_vf_call<SimtComputeCounts>(dim3(blockDimX_), cntStart, cntEnd,
+                                           (__gm__ uint32_t*)positionsGm_.GetPhyAddr(),
+                                           (__gm__ int64_t*)countsOutGm_.GetPhyAddr());
         }
         SyncAll();
     }
@@ -579,14 +516,14 @@ private:
     }
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
 
     // UB buffers: combined sort/tile merge buffer + shape output
     TBuf<TPosition::VECCALC> ubBuf_;
     TBuf<TPosition::VECCALC> shapeBuf_;
 
     // Cached UB pointer for Simt (single pointer, halves via index offset)
-    __local_mem__ int64_t *ubBufPtr64_ = nullptr;
+    __local_mem__ int64_t* ubBufPtr64_ = nullptr;
 
     // GM workspace sub-buffers (uint32_t to save ~50% workspace memory)
     GM_ADDR ws_;
@@ -622,7 +559,7 @@ private:
     int64_t outerSize_ = 0;
     int64_t innerSize_ = 0;
     int64_t transposeDstOffset_ = 0;
-    __gm__ T *effectiveInputFlat_ = nullptr;
+    __gm__ T* effectiveInputFlat_ = nullptr;
 
     // Original input shape for output shape construction
     int64_t inputDimNum_ = 0;

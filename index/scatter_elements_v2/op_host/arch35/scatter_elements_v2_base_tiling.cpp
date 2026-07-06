@@ -26,7 +26,7 @@
 namespace optiling {
 static ge::graphStatus ScatterElementsV2TilingForArch35(gert::TilingContext* context)
 {
-  return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 ge::graphStatus TilingArch35PrepareForScatterElementsV2(gert::TilingParseContext* context)
@@ -41,9 +41,9 @@ ge::graphStatus TilingArch35PrepareForScatterElementsV2(gert::TilingParseContext
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<uint64_t>(ubSizePlatForm);
     if (compileInfo->ubSizePlatForm <= 0) {
-      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "compileInfo->ubSizePlatForm",
-                                                std::to_string(compileInfo->ubSizePlatForm).c_str(),
-                                                "ubSize must be greater than 0");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "compileInfo->ubSizePlatForm",
+                                              std::to_string(compileInfo->ubSizePlatForm).c_str(),
+                                              "ubSize must be greater than 0");
     }
 
     uint32_t workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -53,4 +53,4 @@ ge::graphStatus TilingArch35PrepareForScatterElementsV2(gert::TilingParseContext
 IMPL_OP_OPTILING(ScatterElementsV2)
     .Tiling(ScatterElementsV2TilingForArch35)
     .TilingParse<ScatterElementsV2CompileInfoArch35>(TilingArch35PrepareForScatterElementsV2);
-}
+} // namespace optiling

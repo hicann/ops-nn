@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/transpose.h"
@@ -32,8 +32,8 @@ const aclIntArray* getAllDims(const aclTensor* self, aclOpExecutor* executor)
 }
 
 constexpr size_t MAX_DIM_CNT = 5;
-const aclTensor* ResizeFrom1D(
-    const aclTensor* cdim, const aclTensor* input, bool isSupportNcdhw, aclOpExecutor* executor)
+const aclTensor* ResizeFrom1D(const aclTensor* cdim, const aclTensor* input, bool isSupportNcdhw,
+                              aclOpExecutor* executor)
 {
     auto cdimContiguous = l0op::Contiguous(cdim, executor);
     if (cdimContiguous == nullptr) {
@@ -71,8 +71,8 @@ const aclTensor* ResizeFrom1D(
     return cdimFormat;
 }
 
-const aclTensor* ResizeTo1D(
-    const aclTensor* result, const aclTensor* output, bool isSupportNcdhw, aclOpExecutor* executor)
+const aclTensor* ResizeTo1D(const aclTensor* result, const aclTensor* output, bool isSupportNcdhw,
+                            aclOpExecutor* executor)
 {
     auto resultTransdata = result;
     size_t resultDim = result->GetViewShape().GetDimNum();

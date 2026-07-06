@@ -13,35 +13,36 @@
  * \brief
  */
 
- #include "register/op_def_registry.h"
+#include "register/op_def_registry.h"
 
- namespace ops {
+namespace ops {
 
- class SquaredRelu : public OpDef {
-  public:
-   explicit SquaredRelu(const char* name) : OpDef(name) {
-     this->Input("input")
-         .ParamType(REQUIRED)
-         .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-         .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-         .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-         .AutoContiguous();
+class SquaredRelu : public OpDef {
+public:
+    explicit SquaredRelu(const char* name) : OpDef(name)
+    {
+        this->Input("input")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-     this->Output("output")
-         .ParamType(REQUIRED)
-         .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-         .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-         .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-         .AutoContiguous();
+        this->Output("output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-     this->AICore().AddConfig("ascend910b");
-     this->AICore().AddConfig("ascend910_93");
-     this->AICore().AddConfig("ascend950");
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend950");
 
-     OpAICoreConfig config_kirin = GetKirinCoreConfig();
-     this->AICore().AddConfig("kirinx90", config_kirin);
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
-   }
+    }
 
 private:
     OpAICoreConfig GetKirinCoreConfig() const
@@ -67,7 +68,7 @@ private:
             .AutoContiguous();
         return config_kirin;
     }
- };
+};
 
- OP_ADD(SquaredRelu);
- }  // namespace ops
+OP_ADD(SquaredRelu);
+} // namespace ops

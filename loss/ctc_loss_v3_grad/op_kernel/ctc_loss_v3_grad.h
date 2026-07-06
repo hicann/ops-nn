@@ -43,8 +43,7 @@ __aicore__ inline T1 CeilAlign(T1 a, T2 b)
 };
 
 template <typename TGrad, typename TIndices>
-class CTCLossV3Grad
-{
+class CTCLossV3Grad {
 private:
     TPipe* pipe;
     GlobalTensor<TGrad> gradOutGm;
@@ -204,10 +203,9 @@ private:
 
 public:
     __aicore__ inline CTCLossV3Grad(){};
-    __aicore__ inline void Init(
-        const CTCLossV3GradTilingData* __restrict tilingData, GM_ADDR gradOut, GM_ADDR logProbs, GM_ADDR targets,
-        GM_ADDR inputLengths, GM_ADDR targetLengths, GM_ADDR negLogLikelihood, GM_ADDR logAlpha, GM_ADDR grad,
-        GM_ADDR workspace, TPipe* inputPipe)
+    __aicore__ inline void Init(const CTCLossV3GradTilingData* __restrict tilingData, GM_ADDR gradOut, GM_ADDR logProbs,
+                                GM_ADDR targets, GM_ADDR inputLengths, GM_ADDR targetLengths, GM_ADDR negLogLikelihood,
+                                GM_ADDR logAlpha, GM_ADDR grad, GM_ADDR workspace, TPipe* inputPipe)
     {
         pipe = inputPipe;
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
@@ -235,8 +233,8 @@ public:
         alphaLengthAlign = CeilAlign(alphaLength, NUM_PER_REPEAT);
         maskNumBeta = CeilAlign(alphaLengthAlign / MASK_NUM_PER_BYTES, BLOCK_BYTES);
         curCoreTaskNum = curBlockIdx < taskTailCore ? (taskPerCore + 1) : taskPerCore;
-        startTaskId =
-            curBlockIdx < taskTailCore ? (curCoreTaskNum * curBlockIdx) : (curCoreTaskNum * curBlockIdx + taskTailCore);
+        startTaskId = curBlockIdx < taskTailCore ? (curCoreTaskNum * curBlockIdx) :
+                                                   (curCoreTaskNum * curBlockIdx + taskTailCore);
 
         gradOutGm.SetGlobalBuffer((__gm__ TGrad*)gradOut, batchSize);
         logProbsGm.SetGlobalBuffer((__gm__ TGrad*)logProbs, symbolSet * batchSize * maxInputLength);
@@ -248,8 +246,8 @@ public:
         gradGm.SetGlobalBuffer((__gm__ TGrad*)grad, symbolSet * batchSize * maxInputLength);
         logBetaGm.SetGlobalBuffer((__gm__ float*)workspace, batchSize * alphaLength);
         tempBetaGm.SetGlobalBuffer((__gm__ float*)workspace + batchSize * alphaLength, batchSize * alphaLength);
-        tempTargetsGm.SetGlobalBuffer(
-            (__gm__ int32_t*)workspace + batchSize * alphaLength * DOUBLE, alphaLength * DOUBLE * batchSize);
+        tempTargetsGm.SetGlobalBuffer((__gm__ int32_t*)workspace + batchSize * alphaLength * DOUBLE,
+                                      alphaLength * DOUBLE * batchSize);
         if (batchSize > LARGE_BATCH) {
             targetOffsetGm.SetGlobalBuffer((__gm__ int64_t*)workspace + batchSize * alphaLength * DOUBLE, batchSize);
         }
@@ -271,8 +269,8 @@ public:
         return batchOffsetTargets;
     }
 
-    __aicore__ inline void InitNewTargetsBuffer(
-        int64_t batchSize, LocalTensor<int64_t>& targetOffsetTensor, LocalTensor<TIndices>& targetLengthsTensor)
+    __aicore__ inline void InitNewTargetsBuffer(int64_t batchSize, LocalTensor<int64_t>& targetOffsetTensor,
+                                                LocalTensor<TIndices>& targetLengthsTensor)
     {
         if (batchSize > LARGE_BATCH) {
             DataCopyExtParams copyParamsOffset = {1, static_cast<uint32_t>(batchSize * INT64_SIZE), 0, 0, 0};
@@ -514,17 +512,16 @@ private:
             Duplicate(gradSliceTensor, static_cast<TGrad>(0), sliceLength);
             VToMTE3Sync();
             DataCopyExtParams copyParamsProb = {1, static_cast<uint32_t>(sliceLengthCur * gradDsize), 0, 0, 0};
-            DataCopyPad(
-                gradGm[batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId], gradSliceTensor,
-                copyParamsProb);
+            DataCopyPad(gradGm[batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId], gradSliceTensor,
+                        copyParamsProb);
             MTE3ToVSync();
         }
         gradSliceQue.FreeTensor(gradSliceTensor);
     }
 
-    __aicore__ inline void updateLcab(
-        int64_t t, int64_t sliceId, int64_t sliceLengthCur, const LocalTensor<float>& logAlphaTensor,
-        const LocalTensor<float>& gradSliceTensor)
+    __aicore__ inline void updateLcab(int64_t t, int64_t sliceId, int64_t sliceLengthCur,
+                                      const LocalTensor<float>& logAlphaTensor,
+                                      const LocalTensor<float>& gradSliceTensor)
     {
         if (t < inputLength - 1) {
             Duplicate(gradSliceTensor, -INFINITY, sliceLength);
@@ -563,8 +560,8 @@ private:
         SToVSync();
     }
 
-    __aicore__ inline void updateLcabOneTime(
-        int64_t curGradOffset, float alphaBetaCur, float lcab, const LocalTensor<float>& gradSliceTensor)
+    __aicore__ inline void updateLcabOneTime(int64_t curGradOffset, float alphaBetaCur, float lcab,
+                                             const LocalTensor<float>& gradSliceTensor)
     {
         if (lcab == -INFINITY) {
             gradSliceTensor.SetValue(curGradOffset, alphaBetaCur);
@@ -581,9 +578,11 @@ private:
             }
             SToVSync();
             Exp(scalarLcabTensor, scalarLcabTensor, DOUBLE);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             ReduceSum<float>(scalarLcabTensor, scalarLcabTensor, scalarLcabTensor, DOUBLE);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Log(logScalarLcabTensor, scalarLcabTensor, 1);
             VToSSync();
             float lcabNew = logScalarLcabTensor.GetValue(0) + maxTmp;
@@ -606,43 +605,50 @@ private:
         logBeta3Tensor.SetValue(DOUBLE * targetLength, -INFINITY);
         SToVSync();
         Compare(gtBeta1MaskTensor, logBeta2Tensor, logBeta1Tensor, CMPMODE::GT, doubleSiAlign);
-        PipeBarrier<PIPE_V>();;
-        Select(
-            maxBetaTensor, gtBeta1MaskTensor, logBeta2Tensor, logBeta1Tensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-            doubleSiAlign); // Take the maximum value of logbeta1 and logbeta2
+        PipeBarrier<PIPE_V>();
+        ;
+        Select(maxBetaTensor, gtBeta1MaskTensor, logBeta2Tensor, logBeta1Tensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+               doubleSiAlign); // Take the maximum value of logbeta1 and logbeta2
         BinaryRepeatParams repeatNeginfSelect = {1, 0, 1, 8, 0, 8};
-        Select(
-            logBeta3Tensor, ifHaveThreeMaskTensor, allNeginfTensor, logBeta3Tensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-            NUM_PER_REPEAT, doubleSiAlign / NUM_PER_REPEAT, repeatNeginfSelect);
+        Select(logBeta3Tensor, ifHaveThreeMaskTensor, allNeginfTensor, logBeta3Tensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+               NUM_PER_REPEAT, doubleSiAlign / NUM_PER_REPEAT, repeatNeginfSelect);
         // Correct the position of -inf in logbeta3
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Compare(gtBeta2MaskTensor, logBeta3Tensor, maxBetaTensor, CMPMODE::GT, doubleSiAlign);
-        PipeBarrier<PIPE_V>();;
-        Select(
-            maxBetaTensor, gtBeta2MaskTensor, logBeta3Tensor, maxBetaTensor, // Correct maxBetaTensor
-            SELMODE::VSEL_TENSOR_TENSOR_MODE, doubleSiAlign);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
+        Select(maxBetaTensor, gtBeta2MaskTensor, logBeta3Tensor, maxBetaTensor, // Correct maxBetaTensor
+               SELMODE::VSEL_TENSOR_TENSOR_MODE, doubleSiAlign);
+        PipeBarrier<PIPE_V>();
+        ;
         CompareScalar(ifNeginfMaskTensor, maxBetaTensor, -INFINITY, CMPMODE::EQ, doubleSiAlign);
-        PipeBarrier<PIPE_V>();;
-        Select(
-            maxBetaTensor, ifNeginfMaskTensor, allZeroTensor, maxBetaTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-            NUM_PER_REPEAT, doubleSiAlign / NUM_PER_REPEAT, repeatNeginfSelect);
+        PipeBarrier<PIPE_V>();
+        ;
+        Select(maxBetaTensor, ifNeginfMaskTensor, allZeroTensor, maxBetaTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+               NUM_PER_REPEAT, doubleSiAlign / NUM_PER_REPEAT, repeatNeginfSelect);
 
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Sub(logBeta1Tensor, logBeta1Tensor, maxBetaTensor, doubleSi);
         Sub(logBeta2Tensor, logBeta2Tensor, maxBetaTensor, doubleSi);
         Sub(logBeta3Tensor, logBeta3Tensor, maxBetaTensor, doubleSi);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Exp(logBeta1Tensor, logBeta1Tensor, doubleSi);
         Exp(logBeta2Tensor, logBeta2Tensor, doubleSi);
         Exp(logBeta3Tensor, logBeta3Tensor, doubleSi);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Add(logBeta2Tensor, logBeta1Tensor, logBeta2Tensor, doubleSi);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Add(logBeta3Tensor, logBeta2Tensor, logBeta3Tensor, doubleSi);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Log(logBetaTensor, logBeta3Tensor, doubleSi);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Add(logBetaTensor, logBetaTensor, maxBetaTensor, doubleSi);
     }
 
@@ -658,8 +664,8 @@ private:
             DataCopyPad(targetLengthsTensor, targetLengthsGm[batchId], copyParamsOneI, padParams);
         }
         MTE2ToSSync();
-        targetLength =
-            batchSize > LARGE_BATCH ? targetLengthsTensor.GetValue(0) : targetLengthsTensor.GetValue(batchId);
+        targetLength = batchSize > LARGE_BATCH ? targetLengthsTensor.GetValue(0) :
+                                                 targetLengthsTensor.GetValue(batchId);
         inputLength = inputLengthsTensor.GetValue(0);
 
         doubleSi = DOUBLE * targetLength + 1;
@@ -685,12 +691,10 @@ private:
         LocalTensor<float> gradSliceTensor = gradSliceQue.AllocTensor<float>();
         LocalTensor<TGrad> logProbLastTensor = logProbLastBuf.Get<TGrad>();
         LocalTensor<TGrad> logProbBlankTensor = logProbBlankBuf.Get<TGrad>();
-        CopyInCast(
-            batchId * alphaLength * maxInputLength + t * alphaLength, alphaLengthBlockAlign, alphaLength,
-            logAlphaTensor, logAlphaGm);
-        DataCopyPad(
-            logProbBlankTensor, logProbsGm[batchOffsetProb + t * symbolSet * batchSize + BLANK], copyParamsOneC,
-            padParams); // Load the probability of blank.
+        CopyInCast(batchId * alphaLength * maxInputLength + t * alphaLength, alphaLengthBlockAlign, alphaLength,
+                   logAlphaTensor, logAlphaGm);
+        DataCopyPad(logProbBlankTensor, logProbsGm[batchOffsetProb + t * symbolSet * batchSize + BLANK], copyParamsOneC,
+                    padParams); // Load the probability of blank.
         MTE2ToSSync();
         if constexpr (std::is_same<TGrad, bfloat16_t>::value) {
             logProbBlank = ToFloat(logProbBlankTensor.GetValue(0));
@@ -699,9 +703,8 @@ private:
         }
         lastChar = targetLength >= 1 ? targetsTensor.GetValue(targetLength - 1) : 0;
         SToMTE2Sync();
-        DataCopyPad(
-            logProbLastTensor, logProbsGm[batchOffsetProb + t * symbolSet * batchSize + lastChar], copyParamsOneC,
-            padParams);
+        DataCopyPad(logProbLastTensor, logProbsGm[batchOffsetProb + t * symbolSet * batchSize + lastChar],
+                    copyParamsOneC, padParams);
         MTE2ToSSync();
         if constexpr (std::is_same<TGrad, bfloat16_t>::value) {
             logProbLastChar = ToFloat(logProbLastTensor.GetValue(0));
@@ -723,21 +726,21 @@ private:
             GatherLogBeta(t, batchOffsetProb, logProbSliceTensor);
             VToMTE3Sync();
             DataCopyParams copyParamsResProbOut = {1, static_cast<uint16_t>(DOUBLE * targetLength * FLOAT_SIZE), 0, 0};
-            DataCopyPad(
-                tempBetaGm[1 + batchId * alphaLength], intResProbTensor.ReinterpretCast<float>(), copyParamsResProbOut);
+            DataCopyPad(tempBetaGm[1 + batchId * alphaLength], intResProbTensor.ReinterpretCast<float>(),
+                        copyParamsResProbOut);
             MTE3ToMTE2Sync();
-            DataCopyParams copyParamsResProbIn = {
-                1, static_cast<uint16_t>((DOUBLE * targetLength + 1) * FLOAT_SIZE), 0, 0};
-            DataCopyPad(
-                intResProbTensor.ReinterpretCast<float>(), tempBetaGm[0 + batchId * alphaLength], copyParamsResProbIn,
-                padParams);
+            DataCopyParams copyParamsResProbIn = {1, static_cast<uint16_t>((DOUBLE * targetLength + 1) * FLOAT_SIZE), 0,
+                                                  0};
+            DataCopyPad(intResProbTensor.ReinterpretCast<float>(), tempBetaGm[0 + batchId * alphaLength],
+                        copyParamsResProbIn, padParams);
             MTE2ToSSync();
             intResProbTensor.ReinterpretCast<float>().SetValue(0, logProbBlank);
             // Assign the log_prob values for all even positions using cast and mask.
             SToVSync();
             // logbeta + log_prob
             Add(logBetaTensor, logBetaTensor, intResProbTensor.ReinterpretCast<float>(), doubleSi);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             VToMTE3Sync();
         } else if ((t < inputLength - 1) && (targetLength == 0)) {
             DataCopyParams copyParamsOneBeta = {1, static_cast<uint16_t>(FLOAT_SIZE), 0, 0};
@@ -769,9 +772,8 @@ private:
         gradSliceQue.FreeTensor(gradSliceTensor);
     }
 
-    __aicore__ inline void CopyInCast(
-        int64_t gmOffset, int64_t ubOffset, int64_t castLength, const LocalTensor<float>& dstTensor,
-        const GlobalTensor<TGrad>& srcGm)
+    __aicore__ inline void CopyInCast(int64_t gmOffset, int64_t ubOffset, int64_t castLength,
+                                      const LocalTensor<float>& dstTensor, const GlobalTensor<TGrad>& srcGm)
     {
         DataCopyExtParams copyParamsProb = {1, static_cast<uint32_t>(castLength * gradDsize), 0, 0, 0};
         if constexpr (std::is_same<TGrad, float>::value) {
@@ -781,112 +783,120 @@ private:
             DataCopyPad(dstTensor.ReinterpretCast<TGrad>()[ubOffset], srcGm[gmOffset], copyParamsProb, padParamsProb);
             MTE2ToVSync();
             Cast(dstTensor, dstTensor.ReinterpretCast<TGrad>()[ubOffset], RoundMode::CAST_NONE, castLength);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
         }
     }
 
-    __aicore__ inline void GatherLogBeta(
-        int64_t t, int64_t batchOffsetProb, const LocalTensor<float>& logProbSliceTensor)
+    __aicore__ inline void GatherLogBeta(int64_t t, int64_t batchOffsetProb,
+                                         const LocalTensor<float>& logProbSliceTensor)
     {
         int64_t sliceLengthCur = sliceLength;
         Cast(castFloatTargetsTensor, targetsTensor, RoundMode::CAST_ROUND, targetLength);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Muls(castFloatTargetsTensor, castFloatTargetsTensor, GATHER_FLOAT_SIZE, targetLength);
         for (int64_t sliceId = 0; sliceId < probSliceNum; sliceId++) {
-            float upLimit =
-                sliceId >= (probSliceNum - 1) ? symbolSet * FLOAT_SIZE : sliceLength * (1 + sliceId) * FLOAT_SIZE;
+            float upLimit = sliceId >= (probSliceNum - 1) ? symbolSet * FLOAT_SIZE :
+                                                            sliceLength * (1 + sliceId) * FLOAT_SIZE;
             float negDownLimit = -sliceLength * sliceId * FLOAT_SIZE;
             float downLimit = sliceLength * sliceId * FLOAT_SIZE;
             if (sliceId >= probSliceNum - 1) {
                 sliceLengthCur = sliceLengthTail;
             }
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             CompareScalar(downMaskTensor, castFloatTargetsTensor, downLimit, CMPMODE::GE, siAlign);
             CompareScalar(upMaskTensor, castFloatTargetsTensor, upLimit, CMPMODE::LT, siAlign);
             // Determine the positions of valid data through comparison.
             Adds(changedTargetsTensor, castFloatTargetsTensor, negDownLimit, targetLength);
             // Subtract the threshold from uintTargetsTensor
-            PipeBarrier<PIPE_V>();;
-            Select(
-                changedTargetsTensor, downMaskTensor, changedTargetsTensor, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                siAlign);
-            PipeBarrier<PIPE_V>();;
-            Select(
-                changedTargetsTensor, upMaskTensor, changedTargetsTensor, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                siAlign);
+            PipeBarrier<PIPE_V>();
+            ;
+            Select(changedTargetsTensor, downMaskTensor, changedTargetsTensor, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                   siAlign);
+            PipeBarrier<PIPE_V>();
+            ;
+            Select(changedTargetsTensor, upMaskTensor, changedTargetsTensor, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                   siAlign);
             // Correct invalid data
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Cast(intTargetsTensor, changedTargetsTensor, RoundMode::CAST_ROUND, targetLength);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             LocalTensor<uint32_t> uintTargetsTensor = intTargetsTensor.ReinterpretCast<uint32_t>();
-            CopyInCast(
-                batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId, sliceLengthAlign, sliceLengthCur,
-                logProbSliceTensor, logProbsGm);
+            CopyInCast(batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId, sliceLengthAlign,
+                       sliceLengthCur, logProbSliceTensor, logProbsGm);
             Gather(resPartProbTensor, logProbSliceTensor, uintTargetsTensor, 0, targetLength);
             VToMTE2Sync();
-            PipeBarrier<PIPE_V>();;
-            Select(
-                resPartProbTensor, downMaskTensor, resPartProbTensor, resProbTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                siAlign);
-            PipeBarrier<PIPE_V>();;
-            Select(
-                resProbTensor, upMaskTensor, resPartProbTensor, resProbTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                siAlign);
+            PipeBarrier<PIPE_V>();
+            ;
+            Select(resPartProbTensor, downMaskTensor, resPartProbTensor, resProbTensor,
+                   SELMODE::VSEL_TENSOR_TENSOR_MODE, siAlign);
+            PipeBarrier<PIPE_V>();
+            ;
+            Select(resProbTensor, upMaskTensor, resPartProbTensor, resProbTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                   siAlign);
             // The output results will retain the original values from resProbTensor,
             // while the rest are updated with the newly computed values.
             // This ensures all the correct values are obtained in the end.
         }
 
         Cast(intResProbTensor, resProbTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, targetLength);
-        PipeBarrier<PIPE_V>();;
-        Select(
-            intResProbTensor.ReinterpretCast<float>(), evenMaskTensor, intResProbTensor.ReinterpretCast<float>(),
-            logProbBlank, SELMODE::VSEL_TENSOR_SCALAR_MODE, doubleSiAlign);
+        PipeBarrier<PIPE_V>();
+        ;
+        Select(intResProbTensor.ReinterpretCast<float>(), evenMaskTensor, intResProbTensor.ReinterpretCast<float>(),
+               logProbBlank, SELMODE::VSEL_TENSOR_SCALAR_MODE, doubleSiAlign);
     }
 
-    __aicore__ inline void CalcGrad(
-        int64_t t, int64_t sliceId, int64_t sliceLengthCur, int64_t batchOffsetProb,
-        const LocalTensor<float>& logProbSliceTensor, const LocalTensor<float>& gradSliceTensor)
+    __aicore__ inline void CalcGrad(int64_t t, int64_t sliceId, int64_t sliceLengthCur, int64_t batchOffsetProb,
+                                    const LocalTensor<float>& logProbSliceTensor,
+                                    const LocalTensor<float>& gradSliceTensor)
     {
         // res = (exp(lp) - exp(res + nll - lp)) * gr
-        CopyInCast(
-            batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId, sliceLengthAlign, sliceLengthCur,
-            logProbSliceTensor, logProbsGm);
+        CopyInCast(batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId, sliceLengthAlign,
+                   sliceLengthCur, logProbSliceTensor, logProbsGm);
         MTE2ToVSync();
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Adds(gradSliceTensor, gradSliceTensor, nll, sliceLengthCur);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Sub(gradSliceTensor, gradSliceTensor, logProbSliceTensor, sliceLengthCur);
         Exp(logProbSliceTensor, logProbSliceTensor, sliceLengthCur);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Exp(gradSliceTensor, gradSliceTensor, sliceLengthCur);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Sub(gradSliceTensor, logProbSliceTensor, gradSliceTensor, sliceLengthCur);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Muls(gradSliceTensor, gradSliceTensor, gradOutCurBatch, sliceLengthCur);
         if constexpr (std::is_same<TGrad, half>::value) {
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Cast(gradSliceTensor.ReinterpretCast<TGrad>(), gradSliceTensor, RoundMode::CAST_NONE, sliceLength);
         } else if constexpr (std::is_same<TGrad, bfloat16_t>::value) {
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Cast(gradSliceTensor.ReinterpretCast<TGrad>(), gradSliceTensor, RoundMode::CAST_RINT, sliceLength);
         }
         VToMTE3Sync();
         DataCopyExtParams copyParamsProb = {1, static_cast<uint32_t>(sliceLengthCur * gradDsize), 0, 0, 0};
         if constexpr (std::is_same<TGrad, float>::value) {
-            DataCopyPad(
-                gradGm[batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId], gradSliceTensor,
-                copyParamsProb);
+            DataCopyPad(gradGm[batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId], gradSliceTensor,
+                        copyParamsProb);
         } else {
-            DataCopyPad(
-                gradGm[batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId],
-                gradSliceTensor.ReinterpretCast<TGrad>(), copyParamsProb);
+            DataCopyPad(gradGm[batchOffsetProb + t * symbolSet * batchSize + sliceLength * sliceId],
+                        gradSliceTensor.ReinterpretCast<TGrad>(), copyParamsProb);
         }
         MTE3ToVSync();
     }
 
-    __aicore__ inline void GetMaxTargetLength(
-        const LocalTensor<TIndices>& targetLengthsTensor, const LocalTensor<int64_t>& targetOffsetTensor)
+    __aicore__ inline void GetMaxTargetLength(const LocalTensor<TIndices>& targetLengthsTensor,
+                                              const LocalTensor<int64_t>& targetOffsetTensor)
     {
         // Calcu the real max target length.
         int64_t offsetTmp = 0;
@@ -908,17 +918,16 @@ private:
     {
         Duplicate<float>(allNeginfTensor, -INFINITY, FLOAT_NUM_PER_BLOCK);
         Duplicate<float>(allZeroTensor, 0.0f, FLOAT_NUM_PER_BLOCK);
-        Duplicate<int32_t>(
-            allOneTensor.ReinterpretCast<int32_t>()[CeilAlign(maxTargetLength + 1, HALF_NUM_PER_REPEAT)], 1,
-            maxTargetLength + 1);
-        PipeBarrier<PIPE_V>();;
-        Cast(
-            allOneTensor, allOneTensor.ReinterpretCast<int32_t>()[CeilAlign(maxTargetLength + 1, HALF_NUM_PER_REPEAT)],
-            RoundMode::CAST_NONE, maxTargetLength + 1);
-        PipeBarrier<PIPE_V>();;
-        CompareScalar(
-            evenMaskTensor, allOneTensor.ReinterpretCast<int32_t>(), 1, CMPMODE::EQ,
-            CeilAlign(maxTargetLength + 1, HALF_NUM_PER_REPEAT) * DOUBLE);
+        Duplicate<int32_t>(allOneTensor.ReinterpretCast<int32_t>()[CeilAlign(maxTargetLength + 1, HALF_NUM_PER_REPEAT)],
+                           1, maxTargetLength + 1);
+        PipeBarrier<PIPE_V>();
+        ;
+        Cast(allOneTensor, allOneTensor.ReinterpretCast<int32_t>()[CeilAlign(maxTargetLength + 1, HALF_NUM_PER_REPEAT)],
+             RoundMode::CAST_NONE, maxTargetLength + 1);
+        PipeBarrier<PIPE_V>();
+        ;
+        CompareScalar(evenMaskTensor, allOneTensor.ReinterpretCast<int32_t>(), 1, CMPMODE::EQ,
+                      CeilAlign(maxTargetLength + 1, HALF_NUM_PER_REPEAT) * DOUBLE);
     }
 
     __aicore__ inline void CopyInTargetsTensor(int64_t batchOffsetTargets, int64_t batchId)
@@ -928,27 +937,21 @@ private:
         DataCopyParams copyParamsSiShift = {1, static_cast<uint16_t>((targetLength - 1) * targetDsize), 0, 0};
         if constexpr (std::is_same<TIndices, int32_t>::value) {
             if (targetLength > 1) {
-                DataCopyPad(
-                    targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign], targetsGm[batchOffsetTargets],
-                    copyParamsSi, padParams);
-                DataCopyPad(
-                    targetsShiftTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
-                    targetsGm[batchOffsetTargets + 1], copyParamsSiShift, padParams);
+                DataCopyPad(targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
+                            targetsGm[batchOffsetTargets], copyParamsSi, padParams);
+                DataCopyPad(targetsShiftTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
+                            targetsGm[batchOffsetTargets + 1], copyParamsSiShift, padParams);
                 MTE2ToVSync();
-                Cast(
-                    targetsTensor, targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
-                    RoundMode::CAST_NONE, targetLength);
-                Cast(
-                    targetsShiftTensor, targetsShiftTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
-                    RoundMode::CAST_NONE, targetLength);
+                Cast(targetsTensor, targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
+                     RoundMode::CAST_NONE, targetLength);
+                Cast(targetsShiftTensor, targetsShiftTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
+                     RoundMode::CAST_NONE, targetLength);
             } else {
-                DataCopyPad(
-                    targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign], targetsGm[batchOffsetTargets],
-                    copyParamsSi, padParams);
+                DataCopyPad(targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
+                            targetsGm[batchOffsetTargets], copyParamsSi, padParams);
                 MTE2ToVSync();
-                Cast(
-                    targetsTensor, targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
-                    RoundMode::CAST_NONE, targetLength);
+                Cast(targetsTensor, targetsTensor.ReinterpretCast<int32_t>()[maxTargetLengthBlockAlign],
+                     RoundMode::CAST_NONE, targetLength);
             }
             VToMTE3Sync();
         } else {
@@ -963,29 +966,26 @@ private:
         DataCopyParams copyParamsDoubleSiOut = {1, static_cast<uint16_t>((doubleSi - 1) * FLOAT_SIZE), 0, 0};
         DataCopyParams copyParamsDoubleSiIn = {1, static_cast<uint16_t>((doubleSi)*FLOAT_SIZE), 0, 0};
         targetsDoubleTensor = targetsDoubleBuf.Get<int32_t>();
-        DataCopyPad(
-            tempTargetsGm[batchId * DOUBLE * alphaLength + 1], targetsTensor.ReinterpretCast<int32_t>(),
-            copyParamsDoubleSiOut);
-        DataCopyPad(
-            tempTargetsGm[batchId * DOUBLE * alphaLength + alphaLength + 1],
-            targetsShiftTensor.ReinterpretCast<int32_t>(), copyParamsDoubleSiOut);
+        DataCopyPad(tempTargetsGm[batchId * DOUBLE * alphaLength + 1], targetsTensor.ReinterpretCast<int32_t>(),
+                    copyParamsDoubleSiOut);
+        DataCopyPad(tempTargetsGm[batchId * DOUBLE * alphaLength + alphaLength + 1],
+                    targetsShiftTensor.ReinterpretCast<int32_t>(), copyParamsDoubleSiOut);
         MTE3ToMTE2Sync();
-        DataCopyPad(
-            targetsDoubleTensor, tempTargetsGm[batchId * DOUBLE * alphaLength + 0], copyParamsDoubleSiIn, padParams);
-        DataCopyPad(
-            targetsShiftTensor.ReinterpretCast<int32_t>(),
-            tempTargetsGm[batchId * DOUBLE * alphaLength + alphaLength + 0], copyParamsDoubleSiIn, padParams);
+        DataCopyPad(targetsDoubleTensor, tempTargetsGm[batchId * DOUBLE * alphaLength + 0], copyParamsDoubleSiIn,
+                    padParams);
+        DataCopyPad(targetsShiftTensor.ReinterpretCast<int32_t>(),
+                    tempTargetsGm[batchId * DOUBLE * alphaLength + alphaLength + 0], copyParamsDoubleSiIn, padParams);
         MTE2ToSSync();
         targetsDoubleTensor.SetValue(0, 0);
         targetsShiftTensor.ReinterpretCast<int32_t>().SetValue(0, 0);
-        targetsShiftTensor.ReinterpretCast<int32_t>().SetValue(
-            DOUBLE * targetLength - 1, targetsDoubleTensor.GetValue(DOUBLE * targetLength - 1));
+        targetsShiftTensor.ReinterpretCast<int32_t>().SetValue(DOUBLE * targetLength - 1,
+                                                               targetsDoubleTensor.GetValue(DOUBLE * targetLength - 1));
         targetsShiftTensor.ReinterpretCast<int32_t>().SetValue(DOUBLE * targetLength, 0);
         SToVSync();
-        Compare(
-            ifHaveThreeMaskTensor, targetsDoubleTensor, targetsShiftTensor.template ReinterpretCast<int32_t>(),
-            CMPMODE::EQ, doubleSiAlign);
-        PipeBarrier<PIPE_V>();;
+        Compare(ifHaveThreeMaskTensor, targetsDoubleTensor, targetsShiftTensor.template ReinterpretCast<int32_t>(),
+                CMPMODE::EQ, doubleSiAlign);
+        PipeBarrier<PIPE_V>();
+        ;
     }
 };
 } // namespace CTCLossV3GradNS

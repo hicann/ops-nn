@@ -21,15 +21,9 @@ using namespace op;
 
 class ApplyAdamWProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamWProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamWProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamWProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamWProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(ApplyAdamWProtoTest, apply_adam_w_infershape_verify_test_01)
@@ -52,9 +46,8 @@ TEST_F(ApplyAdamWProtoTest, apply_adam_w_infershape_verify_test_01)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -95,9 +88,8 @@ TEST_F(ApplyAdamWProtoTest, apply_adam_w_infershape_test_01)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -138,9 +130,8 @@ TEST_F(ApplyAdamWProtoTest, infer_axis_type_with_input_is_scalar)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -181,9 +172,8 @@ TEST_F(ApplyAdamWProtoTest, infer_axis_type_with_input_has_unknown_rank)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -224,9 +214,8 @@ TEST_F(ApplyAdamWProtoTest, infer_axis_type_with_input_dim_num_equals_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -267,9 +256,8 @@ TEST_F(ApplyAdamWProtoTest, infer_axis_type_with_input_dim_num_equals_1_and_amsg
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -310,9 +298,8 @@ TEST_F(ApplyAdamWProtoTest, infer_axis_type_with_input_dim_num_equals_2)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -353,9 +340,8 @@ TEST_F(ApplyAdamWProtoTest, infer_axis_type_with_input_dim_num_equals_3)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&output_shape, &output_shape, &output_shape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)

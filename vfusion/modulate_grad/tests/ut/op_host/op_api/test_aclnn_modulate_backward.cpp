@@ -21,13 +21,14 @@ using namespace op;
 using namespace std;
 
 class l2_modulate_backward_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { std::cout << "aclnnModulateBackward_test SetUp" << std::endl; }
+protected:
+    static void SetUpTestCase() { std::cout << "aclnnModulateBackward_test SetUp" << std::endl; }
 
-  static void TearDownTestCase() { std::cout << "aclnnModulateBackward_test TearDown" << std::endl; }
+    static void TearDownTestCase() { std::cout << "aclnnModulateBackward_test TearDown" << std::endl; }
 };
 
-TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
+TEST_F(l2_modulate_backward_test, ascend910B_case_0)
+{
     auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -36,11 +37,12 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+                        OUTPUT(grad_input_desc, grad_scale_desc, grad_shift_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 // // checkNotNull
 // TEST_F(l2_modulate_backward_test, ascend910B_case_1) {
@@ -48,7 +50,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT((aclTensor*)nullptr, (aclTensor*)nullptr, scale_desc, shift_desc), OUTPUT(grad_scale_desc, grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT((aclTensor*)nullptr, (aclTensor*)nullptr, scale_desc,
+//     shift_desc), OUTPUT(grad_scale_desc, grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -71,17 +74,18 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //         auto grad_input_desc = TensorDesc({32, 8, 1024}, ValidList[i], ACL_FORMAT_ND).ValueRange(-10, 10);
 //         auto grad_scale_desc = TensorDesc({32, 1024}, ValidList[i], ACL_FORMAT_ND).ValueRange(-10, 10);
 //         auto grad_shift_desc = TensorDesc({32, 1024}, ValidList[i], ACL_FORMAT_ND).ValueRange(-10, 10);
-//         auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc, grad_shift_desc));
+//         auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//         OUTPUT(grad_input_desc, grad_scale_desc, grad_shift_desc));
 
 //         // SAMPLE: only test GetWorkspaceSize
 //         uint64_t workspaceSize = 0;
 //         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-        // if (ValidList[i] != ACL_DT_UNDEFINED) {
-        //     EXPECT_EQ(aclRet, ACL_SUCCESS);
-        //     ut.TestPrecision();
-        // } else {
-        //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-        // }
+// if (ValidList[i] != ACL_DT_UNDEFINED) {
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// } else {
+//     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+// }
 //     }
 // }
 
@@ -95,7 +99,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -112,7 +117,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -129,7 +135,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -146,7 +153,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -163,7 +171,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -180,7 +189,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 2, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -197,7 +207,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -214,7 +225,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -231,7 +243,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 2, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -248,7 +261,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc), OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+//     OUTPUT(grad_input_desc, grad_scale_desc,grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -263,7 +277,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, shift_desc), OUTPUT(grad_input_desc, (aclTensor*)nullptr, grad_shift_desc));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, shift_desc),
+//     OUTPUT(grad_input_desc, (aclTensor*)nullptr, grad_shift_desc));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -278,7 +293,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, (aclTensor*)nullptr), OUTPUT(grad_input_desc, grad_scale_desc,(aclTensor*)nullptr));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, (aclTensor*)nullptr),
+//     OUTPUT(grad_input_desc, grad_scale_desc,(aclTensor*)nullptr));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -291,7 +307,8 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0) {
 //     auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 //     auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
-//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr), OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+//     auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr,
+//     (aclTensor*)nullptr), OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
 //     // SAMPLE: only test GetWorkspaceSize
 //     uint64_t workspace_size = 0;
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

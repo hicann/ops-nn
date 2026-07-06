@@ -31,7 +31,8 @@ struct TensorInfo {
 };
 
 template <typename T>
-std::string DebugString(const std::vector<T>& v) {
+std::string DebugString(const std::vector<T>& v)
+{
     std::ostringstream oss;
     oss << "[";
     if (v.size() > 0) {
@@ -44,8 +45,10 @@ std::string DebugString(const std::vector<T>& v) {
     return oss.str();
 }
 
-inline void DebugShape(gert::TilingContext* context, const int64_t index, std::vector<int64_t>& shape, bool isInput) {
-    auto geShape = isInput ? context->GetInputShape(index)->GetStorageShape() : context->GetOutputShape(index)->GetStorageShape();
+inline void DebugShape(gert::TilingContext* context, const int64_t index, std::vector<int64_t>& shape, bool isInput)
+{
+    auto geShape = isInput ? context->GetInputShape(index)->GetStorageShape() :
+                             context->GetOutputShape(index)->GetStorageShape();
     int32_t dimNum = geShape.GetDimNum();
     shape.reserve(dimNum);
     for (int i = 0; i < dimNum; ++i) {
@@ -53,11 +56,12 @@ inline void DebugShape(gert::TilingContext* context, const int64_t index, std::v
     }
 }
 
-inline TensorInfo GetTensorInfo(gert::TilingContext* context, int64_t index, bool isInput, int64_t dimCount) {
+inline TensorInfo GetTensorInfo(gert::TilingContext* context, int64_t index, bool isInput, int64_t dimCount)
+{
     TensorInfo info;
     auto tensor = isInput ? context->GetInputDesc(index) : context->GetOutputDesc(index);
     OP_CHECK_IF(tensor == nullptr, OP_LOGE(context->GetNodeName(), "get tensor desc from context fail."), return info);
-    
+
     if (dimCount == 1) {
         info.shape = {context->GetInputShape(index)->GetStorageShape().GetDim(0)};
     } else {
@@ -68,16 +72,19 @@ inline TensorInfo GetTensorInfo(gert::TilingContext* context, int64_t index, boo
     return info;
 }
 
-inline std::vector<int64_t> GetAttrVector(gert::TilingContext* context, int attrIndex, int expectedSize, const char* attrName) {
+inline std::vector<int64_t> GetAttrVector(gert::TilingContext* context, int attrIndex, int expectedSize,
+                                          const char* attrName)
+{
     auto attrs = context->GetAttrs();
     const auto attr = attrs->GetAttrPointer<gert::ContinuousVector>(attrIndex);
     OP_CHECK_IF(attr == nullptr, OP_LOGE(context->GetNodeName(), "get %s from context fail.", attrName), return {});
-    OP_CHECK_IF(attr->GetSize() != expectedSize, OP_LOGE(context->GetNodeName(), "%s of context dim len is invalid.", attrName), return {});
-    
-    const auto data = static_cast<const int64_t *>(attr->GetData());
+    OP_CHECK_IF(attr->GetSize() != expectedSize,
+                OP_LOGE(context->GetNodeName(), "%s of context dim len is invalid.", attrName), return {});
+
+    const auto data = static_cast<const int64_t*>(attr->GetData());
     return std::vector<int64_t>(data, data + expectedSize);
 }
 
-}  // namespace Conv
-}  // namespace NN
-}  // namespace Ops
+} // namespace Conv
+} // namespace NN
+} // namespace Ops

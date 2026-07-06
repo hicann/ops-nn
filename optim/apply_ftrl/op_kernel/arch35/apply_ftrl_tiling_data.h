@@ -18,9 +18,9 @@
 
 #include "atvoss/elewise/elewise_base_struct.h"
 namespace ApplyFtrlOpTiling {
-    using namespace Ops::Base;
-    struct ApplyFtrlRegbaseTilingData {
-        EleBaseTilingDataV2 elewiseTiling;
-    };
-}
+using namespace Ops::Base;
+struct ApplyFtrlRegbaseTilingData {
+    EleBaseTilingDataV2 elewiseTiling;
+};
+} // namespace ApplyFtrlOpTiling
 #endif // APPLY_FTRL_TILING_DATA_H

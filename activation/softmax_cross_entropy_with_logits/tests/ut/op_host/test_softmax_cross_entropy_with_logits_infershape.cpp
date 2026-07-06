@@ -21,10 +21,7 @@
 
 class SoftmaxCrossEntropyWithLogitsTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SoftmaxCrossEntropyWithLogitsTest Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SoftmaxCrossEntropyWithLogitsTest Proto Test SetUp" << std::endl; }
 
     static void TearDownTestCase()
     {

@@ -25,8 +25,8 @@ template <typename T, bool isViewStride0 = false>
 class ScatterNdUpdateKernelNoSort {
 public:
     __aicore__ inline ScatterNdUpdateKernelNoSort() = delete;
-    __aicore__ inline ScatterNdUpdateKernelNoSort(
-        GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace, const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+    __aicore__ inline ScatterNdUpdateKernelNoSort(GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace,
+                                                  const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
     {
         InitParam(tiling);
         InitBuffers(pipe);
@@ -36,9 +36,8 @@ public:
     __aicore__ inline void InitParam(const ScatterNdUpdateArch32TilingData& tiling)
     {
         blockIdx_ = GetBlockIdx();
-        CalcBlockDistribution(
-            blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow, tiling.scatterTiling.tailRow,
-            computeRow_, start_);
+        CalcBlockDistribution(blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow,
+                              tiling.scatterTiling.tailRow, computeRow_, start_);
         end_ = start_ + computeRow_;
         totalIndexRow_ = tiling.linearIndexTiling.blockNum * tiling.linearIndexTiling.blockLength +
                          tiling.linearIndexTiling.blockRemainLength;
@@ -76,8 +75,8 @@ public:
         pipe.InitBuffer(updateQue_, DOUBLE_BUFFER, scatterTileLength_ * sizeof(T));
     }
 
-    __aicore__ inline void SetGmAddr(
-        GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace, const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace,
+                                     const ScatterNdUpdateArch32TilingData& tiling)
     {
         linearIndicesGm_.SetGlobalBuffer((__gm__ int*)workSpace);
         updatesGm_.SetGlobalBuffer((__gm__ T*)updates);
@@ -116,9 +115,9 @@ public:
 
             LocalTensor<T> updateLocal = updateQue_.AllocTensor<T>();
             uint64_t gmOffset = idx * scatterLength_ + tileIdx * scatterTileLength_;
-            DoScatterCopy<T, isViewStride0>(
-                updateLocal, updatesGm_, outputGm_, gmOffset, tileLength, linearIndex, tileIdx, scatterTileLength_,
-                firstDimStrideRows_, varStride0Elements_, scatterLength_);
+            DoScatterCopy<T, isViewStride0>(updateLocal, updatesGm_, outputGm_, gmOffset, tileLength, linearIndex,
+                                            tileIdx, scatterTileLength_, firstDimStrideRows_, varStride0Elements_,
+                                            scatterLength_);
             updateQue_.FreeTensor<T>(updateLocal);
         }
     }

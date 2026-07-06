@@ -20,10 +20,7 @@
 
 const uint32_t STEP_2 = 2;
 
-__aicore__ inline uint64_t Ceil(uint64_t a, uint64_t b)
-{
-    return (a + b - 1) / b;
-}
+__aicore__ inline uint64_t Ceil(uint64_t a, uint64_t b) { return (a + b - 1) / b; }
 
 __aicore__ inline uint64_t DivHkWk(uint64_t a, uint32_t hkWk)
 {
@@ -116,7 +113,7 @@ static __aicore__ inline uint32_t CalRows2Copy(uint32_t copySize, uint32_t width
 // API类中定义call函数的默认重载函数，支持任意类型任意数量的参数
 #define DECLARE_DEFAULT_OVERLOADING_FUN(T, NAMESPACE)                       \
     template <class... Ts>                                                  \
-    static __aicore__ inline NAMESPACE::TypeFalse call(T *self, Ts... args) \
+    static __aicore__ inline NAMESPACE::TypeFalse call(T* self, Ts... args) \
     {                                                                       \
         return (NAMESPACE::TypeFalse){0};                                   \
     }
@@ -225,7 +222,9 @@ static __aicore__ inline uint32_t CalRows2Copy(uint32_t copySize, uint32_t width
     }
 
 // 供类继承使用，返回一个供继承的父类类型
-#define DEFINE_STUCT(T, M) public decltype(__AuxTiling::T##_##M##_checkdefine<T>())
+#define DEFINE_STUCT(T, M) \
+public                     \
+    decltype(__AuxTiling::T##_##M##_checkdefine<T>())
 
 #define DEFINE_STUCT_FIELD(T, FIELD) \
     T FIELD;                         \
@@ -233,12 +232,12 @@ static __aicore__ inline uint32_t CalRows2Copy(uint32_t copySize, uint32_t width
 
 #define CHECK_CONST(T, M) (T::__CONST_TYPE_##M)
 
-#define DEFINE_STUCT_TEMPLATE_FIELD(T, FIELD, C,...) \
-    T <C, ##__VA_ARGS__> FIELD; \
+#define DEFINE_STUCT_TEMPLATE_FIELD(T, FIELD, C, ...) \
+    T<C, ##__VA_ARGS__> FIELD;                        \
     constexpr static bool __CONST_TYPE_##FIELD = false
 
 #define DEFINE_STUCT_ARRAY_FIELD(T, FIELD, NUM) \
-    T FIELD[NUM]; \
+    T FIELD[NUM];                               \
     constexpr static bool __CONST_TYPE_##FIELD = false
 
 #endif

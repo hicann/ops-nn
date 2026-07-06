@@ -11,7 +11,7 @@
 /*!
  * \file swish_grad_infershape.cpp
  * \brief
-*/
+ */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -40,4 +40,4 @@ static ge::graphStatus InferShapeSwishGrad(gert::InferShapeContext* context)
 }
 
 IMPL_OP_INFERSHAPE(SwishGrad).InferShape(InferShapeSwishGrad);
-}
+} // namespace ops

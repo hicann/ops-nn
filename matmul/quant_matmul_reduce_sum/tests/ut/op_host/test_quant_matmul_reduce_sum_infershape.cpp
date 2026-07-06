@@ -23,45 +23,39 @@
 
 namespace ge {
 
-class QuantMatmulReduceSumInferShapeTest : public testing::Test
-{
+class QuantMatmulReduceSumInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantMatmulReduceSumInferShapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantMatmulReduceSumInferShapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantMatmulReduceSumInferShapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantMatmulReduceSumInferShapeTest TearDown" << std::endl; }
 };
 
-TEST_F(QuantMatmulReduceSumInferShapeTest, basic) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulReduceSum")->infer_shape;
+TEST_F(QuantMatmulReduceSumInferShapeTest, basic)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulReduceSum")->infer_shape;
 
-  gert::StorageShape x1Shape = {{8, 2048, 1024}, {8, 2048, 1024}};
-  gert::StorageShape x2Shape = {{8, 1024, 7168}, {8, 1024/32, 7168/16, 16, 32}};
-  gert::StorageShape dimsShape = {{1}, {1}};
-  gert::StorageShape biasShape = {{}, {}};
-  gert::StorageShape x1ScaleShape = {{8, 2048}, {8, 2048}};
-  gert::StorageShape x2ScaleShape = {{7168}, {7168}};
-  gert::StorageShape outputShape = {{}, {}};
-  int64_t dtype = static_cast<int64_t> (ge::DT_BF16);
-  gert::Shape expect_output_shape = {2048, 7168};
+    gert::StorageShape x1Shape = {{8, 2048, 1024}, {8, 2048, 1024}};
+    gert::StorageShape x2Shape = {{8, 1024, 7168}, {8, 1024 / 32, 7168 / 16, 16, 32}};
+    gert::StorageShape dimsShape = {{1}, {1}};
+    gert::StorageShape biasShape = {{}, {}};
+    gert::StorageShape x1ScaleShape = {{8, 2048}, {8, 2048}};
+    gert::StorageShape x2ScaleShape = {{7168}, {7168}};
+    gert::StorageShape outputShape = {{}, {}};
+    int64_t dtype = static_cast<int64_t>(ge::DT_BF16);
+    gert::Shape expect_output_shape = {2048, 7168};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(6, 1)
-                    .IrInstanceNum({1, 1, 1, 1, 1, 1})
-                    .InputShapes({&x1Shape, &x2Shape, &dimsShape, &biasShape, &x1ScaleShape, &x2ScaleShape})
-                    .OutputShapes({&outputShape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, &dimsShape, &biasShape, &x1ScaleShape, &x2ScaleShape})
+                      .OutputShapes({&outputShape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
-}
+} // namespace ge

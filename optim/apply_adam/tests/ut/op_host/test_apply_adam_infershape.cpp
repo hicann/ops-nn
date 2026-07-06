@@ -16,15 +16,9 @@
 
 class ApplyAdam : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdam SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdam SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdam TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdam TearDown" << std::endl; }
 };
 
 TEST_F(ApplyAdam, ApplyAdam_infershape_case_0)
@@ -46,9 +40,8 @@ TEST_F(ApplyAdam, ApplyAdam_infershape_case_0)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &beta2PowerShape, &lrShape, &beta1Shape,
-                           &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &beta2PowerShape, &lrShape,
+                                    &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -74,9 +67,8 @@ TEST_F(ApplyAdam, ApplyAdam_infershape_case_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &vShape, &beta1PowerShape, &beta2PowerShape, &lrShape, &beta1Shape,
-                           &beta2Shape, &epsilonShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &vShape, &beta1PowerShape, &beta2PowerShape, &lrShape,
+                                    &beta1Shape, &beta2Shape, &epsilonShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 

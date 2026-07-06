@@ -11,7 +11,7 @@
 /*!
  * \file matmul_compress.cpp
  * \brief
- */  
+ */
 #include "matmul_compress.h"
 #include "lib/matmul_intf.h"
 #include "kernel_operator.h"
@@ -19,8 +19,8 @@
 #include "matmul_compress_tiling_data.h"
 
 template <int PP_MAT_MUL_MODE, int TRANS>
-__global__ __aicore__ void matmul_compress(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR compressIndexGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+__global__ __aicore__ void matmul_compress(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR compressIndexGM,
+                                           GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     REGISTER_TILING_DEFAULT(MatmulCompressTilingDataArch20);
     GET_TILING_DATA(tilingData, tilingGM);
@@ -28,7 +28,7 @@ __global__ __aicore__ void matmul_compress(
     SetPadding<uint64_t>((uint64_t)0x0);
     SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
     SetAtomicnone();
-    if constexpr (PP_MAT_MUL_MODE == MATMUL_COMPRESS_PP_MAT_MUL_MODE_TRUE && TRANS == MATMUL_COMPRESS_B_TRANS){
+    if constexpr (PP_MAT_MUL_MODE == MATMUL_COMPRESS_PP_MAT_MUL_MODE_TRUE && TRANS == MATMUL_COMPRESS_B_TRANS) {
         MatmulCompressSpace::MatmulCompress<0, false, true, false, half, uint64_t, float, float, true, false> kernel;
         SET_FLAG(MTE2, S, EVENT_ID0);
         WAIT_FLAG(MTE2, S, EVENT_ID0);

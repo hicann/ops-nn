@@ -26,11 +26,10 @@ template <typename T>
 class SwigluGroupQuantGrad : public SwigluGroupQuantGradBase {
 public:
     __aicore__ inline SwigluGroupQuantGrad() {}
-    
-    __aicore__ inline void Init(GM_ADDR gradY, GM_ADDR x, GM_ADDR weight, GM_ADDR yOrigin,
-                                GM_ADDR groupIndex, GM_ADDR gradX, GM_ADDR gradWeight,
-                                GM_ADDR workspace, GM_ADDR tiling);
-    
+
+    __aicore__ inline void Init(GM_ADDR gradY, GM_ADDR x, GM_ADDR weight, GM_ADDR yOrigin, GM_ADDR groupIndex,
+                                GM_ADDR gradX, GM_ADDR gradWeight, GM_ADDR workspace, GM_ADDR tiling);
+
     __aicore__ inline void Process();
 
 private:
@@ -38,7 +37,7 @@ private:
     __aicore__ inline void CopyInX(uint32_t tokenIdx, uint32_t hTileIdx, uint32_t actualTokens, uint32_t currentTileH);
     __aicore__ inline void CopyInTopkWeight(uint32_t tokenIdx, uint32_t currentTileTokens);
     __aicore__ inline void CopyInYOrigin(uint32_t tokenIdx, uint32_t hTileIdx, uint32_t computeSize);
-    
+
     __aicore__ inline void ClampX(LocalTensor<float>& xFloatLocalTensor, uint32_t computeSize);
     __aicore__ inline void ComputeSiLUGrad(LocalTensor<float>& xFloatLocalTensor, uint32_t computeSize);
     __aicore__ inline void ComputeGradX(LocalTensor<float>& xFloatLocalTensor,
@@ -47,23 +46,19 @@ private:
     __aicore__ inline void AccumulateGradWeight(LocalTensor<float>& xFloatLocalTensor,
                                                 LocalTensor<float>& gradYFloatLocalTensor,
                                                 LocalTensor<float>& yOriginFloatLocalTensor,
-                                                LocalTensor<float>& weightLocalTensor,
-                                                uint32_t currentTileTokens, uint32_t currentTileH, uint32_t hIdx);
-    __aicore__ inline void UpdateGradY(LocalTensor<float>& gradYFloatLocalTensor,
-                                       LocalTensor<float>& weightLocalTensor,
-                                       uint32_t currentTileTokens,
-                                       uint32_t currentTileH);
-    __aicore__ inline void CopyOutGradWeight(LocalTensor<float>& weightLocalTensor,
-                                             uint32_t tokenIdx,
+                                                LocalTensor<float>& weightLocalTensor, uint32_t currentTileTokens,
+                                                uint32_t currentTileH, uint32_t hIdx);
+    __aicore__ inline void UpdateGradY(LocalTensor<float>& gradYFloatLocalTensor, LocalTensor<float>& weightLocalTensor,
+                                       uint32_t currentTileTokens, uint32_t currentTileH);
+    __aicore__ inline void CopyOutGradWeight(LocalTensor<float>& weightLocalTensor, uint32_t tokenIdx,
                                              uint32_t currentTileTokens);
-    __aicore__ inline void CopyOutGradX(LocalTensor<float>& xFloatLocalTensor,
-                                        uint32_t tokenIdx, uint32_t hTileIdx, uint32_t currentTileTokens,
-                                        uint32_t currentTileH);
+    __aicore__ inline void CopyOutGradX(LocalTensor<float>& xFloatLocalTensor, uint32_t tokenIdx, uint32_t hTileIdx,
+                                        uint32_t currentTileTokens, uint32_t currentTileH);
     __aicore__ inline void ZeroOutTrunc();
 
     __aicore__ inline void ProcessTile(LocalTensor<float>& weightLocalTensor, uint32_t tokenIdx, uint32_t hTileIdx,
                                        uint32_t currentTileTokens, uint32_t currentTileH);
-    
+
     GlobalTensor<T> gradYGm;
     GlobalTensor<T> xGm;
     GlobalTensor<float> weightGm;
@@ -74,27 +69,27 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void SwigluGroupQuantGrad<T>::Init(GM_ADDR gradY, GM_ADDR x, GM_ADDR weight,
-                                                     GM_ADDR yOrigin, GM_ADDR groupIndex, GM_ADDR gradX,
-                                                     GM_ADDR gradWeight, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void SwigluGroupQuantGrad<T>::Init(GM_ADDR gradY, GM_ADDR x, GM_ADDR weight, GM_ADDR yOrigin,
+                                                     GM_ADDR groupIndex, GM_ADDR gradX, GM_ADDR gradWeight,
+                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
     ParseTilingData(tiling);
-    
-    gradYGm.SetGlobalBuffer((__gm__ T *)gradY, totalTokens * dimH);
-    xGm.SetGlobalBuffer((__gm__ T *)x, totalTokens * dim2H);
-    gradXGm.SetGlobalBuffer((__gm__ T *)gradX, totalTokens * dim2H);
-    
+
+    gradYGm.SetGlobalBuffer((__gm__ T*)gradY, totalTokens * dimH);
+    xGm.SetGlobalBuffer((__gm__ T*)x, totalTokens * dim2H);
+    gradXGm.SetGlobalBuffer((__gm__ T*)gradX, totalTokens * dim2H);
+
     if (hasWeight) {
-        weightGm.SetGlobalBuffer((__gm__ float *)weight, totalTokens);
-        gradWeightGm.SetGlobalBuffer((__gm__ float *)gradWeight, totalTokens);
+        weightGm.SetGlobalBuffer((__gm__ float*)weight, totalTokens);
+        gradWeightGm.SetGlobalBuffer((__gm__ float*)gradWeight, totalTokens);
     }
-    
+
     if (hasYOrigin) {
-        yOriginGm.SetGlobalBuffer((__gm__ T *)yOrigin, totalTokens * dimH);
+        yOriginGm.SetGlobalBuffer((__gm__ T*)yOrigin, totalTokens * dimH);
     }
-    
+
     if (hasGroupIndex) {
-        groupIndexGm.SetGlobalBuffer((__gm__ int64_t *)groupIndex, groupNum);
+        groupIndexGm.SetGlobalBuffer((__gm__ int64_t*)groupIndex, groupNum);
         uint32_t groupTokenSum = 0;
         for (uint32_t i = 0; i < groupNum; i++) {
             groupTokenSum += static_cast<uint32_t>(groupIndexGm.GetValue(i));
@@ -147,21 +142,21 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyInX(uint32_t tokenIdx, uint3
     DataCopyPadParams padParams{false, 0, 0, 0};
     if constexpr (std::is_same_v<T, float>) {
         uint32_t x0GmOffset = tokenIdx * dim2H + hTileIdx * tileH;
-        DataCopyPad(xTLocalTensor, xGm[x0GmOffset], copyParams, padParams); 
+        DataCopyPad(xTLocalTensor, xGm[x0GmOffset], copyParams, padParams);
         uint32_t x1GmOffset = tokenIdx * dim2H + dimH + hTileIdx * tileH;
         DataCopyPad(xTLocalTensor[tileLength], xGm[x1GmOffset], copyParams, padParams);
         xQueue.EnQue<float>(xTLocalTensor);
     } else {
         uint32_t x0GmOffset = tokenIdx * dim2H + hTileIdx * tileH;
-        DataCopyPad(xTLocalTensor, xGm[x0GmOffset], copyParams, padParams); 
+        DataCopyPad(xTLocalTensor, xGm[x0GmOffset], copyParams, padParams);
         uint32_t x1GmOffset = tokenIdx * dim2H + dimH + hTileIdx * tileH;
         DataCopyPad(xTLocalTensor[tileLength * sizeof(float) / sizeof(T)], xGm[x1GmOffset], copyParams, padParams);
         xQueue.EnQue<T>(xTLocalTensor);
         xTLocalTensor = xQueue.DeQue<T>();
         LocalTensor<float> xFloatLocalTensor = xTLocalTensor.template ReinterpretCast<float>();
         Cast(xFloatLocalTensor, xTLocalTensor, RoundMode::CAST_NONE, copySize);
-        Cast(xFloatLocalTensor[tileLength], xTLocalTensor[tileLength * sizeof(float) / sizeof(T)],
-             RoundMode::CAST_NONE, copySize);
+        Cast(xFloatLocalTensor[tileLength], xTLocalTensor[tileLength * sizeof(float) / sizeof(T)], RoundMode::CAST_NONE,
+             copySize);
         PipeBarrier<PIPE_V>();
         xQueue.EnQue<float>(xFloatLocalTensor);
     }
@@ -190,7 +185,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ClampX(LocalTensor<float>& xFloa
 template <typename T>
 __aicore__ inline void SwigluGroupQuantGrad<T>::CopyInTopkWeight(uint32_t tokenIdx, uint32_t currentTileTokens)
 {
-    LocalTensor<float> weightLocalTensor = weightQueue.AllocTensor<float>(); 
+    LocalTensor<float> weightLocalTensor = weightQueue.AllocTensor<float>();
     DataCopyParams copyParams;
     copyParams.blockCount = 1;
     copyParams.blockLen = currentTileTokens * sizeof(float);
@@ -248,10 +243,10 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ComputeSiLUGrad(LocalTensor<floa
     PipeBarrier<PIPE_V>();
     Div(sigmoidX0LocalTensor, sigmoidX0LocalTensor, tmpLocalTensor, computeSize);
     PipeBarrier<PIPE_V>();
-    
+
     Mul(siluX0LocalTensor, x0FloatLocalTensor, sigmoidX0LocalTensor, computeSize);
     PipeBarrier<PIPE_V>();
-    
+
     Subs(tmpLocalTensor, (float)1.0, sigmoidX0LocalTensor, computeSize);
     PipeBarrier<PIPE_V>();
     Mul(tmpLocalTensor, tmpLocalTensor, x0FloatLocalTensor, computeSize);
@@ -300,7 +295,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ApplyClampMask(LocalTensor<float
     // reuse x0TruncatedLocalTensor/x1TruncatedLocalTensor
     LocalTensor<float> maskX0Local = x0TruncatedLocalTensor;
     LocalTensor<float> maskX1Local = x1TruncatedLocalTensor;
-    
+
     CompareScalar(maskX0U8Local, x0TruncatedLocalTensor, clampLimit, CMPMODE::LT, computeSize);
     PipeBarrier<PIPE_V>();
     CompareScalar(maskX1LeftU8Local, x1TruncatedLocalTensor, -clampLimit, CMPMODE::GT, computeSize);
@@ -329,15 +324,18 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ApplyClampMask(LocalTensor<float
 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantGrad<T>::AccumulateGradWeight(LocalTensor<float>& xFloatLocalTensor,
-    LocalTensor<float>& gradYFloatLocalTensor, LocalTensor<float>& yOriginFloatLocalTensor,
-    LocalTensor<float>& weightLocalTensor, uint32_t currentTileTokens, uint32_t currentTileH, uint32_t hIdx)
+                                                                     LocalTensor<float>& gradYFloatLocalTensor,
+                                                                     LocalTensor<float>& yOriginFloatLocalTensor,
+                                                                     LocalTensor<float>& weightLocalTensor,
+                                                                     uint32_t currentTileTokens, uint32_t currentTileH,
+                                                                     uint32_t hIdx)
 {
     LocalTensor<float> gradWeightAccumLocalTensor = weightLocalTensor[AlignUp(tileTokens, FP32_32B_ALIGN_NUM)];
     LocalTensor<float> tmpLocalTensor = xFloatLocalTensor[tileLength * TMP_BUFFER_INDEX];
     uint32_t computeSize = currentTileTokens * currentTileH;
     Mul(yOriginFloatLocalTensor, yOriginFloatLocalTensor, gradYFloatLocalTensor, computeSize);
     PipeBarrier<PIPE_V>();
-    
+
     if (hIdx == 0) {
         Copy(gradWeightAccumLocalTensor, yOriginFloatLocalTensor, computeSize);
         PipeBarrier<PIPE_V>();
@@ -372,8 +370,8 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyOutGradWeight(LocalTensor<fl
                                                                   uint32_t tokenIdx, uint32_t currentTileTokens)
 {
     event_t vToMte3 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>());
- 	SetFlag<HardEvent::V_MTE3>(vToMte3);
- 	WaitFlag<HardEvent::V_MTE3>(vToMte3);
+    SetFlag<HardEvent::V_MTE3>(vToMte3);
+    WaitFlag<HardEvent::V_MTE3>(vToMte3);
     LocalTensor<float> gradWeightAccumLocalTensor = weightLocalTensor[AlignUp(tileTokens, FP32_32B_ALIGN_NUM)];
     DataCopyParams copyParams;
     copyParams.blockCount = 1;
@@ -392,7 +390,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ZeroOutTrunc()
     if (truncValue >= totalTokens) {
         return;
     }
-    
+
     uint32_t zeroTokenStart = truncValue + blockIdx;
     if (zeroTokenStart >= totalTokens) {
         return;
@@ -412,7 +410,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ZeroOutTrunc()
     Duplicate(zeroWeightLocal, (float)0.0, 1);
     event_t vToMte3 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>());
     SetFlag<HardEvent::V_MTE3>(vToMte3);
- 	WaitFlag<HardEvent::V_MTE3>(vToMte3);
+    WaitFlag<HardEvent::V_MTE3>(vToMte3);
     for (uint32_t t = zeroTokenStart; t < totalTokens; t += zeroTokenStep) {
         DataCopyParams gradXCopyParams;
         gradXCopyParams.blockCount = 1;
@@ -444,8 +442,8 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyOutGradX(LocalTensor<float>&
     outCopyParams.dstStride = (dim2H - currentTileH) * sizeof(T);
 
     event_t vToMte3 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>());
- 	SetFlag<HardEvent::V_MTE3>(vToMte3);
- 	WaitFlag<HardEvent::V_MTE3>(vToMte3);
+    SetFlag<HardEvent::V_MTE3>(vToMte3);
+    WaitFlag<HardEvent::V_MTE3>(vToMte3);
 
     if constexpr (std::is_same_v<T, float>) {
         LocalTensor<float> x0FloatLocalTensor = xFloatLocalTensor;
@@ -518,7 +516,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::Process()
     if (blockIdx >= usedCoreNum) {
         return;
     }
-    
+
     uint32_t tokenEnd = tokenStart + tokensPerCore;
     if (tokenEnd > truncValue) {
         tokenEnd = truncValue;
@@ -543,7 +541,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::Process()
             }
             ProcessTile(weightLocalTensor, tokenIdx, hTileIdx, currentTileTokens, currentTileH);
         }
-        
+
         if (hasWeight) {
             CopyOutGradWeight(weightLocalTensor, tokenIdx, currentTileTokens);
             weightQueue.FreeTensor<float>(weightLocalTensor);

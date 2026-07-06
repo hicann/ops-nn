@@ -37,7 +37,7 @@ constexpr uint32_t DB_SIZE = 2;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr uint32_t DATA_SIZE_L0C = 4;
-}  // namespace
+} // namespace
 
 namespace optiling {
 
@@ -45,22 +45,18 @@ bool AdaptiveSlidingWindowTilingV4::CheckDtype() const
 {
     auto checker = std::unique_ptr<QuantBatchMatmulV4Checker4MmadS8S4>(
         new (std::nothrow) QuantBatchMatmulV4Checker4MmadS8S4(context_, inputParams_));
-    OP_TILING_CHECK(checker == nullptr,
-        OP_LOGE(inputParams_.opName, "failed to instantiate checker"),
-        return false);
+    OP_TILING_CHECK(checker == nullptr, OP_LOGE(inputParams_.opName, "failed to instantiate checker"), return false);
 
-    OP_TILING_CHECK(!checker->CheckDtype(),
-        OP_LOGE(inputParams_.opName, "CheckDtype fail"),
-        return false);
+    OP_TILING_CHECK(!checker->CheckDtype(), OP_LOGE(inputParams_.opName, "CheckDtype fail"), return false);
 
     return true;
 }
 
-bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                               const gert::StorageShape *biasShape,
-                                               const gert::StorageShape *pertokenShape,
-                                               const gert::StorageShape *x2TableShape,
-                                               const std::vector<int64_t> &dimValueOfMKN) const
+bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                               const gert::StorageShape* biasShape,
+                                               const gert::StorageShape* pertokenShape,
+                                               const gert::StorageShape* x2TableShape,
+                                               const std::vector<int64_t>& dimValueOfMKN) const
 {
     if (x2TableShape != nullptr) {
         auto x2TableShapeLen = x2TableShape->GetStorageShape().GetDimNum();
@@ -70,19 +66,16 @@ bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape *> 
                                                                  "The shape dim of x2Table must be 2D"),
                         return false);
         // the x2Table is transposed
-        inputParams_.x2TableNSize =
-            static_cast<uint64_t>(x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_SECOND_DIM_INDEX));
-        inputParams_.x2TableKSize =
-            static_cast<uint64_t>(x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_FIRST_DIM_INDEX));
+        inputParams_.x2TableNSize = static_cast<uint64_t>(
+            x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_SECOND_DIM_INDEX));
+        inputParams_.x2TableKSize = static_cast<uint64_t>(
+            x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_FIRST_DIM_INDEX));
     }
     auto checker = std::unique_ptr<QuantBatchMatmulV4Checker4MmadS8S4>(
         new (std::nothrow) QuantBatchMatmulV4Checker4MmadS8S4(context_, inputParams_));
-    OP_TILING_CHECK(checker == nullptr,
-        OP_LOGE(inputParams_.opName, "failed to instantiate checker"),
-        return false);
+    OP_TILING_CHECK(checker == nullptr, OP_LOGE(inputParams_.opName, "failed to instantiate checker"), return false);
     OP_TILING_CHECK(!checker->CheckShape(mandtoryShape, biasShape, pertokenShape, dimValueOfMKN),
-        OP_LOGE(inputParams_.opName, "CheckShape fail"),
-        return false);
+                    OP_LOGE(inputParams_.opName, "CheckShape fail"), return false);
 
     return true;
 }
@@ -108,11 +101,10 @@ ge::graphStatus AdaptiveSlidingWindowTilingV4::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, dtypeAttr);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
-    OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        OP_LOGE(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
-                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
+                    OP_LOGE(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -124,16 +116,15 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeDtype()
     auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
     inputParams_.scaleDtype = scaleDesc != nullptr ? scaleDesc->GetDataType() : inputParams_.scaleDtype;
     auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
-    inputParams_.perTokenScaleDtype =
-        pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() : inputParams_.perTokenScaleDtype;
+    inputParams_.perTokenScaleDtype = pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() :
+                                                                     inputParams_.perTokenScaleDtype;
     auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
     inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
     auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
     inputParams_.x2TableDtype = x2TableDesc != nullptr ? x2TableDesc->GetDataType() : inputParams_.x2TableDtype;
 
     // 当前AdaptiveSlidingWindowTilingV4仅支持LUT场景，x2Table必须存在
-    OP_TILING_CHECK(
-        x2TableDesc == nullptr, OP_LOGE(inputParams_.opName, "X2Table does not exist."), return false);
+    OP_TILING_CHECK(x2TableDesc == nullptr, OP_LOGE(inputParams_.opName, "X2Table does not exist."), return false);
     inputParams_.isLut = true;
 
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
@@ -157,11 +148,13 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     auto x2TableShape = context_->GetOptionalInputShape(GetX2TableIdx());
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
-    OP_TILING_CHECK(x1ShapeLen != 2,
+    OP_TILING_CHECK(
+        x1ShapeLen != 2,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x1", std::to_string(x1ShapeLen).c_str(),
                                                  "The shape dim of x1 must be 2D"),
         return false);
-    OP_TILING_CHECK(x2ShapeLen != 2,
+    OP_TILING_CHECK(
+        x2ShapeLen != 2,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2", std::to_string(x2ShapeLen).c_str(),
                                                  "The shape dim of x2 must be 2D"),
         return false);
@@ -175,28 +168,27 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
 
-    const std::vector<gert::Shape *> mandtoryShape = {&x1Shape, &x2Shape};
+    const std::vector<gert::Shape*> mandtoryShape = {&x1Shape, &x2Shape};
 
     inputParams_.batchA = GetBatchSize(x1Shape);
     inputParams_.batchB = GetBatchSize(x2Shape);
     AnalyzeBatchInfo(x1Shape, x2Shape);
-    OP_TILING_CHECK(
-        !InferOutBatchDim(x1Shape, x2Shape),
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "batchA, batchB",
-            std::to_string(inputParams_.batchA) + ", " + std::to_string(inputParams_.batchB),
-            "batch dim can not be broadcasted or the batch dims of output do not match with input"),
-        return false);
+    OP_TILING_CHECK(!InferOutBatchDim(x1Shape, x2Shape),
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "batchA, batchB",
+                        std::to_string(inputParams_.batchA) + ", " + std::to_string(inputParams_.batchB),
+                        "batch dim can not be broadcasted or the batch dims of output do not match with input"),
+                    return false);
     if (scaleShape != nullptr && !SetQuantMode(scaleShape->GetStorageShape(), pertokenShape)) {
         return false;
     }
     if (!CheckShape(mandtoryShape, biasShape, pertokenShape, x2TableShape, dimValueOfMKN)) {
         return false;
     }
-    OP_TILING_CHECK(
-        !CheckOutputShapeAvailable(),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            inputParams_.opName, "y", "output shape product", "The shape size of y must be <= INT64_MAX"),
-        return false);
+    OP_TILING_CHECK(!CheckOutputShapeAvailable(),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(inputParams_.opName, "y", "output shape product",
+                                                           "The shape size of y must be <= INT64_MAX"),
+                    return false);
 
     auto isPerTensorStr = inputParams_.isPerTensor ? "true" : "false";
     auto isPertokenStr = inputParams_.isPertoken ? "true" : "false";
@@ -208,18 +200,17 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
 bool AdaptiveSlidingWindowTilingV4::CalcBasicBlock()
 {
     adaptiveWin_.baseM = std::min(inputParams_.mSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
-    adaptiveWin_.baseM =
-        !inputParams_.transA
-            ? ops::CeilAlign(adaptiveWin_.baseM, CUBE_BLOCK)
-            : ops::CeilAlign(adaptiveWin_.baseM, GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.aDtype));
+    adaptiveWin_.baseM = !inputParams_.transA ?
+                             ops::CeilAlign(adaptiveWin_.baseM, CUBE_BLOCK) :
+                             ops::CeilAlign(adaptiveWin_.baseM,
+                                            GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.aDtype));
     // lut场景，baseN = groupN, baseK = groupK, 但当shape k/n较小时，baseN baseK也需要后续进行对齐调整
     adaptiveWin_.baseN = std::min(inputParams_.nSize, inputParams_.groupSizeN);
     adaptiveWin_.baseK = std::min(inputParams_.kSize, inputParams_.groupSizeK);
-    adaptiveWin_.baseN =
-        inputParams_.transB
-            ? ops::CeilAlign(adaptiveWin_.baseN, CUBE_BLOCK)
-            : ops::CeilAlign(adaptiveWin_.baseN,
-                             GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.bDtype, inputParams_.isLut));
+    adaptiveWin_.baseN = inputParams_.transB ?
+                             ops::CeilAlign(adaptiveWin_.baseN, CUBE_BLOCK) :
+                             ops::CeilAlign(adaptiveWin_.baseN, GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.bDtype,
+                                                                                     inputParams_.isLut));
     uint64_t maxAlignSize = std::max(
         static_cast<uint64_t>(GetShapeWithDataType(CUBE_REDUCE_BLOCK, inputParams_.aDtype)),
         static_cast<uint64_t>(GetShapeWithDataType(CUBE_REDUCE_BLOCK, inputParams_.bDtype, inputParams_.isLut)));
@@ -233,12 +224,11 @@ bool AdaptiveSlidingWindowTilingV4::SetPlatformInfoForTiling()
     if (!compileInfoInit_) {
         // 初始化qbmmv3的compileInfo
         InitCompileInfo();
-        auto mmCompileInfo = reinterpret_cast<const QuantBatchMatmulV4CompileInfo *>(context_->GetCompileInfo());
-        OP_TILING_CHECK(mmCompileInfo == nullptr,
-                        OP_LOGE(inputParams_.opName, "compile info is null"), return false);
+        auto mmCompileInfo = reinterpret_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
+        OP_TILING_CHECK(mmCompileInfo == nullptr, OP_LOGE(inputParams_.opName, "compile info is null"), return false);
         try {
             compileInfoPtr_ = std::make_unique<QuantBatchMatmulV4CompileInfo>(*mmCompileInfo);
-        } catch (const std::bad_alloc &e) {
+        } catch (const std::bad_alloc& e) {
             OP_LOGE(inputParams_.opName, "failed to instantiate compile info");
             return false;
         }
@@ -304,14 +294,15 @@ bool AdaptiveSlidingWindowTilingV4::CalL1Tiling()
     basicTiling_.singleCoreK = inputParams_.kSize;
 
     basicTiling_.iterateOrder = 0U;
-    basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
-            DB_SIZE :
-            1U;
-    L1TilingDataCalculator l1Calculator(
-        inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN, basicTiling_.baseK);
-    L1TilingMode l1TilingMode = isAFullLoad_ ? L1TilingMode::DEPTH_MAXIMIZED_A_FULL_LOAD : L1TilingMode::DEPTH_MAXIMIZED;
+    basicTiling_.dbL0c = ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <=
+                           aicoreParams_.l0cSize) &&
+                          CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
+                             DB_SIZE :
+                             1U;
+    L1TilingDataCalculator l1Calculator(inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN,
+                                        basicTiling_.baseK);
+    L1TilingMode l1TilingMode = isAFullLoad_ ? L1TilingMode::DEPTH_MAXIMIZED_A_FULL_LOAD :
+                                               L1TilingMode::DEPTH_MAXIMIZED;
     if (!l1Calculator.Compute(l1TilingMode)) {
         return false;
     }
@@ -355,10 +346,8 @@ uint64_t AdaptiveSlidingWindowTilingV4::GetTilingKey() const
 {
     uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
     KernelTemplateType kernelType = isAFullLoad_ ? KernelTemplateType::LUT_AL1FULL : KernelTemplateType::LUT_ASW;
-    return GET_TPL_TILING_KEY(
-        trans, static_cast<uint64_t>(QuantType::NONE),
-        static_cast<uint64_t>(false), static_cast<uint64_t>(true),
-        static_cast<uint64_t>(kernelType));
+    return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(QuantType::NONE), static_cast<uint64_t>(false),
+                              static_cast<uint64_t>(true), static_cast<uint64_t>(kernelType));
 }
 
 bool AdaptiveSlidingWindowTilingV4::CheckCoreNum() const
@@ -367,4 +356,4 @@ bool AdaptiveSlidingWindowTilingV4::CheckCoreNum() const
     return true;
 }
 
-}  // namespace optiling
+} // namespace optiling

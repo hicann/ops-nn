@@ -37,8 +37,8 @@ static constexpr size_t MAX_SUPPORT_DIM_NUM = 8;
 
 bool GatherElementsNoContiguousTiling::IsCapable()
 {
-    if ((!IsContiguous(xShape_, xStride_) || !IsContiguous(indexShape_, indexStride_) ) 
-        && indexShape_.GetDimNum() <= MAX_SUPPORT_DIM_NUM) {
+    if ((!IsContiguous(xShape_, xStride_) || !IsContiguous(indexShape_, indexStride_)) &&
+        indexShape_.GetDimNum() <= MAX_SUPPORT_DIM_NUM) {
         return true;
     }
     return false;
@@ -48,9 +48,11 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const GatherElementsCompileInfo *>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName_, "tiling", "compile_info", "null", "compile info cannot be null"),
-            return ge::GRAPH_FAILED);
+        auto compileInfoPtr = reinterpret_cast<const GatherElementsCompileInfo*>(context_->GetCompileInfo());
+        OP_CHECK_IF(compileInfoPtr == nullptr,
+                    OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName_, "tiling", "compile_info", "null",
+                                                           "compile info cannot be null"),
+                    return ge::GRAPH_FAILED);
         coreNum_ = static_cast<int64_t>(compileInfoPtr->core_num);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ub_size);
         OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", coreNum_);
@@ -63,30 +65,30 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetPlatformInfo()
         OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
-        (std::to_string(coreNum_) + ", " + std::to_string(ubSize_)).c_str(), "> 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
+                                          (std::to_string(coreNum_) + ", " + std::to_string(ubSize_)).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-inline bool GatherElementsNoContiguousTiling::ParamTypeIsInvalid(ge::DataType &x)
+inline bool GatherElementsNoContiguousTiling::ParamTypeIsInvalid(ge::DataType& x)
 {
-    std::set<ge::DataType> supportedDtype = {
-        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BOOL,
-        ge::DT_INT8,  ge::DT_UINT8,   ge::DT_INT16, ge::DT_UINT16,
-        ge::DT_INT32, ge::DT_UINT32,  ge::DT_INT64, ge::DT_UINT64,
-        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN };
+    std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT,       ge::DT_FLOAT16,     ge::DT_BF16,         ge::DT_BOOL,
+                                             ge::DT_INT8,        ge::DT_UINT8,       ge::DT_INT16,        ge::DT_UINT16,
+                                             ge::DT_INT32,       ge::DT_UINT32,      ge::DT_INT64,        ge::DT_UINT64,
+                                             ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN};
     return supportedDtype.count(x) == 0;
 }
 
-ge::graphStatus GatherElementsNoContiguousTiling::GetContiguousTensorInfo(gert::Shape &shape, gert::Stride &stride, size_t idx, bool isOut) 
+ge::graphStatus GatherElementsNoContiguousTiling::GetContiguousTensorInfo(gert::Shape& shape, gert::Stride& stride,
+                                                                          size_t idx, bool isOut)
 {
     auto xStorageShape = isOut ? context_->GetOutputShape(idx) : context_->GetInputShape(idx);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xStorageShape);
     shape = xStorageShape->GetStorageShape();
     stride.SetDimNum(shape.GetDimNum());
     int32_t maxDim = static_cast<int32_t>(shape.GetDimNum()) - 1;
-    int64_t xStride = 1; 
+    int64_t xStride = 1;
     for (int32_t j = maxDim; j >= 0; --j) {
         stride.SetStride(j, xStride);
         xStride *= shape.GetDim(j);
@@ -94,37 +96,39 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetContiguousTensorInfo(gert::
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GatherElementsNoContiguousTiling::GetTensorInfo(gert::Shape &shape, gert::Stride &stride, size_t idx, bool isOut) 
+ge::graphStatus GatherElementsNoContiguousTiling::GetTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx,
+                                                                bool isOut)
 {
     if (isOut) {
-        GetContiguousTensorInfo(shape, stride, idx , isOut);
+        GetContiguousTensorInfo(shape, stride, idx, isOut);
     } else {
         bool isView = context_->InputIsView(idx);
         if (isView) {
             auto* inputStride = context_->GetInputStride(idx);
-            if (inputStride == nullptr || inputStride->GetDimNum() == 0 ) {
-                GetContiguousTensorInfo(shape, stride, idx , isOut);
+            if (inputStride == nullptr || inputStride->GetDimNum() == 0) {
+                GetContiguousTensorInfo(shape, stride, idx, isOut);
             } else {
                 stride = *inputStride;
                 shape = context_->GetInputShape(idx)->GetShape();
-            } 
+            }
         } else {
-            GetContiguousTensorInfo(shape, stride, idx , isOut);
+            GetContiguousTensorInfo(shape, stride, idx, isOut);
         }
     }
     std::string info = isOut ? "output" : "input";
     OP_CHECK_IF(shape.GetDimNum() != stride.GetDimNum(),
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, info.c_str(),
-        (std::to_string(shape.GetDimNum()) + ", " + std::to_string(stride.GetDimNum())).c_str(),
-        "shape's dimNum should be equal to stride's dimNum"),
-        return ge::GRAPH_FAILED); 
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    opName_, info.c_str(),
+                    (std::to_string(shape.GetDimNum()) + ", " + std::to_string(stride.GetDimNum())).c_str(),
+                    "shape's dimNum should be equal to stride's dimNum"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-inline bool GatherElementsNoContiguousTiling::IsEnableInt64(gert::Shape shape, gert::Stride stride) 
+inline bool GatherElementsNoContiguousTiling::IsEnableInt64(gert::Shape shape, gert::Stride stride)
 {
     int64_t maxSize = 0;
-    for(size_t i = 0; i < shape.GetDimNum(); i++) {
+    for (size_t i = 0; i < shape.GetDimNum(); i++) {
         maxSize = std::max(maxSize, shape.GetDim(i) * stride[i]);
     }
     return maxSize > INT32_MAX_BOUND;
@@ -136,39 +140,43 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
-    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x",
-        Ops::Base::ToString(xDtype_).c_str(),
-        "dtype should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN]"),
+    OP_CHECK_IF(
+        ParamTypeIsInvalid(xDtype_),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "x", Ops::Base::ToString(xDtype_).c_str(),
+            "dtype should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, "
+            "DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN]"),
         return ge::GRAPH_FAILED);
     auto indexDesc = context_->GetRequiredInputDesc(IN_INDEX_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
     indexDtype_ = indexDesc->GetDataType();
     OP_CHECK_IF((indexDtype_ != ge::DataType::DT_INT32) && (indexDtype_ != ge::DataType::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index",
-        Ops::Base::ToString(indexDtype_).c_str(),
-        "dtype should be in [DT_INT32, DT_INT64]"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(),
+                                                      "dtype should be in [DT_INT32, DT_INT64]"),
+                return ge::GRAPH_FAILED);
     auto yDesc = context_->GetOutputDesc(OUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
-    OP_CHECK_IF(yDtype != xDtype_, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, y",
-        (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(yDtype)).c_str(),
-        "x and y should have same dtype"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDtype != xDtype_,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    opName_, "x, y", (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(yDtype)).c_str(),
+                    "x and y should have same dtype"),
+                return ge::GRAPH_FAILED);
     GetTensorInfo(xShape_, xStride_, IN_X_IDX, false);
     GetTensorInfo(indexShape_, indexStride_, IN_INDEX_IDX, false);
     GetTensorInfo(yShape_, yStride_, OUT_Y_IDX, true);
     dimSize_ = static_cast<int64_t>(indexShape_.GetDimNum());
 
     OP_CHECK_IF(dimSize_ > MAX_DIM_LEN_EIGHT,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index",
-        std::to_string(dimSize_).c_str(), "dimSize should not larger than 8"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index", std::to_string(dimSize_).c_str(),
+                                                         "dimSize should not larger than 8"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(yShape_ != indexShape_,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "index, y",
-        (Ops::Base::ToString(indexShape_) + ", " + Ops::Base::ToString(yShape_)).c_str(),
-        "index and y should have same shape"),
+    OP_CHECK_IF(
+        yShape_ != indexShape_,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName_, "index, y", (Ops::Base::ToString(indexShape_) + ", " + Ops::Base::ToString(yShape_)).c_str(),
+            "index and y should have same shape"),
         return ge::GRAPH_FAILED);
 
     // 非连续场景要用size*stride去判断
@@ -179,19 +187,21 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
     ySize_ = indexShape_.GetShapeSize();
     xDtypeSize_ = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF((xDtypeSize_ == -1),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", Ops::Base::ToString(xDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
-        indexDtypeSize_ = ge::GetSizeByDataType(indexDtype_);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", Ops::Base::ToString(xDtype_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
+    indexDtypeSize_ = ge::GetSizeByDataType(indexDtype_);
     OP_CHECK_IF((indexDtypeSize_ == -1),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-inline bool GatherElementsNoContiguousTiling::IsContiguous(const gert::Shape &xShape, const gert::Stride &xStride)
+inline bool GatherElementsNoContiguousTiling::IsContiguous(const gert::Shape& xShape, const gert::Stride& xStride)
 {
     int64_t validStride = 1;
-    for(int64_t i = static_cast<int64_t>(xShape.GetDimNum()) - 1; i >= 0; i--) {
+    for (int64_t i = static_cast<int64_t>(xShape.GetDimNum()) - 1; i >= 0; i--) {
         if (xShape[i] == 1) {
             continue;
         }
@@ -205,9 +215,9 @@ inline bool GatherElementsNoContiguousTiling::IsContiguous(const gert::Shape &xS
 
 inline bool GatherElementsNoContiguousTiling::CheckIsIndexTranspose()
 {
-    if (xShape_.GetDimNum() == THREE && IsContiguous(xShape_, xStride_) && IsContiguous(yShape_, yStride_) && axis_ == TWO
-        && indexStride_[0] == 0 && indexShape_[1] * indexShape_[TWO] * indexDtypeSize_ > SIMT_CACHE_SIZE
-        && yShape_[TWO] * xDtypeSize_ > SIMT_CACHE_LINE) {
+    if (xShape_.GetDimNum() == THREE && IsContiguous(xShape_, xStride_) && IsContiguous(yShape_, yStride_) &&
+        axis_ == TWO && indexStride_[0] == 0 && indexShape_[1] * indexShape_[TWO] * indexDtypeSize_ > SIMT_CACHE_SIZE &&
+        yShape_[TWO] * xDtypeSize_ > SIMT_CACHE_LINE) {
         return true;
     }
     return false;
@@ -217,15 +227,14 @@ inline ge::graphStatus GatherElementsNoContiguousTiling::GetAttrInfo()
 {
     auto const attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    auto *axis = attrs->GetAttrPointer<int64_t>(ATTR_DIM_IDX);
+    auto* axis = attrs->GetAttrPointer<int64_t>(ATTR_DIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, axis);
 
     auto axisVal = static_cast<int64_t>(*axis);
     OP_CHECK_IF(axisVal < -dimSize_ || axisVal >= dimSize_,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "axis",
-        std::to_string(axisVal).c_str(),
-        "axis value should be in range [-dimSize, dimSize-1]"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "axis", std::to_string(axisVal).c_str(),
+                                                      "axis value should be in range [-dimSize, dimSize-1]"),
+                return ge::GRAPH_FAILED);
 
     axis_ = axisVal < 0 ? axisVal + dimSize_ : axisVal;
     for (int64_t i = 0; i < dimSize_; i++) {
@@ -233,10 +242,11 @@ inline ge::graphStatus GatherElementsNoContiguousTiling::GetAttrInfo()
             continue;
         }
         OP_CHECK_IF(xShape_.GetDim(i) < indexShape_.GetDim(i),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, index",
-            (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
-            "x should larger than or equal to index of each dim value, except axis"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        opName_, "x, index",
+                        (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
+                        "x should larger than or equal to index of each dim value, except axis"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -302,33 +312,36 @@ void GatherElementsNoContiguousTiling::SetTilingData()
 }
 
 template <typename T>
-static std::string ToString(const T* value, size_t size) {
-  std::string r = "[";
-  for (size_t i = 0; i < size; i++) {
-    r = r + std::to_string(value[i]) + ", ";
-  }
-  r = r + "]";
-  return r;
+static std::string ToString(const T* value, size_t size)
+{
+    std::string r = "[";
+    for (size_t i = 0; i < size; i++) {
+        r = r + std::to_string(value[i]) + ", ";
+    }
+    r = r + "]";
+    return r;
 }
 
 void GatherElementsNoContiguousTiling::PrintTilingData()
 {
     OP_LOGI(opName_, "axis = %ld, usedCore = %ld, perCoreNum = %ld, tailCoreNum = %ld, \
 xStride = %s, indexStride = %s, yStride = %s, indexShape = %s, xShape = %s",
-        m_tilingData_.get_axis(), m_tilingData_.get_usedCore(),
-        m_tilingData_.get_perCoreNum(), m_tilingData_.get_tailCoreNum(),
-        ToString(m_tilingData_.get_xStride(), MAX_DIM_LEN_EIGHT).c_str(),
-        ToString(m_tilingData_.get_indexStride(), MAX_DIM_LEN_EIGHT).c_str(),
-        ToString(m_tilingData_.get_yStride(), MAX_DIM_LEN_EIGHT).c_str(),
-        ToString(m_tilingData_.get_indexShape(), MAX_DIM_LEN_EIGHT).c_str(),
-        ToString(m_tilingData_.get_xShape(), MAX_DIM_LEN_EIGHT).c_str());
+            m_tilingData_.get_axis(), m_tilingData_.get_usedCore(), m_tilingData_.get_perCoreNum(),
+            m_tilingData_.get_tailCoreNum(), ToString(m_tilingData_.get_xStride(), MAX_DIM_LEN_EIGHT).c_str(),
+            ToString(m_tilingData_.get_indexStride(), MAX_DIM_LEN_EIGHT).c_str(),
+            ToString(m_tilingData_.get_yStride(), MAX_DIM_LEN_EIGHT).c_str(),
+            ToString(m_tilingData_.get_indexShape(), MAX_DIM_LEN_EIGHT).c_str(),
+            ToString(m_tilingData_.get_xShape(), MAX_DIM_LEN_EIGHT).c_str());
 }
 
-bool GatherElementsNoContiguousTiling::CanMerge(int64_t* xShape, int64_t* xStride, int index) {
+bool GatherElementsNoContiguousTiling::CanMerge(int64_t* xShape, int64_t* xStride, int index)
+{
     return (xStride[index] == xShape[index + 1] * xStride[index + 1]);
 }
 
-void GatherElementsNoContiguousTiling::InitVector(vector<int64_t> &tempXShape, vector<int64_t> &tempXStride, vector<int64_t> &tempIndexShape, vector<int64_t> &tempIndexStride, vector<int64_t> &tempYStride)
+void GatherElementsNoContiguousTiling::InitVector(vector<int64_t>& tempXShape, vector<int64_t>& tempXStride,
+                                                  vector<int64_t>& tempIndexShape, vector<int64_t>& tempIndexStride,
+                                                  vector<int64_t>& tempYStride)
 {
     tempXShape.resize(xShape_.GetDimNum());
     tempXStride.resize(xStride_.GetDimNum());
@@ -346,13 +359,15 @@ void GatherElementsNoContiguousTiling::InitVector(vector<int64_t> &tempXShape, v
     }
 }
 
-void GatherElementsNoContiguousTiling::DoCoalesce(vector<int64_t> &tempXShape, vector<int64_t> &tempXStride, vector<int64_t> &tempIndexShape, vector<int64_t> &tempIndexStride, vector<int64_t> &tempYStride)
+void GatherElementsNoContiguousTiling::DoCoalesce(vector<int64_t>& tempXShape, vector<int64_t>& tempXStride,
+                                                  vector<int64_t>& tempIndexShape, vector<int64_t>& tempIndexStride,
+                                                  vector<int64_t>& tempYStride)
 {
     bool changed = true;
     while (changed && tempXShape.size() > 1) {
         changed = false;
         for (int64_t i = static_cast<int64_t>(tempXShape.size()) - 2; i >= 0; i--) {
-            const bool is_gather_dim = (i == axis_ ||i + 1 == axis_);
+            const bool is_gather_dim = (i == axis_ || i + 1 == axis_);
             if (is_gather_dim || tempXShape[i] != tempIndexShape[i] || tempXShape[i + 1] != tempIndexShape[i + 1]) {
                 //无法合轴
                 continue;
@@ -363,11 +378,11 @@ void GatherElementsNoContiguousTiling::DoCoalesce(vector<int64_t> &tempXShape, v
             if (!merge_x || !merge_indices || !merge_y) {
                 continue;
             }
-            tempXShape[i] *= tempXShape[i+1];
-            tempXStride[i] = tempXStride[i+1];
-            tempIndexShape[i] *= tempIndexShape[i+1];
-            tempIndexStride[i] = tempIndexStride[i+1];
-            tempYStride[i] = tempYStride[i+1];
+            tempXShape[i] *= tempXShape[i + 1];
+            tempXStride[i] = tempXStride[i + 1];
+            tempIndexShape[i] *= tempIndexShape[i + 1];
+            tempIndexStride[i] = tempIndexStride[i + 1];
+            tempYStride[i] = tempYStride[i + 1];
             tempXShape.erase(tempXShape.begin() + i + 1);
             tempXStride.erase(tempXStride.begin() + i + 1);
             tempIndexShape.erase(tempIndexShape.begin() + i + 1);
@@ -382,7 +397,10 @@ void GatherElementsNoContiguousTiling::DoCoalesce(vector<int64_t> &tempXShape, v
     }
 }
 
-void GatherElementsNoContiguousTiling::UpdateResultFromVector(vector<int64_t> &tempXShape, vector<int64_t> &tempXStride, vector<int64_t> &tempIndexShape, vector<int64_t> &tempIndexStride, vector<int64_t> &tempYStride)
+void GatherElementsNoContiguousTiling::UpdateResultFromVector(vector<int64_t>& tempXShape, vector<int64_t>& tempXStride,
+                                                              vector<int64_t>& tempIndexShape,
+                                                              vector<int64_t>& tempIndexStride,
+                                                              vector<int64_t>& tempYStride)
 {
     xShape_.SetDimNum(tempXShape.size());
     xStride_.SetDimNum(tempXStride.size());
@@ -420,10 +438,7 @@ ge::graphStatus GatherElementsNoContiguousTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GatherElementsNoContiguousTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GatherElementsNoContiguousTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t GatherElementsNoContiguousTiling::GetTilingKey() const
 {

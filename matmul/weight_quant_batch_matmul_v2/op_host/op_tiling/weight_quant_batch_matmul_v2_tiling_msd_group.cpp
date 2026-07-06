@@ -35,10 +35,9 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::PostTiling()
     size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2MsdGroupTilingData);
     OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize);
 
-    OP_TILING_CHECK(
-        tilingDataSize % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(tilingDataSize % sizeof(uint64_t) != 0,
+                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize),
+                    return ge::GRAPH_FAILED);
 
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     uint32_t usedAicNum = tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimK;
@@ -46,11 +45,12 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::PostTiling()
     context_->SetBlockDim(CalcTschBlockDim(usedAivNum, compileInfoPtr_->aicNum, compileInfoPtr_->aivNum));
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    if ( npuArch == NpuArch::DAV_2201 ) {
+    if (npuArch == NpuArch::DAV_2201) {
         context_->SetScheduleMode(1); // WeightQuantBatchMatMulV2MsdGroupKernel kernel use SyncAll()
     }
-    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);
-    if (ret != EOK){
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           tilingData_.get(), tilingDataSize);
+    if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
     }
@@ -72,45 +72,39 @@ bool WeightQuantBatchMatmulV2TilingMsdGroup::IsCapable()
         OP_LOGI(opName_, "MSD pergroup do not support deterministic");
         return false;
     }
-    OP_TILING_CHECK(
-        ((matmulInfoPtr_->antiQuantScaleDtype == ge::DT_UINT64) ||
-         (matmulInfoPtr_->antiQuantScaleDtype == ge::DT_INT64)),
-        OP_LOGI(opName_, "MSD group do not support antiquant scale dtype is uint64"), return false);
+    OP_TILING_CHECK(((matmulInfoPtr_->antiQuantScaleDtype == ge::DT_UINT64) ||
+                     (matmulInfoPtr_->antiQuantScaleDtype == ge::DT_INT64)),
+                    OP_LOGI(opName_, "MSD group do not support antiquant scale dtype is uint64"), return false);
     if (matmulInfoPtr_->bDtype == ge::DT_INT4) {
-        OP_TILING_CHECK(
-            matmulInfoPtr_->groupSize != 64 && matmulInfoPtr_->groupSize != 128,
-            OP_LOGI(opName_, "GroupSize support 64 or 128 for W4, but is [%lu]", matmulInfoPtr_->groupSize),
-            return false);
+        OP_TILING_CHECK(matmulInfoPtr_->groupSize != 64 && matmulInfoPtr_->groupSize != 128,
+                        OP_LOGI(opName_, "GroupSize support 64 or 128 for W4, but is [%lu]", matmulInfoPtr_->groupSize),
+                        return false);
     } else {
-        OP_TILING_CHECK(
-            matmulInfoPtr_->groupSize != 64,
-            OP_LOGI(opName_, "GroupSize support 64 for W8, but is [%lu]", matmulInfoPtr_->groupSize), return false);
+        OP_TILING_CHECK(matmulInfoPtr_->groupSize != 64,
+                        OP_LOGI(opName_, "GroupSize support 64 for W8, but is [%lu]", matmulInfoPtr_->groupSize),
+                        return false);
     }
     // 防止N方向分的核数超过aicNum_   2048:N方向cube上切分SingleCoreN固定为2048
     uint64_t maxNSize = compileInfoPtr_->aicNum * 2048UL;
-    OP_TILING_CHECK(
-        matmulInfoPtr_->mSize > matmulInfoPtr_->groupSize / 8 || matmulInfoPtr_->kSize > 13952 ||
-            matmulInfoPtr_->nSize > maxNSize,
-        OP_LOGI(
-            opName_, "m <= [%lu]/8, k <= [13952], n <= [%lu], but m is [%lu], k is[%lu] and n is [%lu]",
-            matmulInfoPtr_->groupSize, maxNSize, matmulInfoPtr_->mSize, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize),
-        return false);
+    OP_TILING_CHECK(matmulInfoPtr_->mSize > matmulInfoPtr_->groupSize / 8 || matmulInfoPtr_->kSize > 13952 ||
+                        matmulInfoPtr_->nSize > maxNSize,
+                    OP_LOGI(opName_, "m <= [%lu]/8, k <= [13952], n <= [%lu], but m is [%lu], k is[%lu] and n is [%lu]",
+                            matmulInfoPtr_->groupSize, maxNSize, matmulInfoPtr_->mSize, matmulInfoPtr_->kSize,
+                            matmulInfoPtr_->nSize),
+                    return false);
     OP_TILING_CHECK(
         matmulInfoPtr_->kSize % matmulInfoPtr_->groupSize != 0 || matmulInfoPtr_->nSize % 64 != 0,
-        OP_LOGI(
-            opName_, "k should align to GroupSize[%lu], n should align to [64], but k is [%ld] and n is [%lu]",
-            matmulInfoPtr_->groupSize, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize),
+        OP_LOGI(opName_, "k should align to GroupSize[%lu], n should align to [64], but k is [%ld] and n is [%lu]",
+                matmulInfoPtr_->groupSize, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize),
         return false);
-    OP_TILING_CHECK(
-        matmulInfoPtr_->transA || matmulInfoPtr_->transB || matmulInfoPtr_->cDtype == ge::DT_INT8,
-        OP_LOGI(opName_, "MSD group not support trans_a, trans_b or quant"), return false);
+    OP_TILING_CHECK(matmulInfoPtr_->transA || matmulInfoPtr_->transB || matmulInfoPtr_->cDtype == ge::DT_INT8,
+                    OP_LOGI(opName_, "MSD group not support trans_a, trans_b or quant"), return false);
     if (matmulInfoPtr_->bDtype == ge::DT_INT4) {
-        OP_TILING_CHECK(
-            !CheckL1Size(), OP_LOGI(opName_, "L1 size cannot meet the requirement for msd group"), return false);
+        OP_TILING_CHECK(!CheckL1Size(), OP_LOGI(opName_, "L1 size cannot meet the requirement for msd group"),
+                        return false);
     } else {
-        WhiteListShape shape(
-            {1, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize, false, matmulInfoPtr_->transA, matmulInfoPtr_->transB,
-             1});
+        WhiteListShape shape({1, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize, false, matmulInfoPtr_->transA,
+                              matmulInfoPtr_->transB, 1});
         if (MSD_GROUP_WHITE_LIST.find(shape) == MSD_GROUP_WHITE_LIST.end()) {
             OP_LOGI(opName_, "MSD group only support jyxc white case when weight dtype is int8.");
             return false;
@@ -144,24 +138,22 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::InstantiateTilingData()
         tilingData_ = std::unique_ptr<WeightQuantBatchMatmulV2MsdGroupTilingData>(
             new (std::nothrow) WeightQuantBatchMatmulV2MsdGroupTilingData());
     }
-    OP_TILING_CHECK(
-        tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(tilingData_ == nullptr,
+                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
+                    return ge::GRAPH_FAILED);
     size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2MsdGroupTilingData);
-    OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingDataSize,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "tiling data capacity %zu < actual tiling data size %zu",
-            context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize,
+                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data capacity %zu < actual tiling data size %zu",
+                                                    context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::DoOpTiling()
 {
-    OP_TILING_CHECK(
-        InstantiateTilingData() == ge::GRAPH_FAILED,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
+                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"),
+                    return ge::GRAPH_FAILED);
 
     tilingData_->groupSize = matmulInfoPtr_->groupSize;
     tilingData_->kSize = matmulInfoPtr_->kSize;
@@ -170,30 +162,24 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::DoOpTiling()
     tilingData_->hasBias = matmulInfoPtr_->hasBias;
 
     // n方向，cube默认切分基本块为2048
-    tilingData_->cubeBlockDimN = 
-        ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_CUBE_BASE_BLOCK));
+    tilingData_->cubeBlockDimN = ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_CUBE_BASE_BLOCK));
     // n方向，vector默认切分基本块为1024
     tilingData_->vecSingleCoreN = 1024;
-    tilingData_->vecBlockDimN = 
-        ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_VEC_BASE_BLOCK)), 2UL);
+    tilingData_->vecBlockDimN = ops::CeilAlign(
+        ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_VEC_BASE_BLOCK)), 2UL);
 
-    tilingData_->singleCoreK = 
-        ops::CeilAlign(
-            ops::CeilDiv(
-                matmulInfoPtr_->kSize,
-                compileInfoPtr_->aicNum / static_cast<uint64_t>(tilingData_->cubeBlockDimN)),
-            matmulInfoPtr_->groupSize);
-    tilingData_->cubeBlockDimK = 
-        ops::CeilDiv(matmulInfoPtr_->kSize, static_cast<uint64_t>(tilingData_->singleCoreK));
-    tilingData_->singleCoreGroup = 
-        ops::CeilDiv(static_cast<uint64_t>(tilingData_->singleCoreK), matmulInfoPtr_->groupSize);
-    tilingData_->vec1SingleCoreM = 
-        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(compileInfoPtr_->aivNum));
+    tilingData_->singleCoreK = ops::CeilAlign(
+        ops::CeilDiv(matmulInfoPtr_->kSize,
+                     compileInfoPtr_->aicNum / static_cast<uint64_t>(tilingData_->cubeBlockDimN)),
+        matmulInfoPtr_->groupSize);
+    tilingData_->cubeBlockDimK = ops::CeilDiv(matmulInfoPtr_->kSize, static_cast<uint64_t>(tilingData_->singleCoreK));
+    tilingData_->singleCoreGroup = ops::CeilDiv(static_cast<uint64_t>(tilingData_->singleCoreK),
+                                                matmulInfoPtr_->groupSize);
+    tilingData_->vec1SingleCoreM = ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(compileInfoPtr_->aivNum));
     OP_TILING_CHECK(
         !GetMatMulTiling(),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "failed to get mm tiling for mnk[%lu, %lu, %lu]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
-            matmulInfoPtr_->kSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to get mm tiling for mnk[%lu, %lu, %lu]",
+                                        matmulInfoPtr_->mSize, matmulInfoPtr_->nSize, matmulInfoPtr_->kSize),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -201,9 +187,8 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::DoOpTiling()
 
 void WeightQuantBatchMatmulV2TilingMsdGroup::Reset()
 {
-    OP_TILING_CHECK(memset_s(
-                        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 0,
-                        context_->GetRawTilingData()->GetCapacity()) != EOK,
+    OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 0,
+                             context_->GetRawTilingData()->GetCapacity()) != EOK,
                     VECTOR_INNER_ERR_REPORT_TILIING(opName_, "fail to memset tiling data"), return;);
 }
 
@@ -217,32 +202,25 @@ bool WeightQuantBatchMatmulV2TilingMsdGroup::GetMatMulTiling()
     }
 
     matmul_tiling::MatmulApiTiling mmTiling;
-    mmTiling.SetAType(
-        matmul_tiling::TPosition::A1, matmul_tiling::CubeFormat::ND, GetMatmulTilingDtype(matmulInfoPtr_->bDtype),
-        matmulInfoPtr_->transA);
-    mmTiling.SetBType(
-        matmul_tiling::TPosition::A1, matmul_tiling::CubeFormat::ND, GetMatmulTilingDtype(matmulInfoPtr_->bDtype),
-        matmulInfoPtr_->transB);
+    mmTiling.SetAType(matmul_tiling::TPosition::A1, matmul_tiling::CubeFormat::ND,
+                      GetMatmulTilingDtype(matmulInfoPtr_->bDtype), matmulInfoPtr_->transA);
+    mmTiling.SetBType(matmul_tiling::TPosition::A1, matmul_tiling::CubeFormat::ND,
+                      GetMatmulTilingDtype(matmulInfoPtr_->bDtype), matmulInfoPtr_->transB);
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT32);
     mmTiling.SetBias(false);
     mmTiling.SetOrgShape(iteratorTime * matmulInfoPtr_->mSize, cubeSingleCoreN, matmulInfoPtr_->kSize, cubeSingleCoreN);
     mmTiling.SetShape(iteratorTime * matmulInfoPtr_->mSize, cubeSingleCoreN, matmulInfoPtr_->groupSize);
     mmTiling.SetBufferSpace(aicoreParams_.l1Size, aicoreParams_.l0cSize);
-    mmTiling.SetFixSplit(
-        ops::CeilAlign(static_cast<uint32_t>(iteratorTime * matmulInfoPtr_->mSize), BLOCK_CUBE), BASIC_BLOCK,
-        matmulInfoPtr_->groupSize);
-    OP_TILING_CHECK(
-        mmTiling.GetTiling(tilingData_->matmulTiling) == -1,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to get matmul tiling"), return false);
+    mmTiling.SetFixSplit(ops::CeilAlign(static_cast<uint32_t>(iteratorTime * matmulInfoPtr_->mSize), BLOCK_CUBE),
+                         BASIC_BLOCK, matmulInfoPtr_->groupSize);
+    OP_TILING_CHECK(mmTiling.GetTiling(tilingData_->matmulTiling) == -1,
+                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to get matmul tiling"), return false);
 
     tilingData_->matmulTiling.shareL1Size = 0;
-    tilingData_->matmulTiling.dbL0C = 
-        std::min(
-            DOUBLE_BUFFER_FACTOR,
-            ops::CeilDiv(
-                aicoreParams_.l0cSize, static_cast<uint64_t>(tilingData_->matmulTiling.shareL0CSize) *
-                                           tilingData_->matmulTiling.stepM *
-                                           tilingData_->matmulTiling.stepN));
+    tilingData_->matmulTiling.dbL0C = std::min(
+        DOUBLE_BUFFER_FACTOR,
+        ops::CeilDiv(aicoreParams_.l0cSize, static_cast<uint64_t>(tilingData_->matmulTiling.shareL0CSize) *
+                                                tilingData_->matmulTiling.stepM * tilingData_->matmulTiling.stepN));
     return true;
 }
 

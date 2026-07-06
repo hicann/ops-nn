@@ -27,6 +27,7 @@ public:
     __aicore__ inline void RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                            const Conv2DTilingData& convTilingData,
                                            const ExtendParams* extendParams = nullptr);
+
 private:
     __aicore__ inline bool Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                             const ExtendParams* extendParams, const Conv2DTilingData& tilingData);
@@ -82,9 +83,10 @@ public:
 };
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const Conv2DTilingData& convTilingData,
-                    const ExtendParams* extendParams)
+__aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
+                                   CONV_CFG>::RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                                              const Conv2DTilingData& convTilingData,
+                                                              const ExtendParams* extendParams)
 {
     if (Conv2dKernelInit(x, filter, bias, y, extendParams, convTilingData)) {
         Conv2dKernelImpl();
@@ -92,9 +94,10 @@ __aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams,
-                     const Conv2DTilingData& tilingData)
+__aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
+                                   CONV_CFG>::Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                                               const ExtendParams* extendParams,
+                                                               const Conv2DTilingData& tilingData)
 {
     hasScale = (extendParams != nullptr);
     convTilingData = &tilingData;
@@ -118,8 +121,8 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitSingleCoreData()
+__aicore__ inline bool
+GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitSingleCoreData()
 {
     InitBlockNums();
 
@@ -141,7 +144,7 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     } else {
         DimDataToFill hoToFill(this->singleCoreHo, this->hoIdxStart, this->isHoDimTail);
         isRealDim = convCommon.CalcDimData(this->hoBlockNums, convTilingData->hoDim, convTilingData->hout,
-                                            convTilingData->hout, hoToFill);
+                                           convTilingData->hout, hoToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
@@ -163,8 +166,8 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitBlockNums()
+__aicore__ inline void
+GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitBlockNums()
 {
     // group can be seem as divided axis of n
     // NCHW: batchDim -> 'groupDim -> nDim' -> hoDim -> woDim / batchDim -> 'groupDim -> nDim' -> mDim
@@ -198,12 +201,12 @@ __aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitSingleCoreDataOriGroup()
+__aicore__ inline bool
+GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitSingleCoreDataOriGroup()
 {
     DimDataToFill groupToFill(singleGroups, groupIdxStart, isGroupDimTail);
-    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->groupDim,
-                                            convTilingData->groups, convTilingData->groups, groupToFill);
+    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->groupDim, convTilingData->groups,
+                                            convTilingData->groups, groupToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
@@ -218,19 +221,18 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitSingleCoreDataOptGroup()
+__aicore__ inline bool
+GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitSingleCoreDataOptGroup()
 {
     DimDataToFill groupToFill(singleGroupOpt, groupIdxStart, isGroupDimTail);
-    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->groupDim,
-                                            convTilingData->groupOpt, convTilingData->groupOpt, groupToFill);
+    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->groupDim, convTilingData->groupOpt,
+                                            convTilingData->groupOpt, groupToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nToFill(singleCoOpt, this->nIdxStart, this->isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, convTilingData->nDim,
-                                             convTilingData->coutOpt, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, convTilingData->nDim, convTilingData->coutOpt, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
@@ -241,8 +243,8 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+__aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitBuffer(
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
     if constexpr (isOptGroup) {
         convCommon.CalcStartAddrOptGroup(din, dout, kd);
@@ -254,14 +256,14 @@ __aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    Conv2dKernelImpl()
+__aicore__ inline void
+GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::Conv2dKernelImpl()
 {
     if constexpr (isMMode) {
         if (unlikely(this->isNDimTail || this->isMDimTail || this->isBatchDimTail)) {
             conv.SetSingleOutputShape(this->singleCoreN, this->singleCoreM, this->singleCoreBatch);
         }
- 
+
         conv.SetFmapStartPosition(this->mIdxStart);
     } else {
         if (unlikely(this->isNDimTail || this->isHoDimTail || this->isWoDimTail || this->isBatchDimTail)) {

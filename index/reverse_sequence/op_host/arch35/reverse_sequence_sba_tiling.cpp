@@ -29,8 +29,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 using namespace ReverseSequence;
 
 static constexpr int64_t DIM_A1 = 0;
@@ -53,4 +52,4 @@ void ReverseSequenceSBATiling::InitializationVars()
 
 REGISTER_TILING_TEMPLATE("ReverseSequence", ReverseSequenceSBATiling, 8);
 
-}  // namespace optiling
+} // namespace optiling

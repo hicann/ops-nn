@@ -26,20 +26,25 @@ protected:
     static void TearDownTestCase() { cout << "DataFormatDimMapKernelTest TearDown\n" << endl; }
 };
 
-static constexpr int64_t kMinComparesElems = 256;  // Ascend950 Compares mask alignment
+static constexpr int64_t kMinComparesElems = 256; // Ascend950 Compares mask alignment
 
 // Helper: fill TilingData for NHWC→NCHW (formatLen=4, table=[0,2,3,1,...])
-static void FillTilingNh2Nc(int64_t totalNum, DataFormatDimMapTilingData* td,
-                             int64_t blockFactor = 256, int64_t ubFactor = 256) {
+static void FillTilingNh2Nc(int64_t totalNum, DataFormatDimMapTilingData* td, int64_t blockFactor = 256,
+                            int64_t ubFactor = 256)
+{
     memset(td, 0, sizeof(DataFormatDimMapTilingData));
     td->totalNum = totalNum;
     td->blockFactor = blockFactor;
     td->ubFactor = ubFactor;
     td->formatLen = 4;
-    td->expandedTable[0] = 0; td->expandedTable[1] = 2;
-    td->expandedTable[2] = 3; td->expandedTable[3] = 1;
-    td->expandedTable[4] = 0; td->expandedTable[5] = 2;
-    td->expandedTable[6] = 3; td->expandedTable[7] = 1;
+    td->expandedTable[0] = 0;
+    td->expandedTable[1] = 2;
+    td->expandedTable[2] = 3;
+    td->expandedTable[3] = 1;
+    td->expandedTable[4] = 0;
+    td->expandedTable[5] = 2;
+    td->expandedTable[6] = 3;
+    td->expandedTable[7] = 1;
 }
 
 TEST_F(DataFormatDimMapKernelTest, nhwc_to_nchw_int32_256elem)

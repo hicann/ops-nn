@@ -21,14 +21,14 @@
 /*!
  * \file renorm_v2_tiling_data.h
  * \brief tiling data struct
-*/
+ */
 
 #ifndef __RENORM_V2_TILING_DATA_H__
 #define __RENORM_V2_TILING_DATA_H__
 
 struct RenormV2TilingData {
-    uint32_t rows;                 // 输入张量行数
-    uint32_t cols;                 // 输入张量列数
+    uint32_t rows; // 输入张量行数
+    uint32_t cols; // 输入张量列数
     uint32_t smallCoreDataNum;
     uint32_t bigCoreDataNum;
     uint32_t finalBigTileNum;
@@ -37,9 +37,9 @@ struct RenormV2TilingData {
     uint32_t smallTailDataNum;
     uint32_t bigTailDataNum;
     uint32_t tailBlockNum;
-    float p;                       // 范数阶数
-    int32_t axis;                  // 范数计算轴（0或1）
-    float max_norm;                // 最大范数值
+    float p;        // 范数阶数
+    int32_t axis;   // 范数计算轴（0或1）
+    float max_norm; // 最大范数值
 };
 
 #endif // __RENORM_V2_TILING_DATA_H__

@@ -35,11 +35,10 @@ TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_1d)
                       .IrInstanceNum({1})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
-                           {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
-                           {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
-                           {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -61,11 +60,10 @@ TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_2d)
                       .IrInstanceNum({1})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"min", Ops::NN::AnyValue::CreateFrom<float>(-1.0f)},
-                           {"max", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
-                           {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
-                           {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-1.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -87,11 +85,10 @@ TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_4d)
                       .IrInstanceNum({1})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"min", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
-                           {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
-                           {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -113,11 +110,10 @@ TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_3d)
                       .IrInstanceNum({1})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
-                           {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
-                           {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
-                           {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -139,11 +135,10 @@ TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_5d)
                       .IrInstanceNum({1})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
-                           {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
-                           {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
-                           {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .Build();

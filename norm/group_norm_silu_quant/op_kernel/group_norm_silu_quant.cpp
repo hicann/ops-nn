@@ -13,7 +13,10 @@
 
 using namespace GroupNormSiluQuant;
 
-extern "C" __global__ __aicore__ void group_norm_silu_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR quantScale, GM_ADDR yOut, GM_ADDR meanOut, GM_ADDR rstdOut, GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void group_norm_silu_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR quantScale,
+                                                            GM_ADDR yOut, GM_ADDR meanOut, GM_ADDR rstdOut,
+                                                            GM_ADDR workspace, GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_VECTOR_CORE);
     if (workspace == nullptr) {
         return;

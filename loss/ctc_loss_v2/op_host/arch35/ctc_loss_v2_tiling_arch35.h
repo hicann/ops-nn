@@ -23,36 +23,36 @@ namespace optiling {
 ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context);
 
 BEGIN_TILING_DATA_DEF(CTCLossV2TilingData4AscendC)
-    TILING_DATA_FIELD_DEF(int64_t, maxInputLength);
-    TILING_DATA_FIELD_DEF(int64_t, maxTargetLength);
-    TILING_DATA_FIELD_DEF(int64_t, lpInputStride);
-    TILING_DATA_FIELD_DEF(int64_t, lpBatchStride);
-    TILING_DATA_FIELD_DEF(int64_t, lpCharStride);
-    TILING_DATA_FIELD_DEF(int64_t, laBatchStride);
-    TILING_DATA_FIELD_DEF(int64_t, laInputStride);
-    TILING_DATA_FIELD_DEF(int64_t, laTargetStride);
-    TILING_DATA_FIELD_DEF(int64_t, tgTargetStride);
-    TILING_DATA_FIELD_DEF(int64_t, batchSize);
-    TILING_DATA_FIELD_DEF(int64_t, blank);
-    TILING_DATA_FIELD_DEF(int64_t, blockDimX);
-    TILING_DATA_FIELD_DEF(int64_t, blockDimY);
-    TILING_DATA_FIELD_DEF(int64_t, targetsDim);
-    TILING_DATA_FIELD_DEF(int64_t, tgBatchStride);
-    TILING_DATA_FIELD_DEF(int64_t, workspaceSize);
-    TILING_DATA_FIELD_DEF(int64_t, gridY);
-    TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, maxInputLength);
+TILING_DATA_FIELD_DEF(int64_t, maxTargetLength);
+TILING_DATA_FIELD_DEF(int64_t, lpInputStride);
+TILING_DATA_FIELD_DEF(int64_t, lpBatchStride);
+TILING_DATA_FIELD_DEF(int64_t, lpCharStride);
+TILING_DATA_FIELD_DEF(int64_t, laBatchStride);
+TILING_DATA_FIELD_DEF(int64_t, laInputStride);
+TILING_DATA_FIELD_DEF(int64_t, laTargetStride);
+TILING_DATA_FIELD_DEF(int64_t, tgTargetStride);
+TILING_DATA_FIELD_DEF(int64_t, batchSize);
+TILING_DATA_FIELD_DEF(int64_t, blank);
+TILING_DATA_FIELD_DEF(int64_t, blockDimX);
+TILING_DATA_FIELD_DEF(int64_t, blockDimY);
+TILING_DATA_FIELD_DEF(int64_t, targetsDim);
+TILING_DATA_FIELD_DEF(int64_t, tgBatchStride);
+TILING_DATA_FIELD_DEF(int64_t, workspaceSize);
+TILING_DATA_FIELD_DEF(int64_t, gridY);
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(CTCLossV2, CTCLossV2TilingData4AscendC)
 
 struct CTCLossV2ForCompileInfo {
-  int32_t totalCoreNum = 0;
-  uint64_t ubSize = 0;
+    int32_t totalCoreNum = 0;
+    uint64_t ubSize = 0;
 };
 
 struct CTCLossV2CompileInfo {
-  int32_t coreNum = 1;
-  int32_t ubSize = 1;
+    int32_t coreNum = 1;
+    int32_t ubSize = 1;
 };
-}  // namespace optiling
-#endif  // OPS_LOSS_CTC_LOSS_V2_OP_HOST_CTC_LOSS_V2_TILING_ARCH35_H_
+} // namespace optiling
+#endif // OPS_LOSS_CTC_LOSS_V2_OP_HOST_CTC_LOSS_V2_TILING_ARCH35_H_

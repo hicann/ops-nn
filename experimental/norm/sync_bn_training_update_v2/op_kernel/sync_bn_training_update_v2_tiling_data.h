@@ -34,7 +34,7 @@ struct SyncBnTrainingUpdateV2TilingData {
     uint32_t smallTailDataNum;
     uint32_t bigTailDataNum;
     uint32_t tailBlockNum;
-    
+
     float momentum;
     uint32_t Ndim;
     uint32_t Cdim;

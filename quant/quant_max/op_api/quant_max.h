@@ -15,9 +15,8 @@
 
 namespace l0op {
 
-const aclTensor* QuantMax(
-    const aclTensor* x, const aclTensor* scale, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, aclOpExecutor* executor);
+const aclTensor* QuantMax(const aclTensor* x, const aclTensor* scale, const char* roundMode, int64_t dstType,
+                          const aclTensor* y, const aclTensor* amax, aclOpExecutor* executor);
 
 } // namespace l0op
 

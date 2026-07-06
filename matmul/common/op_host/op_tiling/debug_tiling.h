@@ -18,8 +18,7 @@
 
 namespace Ops {
 namespace NN {
-std::string DebugTilingContext(const gert::TilingContext *context);
-std::string DebugTilingData(gert::TilingContext *context);
-}  // namespace NN
-}  // namespace Ops
-
+std::string DebugTilingContext(const gert::TilingContext* context);
+std::string DebugTilingData(gert::TilingContext* context);
+} // namespace NN
+} // namespace Ops

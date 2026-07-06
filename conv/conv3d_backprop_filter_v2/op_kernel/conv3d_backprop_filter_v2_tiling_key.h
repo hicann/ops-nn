@@ -14,7 +14,7 @@
  */
 #ifndef CONV3D_BACKPROP_FILTER_V2_TILING_KEY_H
 #define CONV3D_BACKPROP_FILTER_V2_TILING_KEY_H
- 
+
 #include "ascendc/host_api/tiling/template_argument.h"
 
 #define TPL_SPLIT_DFL 0 // base_tiling时
@@ -25,16 +25,17 @@
 
 // 模板参数
 ASCENDC_TPL_ARGS_DECL(Conv3dBackPropFilterV2,
-    ASCENDC_TPL_UINT_DECL(conv3DDWTemplateId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, \
-                          TPL_SPLIT_DFL, TPL_SPLIT_M_K, TPL_SPLIT_K_N, TPL_SPLIT_M_N, TPL_SPLIT_M_N_STREAMK), // LIST模式, 穷举
+                      ASCENDC_TPL_UINT_DECL(conv3DDWTemplateId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_SPLIT_DFL,
+                                            TPL_SPLIT_M_K, TPL_SPLIT_K_N, TPL_SPLIT_M_N,
+                                            TPL_SPLIT_M_N_STREAMK), // LIST模式, 穷举
 );
 
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
 ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_RANGE, 1, TPL_SPLIT_DFL, TPL_SPLIT_M_N_STREAMK), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
-    ),
-);
+        ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_RANGE, 1, TPL_SPLIT_DFL,
+                             TPL_SPLIT_M_N_STREAMK), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
+        ), );
 
 #endif // CONV3D_BACKPROP_FILTER_V2_TILING_KEY_H

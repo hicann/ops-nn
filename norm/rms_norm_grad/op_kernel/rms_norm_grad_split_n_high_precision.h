@@ -21,12 +21,10 @@ using namespace RmsNormGrad;
 template <typename T_DY, typename T_GAMMA>
 class RmsNormGradSplitNHighPrecision {
 public:
-    __aicore__ inline RmsNormGradSplitNHighPrecision()
-    {}
+    __aicore__ inline RmsNormGradSplitNHighPrecision() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
-        const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
+                                const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
     {
         InitVar(tiling);
         InitInputGmBuffer(dy, x, rstd, gamma, blockDim_, coreCalcTail_);
@@ -55,8 +53,8 @@ public:
             LocalTensor<int32_t> workLocal = syncTmpBuf_.Get<int32_t>();
             SyncAll(syncTmpSpaceGm_, workLocal);
         } else {
-            workspaceGm_.SetGlobalBuffer(
-                (__gm__ float*)usrWorkspace + ALIGN_32 * GetBlockNum() + GetBlockIdx() * colVal_);
+            workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + ALIGN_32 * GetBlockNum() +
+                                         GetBlockIdx() * colVal_);
             if (GetBlockIdx() == 0) {
                 InitGmZero<float>(workspaceGm_, outZeroTmpBuf_, colValAlign_, (uint32_t)0);
             }
@@ -91,8 +89,8 @@ public:
         isDeterministic_ = tiling->fixed_output;
     }
 
-    __aicore__ inline void InitInputGmBuffer(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t numBlocks, uint32_t coreCalcTail)
+    __aicore__ inline void InitInputGmBuffer(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t numBlocks,
+                                             uint32_t coreCalcTail)
     {
         if (GetBlockIdx() < numBlocks - 1) {
             coreOffset_ = blockFactor_;
@@ -124,7 +122,8 @@ public:
 
     __aicore__ inline void InitInputQue()
     {
-        ubFactorAlign_ = (ubFactor_ * colValAlign_) > (blockDim_ * COL_TEMPLATE) ? (ubFactor_ * colValAlign_) : (blockDim_ * COL_TEMPLATE);
+        ubFactorAlign_ = (ubFactor_ * colValAlign_) > (blockDim_ * COL_TEMPLATE) ? (ubFactor_ * colValAlign_) :
+                                                                                   (blockDim_ * COL_TEMPLATE);
         rstdLen_ = (ubFactor_ + alignLen_ - 1) / alignLen_ * alignLen_;
         bufferLenSize_ = ubFactorAlign_ * sizeof(float);
         bufferNum_ = BUFFER_NUM_DB;
@@ -197,7 +196,8 @@ public:
         }
     }
 
-    __aicore__ inline void doDeter() {
+    __aicore__ inline void doDeter()
+    {
         LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
         LocalTensor<float> buffer2_ = inQueDY_.AllocTensor<float>();
         deterministic_struct deterministicStruct = {buffer1_, buffer2_, workspaceGmOri_, dgammaGm_};
@@ -227,8 +227,8 @@ public:
         inQueGamma_.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void SubProcess(
-        uint32_t loopIdx, uint32_t calcLen, LocalTensor<float>& gammaLocal, LocalTensor<float>& dgammaLocal)
+    __aicore__ inline void SubProcess(uint32_t loopIdx, uint32_t calcLen, LocalTensor<float>& gammaLocal,
+                                      LocalTensor<float>& dgammaLocal)
     {
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
         if (colValAlign_ > SMALLD_THRESHOLD) {
@@ -428,8 +428,8 @@ public:
         outQueDX_.EnQue(dxLocal);
     }
 
-    __aicore__ inline void ComputeSmallD(
-        uint32_t calcLen, LocalTensor<float>& gammaLocal, LocalTensor<float>& dgammaLocal)
+    __aicore__ inline void ComputeSmallD(uint32_t calcLen, LocalTensor<float>& gammaLocal,
+                                         LocalTensor<float>& dgammaLocal)
     {
         uint32_t elementNum = colValAlign_ * calcLen;
 

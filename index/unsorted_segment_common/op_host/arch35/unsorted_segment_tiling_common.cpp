@@ -24,15 +24,14 @@ static constexpr uint32_t INPUT_SEGMENT_IDS_INDEX = 1;
 static constexpr uint32_t INPUT_NUM_SEGMENTS_INDEX = 2;
 static constexpr uint32_t OUTPUT_DATA_INDEX = 0;
 constexpr uint64_t ASCENDC_WORKSPACE = static_cast<uint64_t>(16) * 1024 * 1024;
-static constexpr uint64_t CAST_INT32_TO_INT16 = 1;   // int32 Cast int16
-static constexpr uint64_t CAST_INT64_TO_INT32 = 2;   // int64 Cast int32
-static constexpr uint64_t CAST_INT64_TO_INT16 = 3;   // int64 Cast int16
-static constexpr uint64_t CAST_INT32_TO_UINT8 = 4;   // int32 Cast uint8
-static constexpr uint64_t CAST_INT64_TO_UINT8 = 5;   // int64 Cast uint8
+static constexpr uint64_t CAST_INT32_TO_INT16 = 1; // int32 Cast int16
+static constexpr uint64_t CAST_INT64_TO_INT32 = 2; // int64 Cast int32
+static constexpr uint64_t CAST_INT64_TO_INT16 = 3; // int64 Cast int16
+static constexpr uint64_t CAST_INT32_TO_UINT8 = 4; // int32 Cast uint8
+static constexpr uint64_t CAST_INT64_TO_UINT8 = 5; // int64 Cast uint8
 
-static const std::set<ge::DataType> DATA_TYPE_SUPPORT = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                                                        ge::DT_INT32, ge::DT_INT64, ge::DT_UINT32,
-                                                        ge::DT_UINT64};
+static const std::set<ge::DataType> DATA_TYPE_SUPPORT = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT32,
+                                                         ge::DT_INT64, ge::DT_UINT32,  ge::DT_UINT64};
 
 static const std::set<ge::DataType> SEG_TYPE_SUPPORT = {ge::DT_INT32, ge::DT_INT64};
 
@@ -52,21 +51,21 @@ void UnsortedSegmentBaseTiling::GetCastTypeForSort()
 
     if (idType_ == ge::DT_INT32) {
         if (outputOuterDim_ < UINT8_MAX) {
-            idCastMode_ = CAST_INT32_TO_UINT8;          // int32 Cast uint8
+            idCastMode_ = CAST_INT32_TO_UINT8; // int32 Cast uint8
             idCastDtype_ = ge::DT_UINT8;
         } else if (outputOuterDim_ < INT16_MAX) {
-            idCastMode_ = CAST_INT32_TO_INT16;          // int32 Cast int16
+            idCastMode_ = CAST_INT32_TO_INT16; // int32 Cast int16
             idCastDtype_ = ge::DT_INT16;
         }
     } else {
         if (outputOuterDim_ < UINT8_MAX) {
-            idCastMode_ = CAST_INT64_TO_UINT8;          // int64 Cast uint8
+            idCastMode_ = CAST_INT64_TO_UINT8; // int64 Cast uint8
             idCastDtype_ = ge::DT_UINT8;
         } else if (outputOuterDim_ < INT16_MAX) {
-            idCastMode_ = CAST_INT64_TO_INT16;          // int64 Cast int16
+            idCastMode_ = CAST_INT64_TO_INT16; // int64 Cast int16
             idCastDtype_ = ge::DT_INT16;
         } else if (outputOuterDim_ < INT32_MAX) {
-            idCastMode_ = CAST_INT64_TO_INT32;          // int64 Cast int32
+            idCastMode_ = CAST_INT64_TO_INT32; // int64 Cast int32
             idCastDtype_ = ge::DT_INT32;
         }
     }
@@ -75,7 +74,6 @@ void UnsortedSegmentBaseTiling::GetCastTypeForSort()
         idCastDtypeSize_ = ge::GetSizeByDataType(idCastDtype_);
     }
 }
-
 
 ge::graphStatus UnsortedSegmentBaseTiling::GetPlatformInfo()
 {
@@ -140,16 +138,16 @@ ge::graphStatus UnsortedSegmentBaseTiling::CheckInputDtype()
 
     auto dataTypeIter = DATA_TYPE_SUPPORT.find(dataDtypePtr->GetDataType());
     auto segmentIdsTypeIter = SEG_TYPE_SUPPORT.find(segmentIdsDtypePtr->GetDataType());
-    OP_TILING_CHECK(
-        dataTypeIter == DATA_TYPE_SUPPORT.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            Ops::Base::ToString(dataDtypePtr->GetDataType()).c_str(), ToString(DATA_TYPE_SUPPORT).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        segmentIdsTypeIter == SEG_TYPE_SUPPORT.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids",
-            Ops::Base::ToString(segmentIdsDtypePtr->GetDataType()).c_str(), ToString(SEG_TYPE_SUPPORT).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(dataTypeIter == DATA_TYPE_SUPPORT.end(),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+                                              Ops::Base::ToString(dataDtypePtr->GetDataType()).c_str(),
+                                              ToString(DATA_TYPE_SUPPORT).c_str()),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(segmentIdsTypeIter == SEG_TYPE_SUPPORT.end(),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids",
+                                              Ops::Base::ToString(segmentIdsDtypePtr->GetDataType()).c_str(),
+                                              ToString(SEG_TYPE_SUPPORT).c_str()),
+                    return ge::GRAPH_FAILED);
 
     dataType_ = dataDtypePtr->GetDataType();
     idType_ = segmentIdsDtypePtr->GetDataType();
@@ -158,14 +156,14 @@ ge::graphStatus UnsortedSegmentBaseTiling::CheckInputDtype()
     idTypeBytes_ = ge::GetSizeByDataType(idType_);
     OP_TILING_CHECK(
         dataTypeBytes_ <= 0UL,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
-            std::to_string(dataTypeBytes_).c_str(), "The dtype size of x must be greater than 0."),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(dataTypeBytes_).c_str(),
+                                              "The dtype size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        idTypeBytes_ <= 0UL,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids",
-            std::to_string(idTypeBytes_).c_str(), "The dtype size of segment_ids must be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(idTypeBytes_ <= 0UL,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids",
+                                                          std::to_string(idTypeBytes_).c_str(),
+                                                          "The dtype size of segment_ids must be greater than 0."),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -196,37 +194,34 @@ ge::graphStatus UnsortedSegmentBaseTiling::GetShapeAttrsInfo()
 
     int64_t num_segments = 0;
     Ops::Base::GetConstInt(context_, INPUT_NUM_SEGMENTS_INDEX, num_segments);
-    OP_TILING_CHECK(
-    num_segments != outputShape[0],
-    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "num_segments",
-        std::to_string(num_segments).c_str(),
-        ("The num_segments must match Outputshape[0]=" + std::to_string(outputShape[0])).c_str()),
-    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(num_segments != outputShape[0],
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        context_->GetNodeName(), "num_segments", std::to_string(num_segments).c_str(),
+                        ("The num_segments must match Outputshape[0]=" + std::to_string(outputShape[0])).c_str()),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        numSegmentsShape.GetDimNum() != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "num_segments",
-            (std::to_string(numSegmentsShape.GetDimNum()) + "D").c_str(), "1D"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(numSegmentsShape.GetDimNum() != 1,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "num_segments",
+                                                 (std::to_string(numSegmentsShape.GetDimNum()) + "D").c_str(), "1D"),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        !ShapeStartsWith(dataShape, segmentIdsShape),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and segment_ids", 
-            Ops::Base::ToString(dataShape) + " and " + Ops::Base::ToString(segmentIdsShape),
-            "The shape of segment_ids must be the same as the shape consisting of the first " + 
-            std::to_string(segmentIdsShape.GetDimNum()) + "axes of x."),
-        return ge::GRAPH_FAILED);   
+    OP_TILING_CHECK(!ShapeStartsWith(dataShape, segmentIdsShape),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "x and segment_ids",
+                        Ops::Base::ToString(dataShape) + " and " + Ops::Base::ToString(segmentIdsShape),
+                        "The shape of segment_ids must be the same as the shape consisting of the first " +
+                            std::to_string(segmentIdsShape.GetDimNum()) + "axes of x."),
+                    return ge::GRAPH_FAILED);
 
     std::tie(inputOuterDim_, innerDim_) = FlatInput(dataShape, segmentIdsShape);
     // check key value not greater than 2^48.
     uint64_t bound = static_cast<int64_t>(1ULL << 48);
-    OP_TILING_CHECK(
-        inputOuterDim_ > bound,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(dataShape),
-            "The product of the first " + std::to_string(segmentIdsShape.GetDimNum())
-            + " axes of x must be less than 2^48"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputOuterDim_ > bound,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(dataShape),
+                                                           "The product of the first " +
+                                                               std::to_string(segmentIdsShape.GetDimNum()) +
+                                                               " axes of x must be less than 2^48"),
+                    return ge::GRAPH_FAILED);
 
     dataShapeSize_ = dataShape.GetShapeSize();
     outputOuterDim_ = outputShape[0];
@@ -236,8 +231,8 @@ ge::graphStatus UnsortedSegmentBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-std::tuple<uint64_t, uint64_t> UnsortedSegmentBaseTiling::AutoTiling(
-    uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize, bool colTileNumMin)
+std::tuple<uint64_t, uint64_t> UnsortedSegmentBaseTiling::AutoTiling(uint64_t usedCoreNum, uint64_t colNumAlign,
+                                                                     uint64_t colLimitSize, bool colTileNumMin)
 {
     /* 给定Shape[M, N] 和 block core num
     ** M切分成m块，N切分成n块，找到m*n <= usedCoreNum, 且m*n尽可能接近usedCoreNum的所有m和n的可能
@@ -282,19 +277,19 @@ std::tuple<uint64_t, uint64_t> UnsortedSegmentBaseTiling::AutoTiling(
     }
 
     if (colTileNumMin) {
-        std::sort(
-            allTiling.begin(), allTiling.end(), [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
-                constexpr int NIndex = 1;
-                constexpr int DeltaIndex = 3;
-                return std::make_pair(a[NIndex], a[DeltaIndex]) < std::make_pair(b[NIndex], b[DeltaIndex]);
-            });
+        std::sort(allTiling.begin(), allTiling.end(),
+                  [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
+                      constexpr int NIndex = 1;
+                      constexpr int DeltaIndex = 3;
+                      return std::make_pair(a[NIndex], a[DeltaIndex]) < std::make_pair(b[NIndex], b[DeltaIndex]);
+                  });
     } else {
-        std::sort(
-            allTiling.begin(), allTiling.end(), [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
-                constexpr int MIndex = 0;
-                constexpr int DeltaIndex = 3;
-                return std::make_pair(a[DeltaIndex], a[MIndex]) < std::make_pair(b[DeltaIndex], b[MIndex]);
-            });
+        std::sort(allTiling.begin(), allTiling.end(),
+                  [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
+                      constexpr int MIndex = 0;
+                      constexpr int DeltaIndex = 3;
+                      return std::make_pair(a[DeltaIndex], a[MIndex]) < std::make_pair(b[DeltaIndex], b[MIndex]);
+                  });
     }
 
     uint64_t rowTileNum = allTiling[0][0];
@@ -315,25 +310,13 @@ std::set<uint64_t> UnsortedSegmentBaseTiling::FindUniqueCut(uint64_t usedCoreNum
     return result;
 }
 
-bool UnsortedSegmentBaseTiling::IsCapable()
-{
-    return true;
-}
+bool UnsortedSegmentBaseTiling::IsCapable() { return true; }
 
-ge::graphStatus UnsortedSegmentBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus UnsortedSegmentBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus UnsortedSegmentBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus UnsortedSegmentBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t UnsortedSegmentBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t UnsortedSegmentBaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus UnsortedSegmentBaseTiling::GetWorkspaceSize()
 {
@@ -344,9 +327,6 @@ ge::graphStatus UnsortedSegmentBaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus UnsortedSegmentBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus UnsortedSegmentBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 } // namespace optiling

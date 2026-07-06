@@ -13,7 +13,7 @@
  * \brief
  */
 #include "arch32/conv3d_backprop_filter_v2_base_tiling.h"
- 
+
 #include <map>
 #include <numeric>
 #include <register/op_impl_registry.h>
@@ -21,22 +21,23 @@
 #include "common/op_host/op_tiling/conv_platform_util.h"
 #include "error_util.h"
 
-
 namespace Ops {
 namespace NN {
 namespace Conv {
 
-static ge::graphStatus Conv3DBackpropFilterV2TilingFunc(gert::TilingContext *context)
+static ge::graphStatus Conv3DBackpropFilterV2TilingFunc(gert::TilingContext* context)
 {
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseContext *context)
+static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseContext* context)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"),
+                return ge::GRAPH_FAILED);
 
     // 此函数会将platformInfoPtr中的soc_version传递给compileInfoPtr，在tiling中尽量使用compileInfoPtr->soc_version来获取平台信息
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);
@@ -44,7 +45,7 @@ static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseCon
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->shortSocVersion = ascendcPlatform.GetSocVersion();
-	compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
     OP_LOGD(context->GetNodeName(), "compileInfoPtr npuArch: %d", compileInfoPtr->npuArch);
     return ge::GRAPH_SUCCESS;
 }
@@ -52,6 +53,6 @@ static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseCon
 IMPL_OP_OPTILING(Conv3DBackpropFilterV2)
     .Tiling(Conv3DBackpropFilterV2TilingFunc)
     .TilingParse<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>(TilingParseForConv3DBackpropFilterV2);
-}  // namespace Conv
-}  // namespace NN
-}  // namespace Ops
+} // namespace Conv
+} // namespace NN
+} // namespace Ops

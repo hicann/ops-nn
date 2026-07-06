@@ -17,8 +17,7 @@
 #include "platform/platform_info.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t FLOAT16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
 static constexpr int64_t INT32_SIZE = 4;
@@ -29,7 +28,7 @@ static constexpr int64_t SIMT_NCHW_INT32_TILING_KEY = 900;
 static constexpr int64_t SIMT_NCHW_INT64_TILING_KEY = 901;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t CACHE_LINE_SIZE = 128;
-static constexpr int64_t MIN_DATA_SIZE   = 1024;
+static constexpr int64_t MIN_DATA_SIZE = 1024;
 static constexpr int64_t LOCAL_MEMORY_SIZE = 16384;
 static constexpr int64_t SIMT_OUT_THRESHOLD = 256;
 
@@ -57,15 +56,9 @@ uint64_t MaxPoolGradWithArgmaxV3SimtTiling::GetTilingKey() const
     return tilingKey;
 }
 
-ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::DoOpTiling()
-{
-    return SimtBase->DoOpTiling(context_);
-}
+ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::DoOpTiling() { return SimtBase->DoOpTiling(context_); }
 
-ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::PostTiling()
-{
-    return SimtBase->PostTiling(context_, hardwareData);
-}
+ge::graphStatus MaxPoolGradWithArgmaxV3SimtTiling::PostTiling() { return SimtBase->PostTiling(context_, hardwareData); }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3SimtTiling, 1);
-}  // namespace optiling
+} // namespace optiling

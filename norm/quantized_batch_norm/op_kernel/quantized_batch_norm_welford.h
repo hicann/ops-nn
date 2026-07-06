@@ -23,15 +23,11 @@ using namespace AscendC;
 template <typename T1, typename T2, int SPLIT_MODE, int R0_ALIGN_MODE>
 class QuantizedBatchNormWelford : public QuantizedBatchNormBase<T1, T2> {
 public:
-    __aicore__ inline QuantizedBatchNormWelford(TPipe* pipe)
-    {
-        this->pipe_ = pipe;
-    }
+    __aicore__ inline QuantizedBatchNormWelford(TPipe* pipe) { this->pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR mean, GM_ADDR var, GM_ADDR input_scale, GM_ADDR input_zero_point, GM_ADDR output_scale,
-        GM_ADDR output_zero_point, GM_ADDR weight, GM_ADDR bias, GM_ADDR y,
-        const QuantizedBatchNormWelfordTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR mean, GM_ADDR var, GM_ADDR input_scale, GM_ADDR input_zero_point,
+                                GM_ADDR output_scale, GM_ADDR output_zero_point, GM_ADDR weight, GM_ADDR bias,
+                                GM_ADDR y, const QuantizedBatchNormWelfordTilingData* __restrict tilingData)
     {
         patternR1 = tilingData->patternR1;
         patternA = tilingData->patternA;
@@ -55,8 +51,8 @@ public:
 
         this->epsilon = tilingData->epsilon;
 
-        uint64_t aGmBlockOffset =
-            static_cast<uint64_t>(this->blockIdx) * static_cast<uint64_t>(tilingData->blockFactor);
+        uint64_t aGmBlockOffset = static_cast<uint64_t>(this->blockIdx) *
+                                  static_cast<uint64_t>(tilingData->blockFactor);
         uint64_t aR0GmBlockOffset = aGmBlockOffset * patternR0;
         uint64_t weightGmBlockOffset = aGmBlockOffset;
         this->xGm.SetGlobalBuffer((__gm__ T1*)x + aR0GmBlockOffset);
@@ -76,8 +72,8 @@ public:
 
         // 输入que
         this->pipe_->InitBuffer(xQueue, DOUBLE_BUFFER, r0UbFactor * sizeof(T1));
-        this->pipe_->InitBuffer(
-            wbmvsQueue, 1, aUbFactor * FLOAT_SIZE * MERGE_INPUT_NUM + MIN_BUFFER * FLOAT_SIZE * TWO_NUM);
+        this->pipe_->InitBuffer(wbmvsQueue, 1,
+                                aUbFactor * FLOAT_SIZE * MERGE_INPUT_NUM + MIN_BUFFER * FLOAT_SIZE * TWO_NUM);
         this->pipe_->InitBuffer(zeroPointQueue, 1, MIN_BUFFER * INT32_SIZE * TWO_NUM);
 
         // 输出que
@@ -161,8 +157,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInXAndDequant(
-        LocalTensor<T1>& xTensor, const int64_t copyInSize, const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInXAndDequant(LocalTensor<T1>& xTensor, const int64_t copyInSize,
+                                             const uint64_t copyInGmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -178,8 +174,8 @@ private:
         DequantX(xTensor, intriParams.blockCount * copyInSize);
     }
 
-    __aicore__ inline void CopyInNR0AndDequant(
-        LocalTensor<T1>& xTensor, const int64_t copyInR0LineNum, const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInNR0AndDequant(LocalTensor<T1>& xTensor, const int64_t copyInR0LineNum,
+                                               const uint64_t copyInGmOffset)
     {
         DataCopyPadExtParams<T1> padParams = {true, 0, static_cast<uint8_t>(patternR0Align - patternR0), 0};
         if constexpr (R0_ALIGN_MODE == R0_ALIGN) {
@@ -226,9 +222,8 @@ private:
         DataCopyPad(this->yGm[copyOutGmOffset], xTensor, intriParams);
     }
 
-    __aicore__ inline void CopyInWeightBias(
-        LocalTensor<float>& weightTensor, LocalTensor<float>& biasTensor, const int64_t copyInSize,
-        const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInWeightBias(LocalTensor<float>& weightTensor, LocalTensor<float>& biasTensor,
+                                            const int64_t copyInSize, const uint64_t copyInGmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -240,9 +235,8 @@ private:
         DataCopyPad(biasTensor, this->biasGm[copyInGmOffset], intriParams, padParams);
     }
 
-    __aicore__ inline void CopyInMeanVar(
-        LocalTensor<float>& meanInTensor, LocalTensor<float>& varInTensor, const int64_t copyInSize,
-        const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInMeanVar(LocalTensor<float>& meanInTensor, LocalTensor<float>& varInTensor,
+                                         const int64_t copyInSize, const uint64_t copyInGmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -350,8 +344,8 @@ private:
         for (int64_t r1LoopIdx = 0; r1LoopIdx < patternR1; r1LoopIdx++) {
             r0ProcNum = r0UbFactor;
             for (int64_t r0LoopIdx = 0; r0LoopIdx < r0UbLoop; r0LoopIdx++) {
-                xGmOffset =
-                    r1LoopIdx * patternA * patternR0 + (aUbLoopNowStartIdx + aNum) * patternR0 + r0LoopIdx * r0UbFactor;
+                xGmOffset = r1LoopIdx * patternA * patternR0 + (aUbLoopNowStartIdx + aNum) * patternR0 +
+                            r0LoopIdx * r0UbFactor;
                 if (unlikely(r0LoopIdx == r0UbLoop - 1)) {
                     r0ProcNum = r0UbTail;
                 }

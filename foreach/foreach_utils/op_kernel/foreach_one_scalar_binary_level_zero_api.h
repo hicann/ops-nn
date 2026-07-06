@@ -27,17 +27,15 @@ constexpr int16_t BYTES_PER_REPEAT = 256;
 constexpr int8_t BYTES_PER_BLOCK = 32;
 
 template <typename T>
-using OneScalarBinaryLevelZeroApiOp = void(
-    const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, uint64_t, const uint8_t,
-    const BinaryRepeatParams&);
+using OneScalarBinaryLevelZeroApiOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&,
+                                           uint64_t, const uint8_t, const BinaryRepeatParams&);
 
 template <typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, uint8_t paramsCount>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& dataLocal, LocalTensor<T>& outLocal, LocalTensor<float>& float32Tensor,
-        LocalTensor<P>& oneBlockData, uint32_t maxCastDataCount, int64_t dataCount, uint64_t elementsPerRepeat)
+    __aicore__ inline void Compute(LocalTensor<T>& dataLocal, LocalTensor<T>& outLocal,
+                                   LocalTensor<float>& float32Tensor, LocalTensor<P>& oneBlockData,
+                                   uint32_t maxCastDataCount, int64_t dataCount, uint64_t elementsPerRepeat)
     {
         uint32_t totalRepeatCnt = 0;
         uint32_t totalRepeatCntRemainder = 0;
@@ -69,12 +67,11 @@ public:
 };
 
 template <OneScalarBinaryLevelZeroApiOp<float>* op, uint8_t paramsCount>
-class InnerComputer<half, float, op, paramsCount>
-{
+class InnerComputer<half, float, op, paramsCount> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<half>& dataLocal, LocalTensor<half>& outLocal, LocalTensor<float>& float32Tensor,
-        LocalTensor<float> oneBlockData, uint32_t maxCastDataCount, int64_t dataCount, uint64_t elementsPerRepeat)
+    __aicore__ inline void Compute(LocalTensor<half>& dataLocal, LocalTensor<half>& outLocal,
+                                   LocalTensor<float>& float32Tensor, LocalTensor<float> oneBlockData,
+                                   uint32_t maxCastDataCount, int64_t dataCount, uint64_t elementsPerRepeat)
     {
         uint32_t castTimes = 0;
         uint32_t castTimesRemainder = 0;
@@ -87,23 +84,21 @@ public:
         }
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            ComputePerCast(
-                dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, i, maxCastDataCount,
-                elementsPerRepeat);
+            ComputePerCast(dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, i, maxCastDataCount,
+                           elementsPerRepeat);
         }
 
         if (castTimesRemainder > 0) {
-            ComputePerCast(
-                dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, castTimes, castTimesRemainder,
-                elementsPerRepeat);
+            ComputePerCast(dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, castTimes,
+                           castTimesRemainder, elementsPerRepeat);
         }
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<half>& dataLocal, LocalTensor<half>& outLocal, LocalTensor<float>& float32Tensor,
-        LocalTensor<float>& oneBlockData, uint32_t maxCastDataCount, uint32_t index, int64_t dataCount,
-        uint64_t elementsPerRepeat)
+    __aicore__ inline void ComputePerCast(LocalTensor<half>& dataLocal, LocalTensor<half>& outLocal,
+                                          LocalTensor<float>& float32Tensor, LocalTensor<float>& oneBlockData,
+                                          uint32_t maxCastDataCount, uint32_t index, int64_t dataCount,
+                                          uint64_t elementsPerRepeat)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -155,34 +150,31 @@ private:
 
 #if __CCE_AICORE__ >= 220
 template <OneScalarBinaryLevelZeroApiOp<float>* op, uint8_t paramsCount>
-class InnerComputer<bfloat16_t, float, op, paramsCount>
-{
+class InnerComputer<bfloat16_t, float, op, paramsCount> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& dataLocal, LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
-        LocalTensor<float> oneBlockData, uint32_t maxCastDataCount, int64_t dataCount, uint64_t elementsPerRepeat)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& dataLocal, LocalTensor<bfloat16_t>& outLocal,
+                                   LocalTensor<float>& float32Tensor, LocalTensor<float> oneBlockData,
+                                   uint32_t maxCastDataCount, int64_t dataCount, uint64_t elementsPerRepeat)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            ComputePerCast(
-                dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, i, maxCastDataCount,
-                elementsPerRepeat);
+            ComputePerCast(dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, i, maxCastDataCount,
+                           elementsPerRepeat);
         }
 
         if (castTimesRemainder > 0) {
-            ComputePerCast(
-                dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, castTimes, castTimesRemainder,
-                elementsPerRepeat);
+            ComputePerCast(dataLocal, outLocal, float32Tensor, oneBlockData, maxCastDataCount, castTimes,
+                           castTimesRemainder, elementsPerRepeat);
         }
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<bfloat16_t>& dataLocal, LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
-        LocalTensor<float>& oneBlockData, uint32_t maxCastDataCount, uint32_t index, int64_t dataCount,
-        uint64_t elementsPerRepeat)
+    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& dataLocal, LocalTensor<bfloat16_t>& outLocal,
+                                          LocalTensor<float>& float32Tensor, LocalTensor<float>& oneBlockData,
+                                          uint32_t maxCastDataCount, uint32_t index, int64_t dataCount,
+                                          uint64_t elementsPerRepeat)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -204,8 +196,8 @@ private:
 
         if (repeatBatchCntRemainder > 0) {
             PipeBarrier<PIPE_V>();
-            op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, elementsPerRepeat, repeatBatchCntRemainder,
-               {1, 1, 0, 8, 8, 0});
+            op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, elementsPerRepeat,
+               repeatBatchCntRemainder, {1, 1, 0, 8, 8, 0});
             PipeBarrier<PIPE_V>();
             offset_1 += repeatBatchCntRemainder * elementsPerRepeat;
         }
@@ -224,21 +216,18 @@ private:
 };
 #endif
 
-template <
-    typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+template <typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
 class ForeachOneScalarBinaryLevelZeroApi
-    : public KernelForeachUnary<
-          T, ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount,
-          needCopyOut>
-{
+    : public KernelForeachUnary<T, ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                bufferNum, paramsCount, needCopyOut> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount,
-        needCopyOut>;
+    using Base = KernelForeachUnary<T,
+                                    ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                    bufferNum, paramsCount, needCopyOut>;
     using Operator = OneScalarBinaryLevelZeroApiOp<P>;
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
 
     __aicore__ inline ForeachOneScalarBinaryLevelZeroApi() : Base(*this){};
@@ -251,26 +240,23 @@ protected:
     P scalarValue = 0;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> inLocal = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> outLocal = Base::outQueue.template AllocTensor<T>();
         InnerComputer<T, P, op, paramsCount> computer;
-        computer.Compute(
-            inLocal, outLocal, float32Tensor, scalarOneBlockLM, Base::maxCastDataCount, dataCount, elementsPerRepeat);
+        computer.Compute(inLocal, outLocal, float32Tensor, scalarOneBlockLM, Base::maxCastDataCount, dataCount,
+                         elementsPerRepeat);
         Base::dataQueue.FreeTensor(inLocal);
         Base::outQueue.template EnQue<T>(outLocal);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
-    {}
+    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder) {}
 
     __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
     {
@@ -293,14 +279,12 @@ private:
         Base::outQueue.FreeTensor(retLocal);
         return true;
     }
-    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
-    {}
+    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart) {}
     friend Base;
 };
 
-template <
-    typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
-    bool needCopyOut>
+template <typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
+          bool needCopyOut>
 __aicore__ inline void ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>::Init(
     GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
 {
@@ -335,9 +319,8 @@ __aicore__ inline void ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, p
     Duplicate(scalarOneBlockLM, scalarValue, BYTES_PER_BLOCK / sizeof(P));
 }
 
-template <
-    typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
-    bool needCopyOut>
+template <typename T, typename P, OneScalarBinaryLevelZeroApiOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
+          bool needCopyOut>
 __aicore__ inline void ForeachOneScalarBinaryLevelZeroApi<T, P, op, bufferNum, paramsCount, needCopyOut>::Process()
 {
     if (

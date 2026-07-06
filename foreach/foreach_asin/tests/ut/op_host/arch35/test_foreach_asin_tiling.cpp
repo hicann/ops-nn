@@ -26,14 +26,8 @@ using namespace ut_util;
 
 class ForeachAsinTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachAsinTilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachAsinTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachAsinTilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ForeachAsinTilingTest TearDown" << std::endl; }
 };
 
 TEST_F(ForeachAsinTilingTest, test_tiling_float16)
@@ -43,7 +37,10 @@ TEST_F(ForeachAsinTilingTest, test_tiling_float16)
     GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":253952,"CORE_NUM":64}})", soc, ai, intr);
     pf.Init();
 
-    struct ForeachAsinCompileInfo { int64_t coreNum; int64_t ubSize; } ci = {64, 253952};
+    struct ForeachAsinCompileInfo {
+        int64_t coreNum;
+        int64_t ubSize;
+    } ci = {64, 253952};
     auto opType = std::string("ForeachAsin");
     auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
@@ -51,9 +48,11 @@ TEST_F(ForeachAsinTilingTest, test_tiling_float16)
     ASSERT_NE(tilingParseFn, nullptr);
 
     std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -67,17 +66,17 @@ TEST_F(ForeachAsinTilingTest, test_tiling_float16)
     auto ws = reinterpret_cast<gert::ContinuousVector*>(workspace.get());
     gert::StorageShape inputs = {{3, 6, 5}, {3, 6, 5}};
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(1, 1)
-        .IrInstanceNum({1})
-        .InputShapes({&inputs})
-        .OutputShapes({&inputs})
-        .CompileInfo(&ci)
-        .PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws)
-        .Build();
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&inputs})
+                      .OutputShapes({&inputs})
+                      .CompileInfo(&ci)
+                      .PlatformInfo(reinterpret_cast<char*>(&pf))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws)
+                      .Build();
     auto tilingCtx = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingCtx->GetPlatformInfo(), nullptr);
     tilingCtx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
@@ -96,7 +95,10 @@ TEST_F(ForeachAsinTilingTest, test_tiling_float32)
     GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":253952,"CORE_NUM":64}})", soc, ai, intr);
     pf.Init();
 
-    struct ForeachAsinCompileInfo { int64_t coreNum; int64_t ubSize; } ci = {64, 253952};
+    struct ForeachAsinCompileInfo {
+        int64_t coreNum;
+        int64_t ubSize;
+    } ci = {64, 253952};
     auto opType = std::string("ForeachAsin");
     auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
@@ -104,9 +106,11 @@ TEST_F(ForeachAsinTilingTest, test_tiling_float32)
     ASSERT_NE(tilingParseFn, nullptr);
 
     std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -120,17 +124,17 @@ TEST_F(ForeachAsinTilingTest, test_tiling_float32)
     auto ws = reinterpret_cast<gert::ContinuousVector*>(workspace.get());
     gert::StorageShape inputs = {{3, 6, 5}, {3, 6, 5}};
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(1, 1)
-        .IrInstanceNum({1})
-        .InputShapes({&inputs})
-        .OutputShapes({&inputs})
-        .CompileInfo(&ci)
-        .PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws)
-        .Build();
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&inputs})
+                      .OutputShapes({&inputs})
+                      .CompileInfo(&ci)
+                      .PlatformInfo(reinterpret_cast<char*>(&pf))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws)
+                      .Build();
     auto tilingCtx = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingCtx->GetPlatformInfo(), nullptr);
     tilingCtx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
@@ -149,7 +153,10 @@ TEST_F(ForeachAsinTilingTest, test_tiling_bfloat16)
     GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":253952,"CORE_NUM":64}})", soc, ai, intr);
     pf.Init();
 
-    struct ForeachAsinCompileInfo { int64_t coreNum; int64_t ubSize; } ci = {64, 253952};
+    struct ForeachAsinCompileInfo {
+        int64_t coreNum;
+        int64_t ubSize;
+    } ci = {64, 253952};
     auto opType = std::string("ForeachAsin");
     auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
@@ -157,9 +164,11 @@ TEST_F(ForeachAsinTilingTest, test_tiling_bfloat16)
     ASSERT_NE(tilingParseFn, nullptr);
 
     std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -173,17 +182,17 @@ TEST_F(ForeachAsinTilingTest, test_tiling_bfloat16)
     auto ws = reinterpret_cast<gert::ContinuousVector*>(workspace.get());
     gert::StorageShape inputs = {{3, 6, 5}, {3, 6, 5}};
     auto holder = gert::TilingContextFaker()
-        .NodeIoNum(1, 1)
-        .IrInstanceNum({1})
-        .InputShapes({&inputs})
-        .OutputShapes({&inputs})
-        .CompileInfo(&ci)
-        .PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws)
-        .Build();
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&inputs})
+                      .OutputShapes({&inputs})
+                      .CompileInfo(&ci)
+                      .PlatformInfo(reinterpret_cast<char*>(&pf))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws)
+                      .Build();
     auto tilingCtx = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingCtx->GetPlatformInfo(), nullptr);
     tilingCtx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);

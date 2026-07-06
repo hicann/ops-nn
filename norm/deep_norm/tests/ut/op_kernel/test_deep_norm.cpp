@@ -20,25 +20,17 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void deep_norm(
-    GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean, GM_ADDR rstd, GM_ADDR y, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void deep_norm(GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean,
+                                                GM_ADDR rstd, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class deep_norm_test : public testing::Test
-{
+class deep_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "deep_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "deep_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "deep_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "deep_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(deep_norm_test, test_case_1)
-{   // fp16 < 4096  tiling key 1
+{ // fp16 < 4096  tiling key 1
     // size config
     size_t N = 24;
     size_t D = 2560;
@@ -99,7 +91,7 @@ TEST_F(deep_norm_test, test_case_1)
 }
 
 TEST_F(deep_norm_test, test_case_0)
-{   // bf16 < 4096  tiling key 0
+{ // bf16 < 4096  tiling key 0
     // size config
     size_t N = 24;
     size_t D = 2560;
@@ -161,7 +153,7 @@ TEST_F(deep_norm_test, test_case_0)
 }
 
 TEST_F(deep_norm_test, test_case_2)
-{   // fp32 < 4096  tiling key 2
+{ // fp32 < 4096  tiling key 2
     // size config
     size_t N = 24;
     size_t D = 2560;
@@ -223,7 +215,7 @@ TEST_F(deep_norm_test, test_case_2)
 }
 
 TEST_F(deep_norm_test, test_case_5)
-{   // fp16 4096 ~ 15360  tiling key 5
+{ // fp16 4096 ~ 15360  tiling key 5
     // size config
     size_t N = 24;
     size_t D = 5000;
@@ -285,7 +277,7 @@ TEST_F(deep_norm_test, test_case_5)
 }
 
 TEST_F(deep_norm_test, test_case_4)
-{   // bf16 4096 ~ 15360  tiling key 4
+{ // bf16 4096 ~ 15360  tiling key 4
     // size config
     size_t N = 24;
     size_t D = 5000;
@@ -347,7 +339,7 @@ TEST_F(deep_norm_test, test_case_4)
 }
 
 TEST_F(deep_norm_test, test_case_6)
-{   // fp32 4096 ~ 8192  tiling key 6
+{ // fp32 4096 ~ 8192  tiling key 6
     // size config
     size_t N = 24;
     size_t D = 5000;
@@ -409,7 +401,7 @@ TEST_F(deep_norm_test, test_case_6)
 }
 
 TEST_F(deep_norm_test, test_case_13)
-{   // fp16 > 15360  tiling key 13
+{ // fp16 > 15360  tiling key 13
     // size config
     size_t N = 24;
     size_t D = 16000;
@@ -471,7 +463,7 @@ TEST_F(deep_norm_test, test_case_13)
 }
 
 TEST_F(deep_norm_test, test_case_12)
-{   // bf16  > 15360  tiling key 12
+{ // bf16  > 15360  tiling key 12
     // size config
     size_t N = 24;
     size_t D = 16000;
@@ -533,7 +525,7 @@ TEST_F(deep_norm_test, test_case_12)
 }
 
 TEST_F(deep_norm_test, test_case_14)
-{   // fp32 > 8192  tiling key 14
+{ // fp32 > 8192  tiling key 14
     // size config
     size_t N = 24;
     size_t D = 9000;
@@ -595,7 +587,7 @@ TEST_F(deep_norm_test, test_case_14)
 }
 
 TEST_F(deep_norm_test, test_case_17)
-{   // fp16 < 100  tiling key 17
+{ // fp16 < 100  tiling key 17
     // size config
     size_t N = 24;
     size_t D = 256;
@@ -657,7 +649,7 @@ TEST_F(deep_norm_test, test_case_17)
 }
 
 TEST_F(deep_norm_test, test_case_16)
-{   // bf16 < 100  tiling key 16
+{ // bf16 < 100  tiling key 16
     // size config
     size_t N = 24;
     size_t D = 256;
@@ -719,7 +711,7 @@ TEST_F(deep_norm_test, test_case_16)
 }
 
 TEST_F(deep_norm_test, test_case_18)
-{   // fp32 < 100  tiling key 18
+{ // fp32 < 100  tiling key 18
     // size config
     size_t N = 24;
     size_t D = 256;

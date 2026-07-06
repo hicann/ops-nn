@@ -34,8 +34,8 @@ class TransposeTileBase {
 public:
     __aicore__ inline TransposeTileBase() {}
 
-    __aicore__ inline void Init(GlobalTensor<T>& srcGm, GlobalTensor<Q>& dstGm, 
-                                LocalTensor<uint8_t>& allUbLocal) {
+    __aicore__ inline void Init(GlobalTensor<T>& srcGm, GlobalTensor<Q>& dstGm, LocalTensor<uint8_t>& allUbLocal)
+    {
         this->srcGm = srcGm;
         this->dstGm = dstGm;
         this->allUbLocal = allUbLocal;
@@ -43,36 +43,32 @@ public:
         auto tempUbLoal = this->allUbLocal[CACHE_CAPACITY * sizeof(U)];
         this->dstUbLocal = tempUbLoal.template ReinterpretCast<U>();
     }
-    
-    __aicore__ inline void SetCoreNums(uint32_t coreNums) {
-        this->coreNums = coreNums;
-    }
 
-    __aicore__ inline void SetCoreId(uint32_t* coreId) {
-        this->coreId = coreId;
-    }
+    __aicore__ inline void SetCoreNums(uint32_t coreNums) { this->coreNums = coreNums; }
 
-    __aicore__ inline void SetPadOffset(GlobalTensor<int32_t>& padGmTensor) {
-        this->padGmTensor = padGmTensor;
- 	}
+    __aicore__ inline void SetCoreId(uint32_t* coreId) { this->coreId = coreId; }
 
-    __aicore__ inline void SetTransposeOffset(GlobalTensor<int32_t>& transposeGmTensor) {
+    __aicore__ inline void SetPadOffset(GlobalTensor<int32_t>& padGmTensor) { this->padGmTensor = padGmTensor; }
+
+    __aicore__ inline void SetTransposeOffset(GlobalTensor<int32_t>& transposeGmTensor)
+    {
         this->transposeGmTensor = transposeGmTensor;
     }
 
-    __aicore__ inline void SetIsForward(bool isForward) {
-        this->isForward = isForward;
-    }
+    __aicore__ inline void SetIsForward(bool isForward) { this->isForward = isForward; }
 
 protected:
-    __aicore__ inline void GetNextCore(uint32_t* coreId) {
+    __aicore__ inline void GetNextCore(uint32_t* coreId)
+    {
         *coreId += 1;
         if (*coreId == this->coreNums) {
             *coreId = 0;
         }
     }
 
-    __aicore__ inline void CalcSplitParams(uint32_t totalSize, uint32_t& baseSize, uint32_t& extraSize, uint64_t& usedCores) {
+    __aicore__ inline void CalcSplitParams(uint32_t totalSize, uint32_t& baseSize, uint32_t& extraSize,
+                                           uint64_t& usedCores)
+    {
         usedCores = this->coreNums;
         usedCores = usedCores > 0 ? usedCores : 1;
         uint32_t aliged = BYTE_ALIGNMENT / sizeof(T);
@@ -87,19 +83,21 @@ protected:
         }
     }
 
-    __aicore__ inline void LoadDataToUbContinuoues(uint32_t srcOffset, uint32_t rowSize, uint32_t colSize) {
+    __aicore__ inline void LoadDataToUbContinuoues(uint32_t srcOffset, uint32_t rowSize, uint32_t colSize)
+    {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(colSize * rowSize * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         if constexpr (std::is_same<T, U>::value) {
             DataCopyPad(this->srcUbLocal[0], this->srcGm[srcOffset], copyParams, padParams);
         } else {
-            auto srcLocalT = std::is_same<T, int64_t>::value ? 
-                this->srcUbLocal.template ReinterpretCast<T>() :
-                this->srcUbLocal.template ReinterpretCast<T>()[CACHE_CAPACITY];
+            auto srcLocalT = std::is_same<T, int64_t>::value ?
+                                 this->srcUbLocal.template ReinterpretCast<T>() :
+                                 this->srcUbLocal.template ReinterpretCast<T>()[CACHE_CAPACITY];
             DataCopyPad(srcLocalT, this->srcGm[srcOffset], copyParams, padParams);
             PIPE_MTE2_S();
             if constexpr (std::is_same<T, bool>::value) {
-                Cast(this->srcUbLocal, srcLocalT.template ReinterpretCast<uint8_t>(), RoundMode::CAST_NONE, rowSize * colSize);
+                Cast(this->srcUbLocal, srcLocalT.template ReinterpretCast<uint8_t>(), RoundMode::CAST_NONE,
+                     rowSize * colSize);
             } else {
                 Cast(this->srcUbLocal, srcLocalT, RoundMode::CAST_NONE, rowSize * colSize);
             }
@@ -109,7 +107,8 @@ protected:
         uint32_t colsAligned = (colSize + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
         uint32_t multiple = BASE_TILE_SIZE / colsAligned;
         if (colSize % BYTE_ALIGNMENT != 0 && rowSize != BASE_TILE_SIZE * multiple) {
-            // 反向（isForward == false），行分块且cols <= BASE_TILE_SIZE (isSpecial == true)，且非整块，且cols不是32的整数倍。需要pad
+            // 反向（isForward == false），行分块且cols <= BASE_TILE_SIZE (isSpecial ==
+            // true)，且非整块，且cols不是32的整数倍。需要pad
             PIPE_MTE2_S();
             auto colSizeAligned = (colSize + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
             auto gatherTimes = rowSize / BYTE_ALIGNMENT;
@@ -121,7 +120,8 @@ protected:
                 auto gatherNums = (i == gatherTimes ? gatherLeft : BYTE_ALIGNMENT) * colSizeAligned;
                 auto srcStart = i * BYTE_ALIGNMENT * colSize;
                 auto dstStart = i * BYTE_ALIGNMENT * colSizeAligned;
-                Gather(this->dstUbLocal[dstStart], this->srcUbLocal[srcStart], this->gatherIndicesLocal.template ReinterpretCast<uint32_t>(), 0, gatherNums);
+                Gather(this->dstUbLocal[dstStart], this->srcUbLocal[srcStart],
+                       this->gatherIndicesLocal.template ReinterpretCast<uint32_t>(), 0, gatherNums);
                 PipeBarrier<PIPE_V>();
             }
             auto temp = this->dstUbLocal;
@@ -131,7 +131,8 @@ protected:
         }
     }
 
-    __aicore__ inline void LoadDataToUb(uint32_t srcOffset, uint32_t rowSize, uint32_t colSize, uint32_t rowLength) {
+    __aicore__ inline void LoadDataToUb(uint32_t srcOffset, uint32_t rowSize, uint32_t colSize, uint32_t rowLength)
+    {
         if (this->isSpecial && (!this->isForward)) {
             this->LoadDataToUbContinuoues(srcOffset, rowSize, colSize);
             return;
@@ -142,24 +143,20 @@ protected:
         uint32_t aligned = BYTE_ALIGNMENT / sizeof(T);
         dstStride = dstStride / aligned;
 
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(rowSize),
-            static_cast<uint32_t>(colSize * sizeof(T)),
-            static_cast<uint32_t>(rowLength * sizeof(T) - colSize * sizeof(T)),
-            dstStride,
-            0
-        };
+        DataCopyExtParams copyParams{static_cast<uint16_t>(rowSize), static_cast<uint32_t>(colSize * sizeof(T)),
+                                     static_cast<uint32_t>(rowLength * sizeof(T) - colSize * sizeof(T)), dstStride, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         if constexpr (std::is_same<T, U>::value) {
             DataCopyPad(this->srcUbLocal[0], this->srcGm[srcOffset], copyParams, padParams);
         } else {
-            auto srcUbT = std::is_same<T, int64_t>::value ? 
-                this->srcUbLocal.template ReinterpretCast<T>() :
-                this->srcUbLocal.template ReinterpretCast<T>()[CACHE_CAPACITY];
+            auto srcUbT = std::is_same<T, int64_t>::value ?
+                              this->srcUbLocal.template ReinterpretCast<T>() :
+                              this->srcUbLocal.template ReinterpretCast<T>()[CACHE_CAPACITY];
             DataCopyPad(srcUbT, this->srcGm[srcOffset], copyParams, padParams);
             PIPE_MTE2_S();
             if constexpr (std::is_same<T, bool>::value) {
-                Cast(this->srcUbLocal, srcUbT.template ReinterpretCast<uint8_t>(), RoundMode::CAST_NONE, rowSize * colSizeAligned);
+                Cast(this->srcUbLocal, srcUbT.template ReinterpretCast<uint8_t>(), RoundMode::CAST_NONE,
+                     rowSize * colSizeAligned);
             } else {
                 Cast(this->srcUbLocal, srcUbT, RoundMode::CAST_NONE, rowSize * colSizeAligned);
             }
@@ -167,15 +164,19 @@ protected:
         }
     }
 
-    __aicore__ inline void DoTranspose(uint32_t rowSize, uint32_t colSize) {
+    __aicore__ inline void DoTranspose(uint32_t rowSize, uint32_t colSize)
+    {
         if (this->isForward && this->isSpecial) {
             uint32_t rowsAligned = (rowSize + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
             uint32_t multiple = BASE_TILE_SIZE / rowsAligned;
             if (colSize == BASE_TILE_SIZE * multiple) {
                 //正向，列分块，且rows <= BASE_TILE_SIZE, 且是整块
-                Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0, rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0,
+                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
                 PipeBarrier<PIPE_V>();
-                Gather(this->dstUbLocal[rowSize * colSize / 2], this->srcUbLocal, this->gatherIndicesLocal[rowSize * colSize / 2], 0, rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                Gather(this->dstUbLocal[rowSize * colSize / 2], this->srcUbLocal,
+                       this->gatherIndicesLocal[rowSize * colSize / 2], 0,
+                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
                 return;
             }
         }
@@ -184,9 +185,12 @@ protected:
             uint32_t multiple = BASE_TILE_SIZE / colsAligned;
             if (rowSize == BASE_TILE_SIZE * multiple) {
                 // 反向，行分块且cols <= BASE_TILE_SIZE，且是整块
-                Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0, rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0,
+                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
                 PipeBarrier<PIPE_V>();
-                Gather(this->dstUbLocal[rowSize * colSize / 2], this->srcUbLocal, this->gatherIndicesLocal[rowSize * colSize / 2], 0, rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                Gather(this->dstUbLocal[rowSize * colSize / 2], this->srcUbLocal,
+                       this->gatherIndicesLocal[rowSize * colSize / 2], 0,
+                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
                 return;
             }
         }
@@ -204,7 +208,8 @@ protected:
         }
     }
 
-    __aicore__ inline void StoreDataToGmContinuous(uint32_t dstOffset, uint32_t rowSize, uint32_t colSize) {
+    __aicore__ inline void StoreDataToGmContinuous(uint32_t dstOffset, uint32_t rowSize, uint32_t colSize)
+    {
         uint32_t rowsAligned = (rowSize + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
         uint32_t multiple = BASE_TILE_SIZE / rowsAligned;
         if (rowSize % BYTE_ALIGNMENT != 0 && colSize != BASE_TILE_SIZE * multiple) {
@@ -213,7 +218,6 @@ protected:
             auto tasks = colSize / blockNums;
             auto leftTasks = colSize % blockNums;
             uint32_t rowSizeAligned = (rowSize + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
-            
 
             for (int32_t i = 0; i <= tasks; i++) {
                 if (i == tasks && leftTasks == 0) {
@@ -238,7 +242,8 @@ protected:
             if constexpr (!std::is_same<Q, bool>::value) {
                 Cast(srcLocalQ, this->dstUbLocal, RoundMode::CAST_RINT, colSize * rowSize);
             } else {
-                Cast(srcLocalQ.template ReinterpretCast<uint8_t>(), this->dstUbLocal, RoundMode::CAST_RINT, colSize * rowSize);
+                Cast(srcLocalQ.template ReinterpretCast<uint8_t>(), this->dstUbLocal, RoundMode::CAST_RINT,
+                     colSize * rowSize);
             }
             PIPE_V_S();
         } else {
@@ -249,7 +254,8 @@ protected:
         DataCopyPad(this->dstGm[dstOffset], srcLocalQ, dstCopyParams);
     }
 
-    __aicore__ inline void StoreDataToGm(uint32_t dstOffset, uint32_t rowSize, uint32_t colSize, uint32_t rowLength) {
+    __aicore__ inline void StoreDataToGm(uint32_t dstOffset, uint32_t rowSize, uint32_t colSize, uint32_t rowLength)
+    {
         if (this->isForward && this->isSpecial) {
             this->StoreDataToGmContinuous(dstOffset, rowSize, colSize);
             return;
@@ -262,7 +268,8 @@ protected:
             if constexpr (!std::is_same<Q, bool>::value) {
                 Cast(srcLocalQ, this->dstUbLocal, RoundMode::CAST_RINT, colSize * rowSizeAligned);
             } else {
-                Cast(srcLocalQ.template ReinterpretCast<uint8_t>(), this->dstUbLocal, RoundMode::CAST_RINT, colSize * rowSizeAligned);
+                Cast(srcLocalQ.template ReinterpretCast<uint8_t>(), this->dstUbLocal, RoundMode::CAST_RINT,
+                     colSize * rowSizeAligned);
             }
             PIPE_V_S();
         } else {
@@ -272,30 +279,30 @@ protected:
         uint32_t srcUbStride = rowSizeAligned - rowSize;
         uint32_t aliged = BYTE_ALIGNMENT / sizeof(Q);
         srcUbStride = srcUbStride / aliged;
-        DataCopyExtParams dstCopyParams{
-            static_cast<uint16_t>(colSize),
-            static_cast<uint32_t>(rowSize * sizeof(Q)),
-            srcUbStride,
-            static_cast<uint32_t>(rowLength * sizeof(Q) - rowSize * sizeof(Q)),
-            0
-        };
+        DataCopyExtParams dstCopyParams{static_cast<uint16_t>(colSize), static_cast<uint32_t>(rowSize * sizeof(Q)),
+                                        srcUbStride, static_cast<uint32_t>(rowLength * sizeof(Q) - rowSize * sizeof(Q)),
+                                        0};
         DataCopyPad(this->dstGm[dstOffset], srcLocalQ, dstCopyParams);
     }
 
-    __aicore__ inline void ReadPadOffset() {
+    __aicore__ inline void ReadPadOffset()
+    {
         auto gatherLocalStart = CACHE_CAPACITY * sizeof(int32_t) * 2;
         auto offsetLocal = this->allUbLocal[gatherLocalStart].template ReinterpretCast<int32_t>();
-        DataCopyExtParams copyParams{1, static_cast<uint32_t>(BLOCK_SIZE * OFFSET_TABLE_SIZE * sizeof(int32_t)), 0, 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(BLOCK_SIZE * OFFSET_TABLE_SIZE * sizeof(int32_t)), 0, 0,
+                                     0};
         DataCopyPadExtParams<int32_t> padParams{true, 0, 0, 0};
         DataCopyPad(offsetLocal, this->padGmTensor, copyParams, padParams);
         PIPE_MTE2_S();
         this->gatherIndicesLocal = offsetLocal.template ReinterpretCast<uint32_t>();
     }
 
-    __aicore__ inline void ReadTransposeOffset() {
+    __aicore__ inline void ReadTransposeOffset()
+    {
         auto gatherLocalStart = CACHE_CAPACITY * sizeof(int32_t) * 2;
         auto offsetLocal = this->allUbLocal[gatherLocalStart].template ReinterpretCast<int32_t>();
-        DataCopyExtParams copyParams{1, static_cast<uint32_t>(OFFSET_TABLE_SIZE * OFFSET_TABLE_SIZE * sizeof(int32_t)), 0, 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(OFFSET_TABLE_SIZE * OFFSET_TABLE_SIZE * sizeof(int32_t)),
+                                     0, 0, 0};
         DataCopyPadExtParams<int32_t> padParams{true, 0, 0, 0};
         DataCopyPad(offsetLocal, this->transposeGmTensor, copyParams, padParams);
         PIPE_MTE2_S();
@@ -323,14 +330,16 @@ protected:
 template <typename T, typename U, typename Q>
 class TransposeTileForward : public TransposeTileBase<T, U, Q> {
 public:
-    __aicore__ inline void SetShape(uint32_t rows, uint32_t cols, uint32_t tileStartCol, uint32_t tileCols) {
+    __aicore__ inline void SetShape(uint32_t rows, uint32_t cols, uint32_t tileStartCol, uint32_t tileCols)
+    {
         this->rows = rows;
         this->cols = cols;
         this->tileStartCol = tileStartCol;
         this->tileCols = tileCols;
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (this->tileCols >= this->rows) {
             if (this->rows <= BASE_TILE_SIZE) {
                 this->isSpecial = true; // hight <= BASE_TILE_SIZE 且按列分核，才特殊处理。
@@ -343,7 +352,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CoreSplitByColumns(uint32_t taskCols) {
+    __aicore__ inline void CoreSplitByColumns(uint32_t taskCols)
+    {
         uint32_t baseCols, extraCols;
         uint64_t usedCores;
         this->CalcSplitParams(taskCols, baseCols, extraCols, usedCores);
@@ -362,11 +372,12 @@ private:
         }
     }
 
-    __aicore__ inline void CoreSplitByRows(uint32_t taskCols) {
+    __aicore__ inline void CoreSplitByRows(uint32_t taskCols)
+    {
         uint32_t baseRows, extraRows;
         uint64_t usedCores;
         this->CalcSplitParams(this->rows, baseRows, extraRows, usedCores);
-        
+
         for (uint32_t j = 0; j <= usedCores; j++) {
             if (j == usedCores && extraRows == 0) {
                 break;
@@ -383,7 +394,8 @@ private:
         }
     }
 
-    __aicore__ inline void DoTileTranspose(uint32_t startCol, uint32_t taskCols, uint32_t startRow, uint32_t taskRows) {
+    __aicore__ inline void DoTileTranspose(uint32_t startCol, uint32_t taskCols, uint32_t startRow, uint32_t taskRows)
+    {
         uint32_t colTileSize = BASE_TILE_SIZE;
         uint32_t rowTileSize = BASE_TILE_SIZE;
         // rows少，colTileSize变大
@@ -407,12 +419,12 @@ private:
                 this->ReadPadOffset();
             }
         }
-        
+
         for (uint32_t rowBlockIdx = 0; rowBlockIdx <= rowBlocks; rowBlockIdx++) {
             if (rowBlockIdx == rowBlocks && rowLeft == 0) {
                 break;
             }
-            uint32_t rowSize = (rowBlockIdx == rowBlocks ? rowLeft : rowTileSize); 
+            uint32_t rowSize = (rowBlockIdx == rowBlocks ? rowLeft : rowTileSize);
             for (uint32_t colBlockIdx = 0; colBlockIdx <= colBlocks; colBlockIdx++) {
                 if (colBlockIdx == colBlocks && colLeft == 0) {
                     break;
@@ -423,8 +435,10 @@ private:
                     this->ReadPadOffset();
                 }
 
-                uint32_t srcOffset = ((startRow + rowBlockIdx * rowTileSize) * this->cols + this->tileStartCol + startCol + colBlockIdx * colTileSize);
-                uint32_t dstOffset = ((startCol + colBlockIdx * colTileSize) * this->rows + rowBlockIdx * rowTileSize + startRow);
+                uint32_t srcOffset = ((startRow + rowBlockIdx * rowTileSize) * this->cols + this->tileStartCol +
+                                      startCol + colBlockIdx * colTileSize);
+                uint32_t dstOffset = ((startCol + colBlockIdx * colTileSize) * this->rows + rowBlockIdx * rowTileSize +
+                                      startRow);
                 this->LoadDataToUb(srcOffset, rowSize, colSize, this->cols);
                 PIPE_MTE2_S();
                 this->DoTranspose(rowSize, colSize);
@@ -438,6 +452,6 @@ private:
 private:
     uint32_t tileCols = 0;
 };
-}
+} // namespace ScatterElementsV2NS
 
-# endif
+#endif

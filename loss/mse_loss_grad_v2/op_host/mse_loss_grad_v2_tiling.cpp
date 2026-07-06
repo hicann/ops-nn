@@ -26,10 +26,7 @@ static constexpr uint32_t FLOAT_KEY = 1;
 static constexpr uint32_t FLOAT16_KEY = 2;
 static constexpr uint32_t BFLOAT16_KEY = 3;
 
-void GetTilingKey(const uint32_t dtypeKey, uint32_t& tilingKey)
-{
-    tilingKey = dtypeKey;
-}
+void GetTilingKey(const uint32_t dtypeKey, uint32_t& tilingKey) { tilingKey = dtypeKey; }
 
 static ge::graphStatus TilingFunc(gert::TilingContext* context)
 {
@@ -131,8 +128,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-struct MseLossGradCompileInfo {
-};
+struct MseLossGradCompileInfo {};
 
 static ge::graphStatus TilingParse4MseLossGrad(gert::TilingParseContext* context)
 {

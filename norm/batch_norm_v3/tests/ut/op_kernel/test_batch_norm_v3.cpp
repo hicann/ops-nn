@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -27,21 +28,15 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void batch_norm_v3(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR variance, GM_ADDR y, GM_ADDR mean_out,
-    GM_ADDR variance_out, GM_ADDR save_mean, GM_ADDR save_var, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void batch_norm_v3(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean,
+                                                    GM_ADDR variance, GM_ADDR y, GM_ADDR mean_out, GM_ADDR variance_out,
+                                                    GM_ADDR save_mean, GM_ADDR save_var, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
-class batch_norm_v3_test : public testing::Test
-{
+class batch_norm_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << " batch_norm_v3_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << " batch_norm_v3_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << " batch_norm_v3_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << " batch_norm_v3_test TearDown\n" << endl; }
 };
 
 TEST_F(batch_norm_v3_test, test_case_1000)
@@ -95,9 +90,8 @@ TEST_F(batch_norm_v3_test, test_case_1000)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -165,9 +159,8 @@ TEST_F(batch_norm_v3_test, test_case_1001)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1001);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -235,9 +228,8 @@ TEST_F(batch_norm_v3_test, test_case_1002)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1002);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -305,9 +297,8 @@ TEST_F(batch_norm_v3_test, test_case_1012)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1012);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -375,9 +366,8 @@ TEST_F(batch_norm_v3_test, test_case_1003)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1003);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -445,9 +435,8 @@ TEST_F(batch_norm_v3_test, test_case_1013)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1013);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -514,9 +503,8 @@ TEST_F(batch_norm_v3_test, test_case_2000)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2000);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -583,9 +571,8 @@ TEST_F(batch_norm_v3_test, test_case_2001)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2001);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean, save_var,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, weight, bias, mean, variance, y, mean_out, variance_out, save_mean,
+                save_var, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);

@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_maximum_scalar_list_proto.h"
 
-class ForeachMaximumScalarListTest : public testing::Test
-{
+class ForeachMaximumScalarListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMaximumScalarList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMaximumScalarList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMaximumScalarList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMaximumScalarList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMaximumScalarListTest, infer_shape_known_success)
@@ -86,8 +79,8 @@ TEST_F(ForeachMaximumScalarListTest, infer_shape_known_success)
 
 TEST_F(ForeachMaximumScalarListTest, infer_dtype_test_1)
 {
-    auto infer_datatype_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMaximumScalarList")->infer_datatype;
+    auto
+        infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMaximumScalarList")->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);
 
     // x1

@@ -18,8 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* GatherElementsV2(
-    const aclTensor* self, const aclTensor* index, const int64_t dim, aclOpExecutor* executor);
+const aclTensor* GatherElementsV2(const aclTensor* self, const aclTensor* index, const int64_t dim,
+                                  aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_OP_GATHER_ELEMENTS_V2_H_

@@ -75,16 +75,16 @@ __aicore__ inline void CeluV2<T>::Init(GM_ADDR x, GM_ADDR y, const CeluV2TilingD
     this->tileDataNum = tilingData->tileDataNum;
     this->alpha = tilingData->alpha;
     this->invAlpha = tilingData->invAlpha;
-    if (coreNum < tilingData->tailBlockNum) { 
+    if (coreNum < tilingData->tailBlockNum) {
         this->coreDataNum = tilingData->bigCoreDataNum;
         this->tileNum = tilingData->finalBigTileNum;
         this->tailDataNum = tilingData->bigTailDataNum;
-    }
-    else { 
+    } else {
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     inputGMX.SetGlobalBuffer((__gm__ T*)x + globalBufferIndex, this->coreDataNum);
     outputGMY.SetGlobalBuffer((__gm__ T*)y + globalBufferIndex, this->coreDataNum);

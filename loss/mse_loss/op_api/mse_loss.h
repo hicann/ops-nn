@@ -21,11 +21,10 @@
 namespace l0op {
 const aclTensor* MseLoss(const aclTensor* self, const aclTensor* target, const std::string& reduction,
                          aclOpExecutor* executor);
-const aclTensor* MseLossV1(const aclTensor *self, const aclTensor *target, const std::string &reduction,
-                         aclOpExecutor *executor);
+const aclTensor* MseLossV1(const aclTensor* self, const aclTensor* target, const std::string& reduction,
+                           aclOpExecutor* executor);
 const aclTensor* MSELossV2(const aclTensor* self, const aclTensor* target, const std::string& reduction,
-                         aclOpExecutor* executor);
-}
+                           aclOpExecutor* executor);
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_OP_MSE_LOSS_OP_H_
-
+#endif // OP_API_INC_LEVEL0_OP_MSE_LOSS_OP_H_

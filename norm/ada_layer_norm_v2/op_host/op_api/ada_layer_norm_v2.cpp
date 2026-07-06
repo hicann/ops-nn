@@ -24,10 +24,11 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AdaLayerNormV2);
 
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> AdaLayerNormV2(
-    AdaLayerNormV2InputTensor inputTensor, float epsilon, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> AdaLayerNormV2(AdaLayerNormV2InputTensor inputTensor,
+                                                                    float epsilon, aclOpExecutor* executor)
 {
-    L0_DFX(AdaLayerNormV2, inputTensor.x, inputTensor.scale, inputTensor.shift, inputTensor.weightOptional, inputTensor.biasOptional, epsilon);
+    L0_DFX(AdaLayerNormV2, inputTensor.x, inputTensor.scale, inputTensor.shift, inputTensor.weightOptional,
+           inputTensor.biasOptional, epsilon);
 
     op::Shape xShape = inputTensor.x->GetViewShape();
     auto xDtype = inputTensor.x->GetDataType();
@@ -37,8 +38,10 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*> AdaLayerNormV2(
     auto mean = executor->AllocTensor(xShape, xDtype, xFormat);
     auto rstd = executor->AllocTensor(xShape, xDtype, xFormat);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AdaLayerNormV2, OP_INPUT(inputTensor.x, inputTensor.scale, inputTensor.shift, inputTensor.weightOptional, inputTensor.biasOptional), OP_OUTPUT(out, mean, rstd), OP_ATTR(epsilon));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaLayerNormV2,
+                                           OP_INPUT(inputTensor.x, inputTensor.scale, inputTensor.shift,
+                                                    inputTensor.weightOptional, inputTensor.biasOptional),
+                                           OP_OUTPUT(out, mean, rstd), OP_ATTR(epsilon));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaLayerNormV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::tuple(nullptr, nullptr, nullptr);

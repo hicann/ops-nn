@@ -31,9 +31,9 @@ using namespace std;
 using namespace ge;
 
 struct Runtime2TestParam {
-  std::vector<std::string> attrs;
-  std::vector<bool> input_const;
-  std::vector<uint32_t> irnum;
+    std::vector<std::string> attrs;
+    std::vector<bool> input_const;
+    std::vector<uint32_t> irnum;
 };
 
 ge::graphStatus InferShapeTest(ge::Operator& op, const Runtime2TestParam& param);
@@ -44,4 +44,4 @@ ge::graphStatus InferDataTypeTest(ge::Operator& op, const Runtime2TestParam& par
 
 ge::graphStatus InferDataTypeTest(ge::Operator& op);
 
-#endif //NN_TESTS_UT_COMMON_UT_OP_COMMON_H_
+#endif // NN_TESTS_UT_COMMON_UT_OP_COMMON_H_

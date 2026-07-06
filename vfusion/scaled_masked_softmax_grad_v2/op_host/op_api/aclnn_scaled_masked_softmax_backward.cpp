@@ -28,20 +28,22 @@ extern "C" {
 #endif
 
 namespace {
-    constexpr int32_t INPUT_DIM_NUM = 4;
-    constexpr int32_t D_LIMIT = 4096;
-    constexpr int32_t D_LIMIT_D = 8192;
-}
+constexpr int32_t INPUT_DIM_NUM = 4;
+constexpr int32_t D_LIMIT = 4096;
+constexpr int32_t D_LIMIT_D = 8192;
+} // namespace
 
-extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2GetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, double scale, bool fixTriuMask,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
+extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2GetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* y,
+                                                                       const aclTensor* mask, double scale,
+                                                                       bool fixTriuMask, aclTensor* out,
+                                                                       uint64_t* workspaceSize,
+                                                                       aclOpExecutor** executor);
 
-extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                       const aclrtStream stream);
 
-static const std::initializer_list<op::DataType> TYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> TYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                      op::DataType::DT_BF16};
 static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, aclTensor* out)
 {
     OP_CHECK_NULL(gradOutput, return false);
@@ -51,8 +53,8 @@ static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* y,
     return true;
 }
 
-static inline bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, const aclTensor* out)
+static inline bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask,
+                                   const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, TYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(y, TYPE_SUPPORT_LIST, return false);
@@ -62,38 +64,36 @@ static inline bool CheckDtypeValid(
     OP_CHECK_DTYPE_NOT_SUPPORT(out, TYPE_SUPPORT_LIST, return false);
     return true;
 }
-static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, const aclTensor* out)
+static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask,
+                               const aclTensor* out)
 {
     bool formatValid = gradOutput->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
                        y->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
                        out->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ;
     if (!formatValid) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Input and output format only support [ND]. Actual: gradOutput:[%s], y:[%s], out:[%s].",
-            op::ToString(gradOutput->GetStorageFormat()).GetString(), op::ToString(y->GetStorageFormat()).GetString(),
-                op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Input and output format only support [ND]. Actual: gradOutput:[%s], y:[%s], out:[%s].",
+                op::ToString(gradOutput->GetStorageFormat()).GetString(),
+                op::ToString(y->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
     if (mask != nullptr) {
         formatValid = (formatValid && mask->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ);
     }
     if (!formatValid) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Mask format only support [ND]. Actual: mask:[%s].",
-            op::ToString(mask->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Mask format only support [ND]. Actual: mask:[%s].",
+                op::ToString(mask->GetStorageFormat()).GetString());
         return false;
     }
     return formatValid;
 }
 
-static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, const aclTensor* out)
+static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask,
+                              const aclTensor* out)
 {
     if (gradOutput->GetViewShape().GetDimNum() != INPUT_DIM_NUM) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "gradOutput only support 4 dims, but current is %lu",
-            gradOutput->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput only support 4 dims, but current is %lu",
+                gradOutput->GetViewShape().GetDimNum());
         return false;
     }
     int64_t batch = gradOutput->GetViewShape().GetDim(DIM_0);
@@ -108,47 +108,41 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* y, c
 
     bool isInputVaild = (batch >= 0 && channel >= 0 && seqLength >= 0 && headDim >= 0 && headDim <= dDimLimit);
     if (!isInputVaild) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "shape of gradOutput is not true, current is %s",
-            op::ToString(gradOutput->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shape of gradOutput is not true, current is %s",
+                op::ToString(gradOutput->GetViewShape()).GetString());
         return false;
     }
     if (gradOutput->GetViewShape() != y->GetViewShape()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "shape of y should equal to gradOutput, gradOutput is %s, y is %s",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(y->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shape of y should equal to gradOutput, gradOutput is %s, y is %s",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(y->GetViewShape()).GetString());
         return false;
     }
     if (gradOutput->GetViewShape() != out->GetViewShape()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "shape of out should equal to gradOutput, gradOutput is %s, out is %s",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(out->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shape of out should equal to gradOutput, gradOutput is %s, out is %s",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(out->GetViewShape()).GetString());
         return false;
     }
     if (mask != nullptr) {
         if (mask->GetViewShape().GetDimNum() != INPUT_DIM_NUM) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "mask only support 4 dims, but current is %lu",
-                mask->GetViewShape().GetDimNum());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mask only support 4 dims, but current is %lu",
+                    mask->GetViewShape().GetDimNum());
             return false;
         }
         int64_t maskBatch = mask->GetViewShape().GetDim(DIM_0);
         int64_t maskChannel = mask->GetViewShape().GetDim(DIM_1);
         int64_t maskSeqLength = mask->GetViewShape().GetDim(DIM_2);
         int64_t maskHeadDim = mask->GetViewShape().GetDim(DIM_3);
-        bool isMaskVaild =
-            (maskBatch >= 0 && maskChannel >= 0 && maskSeqLength >= 0 && maskHeadDim >= 0 &&
-             (maskSeqLength == seqLength && maskHeadDim == headDim));
+        bool isMaskVaild = (maskBatch >= 0 && maskChannel >= 0 && maskSeqLength >= 0 && maskHeadDim >= 0 &&
+                            (maskSeqLength == seqLength && maskHeadDim == headDim));
         if (!isMaskVaild) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "shape of mask is not true, current is %s",
-                op::ToString(mask->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shape of mask is not true, current is %s",
+                    op::ToString(mask->GetViewShape()).GetString());
             return false;
         }
         if ((batch != maskBatch && maskBatch != 1) || (channel != maskChannel && maskChannel != 1)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "mask should broadcast to gradOutput, gradOutput is %s, mask is %s",
-                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(mask->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mask should broadcast to gradOutput, gradOutput is %s, mask is %s",
+                    op::ToString(gradOutput->GetViewShape()).GetString(),
+                    op::ToString(mask->GetViewShape()).GetString());
             return false;
         }
     }
@@ -173,9 +167,10 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* y, 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, double scale, bool fixTriuMask,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* y,
+                                                             const aclTensor* mask, double scale, bool fixTriuMask,
+                                                             aclTensor* out, uint64_t* workspaceSize,
+                                                             aclOpExecutor** executor)
 {
     auto ret = CheckParams(gradOutput, y, mask, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -186,12 +181,12 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize(
     auto outXGrad = const_cast<aclTensor*>(out);
     outXGrad->SetDataType(gradOutput->GetDataType());
 
-    return aclnnInnerScaledMaskedSoftmaxGradV2GetWorkspaceSize(
-        gradOutput, y, mask, scale, false, outXGrad, workspaceSize, executor);
+    return aclnnInnerScaledMaskedSoftmaxGradV2GetWorkspaceSize(gradOutput, y, mask, scale, false, outXGrad,
+                                                               workspaceSize, executor);
 }
 
-aclnnStatus aclnnScaledMaskedSoftmaxBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnScaledMaskedSoftmaxBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                             const aclrtStream stream)
 {
     return aclnnInnerScaledMaskedSoftmaxGradV2(workspace, workspaceSize, executor, stream);
 }

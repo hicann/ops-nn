@@ -52,27 +52,27 @@ ge::graphStatus SwishGradTiling::CalcInputDtype()
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtype of grad must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
+                                              ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+                                              "The dtype of grad must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     auto inputDesc1 = tilingContext->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc1);
     this->inputDtype1 = inputDesc1->GetDataType();
-    OP_CHECK_IF(
-        this->inputDtype1 != this->inputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype1),
-            "The dtypes of x and grad must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->inputDtype1 != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, grad",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->inputDtype1),
+                                                       "The dtypes of x and grad must be the same"),
+                return ge::GRAPH_FAILED);
     auto inputDesc2 = tilingContext->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc2);
     this->inputDtype2 = inputDesc2->GetDataType();
-    OP_CHECK_IF(
-        this->inputDtype2 != this->inputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype2),
-            "The dtypes of y and grad must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->inputDtype2 != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, grad",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->inputDtype2),
+                                                       "The dtypes of y and grad must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -92,21 +92,24 @@ ge::graphStatus SwishGradTiling::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradXStorageShape);
     const gert::Shape& outputGradXShape = Ops::Base::EnsureNotScalar(gradXStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputGradShape != inputXShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "grad, x",
-            Ops::Base::ToString(inputGradShape) + ", " + Ops::Base::ToString(inputXShape),
-            "The shapes of grad and x must be the same"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputGradShape != inputYShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "grad, y",
-            Ops::Base::ToString(inputGradShape) + ", " + Ops::Base::ToString(inputYShape),
-            "The shapes of grad and y must be the same"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputGradShape != outputGradXShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "grad, grad_x",
-            Ops::Base::ToString(inputGradShape) + ", " + Ops::Base::ToString(outputGradXShape),
-            "The shapes of grad and grad_x must be the same"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputGradShape != inputXShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "grad, x",
+                    Ops::Base::ToString(inputGradShape) + ", " + Ops::Base::ToString(inputXShape),
+                    "The shapes of grad and x must be the same"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputGradShape != inputYShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "grad, y",
+                    Ops::Base::ToString(inputGradShape) + ", " + Ops::Base::ToString(inputYShape),
+                    "The shapes of grad and y must be the same"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputGradShape != outputGradXShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "grad, grad_x",
+                    Ops::Base::ToString(inputGradShape) + ", " + Ops::Base::ToString(outputGradXShape),
+                    "The shapes of grad and grad_x must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -115,12 +118,12 @@ ge::graphStatus SwishGradTiling::CalcOutputDtype()
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->outputDtype != this->inputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "grad_x, grad",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtypes of grad_x and grad must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->outputDtype != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "grad_x, grad",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+                                                       "The dtypes of grad_x and grad must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -141,15 +144,13 @@ ge::graphStatus SwishGradTiling::RunTiling()
     OP_LOGD(tilingContext->GetNodeName(), "SwishGradTiling RunTiling enter.");
 
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
+
     // get tilingdata address in context
     tiling = tilingContext->GetTilingData<SwishGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
@@ -168,13 +169,12 @@ ge::graphStatus SwishGradTiling::RunTiling()
         baseTilingResult = elewiseBaseTiling.DoTiling<SwishGradOp::SwishGradDAG<float>::OpDag>(tiling->baseTiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad_x",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "The dtype of grad_x must be DT_FLOAT16, DT_BF16 or DT_FLOAT");
+                                              ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                              "The dtype of grad_x must be DT_FLOAT16, DT_BF16 or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
     return SetTilingData();
 }

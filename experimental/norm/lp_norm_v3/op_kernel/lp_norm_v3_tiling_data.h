@@ -35,9 +35,9 @@ struct LpNormV3TilingData {
     uint32_t smallTailDataNum;
     uint32_t bigTailDataNum;
     uint32_t tailBlockNum;
-    
+
     float p;
-    uint32_t cols;   
+    uint32_t cols;
     uint32_t rows;
     // 扩展其他tilling参数
 };

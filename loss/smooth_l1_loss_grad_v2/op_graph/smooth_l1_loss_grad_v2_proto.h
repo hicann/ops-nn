@@ -19,8 +19,7 @@
 #include "graph/operator_reg.h"
 #include "nn_norm.h"
 
-
-namespace ge { 
+namespace ge {
 /**
 * @brief Calculates the reversed outputs of the function "smooth_l1_loss_v2". Broadcasting is supported.
 
@@ -46,13 +45,13 @@ namespace ge {
 * Compatible with the Pytorch operator SmoothL1LossBackward.
 */
 REG_OP(SmoothL1LossGradV2)
-    .INPUT(predict, TensorType({DT_FLOAT, DT_FLOAT16,DT_BF16}))
+    .INPUT(predict, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(label, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(dout, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OUTPUT(gradient, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(sigma, Float, 1.0)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SmoothL1LossGradV2)
-}
+} // namespace ge
 
 #endif

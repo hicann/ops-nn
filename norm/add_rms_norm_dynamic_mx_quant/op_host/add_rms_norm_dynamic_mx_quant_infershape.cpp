@@ -37,8 +37,8 @@ using namespace Ops::Base;
 
 namespace ops {
 
-static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {
-    DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2};
+static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN,
+                                                                  DT_FLOAT8_E5M2};
 
 static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeContext* context)
 {
@@ -130,8 +130,9 @@ static graphStatus InferDataType4AddRmsNormDynamicMxQuant(gert::InferDataTypeCon
             yDtype = static_cast<ge::DataType>(*pDstDtype);
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(context,
-                        "attr dst_type only support 35(float8_e5m2), 36(float8_e4m3fn), 40(float4_e2m1), 41(float4_e1m2)"),
+                OP_LOGE(
+                    context,
+                    "attr dst_type only support 35(float8_e5m2), 36(float8_e4m3fn), 40(float4_e2m1), 41(float4_e1m2)"),
                 return ge::GRAPH_FAILED);
         }
         const bool* output_rstd = attrs->GetAttrPointer<bool>(ATTR_OUTPUT_RSTD_IDX);

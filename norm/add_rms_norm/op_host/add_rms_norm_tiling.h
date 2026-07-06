@@ -75,7 +75,7 @@ struct AddRmsNormCompileInfo {
 };
 
 namespace addRmsNormRegbase {
-    ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context);
+ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context);
 }
 
 REGISTER_TILING_DATA_CLASS(AddRmsNorm, AddRMSNormTilingData)

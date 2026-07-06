@@ -15,18 +15,18 @@
 
 struct GroupedDynamicMxQuantTilingData {
     int64_t totalCoreNum{0};
-    int64_t usedCoreNum{0};           // 实际使用核数
-    int64_t blockFactor{0};           // 头核处理数据量
-    int64_t tailBlockFactor{0};       // 尾核处理数据量
-    int64_t uo{0};                    // 切分轴上的循环次数
-    int64_t maxUbCol{0};              // 单次循环要处理的数据大小
-    int64_t ubFactor{0};              // 单次循环要处理的数据大小
-    int64_t tailUbFactor{0};          // 尾循环要处理的数据大小
-    int64_t blockSize{0};             // 量化数据块大小
-    int64_t scaleAlg{0};              // OCP Microscaling Formats(Mx) Specification实现/cuBLAS实现，默认OCP实现
-    int64_t preAxisSize{0};           // 输入row长度
-    int64_t postAxisSize{0};          // 输入col长度
-    int64_t groupSize{0};             // group个数
-    float dstTypeMax{0.0f};              // 目前仅支持0.0
+    int64_t usedCoreNum{0};     // 实际使用核数
+    int64_t blockFactor{0};     // 头核处理数据量
+    int64_t tailBlockFactor{0}; // 尾核处理数据量
+    int64_t uo{0};              // 切分轴上的循环次数
+    int64_t maxUbCol{0};        // 单次循环要处理的数据大小
+    int64_t ubFactor{0};        // 单次循环要处理的数据大小
+    int64_t tailUbFactor{0};    // 尾循环要处理的数据大小
+    int64_t blockSize{0};       // 量化数据块大小
+    int64_t scaleAlg{0};        // OCP Microscaling Formats(Mx) Specification实现/cuBLAS实现，默认OCP实现
+    int64_t preAxisSize{0};     // 输入row长度
+    int64_t postAxisSize{0};    // 输入col长度
+    int64_t groupSize{0};       // group个数
+    float dstTypeMax{0.0f};     // 目前仅支持0.0
 };
-#endif  // GROUPED_DYNAMIC_MX_QUANT_TILINGDATA_H
+#endif // GROUPED_DYNAMIC_MX_QUANT_TILINGDATA_H

@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool3d_grad_tiling.h
@@ -33,10 +33,8 @@ using namespace Pool3DGradNameSpace;
 
 class MaxPool3DGradTilingBase : public TilingBaseClass {
 public:
-    explicit MaxPool3DGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~MaxPool3DGradTilingBase() override
-    {}
+    explicit MaxPool3DGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~MaxPool3DGradTilingBase() override {}
 
     const std::string nodeName = "MaxPool3DGrad";
     Pool3DGradNCDHWTilingData* tilingData_ = context_->GetTilingData<Pool3DGradNCDHWTilingData>();
@@ -68,15 +66,11 @@ protected:
 class MaxPool3DGradNCDHWSmallKernelTiling : public MaxPool3DGradTilingBase {
 public:
     explicit MaxPool3DGradNCDHWSmallKernelTiling(gert::TilingContext* context)
-        : MaxPool3DGradTilingBase(context),
-        base(new Pool3DGradNCDHWSmallKernelCommonTiling(&inputData))
-    {
-    }
+        : MaxPool3DGradTilingBase(context), base(new Pool3DGradNCDHWSmallKernelCommonTiling(&inputData))
+    {}
 
-    ~MaxPool3DGradNCDHWSmallKernelTiling() override
-    {
-        delete base;
-    }
+    ~MaxPool3DGradNCDHWSmallKernelTiling() override { delete base; }
+
 private:
     Pool3DGradNCDHWSmallKernelCommonTiling* base;
     uint64_t GetTilingKey() const override;
@@ -123,16 +117,11 @@ struct InputSIMTInfo {
     std::string data_format;
 };
 
-class MaxPool3DGradSimtTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class MaxPool3DGradSimtTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPool3DGradSimtTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit MaxPool3DGradSimtTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~MaxPool3DGradSimtTiling() override
-    {
-    }
+    ~MaxPool3DGradSimtTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -146,8 +135,7 @@ protected:
     void DumpTilingInfo() override;
 
 private:
-    MaxPool3DGradSimtTilingData* tilingData_ = 
-        context_->GetTilingData<MaxPool3DGradSimtTilingData>();
+    MaxPool3DGradSimtTilingData* tilingData_ = context_->GetTilingData<MaxPool3DGradSimtTilingData>();
     InputSIMTInfo inputData;
     int nDimPos = 0;
     int cDimPos = 1;
@@ -159,6 +147,6 @@ private:
     int64_t ubSize = 0;
     ge::DataType dtype = ge::DataType::DT_FLOAT;
 };
-}  // namespace optiling
+} // namespace optiling
 
 #endif

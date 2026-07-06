@@ -11,36 +11,20 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::Format> format = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::Format> format = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
-static const std::vector<ge::DataType> valueType = {
-    ge::DT_INT64, ge::DT_INT32, ge::DT_INT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8};
+static const std::vector<ge::DataType> valueType = {ge::DT_INT64,   ge::DT_INT32, ge::DT_INT16, ge::DT_FLOAT,
+                                                    ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8,  ge::DT_UINT8};
 
 class ThresholdV2 : public OpDef {
 public:
     explicit ThresholdV2(const char* name) : OpDef(name)
     {
-        this->Input("x")
-            .ParamType(REQUIRED)
-            .DataType(valueType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Input("threshold")
-            .ParamType(REQUIRED)
-            .DataType(valueType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Input("value")
-            .ParamType(OPTIONAL)
-            .DataType(valueType)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(valueType)
-            .Format(format)
-            .UnknownShapeFormat(format);
+        this->Input("x").ParamType(REQUIRED).DataType(valueType).Format(format).UnknownShapeFormat(format);
+        this->Input("threshold").ParamType(REQUIRED).DataType(valueType).Format(format).UnknownShapeFormat(format);
+        this->Input("value").ParamType(OPTIONAL).DataType(valueType).Format(format).UnknownShapeFormat(format);
+        this->Output("y").ParamType(REQUIRED).DataType(valueType).Format(format).UnknownShapeFormat(format);
 
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)

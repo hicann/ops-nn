@@ -37,16 +37,13 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename TypeParam>
-struct is_same<TypeParam, TypeParam> : public true_type {
-};
+struct is_same<TypeParam, TypeParam> : public true_type {};
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyEx(
-    const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
-    const DataCopyPadParams& padParams = {})
+__aicore__ inline void DataCopyEx(const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
+                                  const DataCopyPadParams& padParams = {})
 {
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
@@ -109,9 +106,9 @@ __aicore__ inline float ReduceSumFP32(const LocalTensor<float>& src_local, int32
     return value;
 }
 
-__aicore__ inline void ReduceSumShort(
-    const LocalTensor<float>& dst_local2, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
-    int32_t align_len, int32_t data_len, int32_t repeat)
+__aicore__ inline void ReduceSumShort(const LocalTensor<float>& dst_local2, const LocalTensor<float>& src_local,
+                                      const LocalTensor<float>& tmp_local, int32_t align_len, int32_t data_len,
+                                      int32_t repeat)
 {
     int32_t elementNum = ONE_BLK_SIZE / sizeof(float);
     int32_t maxRepeat = ONE_REPEAT_BYTE_SIZE / sizeof(float);
@@ -137,7 +134,8 @@ __aicore__ inline void ReduceSumShort(
         BlockReduceSum<float>(dst_local2, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
     }
     if (repeatTail != 0) {
-        BlockReduceSum<float>(dst_local2[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local2[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1,
+                              elementNum);
     }
 }
 
@@ -149,19 +147,10 @@ __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     return 0;
 }
 
-__aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-{
-    return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-}
+__aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-__aicore__ inline uint32_t THE_SMALLEST_NUMBER_BETWEEN_TWO_NUMBERS(uint32_t x, uint32_t y)
-{
-    return x < y ? x : y;
-}
+__aicore__ inline uint32_t THE_SMALLEST_NUMBER_BETWEEN_TWO_NUMBERS(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-__aicore__ inline uint32_t THE_BIGGEST_NUMBER_BETWEEN_TWO_NUMBERS(uint32_t x, uint32_t y)
-{
-    return x > y ? x : y;
-}
+__aicore__ inline uint32_t THE_BIGGEST_NUMBER_BETWEEN_TWO_NUMBERS(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
 #endif // __QUANTIZE_ADD_LAYER_NORM_BASE_H_

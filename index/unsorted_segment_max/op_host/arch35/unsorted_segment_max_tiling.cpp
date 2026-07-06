@@ -18,7 +18,7 @@
 using Ops::NN::Optiling::TilingRegistry;
 using namespace AscendC;
 
-namespace optiling{
+namespace optiling {
 
 static ge::graphStatus Tiling4UnsortedSegmentMax(gert::TilingContext* context)
 {
@@ -49,7 +49,7 @@ static ge::graphStatus TilingPrepare4UnsortedSegmentMax(gert::TilingParseContext
     OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
 
-    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context, "Failed to get max_thread"),return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context, "Failed to get max_thread"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "max_thread_platform is %lu", compileInfo->maxThread);
     OP_LOGD(context, "Tiling Prepare for UnsortedSegmentMax end");
     return ge::GRAPH_SUCCESS;
@@ -66,4 +66,4 @@ REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSimdDynSortTi
 REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSortSimtTiling, 60);
 REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSimtTiling, 100);
 
-} //namespace optiling
+} // namespace optiling

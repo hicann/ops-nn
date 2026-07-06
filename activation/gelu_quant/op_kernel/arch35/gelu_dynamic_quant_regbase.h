@@ -33,9 +33,8 @@ template <typename T1, typename T2>
 class GeluDynamicQuant : public GeluQuantBase {
 public:
     __aicore__ inline GeluDynamicQuant(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-        const GeluQuantTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const GeluQuantTilingData& tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessMulRows(LocalTensor<float>& scaleLocalFp32, int64_t offset, int32_t rowCount);
     __aicore__ inline void ProcessOptionalScale(LocalTensor<float>& scaleLocalFp32, int32_t calCount);
@@ -45,8 +44,8 @@ public:
     __aicore__ inline void ComputeGelu(LocalTensor<float>& geluRes, int32_t rowCount);
 
     template <typename dstType, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeDynamicQuantRegbase(
-        LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, int32_t rowCount);
+    __aicore__ inline void ComputeDynamicQuantRegbase(LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32,
+                                                      int32_t rowCount);
     __aicore__ inline void SetMaxValue()
     {
         if (dstType_ == DT_INT8) {
@@ -89,9 +88,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuant<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void GeluDynamicQuant<T1, T2>::Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y,
+                                                      GM_ADDR outScale, GM_ADDR workspace,
+                                                      const GeluQuantTilingData& tilingData)
 {
     // Init tiling data
     GeluQuantBase::ParseTilingData(tilingData);
@@ -134,8 +133,8 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::Init(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuant<T1, T2>::ProcessMulRows(
-    LocalTensor<float>& scaleLocalFp32, int64_t offset, int32_t rowCount)
+__aicore__ inline void GeluDynamicQuant<T1, T2>::ProcessMulRows(LocalTensor<float>& scaleLocalFp32, int64_t offset,
+                                                                int32_t rowCount)
 {
     CopyIn(offset, rowCount);
     Compute(scaleLocalFp32, rowCount);
@@ -165,17 +164,16 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::Process()
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuant<T1, T2>::ProcessOptionalScale(
-    LocalTensor<float>& scaleLocalFp32, int32_t calCount)
+__aicore__ inline void GeluDynamicQuant<T1, T2>::ProcessOptionalScale(LocalTensor<float>& scaleLocalFp32,
+                                                                      int32_t calCount)
 {
     if (inputScaleType_ == NORMAL_TENSOR) {
         LocalTensor<T2> optionalScale = inQueue_.AllocTensor<T2>();
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(1), static_cast<uint32_t>(endAxisLen_ * sizeof(T2)), static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(endAxisLen_ * sizeof(T2)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-        DataCopyPadExtParams<T2> padParams{
-            true, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
+        DataCopyPadExtParams<T2> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                           static_cast<float>(0)};
 
         DataCopyPad(optionalScale, inputScaleGm_[0], copyParams, padParams);
 
@@ -200,9 +198,8 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluDynamicQuant<T1, T2>::CopyIn(int64_t offset, int32_t rowCount)
 {
     LocalTensor<T1> xLocal = inQueue_.AllocTensor<T1>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(rowCount), static_cast<uint32_t>(endAxisLen_ * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(rowCount), static_cast<uint32_t>(endAxisLen_ * sizeof(T1)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T1> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T1>(0.0)};
     DataCopyPad(xLocal, xGm_[offset / endAxisActualAlignLen_ * endAxisLen_], copyParams, padParams);
@@ -231,16 +228,15 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluDynamicQuant<T1, T2>::CopyOut(int64_t offset, int32_t rowCount)
 {
     LocalTensor<float> scaleOutLocal = scaleOutQueue_.DeQue<float>();
-    DataCopyExtParams copyParamsFloat{
-        static_cast<uint16_t>(rowCount), static_cast<uint32_t>(1 * sizeof(float)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsFloat{static_cast<uint16_t>(rowCount), static_cast<uint32_t>(1 * sizeof(float)),
+                                      static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPad(outScaleGm_[offset / endAxisActualAlignLen_], scaleOutLocal, copyParamsFloat);
     scaleOutQueue_.FreeTensor(scaleOutLocal);
 
     LocalTensor<int8_t> outLocal = outQueue_.DeQue<int8_t>();
-    DataCopyExtParams copyParamsInt8{
-        static_cast<uint16_t>(rowCount), static_cast<uint32_t>(endAxisLen_ * sizeof(int8_t)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsInt8{static_cast<uint16_t>(rowCount),
+                                     static_cast<uint32_t>(endAxisLen_ * sizeof(int8_t)), static_cast<uint32_t>(0),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     auto curOffset = offset / endAxisActualAlignLen_ * endAxisLen_;
     DataCopyPad(yGm_[curOffset], outLocal, copyParamsInt8);
     outQueue_.FreeTensor(outLocal);
@@ -271,8 +267,9 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeGelu(LocalTensor<float>&
 
 template <typename T1, typename T2>
 template <typename dstType, AscendC::RoundMode roundMode>
-__aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(
-    LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, int32_t rowCount)
+__aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(LocalTensor<float>& geluRes,
+                                                                            LocalTensor<float>& scaleLocalFp32,
+                                                                            int32_t rowCount)
 {
     this->SetFloatOverflowModeForRegbase<dstType>();
     uint32_t dtypeSize = sizeof(float);
@@ -321,8 +318,8 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(
                 AscendC::MicroAPI::DataCopy(scaleOutAddr + i * FP32_BLOCK_NUM, vregOutScale, preg1);
             }
             uint32_t sreg1 = endAxisLen_;
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
             for (uint16_t j = 0; j < loopNum; j++) {
                 auto yOutAddr = yAddr + i * endAxisLenAlignTo8_ + j * vl;
                 preg2 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
@@ -334,18 +331,18 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(
                 if constexpr (IsSameType<dstType, int8_t>::value) {
                     AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregQuantRes, preg2);
                     AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg2);
-                } else if constexpr (
-                    IsSameType<dstType, fp8_e4m3fn_t>::value || IsSameType<dstType, fp8_e5m2_t>::value) {
+                } else if constexpr (IsSameType<dstType, fp8_e4m3fn_t>::value ||
+                                     IsSameType<dstType, fp8_e5m2_t>::value) {
                     AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregY, vregQuantRes, preg2);
-                } else if constexpr (
-                    IsSameType<dstType, hifloat8_t>::value && roundMode == AscendC::RoundMode::CAST_HYBRID) {
+                } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
+                                     roundMode == AscendC::RoundMode::CAST_HYBRID) {
                     AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregQuantRes, preg2);
-                } else if constexpr (
-                    IsSameType<dstType, hifloat8_t>::value && roundMode == AscendC::RoundMode::CAST_ROUND) {
+                } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
+                                     roundMode == AscendC::RoundMode::CAST_ROUND) {
                     AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregQuantRes, preg2);
                 }
-                AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    yOutAddr, vregY, preg2);
+                AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY,
+                                                                                                   preg2);
             }
         }
     }

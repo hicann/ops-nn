@@ -25,13 +25,12 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
-static constexpr uint64_t AVG_POOL_TILING_KEY_SMALL_KERNEL_NHWC     = 200001;
+static constexpr uint64_t AVG_POOL_TILING_KEY_SMALL_KERNEL_NHWC = 200001;
 static constexpr uint64_t AVG_POOL_TILING_KEY_SMALL_KERNEL_NHWC_PAD = 211110;
 static constexpr uint64_t AVG_POOL_TILING_KEY_SMALL_KERNEL_NHWC_PAD_DIV = 211111;
-static constexpr uint64_t AVG_POOL_TILING_KEY_BIG_CHANNELS_NHWC     = 222220;
+static constexpr uint64_t AVG_POOL_TILING_KEY_BIG_CHANNELS_NHWC = 222220;
 static constexpr uint64_t AVG_POOL_TILING_KEY_BIG_CHANNELS_NHWC_PAD = 222221;
 static constexpr uint64_t AVG_POOL_TILING_KEY_BIG_CHANNELS_NHWC_PAD_DIV = 222222;
 static constexpr int64_t OUT_BUFFER_LEN = 1024;
@@ -73,7 +72,8 @@ bool AvgPoolCommonNHWCSmallKernelTiling::IsCapable()
     if (inputData_.inputFormat != ge::Format::FORMAT_NHWC) {
         return false;
     }
-    uint64_t totalLoops = static_cast<uint64_t>(inputData_.batches * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] * inputData_.channels);
+    uint64_t totalLoops = static_cast<uint64_t>(inputData_.batches * inputData_.outShape[W_DIM] *
+                                                inputData_.outShape[H_DIM] * inputData_.channels);
     if (totalLoops < coreNum_) {
         return false;
     }
@@ -82,7 +82,7 @@ bool AvgPoolCommonNHWCSmallKernelTiling::IsCapable()
         (inputData_.outShape[W_DIM] > 1 && inputData_.stride[W_DIM] >= MAX_STRIDE * inputData_.kernelSize[W_DIM])) {
         // stride 较大的离散场景不处理
         return false;
-    }    
+    }
     if (IsBufferCapable()) {
         return true;
     }
@@ -93,7 +93,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::InitializationVars()
 {
     isPadding_ = false;
     if (inputData_.pad[TOP_PAD_INDEX] != 0 || inputData_.pad[BOTTOM_PAD_INDEX] != 0 ||
-        inputData_.pad[LEFT_PAD_INDEX] != 0 || inputData_.pad[RIGHT_PAD_INDEX] != 0 ) {
+        inputData_.pad[LEFT_PAD_INDEX] != 0 || inputData_.pad[RIGHT_PAD_INDEX] != 0) {
         isPadding_ = true;
     }
     if (inputData_.ceilMode && isPadding_ == false) {
@@ -139,26 +139,26 @@ bool AvgPoolCommonNHWCSmallKernelTiling::IsBufferCapable()
         minOutRows = kernels / inputData_.outShape[W_DIM];
         minOutCols = inputData_.outShape[W_DIM];
     }
-    int64_t tmpTotalBufferSize = CalcBufferSize(minRows, minCols, minOutRows, minOutCols, isPadding_, needCalcDivisorBuffer_);
+    int64_t tmpTotalBufferSize = CalcBufferSize(minRows, minCols, minOutRows, minOutCols, isPadding_,
+                                                needCalcDivisorBuffer_);
 
     return tmpTotalBufferSize <= availableUb_;
 }
 
 void AvgPoolCommonNHWCSmallKernelTiling::CalcDivsiorUbSize(bool isPad)
 {
-    bool needColInPad =
-                (inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + inputData_.kernelSize[W_DIM]
-                <= inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX];
-    bool needRowInPad =
-                (inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + inputData_.kernelSize[H_DIM]
-                <= inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX];
+    bool needColInPad = (inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + inputData_.kernelSize[W_DIM] <=
+                        inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX];
+    bool needRowInPad = (inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + inputData_.kernelSize[H_DIM] <=
+                        inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX];
     allNeedInPad_ = needColInPad && needRowInPad;
     if ((!isPad) || (allNeedInPad_ && inputData_.countIncludePad)) {
         divisorUbSize_ = 0;
-        return ;
+        return;
     }
     int64_t oneBatchOutNum = inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM];
-    int64_t oneBatchDivisorBuffer = Ops::Base::CeilAlign(oneBatchOutNum * sizeof(float), static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
+    int64_t oneBatchDivisorBuffer = Ops::Base::CeilAlign(oneBatchOutNum * sizeof(float),
+                                                         static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
     if (oneBatchDivisorBuffer <= MIN_DIVISOR_UB) {
         divisorUbSize_ = MIN_DIVISOR_UB;
     } else if (oneBatchDivisorBuffer <= MAX_DIVISOR_UB) {
@@ -175,24 +175,28 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcDivisorMode()
         divisorMode_ = NO_NEED_CALC_DIVISOR;
         realCalcDivisor_ = 0;
         return;
-    } 
+    }
     int64_t maxInt32 = std::numeric_limits<int32_t>::max();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
-    bool colNeedInt64 =
-            inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX] > maxInt32;
-    bool rowNeedInt64 =
-             inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX] > maxInt32;
+    bool colNeedInt64 = inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] +
+                            inputData_.pad[RIGHT_PAD_INDEX] >
+                        maxInt32;
+    bool rowNeedInt64 = inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] +
+                            inputData_.pad[BOTTOM_PAD_INDEX] >
+                        maxInt32;
     int64_t oneBatchOutElementNum = inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM];
     bool outNeedInt64 = oneBatchOutElementNum > maxInt32;
     int64_t needInt64 = static_cast<int64_t>(colNeedInt64 || rowNeedInt64 || outNeedInt64);
     int64_t includePad = inputData_.countIncludePad;
     int64_t oneRegDivElements = platform::GetVRegSize(context_) / B32;
-    int64_t needMultiBatch = static_cast<int64_t>((oneRegDivElements >= DIGIT_TWO * oneBatchOutElementNum) && (ubFactorN_ > 1));
+    int64_t needMultiBatch = static_cast<int64_t>((oneRegDivElements >= DIGIT_TWO * oneBatchOutElementNum) &&
+                                                  (ubFactorN_ > 1));
 
     divisorMode_ = (needInt64 << DIGIT_TWO) + (includePad << 1) + needMultiBatch;
     int64_t oncCoreMaxLoop = blockTail_ == 0 ? blockFactor_ : (blockFactor_ + 1);
-    int64_t oneCoreMaxOutNum = oncCoreMaxLoop * ubFactorN_ * outUbFactorH_ * outUbFactorW_ ;
-    if (needCalcDivisorBuffer_ || (oneCoreMaxOutNum < oneBatchOutElementNum && oneBatchOutElementNum > oneRegDivElements)) {
+    int64_t oneCoreMaxOutNum = oncCoreMaxLoop * ubFactorN_ * outUbFactorH_ * outUbFactorW_;
+    if (needCalcDivisorBuffer_ ||
+        (oneCoreMaxOutNum < oneBatchOutElementNum && oneBatchOutElementNum > oneRegDivElements)) {
         realCalcDivisor_ = 1;
     } else {
         realCalcDivisor_ = 0;
@@ -209,34 +213,35 @@ void AvgPoolCommonNHWCSmallKernelTiling::DoBlockTiling()
     int64_t inCols = (outUbFactorW_ - 1) * inputData_.stride[W_DIM] + inputData_.kernelSize[W_DIM];
     int64_t inRows = (outUbFactorH_ - 1) * inputData_.stride[H_DIM] + inputData_.kernelSize[H_DIM];
     if (splitMode_ == SPLIT_BATCHS) {
-        inRows =
-            std::max(inRows, inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX]
-                    + inputData_.pad[BOTTOM_PAD_INDEX]);
+        inRows = std::max(
+            inRows, inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX]);
     }
     if (splitMode_ != SPLIT_COLS) {
-        inCols =
-            std::max(inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX]
-                    + inputData_.pad[RIGHT_PAD_INDEX]);
+        inCols = std::max(
+            inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX]);
     }
     inUbSize_ = ubFactorN_ * inRows * Ops::Base::CeilAlign(inCols * inputData_.channels, oneBlockNum_);
     outUbSize_ = ubFactorN_ * Ops::Base::CeilAlign(outUbFactorW_ * outUbFactorH_ * inputData_.channels, oneBlockNum_);
     if (inputData_.channels * inputData_.dtypeSize >= NOT_GATHER_THRESHOLD) {
-        inUbSize_ = ubFactorN_* inRows * inCols * Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
-        outUbSize_ = ubFactorN_ * outUbFactorW_ * outUbFactorH_ * Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
+        inUbSize_ = ubFactorN_ * inRows * inCols * Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
+        outUbSize_ = ubFactorN_ * outUbFactorW_ * outUbFactorH_ *
+                     Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
     }
     if (inputData_.divisorOverride == 0 && inputData_.dtypeSize == DIGIT_TWO) {
         outUbSize_ = outUbSize_ * DIGIT_TWO;
     }
     if (wLoop_ == 1 && (inputData_.inputShape[W_DIM] * inputData_.channels) <= maxGatherScatterElm_) {
-        onceCopyRow_ = std::min(maxGatherScatterElm_ / (inputData_.inputShape[W_DIM] * inputData_.channels), inputData_.inputShape[H_DIM]);
+        onceCopyRow_ = std::min(maxGatherScatterElm_ / (inputData_.inputShape[W_DIM] * inputData_.channels),
+                                inputData_.inputShape[H_DIM]);
     }
     if (needCalcDivisorBuffer_) {
-        divisorUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorH_ * sizeof(float), static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
+        divisorUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorH_ * sizeof(float),
+                                              static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
     }
 }
 
 int64_t AvgPoolCommonNHWCSmallKernelTiling::CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows,
-                                                        int64_t outCols, bool isPadding, bool needCalCDivisorBuffer)
+                                                           int64_t outCols, bool isPadding, bool needCalCDivisorBuffer)
 {
     int64_t tmpInDataBufferSize = inRows * Ops::Base::CeilAlign(inCols * inputData_.channels, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outRows * outCols * inputData_.channels, oneBlockNum_);
@@ -252,7 +257,10 @@ int64_t AvgPoolCommonNHWCSmallKernelTiling::CalcBufferSize(int64_t inRows, int64
         tmpTotalBufferSize += tmpInDataBufferSize;
     }
     if (needCalcDivisorBuffer_) {
-        tmpTotalBufferSize = tmpTotalBufferSize + Ops::Base::CeilAlign(outRows * outCols * sizeof(float), static_cast<uint64_t>(platform::GetUbBlockSize(context_))) / inputData_.dtypeSize;
+        tmpTotalBufferSize = tmpTotalBufferSize +
+                             Ops::Base::CeilAlign(outRows * outCols * sizeof(float),
+                                                  static_cast<uint64_t>(platform::GetUbBlockSize(context_))) /
+                                 inputData_.dtypeSize;
     }
     return tmpTotalBufferSize;
 }
@@ -264,7 +272,8 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcSplitMaxRows(int64_t maxInCols)
     while (outRowsLower < outRowsUpper) {
         int64_t outRowsMid = (outRowsLower + outRowsUpper + 1) / DIGIT_TWO;
         int64_t inRowsMid = (outRowsMid - 1) * inputData_.stride[H_DIM] + inputData_.kernelSize[H_DIM];
-        int64_t midBuffer = CalcBufferSize(inRowsMid, maxInCols, outRowsMid, inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+        int64_t midBuffer = CalcBufferSize(inRowsMid, maxInCols, outRowsMid, inputData_.outShape[W_DIM], isPadding_,
+                                           needCalcDivisorBuffer_);
         if (midBuffer <= availableUb_) {
             outRowsLower = outRowsMid;
         } else {
@@ -278,7 +287,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcSplitMaxRows(int64_t maxInCols)
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInRows = MAX_INPUT_ELEMENTS / Ops::Base::CeilAlign(maxInCols * inputData_.channels, oneBlockNum_);
         outUbFactorH_ = std::min((tmpInRows - inputData_.kernelSize[H_DIM]) / inputData_.stride[H_DIM] + 1,
-            inputData_.outShape[H_DIM]);
+                                 inputData_.outShape[H_DIM]);
     }
     if (outUbFactorH_ <= 0) {
         OP_LOGE(context_, "MaxPool outUbFactorH_ is %ld.", outUbFactorH_);
@@ -302,7 +311,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
     while (outColsLower < outColsUpper) {
         int64_t outColsMid = (outColsLower + outColsUpper + 1) / DIGIT_TWO;
         int64_t inColsMid = (outColsMid - 1) * inputData_.stride[W_DIM] + inputData_.kernelSize[W_DIM];
-        int64_t midBuffer = CalcBufferSize( minInRows, inColsMid, 1, outColsMid, isPadding_, needCalcDivisorBuffer_);
+        int64_t midBuffer = CalcBufferSize(minInRows, inColsMid, 1, outColsMid, isPadding_, needCalcDivisorBuffer_);
         if (midBuffer <= availableUb_) {
             outColsLower = outColsMid;
         } else {
@@ -316,7 +325,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInCols = Ops::Base::FloorAlign(MAX_INPUT_ELEMENTS / (minInRows * inputData_.channels), oneBlockNum_);
         outUbFactorW_ = std::min((tmpInCols - inputData_.kernelSize[W_DIM]) / inputData_.stride[W_DIM] + 1,
-            inputData_.outShape[W_DIM]);
+                                 inputData_.outShape[W_DIM]);
     }
     if (outUbFactorW_ <= 0) {
         OP_LOGE(context_, "MaxPool outUbFactorW_ is %ld.", outUbFactorW_);
@@ -352,18 +361,17 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcSplitMaxBatch(int64_t oneBacthBuffe
     splitMode_ = SPLIT_BATCHS;
 }
 
-void AvgPoolCommonNHWCSmallKernelTiling::CalcGatherMode()    
+void AvgPoolCommonNHWCSmallKernelTiling::CalcGatherMode()
 {
     // c轴较大时，ub内c轴对齐存储计算
     if (inputData_.channels * inputData_.dtypeSize >= NOT_GATHER_THRESHOLD) {
         gatherMode_ = NOT_GATHER;
         return;
     }
-    if (inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] * inputData_.channels <=
-            maxGatherScatterElm_ &&
+    if (inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] * inputData_.channels <= maxGatherScatterElm_ &&
         splitMode_ == SPLIT_BATCHS) {
         gatherMode_ = GATHER_MULTI_BATCH;
-    }  else if (inputData_.outShape[W_DIM] * inputData_.channels <= maxGatherScatterElm_ && (splitMode_ != SPLIT_COLS)) {
+    } else if (inputData_.outShape[W_DIM] * inputData_.channels <= maxGatherScatterElm_ && (splitMode_ != SPLIT_COLS)) {
         gatherMode_ = GATHER_MULTI_ROW;
     } else {
         gatherMode_ = GATHER_SINGLE_ROW;
@@ -387,17 +395,18 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcCopyMode()
 
 void AvgPoolCommonNHWCSmallKernelTiling::DoUBTilingSingle()
 {
-    int64_t maxInCols =
-        std::max((inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + inputData_.kernelSize[W_DIM],
-                 inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX]);
-    int64_t maxInRows =
-        std::max((inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + inputData_.kernelSize[H_DIM],
-                 inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX]);
+    int64_t maxInCols = std::max(
+        (inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + inputData_.kernelSize[W_DIM],
+        inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX]);
+    int64_t maxInRows = std::max(
+        (inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + inputData_.kernelSize[H_DIM],
+        inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX]);
 
     int64_t minInRows = inputData_.kernelSize[H_DIM];
-    int64_t oneBacthBuffer =
-        CalcBufferSize(maxInRows, maxInCols, inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
-    int64_t oneRowsBuffer = CalcBufferSize(minInRows, maxInCols, 1, inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+    int64_t oneBacthBuffer = CalcBufferSize(maxInRows, maxInCols, inputData_.outShape[H_DIM],
+                                            inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+    int64_t oneRowsBuffer = CalcBufferSize(minInRows, maxInCols, 1, inputData_.outShape[W_DIM], isPadding_,
+                                           needCalcDivisorBuffer_);
     if (oneBacthBuffer <= 0 || oneRowsBuffer <= 0 ||
         inputData_.batches * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] <= 0) {
         nLoop_ = 0;
@@ -407,12 +416,12 @@ void AvgPoolCommonNHWCSmallKernelTiling::DoUBTilingSingle()
         return;
     }
     // d*h*w*c 全载
-    int64_t oneBatchInputSize =  maxInRows * Ops::Base::CeilAlign(maxInCols * inputData_.channels, oneBlockNum_);
+    int64_t oneBatchInputSize = maxInRows * Ops::Base::CeilAlign(maxInCols * inputData_.channels, oneBlockNum_);
     if (oneBacthBuffer <= availableUb_ && oneBatchInputSize <= MAX_INPUT_ELEMENTS) {
         CalcSplitMaxBatch(oneBacthBuffer, oneBatchInputSize);
         return;
     }
- 
+
     // w*c 全载
     if (oneRowsBuffer <= availableUb_ && maxInCols <= MAX_INPUT_ELEMENTS) {
         CalcSplitMaxRows(maxInCols);
@@ -427,7 +436,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::DoUBTiling()
     int64_t ubStep = BLOCK_SPLIT_THREHOLD / inputData_.dtypeSize;
     do {
         DoUBTilingSingle();
-        
+
         if (nLoop_ * hLoop_ * wLoop_ >= static_cast<int64_t>(coreNum_) || isZero_) {
             break;
         }
@@ -447,10 +456,7 @@ ge::graphStatus AvgPoolCommonNHWCSmallKernelTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AvgPoolCommonNHWCSmallKernelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AvgPoolCommonNHWCSmallKernelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 void AvgPoolCommonNHWCSmallKernelTiling::CalcDivisor()
 {
@@ -495,8 +501,8 @@ ge::graphStatus AvgPoolCommonNHWCSmallKernelTiling::PostTiling()
 
 void AvgPoolCommonNHWCSmallKernelTiling::SetTilingData()
 {
-     AvgPool::AvgPoolNHWCSmallKernelTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolNHWCSmallKernelTilingData>();
+    AvgPool::AvgPoolNHWCSmallKernelTilingData*
+        tilingData = context_->GetTilingData<AvgPool::AvgPoolNHWCSmallKernelTilingData>();
 
     tilingData->hInDim = inputData_.inputShape[H_DIM];
     tilingData->wInDim = inputData_.inputShape[W_DIM];
@@ -534,8 +540,8 @@ void AvgPoolCommonNHWCSmallKernelTiling::SetTilingData()
 
 void AvgPoolCommonNHWCSmallKernelTiling::DumpTilingInfo()
 {
-    AvgPool::AvgPoolNHWCSmallKernelTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolNHWCSmallKernelTilingData>();
+    AvgPool::AvgPoolNHWCSmallKernelTilingData*
+        tilingData = context_->GetTilingData<AvgPool::AvgPoolNHWCSmallKernelTilingData>();
     std::ostringstream str;
     str << " hInDim:" << tilingData->hInDim;
     str << " wInDim:" << tilingData->wInDim;
@@ -597,4 +603,4 @@ ge::graphStatus AvgPoolV2NHWCSmallKernelTiling::GetShapeAttrsInfo()
 REGISTER_TILING_TEMPLATE("AvgPool", AvgPoolNHWCSmallKernelTiling, 1);
 REGISTER_TILING_TEMPLATE("AvgPoolV2", AvgPoolV2NHWCSmallKernelTiling, 1);
 
-}  // namespace optiling
+} // namespace optiling

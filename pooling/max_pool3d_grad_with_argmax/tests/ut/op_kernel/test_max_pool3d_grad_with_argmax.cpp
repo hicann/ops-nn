@@ -22,25 +22,19 @@
 
 using namespace std;
 
-extern "C" void max_pool3d_grad_with_argmax(
-    GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" void max_pool3d_grad_with_argmax(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace,
+                                            GM_ADDR tiling);
 
 class MaxPool3dGradWithArgmaxKernel : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "MaxPool3dGradWithArgmax Kernel SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "MaxPool3dGradWithArgmax Kernel TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "MaxPool3dGradWithArgmax Kernel SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "MaxPool3dGradWithArgmax Kernel TearDown\n" << endl; }
 };
 
 template <typename T>
-void TestMaxPool3dGradWithArgmaxKernel(
-    vector<uint64_t>& xShape, vector<uint64_t>& gradShape, vector<uint64_t>& ksize, vector<uint64_t>& strides,
-    vector<uint64_t>& pads, vector<uint64_t>& dilation, uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
+void TestMaxPool3dGradWithArgmaxKernel(vector<uint64_t>& xShape, vector<uint64_t>& gradShape, vector<uint64_t>& ksize,
+                                       vector<uint64_t>& strides, vector<uint64_t>& pads, vector<uint64_t>& dilation,
+                                       uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
 {
     uint64_t ncDim = xShape[0] * xShape[1];
     uint64_t diDim = xShape[2];
@@ -124,9 +118,10 @@ void TestMaxPool3dGradWithArgmaxKernel(
 }
 
 template <typename T>
-void TestMaxPool3dGradWithArgmaxKernelNew(
-    vector<uint64_t>& xShape, vector<uint64_t>& gradShape, vector<uint64_t>& ksize, vector<uint64_t>& strides,
-    vector<uint64_t>& pads, vector<uint64_t>& dilation, uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
+void TestMaxPool3dGradWithArgmaxKernelNew(vector<uint64_t>& xShape, vector<uint64_t>& gradShape,
+                                          vector<uint64_t>& ksize, vector<uint64_t>& strides, vector<uint64_t>& pads,
+                                          vector<uint64_t>& dilation, uint64_t workspaceSize, uint64_t blockDim,
+                                          uint64_t tilingKey)
 {
     uint64_t ncDim = xShape[0] * xShape[1];
     uint64_t diDim = xShape[2];
@@ -161,14 +156,14 @@ void TestMaxPool3dGradWithArgmaxKernelNew(
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    MaxPool3DGradWithArgmaxNoSplitTilingData* tilingDatafromBinNo =
-        reinterpret_cast<MaxPool3DGradWithArgmaxNoSplitTilingData*>(tiling);
-    MaxPool3DGradWithArgmaxSplitDTilingData* tilingDatafromBinD =
-        reinterpret_cast<MaxPool3DGradWithArgmaxSplitDTilingData*>(tiling);
-    MaxPool3DGradWithArgmaxSplitHTilingData* tilingDatafromBinH =
-        reinterpret_cast<MaxPool3DGradWithArgmaxSplitHTilingData*>(tiling);
-    MaxPool3DGradWithArgmaxSplitWTilingData* tilingDatafromBinW =
-        reinterpret_cast<MaxPool3DGradWithArgmaxSplitWTilingData*>(tiling);
+    MaxPool3DGradWithArgmaxNoSplitTilingData*
+        tilingDatafromBinNo = reinterpret_cast<MaxPool3DGradWithArgmaxNoSplitTilingData*>(tiling);
+    MaxPool3DGradWithArgmaxSplitDTilingData*
+        tilingDatafromBinD = reinterpret_cast<MaxPool3DGradWithArgmaxSplitDTilingData*>(tiling);
+    MaxPool3DGradWithArgmaxSplitHTilingData*
+        tilingDatafromBinH = reinterpret_cast<MaxPool3DGradWithArgmaxSplitHTilingData*>(tiling);
+    MaxPool3DGradWithArgmaxSplitWTilingData*
+        tilingDatafromBinW = reinterpret_cast<MaxPool3DGradWithArgmaxSplitWTilingData*>(tiling);
 
     if (tilingKey == 100000 || tilingKey == 100001 || tilingKey == 100002) {
         tilingDatafromBinNo->inputShapes[0] = xShape[2];
@@ -307,17 +302,17 @@ void TestMaxPool3dGradWithArgmaxKernelNew(
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     if (tilingKey == 100000 || tilingKey == 100001 || tilingKey == 100002) {
-        ICPU_RUN_KF(
-            max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBinNo));
+        ICPU_RUN_KF(max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace,
+                    (uint8_t*)(tilingDatafromBinNo));
     } else if (tilingKey == 110000 || tilingKey == 110001 || tilingKey == 110002) {
-        ICPU_RUN_KF(
-            max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBinD));
+        ICPU_RUN_KF(max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace,
+                    (uint8_t*)(tilingDatafromBinD));
     } else if (tilingKey == 111000 || tilingKey == 111001 || tilingKey == 111002) {
-        ICPU_RUN_KF(
-            max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBinH));
+        ICPU_RUN_KF(max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace,
+                    (uint8_t*)(tilingDatafromBinH));
     } else {
-        ICPU_RUN_KF(
-            max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBinW));
+        ICPU_RUN_KF(max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace,
+                    (uint8_t*)(tilingDatafromBinW));
     }
 
     AscendC::GmFree(x);
@@ -339,8 +334,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_normal_case_0)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 0;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_normal_case_tail_empty_kernel)
@@ -354,8 +349,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_normal_case_ta
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 0;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_case)
@@ -369,8 +364,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_case)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 51;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_overlap_case)
@@ -384,8 +379,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_overlap_
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 151;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_overlap_case)
@@ -399,8 +394,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_overlap
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 161;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdhw_overlap_case)
@@ -414,8 +409,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdhw_overla
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 171;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_1_case)
@@ -429,8 +424,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_1_case)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 1;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_21_case)
@@ -444,8 +439,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_21_case)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 21;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_31_case)
@@ -459,8 +454,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_31_case)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 31;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_41_case)
@@ -474,8 +469,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_41_case
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 41;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_101_case)
@@ -489,8 +484,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_101_case
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 101;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_121_case)
@@ -504,8 +499,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_121_case
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 121;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_131_case)
@@ -519,8 +514,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkd_131_case
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 131;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_141_case)
@@ -534,8 +529,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_141_cas
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 141;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdhw_case)
@@ -549,8 +544,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdhw_case)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 71;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_case)
@@ -564,8 +559,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_cutkdh_case)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 61;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_normal_case_1)
@@ -579,8 +574,8 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_normal_case_1)
     uint64_t workspaceSize = 92160;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 100;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_case_0)
@@ -594,14 +589,15 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_case_0
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 40;
     uint64_t tilingKey = 2;
-    TestMaxPool3dGradWithArgmaxKernel<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernel<float>(xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim,
+                                             tilingKey);
 }
 
 template <typename T>
-void TestMaxPool3dGradWithArgmaxKernelScatterOverlap(
-    vector<uint64_t>& xShape, vector<uint64_t>& gradShape, vector<uint64_t>& ksize, vector<uint64_t>& strides,
-    vector<uint64_t>& pads, vector<uint64_t>& dilation, uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
+void TestMaxPool3dGradWithArgmaxKernelScatterOverlap(vector<uint64_t>& xShape, vector<uint64_t>& gradShape,
+                                                     vector<uint64_t>& ksize, vector<uint64_t>& strides,
+                                                     vector<uint64_t>& pads, vector<uint64_t>& dilation,
+                                                     uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
 {
     uint64_t ncDim = xShape[0] * xShape[1];
     uint64_t diDim = xShape[2];
@@ -695,6 +691,6 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_overla
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 102;
-    TestMaxPool3dGradWithArgmaxKernelScatterOverlap<float>(
-        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+    TestMaxPool3dGradWithArgmaxKernelScatterOverlap<float>(xShape, gradShape, ksize, strides, pads, dilation,
+                                                           workspaceSize, blockDim, tilingKey);
 }

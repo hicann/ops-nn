@@ -19,12 +19,10 @@
 template <typename T1>
 class RmsNormGradSplitD {
 public:
-    __aicore__ inline RmsNormGradSplitD()
-    {}
+    __aicore__ inline RmsNormGradSplitD() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
-        const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
+                                const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
     {
         InitVar(tiling);
         InitInputGmBuffer(dy, x, rstd, gamma, block_dim, core_calc_num, core_calc_tail);
@@ -59,9 +57,8 @@ public:
         fixed_output = tiling->fixed_output;
     }
 
-    __aicore__ inline void InitInputGmBuffer(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t block_dim, uint32_t core_calc_num,
-        uint32_t core_calc_tail)
+    __aicore__ inline void InitInputGmBuffer(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t block_dim,
+                                             uint32_t core_calc_num, uint32_t core_calc_tail)
     {
         if (GetBlockIdx() < block_dim - 1) {
             core_offset = block_factor;
@@ -76,8 +73,8 @@ public:
         gammaGm.SetGlobalBuffer((__gm__ T1*)gamma, col_val);
     }
 
-    __aicore__ inline void InitOutputGmBuffer(
-        GM_ADDR dx, GM_ADDR dgamma, uint32_t block_dim, uint32_t core_calc_num, uint32_t core_calc_tail)
+    __aicore__ inline void InitOutputGmBuffer(GM_ADDR dx, GM_ADDR dgamma, uint32_t block_dim, uint32_t core_calc_num,
+                                              uint32_t core_calc_tail)
     {
         dxGm.SetGlobalBuffer((__gm__ T1*)dx + GetBlockIdx() * core_offset_start, core_offset_len);
         dgammaGm.SetGlobalBuffer((__gm__ float*)dgamma, col_val);
@@ -272,9 +269,8 @@ public:
                 if (blockidx == 0) {
                     DataCopyPad(dgamma, workspace_gm[(ub_calc_loop - 1) * calc_len], tailCopyParams, tailPadParams);
                 } else {
-                    DataCopyPad(
-                        tmpBuf, workspace_gm[blockidx * col_val + (ub_calc_loop - 1) * calc_len], tailCopyParams,
-                        tailPadParams);
+                    DataCopyPad(tmpBuf, workspace_gm[blockidx * col_val + (ub_calc_loop - 1) * calc_len],
+                                tailCopyParams, tailPadParams);
                     PipeBarrier<PIPE_ALL>();
                     Add(dgamma, dgamma, tmpBuf, ub_calc_tail);
                     PipeBarrier<PIPE_ALL>();
@@ -288,8 +284,8 @@ public:
         inQueRstd.FreeTensor(tmpBuf);
     }
 
-    __aicore__ inline void ComputeDgammaFp32(
-        uint32_t i, uint32_t j, uint32_t calc_len, LocalTensor<T1>& gamma_ub, LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeDgammaFp32(uint32_t i, uint32_t j, uint32_t calc_len, LocalTensor<T1>& gamma_ub,
+                                             LocalTensor<float>& dgamma)
     {
         LocalTensor<T1> x_ub = inQueX.DeQue<T1>();
         LocalTensor<T1> dy_ub = inQueDY.DeQue<T1>();
@@ -313,8 +309,8 @@ public:
         inQueDY.FreeTensor(dy_ub);
     }
 
-    __aicore__ inline void ComputeDySum(
-        uint32_t i, uint32_t j, uint32_t calc_len, uint32_t calc_len_align, LocalTensor<float>& dy_sum)
+    __aicore__ inline void ComputeDySum(uint32_t i, uint32_t j, uint32_t calc_len, uint32_t calc_len_align,
+                                        LocalTensor<float>& dy_sum)
     {
         CopyGammaIn(j, calc_len);
         CopyIn(i, j, calc_len, calc_len_align);
@@ -394,9 +390,8 @@ public:
         outQueDX.FreeTensor(dx_ub);
     }
 
-    __aicore__ inline void ComputeMain(
-        uint32_t n_idx, uint32_t d_idx, uint32_t calc_len, LocalTensor<T1>& gamma_ub, LocalTensor<float>& dgamma,
-        LocalTensor<float>& dy_sum)
+    __aicore__ inline void ComputeMain(uint32_t n_idx, uint32_t d_idx, uint32_t calc_len, LocalTensor<T1>& gamma_ub,
+                                       LocalTensor<float>& dgamma, LocalTensor<float>& dy_sum)
     {
         LocalTensor<T1> x_ub = inQueX.DeQue<T1>();
         LocalTensor<T1> dy_ub = inQueDY.DeQue<T1>();
@@ -486,8 +481,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeDgammaFp16(
-        uint32_t i, uint32_t j, uint32_t calc_len, LocalTensor<T1>& gamma_ub, LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeDgammaFp16(uint32_t i, uint32_t j, uint32_t calc_len, LocalTensor<T1>& gamma_ub,
+                                             LocalTensor<float>& dgamma)
     {
         LocalTensor<T1> x_ub = inQueX.DeQue<T1>();
         LocalTensor<T1> dy_ub = inQueDY.DeQue<T1>();
@@ -518,8 +513,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeDySumFp16(
-        uint32_t i, uint32_t j, uint32_t calc_len, uint32_t calc_len_align, LocalTensor<float>& dy_sum)
+    __aicore__ inline void ComputeDySumFp16(uint32_t i, uint32_t j, uint32_t calc_len, uint32_t calc_len_align,
+                                            LocalTensor<float>& dy_sum)
     {
         CopyGammaIn(j, calc_len);
         CopyIn(i, j, calc_len, calc_len_align);
@@ -560,8 +555,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeMainFp16(
-        uint32_t n_idx, uint32_t d_idx, uint32_t calc_len, LocalTensor<T1>& gamma_ub, LocalTensor<float>& dy_sum)
+    __aicore__ inline void ComputeMainFp16(uint32_t n_idx, uint32_t d_idx, uint32_t calc_len, LocalTensor<T1>& gamma_ub,
+                                           LocalTensor<float>& dy_sum)
     {
         LocalTensor<T1> x_ub = inQueX.DeQue<T1>();
         LocalTensor<T1> dy_ub = inQueDY.DeQue<T1>();
@@ -674,8 +669,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeDgammaBf16(
-        uint32_t i, uint32_t j, uint32_t calc_len, LocalTensor<T1>& gamma_ub, LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeDgammaBf16(uint32_t i, uint32_t j, uint32_t calc_len, LocalTensor<T1>& gamma_ub,
+                                             LocalTensor<float>& dgamma)
     {
         LocalTensor<T1> x_ub = inQueX.DeQue<T1>();
         LocalTensor<T1> dy_ub = inQueDY.DeQue<T1>();
@@ -712,8 +707,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeDySumBf16(
-        uint32_t i, uint32_t j, uint32_t calc_len, uint32_t calc_len_align, LocalTensor<float>& dy_sum)
+    __aicore__ inline void ComputeDySumBf16(uint32_t i, uint32_t j, uint32_t calc_len, uint32_t calc_len_align,
+                                            LocalTensor<float>& dy_sum)
     {
         CopyGammaIn(j, calc_len);
         CopyIn(i, j, calc_len, calc_len_align);
@@ -758,8 +753,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeMainBf16(
-        uint32_t n_idx, uint32_t d_idx, uint32_t calc_len, LocalTensor<T1>& gamma_ub, LocalTensor<float>& dy_sum)
+    __aicore__ inline void ComputeMainBf16(uint32_t n_idx, uint32_t d_idx, uint32_t calc_len, LocalTensor<T1>& gamma_ub,
+                                           LocalTensor<float>& dy_sum)
     {
         LocalTensor<T1> x_ub = inQueX.DeQue<T1>();
         LocalTensor<T1> dy_ub = inQueDY.DeQue<T1>();

@@ -28,27 +28,29 @@ using namespace AscendC;
 static constexpr int64_t SPLIT_DIM_A1 = 4;
 
 template <typename T, typename SeqType, typename CompType>
-class ReverseSequenceSBA
-{
+class ReverseSequenceSBA {
 public:
-    __aicore__ inline ReverseSequenceSBA(TPipe *pipe, const ReverseSequenceA1SBATilingData *tilingData)
-                        : pipe_(pipe), tilingData_(tilingData) {};
+    __aicore__ inline ReverseSequenceSBA(TPipe* pipe, const ReverseSequenceA1SBATilingData* tilingData)
+        : pipe_(pipe), tilingData_(tilingData){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR seqLengths, GM_ADDR y);
     __aicore__ inline void Process();
+
 private:
     template <int64_t SplitMode>
     __aicore__ inline void BaseCompute();
     __aicore__ inline void ComputeSplitA1(int64_t srcOffset, int64_t inDimA);
-    __aicore__ inline void ComputeSplitA(int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t bStart, int64_t aStart, int64_t inDimA);
+    __aicore__ inline void ComputeSplitA(int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t bStart,
+                                         int64_t aStart, int64_t inDimA);
     __aicore__ inline void ComputeSplitS(int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t inDimS);
-    __aicore__ inline void ComputeSplitB(int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t bStart, int64_t inDimB);
+    __aicore__ inline void ComputeSplitB(int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t bStart,
+                                         int64_t inDimB);
     __aicore__ inline void ReverseCompute(CompType curOffset, CompType xUbFactor);
     __aicore__ inline void CopyInMultiDim(int64_t offset, int64_t blockCount, int64_t blockLen);
     __aicore__ inline void CopyInSingleDim(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyOutSingleDim(int64_t globalOffset, LocalTensor<T> yLocal, int64_t blockLen);
     __aicore__ inline void GetCurrentSeqLength(int64_t bStart);
-    TPipe *pipe_;
-    const ReverseSequenceA1SBATilingData *tilingData_;
+    TPipe* pipe_;
+    const ReverseSequenceA1SBATilingData* tilingData_;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> dataQueue_;
     TQue<QuePosition::VECOUT, DB_BUFFER> outQueue_;
     GlobalTensor<T> xGm_;
@@ -65,9 +67,9 @@ private:
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseA1Compute(
-    __local_mem__ T* xLocal, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType xUbFactor,
-    CompType batchDim, CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2,
-    CompType m3, CompType shift0, CompType shift1, CompType shift2, CompType shift3);
+    __local_mem__ T* xLocal, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType xUbFactor, CompType batchDim,
+    CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0,
+    CompType shift1, CompType shift2, CompType shift3);
 
 template <typename T, typename SeqType, typename CompType>
 __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::Init(GM_ADDR x, GM_ADDR seqLengths, GM_ADDR y)
@@ -82,22 +84,22 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::Init(GM_ADDR x,
     }
     eleBlk_ = ubBlockSize_ / tilingData_->dtypeSize;
     blockIdx_ = GetBlockIdx();
- 	blockNum_ = GetBlockNum();
+    blockNum_ = GetBlockNum();
 }
 
 template <typename T, typename SeqType, typename CompType>
 __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::Process()
 {
     if (blockIdx_ > blockNum_) {
- 	    return;
- 	}
+        return;
+    }
 
     if (tilingData_->splitMode == SPLIT_DIM_A1) {
         BaseCompute<SPLIT_DIM_A1>();
     } else if (tilingData_->splitMode == SPLIT_DIM_S) {
         BaseCompute<SPLIT_DIM_S>();
     } else if (tilingData_->splitMode == SPLIT_DIM_B) {
-        BaseCompute< SPLIT_DIM_B>();
+        BaseCompute<SPLIT_DIM_B>();
     } else {
         BaseCompute<SPLIT_DIM_A>();
     }
@@ -124,21 +126,22 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::BaseCompute()
         int64_t sIdx = (loopIdx - a1LoopNum) / (tilingData_->bLoop * tilingData_->aLoop);
         int64_t bIdx = (loopIdx - a1LoopNum - sIdx * tilingData_->bLoop * tilingData_->aLoop) / tilingData_->aLoop;
         int64_t aIdx = loopIdx % tilingData_->aLoop;
-        int64_t inDimA1 =
-            a1Idx == tilingData_->a1Loop - 1 ? tilingData_->a1Dim - a1Idx * tilingData_->ubFactorA1 : tilingData_->ubFactorA1;
-        int64_t inDimS =
-            sIdx == tilingData_->sLoop - 1 ? tilingData_->sDim - sIdx * tilingData_->ubFactorS : tilingData_->ubFactorS;
-        int64_t inDimB =
-            bIdx == tilingData_->bLoop - 1 ? tilingData_->bDim - bIdx * tilingData_->ubFactorB : tilingData_->ubFactorB;
-        int64_t inDimA =
-            aIdx == tilingData_->aLoop - 1 ? tilingData_->aDim - aIdx * tilingData_->ubFactorA : tilingData_->ubFactorA;
+        int64_t inDimA1 = a1Idx == tilingData_->a1Loop - 1 ? tilingData_->a1Dim - a1Idx * tilingData_->ubFactorA1 :
+                                                             tilingData_->ubFactorA1;
+        int64_t inDimS = sIdx == tilingData_->sLoop - 1 ? tilingData_->sDim - sIdx * tilingData_->ubFactorS :
+                                                          tilingData_->ubFactorS;
+        int64_t inDimB = bIdx == tilingData_->bLoop - 1 ? tilingData_->bDim - bIdx * tilingData_->ubFactorB :
+                                                          tilingData_->ubFactorB;
+        int64_t inDimA = aIdx == tilingData_->aLoop - 1 ? tilingData_->aDim - aIdx * tilingData_->ubFactorA :
+                                                          tilingData_->ubFactorA;
 
         int64_t a1Start = a1Idx * tilingData_->ubFactorA1;
         int64_t sStart = sIdx * tilingData_->ubFactorS;
         int64_t bStart = bIdx * tilingData_->ubFactorB;
         int64_t aStart = aIdx * tilingData_->ubFactorA;
         int64_t a1Offset = a1Start * tilingData_->sDim * tilingData_->bDim * tilingData_->aDim;
-        int64_t srcOffset = a1Offset + sStart * tilingData_->bDim * tilingData_->aDim + bStart * tilingData_->aDim + aStart;
+        int64_t srcOffset = a1Offset + sStart * tilingData_->bDim * tilingData_->aDim + bStart * tilingData_->aDim +
+                            aStart;
         if constexpr (SplitMode == SPLIT_DIM_A1) {
             ComputeSplitA1(srcOffset, inDimA1);
         } else if constexpr (SplitMode == SPLIT_DIM_A) {
@@ -164,9 +167,9 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitA1(
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseA1Compute(
-    __local_mem__ T* xLocal, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType xUbFactor,
-    CompType batchDim, CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2,
-    CompType m3, CompType shift0, CompType shift1, CompType shift2, CompType shift3)
+    __local_mem__ T* xLocal, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType xUbFactor, CompType batchDim,
+    CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0,
+    CompType shift1, CompType shift2, CompType shift3)
 {
     for (CompType xOffset = threadIdx.x; xOffset < xUbFactor; xOffset += blockDim.x) {
         CompType batchPreAxis = Simt::UintDiv(xOffset, m0, shift0);
@@ -176,16 +179,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseA1Compute(
         CompType reverseNum = static_cast<CompType>(seqGm[batchDimIdx]);
         CompType seqPreAxis = Simt::UintDiv(xOffset, m2, shift2); // xOffSet / seqSize
         CompType seqIdx = Simt::UintDiv(seqPreAxis, m3, shift3);  // xOffSet / seqSize / seqDim
-        CompType seqDimIdx = seqPreAxis - seqIdx * seqDim; // xOffSet / seqSize % seqDim
+        CompType seqDimIdx = seqPreAxis - seqIdx * seqDim;        // xOffSet / seqSize % seqDim
 
         CompType reverseSizeMod = xOffset - seqPreAxis * reverseSize; // xOffSet % reverseSize
-        
+
         if (reverseNum > seqDim) {
             reverseNum = seqDim;
         }
 
         if (seqDimIdx < reverseNum) {
-            CompType reverseOffset = seqIdx * seqDim * reverseSize + (reverseNum - 1 - seqDimIdx) * reverseSize + reverseSizeMod; // 
+            CompType reverseOffset = seqIdx * seqDim * reverseSize + (reverseNum - 1 - seqDimIdx) * reverseSize +
+                                     reverseSizeMod; //
             outLocal[reverseOffset] = xLocal[xOffset];
         }
 
@@ -212,15 +216,16 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ReverseCompute(
     asc_vf_call<ReverseA1Compute<T, SeqType, CompType>>(
         dim3(USED_THREAD), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
         (__local_mem__ T*)(outLocal.GetPhyAddr()), xUbFactor, tilingData_->bDim, tilingData_->sDim,
-        tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0,
-        params.shift1, params.shift2, params.shift3);
+        tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1,
+        params.shift2, params.shift3);
 
     outQueue_.EnQue(outLocal);
     dataQueue_.FreeTensor(xLocal);
 }
 
 template <typename T, typename SeqType, typename CompType>
-__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::CopyInMultiDim(int64_t offset, int64_t blockCount, int64_t blockLen)
+__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::CopyInMultiDim(int64_t offset, int64_t blockCount,
+                                                                                int64_t blockLen)
 {
     LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
     int64_t alignBlockLen = ops::Aligned(blockLen, eleBlk_);
@@ -257,7 +262,9 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::CopyInSingleDim
 }
 
 template <typename T, typename SeqType, typename CompType>
-__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::CopyOutSingleDim(int64_t globalOffset, LocalTensor<T> yLocal, int64_t blockLen)
+__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::CopyOutSingleDim(int64_t globalOffset,
+                                                                                  LocalTensor<T> yLocal,
+                                                                                  int64_t blockLen)
 {
     DataCopyExtParams copyExtParams;
     copyExtParams.blockCount = 1;
@@ -270,7 +277,7 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::CopyOutSingleDi
 template <typename T, typename SeqType, typename CompType>
 __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::GetCurrentSeqLength(int64_t bStart)
 {
-   if (bStart_ != bStart) {
+    if (bStart_ != bStart) {
         bStart_ = bStart;
         seqLen_ = static_cast<int64_t>(seqGm_.GetValue(bStart_));
     } else {
@@ -285,8 +292,9 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::GetCurrentSeqLe
 }
 
 template <typename T, typename SeqType, typename CompType>
-__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitA(
-    int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t bStart, int64_t aStart, int64_t inDimA)
+__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitA(int64_t srcOffset, int64_t a1Offset,
+                                                                               int64_t sStart, int64_t bStart,
+                                                                               int64_t aStart, int64_t inDimA)
 {
     CopyInSingleDim(srcOffset, inDimA);
     GetCurrentSeqLength(bStart);
@@ -302,8 +310,9 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitA(
 }
 
 template <typename T, typename SeqType, typename CompType>
-__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitB(
-    int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t bStart, int64_t inDimB)
+__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitB(int64_t srcOffset, int64_t a1Offset,
+                                                                               int64_t sStart, int64_t bStart,
+                                                                               int64_t inDimB)
 {
     CopyInMultiDim(srcOffset, inDimB, tilingData_->aDim);
     int64_t alignBlockLen = ops::Aligned(tilingData_->aDim, eleBlk_);
@@ -323,7 +332,8 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitB(
 }
 
 template <typename T, typename SeqType, typename CompType>
-__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitS(int64_t srcOffset, int64_t a1Offset, int64_t sStart, int64_t inDimS)
+__aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitS(int64_t srcOffset, int64_t a1Offset,
+                                                                               int64_t sStart, int64_t inDimS)
 {
     CopyInMultiDim(srcOffset, inDimS * tilingData_->bDim, tilingData_->aDim);
     int64_t alignBlockLen = ops::Aligned(tilingData_->aDim, eleBlk_);
@@ -344,6 +354,6 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitS(i
     }
     dataQueue_.FreeTensor(yLocal);
 }
-}
+} // namespace ReverseSequence
 
 #endif

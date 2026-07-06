@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file sync_batch_norm_gather_stats_fused.cpp
  * \brief
  */
@@ -34,51 +34,47 @@ using namespace SyncBatchNormGatherStatsFused;
 #define KEY_FIRST_AXIS_WORKSPACE_FP16 402
 #define KEY_FIRST_AXIS_WORKSPACE_BF16 403
 
-#define INVOKE_COMMON_IMPL(T)                                                                                   \
-    do {                                                                                                        \
-        GET_TILING_DATA_WITH_STRUCT(SyncBatchNormGatherStatsFusedTilingDataCommon, tilingData, tiling);         \
-        SyncBatchNormGatherStatsFusedCommon<T> op;                                                              \
-        op.Init(                                                                                                \
-            mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut, runningVarOut, usrWorkspace, \
-            &tilingData, pipe);                                                                                 \
-        op.Process(&tilingData);                                                                                           \
+#define INVOKE_COMMON_IMPL(T)                                                                            \
+    do {                                                                                                 \
+        GET_TILING_DATA_WITH_STRUCT(SyncBatchNormGatherStatsFusedTilingDataCommon, tilingData, tiling);  \
+        SyncBatchNormGatherStatsFusedCommon<T> op;                                                       \
+        op.Init(mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut, \
+                runningVarOut, usrWorkspace, &tilingData, pipe);                                         \
+        op.Process(&tilingData);                                                                         \
     } while (0)
 
-#define INVOKE_WORKSPACE_IMPL(T)                                                                                \
-    do {                                                                                                        \
-        GET_TILING_DATA_WITH_STRUCT(SyncBatchNormGatherStatsFusedTilingDataWorkspace, tilingData, tiling);      \
-        SyncBatchNormGatherStatsFusedWorkspace<T> op;                                                           \
-        op.Init(                                                                                                \
-            mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut, runningVarOut, usrWorkspace, \
-            &tilingData, pipe);                                                                                 \
-        op.Process();                                                                                           \
+#define INVOKE_WORKSPACE_IMPL(T)                                                                           \
+    do {                                                                                                   \
+        GET_TILING_DATA_WITH_STRUCT(SyncBatchNormGatherStatsFusedTilingDataWorkspace, tilingData, tiling); \
+        SyncBatchNormGatherStatsFusedWorkspace<T> op;                                                      \
+        op.Init(mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut,   \
+                runningVarOut, usrWorkspace, &tilingData, pipe);                                           \
+        op.Process();                                                                                      \
     } while (0)
-
 
 #define INVOKE_FIRST_AXIS_COMMON_IMPL(T)                                                                         \
     do {                                                                                                         \
         GET_TILING_DATA_WITH_STRUCT(SyncBatchNormGatherStatsFusedTilingDataFirstAxisCommon, tilingData, tiling); \
         SyncBatchNormGatherStatsFusedFirstAxisCommon<T> op;                                                      \
-        op.Init(                                                                                                 \
-            mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut, runningVarOut, usrWorkspace,  \
-            &tilingData, pipe);                                                                                  \
-        op.Process(&tilingData);                                                                                            \
+        op.Init(mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut,         \
+                runningVarOut, usrWorkspace, &tilingData, pipe);                                                 \
+        op.Process(&tilingData);                                                                                 \
     } while (0)
-
 
 #define INVOKE_FIRST_AXIS_WORKSPACE_IMPL(T)                                                                         \
     do {                                                                                                            \
         GET_TILING_DATA_WITH_STRUCT(SyncBatchNormGatherStatsFusedTilingDataFirstAxisWorkspace, tilingData, tiling); \
         SyncBatchNormGatherStatsFusedFirstAxisWorkspace<T> op;                                                      \
-        op.Init(                                                                                                    \
-            mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut, runningVarOut, usrWorkspace,     \
-            &tilingData, pipe);                                                                                     \
+        op.Init(mean, invstd, counts, runningMean, runningVar, meanAllOut, invstdAllOut, runningMeanOut,            \
+                runningVarOut, usrWorkspace, &tilingData, pipe);                                                    \
         op.Process();                                                                                               \
     } while (0)
 
-extern "C" __global__ __aicore__ void sync_batch_norm_gather_stats_fused(
-    GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar, GM_ADDR meanAllOut,
-    GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sync_batch_norm_gather_stats_fused(GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts,
+                                                                         GM_ADDR runningMean, GM_ADDR runningVar,
+                                                                         GM_ADDR meanAllOut, GM_ADDR invstdAllOut,
+                                                                         GM_ADDR runningMeanOut, GM_ADDR runningVarOut,
+                                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     GM_ADDR usrWorkspace = GetUserWorkspace(workspace);
     TPipe pipe;
@@ -97,8 +93,7 @@ extern "C" __global__ __aicore__ void sync_batch_norm_gather_stats_fused(
         INVOKE_WORKSPACE_IMPL(half);
     } else if (TILING_KEY_IS(KEY_WORKSPACE_BF16)) {
         INVOKE_WORKSPACE_IMPL(bfloat16_t);
-    } 
-    else if (TILING_KEY_IS(KEY_FIRST_AXIS_COMMON_FP32)) {
+    } else if (TILING_KEY_IS(KEY_FIRST_AXIS_COMMON_FP32)) {
         INVOKE_FIRST_AXIS_COMMON_IMPL(float);
     } else if (TILING_KEY_IS(KEY_FIRST_AXIS_COMMON_FP16)) {
         INVOKE_FIRST_AXIS_COMMON_IMPL(half);

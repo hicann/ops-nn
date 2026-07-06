@@ -57,8 +57,7 @@ namespace Conv {
 
 ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch ==
-            NpuArch::DAV_3510) {
+    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -80,13 +79,13 @@ ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 
     OP_TILING_CHECK(
         coreNum_ <= 0,
-        CUBE_INNER_ERR_REPORT(
-            this->opName_, "Failed to get valid core number from platform information. core num: %d", coreNum_),
+        CUBE_INNER_ERR_REPORT(this->opName_, "Failed to get valid core number from platform information. core num: %d",
+                              coreNum_),
         return ge::GRAPH_FAILED);
     SetRunInfoTiling(tilingData_.conv3DDxTiling);
 
-    mmInfo_.mValue = Ops::Base::CeilAlign(
-        static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w, static_cast<uint64_t>(blockSize_));
+    mmInfo_.mValue = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w,
+                                          static_cast<uint64_t>(blockSize_));
     mmInfo_.nValue = runInfo_.dedx_cin1_g * blockSize_;
     mmInfo_.kValue = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * runInfo_.dedy_cout1_g *
                      blockSize_; // kernel_d是单独的循环，不算在L0的K值上
@@ -97,8 +96,7 @@ ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 
 bool Conv3DDXV2BasicBlockTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch ==
-            NpuArch::DAV_3510) {
+    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
         return false;
     }
     enableKernelSplit_ = CheckKernelSplitEnable();
@@ -106,10 +104,7 @@ bool Conv3DDXV2BasicBlockTiling::IsCapable()
            static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_BF16);
 }
 
-ge::graphStatus Conv3DDXV2BasicBlockTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Conv3DDXV2BasicBlockTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
 void Conv3DDXV2BasicBlockTiling::SetTilingData(const BasicBlockTilingParams& tilingParams)
 {
@@ -184,8 +179,8 @@ uint64_t Conv3DDXV2BasicBlockTiling::GetTilingKey() const
     return tilingKey;
 }
 
-bool Conv3DDXV2BasicBlockTiling::IsStepL1Valid(
-    const uint32_t& stepKa, const uint32_t& stepKb, const BasicBlockTilingParams& tilingParams)
+bool Conv3DDXV2BasicBlockTiling::IsStepL1Valid(const uint32_t& stepKa, const uint32_t& stepKb,
+                                               const BasicBlockTilingParams& tilingParams)
 {
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
     bool isHkWkAligned = stepKa * tilingParams.baseK % lenHkWkC0_ == 0 && stepKb * tilingParams.baseK % lenHkWkC0_ == 0;
@@ -232,8 +227,8 @@ void Conv3DDXV2BasicBlockTiling::InitBaseMNK(BasicBlockTilingParams& tilingParam
     tilingParams.baseN = baseN;
 }
 
-void Conv3DDXV2BasicBlockTiling::AdjustBaseMNK(
-    const uint32_t l0abPingPong, const uint32_t l0cPingPong, uint32_t& baseM, uint32_t& baseN, uint32_t& baseK)
+void Conv3DDXV2BasicBlockTiling::AdjustBaseMNK(const uint32_t l0abPingPong, const uint32_t l0cPingPong, uint32_t& baseM,
+                                               uint32_t& baseN, uint32_t& baseK)
 {
     uint32_t l0abMaxNum = L0_AB_SIZE / l0abPingPong / dtypeByte_;
     uint32_t l0cMaxNum = L0C_SIZE / l0cPingPong / ge::GetSizeByDataType(ge::DT_FLOAT);
@@ -277,8 +272,8 @@ void Conv3DDXV2BasicBlockTiling::AdjustBaseMNK(
     }
 }
 
-void Conv3DDXV2BasicBlockTiling::EqualL1MatchStepMNK(
-    uint32_t& stepKa, uint32_t& stepKb, BasicBlockTilingParams& tilingParams)
+void Conv3DDXV2BasicBlockTiling::EqualL1MatchStepMNK(uint32_t& stepKa, uint32_t& stepKb,
+                                                     BasicBlockTilingParams& tilingParams)
 {
     uint32_t hoCal = CalFmapH(tilingParams.baseM); // 此处默认stepM=1
     uint64_t baseNHkWkC0Size = lenHkWkC0_ * tilingParams.baseN * dtypeByte_;
@@ -298,13 +293,11 @@ void Conv3DDXV2BasicBlockTiling::EqualL1MatchStepMNK(
     }
     AlignCout1(cout1A1, cout1B1, false);
 
-    stepKa = std::max(
-        ONE_U64,
-        Ops::Base::CeilDiv(static_cast<uint64_t>(cout1A1) * lenHkWkC0_, static_cast<uint64_t>(tilingParams.baseK)));
+    stepKa = std::max(ONE_U64, Ops::Base::CeilDiv(static_cast<uint64_t>(cout1A1) * lenHkWkC0_,
+                                                  static_cast<uint64_t>(tilingParams.baseK)));
     stepKa = std::min(stepKa, UINT16_MAX / tilingParams.baseK);
-    stepKb = std::max(
-        ONE_U64,
-        Ops::Base::CeilDiv(static_cast<uint64_t>(cout1B1) * lenHkWkC0_, static_cast<uint64_t>(tilingParams.baseK)));
+    stepKb = std::max(ONE_U64, Ops::Base::CeilDiv(static_cast<uint64_t>(cout1B1) * lenHkWkC0_,
+                                                  static_cast<uint64_t>(tilingParams.baseK)));
     if (stepKa > stepKb) {
         stepKa = Ops::Base::FloorAlign(stepKa, stepKb);
     } else {
@@ -354,11 +347,11 @@ void Conv3DDXV2BasicBlockTiling::CalStepMNK(BasicBlockTilingParams& tilingParams
     }
 }
 
-void Conv3DDXV2BasicBlockTiling::LadderMatchStepKWithFullLoad(
-    uint32_t& stepKa, const uint32_t& stepKb, BasicBlockTilingParams& tilingParams)
+void Conv3DDXV2BasicBlockTiling::LadderMatchStepKWithFullLoad(uint32_t& stepKa, const uint32_t& stepKb,
+                                                              BasicBlockTilingParams& tilingParams)
 {
-    stepKa = std::min(
-        Ops::Base::CeilDiv(mmInfo_.kValue, static_cast<uint64_t>(tilingParams.baseK)), static_cast<uint64_t>(stepKb));
+    stepKa = std::min(Ops::Base::CeilDiv(mmInfo_.kValue, static_cast<uint64_t>(tilingParams.baseK)),
+                      static_cast<uint64_t>(stepKb));
     while (stepKa > 1) {
         if (IsStepL1Valid(stepKa, stepKb, tilingParams) && stepKb % stepKa == 0) {
             break;
@@ -368,12 +361,11 @@ void Conv3DDXV2BasicBlockTiling::LadderMatchStepKWithFullLoad(
     // 待kernel支持不对齐, 对齐HkWkC0的策略如果找不到，预期要按照再找一次
 }
 
-void Conv3DDXV2BasicBlockTiling::LadderMatchStepMNK(
-    uint32_t& stepKa, uint32_t& stepKb, BasicBlockTilingParams& tilingParams)
+void Conv3DDXV2BasicBlockTiling::LadderMatchStepMNK(uint32_t& stepKa, uint32_t& stepKb,
+                                                    BasicBlockTilingParams& tilingParams)
 {
-    stepKa = std::min(
-        Ops::Base::CeilDiv(mmInfo_.kValue, static_cast<uint64_t>(tilingParams.baseK)),
-        static_cast<uint64_t>(runInfo_.kernel_h * runInfo_.kernel_w));
+    stepKa = std::min(Ops::Base::CeilDiv(mmInfo_.kValue, static_cast<uint64_t>(tilingParams.baseK)),
+                      static_cast<uint64_t>(runInfo_.kernel_h * runInfo_.kernel_w));
     stepKb = stepKa;
     while (stepKa > 1 && stepKb > 1) {
         if (IsStepL1Valid(stepKa, stepKb, tilingParams)) {
@@ -420,8 +412,8 @@ void Conv3DDXV2BasicBlockTiling::ShrinkBasicBlock(BasicBlockTilingParams& tiling
     }
 
     uint32_t l0MaxKNum = L0_AB_SIZE / tilingParams.al0Pbuffer / dtypeByte_ / std::max(baseMStart, baseNStart);
-    baseKStart =
-        std::min(static_cast<uint64_t>(std::max(l0MaxKNum / blockSize_, ONE_U32) * blockSize_), mmInfo_.kValue);
+    baseKStart = std::min(static_cast<uint64_t>(std::max(l0MaxKNum / blockSize_, ONE_U32) * blockSize_),
+                          mmInfo_.kValue);
 
     while (baseKStart > static_cast<uint32_t>(blockSize_)) {
         baseKStart = std::max(baseKStart - blockSize_, static_cast<uint32_t>(blockSize_));
@@ -498,17 +490,16 @@ bool Conv3DDXV2BasicBlockTiling::MultiCoreSplitMN(BasicBlockTilingParams& tiling
     return true;
 }
 
-bool Conv3DDXV2BasicBlockTiling::IsL2Efficient(
-    const uint64_t singleCoreM, const uint64_t singleCoreN, const uint64_t singleCoreK,
-    const uint64_t transdataWorkSpace)
+bool Conv3DDXV2BasicBlockTiling::IsL2Efficient(const uint64_t singleCoreM, const uint64_t singleCoreN,
+                                               const uint64_t singleCoreK, const uint64_t transdataWorkSpace)
 {
     uint32_t doutCopyLine = std::max(runInfo_.kernel_d / runInfo_.stride_d, ONE_S32);
     uint32_t houtCopyLine = std::max(CalFmapH(singleCoreM) / runInfo_.stride_h, ONE_S32);
-    uint64_t inputL2Cache =
-        static_cast<uint64_t>(houtCopyLine) * runInfo_.dedy_w * doutCopyLine * runInfo_.dedy_cout1_g * blockSize_;
-    uint64_t l2CacheSize =
-        (inputL2Cache + singleCoreN * singleCoreK * doutCopyLine + singleCoreM * singleCoreN + transdataWorkSpace) *
-        dtypeByte_ * coreNum_;
+    uint64_t inputL2Cache = static_cast<uint64_t>(houtCopyLine) * runInfo_.dedy_w * doutCopyLine *
+                            runInfo_.dedy_cout1_g * blockSize_;
+    uint64_t l2CacheSize = (inputL2Cache + singleCoreN * singleCoreK * doutCopyLine + singleCoreM * singleCoreN +
+                            transdataWorkSpace) *
+                           dtypeByte_ * coreNum_;
     return l2CacheSize <= L2_CACHE_SIZE_THRESHHOLD;
 }
 
@@ -524,8 +515,8 @@ void Conv3DDXV2BasicBlockTiling::SetSingleCoreInfo(BasicBlockTilingParams& tilin
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t mAl1 = tilingParams.stepM * tilingParams.baseM;
     uint64_t nCnt = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_cin), tilingParams.singleCoreCin);
-    uint64_t singleCoreK =
-        static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * runInfo_.dedy_cout1_g * blockSize_;
+    uint64_t singleCoreK = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * runInfo_.dedy_cout1_g *
+                           blockSize_;
     tilingParams.singleCoreM = std::max(mAl1 / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
 
     // 场景一：其他方向核间分配均匀时，适度合并M方向的任务，减少头开销
@@ -541,9 +532,8 @@ void Conv3DDXV2BasicBlockTiling::SetSingleCoreInfo(BasicBlockTilingParams& tilin
             }
 
             // 不超过L2 Cache，评估L时要充分考虑Load3D的影响
-            if (!IsL2Efficient(
-                    tmpSingleCoreHWI, tilingParams.singleCoreCin, singleCoreK,
-                    tilingParams.baseM * tilingParams.baseN)) {
+            if (!IsL2Efficient(tmpSingleCoreHWI, tilingParams.singleCoreCin, singleCoreK,
+                               tilingParams.baseM * tilingParams.baseN)) {
                 continue;
             }
             tilingParams.singleCoreM = tmpSingleCoreHWI;
@@ -560,9 +550,8 @@ void Conv3DDXV2BasicBlockTiling::SetSingleCoreInfo(BasicBlockTilingParams& tilin
             }
 
             // 不超过L2 Cache，评估L时要充分考虑Load3D的影响
-            if (!IsL2Efficient(
-                    tmpSingleCoreHWI, tilingParams.singleCoreCin, singleCoreK,
-                    tilingParams.baseM * tilingParams.baseN)) {
+            if (!IsL2Efficient(tmpSingleCoreHWI, tilingParams.singleCoreCin, singleCoreK,
+                               tilingParams.baseM * tilingParams.baseN)) {
                 continue;
             }
             tilingParams.singleCoreM = tmpSingleCoreHWI;

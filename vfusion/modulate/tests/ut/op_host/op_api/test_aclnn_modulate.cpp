@@ -21,14 +21,15 @@ using namespace op;
 using namespace std;
 
 class l2_modulate_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { std::cout << "aclnnModulate_test SetUp" << std::endl; }
+protected:
+    static void SetUpTestCase() { std::cout << "aclnnModulate_test SetUp" << std::endl; }
 
-  static void TearDownTestCase() { std::cout << "aclnnModulate_test TearDown" << std::endl; }
+    static void TearDownTestCase() { std::cout << "aclnnModulate_test TearDown" << std::endl; }
 };
 
 // checkNotNull
-TEST_F(l2_modulate_test, ascend910B_case_1) {
+TEST_F(l2_modulate_test, ascend910B_case_1)
+{
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto out_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -41,12 +42,9 @@ TEST_F(l2_modulate_test, ascend910B_case_1) {
 }
 
 // CheckDtypeValid
-TEST_F(l2_modulate_test, ascend910B_case_2) {
-    vector<aclDataType> ValidList = {
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_BF16,
-        ACL_DT_UNDEFINED};
+TEST_F(l2_modulate_test, ascend910B_case_2)
+{
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16, ACL_DT_UNDEFINED};
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
         auto self_desc = TensorDesc({32, 8, 1024}, ValidList[i], ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -68,7 +66,8 @@ TEST_F(l2_modulate_test, ascend910B_case_2) {
 }
 
 // checkDtype different dtype of input
-TEST_F(l2_modulate_test, ascend910B_case_3) {
+TEST_F(l2_modulate_test, ascend910B_case_3)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -82,7 +81,8 @@ TEST_F(l2_modulate_test, ascend910B_case_3) {
 }
 
 // checkDtype different dtype of input
-TEST_F(l2_modulate_test, ascend910B_case_4) {
+TEST_F(l2_modulate_test, ascend910B_case_4)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -96,7 +96,8 @@ TEST_F(l2_modulate_test, ascend910B_case_4) {
 }
 
 // checkShape for self
-TEST_F(l2_modulate_test, ascend910B_case_5) {
+TEST_F(l2_modulate_test, ascend910B_case_5)
+{
     auto self_desc = TensorDesc({32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -110,7 +111,8 @@ TEST_F(l2_modulate_test, ascend910B_case_5) {
 }
 
 // checkShape for scale
-TEST_F(l2_modulate_test, ascend910B_case_6) {
+TEST_F(l2_modulate_test, ascend910B_case_6)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -124,7 +126,8 @@ TEST_F(l2_modulate_test, ascend910B_case_6) {
 }
 
 // checkShape for scale
-TEST_F(l2_modulate_test, ascend910B_case_7) {
+TEST_F(l2_modulate_test, ascend910B_case_7)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -138,7 +141,8 @@ TEST_F(l2_modulate_test, ascend910B_case_7) {
 }
 
 // checkShape for scale
-TEST_F(l2_modulate_test, ascend910B_case_8) {
+TEST_F(l2_modulate_test, ascend910B_case_8)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -152,7 +156,8 @@ TEST_F(l2_modulate_test, ascend910B_case_8) {
 }
 
 // checkShape for scale
-TEST_F(l2_modulate_test, ascend910B_case_9) {
+TEST_F(l2_modulate_test, ascend910B_case_9)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -166,7 +171,8 @@ TEST_F(l2_modulate_test, ascend910B_case_9) {
 }
 
 // checkShape for shift
-TEST_F(l2_modulate_test, ascend910B_case_10) {
+TEST_F(l2_modulate_test, ascend910B_case_10)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -180,7 +186,8 @@ TEST_F(l2_modulate_test, ascend910B_case_10) {
 }
 
 // checkShape for shift
-TEST_F(l2_modulate_test, ascend910B_case_11) {
+TEST_F(l2_modulate_test, ascend910B_case_11)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -194,7 +201,8 @@ TEST_F(l2_modulate_test, ascend910B_case_11) {
 }
 
 // checkShape for shift
-TEST_F(l2_modulate_test, ascend910B_case_12) {
+TEST_F(l2_modulate_test, ascend910B_case_12)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -208,7 +216,8 @@ TEST_F(l2_modulate_test, ascend910B_case_12) {
 }
 
 // checkShape for shift
-TEST_F(l2_modulate_test, ascend910B_case_13) {
+TEST_F(l2_modulate_test, ascend910B_case_13)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -222,7 +231,8 @@ TEST_F(l2_modulate_test, ascend910B_case_13) {
 }
 
 // checkShape for out
-TEST_F(l2_modulate_test, ascend910B_case_14) {
+TEST_F(l2_modulate_test, ascend910B_case_14)
+{
     auto self_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);

@@ -34,8 +34,8 @@ class BinaryCrossEntropyGradV2MS {
 public:
     __aicore__ inline BinaryCrossEntropyGradV2MS(){};
 
-    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight, 
-    GM_ADDR outgrad, const BinaryCrossEntropyGradV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight, GM_ADDR outgrad,
+                                const BinaryCrossEntropyGradV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -67,8 +67,9 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void BinaryCrossEntropyGradV2MS<T>::Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight, 
-     GM_ADDR outgrad, const BinaryCrossEntropyGradV2TilingData* tilingData)
+__aicore__ inline void BinaryCrossEntropyGradV2MS<T>::Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight,
+                                                           GM_ADDR outgrad,
+                                                           const BinaryCrossEntropyGradV2TilingData* tilingData)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     int64_t coreNum = AscendC::GetBlockIdx();
@@ -76,16 +77,16 @@ __aicore__ inline void BinaryCrossEntropyGradV2MS<T>::Init(GM_ADDR grad, GM_ADDR
     this->tileDataNum = tilingData->tileDataNum;
     this->totalLength = tilingData->totalLength;
     this->reduction = tilingData->reduction;
-    if (coreNum < tilingData->tailBlockNum) { 
+    if (coreNum < tilingData->tailBlockNum) {
         this->coreDataNum = tilingData->bigCoreDataNum;
         this->tileNum = tilingData->finalBigTileNum;
         this->tailDataNum = tilingData->bigTailDataNum;
-    }
-    else { 
+    } else {
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     logitsGm.SetGlobalBuffer((__gm__ T*)logits + globalBufferIndex, this->coreDataNum);
     labelsGm.SetGlobalBuffer((__gm__ T*)labels + globalBufferIndex, this->coreDataNum);
@@ -95,7 +96,7 @@ __aicore__ inline void BinaryCrossEntropyGradV2MS<T>::Init(GM_ADDR grad, GM_ADDR
     pipe.InitBuffer(inQueueLogits, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(inQueueLabels, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(inQueueGrad, BUFFER_NUM, 16 * sizeof(T));
-    pipe.InitBuffer(inQueueWeight, BUFFER_NUM, this->tileDataNum * sizeof(T));   
+    pipe.InitBuffer(inQueueWeight, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(outQueueOutGrad, BUFFER_NUM, this->tileDataNum * sizeof(T));
 }
 
@@ -139,8 +140,10 @@ __aicore__ inline void BinaryCrossEntropyGradV2MS<T>::Compute(int32_t progress)
     T scalar = gradLocal.GetValue(0);
     float scalarf = 0;
     float redcf = static_cast<float>(reductionScalar);
-    if(redcf == 2)  scalarf = static_cast<float>(scalar)/this->totalLength;
-        else scalarf = static_cast<float>(scalar);
+    if (redcf == 2)
+        scalarf = static_cast<float>(scalar) / this->totalLength;
+    else
+        scalarf = static_cast<float>(scalar);
     scalar = static_cast<T>(scalarf);
 
     AscendC::Sub(logitsLocal, logitsLocal, labelsLocal, this->processDataNum);

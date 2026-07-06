@@ -56,17 +56,16 @@ static ge::graphStatus InferShape4ApplyCenteredRMSProp(gert::InferShapeContext* 
     }
 
     gert::Shape* varOutShape = context->GetOutputShape(0);
-    gert::Shape* mgOutShape  = context->GetOutputShape(1);
-    gert::Shape* msOutShape  = context->GetOutputShape(2);
+    gert::Shape* mgOutShape = context->GetOutputShape(1);
+    gert::Shape* msOutShape = context->GetOutputShape(2);
     gert::Shape* momOutShape = context->GetOutputShape(3);
-    if (varOutShape == nullptr || mgOutShape == nullptr ||
-        msOutShape == nullptr || momOutShape == nullptr) {
+    if (varOutShape == nullptr || mgOutShape == nullptr || msOutShape == nullptr || momOutShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
 
     *varOutShape = *varShape;
-    *mgOutShape  = *mgShape;
-    *msOutShape  = *msShape;
+    *mgOutShape = *mgShape;
+    *msOutShape = *msShape;
     *momOutShape = *momShape;
     return ge::GRAPH_SUCCESS;
 }

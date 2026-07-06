@@ -23,16 +23,15 @@ namespace OpKernel {
 using namespace AscendC;
 
 template <typename T>
-using OneScalarTernaryOp =
-    void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, const T&, const int32_t&);
+using OneScalarTernaryOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, const T&,
+                                const int32_t&);
 
 template <typename T, typename P, OneScalarTernaryOp<P>* op>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& outLocal,
-        LocalTensor<float>& float32Tensor, T scalarVal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& outLocal,
+                                   LocalTensor<float>& float32Tensor, T scalarVal, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         op(outLocal, inLocal_1, inLocal_2, scalarVal, dataCount);
@@ -42,33 +41,30 @@ public:
 
 #if __CCE_AICORE__ >= 220
 template <OneScalarTernaryOp<float>* op>
-class InnerComputer<bfloat16_t, float, op>
-{
+class InnerComputer<bfloat16_t, float, op> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, LocalTensor<bfloat16_t>& outLocal,
-        LocalTensor<float>& float32Tensor, float scalarVal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                   LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
+                                   float scalarVal, uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            ComputePerCast(
-                inLocal_1, inLocal_2, outLocal, float32Tensor, scalarVal, maxCastDataCount, i, maxCastDataCount);
+            ComputePerCast(inLocal_1, inLocal_2, outLocal, float32Tensor, scalarVal, maxCastDataCount, i,
+                           maxCastDataCount);
         }
 
         if (castTimesRemainder > 0) {
-            ComputePerCast(
-                inLocal_1, inLocal_2, outLocal, float32Tensor, scalarVal, maxCastDataCount, castTimes,
-                castTimesRemainder);
+            ComputePerCast(inLocal_1, inLocal_2, outLocal, float32Tensor, scalarVal, maxCastDataCount, castTimes,
+                           castTimesRemainder);
         }
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, LocalTensor<bfloat16_t>& outLocal,
-        LocalTensor<float>& float32Tensor, float scalarVal, uint32_t maxCastDataCount, uint32_t index,
-        int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                          LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
+                                          float scalarVal, uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -82,20 +78,17 @@ private:
 };
 #endif
 
-template <
-    typename T, typename P, OneScalarTernaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
-class ForeachOneScalarTernary : public KernelForeachUnary<
-                                    T, ForeachOneScalarTernary<T, P, op, bufferNum, paramsCount, needCopyOut>,
-                                    bufferNum, paramsCount, needCopyOut>
-{
+template <typename T, typename P, OneScalarTernaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+class ForeachOneScalarTernary
+    : public KernelForeachUnary<T, ForeachOneScalarTernary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
+                                paramsCount, needCopyOut> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachOneScalarTernary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount, needCopyOut>;
+    using Base = KernelForeachUnary<T, ForeachOneScalarTernary<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                    bufferNum, paramsCount, needCopyOut>;
     using Operator = OneScalarTernaryOp<P>;
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
-        const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline ForeachOneScalarTernary() : Base(*this){};
     using Base::Process;
 
@@ -112,8 +105,8 @@ protected:
 #endif
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> inLocal_1 = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> inLocal_2 = InQueue_2.DeQue<T>();
@@ -140,16 +133,11 @@ private:
         InQueue_2.EnQue(inLocal_2);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
     __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
     {

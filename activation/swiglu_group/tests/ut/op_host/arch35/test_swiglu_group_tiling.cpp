@@ -43,15 +43,9 @@ struct TilingCase {
 
 class SwigluGroupTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluGroupTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluGroupTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluGroupTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluGroupTilingTest TearDown" << std::endl; }
 };
 
 void ExecuteTilingCase(const TilingCase& tc)
@@ -83,7 +77,8 @@ void ExecuteTilingCase(const TilingCase& tc)
 
     auto kernelHolder = gert::KernelRunContextFaker()
                             .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
                             .Outputs({&compileInfo})
                             .Build();
 

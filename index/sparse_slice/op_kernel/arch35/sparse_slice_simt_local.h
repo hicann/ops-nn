@@ -33,13 +33,13 @@ static constexpr int64_t DIGIT_NINETEEN = 19;
 template <typename NUM_T>
 __simt_callee__ __aicore__ inline void SimtComputeReduction(__ubuf__ NUM_T* tmpValNum_, int64_t countBR)
 {
-    if(countBR == 0){
+    if (countBR == 0) {
         tmpValNum_[0] = 0;
     }
-    while(countBR > 1){
+    while (countBR > 1) {
         int64_t halfBR = countBR / BINARY_HALF;
         int64_t res = countBR % BINARY_HALF;
-        if(threadIdx.x < halfBR){
+        if (threadIdx.x < halfBR) {
             tmpValNum_[threadIdx.x] += tmpValNum_[threadIdx.x + halfBR + res];
         }
         asc_syncthreads();
@@ -69,113 +69,107 @@ __simt_callee__ __aicore__ inline void SimtComputePrefixSum(__ubuf__ NUM_T* temp
 
 template <typename I_T, typename V_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SparseSliceSimtCompute(
-    __ubuf__ I_T* indices, __gm__ V_T* values, __gm__ I_T* shape,
-    __gm__ I_T* start, __gm__ I_T* size, __gm__ I_T* yIndices, 
-    __gm__ V_T* yValues, __gm__ I_T* yShape, 
-    __gm__ int64_t* tmpValNumGM, __ubuf__ int64_t* tmpValNum, 
-    __ubuf__ int64_t* tmpValNumBlock, const int64_t nnzNum, const int64_t rankNum, int64_t startNNZ, int64_t endNNZ, int64_t nnzNumBlock, __ubuf__ I_T* yShape_,
-    __ubuf__ bool* tmpValBlock_, __ubuf__ int64_t* indicesPos)
-    {
-        if(blockIdx.x == gridDim.x-1 && threadIdx.x < rankNum){
-            yShape[threadIdx.x] = yShape_[threadIdx.x];
-        }
+    __ubuf__ I_T* indices, __gm__ V_T* values, __gm__ I_T* shape, __gm__ I_T* start, __gm__ I_T* size,
+    __gm__ I_T* yIndices, __gm__ V_T* yValues, __gm__ I_T* yShape, __gm__ int64_t* tmpValNumGM,
+    __ubuf__ int64_t* tmpValNum, __ubuf__ int64_t* tmpValNumBlock, const int64_t nnzNum, const int64_t rankNum,
+    int64_t startNNZ, int64_t endNNZ, int64_t nnzNumBlock, __ubuf__ I_T* yShape_, __ubuf__ bool* tmpValBlock_,
+    __ubuf__ int64_t* indicesPos)
+{
+    if (blockIdx.x == gridDim.x - 1 && threadIdx.x < rankNum) {
+        yShape[threadIdx.x] = yShape_[threadIdx.x];
+    }
 
-        int64_t avgNNZThread = nnzNumBlock / blockDim.x;
-        int64_t tailThread = nnzNumBlock - avgNNZThread * blockDim.x;
-        int64_t startNNZThread = startNNZ + avgNNZThread * threadIdx.x + (threadIdx.x > tailThread ? tailThread : threadIdx.x);
-        int64_t nnzNumThread = avgNNZThread + (threadIdx.x < tailThread ? 1 : 0);
-        int64_t endNNZThread = startNNZThread + nnzNumThread;
-        indicesPos[threadIdx.x] = startNNZThread;
-        indicesPos[threadIdx.x + blockDim.x] = endNNZThread;
+    int64_t avgNNZThread = nnzNumBlock / blockDim.x;
+    int64_t tailThread = nnzNumBlock - avgNNZThread * blockDim.x;
+    int64_t startNNZThread = startNNZ + avgNNZThread * threadIdx.x +
+                             (threadIdx.x > tailThread ? tailThread : threadIdx.x);
+    int64_t nnzNumThread = avgNNZThread + (threadIdx.x < tailThread ? 1 : 0);
+    int64_t endNNZThread = startNNZThread + nnzNumThread;
+    indicesPos[threadIdx.x] = startNNZThread;
+    indicesPos[threadIdx.x + blockDim.x] = endNNZThread;
 
-        int64_t threadVal = 0;
-        for(int64_t i = startNNZThread-startNNZ; i < endNNZThread-startNNZ; i++){
-            bool val = true;
-            for(int64_t j = 0; j < rankNum; j++){
-                int64_t tmp = indices[i*rankNum + j] - start[j];
-                if(tmp < 0 || tmp >= yShape_[j]){
-                    val = false;
-                    break;
-                }
-            }
-            if(val){
-                threadVal += 1;
-                tmpValBlock_[i] = true;
+    int64_t threadVal = 0;
+    for (int64_t i = startNNZThread - startNNZ; i < endNNZThread - startNNZ; i++) {
+        bool val = true;
+        for (int64_t j = 0; j < rankNum; j++) {
+            int64_t tmp = indices[i * rankNum + j] - start[j];
+            if (tmp < 0 || tmp >= yShape_[j]) {
+                val = false;
+                break;
             }
         }
-        tmpValNum[threadIdx.x] = threadVal;
-        asc_syncthreads();
-        
-        SimtComputePrefixSum<int64_t>(tmpValNum);
-        asc_syncthreads();
-        if(threadIdx.x == 0){
-            tmpValNumGM[blockIdx.x] = tmpValNum[blockDim.x-1];
+        if (val) {
+            threadVal += 1;
+            tmpValBlock_[i] = true;
         }
     }
+    tmpValNum[threadIdx.x] = threadVal;
+    asc_syncthreads();
+
+    SimtComputePrefixSum<int64_t>(tmpValNum);
+    asc_syncthreads();
+    if (threadIdx.x == 0) {
+        tmpValNumGM[blockIdx.x] = tmpValNum[blockDim.x - 1];
+    }
+}
 
 template <typename I_T, typename V_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SparseSliceSimtGather(
-    __ubuf__ I_T* indices, __gm__ V_T* values, __gm__ I_T* shape,
-    __gm__ I_T* start, __gm__ I_T* size, __gm__ volatile I_T* yIndices, 
-    __gm__ volatile V_T* yValues, __gm__ volatile I_T* yShape, __gm__ volatile I_T* outputShape1,
-    __gm__ int64_t* tmpValNumGM, __ubuf__ int64_t* tmpValNum, 
-    __ubuf__ int64_t* tmpValNumBlock, const int64_t nnzNum, const int64_t rankNum, int64_t startNNZ, int64_t endNNZ, int64_t nnzNumBlock,
-    __ubuf__ bool* tmpValBlock_, __ubuf__ int64_t* indicesPos)
-    {
-        int64_t startNNZThread = indicesPos[threadIdx.x];
-        int64_t endNNZThread = indicesPos[threadIdx.x + blockDim.x];
+    __ubuf__ I_T* indices, __gm__ V_T* values, __gm__ I_T* shape, __gm__ I_T* start, __gm__ I_T* size,
+    __gm__ volatile I_T* yIndices, __gm__ volatile V_T* yValues, __gm__ volatile I_T* yShape,
+    __gm__ volatile I_T* outputShape1, __gm__ int64_t* tmpValNumGM, __ubuf__ int64_t* tmpValNum,
+    __ubuf__ int64_t* tmpValNumBlock, const int64_t nnzNum, const int64_t rankNum, int64_t startNNZ, int64_t endNNZ,
+    int64_t nnzNumBlock, __ubuf__ bool* tmpValBlock_, __ubuf__ int64_t* indicesPos)
+{
+    int64_t startNNZThread = indicesPos[threadIdx.x];
+    int64_t endNNZThread = indicesPos[threadIdx.x + blockDim.x];
 
-        if(threadIdx.x < gridDim.x){
-            tmpValNumBlock[threadIdx.x] = tmpValNumGM[threadIdx.x*1];
-        }
-        asc_syncthreads();
+    if (threadIdx.x < gridDim.x) {
+        tmpValNumBlock[threadIdx.x] = tmpValNumGM[threadIdx.x * 1];
+    }
+    asc_syncthreads();
 
-        SimtComputeReduction<int64_t>(tmpValNumBlock, blockIdx.x);
-        if(blockIdx.x == gridDim.x-1 && threadIdx.x == blockDim.x-1){
-            int64_t total = tmpValNumBlock[0] + tmpValNumBlock[blockIdx.x];
-            outputShape1[DIGIT_ZERO] = Y_INDICES_SHAPE_DIM_BASE;
-            outputShape1[DIGIT_ONE] = total;
-            outputShape1[DIGIT_TWO] = rankNum;
-            outputShape1[DIGIT_NINE] = DIGIT_ONE;
-            outputShape1[DIGIT_TEN] = total;
-            outputShape1[DIGIT_EIGHTEEN] = DIGIT_ONE;
-            outputShape1[DIGIT_NINETEEN] = rankNum;
-        }        
-
-        int64_t addrThreadOffset = 0;
-        if(threadIdx.x != 0){
-            addrThreadOffset = tmpValNum[threadIdx.x-1];
-        }
-        int64_t addrThreadOut = tmpValNumBlock[0] + addrThreadOffset;
-
-        for(int64_t i = startNNZThread-startNNZ; i < endNNZThread-startNNZ; i++){
-            if(tmpValBlock_[i]){
-                for(int64_t j = 0; j < rankNum; j++){
-                    yIndices[addrThreadOut * rankNum + j] = indices[(i)*rankNum + j] - start[j];
-                }
-                yValues[addrThreadOut] = values[i+startNNZ];
-                addrThreadOut += 1;
-            }
-        }        
+    SimtComputeReduction<int64_t>(tmpValNumBlock, blockIdx.x);
+    if (blockIdx.x == gridDim.x - 1 && threadIdx.x == blockDim.x - 1) {
+        int64_t total = tmpValNumBlock[0] + tmpValNumBlock[blockIdx.x];
+        outputShape1[DIGIT_ZERO] = Y_INDICES_SHAPE_DIM_BASE;
+        outputShape1[DIGIT_ONE] = total;
+        outputShape1[DIGIT_TWO] = rankNum;
+        outputShape1[DIGIT_NINE] = DIGIT_ONE;
+        outputShape1[DIGIT_TEN] = total;
+        outputShape1[DIGIT_EIGHTEEN] = DIGIT_ONE;
+        outputShape1[DIGIT_NINETEEN] = rankNum;
     }
 
+    int64_t addrThreadOffset = 0;
+    if (threadIdx.x != 0) {
+        addrThreadOffset = tmpValNum[threadIdx.x - 1];
+    }
+    int64_t addrThreadOut = tmpValNumBlock[0] + addrThreadOffset;
+
+    for (int64_t i = startNNZThread - startNNZ; i < endNNZThread - startNNZ; i++) {
+        if (tmpValBlock_[i]) {
+            for (int64_t j = 0; j < rankNum; j++) {
+                yIndices[addrThreadOut * rankNum + j] = indices[(i)*rankNum + j] - start[j];
+            }
+            yValues[addrThreadOut] = values[i + startNNZ];
+            addrThreadOut += 1;
+        }
+    }
+}
 
 template <typename I_T, typename V_T>
-class SparseSliceSimt : public SparseSliceBase{
-    public:
-    __aicore__ inline SparseSliceSimt(){
-        blockNum_ = GetBlockNum();
-    }
+class SparseSliceSimt : public SparseSliceBase {
+public:
+    __aicore__ inline SparseSliceSimt() { blockNum_ = GetBlockNum(); }
 
-    __aicore__ inline void Init(
-        GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start, GM_ADDR size,
-        GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yshape, 
-        GM_ADDR outputShape1, GM_ADDR workspace, const SparseSliceTilingData& tilingData, 
-        TPipe *inPipe);
+    __aicore__ inline void Init(GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start, GM_ADDR size,
+                                GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yshape, GM_ADDR outputShape1,
+                                GM_ADDR workspace, const SparseSliceTilingData& tilingData, TPipe* inPipe);
     __aicore__ inline void Process();
     __aicore__ inline void CopyIndices();
 
-    private:
+private:
     TPipe* pipe;
 
     GlobalTensor<I_T> indices_;
@@ -196,7 +190,7 @@ class SparseSliceSimt : public SparseSliceBase{
     LocalTensor<int64_t> indicesUB_;
     LocalTensor<I_T> yShapeUB_;
     LocalTensor<bool> tmpValBlock_;
-    LocalTensor<int64_t>  indicesPos_;
+    LocalTensor<int64_t> indicesPos_;
 
     TBuf<TPosition::VECCALC> tmpValNumBuffer_;
     TBuf<TPosition::VECCALC> tmpValNumBlockBuffer_;
@@ -207,72 +201,75 @@ class SparseSliceSimt : public SparseSliceBase{
 
     int64_t nnzNum = 0;
     int64_t rankNum = 0;
-    int64_t blockNum_= 0;
+    int64_t blockNum_ = 0;
     int64_t startNNZ = 0;
     int64_t endNNZ = 0;
     int64_t nnzNumBlock = 0;
 };
 
 template <typename I_T, typename V_T>
-__aicore__ inline void SparseSliceSimt<I_T, V_T>::CopyIndices(){
+__aicore__ inline void SparseSliceSimt<I_T, V_T>::CopyIndices()
+{
     int64_t avgNNZ = nnzNum / GetBlockNum();
     int64_t tailBlock = nnzNum - avgNNZ * GetBlockNum();
     int64_t startNNZ = avgNNZ * blockIdx.x + (blockIdx.x > tailBlock ? tailBlock : blockIdx.x);
     int64_t nnzNumBlock = avgNNZ + (blockIdx.x < tailBlock ? 1 : 0);
-    DataCopyExtParams copyParamsIndices{ static_cast<uint16_t>(1), static_cast<uint32_t>(rankNum * nnzNumBlock * static_cast<int32_t>(sizeof(I_T))),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0) };
+    DataCopyExtParams copyParamsIndices{
+        static_cast<uint16_t>(1), static_cast<uint32_t>(rankNum * nnzNumBlock * static_cast<int32_t>(sizeof(I_T))),
+        static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<I_T> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
-        static_cast<int64_t>(0) };
+                                        static_cast<int64_t>(0)};
     DataCopyPad<I_T>(indicesUB_[0], indices_[startNNZ * rankNum], copyParamsIndices, padParams);
 }
 
 template <typename I_T, typename V_T>
-__aicore__ inline void SparseSliceSimt<I_T, V_T>::Init(
-    GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start, GM_ADDR size,
-    GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape, 
-    GM_ADDR outputShape1, GM_ADDR workspace, const SparseSliceTilingData& tilingData, 
-    TPipe *inPipe){
-        pipe = inPipe;
-        SparseSliceBase::ParseTilingData(tilingData);
-        nnzNum = tilingData.valueNumbers;
-        rankNum = tilingData.rankNumbers;
+__aicore__ inline void SparseSliceSimt<I_T, V_T>::Init(GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start,
+                                                       GM_ADDR size, GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape,
+                                                       GM_ADDR outputShape1, GM_ADDR workspace,
+                                                       const SparseSliceTilingData& tilingData, TPipe* inPipe)
+{
+    pipe = inPipe;
+    SparseSliceBase::ParseTilingData(tilingData);
+    nnzNum = tilingData.valueNumbers;
+    rankNum = tilingData.rankNumbers;
 
-        indices_.SetGlobalBuffer((__gm__ I_T*)(indices));
-        indices_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
-        
-        values_.SetGlobalBuffer((__gm__ V_T*)(values));
-        shape_.SetGlobalBuffer((__gm__ I_T*)(shape));
-        start_.SetGlobalBuffer((__gm__ I_T*)(start));
-        size_.SetGlobalBuffer((__gm__ I_T*)(size));
-        yIndices_.SetGlobalBuffer((__gm__ I_T*)(yIndices));
-        yValues_.SetGlobalBuffer((__gm__ V_T*)(yValues));
-        yShapeTensor_.SetGlobalBuffer((__gm__ I_T*)(yShape));
-        outputShape1_.SetGlobalBuffer((__gm__ I_T*)(outputShape1));
+    indices_.SetGlobalBuffer((__gm__ I_T*)(indices));
+    indices_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
 
-        tmpValNumGM_.SetGlobalBuffer((__gm__ int64_t*)(workspace), blockNum_ * DIGIT_ALIGN);
+    values_.SetGlobalBuffer((__gm__ V_T*)(values));
+    shape_.SetGlobalBuffer((__gm__ I_T*)(shape));
+    start_.SetGlobalBuffer((__gm__ I_T*)(start));
+    size_.SetGlobalBuffer((__gm__ I_T*)(size));
+    yIndices_.SetGlobalBuffer((__gm__ I_T*)(yIndices));
+    yValues_.SetGlobalBuffer((__gm__ V_T*)(yValues));
+    yShapeTensor_.SetGlobalBuffer((__gm__ I_T*)(yShape));
+    outputShape1_.SetGlobalBuffer((__gm__ I_T*)(outputShape1));
 
-        pipe->InitBuffer(tmpValNumBuffer_, DIGIT_TWO * THREAD_NUM * sizeof(int64_t));
-        tmpValNum_ = tmpValNumBuffer_.Get<int64_t>();
-        pipe->InitBuffer(tmpValNumBlockBuffer_, blockNum_ * sizeof(int64_t));
-        tmpValNumBlock_ = tmpValNumBlockBuffer_.Get<int64_t>();
-        pipe->InitBuffer(indicesUBBuffer_, INDICES_NUM * sizeof(int64_t));
-        indicesUB_ = indicesUBBuffer_.Get<int64_t>();
-        pipe->InitBuffer(tmpValBlockBuffer_, INDICES_NUM * sizeof(bool));
-        tmpValBlock_ = tmpValBlockBuffer_.Get<bool>();
-        pipe->InitBuffer(yShapeBuffer_, MAX_INDICES * sizeof(int64_t));
-        yShapeUB_ = yShapeBuffer_.Get<int64_t>();
-        pipe->InitBuffer(indicesPosBuffer_, DIGIT_TWO * THREAD_NUM * sizeof(int64_t));
-        indicesPos_ = indicesPosBuffer_.Get<int64_t>();
-        Duplicate(tmpValNum_, static_cast<int64_t>(0), DIGIT_TWO * THREAD_NUM);
-        Duplicate(tmpValNumBlock_, static_cast<int64_t>(0), blockNum_);
-        Duplicate(tmpValBlock_, false, INDICES_NUM);
-        for (int32_t i = 0; i < rankNumbers_; i++) {
-            yShapeUB_(i) = tilingData.yShape[i];
-        }
+    tmpValNumGM_.SetGlobalBuffer((__gm__ int64_t*)(workspace), blockNum_ * DIGIT_ALIGN);
+
+    pipe->InitBuffer(tmpValNumBuffer_, DIGIT_TWO * THREAD_NUM * sizeof(int64_t));
+    tmpValNum_ = tmpValNumBuffer_.Get<int64_t>();
+    pipe->InitBuffer(tmpValNumBlockBuffer_, blockNum_ * sizeof(int64_t));
+    tmpValNumBlock_ = tmpValNumBlockBuffer_.Get<int64_t>();
+    pipe->InitBuffer(indicesUBBuffer_, INDICES_NUM * sizeof(int64_t));
+    indicesUB_ = indicesUBBuffer_.Get<int64_t>();
+    pipe->InitBuffer(tmpValBlockBuffer_, INDICES_NUM * sizeof(bool));
+    tmpValBlock_ = tmpValBlockBuffer_.Get<bool>();
+    pipe->InitBuffer(yShapeBuffer_, MAX_INDICES * sizeof(int64_t));
+    yShapeUB_ = yShapeBuffer_.Get<int64_t>();
+    pipe->InitBuffer(indicesPosBuffer_, DIGIT_TWO * THREAD_NUM * sizeof(int64_t));
+    indicesPos_ = indicesPosBuffer_.Get<int64_t>();
+    Duplicate(tmpValNum_, static_cast<int64_t>(0), DIGIT_TWO * THREAD_NUM);
+    Duplicate(tmpValNumBlock_, static_cast<int64_t>(0), blockNum_);
+    Duplicate(tmpValBlock_, false, INDICES_NUM);
+    for (int32_t i = 0; i < rankNumbers_; i++) {
+        yShapeUB_(i) = tilingData.yShape[i];
     }
+}
 
 template <typename I_T, typename V_T>
-__aicore__ inline void SparseSliceSimt<I_T, V_T>::Process(){
+__aicore__ inline void SparseSliceSimt<I_T, V_T>::Process()
+{
     CopyIndices();
     int64_t avgNNZ = nnzNum / GetBlockNum();
     int64_t tailBlock = nnzNum - avgNNZ * GetBlockNum();
@@ -282,23 +279,25 @@ __aicore__ inline void SparseSliceSimt<I_T, V_T>::Process(){
 
     PipeBarrier<PIPE_ALL>();
 
-    asc_vf_call<SparseSliceSimtCompute<I_T, V_T>>(dim3(THREAD_NUM),
-    (__ubuf__ I_T*) indicesUB_.GetPhyAddr(), (__gm__ V_T*) values_.GetPhyAddr(), (__gm__ I_T*) shape_.GetPhyAddr(),
-    (__gm__ I_T*) start_.GetPhyAddr(), (__gm__ I_T*) size_.GetPhyAddr(), (__gm__ I_T*) yIndices_.GetPhyAddr(), 
-    (__gm__ V_T*) yValues_.GetPhyAddr(), (__gm__ I_T*) yShapeTensor_.GetPhyAddr(), 
-    (__gm__ int64_t*) tmpValNumGM_.GetPhyAddr(), (__ubuf__ int64_t*) tmpValNum_.GetPhyAddr(), 
-    (__ubuf__ int64_t*) tmpValNumBlock_.GetPhyAddr(), nnzNum, rankNum, startNNZ, endNNZ, nnzNumBlock, (__ubuf__ I_T*) yShapeUB_.GetPhyAddr(),
-    (__ubuf__ bool*) tmpValBlock_.GetPhyAddr(), (__ubuf__ int64_t*) indicesPos_.GetPhyAddr());
+    asc_vf_call<SparseSliceSimtCompute<I_T, V_T>>(
+        dim3(THREAD_NUM), (__ubuf__ I_T*)indicesUB_.GetPhyAddr(), (__gm__ V_T*)values_.GetPhyAddr(),
+        (__gm__ I_T*)shape_.GetPhyAddr(), (__gm__ I_T*)start_.GetPhyAddr(), (__gm__ I_T*)size_.GetPhyAddr(),
+        (__gm__ I_T*)yIndices_.GetPhyAddr(), (__gm__ V_T*)yValues_.GetPhyAddr(),
+        (__gm__ I_T*)yShapeTensor_.GetPhyAddr(), (__gm__ int64_t*)tmpValNumGM_.GetPhyAddr(),
+        (__ubuf__ int64_t*)tmpValNum_.GetPhyAddr(), (__ubuf__ int64_t*)tmpValNumBlock_.GetPhyAddr(), nnzNum, rankNum,
+        startNNZ, endNNZ, nnzNumBlock, (__ubuf__ I_T*)yShapeUB_.GetPhyAddr(), (__ubuf__ bool*)tmpValBlock_.GetPhyAddr(),
+        (__ubuf__ int64_t*)indicesPos_.GetPhyAddr());
     PipeBarrier<PIPE_ALL>();
     SyncAll();
-    asc_vf_call<SparseSliceSimtGather<I_T, V_T>>(dim3(THREAD_NUM),
-    (__ubuf__ I_T*) indicesUB_.GetPhyAddr(), (__gm__ V_T*) values_.GetPhyAddr(), (__gm__ I_T*) shape_.GetPhyAddr(),
-    (__gm__ I_T*) start_.GetPhyAddr(), (__gm__ I_T*) size_.GetPhyAddr(), (__gm__ volatile I_T*) yIndices_.GetPhyAddr(), 
-    (__gm__ volatile V_T*) yValues_.GetPhyAddr(), (__gm__ volatile I_T*) yShapeTensor_.GetPhyAddr(), (__gm__ volatile I_T*) outputShape1_.GetPhyAddr(),
-    (__gm__ int64_t*) tmpValNumGM_.GetPhyAddr(), (__ubuf__ int64_t*) tmpValNum_.GetPhyAddr(), 
-    (__ubuf__ int64_t*) tmpValNumBlock_.GetPhyAddr(), nnzNum, rankNum, startNNZ, endNNZ, nnzNumBlock,
-    (__ubuf__ bool*) tmpValBlock_.GetPhyAddr(), (__ubuf__ int64_t*) indicesPos_.GetPhyAddr());
+    asc_vf_call<SparseSliceSimtGather<I_T, V_T>>(
+        dim3(THREAD_NUM), (__ubuf__ I_T*)indicesUB_.GetPhyAddr(), (__gm__ V_T*)values_.GetPhyAddr(),
+        (__gm__ I_T*)shape_.GetPhyAddr(), (__gm__ I_T*)start_.GetPhyAddr(), (__gm__ I_T*)size_.GetPhyAddr(),
+        (__gm__ volatile I_T*)yIndices_.GetPhyAddr(), (__gm__ volatile V_T*)yValues_.GetPhyAddr(),
+        (__gm__ volatile I_T*)yShapeTensor_.GetPhyAddr(), (__gm__ volatile I_T*)outputShape1_.GetPhyAddr(),
+        (__gm__ int64_t*)tmpValNumGM_.GetPhyAddr(), (__ubuf__ int64_t*)tmpValNum_.GetPhyAddr(),
+        (__ubuf__ int64_t*)tmpValNumBlock_.GetPhyAddr(), nnzNum, rankNum, startNNZ, endNNZ, nnzNumBlock,
+        (__ubuf__ bool*)tmpValBlock_.GetPhyAddr(), (__ubuf__ int64_t*)indicesPos_.GetPhyAddr());
 }
 
-}
+} // namespace SparseSlice
 #endif

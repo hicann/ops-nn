@@ -19,9 +19,9 @@
 constexpr int32_t FOREACH_TAN_MAX_TENSOR_NUM = 256;
 
 struct ForeachTanTilingData {
-    int32_t tensorNum = 0;                                        // TensorList 中 Tensor 的数量
-    int32_t needCoreNum = 1;                                      // 需要的核数
-    int64_t tensorElements[FOREACH_TAN_MAX_TENSOR_NUM] = {0};    // 每个 Tensor 的元素数量
+    int32_t tensorNum = 0;                                    // TensorList 中 Tensor 的数量
+    int32_t needCoreNum = 1;                                  // 需要的核数
+    int64_t tensorElements[FOREACH_TAN_MAX_TENSOR_NUM] = {0}; // 每个 Tensor 的元素数量
 };
 
 #endif

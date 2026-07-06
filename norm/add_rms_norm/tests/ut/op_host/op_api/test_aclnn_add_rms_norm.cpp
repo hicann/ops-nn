@@ -17,21 +17,14 @@
 
 using namespace std;
 
-class l2_add_rms_norm_test : public testing::Test
-{
+class l2_add_rms_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_add_rms_norm_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_add_rms_norm_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_add_rms_norm_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_add_rms_norm_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& weightShape, const vector<int64_t>& rstdShape, aclDataType dtype, aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& weightShape, const vector<int64_t>& rstdShape,
+                    aclDataType dtype, aclnnStatus expectRet)
     {
         auto x1 = TensorDesc(xShape, dtype, ACL_FORMAT_ND);
         auto x2 = TensorDesc(xShape, dtype, ACL_FORMAT_ND);

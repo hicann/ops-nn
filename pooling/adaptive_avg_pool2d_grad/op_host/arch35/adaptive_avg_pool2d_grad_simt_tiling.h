@@ -22,10 +22,8 @@ using namespace AdaptiveAvgPool2dGradOp;
 namespace optiling {
 class AdaptiveAvgPool2dGradTilingSimt : public AdaptiveAvgPool2dGradTilingBase {
 public:
-    explicit AdaptiveAvgPool2dGradTilingSimt(gert::TilingContext* context) : AdaptiveAvgPool2dGradTilingBase(context)
-    {}
-    ~AdaptiveAvgPool2dGradTilingSimt() override
-    {}
+    explicit AdaptiveAvgPool2dGradTilingSimt(gert::TilingContext* context) : AdaptiveAvgPool2dGradTilingBase(context) {}
+    ~AdaptiveAvgPool2dGradTilingSimt() override {}
 
 protected:
     bool IsCapable() override;

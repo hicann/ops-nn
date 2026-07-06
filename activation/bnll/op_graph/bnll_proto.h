@@ -34,9 +34,6 @@ namespace ge {
 * @li Compatible with Caffe's BNLLLayer operator
 *
 */
-REG_OP(BNLL)
-    .INPUT(x, TensorType::FloatingDataType())
-    .OUTPUT(y, TensorType::FloatingDataType())
-    .OP_END_FACTORY_REG(BNLL)
+REG_OP(BNLL).INPUT(x, TensorType::FloatingDataType()).OUTPUT(y, TensorType::FloatingDataType()).OP_END_FACTORY_REG(BNLL)
 } // namespace ge
 #endif

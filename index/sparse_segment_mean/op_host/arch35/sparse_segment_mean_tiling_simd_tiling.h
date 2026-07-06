@@ -18,8 +18,7 @@
 
 #include "sparse_segment_mean_tiling_base.h"
 
-namespace optiling
-{
+namespace optiling {
 struct SparseSegmentMeanSplitInfo {
     // DoBlockTiling
     int64_t normalCoreInnerNum{0};
@@ -51,17 +50,11 @@ struct SparseSegmentMeanSplitInfo {
     int64_t outBufferSize{0};
 };
 
-class SparseSegmentMeanSimdTiling : public SparseSegmentMeanBaseTiling
-{
+class SparseSegmentMeanSimdTiling : public SparseSegmentMeanBaseTiling {
 public:
-    explicit SparseSegmentMeanSimdTiling(gert::TilingContext* context)
-        : SparseSegmentMeanBaseTiling(context)
-    {
-    }
+    explicit SparseSegmentMeanSimdTiling(gert::TilingContext* context) : SparseSegmentMeanBaseTiling(context) {}
 
-    ~SparseSegmentMeanSimdTiling() override
-    {
-    }
+    ~SparseSegmentMeanSimdTiling() override {}
 
 private:
     void DoBlockTiling();
@@ -76,6 +69,6 @@ private:
     SparseSegmentMeanSplitInfo splitData;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

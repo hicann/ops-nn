@@ -14,10 +14,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> DeformableOffsetsGrad(
-    const aclTensor* grad_output, const aclTensor* input, const aclTensor* offsets, const aclIntArray* stride,
-    const aclIntArray* pads, const aclIntArray* kernel_size, const aclIntArray* dilations, bool modulated,
-    int64_t deformable_groups, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> DeformableOffsetsGrad(const aclTensor* grad_output, const aclTensor* input,
+                                                               const aclTensor* offsets, const aclIntArray* stride,
+                                                               const aclIntArray* pads, const aclIntArray* kernel_size,
+                                                               const aclIntArray* dilations, bool modulated,
+                                                               int64_t deformable_groups, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OPS_IMAGE_DEFORMABLE_OFFSETS_GRAD_OP_HOST_OP_API_DEFORMABLE_OFFSETS_GRAD_H

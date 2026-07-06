@@ -41,15 +41,9 @@ static const int64_t DIM_NUM_NDC1HWC0 = 6;
 static const int64_t NDC1HWC0_DIM_INDEX_C0 = 5;
 static const int64_t NDC1HWC0_DIM_INDEX_C1 = 2;
 
-ge::graphStatus PreluTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PreluTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
-bool PreluTiling::IsCapable()
-{
-    return true;
-}
+bool PreluTiling::IsCapable() { return true; }
 
 ge::graphStatus PreluTiling::DoOpTiling()
 {
@@ -59,32 +53,29 @@ ge::graphStatus PreluTiling::DoOpTiling()
     ge::DataType xInputDtype = xInputDesc->GetDataType();
     OP_CHECK_IF(
         xInputDtype != ge::DT_FLOAT16 && xInputDtype != ge::DT_BF16 && xInputDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xInputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto weightInputDesc = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, weightInputDesc);
     ge::DataType weightInputDtype = weightInputDesc->GetDataType();
-    OP_CHECK_IF(
-        xInputDtype != weightInputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "weight, x",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(weightInputDtype),
-            "The dtypes of weight and x must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xInputDtype != weightInputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight, x",
+                                                       ge::TypeUtils::DataTypeToSerialString(xInputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(weightInputDtype),
+                                                       "The dtypes of weight and x must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     ge::DataType outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        outputDtype != xInputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "y, x",
-            ge::TypeUtils::DataTypeToSerialString(outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(xInputDtype),
-            "The dtypes of y and x must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputDtype != xInputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y, x",
+                                                       ge::TypeUtils::DataTypeToSerialString(outputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(xInputDtype),
+                                                       "The dtypes of y and x must be the same"),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (xInputDtype == ge::DT_FLOAT16) {
@@ -98,11 +89,10 @@ ge::graphStatus PreluTiling::DoOpTiling()
     } else if (xInputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<PreluDAG<bfloat16_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OPS_REPORT_VECTOR_INNER_ERR(
-                context_->GetNodeName(), "BroadcastBaseTiling<PreluDAG<bfloat16_t>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(),
+                                                "BroadcastBaseTiling<PreluDAG<bfloat16_t>::OpDag> failed"),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (xInputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<PreluDAG<float>::OpDag> brcBaseTiling(context_);
@@ -113,39 +103,23 @@ ge::graphStatus PreluTiling::DoOpTiling()
             return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xInputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus PreluTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PreluTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t PreluTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t PreluTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus PreluTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PreluTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus PreluTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PreluTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus PreluTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PreluTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Tiling4PRelu(gert::TilingContext* context)
 {

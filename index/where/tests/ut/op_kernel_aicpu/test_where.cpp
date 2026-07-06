@@ -25,58 +25,58 @@ using namespace aicpu;
 
 class TEST_WHERE_UT : public testing::Test {};
 
+#define CREATE_NODEDEF(shapes, data_types, datas)                    \
+    auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef(); \
+    NodeDefBuilder(node_def.get(), "Where", "Where")                 \
+        .Input({"x", data_types[0], shapes[0], datas[0]})            \
+        .Output({"y", data_types[1], shapes[1], datas[1]})
 
-#define CREATE_NODEDEF(shapes, data_types, datas)                  \
-  auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef(); \
-  NodeDefBuilder(node_def.get(), "Where", "Where")                 \
-      .Input({"x", data_types[0], shapes[0], datas[0]})            \
-      .Output({"y", data_types[1], shapes[1], datas[1]})           \
+#define ADD_CASE(case_name, base_type, aicpu_type, shape, data_num, input_data) \
+    TEST_F(TEST_WHERE_UT, TestWhere_##case_name)                                \
+    {                                                                           \
+        vector<DataType> data_types = {aicpu_type, DT_INT64};                   \
+        base_type input[data_num[0]] = {1, 1, 1, 0};                            \
+        int64_t output[data_num[1]] = {0};                                      \
+        vector<void*> datas = {(void*)input, (void*)output};                    \
+        CREATE_NODEDEF(shape, data_types, datas);                               \
+        RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);                           \
+        int64_t expect_out[data_num[1]] = {0, 0, 0, 1, 1, 0};                   \
+        bool res = CompareResult<int64_t>(output, expect_out, data_num[1]);     \
+        EXPECT_EQ(res, true);                                                   \
+    }
 
-#define ADD_CASE(case_name, base_type, aicpu_type, shape, data_num, input_data)\
-  TEST_F(TEST_WHERE_UT, TestWhere_##case_name) {                               \
-    vector<DataType> data_types = {aicpu_type, DT_INT64};                      \
-    base_type input[data_num[0]] = {1, 1, 1, 0};                               \
-    int64_t output[data_num[1]] = {0};                                         \
-    vector<void *> datas = {(void *)input, (void *)output};                    \
-    CREATE_NODEDEF(shape, data_types, datas);                                  \
-    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);                              \
-    int64_t expect_out[data_num[1]] = {0, 0, 0, 1, 1, 0};                      \
-    bool res = CompareResult<int64_t>(output, expect_out, data_num[1]);        \
-    EXPECT_EQ(res, true);                                                      \
-  }
+#define ADD_CASE_WITH_SHAPE(case_name, data_type, aicpu_type, shapes, input_data, expect_out) \
+    TEST_F(TEST_WHERE_UT, TestWhere_WITH_SHAPE_##case_name)                                   \
+    {                                                                                         \
+        vector<DataType> data_types = {aicpu_type, DT_INT64};                                 \
+        vector<data_type> input(input_data.begin(), input_data.end());                        \
+        int64_t output[40] = {0};                                                             \
+        vector<void*> datas = {(void*)input.data(), (void*)output};                           \
+        CREATE_NODEDEF(shapes, data_types, datas);                                            \
+        RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);                                         \
+        int nums = shapes[1][0] * shapes[1][1];                                               \
+        bool res = CompareResult<int64_t>(output, expect_out.data(), nums);                   \
+        EXPECT_EQ(res, true);                                                                 \
+    }
 
-#define ADD_CASE_WITH_SHAPE(case_name, data_type, aicpu_type, shapes,          \
-                            input_data, expect_out)                            \
-  TEST_F(TEST_WHERE_UT, TestWhere_WITH_SHAPE_##case_name) {                    \
-    vector<DataType> data_types = {aicpu_type, DT_INT64};                      \
-    vector<data_type> input(input_data.begin(), input_data.end());             \
-    int64_t output[40] = {0};                                                  \
-    vector<void *> datas = {(void *)input.data(), (void *)output};             \
-    CREATE_NODEDEF(shapes, data_types, datas);                                 \
-    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);                              \
-    int nums = shapes[1][0] * shapes[1][1];                                    \
-    bool res = CompareResult<int64_t>(output, expect_out.data(), nums);        \
-    EXPECT_EQ(res, true);                                                      \
-  }
-
-#define ADD_EMPTY_CASE(data_type, aicpu_type, shapes)                          \
-  TEST_F(TEST_WHERE_UT, ADD_EMPTY_CASE) {                                      \
-    vector<DataType> data_types = {aicpu_type, DT_INT64};                      \
-    int64_t output[40] = {0};                                                  \
-    int64_t expect_out[1] = {0};                                               \
-    vector<void *> datas = {nullptr, (void *)output} ;                         \
-    CREATE_NODEDEF(shapes, data_types, datas);                                 \
-    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);                              \
-    bool res = CompareResult<int64_t>(output, expect_out, 0);                  \
-    EXPECT_EQ(res, true);                                                      \
-  }
+#define ADD_EMPTY_CASE(data_type, aicpu_type, shapes)             \
+    TEST_F(TEST_WHERE_UT, ADD_EMPTY_CASE)                         \
+    {                                                             \
+        vector<DataType> data_types = {aicpu_type, DT_INT64};     \
+        int64_t output[40] = {0};                                 \
+        int64_t expect_out[1] = {0};                              \
+        vector<void*> datas = {nullptr, (void*)output};           \
+        CREATE_NODEDEF(shapes, data_types, datas);                \
+        RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);             \
+        bool res = CompareResult<int64_t>(output, expect_out, 0); \
+        EXPECT_EQ(res, true);                                     \
+    }
 
 vector<int> case_data{0, 1, 2, 0, 4, 0, 3, 7};
 vector<int> data_0{0};
-vector<std::complex<float>> data_1 = {std::complex<float>(0, 0),   std::complex<float>(0, 1.),  
-                                      std::complex<float>(1.5, 0), std::complex<float>(0, 0),
-                                      std::complex<float>(4.1, 1), std::complex<float>(0., 0.),
-                                      std::complex<float>(0, 2),   std::complex<float>(1., 1.)};
+vector<std::complex<float>> data_1 = {
+    std::complex<float>(0, 0),   std::complex<float>(0, 1.),  std::complex<float>(1.5, 0), std::complex<float>(0, 0),
+    std::complex<float>(4.1, 1), std::complex<float>(0., 0.), std::complex<float>(0, 2),   std::complex<float>(1., 1.)};
 vector<std::complex<double>> data_2 = {std::complex<double>(0, 0),   std::complex<double>(0, 1.),
                                        std::complex<double>(1.5, 0), std::complex<double>(0, 0),
                                        std::complex<double>(4.1, 1), std::complex<double>(0., 0.),
@@ -92,28 +92,17 @@ vector<int64_t> shape3_res = {0, 1, 0, 2, 1, 0, 1, 2, 1, 3};
 vector<vector<int64_t>> shape4 = {{2, 2, 2}, {5, 3}};
 vector<int64_t> shape4_res = {0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1};
 vector<vector<int64_t>> shape5 = {{2, 1, 2, 2}, {5, 4}};
-vector<int64_t> shape5_res = {0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 
-                              0, 1, 0, 1, 1};
+vector<int64_t> shape5_res = {0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1};
 vector<vector<int64_t>> shape6 = {{2, 1, 2, 1, 2}, {5, 5}};
-vector<int64_t> shape6_res = {0, 0, 0, 0, 1, 0, 0, 1, 0, 0,
-                              1, 0, 0, 0, 0, 1, 0, 1, 0, 0,
-                              1, 0, 1, 0, 1};
+vector<int64_t> shape6_res = {0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1};
 vector<vector<int64_t>> shape7 = {{2, 1, 1, 2, 1, 2}, {5, 6}};
-vector<int64_t> shape7_res = {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
-                              1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0,
-                              1, 0, 0, 1, 0, 1};
+vector<int64_t> shape7_res = {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1};
 vector<vector<int64_t>> shape8 = {{2, 1, 1, 2, 1, 1, 2}, {5, 7}};
-vector<int64_t> shape8_res = {0, 0, 0, 0, 0, 0, 1,
-                              0, 0, 0, 1, 0, 0, 0,
-                              1, 0, 0, 0, 0, 0, 0,
-                              1, 0, 0, 1, 0, 0, 0,
-                              1, 0, 0, 1, 0, 0, 1};
+vector<int64_t> shape8_res = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+                              0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1};
 vector<vector<int64_t>> shape9 = {{2, 1, 1, 2, 1, 1, 2, 1}, {5, 8}};
-vector<int64_t> shape9_res = {0, 0, 0, 0, 0, 0, 1, 0,
-                              0, 0, 0, 1, 0, 0, 0, 0,
-                              1, 0, 0, 0, 0, 0, 0, 0,
-                              1, 0, 0, 1, 0, 0, 0, 0,
-                              1, 0, 0, 1, 0, 0, 1, 0};
+vector<int64_t> shape9_res = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0,
+                              0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
 ADD_CASE(bool_where, bool, DT_BOOL, where_shapes1, data_nums, data)
 ADD_CASE(int8_where, int8_t, DT_INT8, where_shapes1, data_nums, data)
 ADD_CASE(int16_where, int16_t, DT_INT16, where_shapes1, data_nums, data)
@@ -291,22 +280,24 @@ ADD_CASE_WITH_SHAPE(complex128_full_6D, std::complex<double>, DT_COMPLEX128, sha
 ADD_CASE_WITH_SHAPE(complex128_full_7D, std::complex<double>, DT_COMPLEX128, shape8, data_2, shape8_res)
 ADD_CASE_WITH_SHAPE(complex128_full_8D, std::complex<double>, DT_COMPLEX128, shape9, data_2, shape9_res)
 
-TEST_F(TEST_WHERE_UT, Unsupport_Dimension) {
-  vector<DataType> data_types = {DT_INT32, DT_INT64};
-  vector<int> input = {0, 2, 0, 0, 0, 0, 1, 0};
-  vector<vector<int64_t>> shapes = {{2, 1, 1, 1, 2, 1, 1, 2, 1}, {2, 9}};
-  int64_t output[40] = {0};
-  int64_t expect_out[40] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0};
-  vector<void *> datas = {(void*)input.data(), (void *)output};
-  CREATE_NODEDEF(shapes, data_types, datas);
-  RUN_KERNEL(node_def, HOST, KERNEL_STATUS_INNER_ERROR);
+TEST_F(TEST_WHERE_UT, Unsupport_Dimension)
+{
+    vector<DataType> data_types = {DT_INT32, DT_INT64};
+    vector<int> input = {0, 2, 0, 0, 0, 0, 1, 0};
+    vector<vector<int64_t>> shapes = {{2, 1, 1, 1, 2, 1, 1, 2, 1}, {2, 9}};
+    int64_t output[40] = {0};
+    int64_t expect_out[40] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0};
+    vector<void*> datas = {(void*)input.data(), (void*)output};
+    CREATE_NODEDEF(shapes, data_types, datas);
+    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_INNER_ERROR);
 }
 
-TEST_F(TEST_WHERE_UT, Unsupport_DataType) {
-  vector<DataType> data_types = {DT_QUINT16, DT_INT64};
-  vector<int> input(case_data.begin(), case_data.end());
-  int64_t output[40] = {0};
-  vector<void *> datas = {(void *)input.data(), (void *)output};
-  CREATE_NODEDEF(shape9, data_types, datas);
-  RUN_KERNEL(node_def, HOST, KERNEL_STATUS_INNER_ERROR);
+TEST_F(TEST_WHERE_UT, Unsupport_DataType)
+{
+    vector<DataType> data_types = {DT_QUINT16, DT_INT64};
+    vector<int> input(case_data.begin(), case_data.end());
+    int64_t output[40] = {0};
+    vector<void*> datas = {(void*)input.data(), (void*)output};
+    CREATE_NODEDEF(shape9, data_types, datas);
+    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_INNER_ERROR);
 }

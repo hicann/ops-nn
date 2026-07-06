@@ -79,10 +79,7 @@ struct GluSingleTilingOptParam {
 
 class DequantSwigluQuantTiling : public TilingBaseClass {
 public:
-    explicit DequantSwigluQuantTiling(gert::TilingContext* cont) : TilingBaseClass(cont)
-    {
-        Reset();
-    }
+    explicit DequantSwigluQuantTiling(gert::TilingContext* cont) : TilingBaseClass(cont) { Reset(); }
     ~DequantSwigluQuantTiling() override = default;
 
     void Reset(gert::TilingContext* cont) override
@@ -145,13 +142,11 @@ private:
 
     void SaveOptBaseShape(uint32_t baseRowLen_, uint32_t baseColLen_, GluSingleTilingOptParam& optTiling);
 
-    int64_t getTilingKeyDynamic(
-        const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const;
+    int64_t getTilingKeyDynamic(const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const;
 
     bool isPerformanceBranch();
 
-    int64_t getTilingKeyStatic(
-        const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const;
+    int64_t getTilingKeyStatic(const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const;
 
     ge::graphStatus GetShapeAttrsInfoInner();
 
@@ -238,16 +233,16 @@ ge::graphStatus DequantSwigluQuantTiling::checkWeightBiasActivate(gert::TilingCo
         bool checkBiasRes = biasDataType != ge::DT_INT32 && biasDataType != ge::DT_FLOAT &&
                             biasDataType != ge::DT_FLOAT16 && biasDataType != ge::DT_BF16;
         OP_CHECK_IF(checkBiasRes,
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "bias",
-                ge::TypeUtils::DataTypeToSerialString(biasDataType).c_str(), "int32, float, fp16 or bf16"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "bias",
+                                              ge::TypeUtils::DataTypeToSerialString(biasDataType).c_str(),
+                                              "int32, float, fp16 or bf16"),
+                    return ge::GRAPH_FAILED);
 
         uint64_t biasShapeSize = biasShapeShapePtr->GetStorageShape().GetShapeSize();
         OP_CHECK_IF(biasShapeSize != tilingData.get_colLen() * 2,
-            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "bias",
-                std::to_string(biasShapeSize).c_str(),
-                (std::to_string(tilingData.get_colLen() * 2)).c_str()),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "bias", std::to_string(biasShapeSize).c_str(),
+                                                  (std::to_string(tilingData.get_colLen() * 2)).c_str()),
+                    return ge::GRAPH_FAILED);
     }
     tilingData.set_biasIsEmpty(biasShapeShapePtr == nullptr);
     // int32时 weight_scale为必选项
@@ -257,18 +252,20 @@ ge::graphStatus DequantSwigluQuantTiling::checkWeightBiasActivate(gert::TilingCo
     auto weightScaleInputDesc = context->GetOptionalInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, weightScaleInputDesc);
     ge::DataType weightScaleDataType = weightScaleInputDesc->GetDataType();
-    OP_CHECK_IF(weightScaleDataType != ge::DT_FLOAT,
+    OP_CHECK_IF(
+        weightScaleDataType != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "weight_scale",
-            ge::TypeUtils::DataTypeToSerialString(weightScaleDataType).c_str(), "float32"),
+                                  ge::TypeUtils::DataTypeToSerialString(weightScaleDataType).c_str(), "float32"),
         return ge::GRAPH_FAILED);
 
     uint64_t weightScaleShapeSize = weightScaleShapePtr->GetStorageShape().GetShapeSize();
     OP_CHECK_IF(weightScaleShapeSize != tilingData.get_colLen() * 2,
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "weight_scale",
-            std::to_string(weightScaleShapeSize).c_str(),
-            ("The shape size of weight_scale must be equal to the last dimension of x"
-            + std::to_string(tilingData.get_colLen() * 2)).c_str()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context->GetNodeName(), "weight_scale", std::to_string(weightScaleShapeSize).c_str(),
+                    ("The shape size of weight_scale must be equal to the last dimension of x" +
+                     std::to_string(tilingData.get_colLen() * 2))
+                        .c_str()),
+                return ge::GRAPH_FAILED);
 
     // int32时 activate_scale为可选项
     auto activateScaleShapePtr = context->GetOptionalInputShape(2);
@@ -276,17 +273,18 @@ ge::graphStatus DequantSwigluQuantTiling::checkWeightBiasActivate(gert::TilingCo
         auto activateScaleInputDesc = context->GetOptionalInputDesc(2);
         OP_CHECK_NULL_WITH_CONTEXT(context, activateScaleInputDesc);
         ge::DataType activateScaleDataType = activateScaleInputDesc->GetDataType();
-        OP_CHECK_IF(activateScaleDataType != ge::DT_FLOAT,
+        OP_CHECK_IF(
+            activateScaleDataType != ge::DT_FLOAT,
             OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "activation_scale",
-                ge::TypeUtils::DataTypeToSerialString(activateScaleDataType).c_str(), "float32"),
+                                      ge::TypeUtils::DataTypeToSerialString(activateScaleDataType).c_str(), "float32"),
             return ge::GRAPH_FAILED);
 
         uint64_t activateScaleShapeSize = activateScaleShapePtr->GetStorageShape().GetShapeSize();
         OP_CHECK_IF(activateScaleShapeSize != tilingData.get_rowLen(),
-            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "activation_scale",
-                std::to_string(activateScaleShapeSize).c_str(),
-                ("equal to " + std::to_string(tilingData.get_rowLen())).c_str()),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "activation_scale",
+                                                  std::to_string(activateScaleShapeSize).c_str(),
+                                                  ("equal to " + std::to_string(tilingData.get_rowLen())).c_str()),
+                    return ge::GRAPH_FAILED);
     }
     tilingData.set_activateScaleIsEmpty(activateScaleShapePtr == nullptr);
     return ge::GRAPH_SUCCESS;
@@ -309,32 +307,33 @@ ge::graphStatus DequantSwigluQuantTiling::checkInputShape(gert::TilingContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, quantScaleInputDesc);
     ge::DataType quantScaleDataType = quantScaleInputDesc->GetDataType();
     OP_CHECK_IF(quantScaleDataType != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "quant_scale",
-            ge::TypeUtils::DataTypeToSerialString(quantScaleDataType).c_str(), "float32"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "quant_scale",
+                                          ge::TypeUtils::DataTypeToSerialString(quantScaleDataType).c_str(), "float32"),
+                return ge::GRAPH_FAILED);
     quantScaleShapeSize = quantScaleShapePtr->GetStorageShape().GetShapeSize();
     bool checkQuantScaleSize = (quantScaleShapeSize != tilingData.get_colLen()) && (quantScaleShapeSize != 1);
     OP_CHECK_IF(checkQuantScaleSize,
-        OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "quant_scale",
-            std::to_string(quantScaleShapeSize).c_str(),
-            (std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "quant_scale",
+                                              std::to_string(quantScaleShapeSize).c_str(),
+                                              (std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
+                return ge::GRAPH_FAILED);
     if (quantMode == 0) {
         auto quantOffsetShapePtr = context->GetOptionalInputShape(5);
         auto quantOffsetInputDesc = context->GetOptionalInputDesc(5);
         OP_CHECK_NULL_WITH_CONTEXT(context, quantOffsetInputDesc);
         ge::DataType quantOffsetDataType = quantOffsetInputDesc->GetDataType();
-        OP_CHECK_IF(quantOffsetDataType != ge::DT_FLOAT,
+        OP_CHECK_IF(
+            quantOffsetDataType != ge::DT_FLOAT,
             OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "quant_offset",
-                ge::TypeUtils::DataTypeToSerialString(quantOffsetDataType).c_str(), "float32"),
+                                      ge::TypeUtils::DataTypeToSerialString(quantOffsetDataType).c_str(), "float32"),
             return ge::GRAPH_FAILED);
         uint64_t quantOffsetShapeSize = quantOffsetShapePtr->GetStorageShape().GetShapeSize();
         bool checkQuantOffsetSize = (quantOffsetShapeSize != tilingData.get_colLen()) && (quantOffsetShapeSize != 1);
         OP_CHECK_IF(checkQuantOffsetSize,
-            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "quant_offset",
-                std::to_string(quantOffsetShapeSize).c_str(),
-                (std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "quant_offset",
+                                                  std::to_string(quantOffsetShapeSize).c_str(),
+                                                  (std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -347,10 +346,8 @@ bool DequantSwigluQuantTiling::SetAttr(const gert::RuntimeAttrs* attrs)
     std::transform(quantModeAttr.begin(), quantModeAttr.end(), quantModeAttr.begin(), ::tolower);
 
     if ((quantModeAttr != "static") && (quantModeAttr != "dynamic")) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "quant_mode",
-            quantModeAttr.c_str(),
-            "quant_mode should be static or dynamic with case insensitive");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_mode", quantModeAttr.c_str(),
+                                              "quant_mode should be static or dynamic with case insensitive");
         return false;
     }
     activateLeft = (isActivateLeftAttr ? 1 : 0);
@@ -426,11 +423,11 @@ uint32_t DequantSwigluQuantTiling::getBaseColLenUpBound(GluSingleTilingOptParam&
     }
 }
 
-void DequantSwigluQuantTiling::SaveOptBaseShape(
-    uint32_t baseRowLen_, uint32_t baseColLen_, GluSingleTilingOptParam& optTiling)
+void DequantSwigluQuantTiling::SaveOptBaseShape(uint32_t baseRowLen_, uint32_t baseColLen_,
+                                                GluSingleTilingOptParam& optTiling)
 {
-    uint64_t totalTileNum =
-        std::min(static_cast<uint64_t>(tilingData.get_rowLen()), static_cast<uint64_t>(totalAvailableCore));
+    uint64_t totalTileNum = std::min(static_cast<uint64_t>(tilingData.get_rowLen()),
+                                     static_cast<uint64_t>(totalAvailableCore));
     uint64_t baseSize = static_cast<uint64_t>(baseRowLen_ * baseColLen_);
     if (static_cast<int32_t>(baseRowLen_) == 0 || static_cast<int32_t>(baseColLen_) == 0) {
         OP_LOGI("SaveOptBaseShape", "baseRowLen_:%u or baseColLen:%u is zero.", baseRowLen_, baseColLen_);
@@ -439,8 +436,7 @@ void DequantSwigluQuantTiling::SaveOptBaseShape(
     uint64_t baseTileNum = (baseRowLen_ == 0 ? 0 : (tilingData.get_rowLen() / baseRowLen_)) *
                            (baseColLen_ == 0 ? 0 : (tilingData.get_colLen() / baseColLen_));
     totalUsedCoreNum_ = std::min(totalTileNum, static_cast<uint64_t>(totalAvailableCore));
-    if(tilingData.get_colLen() < PERFORMANCE_COL_LEN
-    && tilingData.get_rowLen() < PERFORMANCE_ROW_LEN) {
+    if (tilingData.get_colLen() < PERFORMANCE_COL_LEN && tilingData.get_rowLen() < PERFORMANCE_ROW_LEN) {
         totalUsedCoreNum_ = std::min(totalUsedCoreNum_, static_cast<uint32_t>(MIN_CORE));
     }
     optTiling.optBaseRowLen = baseRowLen_;
@@ -457,17 +453,16 @@ bool DequantSwigluQuantTiling::CalcOptBaseShape(GluSingleTilingOptParam& optTili
     uint32_t baseColLen_ = getBaseColLenUpBound(optTiling);
     uint32_t baseRowlen_ = 1;
     if ((quantMode == 1) && (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16)) {
-        baseRowlen_ = std::min(
-            optTiling.maxTileLen / AlignUp<uint32_t>(baseColLen_, ALIGN_UINT_IN_CACHE_32B),
-            static_cast<uint32_t>(tilingData.get_rowLen()));
+        baseRowlen_ = std::min(optTiling.maxTileLen / AlignUp<uint32_t>(baseColLen_, ALIGN_UINT_IN_CACHE_32B),
+                               static_cast<uint32_t>(tilingData.get_rowLen()));
         baseRowlen_ = std::min(DivCeil<uint32_t>(tilingData.get_rowLen(), totalAvailableCore), baseRowlen_);
     }
     SaveOptBaseShape(baseRowlen_, baseColLen_, optTiling);
     return true;
 }
 
-bool DequantSwigluQuantTiling::CalcOptTiling(
-    const uint64_t ubSize, const int32_t dtype, GluSingleTilingOptParam& optTiling)
+bool DequantSwigluQuantTiling::CalcOptTiling(const uint64_t ubSize, const int32_t dtype,
+                                             GluSingleTilingOptParam& optTiling)
 {
     // 计算maxTilingLen
     if (!CalcUbMaxTileLen(ubSize, dtype, optTiling)) {
@@ -480,8 +475,8 @@ bool DequantSwigluQuantTiling::CalcOptTiling(
     return true;
 }
 
-bool DequantSwigluQuantTiling::CalcTiling(
-    const uint32_t totalCores, const uint64_t ubSize, const platform_ascendc::SocVersion socVersion_)
+bool DequantSwigluQuantTiling::CalcTiling(const uint32_t totalCores, const uint64_t ubSize,
+                                          const platform_ascendc::SocVersion socVersion_)
 {
     totalAvailableCore = totalCores;
     if (!GetLengthByType(xInputDataType, inputDTypeLen)) {
@@ -491,9 +486,8 @@ bool DequantSwigluQuantTiling::CalcTiling(
     ubMinBlockLen = ALIGN_UINT_IN_CACHE_32B / inputDTypeLen; // min block size
     cacheLineLen = PACK_UINT_IN_CACHE_512B / inputDTypeLen;  // bandwidth max efficiency
     alignPackLen = cacheLineLen;                             // 默认512对齐，策略可调整
-    OP_LOGI(
-        "DequantSwigluQuant", "CalcTiling GetLengthByType:%u ubMinBlockLen:%u cacheLineLen:%u alignPackLen:%u",
-        inputDTypeLen, ubMinBlockLen, cacheLineLen, alignPackLen);
+    OP_LOGI("DequantSwigluQuant", "CalcTiling GetLengthByType:%u ubMinBlockLen:%u cacheLineLen:%u alignPackLen:%u",
+            inputDTypeLen, ubMinBlockLen, cacheLineLen, alignPackLen);
     // Is 32-byte aligned for split colLen?
     tilingData.set_is32BAligned(tilingData.get_colLen() % ubMinBlockLen == 0);
     // 310p not support Non-64B
@@ -501,8 +495,8 @@ bool DequantSwigluQuantTiling::CalcTiling(
     if (((socVersion_ == platform_ascendc::SocVersion::ASCEND310P)) &&
         (tilingData.get_colLen() % blockSizeOf64B != 0)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            std::to_string(tilingData.get_colLen()).c_str(),
-            "The last dimension of x must be 64B aligned on ASCEND310P");
+                                              std::to_string(tilingData.get_colLen()).c_str(),
+                                              "The last dimension of x must be 64B aligned on ASCEND310P");
         return false;
     }
     GluSingleTilingOptParam optTilingDb;
@@ -515,16 +509,12 @@ bool DequantSwigluQuantTiling::CalcTiling(
     tilingData.set_baseColLen(optTiling->optBaseColLen);
     totalUsedCoreNum = optTiling->totalUsedCoreNum;
     tilingData.set_usedCoreNum(totalUsedCoreNum);
-    OP_LOGI(
-        "DequantSwigluQuant", "CalcTilingRES baseRowLen:%u baseColLen:%u", optTiling->optBaseRowLen,
-        optTiling->optBaseColLen);
+    OP_LOGI("DequantSwigluQuant", "CalcTilingRES baseRowLen:%u baseColLen:%u", optTiling->optBaseRowLen,
+            optTiling->optBaseColLen);
     return true;
 }
 
-ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
 {
@@ -557,18 +547,16 @@ ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
     const gert::Shape yShape = yShapePtr->GetStorageShape();
 
     int32_t dimNum = xShape.GetDimNum();
-    if(xShape.GetDimNum() != yShape.GetDimNum()){
+    if (xShape.GetDimNum() != yShape.GetDimNum()) {
         std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x and y",
-        incorrectDims.c_str(),
-        "The shape of y must be equal to the shape of x");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x and y", incorrectDims.c_str(),
+                                                  "The shape of y must be equal to the shape of x");
     }
 
-    if(xShape.GetDim(dimNum - 1) != yShape.GetDim(dimNum - 1) * 2){
-         std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
-         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "x and y",
-        incorrectDims.c_str(),
-        "The last dimension of x must be twice the last dimension of y.");
+    if (xShape.GetDim(dimNum - 1) != yShape.GetDim(dimNum - 1) * 2) {
+        std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "x and y", incorrectDims.c_str(),
+                                               "The last dimension of x must be twice the last dimension of y.");
     }
 
     auto scaleShapePtr = context_->GetOutputShape(1);
@@ -596,13 +584,10 @@ ge::graphStatus DequantSwigluQuantTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DequantSwigluQuantTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus DequantSwigluQuantTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-int64_t DequantSwigluQuantTiling::getTilingKeyStatic(
-    const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const
+int64_t DequantSwigluQuantTiling::getTilingKeyStatic(const int32_t inputDtype, const ge::DataType biasType,
+                                                     const int64_t scaleSize) const
 {
     if (inputDtype != ge::DT_INT32) {
         if (scaleSize == 1) {
@@ -642,8 +627,8 @@ int64_t DequantSwigluQuantTiling::getTilingKeyStatic(
     }
 }
 
-int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(
-    const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const
+int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(const int32_t inputDtype, const ge::DataType biasType,
+                                                      const int64_t scaleSize) const
 {
     if (inputDtype != ge::DT_INT32) {
         if (inputDtype == ge::DT_FLOAT16) {
@@ -674,7 +659,7 @@ int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(
         if (biasType == ge::DT_INT32) {
             return DYNAMIC_INT_X_INT_BIAS_QUANT_D;
         } else if (biasType == ge::DT_FLOAT) {
-            if(isPerfBranch) {
+            if (isPerfBranch) {
                 return DYNAMIC_INT_X_FLOAT32_BIAS_QUANT_D_PERFORMANCE;
             }
             return DYNAMIC_INT_X_FLOAT32_BIAS_QUANT_D;
@@ -686,13 +671,11 @@ int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(
     }
 }
 
-bool DequantSwigluQuantTiling::isPerformanceBranch() {
-    if(tilingData.get_is32BAligned() == 1
-    && tilingData.get_colLen() <= PERFORMANCE_COL_LEN
-    && tilingData.get_baseRowLen() == 1
-    && tilingData.get_baseColLen() == tilingData.get_colLen()
-    && tilingData.get_biasIsEmpty() == 1
-    && tilingData.get_activateScaleIsEmpty() == 0) {
+bool DequantSwigluQuantTiling::isPerformanceBranch()
+{
+    if (tilingData.get_is32BAligned() == 1 && tilingData.get_colLen() <= PERFORMANCE_COL_LEN &&
+        tilingData.get_baseRowLen() == 1 && tilingData.get_baseColLen() == tilingData.get_colLen() &&
+        tilingData.get_biasIsEmpty() == 1 && tilingData.get_activateScaleIsEmpty() == 0) {
         return true;
     }
     return false;

@@ -16,10 +16,11 @@
 #include "log/log.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 
-ge::graphStatus CopyShapeInput2OutputWithForKlDivLossGrad(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx) {
+ge::graphStatus CopyShapeInput2OutputWithForKlDivLossGrad(gert::InferShapeContext* context, int64_t input_idx,
+                                                          int64_t output_idx)
+{
     auto in_shape = context->GetInputShape(input_idx);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
     auto out_shape = context->GetOutputShape(output_idx);
@@ -42,6 +43,5 @@ graphStatus InferDtypeForKlDivLossGrad(gert::InferDataTypeContext* context)
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(KlDivLossGrad).InferShape(InferShape4InIdx1AndOutIdx0)
-                                 .InferDataType(InferDtypeForKlDivLossGrad);
-}
+IMPL_OP_INFERSHAPE(KlDivLossGrad).InferShape(InferShape4InIdx1AndOutIdx0).InferDataType(InferDtypeForKlDivLossGrad);
+} // namespace ops

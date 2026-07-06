@@ -28,15 +28,15 @@ namespace AscendC {
  *  2.2 inplace_matmul_all_reduce_add_rms_norm.cpp
  *  2.3 matmul_all_reduce.cpp
  */
-template <typename xType, typename wType, int fFormat, int wFormat, typename scaleType, typename yType, bool aTrans, bool bTrans,
-          bool isAllAiv = false>
+template <typename xType, typename wType, int fFormat, int wFormat, typename scaleType, typename yType, bool aTrans,
+          bool bTrans, bool isAllAiv = false>
 class BmmDequantBf16 {
 public:
     __aicore__ inline BmmDequantBf16() {}
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR scale, GM_ADDR y, GM_ADDR workSpace,
-                                const QuantBatchMatmulV3TilingData *__restrict tilingData, TPipe *tPipe)
+                                const QuantBatchMatmulV3TilingData* __restrict tilingData, TPipe* tPipe)
     {
-        blockIdx_ = GetBlockIdx();  // AIC_AIV_1_1 by default
+        blockIdx_ = GetBlockIdx(); // AIC_AIV_1_1 by default
         blockIdx_ /= GetTaskRation();
 
         InitTilingData(tilingData);
@@ -67,28 +67,28 @@ public:
             return;
         }
         if (isPerTensor_) {
-            scaleScalar_ = *((__gm__ scaleType *)scale);
+            scaleScalar_ = *((__gm__ scaleType*)scale);
         }
-        xGm_.SetGlobalBuffer((__gm__ xType *)x1);
-        weightGm_.SetGlobalBuffer((__gm__ wType *)x2);
+        xGm_.SetGlobalBuffer((__gm__ xType*)x1);
+        weightGm_.SetGlobalBuffer((__gm__ wType*)x2);
         if (m_ <= baseM_) {
             weightGm_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
         }
         if (hasBias_ != 0U) {
             if (biasDtype_ == DT_BF16) {
-                biasGmBf16_.SetGlobalBuffer((__gm__ bfloat16_t *)bias);
+                biasGmBf16_.SetGlobalBuffer((__gm__ bfloat16_t*)bias);
             } else if (biasDtype_ == DT_FLOAT16) {
-                biasGmFp16_.SetGlobalBuffer((__gm__ half *)bias);
+                biasGmFp16_.SetGlobalBuffer((__gm__ half*)bias);
             } else if (biasDtype_ == DT_FLOAT) {
-                biasGmFp32_.SetGlobalBuffer((__gm__ float *)bias);
+                biasGmFp32_.SetGlobalBuffer((__gm__ float*)bias);
             } else {
-                biasGmInt32_.SetGlobalBuffer((__gm__ int32_t *)bias);
+                biasGmInt32_.SetGlobalBuffer((__gm__ int32_t*)bias);
             }
         }
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
-        scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
-        uint32_t singleOffset =
-            DequantBmm::Max(singleTimeM_, baseM_) * DequantBmm::Max(singleTimeN_, baseN_) * sizeof(int32_t);
+        yGm_.SetGlobalBuffer((__gm__ yType*)y);
+        scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
+        uint32_t singleOffset = DequantBmm::Max(singleTimeM_, baseM_) * DequantBmm::Max(singleTimeN_, baseN_) *
+                                sizeof(int32_t);
         mm.SetWorkspace(workSpace + blockIdx_ * singleOffset, singleOffset);
     }
 
@@ -106,7 +106,7 @@ public:
 
         uint32_t divideBatchcoreNum = usedCoreNum_ / batchDim;
 
-        uint32_t mCoreIndx = (blockIdx_ % divideBatchcoreNum) % mDim;  // 必须沿着N 轴方向输出
+        uint32_t mCoreIndx = (blockIdx_ % divideBatchcoreNum) % mDim; // 必须沿着N 轴方向输出
         uint32_t nCoreIndx = (blockIdx_ % divideBatchcoreNum) / mDim;
         uint32_t batchCoreIndx = blockIdx_ / divideBatchcoreNum;
 
@@ -157,7 +157,7 @@ protected:
     GlobalTensor<yType> yGm_;
     GlobalTensor<scaleType> scaleGm_;
 
-    TPipe *pipe_;
+    TPipe* pipe_;
     // define the que
     TQue<QuePosition::VECIN, 1> vecQueSrc_;
     TQue<QuePosition::VECIN, 1> vecQueScale_;
@@ -208,7 +208,7 @@ protected:
 
     /** init function for TilingData of mm1
      */
-    __aicore__ inline void InitTilingData(const QuantBatchMatmulV3TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const QuantBatchMatmulV3TilingData* tilingData)
     {
         hasBias_ = tilingData->matmulTiling.isBias;
         isPerTensor_ = tilingData->params.isPerTensor;
@@ -226,10 +226,10 @@ protected:
         m_ = tilingData->matmulTiling.M;
         n_ = tilingData->matmulTiling.N;
         k_ = tilingData->matmulTiling.Ka;
-        singleCoreM_ = tilingData->params.realSingleCoreM;    // calcM of each core
-        singleCoreN_ = tilingData->params.realSingleCoreN;    // calcN of each core
-        singleTimeM_ = tilingData->matmulTiling.singleCoreM;  // calcM of each mm iterate
-        singleTimeN_ = tilingData->matmulTiling.singleCoreN;  // calcN of each mm iterate
+        singleCoreM_ = tilingData->params.realSingleCoreM;   // calcM of each core
+        singleCoreN_ = tilingData->params.realSingleCoreN;   // calcN of each core
+        singleTimeM_ = tilingData->matmulTiling.singleCoreM; // calcM of each mm iterate
+        singleTimeN_ = tilingData->matmulTiling.singleCoreN; // calcN of each mm iterate
         singleCoreK_ = tilingData->matmulTiling.singleCoreK;
         usedCoreNum_ = tilingData->matmulTiling.usedCoreNum;
 
@@ -255,15 +255,12 @@ protected:
         } else if constexpr (AMatmulType::format == CubeFormat::NZ) {
             if constexpr (aTrans) {
                 // m1, k1, k0, m0
-                offsetA_ =
-                    DequantBmm::Align(k_, BMM_BLOCK_NUM) * DequantBmm::Align(mOffset, K0_INT8) +
-                    batchAOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM) *
-                        DequantBmm::Align(m_, K0_INT8);
+                offsetA_ = DequantBmm::Align(k_, BMM_BLOCK_NUM) * DequantBmm::Align(mOffset, K0_INT8) +
+                           batchAOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM) * DequantBmm::Align(m_, K0_INT8);
             } else {
                 // k1, m1, m0, k0
                 offsetA_ = DequantBmm::Align(mOffset, BMM_BLOCK_NUM) * K0_INT8 +
-                           batchAOffset * DequantBmm::Align(k_, K0_INT8) *
-                               DequantBmm::Align(m_, BMM_BLOCK_NUM);
+                           batchAOffset * DequantBmm::Align(k_, K0_INT8) * DequantBmm::Align(m_, BMM_BLOCK_NUM);
             }
         }
 
@@ -274,14 +271,11 @@ protected:
             if constexpr (bTrans) {
                 // k1, n1, n0, k0
                 offsetB_ = DequantBmm::Align(nOffset, BMM_BLOCK_NUM) * K0_INT8 +
-                           batchBOffset * DequantBmm::Align(n_, BMM_BLOCK_NUM) *
-                               DequantBmm::Align(k_, K0_INT8);
+                           batchBOffset * DequantBmm::Align(n_, BMM_BLOCK_NUM) * DequantBmm::Align(k_, K0_INT8);
             } else {
                 // n1, k1, k0, n0
-                offsetB_ =
-                    DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
-                    batchBOffset * DequantBmm::Align(n_, K0_INT8) *
-                        DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                offsetB_ = DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
+                           batchBOffset * DequantBmm::Align(n_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 
@@ -321,8 +315,7 @@ protected:
                 if constexpr (bTrans) {
                     offsetB_ -= DequantBmm::Align(nOffset, BMM_BLOCK_NUM) * K0_INT8;
                 } else {
-                    offsetB_ -=
-                        DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                    offsetB_ -= DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
                 }
             }
             offsetBias_ -= nOffset;
@@ -341,8 +334,7 @@ protected:
             if constexpr (bTrans) {
                 offsetB_ += DequantBmm::Align(singleTimeN_, BMM_BLOCK_NUM) * K0_INT8;
             } else {
-                offsetB_ +=
-                    DequantBmm::Align(singleTimeN_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                offsetB_ += DequantBmm::Align(singleTimeN_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 
@@ -361,26 +353,26 @@ protected:
         if (hasBias_ != 0 && biasDtype_ == DT_INT32) {
             mm.SetBias(biasGmInt32_[offsetBias_]);
         }
-        mm.template Iterate<false>();  // matmultiling singleTimeM_ * singleTimeN_
+        mm.template Iterate<false>(); // matmultiling singleTimeM_ * singleTimeN_
     }
 
-    __aicore__ inline void BiasTensorInit(LocalTensor<float> &dstLocalFp32, LocalTensor<float> &biasFp32,
-                                          LocalTensor<bfloat16_t> &oriBiasBf16, LocalTensor<half> &oriBiasFp16,
-                                          LocalTensor<float> &oriBiasFp32)
+    __aicore__ inline void BiasTensorInit(LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32,
+                                          LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                          LocalTensor<float>& oriBiasFp32)
     {
         dstLocalFp32 = outFp32Tmp_.Get<float>();
         biasFp32 = biasFp32Tmp_.Get<float>();
         if (biasDtype_ == DT_BF16) {
-            oriBiasBf16 = vecQueBias_.AllocTensor<bfloat16_t>();  // free in CalBiasAdd
+            oriBiasBf16 = vecQueBias_.AllocTensor<bfloat16_t>(); // free in CalBiasAdd
         } else if (biasDtype_ == DT_FLOAT16) {
-            oriBiasFp16 = vecQueBias_.AllocTensor<half>();  // free in CalBiasAdd
+            oriBiasFp16 = vecQueBias_.AllocTensor<half>(); // free in CalBiasAdd
         } else if (biasDtype_ == DT_FLOAT) {
-            oriBiasFp32 = vecQueBias_.AllocTensor<float>();  // free in CalBiasAdd
+            oriBiasFp32 = vecQueBias_.AllocTensor<float>(); // free in CalBiasAdd
         }
     }
 
-    __aicore__ inline void BiasGm2Ub(LocalTensor<bfloat16_t> &oriBiasBf16, LocalTensor<half> &oriBiasFp16,
-                                     LocalTensor<float> &oriBiasFp32, DataCopyPadParams padParams,
+    __aicore__ inline void BiasGm2Ub(LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                     LocalTensor<float>& oriBiasFp32, DataCopyPadParams padParams,
                                      uint64_t baseNOfffset, uint32_t curAivN)
     {
         DataCopyParams bias2UbParams{1, 0, 0, 0};
@@ -396,7 +388,7 @@ protected:
         }
     }
 
-    __aicore__ inline void Bf16ScaleGm2Ub(LocalTensor<scaleType> &scaleLocal, GlobalTensor<scaleType> &scaleGm_,
+    __aicore__ inline void Bf16ScaleGm2Ub(LocalTensor<scaleType>& scaleLocal, GlobalTensor<scaleType>& scaleGm_,
                                           DataCopyPadParams padParams, uint64_t baseNOfffset, uint32_t curAivN)
     {
         DataCopyParams scale2UbParams{1, 0, 0, 0};
@@ -405,13 +397,13 @@ protected:
         DataCopyPad(scaleLocal, scaleGm_[scaleOffset], scale2UbParams, padParams);
     }
 
-    __aicore__ inline void CalBiasAdd(LocalTensor<float> &dstLocalFp32, LocalTensor<float> &biasFp32,
-                                      LocalTensor<bfloat16_t> &oriBiasBf16, LocalTensor<half> &oriBiasFp16,
-                                      LocalTensor<float> &oriBiasFp32, LocalTensor<yType> &dstLocal, uint32_t curAivN,
+    __aicore__ inline void CalBiasAdd(LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32,
+                                      LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                      LocalTensor<float>& oriBiasFp32, LocalTensor<yType>& dstLocal, uint32_t curAivN,
                                       uint32_t curAivM)
     {
-        uint32_t computedAivN = DequantBmm::Align(curAivN, 8U);  // 8: 32B aligned for int32_t
-        uint32_t ubResAlignedN = DequantBmm::Align(curAivN);     // 16: sizeof(yType) is 2, 32B / 2
+        uint32_t computedAivN = DequantBmm::Align(curAivN, 8U); // 8: 32B aligned for int32_t
+        uint32_t ubResAlignedN = DequantBmm::Align(curAivN);    // 16: sizeof(yType) is 2, 32B / 2
         AscendC::PipeBarrier<PIPE_V>();
         if (biasDtype_ == DT_BF16) {
             Cast(biasFp32, oriBiasBf16, RoundMode::CAST_NONE, ubResAlignedN);
@@ -447,7 +439,7 @@ protected:
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void DequantCompute(GlobalTensor<int32_t> &curMmOutGm, uint64_t baseMOfffset,
+    __aicore__ inline void DequantCompute(GlobalTensor<int32_t>& curMmOutGm, uint64_t baseMOfffset,
                                           uint64_t baseNOfffset, uint32_t curAicM, uint32_t curAicN)
     {
         LocalTensor<float> dstLocalFp32;
@@ -575,6 +567,6 @@ protected:
         mm.End();
     }
 };
-}  // namespace AscendC
+} // namespace AscendC
 
-#endif  // QUANT_BATCH_MATMUL_V3_BF16_H
+#endif // QUANT_BATCH_MATMUL_V3_BF16_H

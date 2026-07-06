@@ -32,8 +32,8 @@ using namespace AscendAntiQuantV2;
 using namespace AscendAntiQuantV2Op;
 
 template <uint64_t perMode, uint64_t zeroPointsType, uint64_t sqrtMode>
-__global__ __aicore__ void ascend_anti_quant_v2(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void ascend_anti_quant_v2(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                                GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if constexpr (perMode == TPL_PER_TENSOR) {
@@ -44,7 +44,8 @@ __global__ __aicore__ void ascend_anti_quant_v2(
             op.Init(x, scale, offset, y);
             op.Process();
         } else {
-            AscendAntiQuantV2PerTensorNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(&tilingData);
+            AscendAntiQuantV2PerTensorNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(
+                &tilingData);
             op.Init(x, scale, offset, y);
             op.Process();
         }
@@ -56,7 +57,8 @@ __global__ __aicore__ void ascend_anti_quant_v2(
             op.Init(x, scale, offset, y);
             op.Process();
         } else {
-            AscendAntiQuantV2PerChannelNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(&tilingData);
+            AscendAntiQuantV2PerChannelNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(
+                &tilingData);
             op.Init(x, scale, offset, y);
             op.Process();
         }
@@ -68,7 +70,8 @@ __global__ __aicore__ void ascend_anti_quant_v2(
             op.Init(x, scale, offset, y);
             op.Process();
         } else {
-            AscendAntiQuantV2PerHeadNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(&tilingData);
+            AscendAntiQuantV2PerHeadNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(
+                &tilingData);
             op.Init(x, scale, offset, y);
             op.Process();
         }
@@ -76,11 +79,13 @@ __global__ __aicore__ void ascend_anti_quant_v2(
         REGISTER_TILING_DEFAULT(AscendAntiQuantV2TilingData);
         GET_TILING_DATA_WITH_STRUCT(AscendAntiQuantV2TilingData, tilingData, tiling);
         if constexpr (zeroPointsType == TPL_HAS_OFFSET) {
-            AscendAntiQuantV2PerChannelNddmaRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(&tilingData);
+            AscendAntiQuantV2PerChannelNddmaRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(
+                &tilingData);
             op.Init(x, scale, offset, y);
             op.Process();
         } else {
-            AscendAntiQuantV2PerChannelNddmaNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(&tilingData);
+            AscendAntiQuantV2PerChannelNddmaNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(
+                &tilingData);
             op.Init(x, scale, offset, y);
             op.Process();
         }
@@ -92,7 +97,8 @@ __global__ __aicore__ void ascend_anti_quant_v2(
             op.Init(x, scale, offset, y);
             op.Process();
         } else {
-            AscendAntiQuantV2PerHeadNddmaNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(&tilingData);
+            AscendAntiQuantV2PerHeadNddmaNoOffsetRegbase<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE, DTYPE_Y, sqrtMode> op(
+                &tilingData);
             op.Init(x, scale, offset, y);
             op.Process();
         }

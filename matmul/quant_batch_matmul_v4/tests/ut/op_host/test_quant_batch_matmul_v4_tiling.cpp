@@ -44,8 +44,7 @@ struct QuantBatchMatmulV4TilingTestParam {
 };
 
 class TestQuantBatchMatmulV4Tiling : public testing::TestWithParam<QuantBatchMatmulV4TilingTestParam> {};
-class TestQuantBatchMatmulV4TilingRegbase
-    : public testing::TestWithParam<QuantBatchMatmulV4TilingTestParam> {};
+class TestQuantBatchMatmulV4TilingRegbase : public testing::TestWithParam<QuantBatchMatmulV4TilingTestParam> {};
 
 using namespace ge;
 using namespace ut_util;
@@ -55,8 +54,8 @@ static std::vector<QuantBatchMatmulV4TilingTestParam> GetParams()
 {
     std::vector<QuantBatchMatmulV4TilingTestParam> params;
     const std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
-    const std::string casePath(
-        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_tiling.csv");
+    const std::string casePath(rootPath +
+                               "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_tiling.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
         std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -92,7 +91,7 @@ static std::vector<QuantBatchMatmulV4TilingTestParam> GetParams()
     return params;
 }
 
-static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
+static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
 {
     std::cout << "run case " << param.caseName << std::endl;
     std::vector<string> testParam;
@@ -233,16 +232,18 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     int64_t groupM = 0;
     if (group > 0) {
         groupSize = group;
-        groupK = group & 0xFFFF; // 0-15bit group_k
-        groupN = static_cast<int64_t>((group & 0xFFFF0000) >> 16); // 16-31bit group_n
+        groupK = group & 0xFFFF;                                       // 0-15bit group_k
+        groupN = static_cast<int64_t>((group & 0xFFFF0000) >> 16);     // 16-31bit group_n
         groupM = static_cast<int64_t>((group & 0xFFFF00000000) >> 32); // 32-47bit group_m
         int64_t groupNum = (k + group - 1) / group;
         if (!hasX2Table) {
-            x1ScaleShape.MutableStorageShape() =
-                x1ScaleDtype == ge::DT_FLOAT8_E8M0 ? gert::Shape({m, groupNum / 2, 2}) : gert::Shape({m, groupNum});
+            x1ScaleShape.MutableStorageShape() = x1ScaleDtype == ge::DT_FLOAT8_E8M0 ?
+                                                     gert::Shape({m, groupNum / 2, 2}) :
+                                                     gert::Shape({m, groupNum});
             if (transB) {
-                x2ScaleShape.MutableStorageShape() =
-                    x2ScaleDtype == ge::DT_FLOAT8_E8M0 ? gert::Shape({n, groupNum / 2, 2}) : gert::Shape({n, groupNum});
+                x2ScaleShape.MutableStorageShape() = x2ScaleDtype == ge::DT_FLOAT8_E8M0 ?
+                                                         gert::Shape({n, groupNum / 2, 2}) :
+                                                         gert::Shape({n, groupNum});
             } else {
                 x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n});
             }
@@ -282,25 +283,25 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     QuantBatchMatmulV4CompileInfo compileInfo;
 
     auto kernelHold = gert::KernelRunContextFaker()
-                            .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
-                            .Outputs({&compileInfo})
-                            .Build();
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
 
     std::string opType("QuantBatchMatmulV4");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, hasBias ? &biasShape : nullptr,
                                     hasX1Scale ? &x1ScaleShape : nullptr, hasX2Scale ? &x2ScaleShape : nullptr,
-                                    hasYScale ? &yScaleShape : nullptr, nullptr, nullptr, nullptr, hasX2Table ?
-                                    &x2TableShape : nullptr})
+                                    hasYScale ? &yScaleShape : nullptr, nullptr, nullptr, nullptr,
+                                    hasX2Table ? &x2TableShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -325,7 +326,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
                       .SetOpType(opType)
                       .Build();
 
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -340,8 +341,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
     ge::graphStatus ret = tilingFunc(tilingContext);
-    ASSERT_EQ(ret, param.tilingResult)
-        << "caseName: " << param.caseName;
+    ASSERT_EQ(ret, param.tilingResult) << "caseName: " << param.caseName;
     if (ret == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey)
             << "caseName: " << param.caseName << ", actual tilingKey: " << tilingContext->GetTilingKey()

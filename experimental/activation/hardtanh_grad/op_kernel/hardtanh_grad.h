@@ -33,18 +33,16 @@ class KernelHardtanhGrad {
 public:
     __aicore__ inline KernelHardtanhGrad(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR result, GM_ADDR grad, GM_ADDR y, 
-        const HardtanhGradTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR result, GM_ADDR grad, GM_ADDR y, const HardtanhGradTilingData* tilingData,
+                                TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void CopyIn(int32_t progress);
     __aicore__ inline void CopyOut(int32_t progress);
     __aicore__ inline void Compute(int32_t progress);
-    __aicore__ inline void CalculateMask(AscendC::LocalTensor<uint8_t> &maskLocal, 
-                                         AscendC::LocalTensor<float> &xLocal, 
-                                         uint32_t length);    
+    __aicore__ inline void CalculateMask(AscendC::LocalTensor<uint8_t>& maskLocal, AscendC::LocalTensor<float>& xLocal,
+                                         uint32_t length);
 
 private:
     AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueueC, inQueueX;
@@ -64,8 +62,8 @@ private:
 };
 
 template <typename TYPE_X, typename TYPE_Y>
-__aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Init(
-    GM_ADDR result, GM_ADDR grad, GM_ADDR y, const HardtanhGradTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Init(GM_ADDR result, GM_ADDR grad, GM_ADDR y,
+                                                                const HardtanhGradTilingData* tilingData, TPipe* pipeIn)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -79,7 +77,8 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Init(
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     this->maskTileDataNum = tilingData->maskTileDataNum;
     this->min = tilingData->min;
@@ -93,7 +92,7 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Init(
     pipeIn->InitBuffer(outQueueY, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_Y));
     pipeIn->InitBuffer(maskBuf, 3 * this->maskTileDataNum * sizeof(uint8_t));
 
-    if constexpr((std::is_same_v<TYPE_Y, half>) || (std::is_same_v<TYPE_Y, bfloat16_t>)) {
+    if constexpr ((std::is_same_v<TYPE_Y, half>) || (std::is_same_v<TYPE_Y, bfloat16_t>)) {
         pipeIn->InitBuffer(tmpBuf, this->tileDataNum * sizeof(float));
     }
 }
@@ -120,27 +119,29 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::CopyOut(int32_t progr
 }
 
 template <typename TYPE_X, typename TYPE_Y>
-__aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::CalculateMask(AscendC::LocalTensor<uint8_t> &maskLocal, 
-                                                                         AscendC::LocalTensor<float> &xLocal, 
+__aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::CalculateMask(AscendC::LocalTensor<uint8_t>& maskLocal,
+                                                                         AscendC::LocalTensor<float>& xLocal,
                                                                          uint32_t length)
 {
     LocalTensor<uint8_t> maskTmp1 = maskLocal;
     LocalTensor<uint8_t> maskTmp2 = maskLocal[this->maskTileDataNum];
-    LocalTensor<uint8_t> maskTmp3 = maskLocal[2 * this->maskTileDataNum];   
+    LocalTensor<uint8_t> maskTmp3 = maskLocal[2 * this->maskTileDataNum];
     CompareScalar(maskTmp1, xLocal, (float)(1.0), CMPMODE::LE, length);
     CompareScalar(maskTmp2, xLocal, (float)(1.0), CMPMODE::GT, length);
     AscendC::PipeBarrier<PIPE_V>();
-    Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (length / BITS_PER_INT16));
+    Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(),
+       (length / BITS_PER_INT16));
     AscendC::PipeBarrier<PIPE_V>();
     Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), (length / BITS_PER_INT16));
     CompareScalar(maskTmp3, xLocal, (float)(this->max), CMPMODE::LE, length);
     CompareScalar(maskTmp2, xLocal, (float)(this->min), CMPMODE::GE, length);
     AscendC::PipeBarrier<PIPE_V>();
-    And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), maskTmp3.ReinterpretCast<uint16_t>(), (length / BITS_PER_INT16));
+    And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(),
+        maskTmp3.ReinterpretCast<uint16_t>(), (length / BITS_PER_INT16));
     AscendC::PipeBarrier<PIPE_V>();
-    Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (length / BITS_PER_INT16));   
+    Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(),
+       (length / BITS_PER_INT16));
 }
-
 
 template <typename TYPE_X, typename TYPE_Y>
 __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Compute(int32_t progress)
@@ -149,26 +150,24 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Compute(int32_t progr
     LocalTensor<TYPE_X> xLocal = inQueueX.DeQue<TYPE_X>();
     LocalTensor<TYPE_X> yLocal = outQueueY.AllocTensor<TYPE_X>();
     LocalTensor<TYPE_X> x2Local = xLocal;
-    LocalTensor<TYPE_X> x1Local = xLocal[this->tileDataNum];    
-    if constexpr (std::is_same_v<TYPE_X, float>) 
-    {
+    LocalTensor<TYPE_X> x1Local = xLocal[this->tileDataNum];
+    if constexpr (std::is_same_v<TYPE_X, float>) {
         CalculateMask(maskTmp, x2Local, this->processDataNum);
-        Select(yLocal, maskTmp, x1Local, static_cast<float>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);        
+        Select(yLocal, maskTmp, x1Local, static_cast<float>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
     }
-    if constexpr (std::is_same_v<TYPE_X, half>) 
-    {
+    if constexpr (std::is_same_v<TYPE_X, half>) {
         LocalTensor<float> p1 = tmpBuf.Get<float>();
         Cast(p1, x2Local, RoundMode::CAST_NONE, this->processDataNum);
         CalculateMask(maskTmp, p1, this->processDataNum);
-        Select(yLocal, maskTmp, x1Local, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);     
-    }    
-    if constexpr (std::is_same_v<TYPE_X, bfloat16_t>) 
-    {
+        Select(yLocal, maskTmp, x1Local, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+    }
+    if constexpr (std::is_same_v<TYPE_X, bfloat16_t>) {
         LocalTensor<float> p1 = tmpBuf.Get<float>();
         Cast(p1, x2Local, RoundMode::CAST_NONE, this->processDataNum);
         CalculateMask(maskTmp, p1, this->processDataNum);
-        Select(yLocal.template ReinterpretCast<half>(), maskTmp, x1Local.template ReinterpretCast<half>(), static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);      
-    }     
+        Select(yLocal.template ReinterpretCast<half>(), maskTmp, x1Local.template ReinterpretCast<half>(),
+               static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+    }
 
     outQueueY.EnQue<TYPE_X>(yLocal);
     inQueueX.FreeTensor(xLocal);
@@ -189,15 +188,14 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Process()
     Compute(loopCount - 1);
     CopyOut(loopCount - 1);
 }
-    
+
 template <typename TYPE_X, typename TYPE_Y>
 class KernelHardtanhGrad_NoDB {
 public:
     __aicore__ inline KernelHardtanhGrad_NoDB(){};
-    __aicore__ inline void Init(
-        GM_ADDR result, GM_ADDR grad, GM_ADDR y, 
-        const HardtanhGradTilingData* tilingData, 
-        TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR result, GM_ADDR grad, GM_ADDR y, const HardtanhGradTilingData* tilingData,
+                                TPipe* pipeIn);
+
 private:
     AscendC::TQue<AscendC::QuePosition::VECIN, 1> inQueueC, inQueueX;
     AscendC::TQue<AscendC::QuePosition::VECOUT, 1> outQueueY;
@@ -211,20 +209,16 @@ private:
 };
 
 template <typename TYPE_X, typename TYPE_Y>
-__aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
-        GM_ADDR result, GM_ADDR grad, GM_ADDR y, 
-        const HardtanhGradTilingData* tilingData, 
-        TPipe* pipeIn)
+__aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(GM_ADDR result, GM_ADDR grad, GM_ADDR y,
+                                                                     const HardtanhGradTilingData* tilingData,
+                                                                     TPipe* pipeIn)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
     uint64_t coreNum = AscendC::GetBlockNum();
-    if (coreId != coreNum - 1)
-    {
+    if (coreId != coreNum - 1) {
         this->processDataNum = tilingData->tileDataNum;
-    }
-    else
-    {
+    } else {
         this->processDataNum = tilingData->smallTailDataNum;
     }
     uint64_t globalBufferIndex = tilingData->tileDataNum * coreId;
@@ -240,7 +234,7 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
     pipeIn->InitBuffer(outQueueY, BUFFER_NUM, MAX_TILEDATA * sizeof(TYPE_Y));
     pipeIn->InitBuffer(maskBuf, 3 * MAX_TILEDATA * sizeof(uint8_t));
 
-    if constexpr((std::is_same_v<TYPE_Y, half>) || (std::is_same_v<TYPE_Y, bfloat16_t>)) {
+    if constexpr ((std::is_same_v<TYPE_Y, half>) || (std::is_same_v<TYPE_Y, bfloat16_t>)) {
         pipeIn->InitBuffer(tmpBuf, MAX_TILEDATA * sizeof(float));
     }
     LocalTensor<TYPE_Y> xLocal = inQueueX.AllocTensor<TYPE_Y>();
@@ -254,41 +248,44 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
     LocalTensor<uint8_t> maskTmp = maskBuf.Get<uint8_t>();
     LocalTensor<uint8_t> maskTmp1 = maskTmp;
     LocalTensor<uint8_t> maskTmp2 = maskTmp[MAX_TILEDATA];
-    LocalTensor<uint8_t> maskTmp3 = maskTmp[2 * MAX_TILEDATA];   
-    
+    LocalTensor<uint8_t> maskTmp3 = maskTmp[2 * MAX_TILEDATA];
+
     WaitFlag<HardEvent::MTE2_V>(eventId1);
 
-    if constexpr (std::is_same_v<TYPE_X, float>) 
-    {
+    if constexpr (std::is_same_v<TYPE_X, float>) {
         LocalTensor<float> yLocal = outQueueY.AllocTensor<float>();
         LocalTensor<float> x2Local = xLocal;
         LocalTensor<float> x1Local = xLocal[MAX_TILEDATA];
-  
+
         CompareScalar(maskTmp1, x2Local, (float)(1.0), CMPMODE::LE, this->processDataNum);
         CompareScalar(maskTmp2, x2Local, (float)(1.0), CMPMODE::GT, this->processDataNum);
         AscendC::PipeBarrier<PIPE_V>();
-        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+           maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+            (this->processDataNum / BITS_PER_INT16));
         CompareScalar(maskTmp3, x2Local, (float)(this->max), CMPMODE::LE, this->processDataNum);
         CompareScalar(maskTmp2, x2Local, (float)(this->min), CMPMODE::GE, this->processDataNum);
         AscendC::PipeBarrier<PIPE_V>();
-        And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), maskTmp3.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(),
+            maskTmp3.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));  
+        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+           maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Select(yLocal, maskTmp1, x1Local, static_cast<float>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
-        
+        Select(yLocal, maskTmp1, x1Local, static_cast<float>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+               this->processDataNum);
+
         event_t eventId2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventId2);
         inQueueX.FreeTensor(xLocal);
         WaitFlag<HardEvent::V_MTE3>(eventId2);
         DataCopy(yGm, yLocal, this->processDataNum);
-        outQueueY.FreeTensor(yLocal);            
+        outQueueY.FreeTensor(yLocal);
     }
 
-    if constexpr (std::is_same_v<TYPE_X, half>) 
-    {
+    if constexpr (std::is_same_v<TYPE_X, half>) {
         LocalTensor<half> yLocal = outQueueY.AllocTensor<half>();
         LocalTensor<half> x2Local = xLocal;
         LocalTensor<half> x1Local = xLocal[MAX_TILEDATA];
@@ -299,15 +296,19 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         CompareScalar(maskTmp1, p1, (float)(1.0), CMPMODE::LE, this->processDataNum);
         CompareScalar(maskTmp2, p1, (float)(1.0), CMPMODE::GT, this->processDataNum);
         AscendC::PipeBarrier<PIPE_V>();
-        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+           maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+            (this->processDataNum / BITS_PER_INT16));
         CompareScalar(maskTmp3, p1, (float)(this->max), CMPMODE::LE, this->processDataNum);
         CompareScalar(maskTmp2, p1, (float)(this->min), CMPMODE::GE, this->processDataNum);
         AscendC::PipeBarrier<PIPE_V>();
-        And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), maskTmp3.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(),
+            maskTmp3.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));   
+        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+           maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
         Select(yLocal, maskTmp1, x1Local, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
 
@@ -317,11 +318,10 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         WaitFlag<HardEvent::V_MTE3>(eventId2);
 
         DataCopy(yGm, yLocal, this->processDataNum);
-        outQueueY.FreeTensor(yLocal);            
+        outQueueY.FreeTensor(yLocal);
     }
 
-    if constexpr (std::is_same_v<TYPE_X, bfloat16_t>) 
-    {
+    if constexpr (std::is_same_v<TYPE_X, bfloat16_t>) {
         LocalTensor<bfloat16_t> yLocal = outQueueY.AllocTensor<bfloat16_t>();
         LocalTensor<bfloat16_t> x2Local = xLocal;
         LocalTensor<bfloat16_t> x1Local = xLocal[MAX_TILEDATA];
@@ -331,17 +331,22 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         CompareScalar(maskTmp1, p1, (float)(1.0f), CMPMODE::LE, this->processDataNum);
         CompareScalar(maskTmp2, p1, (float)(1.0f), CMPMODE::GT, this->processDataNum);
         AscendC::PipeBarrier<PIPE_V>();
-        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+           maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        Not(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+            (this->processDataNum / BITS_PER_INT16));
         CompareScalar(maskTmp3, p1, this->max, CMPMODE::LE, this->processDataNum);
         CompareScalar(maskTmp2, p1, this->min, CMPMODE::GE, this->processDataNum);
         AscendC::PipeBarrier<PIPE_V>();
-        And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), maskTmp3.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
+        And(maskTmp2.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(),
+            maskTmp3.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(), maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));  
+        Or(maskTmp1.ReinterpretCast<uint16_t>(), maskTmp1.ReinterpretCast<uint16_t>(),
+           maskTmp2.ReinterpretCast<uint16_t>(), (this->processDataNum / BITS_PER_INT16));
         AscendC::PipeBarrier<PIPE_V>();
-        Select(yLocal.ReinterpretCast<half>(), maskTmp1, x1Local.ReinterpretCast<half>(), static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        Select(yLocal.ReinterpretCast<half>(), maskTmp1, x1Local.ReinterpretCast<half>(), static_cast<half>(0),
+               SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
 
         event_t eventId2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventId2);
@@ -349,9 +354,9 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         WaitFlag<HardEvent::V_MTE3>(eventId2);
 
         DataCopy(yGm, yLocal, this->processDataNum);
-        outQueueY.FreeTensor(yLocal);        
+        outQueueY.FreeTensor(yLocal);
     }
-}    
-    
-} // namespace Myhardtanh_grad
+}
+
+} // namespace MyHardtanhGrad
 #endif // __HARDTANH_GRAD_H__

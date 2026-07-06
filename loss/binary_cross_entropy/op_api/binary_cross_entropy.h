@@ -14,11 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *BinaryCrossEntropy(const aclTensor *self,
-                      const aclTensor *target,
-                      const aclTensor *weight,
-                      const std::string &reduction,
-                      aclOpExecutor *executor);
+const aclTensor* BinaryCrossEntropy(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                                    const std::string& reduction, aclOpExecutor* executor);
 
 }
 

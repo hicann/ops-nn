@@ -33,7 +33,7 @@ static constexpr int32_t UNIT_FALG_CHECK_ONLY = 2;  // 只检查标记位
 static constexpr uint64_t FIXP_DST_STRIDE = 128L;   // fixp搬出N方向stride固定128元素
 static constexpr AscendC::FixpipeConfig CFG_ROW_MAJOR_UB = {AscendC::CO2Layout::ROW_MAJOR, true};
 
-static constexpr uint64_t K_ALIGNMENT64 = 64UL;     // 处理K轴非64对齐的场景
+static constexpr uint64_t K_ALIGNMENT64 = 64UL; // 处理K轴非64对齐的场景
 
 struct L0CopyAndCalcParams {
     uint64_t mL0Size; // M方向当前在L0上实际计算的大小
@@ -56,18 +56,13 @@ struct FixL0CToDstParams {
     uint64_t dstNdStride = 0; // fixp输出多个矩阵时，目的相邻DN矩阵起始地址间的偏移
 };
 
-enum QuantPreMode
-{
-    NO_QUANT = 0,
-    VEC_QUANT = 1,
-    SCALAR_QUANT = 2
-};
+enum QuantPreMode { NO_QUANT = 0, VEC_QUANT = 1, SCALAR_QUANT = 2 };
 
 template <typename T>
 __aicore__ inline constexpr uint64_t GetC0Size()
 {
-    if constexpr (
-        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value || IsSameType<T, fp4x2_e1m2_t>::value) {
+    if constexpr (IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value ||
+                  IsSameType<T, fp4x2_e1m2_t>::value) {
         return ONE_BLK_SIZE + ONE_BLK_SIZE;
     } else {
         return ONE_BLK_SIZE / sizeof(T);
@@ -84,9 +79,9 @@ __aicore__ inline constexpr uint64_t GetC0Size()
  */
 
 template <typename DstType, typename SrcType, typename XScaleType>
-__aicore__ inline void LoadAAndScaleL1ToL0(
-    const LocalTensor<DstType>& aL0Tensor, const LocalTensor<SrcType>& aL1Tensor,
-    const LocalTensor<XScaleType>& scaleL1Tensor, const L0CopyAndCalcParams& l0CopyAndCalcParams)
+__aicore__ inline void LoadAAndScaleL1ToL0(const LocalTensor<DstType>& aL0Tensor, const LocalTensor<SrcType>& aL1Tensor,
+                                           const LocalTensor<XScaleType>& scaleL1Tensor,
+                                           const L0CopyAndCalcParams& l0CopyAndCalcParams)
 {
     uint64_t mL0AlignSize = Ops::Base::CeilAlign(l0CopyAndCalcParams.mL0Size, static_cast<uint64_t>(BLOCK_CUBE));
     uint64_t mL1AlignSize = Ops::Base::CeilAlign(l0CopyAndCalcParams.mL1Size, static_cast<uint64_t>(BLOCK_CUBE));
@@ -102,8 +97,8 @@ __aicore__ inline void LoadAAndScaleL1ToL0(
     aL0Load2dMx.xStartPosition = 0;
     aL0Load2dMx.yStartPosition = 0;
     aL0Load2dMx.xStep = mL0AlignSize / static_cast<uint64_t>(BLOCK_CUBE);
-    aL0Load2dMx.yStep =
-        Ops::Base::CeilDiv(l0CopyAndCalcParams.kL0Size, 64UL); // 64: 表示K方向跨过了几个32B分形，计算过程为k/32/2
+    aL0Load2dMx.yStep = Ops::Base::CeilDiv(l0CopyAndCalcParams.kL0Size,
+                                           64UL); // 64: 表示K方向跨过了几个32B分形，计算过程为k/32/2
     aL0Load2dMx.srcStride = Ops::Base::CeilDiv(l0CopyAndCalcParams.scaleKL1Size, 64UL);
     aL0Load2dMx.dstStride = aL0Load2dMx.yStep;
     AscendC::LoadData(aL0Tensor, aL1Tensor, scaleL1Tensor, aL0Load2dParams, aL0Load2dMx);
@@ -119,9 +114,9 @@ __aicore__ inline void LoadAAndScaleL1ToL0(
  */
 
 template <typename DstType, typename SrcType, typename WScaleType>
-__aicore__ inline void LoadBAndScaleL1ToL0(
-    const LocalTensor<DstType>& bL0Tensor, const LocalTensor<SrcType>& bL1Tensor,
-    const LocalTensor<WScaleType>& scaleL1Tensor, const L0CopyAndCalcParams& l0CopyAndCalcParams)
+__aicore__ inline void LoadBAndScaleL1ToL0(const LocalTensor<DstType>& bL0Tensor, const LocalTensor<SrcType>& bL1Tensor,
+                                           const LocalTensor<WScaleType>& scaleL1Tensor,
+                                           const L0CopyAndCalcParams& l0CopyAndCalcParams)
 {
     uint64_t nL0AlignSize = Ops::Base::CeilAlign(l0CopyAndCalcParams.nL0Size, static_cast<uint64_t>(BLOCK_CUBE));
     uint64_t nL1AlignSize = Ops::Base::CeilAlign(l0CopyAndCalcParams.nL1Size, static_cast<uint64_t>(BLOCK_CUBE));
@@ -158,9 +153,9 @@ __aicore__ inline void LoadBAndScaleL1ToL0(
  */
 
 template <typename DstType, typename SrcAType, typename SrcBType>
-__aicore__ inline void MmadCompute(
-    const LocalTensor<DstType>& cL0Tensor, const LocalTensor<SrcAType>& aL0Tensor,
-    const LocalTensor<SrcBType>& bL0Tensor, const L0CopyAndCalcParams& l0CopyAndCalcParams)
+__aicore__ inline void MmadCompute(const LocalTensor<DstType>& cL0Tensor, const LocalTensor<SrcAType>& aL0Tensor,
+                                   const LocalTensor<SrcBType>& bL0Tensor,
+                                   const L0CopyAndCalcParams& l0CopyAndCalcParams)
 {
     AscendC::MmadParams mmadParams;
     mmadParams.m = l0CopyAndCalcParams.mL0Size;
@@ -184,9 +179,8 @@ __aicore__ inline void MmadCompute(
  */
 
 template <typename DstType, typename SrcType, bool outSplitN = false>
-__aicore__ inline void FixL0CToDst(
-    const LocalTensor<DstType>& outTensor, const LocalTensor<SrcType>& cL0Tensor,
-    const FixL0CToDstParams& fixL0CToDstParams)
+__aicore__ inline void FixL0CToDst(const LocalTensor<DstType>& outTensor, const LocalTensor<SrcType>& cL0Tensor,
+                                   const FixL0CToDstParams& fixL0CToDstParams)
 {
     AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixParams;
     fixParams.params.ndNum = 1;
@@ -201,4 +195,3 @@ __aicore__ inline void FixL0CToDst(
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

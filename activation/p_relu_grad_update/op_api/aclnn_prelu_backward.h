@@ -51,4 +51,4 @@ ACLNN_API aclnnStatus aclnnPreluBackward(void* workspace, uint64_t workspace_siz
 }
 #endif
 
-#endif  // OP_API_INC_PRELU_BACKWARD_H_
+#endif // OP_API_INC_PRELU_BACKWARD_H_

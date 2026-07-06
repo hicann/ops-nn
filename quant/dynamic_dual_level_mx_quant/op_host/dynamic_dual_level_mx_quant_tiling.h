@@ -74,8 +74,8 @@ enum class RoundModeList {
 
 class DynamicDualLevelMxQuantTiling {
 public:
-    explicit DynamicDualLevelMxQuantTiling(gert::TilingContext* context) : context_(context) {};
-    ~DynamicDualLevelMxQuantTiling() {};
+    explicit DynamicDualLevelMxQuantTiling(gert::TilingContext* context) : context_(context){};
+    ~DynamicDualLevelMxQuantTiling(){};
     ge::graphStatus DoTiling();
 
 private:
@@ -96,9 +96,8 @@ private:
     RoundModeList GetRoundMode(const std::string& roundMode);
 
     template <typename T>
-    ge::graphStatus GetAndValidateAttr(
-        const gert::RuntimeAttrs* attrs, int64_t index, T& target, T expectedValue, const std::string& attrName,
-        const std::string& expectedMsg) const;
+    ge::graphStatus GetAndValidateAttr(const gert::RuntimeAttrs* attrs, int64_t index, T& target, T expectedValue,
+                                       const std::string& attrName, const std::string& expectedMsg) const;
 
 private:
     uint64_t roundMode_ = 0;

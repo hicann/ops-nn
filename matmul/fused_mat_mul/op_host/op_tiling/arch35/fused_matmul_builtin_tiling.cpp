@@ -116,32 +116,30 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
     if (args.hasBias && args.hasX3Input) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "x1, x2, y, bias, x3",
-            Ops::NN::FormatString(
-                "%s, %s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-                Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str(),
-                Ops::Base::ToString(args.x3Type).c_str())
+            Ops::NN::FormatString("%s, %s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str(),
+                                  Ops::Base::ToString(args.biasType).c_str(), Ops::Base::ToString(args.x3Type).c_str())
                 .c_str(),
-            Ops::NN::FormatString(
-                "The dtypes of %s must be within the range %s", "x1, x2, y, bias, x3", "dtype support list")
+            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1, x2, y, bias, x3",
+                                  "dtype support list")
                 .c_str());
         return ge::GRAPH_FAILED;
     } else if (args.hasBias) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "x1, x2, y, bias",
-            Ops::NN::FormatString(
-                "%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-                Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str())
+            Ops::NN::FormatString("%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str(),
+                                  Ops::Base::ToString(args.biasType).c_str())
                 .c_str(),
-            Ops::NN::FormatString(
-                "The dtypes of %s must be within the range %s", "x1, x2, y, bias", "dtype support list")
+            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1, x2, y, bias",
+                                  "dtype support list")
                 .c_str());
         return ge::GRAPH_FAILED;
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "x1, x2, y",
-            Ops::NN::FormatString(
-                "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-                Ops::Base::ToString(args.cType).c_str())
+            Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str())
                 .c_str(),
             Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1, x2, y", "dtype support list")
                 .c_str());
@@ -188,9 +186,9 @@ ge::graphStatus CheckX3Shape(const gert::TilingContext& context, MatMulV3Args& a
         x3Shape[x3DimNum - 1] != static_cast<int64_t>(args.nValue)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
-            Ops::NN::FormatString(
-                "%s of %s must be equal to %s of %s (%lu), %s of %s must be equal to %s of %s (%lu)", "Shape[-2]",
-                 "x3", "Shape[-2]", "y", args.mValue, "Shape[-1]", "x3", "Shape[-1]", "y", args.nValue)
+            Ops::NN::FormatString("%s of %s must be equal to %s of %s (%lu), %s of %s must be equal to %s of %s (%lu)",
+                                  "Shape[-2]", "x3", "Shape[-2]", "y", args.mValue, "Shape[-1]", "x3", "Shape[-1]", "y",
+                                  args.nValue)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -221,18 +219,16 @@ ge::graphStatus CheckBiasShape(const gert::TilingContext& context, const MatMulV
     const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
     const int64_t nOriValue = cShape[cShape.GetDimNum() - 1];
     if (biasValue != nOriValue) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
-            Ops::NN::FormatString(
-                "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y", nOriValue)
-                .c_str());
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
+                                              Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)",
+                                                                    "Shape[-1]", "bias", "Shape[-1]", "y", nOriValue)
+                                                  .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus OpSpecificCheck(
-    const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
+ge::graphStatus OpSpecificCheck(const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
 {
     if (CheckGeluShapeDim(context, args) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -251,13 +247,12 @@ ge::graphStatus OpSpecificCheck(
 namespace optiling {
 namespace fused_matmul {
 
-ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingContext &context, MatMulV3Args& args,
-                                                    MatMulV3BatchInfo& batchInfo)
+ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingContext& context, MatMulV3Args& args,
+                                                         MatMulV3BatchInfo& batchInfo)
 {
     // 本质上是由于matmul判断hasBias有OptionalInput无法占位问题
-    bool hasBias =
-        (context.GetOptionalInputDesc(INPUT_BIAS_IDX) != nullptr &&
-         context.GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape().GetDimNum() > 0);
+    bool hasBias = (context.GetOptionalInputDesc(INPUT_BIAS_IDX) != nullptr &&
+                    context.GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape().GetDimNum() > 0);
     if (!hasBias) {
         return ge::GRAPH_SUCCESS;
     }
@@ -276,9 +271,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingConte
     if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
-            Ops::NN::FormatString(
-                "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y",
-                outputShape[cDims - FINAL_SHAPE_DIM])
+            Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y",
+                                  outputShape[cDims - FINAL_SHAPE_DIM])
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -293,8 +287,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingConte
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
-    const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo)
+ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
+                                                       MatMulV3BatchInfo& batchInfo)
 {
     auto aShape = context.GetInputShape(0)->GetOriginShape();
     auto bShape = context.GetInputShape(1)->GetOriginShape();
@@ -358,9 +352,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
                 .c_str());
         return ge::GRAPH_FAILED;
     }
-    OP_TILING_CHECK(
-        (GetBmmBiasInfo(context, args, batchInfo) != ge::GRAPH_SUCCESS),
-        CUBE_INNER_ERR_REPORT(args_.opName, "GetBmmBiasInfo failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((GetBmmBiasInfo(context, args, batchInfo) != ge::GRAPH_SUCCESS),
+                    CUBE_INNER_ERR_REPORT(args_.opName, "GetBmmBiasInfo failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -371,9 +364,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
     }
     // 重写BMM校验Batch和bias
     MatMulV3BatchInfo tempBatchInfo;
-    OP_TILING_CHECK(
-        (GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
-        CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
+                    CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
     // 获取全部args信息(包括batchInfo)后进行算子特殊校验
     if (OpSpecificCheck(*context_, args_, npuArch_) != ge::GRAPH_SUCCESS) {
@@ -384,8 +376,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     fusedMatmulTilingKey.SetFusedOpType(FUSED_OP_TYPE_MAP.at(opType));
-    MatMulTilingCfg tilingCfg(
-        false, context_->GetCompileInfo(), reinterpret_cast<void*>(&args_), &fusedMatmulTilingKey);
+    MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), reinterpret_cast<void*>(&args_),
+                              &fusedMatmulTilingKey);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
     MMRegisterCfg registerCfg{"FusedMatMul", npuArch_, strategy::GetFusedMatMulPriorities(npuArch_)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
@@ -436,9 +428,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
 
 ge::graphStatus FusedMatMulBuiltInTiling::GetShapeAttrsInfo()
 {
-    OP_TILING_CHECK(
-        GetSocVersion(context_, npuArch_) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT("FusedMatMul", "fail to get npu arch"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetSocVersion(context_, npuArch_) == ge::GRAPH_FAILED,
+                    CUBE_INNER_ERR_REPORT("FusedMatMul", "fail to get npu arch"), return ge::GRAPH_FAILED);
     return MatMulV3Tiling::GetShapeAttrsInfo();
 }
 } // namespace fused_matmul

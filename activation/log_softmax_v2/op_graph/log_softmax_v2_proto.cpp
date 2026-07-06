@@ -41,5 +41,5 @@ REG_OP(LogSoftmaxV2)
     .ATTR(axes, ListInt, {-1})
     .OP_END_FACTORY_REG(LogSoftmaxV2)
 
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_LOG_SOFTMAX_V2_OPS_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_LOG_SOFTMAX_V2_OPS_H_

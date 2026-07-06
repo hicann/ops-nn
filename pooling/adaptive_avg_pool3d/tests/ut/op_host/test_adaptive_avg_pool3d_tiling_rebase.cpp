@@ -45,18 +45,11 @@ struct AdaptiveAvgPool3dCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-class AdaptiveAvgPool3dTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dTilingTestParam>
-{
+class AdaptiveAvgPool3dTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3dTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -107,18 +100,18 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
     // compile info
     AdaptiveAvgPool3dCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -138,7 +131,7 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
                       .NodeInputTd(0, param.data_type, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, param.data_type, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(output_size)},
-                                   {"data_format", param.data_format}})
+                                  {"data_format", param.data_format}})
                       .TilingData(tiling_data.get())
                       .Workspace(ws_size)
                       .Build();
@@ -149,7 +142,8 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // workspaces nullptr return failed
@@ -218,7 +212,7 @@ static AdaptiveAvgPool3dTilingTestParam cases[] = {
      64,
      35,
      "1 14 31 152 119 30 45 49 "},
-     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint64_float32",
+    {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint64_float32",
      {5, 673, 615, 763, 3},
      {5, 47, 345, 496, 3},
      {47, 345, 496},

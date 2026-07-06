@@ -12,48 +12,46 @@
 #include "common/utils/ut_op_common.h"
 
 class AssertRt2UTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "AssertRt2UTest SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "AssertRt2UTest SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "AssertRt2UTest TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "AssertRt2UTest TearDown" << std::endl; }
 };
 
-TEST_F(AssertRt2UTest, InferShape4PrintV3_SUCCESS) {
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV3"), nullptr);
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV3")->infer_shape;
-  ASSERT_NE(infer_shape_func, nullptr);
+TEST_F(AssertRt2UTest, InferShape4PrintV3_SUCCESS)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV3"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV3")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
 
-  gert::StorageShape x0_shape = {{3}, {3}};
-  gert::StorageShape y0_shape = {{3}, {3}};
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInputNum(1)
-                    .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .InputShapes({&x0_shape})
-                    .OutputShapes({&y0_shape})
-                    .Build();
-  EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::StorageShape x0_shape = {{3}, {3}};
+    gert::StorageShape y0_shape = {{3}, {3}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&x0_shape})
+                      .OutputShapes({&y0_shape})
+                      .Build();
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-
-TEST_F(AssertRt2UTest, InferDataType4PrintV3_SUCCESS) {
+TEST_F(AssertRt2UTest, InferDataType4PrintV3_SUCCESS)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV3"), nullptr);
     auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV3")->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);
     auto context_holder = gert::InferDataTypeContextFaker()
-                            .NodeIoNum(1, 1)
-                            .IrInputNum(1)
-                            .NodeInputTd(0, ge::DT_STRING, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .Build();
+                              .NodeIoNum(1, 1)
+                              .IrInputNum(1)
+                              .NodeInputTd(0, ge::DT_STRING, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .Build();
     auto context = context_holder.GetContext<gert::InferDataTypeContext>();
     EXPECT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
-  }
+}
 
-  TEST_F(AssertRt2UTest, InferShape4PrintV2_SUCCESS) {
+TEST_F(AssertRt2UTest, InferShape4PrintV2_SUCCESS)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV2"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV2")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -67,9 +65,10 @@ TEST_F(AssertRt2UTest, InferDataType4PrintV3_SUCCESS) {
                       .InputShapes({&x0_shape})
                       .Build();
     EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  }
+}
 
-  TEST_F(AssertRt2UTest, InferShape4PrintV2_Failed) {
+TEST_F(AssertRt2UTest, InferShape4PrintV2_Failed)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV2"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("PrintV2")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -83,9 +82,10 @@ TEST_F(AssertRt2UTest, InferDataType4PrintV3_SUCCESS) {
                       .InputShapes({&x0_shape})
                       .Build();
     EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
-  }
+}
 
-  TEST_F(AssertRt2UTest, InferShape4Assert_succ) {
+TEST_F(AssertRt2UTest, InferShape4Assert_succ)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Assert"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Assert")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -99,4 +99,4 @@ TEST_F(AssertRt2UTest, InferDataType4PrintV3_SUCCESS) {
                       .InputShapes({&x0_shape})
                       .Build();
     EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  }
+}

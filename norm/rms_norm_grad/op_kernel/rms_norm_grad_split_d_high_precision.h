@@ -21,12 +21,10 @@ using namespace RmsNormGrad;
 template <typename T_DY, typename T_GAMMA>
 class RmsNormGradSplitDHighPrecision {
 public:
-    __aicore__ inline RmsNormGradSplitDHighPrecision()
-    {}
+    __aicore__ inline RmsNormGradSplitDHighPrecision() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
-        const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
+                                const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
     {
         InitVar(tiling);
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ != 200)
@@ -36,7 +34,8 @@ public:
         }
         if (isDeterministic_) {
             uint32_t workspaceColSize = needChunk_ ? chunkSize_ : colValAlign_;
-            InitWorkspaceBuffers(workspaceGm_, workspaceBlockFactorGm_, workspaceGmOri_, usrWorkspace, GetBlockIdx(), blockDim_, workspaceColSize, blockFactor_, needChunk_);
+            InitWorkspaceBuffers(workspaceGm_, workspaceBlockFactorGm_, workspaceGmOri_, usrWorkspace, GetBlockIdx(),
+                                 blockDim_, workspaceColSize, blockFactor_, needChunk_);
         }
         SyncAll();
 #else
@@ -64,7 +63,7 @@ public:
 
         colValAlign_ = (colVal_ + alignLen_ - 1) / alignLen_ * alignLen_;
         isDeterministic_ = tiling->fixed_output;
-        
+
         // Initialize chunk parameters for workspace optimization
         needChunk_ = tiling->need_chunk;
         chunkSize_ = tiling->chunk_size;
@@ -72,8 +71,7 @@ public:
         chunkTail_ = tiling->chunk_tail;
     }
 
-    __aicore__ inline void InitGmBuffer(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx)
+    __aicore__ inline void InitGmBuffer(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx)
     {
         if (GetBlockIdx() < blockDim_ - 1) {
             coreOffset_ = blockFactor_;
@@ -144,11 +142,13 @@ public:
             }
         }
     }
-    
+
     // Chunk processing for workspace optimization
     __aicore__ inline void ProcessWithChunk()
     {
-        uint32_t loop_len = (coreCalcTail_ == 0) ? blockFactor_ : (GetBlockIdx() < blockDim_ - 1) ? blockFactor_ : coreCalcTail_;
+        uint32_t loop_len = (coreCalcTail_ == 0)            ? blockFactor_ :
+                            (GetBlockIdx() < blockDim_ - 1) ? blockFactor_ :
+                                                              coreCalcTail_;
         uint32_t loopMainOuter = loop_len / rowFactor_;
         uint32_t tailOuter = loop_len % rowFactor_;
 
@@ -157,7 +157,8 @@ public:
             GetChunkRange(chunkId, chunkSize_, chunkNum_, chunkTail_, chunkStart, currentChunkLen);
             uint32_t loopMainColChunk = currentChunkLen / ubFactor_;
             uint32_t tailColChunk = currentChunkLen % ubFactor_;
-            ProcessChunkPart1(chunkId, chunkStart, currentChunkLen, loopMainOuter, tailOuter, loopMainColChunk, tailColChunk);
+            ProcessChunkPart1(chunkId, chunkStart, currentChunkLen, loopMainOuter, tailOuter, loopMainColChunk,
+                              tailColChunk);
             uint32_t currentChunkLenAlign_ = (currentChunkLen + alignLen_ - 1) / alignLen_ * alignLen_;
             doDeterminCompute(chunkStart, currentChunkLen, currentChunkLenAlign_, chunkSize_);
             SyncAll();
@@ -168,7 +169,8 @@ public:
     }
 
     // Deterministic compute for chunk processing
-    __aicore__ inline void doDeterminCompute(uint32_t offset, uint32_t calcLen, uint32_t calcLenAlign, uint32_t calcBlockSize)
+    __aicore__ inline void doDeterminCompute(uint32_t offset, uint32_t calcLen, uint32_t calcLenAlign,
+                                             uint32_t calcBlockSize)
     {
         SyncAll();
         LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
@@ -180,8 +182,9 @@ public:
     }
 
     // Process a single chunk
-    __aicore__ inline void ProcessChunkPart1(uint32_t chunkId, uint32_t chunkStart, uint32_t currentChunkLen, 
-        uint32_t loopMainOuter, uint32_t tailOuter, uint32_t loopMainColChunk, uint32_t tailColChunk)
+    __aicore__ inline void ProcessChunkPart1(uint32_t chunkId, uint32_t chunkStart, uint32_t currentChunkLen,
+                                             uint32_t loopMainOuter, uint32_t tailOuter, uint32_t loopMainColChunk,
+                                             uint32_t tailColChunk)
     {
         for (uint32_t iOuter = 0; iOuter < loopMainOuter; iOuter++) {
             SubProcessChunkPart1(iOuter, rowFactor_, chunkStart, loopMainColChunk, tailColChunk);
@@ -191,7 +194,9 @@ public:
         }
     }
 
-    __aicore__ inline void ProcessChunkPart2(uint32_t chunkId, uint32_t chunkStart, uint32_t currentChunkLen, uint32_t loopMainOuter, uint32_t tailOuter, uint32_t loopMainColChunk, uint32_t tailColChunk)
+    __aicore__ inline void ProcessChunkPart2(uint32_t chunkId, uint32_t chunkStart, uint32_t currentChunkLen,
+                                             uint32_t loopMainOuter, uint32_t tailOuter, uint32_t loopMainColChunk,
+                                             uint32_t tailColChunk)
     {
         for (uint32_t iOuter = 0; iOuter < loopMainOuter; iOuter++) {
             SubProcessChunkPart2(iOuter, rowFactor_, chunkStart, loopMainColChunk, tailColChunk);
@@ -201,8 +206,9 @@ public:
         }
     }
 
-    __aicore__ inline void calcBeforeLoop(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, 
-        uint32_t loopMainColChunk, uint32_t tailColChunk, LocalTensor<float>& rstdLocal)
+    __aicore__ inline void calcBeforeLoop(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart,
+                                          uint32_t loopMainColChunk, uint32_t tailColChunk,
+                                          LocalTensor<float>& rstdLocal)
     {
         for (uint32_t j = 0; j < loopMainColChunk; j++) {
             loopColProcessBeforeReduce(iOuter, j, calcRow, ubFactor_, rstdLocal, chunkStart);
@@ -212,7 +218,8 @@ public:
         }
     }
 
-    __aicore__ inline void SubProcessChunkPart1(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, uint32_t loopMainColChunk, uint32_t tailColChunk)
+    __aicore__ inline void SubProcessChunkPart1(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart,
+                                                uint32_t loopMainColChunk, uint32_t tailColChunk)
     {
         CopyRstdIn(iOuter, calcRow);
         LocalTensor<float> rstdLocal = inQueRstd_.DeQue<float>();
@@ -220,9 +227,9 @@ public:
         inQueRstd_.FreeTensor(rstdLocal);
     }
 
-    __aicore__ inline void calcAfterLoop(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, 
-        uint32_t loopMainColChunk, uint32_t tailColChunk,
-        LocalTensor<float>& rstdLocal, LocalTensor<float>& meanLocal)
+    __aicore__ inline void calcAfterLoop(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart,
+                                         uint32_t loopMainColChunk, uint32_t tailColChunk,
+                                         LocalTensor<float>& rstdLocal, LocalTensor<float>& meanLocal)
     {
         Muls(meanLocal, meanLocal, avgFactor_, calcRow);
         PipeBarrier<PIPE_V>();
@@ -233,10 +240,10 @@ public:
             loopColProcessAfterReduce(iOuter, loopMainColChunk, calcRow, tailColChunk, rstdLocal, chunkStart);
         }
     }
-    
+
     // SubProcess for chunk processing
-    __aicore__ inline void SubProcessChunkPart2(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, 
-        uint32_t loopMainColChunk, uint32_t tailColChunk)
+    __aicore__ inline void SubProcessChunkPart2(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart,
+                                                uint32_t loopMainColChunk, uint32_t tailColChunk)
     {
         CopyRstdIn(iOuter, calcRow);
         CopyMeanIn(iOuter, calcRow);
@@ -289,9 +296,8 @@ public:
         inQueRstd_.FreeTensor(rstdLocal);
     }
 
-    __aicore__ inline void loopColProcessBeforeReduce(
-        uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol, 
-        LocalTensor<float>& rstdLocal, uint32_t chunkStart)
+    __aicore__ inline void loopColProcessBeforeReduce(uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol,
+                                                      LocalTensor<float>& rstdLocal, uint32_t chunkStart)
     {
         CopyGammaIn(j, calcCol, chunkStart);
         LocalTensor<float> gammaLocal = inQueGamma_.DeQue<float>();
@@ -308,7 +314,7 @@ public:
         }
         inQueGamma_.FreeTensor(gammaLocal);
         outQueDgamma_.EnQue(dgamma);
-        if(needChunk_) {
+        if (needChunk_) {
             CopyDgammaOutCommon(outQueDgamma_, workspaceGm_, j, calcCol, ubFactor_);
             CopyMeanOutChunkCommon(meanTmpBuf_, workspaceBlockFactorGm_, iOuter, calcRow, rowFactor_);
         } else {
@@ -324,9 +330,8 @@ public:
         }
     }
 
-    __aicore__ inline void loopColProcessAfterReduce(
-        uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol, 
-        LocalTensor<float>& rstdLocal, uint32_t chunkStart)
+    __aicore__ inline void loopColProcessAfterReduce(uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol,
+                                                     LocalTensor<float>& rstdLocal, uint32_t chunkStart)
     {
         CopyGammaIn(j, calcCol, chunkStart);
         LocalTensor<float> gammaLocal = inQueGamma_.DeQue<float>();
@@ -385,8 +390,8 @@ public:
         inQueDY_.EnQue(dyLocal);
     }
 
-    __aicore__ inline void ComputeFormer(
-        uint32_t iInner, float rstdValue, uint32_t calcLen, LocalTensor<float>& gammaLocal, LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeFormer(uint32_t iInner, float rstdValue, uint32_t calcLen,
+                                         LocalTensor<float>& gammaLocal, LocalTensor<float>& dgamma)
     {
         LocalTensor<float> xLocal = inQueX_.DeQue<float>();
         Cast2FloatIf<T_DY>(xLocal, ubFactor_, calcLen);
@@ -409,8 +414,8 @@ public:
         inQueDY_.FreeTensor(dyLocal);
     }
 
-    __aicore__ inline void ComputeLatter(
-        float rstdValue, float meanValue, uint32_t calcLen, LocalTensor<float>& gammaLocal)
+    __aicore__ inline void ComputeLatter(float rstdValue, float meanValue, uint32_t calcLen,
+                                         LocalTensor<float>& gammaLocal)
     {
         LocalTensor<float> xLocal = inQueX_.DeQue<float>();
         Cast2FloatIf<T_DY>(xLocal, ubFactor_, calcLen);
@@ -504,7 +509,7 @@ public:
     uint32_t coreOffsetStart_{0};
     uint32_t coreOffsetLen_{0};
     uint32_t isDeterministic_{0};
-    
+
     // Chunk processing parameters for workspace optimization
     uint32_t needChunk_{0};
     uint32_t chunkSize_{0};

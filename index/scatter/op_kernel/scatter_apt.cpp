@@ -67,200 +67,202 @@ using namespace AscendC;
 #define TILING_KEY_ONECORE_INT64_INT2 313
 #define TILING_KEY_DETERMINISTIC 1000
 
-extern "C" __global__ __aicore__ void scatter(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-  if (workspace == nullptr) {
-    return;
-  }
-  SetSysWorkspace(workspace);
-  GM_ADDR userWs = GetUserWorkspace(workspace);
-  if (userWs == nullptr) {
-    return;
-  }
-  GET_TILING_DATA(tilingData, tiling);
-  TPipe pipeOp;
-  KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-  using VAR_T = typename std::conditional<sizeof(DTYPE_VAR) == sizeof(int8_t), int8_t, DTYPE_VAR>::type;
+extern "C" __global__ __aicore__ void scatter(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                              GM_ADDR tiling)
+{
+    if (workspace == nullptr) {
+        return;
+    }
+    SetSysWorkspace(workspace);
+    GM_ADDR userWs = GetUserWorkspace(workspace);
+    if (userWs == nullptr) {
+        return;
+    }
+    GET_TILING_DATA(tilingData, tiling);
+    TPipe pipeOp;
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    using VAR_T = typename std::conditional<sizeof(DTYPE_VAR) == sizeof(int8_t), int8_t, DTYPE_VAR>::type;
 
-  if (TILING_KEY_IS(TILING_KEY_INT32_INT8)) {
-    SCATTER::Scatter<int8_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT32_UINT8)) {
-    SCATTER::Scatter<uint8_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT32_FLOAT16)) {
-    SCATTER::Scatter<half, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT32_BF16)) {
-    SCATTER::Scatter<bfloat16_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT32_FLOAT)) {
-    SCATTER::Scatter<float, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT32_INT32)) {
-    SCATTER::Scatter<int32_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_INT8)) {
-    SCATTER::Scatter<int8_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_UINT8)) {
-    SCATTER::Scatter<uint8_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_FLOAT16)) {
-    SCATTER::Scatter<half, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_BF16)) {
-    SCATTER::Scatter<bfloat16_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_FLOAT)) {
-    SCATTER::Scatter<float, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_INT32)) {
-    SCATTER::Scatter<int32_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT32_INT2)) {
-    SCATTER::Scatter<int64_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_INT64_INT2)) {
-    SCATTER::Scatter<int64_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_INT8)) {
-    SCATTER::Scatter<int8_t, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_UINT8)) {
-    SCATTER::Scatter<uint8_t, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_FLOAT16)) {
-    SCATTER::Scatter<half, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_BF16)) {
-    SCATTER::Scatter<bfloat16_t, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_FLOAT)) {
-    SCATTER::Scatter<float, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_INT32)) {
-    SCATTER::Scatter<int32_t, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_INT8)) {
-    SCATTER::Scatter<int8_t, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_UINT8)) {
-    SCATTER::Scatter<uint8_t, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_FLOAT16)) {
-    SCATTER::Scatter<half, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_BF16)) {
-    SCATTER::Scatter<bfloat16_t, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_FLOAT)) {
-    SCATTER::Scatter<float, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_INT32)) {
-    SCATTER::Scatter<int32_t, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_INT2)) {
-    SCATTER::Scatter<int64_t, int32_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_INT2)) {
-    SCATTER::Scatter<int64_t, int64_t, uint64_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_SIMD)) {
-    SCATTER::ScatterSimd<DTYPE_INDICES, 0> op(&tilingData, &pipeOp);
-    op.Init(x, indices, updates, y);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_SIMD_PERF)) {
-    SCATTER::ScatterSimd<DTYPE_INDICES, 1> op(&tilingData, &pipeOp);
-    op.Init(x, indices, updates, y);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT8)) {
-    SCATTER::ScatterSimt<int8_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_UINT8)) {
-    SCATTER::ScatterSimt<uint8_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_FLOAT16)) {
-    SCATTER::ScatterSimt<half, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_BF16)) {
-    SCATTER::ScatterSimt<bfloat16_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_FLOAT)) {
-    SCATTER::ScatterSimt<float, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT32)) {
-    SCATTER::ScatterSimt<int32_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT8)) {
-    SCATTER::ScatterSimt<int8_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_UINT8)) {
-    SCATTER::ScatterSimt<uint8_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_FLOAT16)) {
-    SCATTER::ScatterSimt<half, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_BF16)) {
-    SCATTER::ScatterSimt<bfloat16_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_FLOAT)) {
-    SCATTER::ScatterSimt<float, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT32)) {
-    SCATTER::ScatterSimt<int32_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT2)) {
-    SCATTER::ScatterSimt<int64_t, int32_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT2)) {
-    SCATTER::ScatterSimt<int64_t, int64_t, uint32_t> op;
-    op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_DETERMINISTIC)) {
-    SCATTER::ScatterDeterministic<VAR_T, DTYPE_INDICES> op(&tilingData, &pipeOp);
-    op.Init(x, indices, updates, y);
-    op.Process();
-  }
-  return;
+    if (TILING_KEY_IS(TILING_KEY_INT32_INT8)) {
+        SCATTER::Scatter<int8_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT32_UINT8)) {
+        SCATTER::Scatter<uint8_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT32_FLOAT16)) {
+        SCATTER::Scatter<half, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT32_BF16)) {
+        SCATTER::Scatter<bfloat16_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT32_FLOAT)) {
+        SCATTER::Scatter<float, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT32_INT32)) {
+        SCATTER::Scatter<int32_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_INT8)) {
+        SCATTER::Scatter<int8_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_UINT8)) {
+        SCATTER::Scatter<uint8_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_FLOAT16)) {
+        SCATTER::Scatter<half, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_BF16)) {
+        SCATTER::Scatter<bfloat16_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_FLOAT)) {
+        SCATTER::Scatter<float, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_INT32)) {
+        SCATTER::Scatter<int32_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT32_INT2)) {
+        SCATTER::Scatter<int64_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INT64_INT2)) {
+        SCATTER::Scatter<int64_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_INT8)) {
+        SCATTER::Scatter<int8_t, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_UINT8)) {
+        SCATTER::Scatter<uint8_t, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_FLOAT16)) {
+        SCATTER::Scatter<half, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_BF16)) {
+        SCATTER::Scatter<bfloat16_t, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_FLOAT)) {
+        SCATTER::Scatter<float, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_INT32)) {
+        SCATTER::Scatter<int32_t, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_INT8)) {
+        SCATTER::Scatter<int8_t, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_UINT8)) {
+        SCATTER::Scatter<uint8_t, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_FLOAT16)) {
+        SCATTER::Scatter<half, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_BF16)) {
+        SCATTER::Scatter<bfloat16_t, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_FLOAT)) {
+        SCATTER::Scatter<float, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_INT32)) {
+        SCATTER::Scatter<int32_t, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT32_INT2)) {
+        SCATTER::Scatter<int64_t, int32_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_UINT64_INT64_INT2)) {
+        SCATTER::Scatter<int64_t, int64_t, uint64_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD)) {
+        SCATTER::ScatterSimd<DTYPE_INDICES, 0> op(&tilingData, &pipeOp);
+        op.Init(x, indices, updates, y);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_PERF)) {
+        SCATTER::ScatterSimd<DTYPE_INDICES, 1> op(&tilingData, &pipeOp);
+        op.Init(x, indices, updates, y);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT8)) {
+        SCATTER::ScatterSimt<int8_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_UINT8)) {
+        SCATTER::ScatterSimt<uint8_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_FLOAT16)) {
+        SCATTER::ScatterSimt<half, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_BF16)) {
+        SCATTER::ScatterSimt<bfloat16_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_FLOAT)) {
+        SCATTER::ScatterSimt<float, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT32)) {
+        SCATTER::ScatterSimt<int32_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT8)) {
+        SCATTER::ScatterSimt<int8_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_UINT8)) {
+        SCATTER::ScatterSimt<uint8_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_FLOAT16)) {
+        SCATTER::ScatterSimt<half, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_BF16)) {
+        SCATTER::ScatterSimt<bfloat16_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_FLOAT)) {
+        SCATTER::ScatterSimt<float, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT32)) {
+        SCATTER::ScatterSimt<int32_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT2)) {
+        SCATTER::ScatterSimt<int64_t, int32_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT2)) {
+        SCATTER::ScatterSimt<int64_t, int64_t, uint32_t> op;
+        op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_DETERMINISTIC)) {
+        SCATTER::ScatterDeterministic<VAR_T, DTYPE_INDICES> op(&tilingData, &pipeOp);
+        op.Init(x, indices, updates, y);
+        op.Process();
+    }
+    return;
 }

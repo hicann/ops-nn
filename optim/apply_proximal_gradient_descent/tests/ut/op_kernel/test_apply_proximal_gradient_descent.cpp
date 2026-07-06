@@ -24,9 +24,9 @@ using namespace std;
 static constexpr size_t GM_ALIGN = 32;
 static inline size_t AlignUp(size_t n, size_t align) { return ((n + align - 1) / align) * align; }
 
-extern "C" __global__ __aicore__ void apply_proximal_gradient_descent(
-    GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2, GM_ADDR delta,
-    GM_ADDR varOut, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void apply_proximal_gradient_descent(GM_ADDR var, GM_ADDR alpha, GM_ADDR l1,
+                                                                      GM_ADDR l2, GM_ADDR delta, GM_ADDR varOut,
+                                                                      GM_ADDR workspace, GM_ADDR tiling);
 
 class ApplyProximalGradientDescentKernelTest : public testing::Test {
 protected:
@@ -35,7 +35,7 @@ protected:
 };
 
 [[maybe_unused]] static void ComputeGolden(const float* var, float alphaVal, float l1Val, float l2Val,
-                          const float* delta, float* output, size_t n)
+                                           const float* delta, float* output, size_t n)
 {
     for (size_t i = 0; i < n; i++) {
         float prox = var[i] - alphaVal * delta[i];
@@ -72,15 +72,15 @@ TEST_F(ApplyProximalGradientDescentKernelTest, test_fp32_basic)
     *reinterpret_cast<float*>(l1Buf) = 0.001f;
     *reinterpret_cast<float*>(l2Buf) = 0.01f;
 
-    ApplyProximalGradientDescentTilingData* tilingData =
-        reinterpret_cast<ApplyProximalGradientDescentTilingData*>(tiling);
+    ApplyProximalGradientDescentTilingData* tilingData = reinterpret_cast<ApplyProximalGradientDescentTilingData*>(
+        tiling);
     tilingData->totalNum = numElements;
     tilingData->blockFactor = numElements;
     tilingData->ubFactor = numElements;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim,
-                varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf, workspace, tiling);
+    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim, varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf,
+                workspace, tiling);
 
     // ICPU CPU sim 下 DataCopyPad 写回 GM 不保证生效，按 rms_prop UT 范式仅校验
     // 端到端不崩溃且输出无 NaN/Inf；精确数值由 ST/NPU 验收。
@@ -126,15 +126,15 @@ TEST_F(ApplyProximalGradientDescentKernelTest, test_fp32_large_double_buffer)
     *reinterpret_cast<float*>(l1Buf) = 0.001f;
     *reinterpret_cast<float*>(l2Buf) = 0.01f;
 
-    ApplyProximalGradientDescentTilingData* tilingData =
-        reinterpret_cast<ApplyProximalGradientDescentTilingData*>(tiling);
+    ApplyProximalGradientDescentTilingData* tilingData = reinterpret_cast<ApplyProximalGradientDescentTilingData*>(
+        tiling);
     tilingData->totalNum = numElements;
     tilingData->blockFactor = numElements;
     tilingData->ubFactor = 512;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim,
-                varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf, workspace, tiling);
+    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim, varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf,
+                workspace, tiling);
 
     float* outPtr = reinterpret_cast<float*>(outputBuf);
     for (size_t i = 0; i < numElements; i++) {
@@ -178,15 +178,15 @@ TEST_F(ApplyProximalGradientDescentKernelTest, test_fp32_l1_zero_l2_zero)
     *reinterpret_cast<float*>(l1Buf) = 0.0f;
     *reinterpret_cast<float*>(l2Buf) = 0.0f;
 
-    ApplyProximalGradientDescentTilingData* tilingData =
-        reinterpret_cast<ApplyProximalGradientDescentTilingData*>(tiling);
+    ApplyProximalGradientDescentTilingData* tilingData = reinterpret_cast<ApplyProximalGradientDescentTilingData*>(
+        tiling);
     tilingData->totalNum = numElements;
     tilingData->blockFactor = numElements;
     tilingData->ubFactor = numElements;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim,
-                varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf, workspace, tiling);
+    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim, varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf,
+                workspace, tiling);
 
     float* outPtr = reinterpret_cast<float*>(outputBuf);
     for (size_t i = 0; i < numElements; i++) {
@@ -230,15 +230,15 @@ TEST_F(ApplyProximalGradientDescentKernelTest, test_fp32_non_aligned)
     *reinterpret_cast<float*>(l1Buf) = 0.001f;
     *reinterpret_cast<float*>(l2Buf) = 0.01f;
 
-    ApplyProximalGradientDescentTilingData* tilingData =
-        reinterpret_cast<ApplyProximalGradientDescentTilingData*>(tiling);
+    ApplyProximalGradientDescentTilingData* tilingData = reinterpret_cast<ApplyProximalGradientDescentTilingData*>(
+        tiling);
     tilingData->totalNum = numElements;
     tilingData->blockFactor = numElements;
     tilingData->ubFactor = numElements;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim,
-                varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf, workspace, tiling);
+    ICPU_RUN_KF(apply_proximal_gradient_descent, blockDim, varBuf, alphaBuf, l1Buf, l2Buf, deltaBuf, outputBuf,
+                workspace, tiling);
 
     float* outPtr = reinterpret_cast<float*>(outputBuf);
     for (size_t i = 0; i < numElements; i++) {

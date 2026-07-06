@@ -23,8 +23,7 @@ using namespace AscendC;
 using namespace LpNormV2;
 
 template <typename Dtype>
-struct GetPromoteType {
-};
+struct GetPromoteType {};
 
 // inf / -inf 场景下做max/min不需要升精度
 template <>
@@ -49,46 +48,46 @@ __global__ __aicore__ void lp_norm_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, G
     GET_TILING_DATA_WITH_STRUCT(optiling::LpNormV2TilingData, tilingData, tiling);
     TPipe pipe;
     float val = (TemplateNum == TEMPLATE_P_NINF) ? INFINITY : tilingData.epsilon;
-    if constexpr (TemplateNum == TEMPLATE_P0) {  // p=0
+    if constexpr (TemplateNum == TEMPLATE_P0) { // p=0
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2P0Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P1) {  // p=1
+    } else if constexpr (TemplateNum == TEMPLATE_P1) { // p=1
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2P1Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P2) {  // p=2
+    } else if constexpr (TemplateNum == TEMPLATE_P2) { // p=2
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2P2Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P3) {  // p=3
+    } else if constexpr (TemplateNum == TEMPLATE_P3) { // p=3
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2P3Dag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.template SetVar<float, VAR_INDEX_1>(tilingData.recp);
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P_NINF) {  // p = -inf
+    } else if constexpr (TemplateNum == TEMPLATE_P_NINF) { // p = -inf
         using promoteDtype = GetPromoteType<DTYPE_X>::T;
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2PNInfDag<DTYPE_X, promoteDtype, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<promoteDtype, 0>(static_cast<promoteDtype>(tilingData.epsilon));
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P_INF) {  // p = inf
+    } else if constexpr (TemplateNum == TEMPLATE_P_INF) { // p = inf
         using promoteDtype = GetPromoteType<DTYPE_X>::T;
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2PInfDag<DTYPE_X, promoteDtype, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<promoteDtype, 0>(static_cast<promoteDtype>(tilingData.epsilon));
         op.Init(&pipe, x, y, workspace);
         op.Process(val);
-    } else if constexpr (TemplateNum == TEMPLATE_P_OTHER) {  // p = other
+    } else if constexpr (TemplateNum == TEMPLATE_P_OTHER) { // p = other
         using Op = ReduceSch<REDUCE_TPL_VALUE, LpNormV2::LpNormV2POtherDag<DTYPE_X, float, DTYPE_Y>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<float, 0>(tilingData.epsilon);

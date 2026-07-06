@@ -34,8 +34,7 @@ static const std::map<ge::DataType, uint32_t> indexTypeMap = {
 
 ge::graphStatus SegmentSumBaseTiling::GetPlatformInfo()
 {
-    auto compileInfo =
-        reinterpret_cast<const SegmentSumCompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = reinterpret_cast<const SegmentSumCompileInfo*>(context_->GetCompileInfo());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     totalCoreNum_ = compileInfo->core_num;
     ubSize_ = compileInfo->ub_size;
@@ -53,25 +52,25 @@ ge::graphStatus SegmentSumBaseTiling::CheckInputDtype()
     idType_ = segmentIdsDtypePtr->GetDataType();
     auto dataTypeIter = dataTypeMap.find(dataType_);
     auto indexTypeIter = indexTypeMap.find(idType_);
-    OP_CHECK_IF(
-        dataTypeIter == dataTypeMap.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "data", Ops::Base::ToString(dataType_).c_str(), "[float, float16, bfloat16, int32, int64, uint32, uint64]"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        indexTypeIter == indexTypeMap.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids", Ops::Base::ToString(idType_).c_str(), "int32 or int64"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataTypeIter == dataTypeMap.end(),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "data", Ops::Base::ToString(dataType_).c_str(),
+                                          "[float, float16, bfloat16, int32, int64, uint32, uint64]"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indexTypeIter == indexTypeMap.end(),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids", Ops::Base::ToString(idType_).c_str(),
+                                          "int32 or int64"),
+                return ge::GRAPH_FAILED);
 
     valueTypeBytes_ = ge::GetSizeByDataType(dataType_);
     idTypeBytes_ = ge::GetSizeByDataType(idType_);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
 {
-    if (CheckInputDtype() != ge::GRAPH_SUCCESS) { 
-        return ge::GRAPH_FAILED; 
+    if (CheckInputDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
 
     auto dataShapePtr = context_->GetInputShape(INPUT_DATA_INDEX);
@@ -85,29 +84,26 @@ ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
     for (size_t i = 0; i < dataShape.GetDimNum(); ++i) {
         OP_CHECK_IF(
             dataShape.GetDim(i) < 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "data", 
-            Ops::Base::ToString(dataShape).c_str(), "data has negative axes"),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "data",
+                                                  Ops::Base::ToString(dataShape).c_str(), "data has negative axes"),
             return ge::GRAPH_FAILED);
-        
+
         innerDim_ *= (i != 0) ? dataShape.GetDim(i) : 1;
     }
     outerDim_ = dataShape.GetDim(0);
-    
-    OP_CHECK_IF(
-        static_cast<int64_t>(outerDim_) != segmentIdsShape.GetDim(0),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "data and segment_ids",
-            Ops::Base::ToString(dataShape) + " and " + Ops::Base::ToString(segmentIdsShape),
-            "The 0 axis of data must be equal to the same axis of segment_ids"),
-        return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        segmentIdsShape.GetDimNum() != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "segment_ids",
-            std::to_string(segmentIdsShape.GetDimNum()) + "D",
-            "The shape of segment_ids must be 1D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(static_cast<int64_t>(outerDim_) != segmentIdsShape.GetDim(0),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "data and segment_ids",
+                    Ops::Base::ToString(dataShape) + " and " + Ops::Base::ToString(segmentIdsShape),
+                    "The 0 axis of data must be equal to the same axis of segment_ids"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(segmentIdsShape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "segment_ids",
+                                                         std::to_string(segmentIdsShape.GetDimNum()) + "D",
+                                                         "The shape of segment_ids must be 1D"),
+                return ge::GRAPH_FAILED);
 
     dataShapeSize_ = dataShape.GetShapeSize();
     auto segmentIdsShapeSize = segmentIdsShape.GetShapeSize();
@@ -122,38 +118,20 @@ ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputY);
     auto yShape = Ops::Base::EnsureNotScalar(outputY->GetStorageShape());
     segmentNum_ = yShape.GetDim(0);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
-bool SegmentSumBaseTiling::IsCapable()
-{
-    return true;
-}
+bool SegmentSumBaseTiling::IsCapable() { return true; }
 
-ge::graphStatus SegmentSumBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SegmentSumBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus SegmentSumBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SegmentSumBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t SegmentSumBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t SegmentSumBaseTiling::GetTilingKey() const { return 0; }
 
-ge::graphStatus SegmentSumBaseTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SegmentSumBaseTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus SegmentSumBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SegmentSumBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-}  // namespace optiling
+} // namespace optiling

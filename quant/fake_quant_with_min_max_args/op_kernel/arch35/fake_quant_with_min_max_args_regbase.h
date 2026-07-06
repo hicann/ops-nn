@@ -34,17 +34,18 @@ constexpr uint32_t FAKEQUANT_BUFFER_NUM = 2;
 // CastTrait must be defined at namespace/file scope so it can bind to the
 // Cast<T, U, const CastTrait& trait> template parameter (a const reference).
 constexpr static AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_S32_FLOOR = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    RoundMode::CAST_FLOOR};
 constexpr static AscendC::Reg::CastTrait CAST_TRAIT_S32_TO_FP32 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    RoundMode::CAST_RINT};
 
 template <uint64_t SchMode>
 class FakeQuantWithMinMaxArgsRegbase {
 public:
     __aicore__ inline FakeQuantWithMinMaxArgsRegbase(const FakeQuantWithMinMaxArgsTilingData* tilingData)
-        : tilingData_(tilingData) {}
+        : tilingData_(tilingData)
+    {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();

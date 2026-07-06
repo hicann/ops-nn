@@ -17,8 +17,8 @@
 #include "graph/operator_reg.h"
 #include "nn_norm.h"
 
-namespace ge{
-    /**
+namespace ge {
+/**
 *@brief Computes gradients for a softmax operation.
 
 *@par Inputs:
@@ -38,10 +38,10 @@ namespace ge{
 * Compatible with TensorFlow operator SoftmaxGrad.
 */
 REG_OP(SoftmaxGrad)
-    .INPUT(softmax, TensorType({ DT_FLOAT16, DT_BF16, DT_FLOAT }))
-    .INPUT(grad_softmax, TensorType({ DT_FLOAT16, DT_BF16, DT_FLOAT }))
-    .OUTPUT(grad_x, TensorType({ DT_FLOAT16, DT_BF16, DT_FLOAT }))
+    .INPUT(softmax, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
+    .INPUT(grad_softmax, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
+    .OUTPUT(grad_x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .ATTR(axes, ListInt, {-1})
     .OP_END_FACTORY_REG(SoftmaxGrad)
-}
+} // namespace ge
 #endif

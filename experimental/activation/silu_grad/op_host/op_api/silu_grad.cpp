@@ -23,20 +23,22 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SiluGrad);
 
-static const aclTensor *SiluGradAiCore(const aclTensor *gradOutput, const aclTensor *self,
-    aclTensor *gradInput, aclOpExecutor *executor) {
+static const aclTensor* SiluGradAiCore(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput,
+                                       aclOpExecutor* executor)
+{
     L0_DFX(SiluGradAiCore, gradOutput, self, gradInput);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SiluGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(gradInput));
-    OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SiluGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SiluGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return gradInput;
 }
 
-const aclTensor *SiluGrad(const aclTensor *gradOutput, const aclTensor *self, aclOpExecutor *executor) {
+const aclTensor* SiluGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
+{
     op::Shape broadcastShape;
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return nullptr);
     OP_LOGD("gradOutput shape is: %s, self shape is: %s.", op::ToString(gradOutput->GetViewShape()).GetString(),
-    op::ToString(self->GetViewShape()).GetString());
+            op::ToString(self->GetViewShape()).GetString());
     OP_LOGD("broadcastShape shape is: %s.", op::ToString(broadcastShape).GetString());
     op::DataType gradInputDtype;
     if (gradOutput->GetDataType() != self->GetDataType()) {
@@ -47,4 +49,4 @@ const aclTensor *SiluGrad(const aclTensor *gradOutput, const aclTensor *self, ac
     auto gradInput = executor->AllocTensor(broadcastShape, gradInputDtype);
     return SiluGradAiCore(gradOutput, self, gradInput, executor);
 }
-}  // namespace l0op
+} // namespace l0op

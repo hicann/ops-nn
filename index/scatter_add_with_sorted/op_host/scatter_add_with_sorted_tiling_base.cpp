@@ -59,12 +59,14 @@ static std::string ToString(const T* value, size_t size)
 ge::graphStatus ScatterAddWithSortedBaseTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
-    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName, "tiling",
-        "platform_info", "null", "fail to get platform info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        platformInfo == nullptr,
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName, "tiling", "platform_info", "null", "fail to get platform info"),
+        return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto aivNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((aivNum <= 0), OP_LOGE_FOR_INVALID_VALUE(opName, "aivNum",
-        std::to_string(aivNum).c_str(), "> 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((aivNum <= 0), OP_LOGE_FOR_INVALID_VALUE(opName, "aivNum", std::to_string(aivNum).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
     totalCoreNum_ = aivNum;
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
@@ -93,31 +95,29 @@ ge::graphStatus ScatterAddWithSortedBaseTiling::GetShapeAttrsInfo()
     if (updatesDims == 0 || (updatesDims == 1 && updatesSize_ == 1)) {
         isUpdateScalar_ = 1;
     } else {
-        OP_CHECK_IF(
-            CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "updates",
-                Ops::Base::ToString(updateShape).c_str(),
-                "updates shape must satisfy: updatesShape == concat(indicesShape, varShape[1:])"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        opName, "updates", Ops::Base::ToString(updateShape).c_str(),
+                        "updates shape must satisfy: updatesShape == concat(indicesShape, varShape[1:])"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto pos = context_->GetInputShape(POS_IDX);
     if (pos != nullptr) {
         auto posShape = pos->GetStorageShape();
-        OP_CHECK_IF(
-            static_cast<uint64_t>(posShape.GetShapeSize()) != indicesNum_,
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "pos, indices",
-                (std::to_string(posShape.GetShapeSize()) + ", " + std::to_string(indicesNum_)).c_str(),
-                "pos shape must equal indices shape"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(static_cast<uint64_t>(posShape.GetShapeSize()) != indicesNum_,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        opName, "pos, indices",
+                        (std::to_string(posShape.GetShapeSize()) + ", " + std::to_string(indicesNum_)).c_str(),
+                        "pos shape must equal indices shape"),
+                    return ge::GRAPH_FAILED);
         hasPos_ = true;
     }
 
-    OP_CHECK_IF(
-        CheckInputDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "input",
-            "unsupported", "one or more input dtypes are not in the supported sets"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "input", "unsupported",
+                                                      "one or more input dtypes are not in the supported sets"),
+                return ge::GRAPH_FAILED);
 
     bool isFloat = (varDtype_ == ge::DT_FLOAT || varDtype_ == ge::DT_FLOAT16 || varDtype_ == ge::DT_BF16);
     if (context_->GetDeterministic() && !isUpdateScalar_ && isFloat) {
@@ -133,14 +133,14 @@ ge::graphStatus ScatterAddWithSortedBaseTiling::CheckInputDtype()
     indicesDtype_ = indicesPtr->GetDataType();
     OP_CHECK_IF(
         (INDICES_DTYPE_SET.find(indicesDtype_) == INDICES_DTYPE_SET.end()),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "indices",
-            Ops::Base::ToString(indicesDtype_).c_str(),
-            ("indices dtype must be in " + ToString(INDICES_DTYPE_SET)).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "indices", Ops::Base::ToString(indicesDtype_).c_str(),
+                                              ("indices dtype must be in " + ToString(INDICES_DTYPE_SET)).c_str()),
         return ge::GRAPH_FAILED);
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
-    OP_CHECK_IF(indicesDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "indices",
-        Ops::Base::ToString(indicesDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDtypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "indices", Ops::Base::ToString(indicesDtype_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
 
     if (hasPos_) {
         auto posPtr = context_->GetInputDesc(POS_IDX);
@@ -148,65 +148,65 @@ ge::graphStatus ScatterAddWithSortedBaseTiling::CheckInputDtype()
         posDtype_ = posPtr->GetDataType();
         OP_CHECK_IF(
             (INDICES_DTYPE_SET.find(posDtype_) == INDICES_DTYPE_SET.end()),
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "pos",
-                Ops::Base::ToString(posDtype_).c_str(),
-                ("pos dtype must be in " + ToString(INDICES_DTYPE_SET)).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "pos", Ops::Base::ToString(posDtype_).c_str(),
+                                                  ("pos dtype must be in " + ToString(INDICES_DTYPE_SET)).c_str()),
             return ge::GRAPH_FAILED);
         posDtypeSize_ = ge::GetSizeByDataType(posDtype_);
-        OP_CHECK_IF(posDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "pos",
-            Ops::Base::ToString(posDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(posDtypeSize_ <= 0,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "pos", Ops::Base::ToString(posDtype_).c_str(),
+                                                          "failed to get dtype size, dtype may be unsupported"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto dataPtr = context_->GetInputDesc(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataPtr);
     varDtype_ = dataPtr->GetDataType();
-    OP_CHECK_IF(
-        (VAR_DTYPE_SET.find(varDtype_) == VAR_DTYPE_SET.end()),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var",
-            Ops::Base::ToString(varDtype_).c_str(),
-            ("var dtype must be in " + ToString(VAR_DTYPE_SET)).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((VAR_DTYPE_SET.find(varDtype_) == VAR_DTYPE_SET.end()),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var", Ops::Base::ToString(varDtype_).c_str(),
+                                                      ("var dtype must be in " + ToString(VAR_DTYPE_SET)).c_str()),
+                return ge::GRAPH_FAILED);
     varTypeSize_ = ge::GetSizeByDataType(varDtype_);
-    OP_CHECK_IF(varTypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var",
-        Ops::Base::ToString(varDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varTypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var", Ops::Base::ToString(varDtype_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
     auto updatePtr = context_->GetInputDesc(UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updatePtr);
     auto updatesType = updatePtr->GetDataType();
-    OP_CHECK_IF(
-        (VAR_DTYPE_SET.find(updatesType) == VAR_DTYPE_SET.end()),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "updates",
-            Ops::Base::ToString(updatesType).c_str(),
-            ("updates dtype must be in " + ToString(VAR_DTYPE_SET)).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((VAR_DTYPE_SET.find(updatesType) == VAR_DTYPE_SET.end()),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "updates", Ops::Base::ToString(updatesType).c_str(),
+                                                      ("updates dtype must be in " + ToString(VAR_DTYPE_SET)).c_str()),
+                return ge::GRAPH_FAILED);
     updatesDtypeSize_ = ge::GetSizeByDataType(updatesType);
     OP_CHECK_IF(
         (updatesType != varDtype_),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName, "var, updates",
-            (Ops::Base::ToString(varDtype_) + ", " + Ops::Base::ToString(updatesType)).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName, "var, updates", (Ops::Base::ToString(varDtype_) + ", " + Ops::Base::ToString(updatesType)).c_str(),
             "var and updates must have the same dtype"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterAddWithSortedBaseTiling::CheckUpdatesShape(
-    const gert::Shape& varShape, const gert::Shape& indicesShape, const gert::Shape& updatesShape)
+ge::graphStatus ScatterAddWithSortedBaseTiling::CheckUpdatesShape(const gert::Shape& varShape,
+                                                                  const gert::Shape& indicesShape,
+                                                                  const gert::Shape& updatesShape)
 {
     uint64_t varDimNum = static_cast<uint64_t>(varShape.GetDimNum());
     uint64_t indicesDimNum = static_cast<uint64_t>(indicesShape.GetDimNum());
     uint64_t updatesDimNum = static_cast<uint64_t>(updatesShape.GetDimNum());
     OP_CHECK_IF(
         (updatesDimNum != indicesDimNum + varDimNum - 1),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "updates, indices, var",
-            (std::to_string(updatesDimNum) + ", " + std::to_string(indicesDimNum) + ", " +
-             std::to_string(varDimNum)).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName, "updates, indices, var",
+            (std::to_string(updatesDimNum) + ", " + std::to_string(indicesDimNum) + ", " + std::to_string(varDimNum))
+                .c_str(),
             "updatesDimNum must equal indicesDimNum + varDimNum - 1"),
         return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < indicesDimNum; i++) {
         OP_CHECK_IF(
             (static_cast<uint32_t>(updatesShape.GetDim(i)) != static_cast<uint32_t>(indicesShape.GetDim(i))),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "updates, indices",
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName, "updates, indices",
                 (std::to_string(updatesShape.GetDim(i)) + ", " + std::to_string(indicesShape.GetDim(i))).c_str(),
                 "first indicesDimNum dimensions of updates must equal indices dimensions"),
             return ge::GRAPH_FAILED);
@@ -216,43 +216,26 @@ ge::graphStatus ScatterAddWithSortedBaseTiling::CheckUpdatesShape(
         OP_CHECK_IF(
             (static_cast<uint32_t>(updatesShape.GetDim(i + indicesDimNum - 1)) !=
              static_cast<uint32_t>(varShape.GetDim(i))),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "updates, var",
-                (std::to_string(updatesShape.GetDim(i + indicesDimNum - 1)) + ", " +
-                 std::to_string(varShape.GetDim(i))).c_str(),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName, "updates, var",
+                (std::to_string(updatesShape.GetDim(i + indicesDimNum - 1)) + ", " + std::to_string(varShape.GetDim(i)))
+                    .c_str(),
                 "remaining dimensions of updates must equal var dimensions (excluding first dim)"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
-bool ScatterAddWithSortedBaseTiling::IsCapable()
-{
-    return true;
-}
+bool ScatterAddWithSortedBaseTiling::IsCapable() { return true; }
 
-ge::graphStatus ScatterAddWithSortedBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterAddWithSortedBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ScatterAddWithSortedBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterAddWithSortedBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t ScatterAddWithSortedBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t ScatterAddWithSortedBaseTiling::GetTilingKey() const { return 0; }
 
-ge::graphStatus ScatterAddWithSortedBaseTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterAddWithSortedBaseTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ScatterAddWithSortedBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterAddWithSortedBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 } // namespace optiling

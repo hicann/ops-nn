@@ -21,20 +21,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void swi_glu_quant(
-    GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR offsets, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void swi_glu_quant(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR offsets,
+                                                    GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
 class swi_glu_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "swi_glu_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "swi_glu_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "swi_glu_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "swi_glu_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(swi_glu_quant_test, test_case_dynamic_bf16)
@@ -77,9 +71,8 @@ TEST_F(swi_glu_quant_test, test_case_dynamic_bf16)
     tilingDatafromBin->tilingKey = 206;
     ICPU_SET_TILING_KEY(206);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -131,9 +124,8 @@ TEST_F(swi_glu_quant_test, test_case_bf16_static_per_channel)
 
     ICPU_SET_TILING_KEY(205);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -184,9 +176,8 @@ TEST_F(swi_glu_quant_test, test_case_bf16_static_per_tensor)
 
     ICPU_SET_TILING_KEY(204);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -237,9 +228,8 @@ TEST_F(swi_glu_quant_test, test_case_dynamic_fp16)
     tilingDatafromBin->tilingKey = 106;
     ICPU_SET_TILING_KEY(106);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -291,9 +281,8 @@ TEST_F(swi_glu_quant_test, test_case_fp16_static_per_channel)
 
     ICPU_SET_TILING_KEY(105);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -344,9 +333,8 @@ TEST_F(swi_glu_quant_test, test_case_fp16_static_per_tensor)
 
     ICPU_SET_TILING_KEY(104);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -395,9 +383,8 @@ TEST_F(swi_glu_quant_test, test_case_dynamic_fp32)
     tilingDatafromBin->tilingKey = 306;
     ICPU_SET_TILING_KEY(306);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -448,9 +435,8 @@ TEST_F(swi_glu_quant_test, test_case_fp32_static_per_channel)
 
     ICPU_SET_TILING_KEY(305);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);
@@ -501,9 +487,8 @@ TEST_F(swi_glu_quant_test, test_case_fp32_static_per_tensor)
 
     ICPU_SET_TILING_KEY(304);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(swi_glu_quant, blockDim, x, smooth_scales, nullptr, group_index, y, scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(smooth_scales);

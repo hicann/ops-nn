@@ -33,15 +33,14 @@ extern "C" {
 static constexpr size_t MAX_DIM_LEN = 8;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
-    if (Ops::NN::AclnnUtil::IsRegbase() ||
-        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||
@@ -68,9 +67,8 @@ static inline bool CheckDtypeValid(const aclTensor* self, const aclScalar* alpha
 
     // 检查alpha的数据类型能否转换为FLOAT
     if (!CanCast(alpha->GetDataType(), DataType::DT_FLOAT)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "alpha dtype %s can not cast to float32.",
-            ToString(alpha->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alpha dtype %s can not cast to float32.",
+                ToString(alpha->GetDataType()).GetString());
         return false;
     }
 
@@ -117,8 +115,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* alpha, co
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus GetWorkspaceSizeCommon(
-    const aclTensor* self, const aclScalar* alpha, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+static aclnnStatus GetWorkspaceSizeCommon(const aclTensor* self, const aclScalar* alpha, aclTensor* out,
+                                          uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -157,8 +155,8 @@ static aclnnStatus GetWorkspaceSizeCommon(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnCeluGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* alpha, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnCeluGetWorkspaceSize(const aclTensor* self, const aclScalar* alpha, aclTensor* out,
+                                      uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -173,8 +171,8 @@ aclnnStatus aclnnCelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* ex
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceCeluGetWorkspaceSize(
-    aclTensor* selfRef, const aclScalar* alpha, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceCeluGetWorkspaceSize(aclTensor* selfRef, const aclScalar* alpha, uint64_t* workspaceSize,
+                                             aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

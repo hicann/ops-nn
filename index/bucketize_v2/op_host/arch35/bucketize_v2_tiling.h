@@ -36,11 +36,9 @@ struct BucketizeV2CompileInfo {
 
 class BucketizeV2BaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit BucketizeV2BaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit BucketizeV2BaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
-    ~BucketizeV2BaseTiling() override
-    {}
+    ~BucketizeV2BaseTiling() override {}
 
 protected:
     bool IsCapable() override;

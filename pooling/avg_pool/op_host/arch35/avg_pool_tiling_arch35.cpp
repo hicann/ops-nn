@@ -32,18 +32,18 @@ struct CubeTilingCommonParseInfo {
 };
 
 struct AvgPoolTilingParseInfo : CubeTilingCommonParseInfo {
-  int64_t stridesH = 0;
-  int64_t stridesW = 0;
-  int64_t kSizeH = 0;
-  int64_t kSizeW = 0;
-  int64_t filter = 0;
-  int64_t ub_ele = 0;
-  int64_t core_num = 0;
-  int64_t ksize_h = 0;
-  int64_t ksize_w = 0;
-  int64_t strides_h = 0;
-  int64_t strides_w = 0;
-  int64_t padding = 0;
+    int64_t stridesH = 0;
+    int64_t stridesW = 0;
+    int64_t kSizeH = 0;
+    int64_t kSizeW = 0;
+    int64_t filter = 0;
+    int64_t ub_ele = 0;
+    int64_t core_num = 0;
+    int64_t ksize_h = 0;
+    int64_t ksize_w = 0;
+    int64_t strides_h = 0;
+    int64_t strides_w = 0;
+    int64_t padding = 0;
 };
 
 namespace gert {
@@ -52,20 +52,14 @@ namespace gert {
  * @param [inout] context
  * @return succeeded or not
  */
-ge::graphStatus TilingPrepareForAvgPool([[maybe_unused]] TilingParseContext* context)
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepareForAvgPool([[maybe_unused]] TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 /**
  * @brief Op tiling function of AvgPool (runtime2.0).
  * @param [inout] context
  * @return ucceeded or not
  */
-ge::graphStatus TilingForAvgPool(TilingContext* context)
-{
-    return optiling::Tiling4AvgPoolRegBase(context);
-}
+ge::graphStatus TilingForAvgPool(TilingContext* context) { return optiling::Tiling4AvgPoolRegBase(context); }
 
 // register op tiling interface of AvgPool (runtime2.0)
 IMPL_OP_OPTILING(AvgPool).Tiling(TilingForAvgPool).TilingParse<AvgPoolTilingParseInfo>(TilingPrepareForAvgPool);

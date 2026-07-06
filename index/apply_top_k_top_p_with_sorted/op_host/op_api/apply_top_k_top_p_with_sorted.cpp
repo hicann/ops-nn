@@ -27,9 +27,8 @@ namespace l0op {
 
 OP_TYPE_REGISTER(ApplyTopKTopPWithSorted);
 
-const aclTensor* ApplyTopKTopPWithSorted(
-  const aclTensor* sortedValue, const aclTensor* sortedIndices, const aclTensor* p, const aclTensor* k,
-  aclOpExecutor* executor)
+const aclTensor* ApplyTopKTopPWithSorted(const aclTensor* sortedValue, const aclTensor* sortedIndices,
+                                         const aclTensor* p, const aclTensor* k, aclOpExecutor* executor)
 {
     L0_DFX(ApplyTopKTopPWithSorted, sortedValue, sortedIndices, p, k);
     auto output = executor->AllocTensor(sortedValue->GetViewShape(), sortedValue->GetDataType());
@@ -43,4 +42,4 @@ const aclTensor* ApplyTopKTopPWithSorted(
 
     return output;
 }
-}  // namespace l0op
+} // namespace l0op

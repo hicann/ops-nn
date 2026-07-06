@@ -46,8 +46,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
     return 0;
 }
 
-int CreateAclTensorHalf(
-    const std::vector<uint16_t>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclTensor** tensor)
+int CreateAclTensorHalf(const std::vector<uint16_t>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                        aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(uint16_t);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -60,14 +60,13 @@ int CreateAclTensorHalf(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), aclDataType::ACL_FLOAT16, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-        shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), aclDataType::ACL_FLOAT16, strides.data(), 0,
+                              aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
-int CreateAclTensorInt8(
-    const std::vector<int8_t>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclTensor** tensor)
+int CreateAclTensorInt8(const std::vector<int8_t>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                        aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(int8_t);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -80,9 +79,8 @@ int CreateAclTensorInt8(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), aclDataType::ACL_INT8, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-        shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), aclDataType::ACL_INT8, strides.data(), 0,
+                              aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -143,9 +141,8 @@ int main()
     aclOpExecutor* executor = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
 
-    ret = aclnnGeluQuantGetWorkspaceSize(
-        x, inputScale, inputOffset, approximate, quantMode, roundMode, dstType, yOut, outScale, &workspaceSize,
-        &executor);
+    ret = aclnnGeluQuantGetWorkspaceSize(x, inputScale, inputOffset, approximate, quantMode, roundMode, dstType, yOut,
+                                         outScale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGeluQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     void* workspaceAddr = nullptr;
@@ -163,9 +160,8 @@ int main()
 
     auto size = GetShapeSize(yOutShape);
     std::vector<int8_t> yOutData(size, 0);
-    ret = aclrtMemcpy(
-        yOutData.data(), yOutData.size() * sizeof(int8_t), yOutDeviceAddr, size * sizeof(int8_t),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(int8_t), yOutDeviceAddr, size * sizeof(int8_t),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
 
     for (int64_t i = 0; i < size; i++) {

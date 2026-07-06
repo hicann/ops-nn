@@ -25,20 +25,17 @@ namespace Common {
 namespace OpKernel {
 using namespace AscendC;
 
-template <
-    typename T, typename P, OneScalarBinaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
-class ForeachOneScalarListBinary : public KernelForeachUnary<
-                                       T, ForeachOneScalarListBinary<T, P, op, bufferNum, paramsCount, needCopyOut>,
-                                       bufferNum, paramsCount, needCopyOut>
-{
+template <typename T, typename P, OneScalarBinaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+class ForeachOneScalarListBinary
+    : public KernelForeachUnary<T, ForeachOneScalarListBinary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
+                                paramsCount, needCopyOut> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachOneScalarListBinary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount,
-        needCopyOut>;
+    using Base = KernelForeachUnary<T, ForeachOneScalarListBinary<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                    bufferNum, paramsCount, needCopyOut>;
     using Operator = OneScalarBinaryOp<P>;
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline ForeachOneScalarListBinary() : Base(*this){};
     using Base::Process;
 
@@ -52,8 +49,8 @@ protected:
 #endif
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> outLocal = Base::outQueue.template AllocTensor<T>();
         LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
@@ -65,18 +62,12 @@ private:
         Base::outQueue.template EnQue<T>(outLocal);
     }
 
-    __aicore__ inline void AfterProcess()
-    {}
-    
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
-    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
-    {}
+    __aicore__ inline void BeforeProcess() {}
+
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
+    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder) {}
 
     __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
     {

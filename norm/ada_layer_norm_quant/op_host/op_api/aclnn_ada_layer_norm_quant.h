@@ -20,17 +20,19 @@ extern "C" {
 /**
  * @brief aclnnAdaLayerNormQuantGetWorkspaceSize
  */
-ACLNN_API aclnnStatus aclnnAdaLayerNormQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* smoothScalesOptional, double epsilon, const char* quantMode,
-    aclTensor* out, aclTensor* quantScale, aclTensor* quantOffsetOptional, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnAdaLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* scale,
+                                                             const aclTensor* shift, const aclTensor* weightOptional,
+                                                             const aclTensor* biasOptional,
+                                                             const aclTensor* smoothScalesOptional, double epsilon,
+                                                             const char* quantMode, aclTensor* out,
+                                                             aclTensor* quantScale, aclTensor* quantOffsetOptional,
+                                                             uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /*
  * @brief aclnnAdaLayerNormQuant
  */
-ACLNN_API aclnnStatus
-aclnnAdaLayerNormQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnAdaLayerNormQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                             aclrtStream stream);
 
 #ifdef __cplusplus
 }

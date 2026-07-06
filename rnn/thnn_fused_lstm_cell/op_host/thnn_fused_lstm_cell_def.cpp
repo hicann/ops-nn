@@ -62,13 +62,11 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND});
 
         OpAICoreConfig aicore_config;
-        aicore_config.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        aicore_config.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
     }
 };
 
 OP_ADD(ThnnFusedLstmCell);
-}
+} // namespace ops

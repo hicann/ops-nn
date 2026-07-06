@@ -28,7 +28,8 @@ protected:
     static void TearDownTestCase() { std::cout << "EluV2OpApiTest TearDown" << std::endl; }
 };
 
-TEST_F(EluV2OpApiTest, aclnnEluV2_float){
+TEST_F(EluV2OpApiTest, aclnnEluV2_float)
+{
     auto xDesc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto yDesc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     float alpha = 0.5f;
@@ -36,40 +37,42 @@ TEST_F(EluV2OpApiTest, aclnnEluV2_float){
     float input_scale = -2.0f;
 
     auto ut = OP_API_UT(aclnnEluV2, INPUT(x, alpha, scale, input_scale), OUTPUT(y));
-    
+
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-    
+
     ut.TestPrecision();
 }
-TEST_F(EluV2OpApiTest, aclnnEluV2_float16){
-    auto xDesc = TensorDesc({256,256}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto yDesc = TensorDesc({256,256}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+TEST_F(EluV2OpApiTest, aclnnEluV2_float16)
+{
+    auto xDesc = TensorDesc({256, 256}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto yDesc = TensorDesc({256, 256}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
     float alpha = 0.5f;
     float scale = 1.5f;
     float input_scale = -2.0f;
-    
+
     auto ut = OP_API_UT(aclnnEluV2, INPUT(x, alpha, scale, input_scale), OUTPUT(y));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-    
+
     ut.TestPrecision();
 }
-TEST_F(EluV2OpApiTest, aclnnEluV2_bfloat16){
-    auto xDesc = TensorDesc({25,16,1023}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto yDesc = TensorDesc({25,16,1023}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+TEST_F(EluV2OpApiTest, aclnnEluV2_bfloat16)
+{
+    auto xDesc = TensorDesc({25, 16, 1023}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto yDesc = TensorDesc({25, 16, 1023}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
     float alpha = 0.5f;
     float scale = 1.5f;
     float input_scale = -2.0f;
-    
+
     auto ut = OP_API_UT(aclnnEluV2, INPUT(x, alpha, scale, input_scale), OUTPUT(y));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-    
+
     ut.TestPrecision();
 }

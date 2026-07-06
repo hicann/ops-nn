@@ -19,18 +19,11 @@
 
 using namespace std;
 
-class l2_ascend_anti_quant_test : public testing::Test
-{
+class l2_ascend_anti_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_ascend_anti_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_ascend_anti_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_ascend_anti_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_ascend_anti_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_ascend_anti_quant_test, ascend910B2_normal_1)
@@ -44,9 +37,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_normal_1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -63,9 +55,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_normal_3)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -83,9 +75,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_normal_2)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -103,9 +94,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_normal_4)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -122,9 +112,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_normal_5)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -142,9 +132,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_int4)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -162,9 +151,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_int32)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -188,9 +176,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_int32_scalar)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -208,9 +195,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_input_out_dtype_dif_1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -227,9 +213,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_input_out_dtype_dif_2)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -247,9 +233,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_offset_dim_not_1_01)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -267,9 +252,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_offset_dim_not_1_02)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -286,9 +270,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_scale_dim_not_1_Nonoffset)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -306,9 +290,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_scale_cannot_broadcast)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -324,9 +307,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_empty_tensor)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -342,9 +324,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910A_empty_tensor0)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -360,9 +341,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_empty_tensor1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -378,9 +358,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_empty_tensor2)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -396,9 +375,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_empty_tensor3)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -414,9 +392,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_check_input_bf16)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -432,9 +409,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_check_output_bf16)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -450,9 +426,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend910B2_scale_cannot_broadcast_1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -471,9 +446,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -491,9 +465,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_2)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -512,9 +486,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_3)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -532,9 +505,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_4)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -553,9 +526,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_5)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -573,9 +545,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_6)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -594,9 +566,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_7)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -614,9 +585,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_8)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -635,9 +606,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_9)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -656,9 +626,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_10)
     int dstType = ACL_BF16;
     bool sqrtMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -676,9 +645,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_normal_11)
     int dstType = ACL_BF16;
     bool sqrtMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -697,9 +666,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_int4)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -718,9 +686,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_int32)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -739,9 +706,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_scale_dim_not_1_01)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -760,9 +726,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_per_head_1)
     int dstType = ACL_BF16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -772,17 +737,15 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_per_head_1)
 TEST_F(l2_ascend_anti_quant_test, ascend950PR_per_head_2)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
-    auto tensor_1_desc = TensorDesc({3, 4}, ACL_INT4, ACL_FORMAT_ND)
-                             .ValueRange(-2, 2);
+    auto tensor_1_desc = TensorDesc({3, 4}, ACL_INT4, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_scale = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_offset = TensorDesc({3}, ACL_BF16, ACL_FORMAT_ND);
     auto out_tensor_desc = TensorDesc({3, 4}, ACL_BF16, ACL_FORMAT_ND);
     int dstType = ACL_BF16;
     bool sqrtMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -807,9 +770,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_int32_scalar)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -834,9 +796,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_hifloat8_scalar)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -855,9 +816,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_input_out_dtype_dif_1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -875,9 +835,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_input_out_dtype_dif_2)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -896,9 +856,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_offset_dim_not_1)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -916,9 +875,9 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_scale_dim_not_1_Nonoffset)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant,
+                        INPUT(tensor_1_desc, tensor_scale, (aclTensor*)nullptr, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -935,9 +894,8 @@ TEST_F(l2_ascend_anti_quant_test, ascend950PR_empty_tensor)
     int dstType = ACL_FLOAT16;
     bool sqrtMode = false;
 
-    auto ut = OP_API_UT(
-        aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
-        OUTPUT(out_tensor_desc));
+    auto ut = OP_API_UT(aclnnAscendAntiQuant, INPUT(tensor_1_desc, tensor_scale, tensor_offset, dstType, sqrtMode),
+                        OUTPUT(out_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

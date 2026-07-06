@@ -29,32 +29,21 @@ constexpr uint64_t DIM_NUM_FIVE = 5;
 constexpr uint64_t ASCENDC_WORKSPACE = 16 * 1024 * 1024;
 static const gert::Shape g_vec_1_shape = {1};
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
-bool AdaptiveMaxPool3dTilingBase::IsCapable()
-{
-    return true;
-}
+bool AdaptiveMaxPool3dTilingBase::IsCapable() { return true; }
 
-ge::graphStatus AdaptiveMaxPool3dTilingBase::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3dTilingBase::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdaptiveMaxPool3dTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3dTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdaptiveMaxPool3dTilingBase::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t AdaptiveMaxPool3dTilingBase::GetTilingKey() const { return 0; }
 
 ge::graphStatus AdaptiveMaxPool3dTilingBase::GetPlatformInfo()
 {
@@ -76,9 +65,8 @@ ge::graphStatus AdaptiveMaxPool3dTilingBase::GetShapeAttrsInfo()
     auto inputXDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
     auto xDtype = inputXDesc->GetDataType();
-    OP_CHECK_IF(
-        (xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
-        OP_LOGE(nodeName, "x datatype only support float, float16, bfloat16"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
+                OP_LOGE(nodeName, "x datatype only support float, float16, bfloat16"), return ge::GRAPH_FAILED);
     input_.xDtype = xDtype;
     gert::Shape xShape = EnsureNotScalar(inputX->GetStorageShape());
     if (xShape.GetDimNum() == DIM_NUM_FIVE) {
@@ -91,24 +79,21 @@ ge::graphStatus AdaptiveMaxPool3dTilingBase::GetShapeAttrsInfo()
         OP_LOGE(nodeName, "xShape dim number should be 5");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        input_.N < 1 || input_.C < 1 || input_.Di < 1 || input_.Hi < 1 || input_.Wi < 1,
-        OP_LOGE(nodeName, "Invalid shape. Maybe empty tensor."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        input_.Di * input_.Hi * input_.Wi > static_cast<int64_t>(std::numeric_limits<int32_t>::max()),
-        OP_LOGE(nodeName, "no support for D*H*W of input greater than int32 max value"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(input_.N < 1 || input_.C < 1 || input_.Di < 1 || input_.Hi < 1 || input_.Wi < 1,
+                OP_LOGE(nodeName, "Invalid shape. Maybe empty tensor."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(input_.Di * input_.Hi * input_.Wi > static_cast<int64_t>(std::numeric_limits<int32_t>::max()),
+                OP_LOGE(nodeName, "no support for D*H*W of input greater than int32 max value"),
+                return ge::GRAPH_FAILED);
 
     auto attrPtr = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrPtr);
     auto outputSizePtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputSizePtr);
-    OP_CHECK_IF(
-        outputSizePtr->GetSize() != OUTPUTSIZE_DIM_MAX, OP_LOGE(nodeName, "the size of outputsize only support 3"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSizePtr->GetSize() != OUTPUTSIZE_DIM_MAX,
+                OP_LOGE(nodeName, "the size of outputsize only support 3"), return ge::GRAPH_FAILED);
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());
-    OP_CHECK_IF(
-        outputSize[0] <= 0 || outputSize[1] <= 0 || outputSize[OUTPUTSIZE_DIMW] <= 0,
-        OP_LOGE(nodeName, "the value of outputsize should > 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSize[0] <= 0 || outputSize[1] <= 0 || outputSize[OUTPUTSIZE_DIMW] <= 0,
+                OP_LOGE(nodeName, "the value of outputsize should > 0"), return ge::GRAPH_FAILED);
     input_.Do = outputSize[0];
     input_.Ho = outputSize[1];
     input_.Wo = outputSize[OUTPUTSIZE_DIMW];
@@ -124,10 +109,7 @@ ge::graphStatus AdaptiveMaxPool3dTilingBase::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveMaxPool3dTilingBase::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3dTilingBase::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus Tiling4AdaptiveMaxPool3d(gert::TilingContext* context)
 {

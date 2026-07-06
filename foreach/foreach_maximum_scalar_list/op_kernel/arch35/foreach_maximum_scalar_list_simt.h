@@ -40,10 +40,21 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T>
-struct ComputeType { using type = T; };
-template <> struct ComputeType<half> { using type = float; };
-template <> struct ComputeType<bfloat16_t> { using type = float; };
-template <> struct ComputeType<int32_t> { using type = int64_t; };
+struct ComputeType {
+    using type = T;
+};
+template <>
+struct ComputeType<half> {
+    using type = float;
+};
+template <>
+struct ComputeType<bfloat16_t> {
+    using type = float;
+};
+template <>
+struct ComputeType<int32_t> {
+    using type = int64_t;
+};
 
 __simt_callee__ inline float SimtMaximum(float a, float b)
 {
@@ -65,19 +76,11 @@ __simt_callee__ inline float SimtMaximum(float a, float b)
     return a;
 }
 
-__simt_callee__ inline int64_t SimtMaximum(int64_t a, int64_t b)
-{
-    return (a >= b) ? a : b;
-}
+__simt_callee__ inline int64_t SimtMaximum(int64_t a, int64_t b) { return (a >= b) ? a : b; }
 
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachMaximumScalarListSimt(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR scalars,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachMaximumScalarListSimt(
+    int32_t tensorCount, __gm__ int64_t* tensorElements, GM_ADDR xList, GM_ADDR scalars, GM_ADDR yList)
 {
     using C = typename ComputeType<T>::type;
 
@@ -93,11 +96,9 @@ inline void OpForeachMaximumScalarListSimt(
         __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
         S scalarVal = scalarsGm[t];
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             C xVal = static_cast<C>(xData[idx]);
@@ -109,24 +110,17 @@ inline void OpForeachMaximumScalarListSimt(
 }
 
 template <typename T, typename S>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
-    const __gm__ ForeachMaximumScalarListTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
+                               const __gm__ ForeachMaximumScalarListTilingData* tilingGm)
 {
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachMaximumScalarListTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachMaximumScalarListTilingData*>(tilingGm)) +
         offsetof(ForeachMaximumScalarListTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
-    AscendC::Simt::VF_CALL<OpForeachMaximumScalarListSimt<T, S>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        tensorCount,
-        elemCounts,
-        x,
-        scalars,
-        y);
+    AscendC::Simt::VF_CALL<OpForeachMaximumScalarListSimt<T, S>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount,
+                                                                 elemCounts, x, scalars, y);
 }
 
 } // namespace NsForeachMaximumScalarList

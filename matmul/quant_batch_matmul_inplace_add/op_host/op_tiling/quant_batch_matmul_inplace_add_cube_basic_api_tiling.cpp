@@ -26,27 +26,20 @@ const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV
 
 namespace optiling {
 
-QuantBatchMatmulInplaceAddCubeBasicAPITiling::QuantBatchMatmulInplaceAddCubeBasicAPITiling(
-    gert::TilingContext* context)
+QuantBatchMatmulInplaceAddCubeBasicAPITiling::QuantBatchMatmulInplaceAddCubeBasicAPITiling(gert::TilingContext* context)
     : QuantBatchMatmulInplaceAddHelper<AdaptiveSlidingWindowCubeBasicAPITiling>(context), tilingData_(tilingDataSelf_)
 {
     Reset();
 }
 
-void QuantBatchMatmulInplaceAddCubeBasicAPITiling::Reset()
-{
-    ResetInplaceTilingData(tilingData_);
-}
+void QuantBatchMatmulInplaceAddCubeBasicAPITiling::Reset() { ResetInplaceTilingData(tilingData_); }
 
 bool QuantBatchMatmulInplaceAddCubeBasicAPITiling::IsCapable()
 {
     return IsHiFloat8TTQuant() && AdaptiveSlidingWindowCubeBasicAPITiling::IsCapable();
 }
 
-const void* QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingData() const
-{
-    return &tilingData_;
-}
+const void* QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingData() const { return &tilingData_; }
 
 void QuantBatchMatmulInplaceAddCubeBasicAPITiling::SetTilingData()
 {
@@ -71,12 +64,11 @@ uint64_t QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetKernelType() const
 
 uint64_t QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetKernelType());
+    return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
+                              GetKernelType());
 }
 
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddCubeBasicAPITiling, supportedNpuArch,
-    CUBE_BASIC_API_TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddCubeBasicAPITiling,
+                                   supportedNpuArch, CUBE_BASIC_API_TILING_PRIORITY);
 
 } // namespace optiling

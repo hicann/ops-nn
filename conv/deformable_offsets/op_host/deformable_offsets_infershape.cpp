@@ -51,17 +51,16 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto dilations = dilationsPtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, dilations);
     if (dilationsPtr->GetSize() != kDilationsSize) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "dilations", std::to_string(dilationsPtr->GetSize()).c_str(),
-            std::to_string(kDilationsSize).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilations",
+                                     std::to_string(dilationsPtr->GetSize()).c_str(),
+                                     std::to_string(kDilationsSize).c_str());
         return ge::GRAPH_FAILED;
     }
     auto strides = stridesPtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (stridesPtr->GetSize() != kStridesSize) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "strides", std::to_string(stridesPtr->GetSize()).c_str(),
-            std::to_string(kStridesSize).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(stridesPtr->GetSize()).c_str(),
+                                     std::to_string(kStridesSize).c_str());
         return ge::GRAPH_FAILED;
     }
     int64_t dilationsH;
@@ -85,16 +84,15 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     }
 
     if ((strideH <= 0) || (strideW <= 0)) {
-        OP_LOGE(
-            context->GetNodeName(), "stride should be greater than 0, strideH [%ld], strideW [%ld]", strideH, strideW);
+        OP_LOGE(context->GetNodeName(), "stride should be greater than 0, strideH [%ld], strideW [%ld]", strideH,
+                strideW);
         return ge::GRAPH_FAILED;
     }
 
     OP_CHECK_IF(
-        (ksizePtr->GetSize() != kKSizeSize), 
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "kSize", std::to_string(ksizePtr->GetSize()).c_str(),
-            std::to_string(kKSizeSize).c_str()),
+        (ksizePtr->GetSize() != kKSizeSize),
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "kSize", std::to_string(ksizePtr->GetSize()).c_str(),
+                                     std::to_string(kKSizeSize).c_str()),
         return ge::GRAPH_FAILED);
     auto ksize = ksizePtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
@@ -106,17 +104,16 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
 
     const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
-    OP_CHECK_IF(
-        (xShape->GetDimNum() != kDimNum),
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context->GetNodeName(), "x", std::to_string(xShape->GetDimNum()).c_str(), std::to_string(kDimNum).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xShape->GetDimNum() != kDimNum),
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xShape->GetDimNum()).c_str(),
+                                             std::to_string(kDimNum).c_str()),
+                return ge::GRAPH_FAILED);
     const gert::Shape* offsetShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, offsetShape);
     OP_CHECK_IF(
-        (offsetShape->GetDimNum() != kDimNum), 
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context->GetNodeName(), "offset", std::to_string(offsetShape->GetDimNum()).c_str(), std::to_string(kDimNum).c_str()),
+        (offsetShape->GetDimNum() != kDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "offset", std::to_string(offsetShape->GetDimNum()).c_str(),
+                                     std::to_string(kDimNum).c_str()),
         return ge::GRAPH_FAILED);
     auto posH = strchr(dataFormat, 'H') - dataFormat;
     auto posW = strchr(dataFormat, 'W') - dataFormat;
@@ -127,12 +124,10 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto offsetW = offsetShape->GetDim(posW);
     auto pads = padsPtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
-    OP_CHECK_IF(
-        (padsPtr->GetSize() != kPadsSize), 
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "pads", std::to_string(padsPtr->GetSize()).c_str(),
-            std::to_string(kPadsSize).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((padsPtr->GetSize() != kPadsSize),
+                OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads", std::to_string(padsPtr->GetSize()).c_str(),
+                                             std::to_string(kPadsSize).c_str()),
+                return ge::GRAPH_FAILED);
     auto padU = pads[0];
     auto padD = pads[1];
     auto padL = pads[2];
@@ -142,11 +137,10 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto convOutW = (xW + padL + padR - dilKsizeW) / strideW + 1;
 
     if ((convOutH != offsetH) || (convOutW != offsetW)) {
-        OP_LOGE(
-            context->GetNodeName(),
-            "Input_offsets h/w should be same as h/w after convolution, but now offset: [h:%ld, w:%ld]. conv_out: "
-            "[h:%ld, w:%ld].",
-            offsetH, offsetW, convOutH, convOutW);
+        OP_LOGE(context->GetNodeName(),
+                "Input_offsets h/w should be same as h/w after convolution, but now offset: [h:%ld, w:%ld]. conv_out: "
+                "[h:%ld, w:%ld].",
+                offsetH, offsetW, convOutH, convOutW);
         return ge::GRAPH_FAILED;
     }
 
@@ -155,10 +149,9 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     *outputShape = *xShape;
     outputShape->SetDim(posH, offsetH * ksizeH);
     outputShape->SetDim(posW, offsetW * ksizeW);
-    OP_LOGD(
-        context->GetNodeName(), "x shape is %s, offset shape is %s, output shape is %s, dataFormat is %s",
-        Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*offsetShape).c_str(),
-        Ops::Base::ToString(*outputShape).c_str(), dataFormat);
+    OP_LOGD(context->GetNodeName(), "x shape is %s, offset shape is %s, output shape is %s, dataFormat is %s",
+            Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*offsetShape).c_str(),
+            Ops::Base::ToString(*outputShape).c_str(), dataFormat);
     return ge::GRAPH_SUCCESS;
 }
 

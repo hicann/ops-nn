@@ -34,11 +34,11 @@ public:
         // Init
         blockIdx_ = GetBlockIdx();
         usedCoreNum_ = GetBlockNum();
-        ASSERT(usedCoreNum_ != 0 && "block dim can not be zero!"); 
+        ASSERT(usedCoreNum_ != 0 && "block dim can not be zero!");
         if (blockIdx_ >= usedCoreNum_) {
             return;
         }
-        
+
         perCoreElements_ = tilingData_->perCoreElements;
         if (blockIdx_ < usedCoreNum_ - 1) {
             curCoreElements_ = tilingData_->perCoreElements;
@@ -53,7 +53,8 @@ public:
         }
 
         meanGm_.SetGlobalBuffer((__gm__ T_MEAN*)mean + this->perCoreElements_ * blockIdx_, this->curCoreElements_);
-        varianceGm_.SetGlobalBuffer((__gm__ T_MEAN*)variance + this->perCoreElements_ * blockIdx_, this->curCoreElements_);
+        varianceGm_.SetGlobalBuffer((__gm__ T_MEAN*)variance + this->perCoreElements_ * blockIdx_,
+                                    this->curCoreElements_);
 
         // init local memory
         pipe_.InitBuffer(outNanQueue_, BUFFER_NUM, perCorePerLoopElements_ * sizeof(T_MEAN));
@@ -75,16 +76,15 @@ public:
         meanTypeNanLocal = outNanQueue_.DeQue<T_MEAN>();
 
         for (uint64_t i = 0; i < coreLoopsNum_; i++) {
-            uint64_t perLoopElements =
-                (i == (coreLoopsNum_ - 1)) ? perCoreLastLoopElements_ : perCorePerLoopElements_;
+            uint64_t perLoopElements = (i == (coreLoopsNum_ - 1)) ? perCoreLastLoopElements_ : perCorePerLoopElements_;
             CopyOut(i, perLoopElements, meanTypeNanLocal);
         }
         outNanQueue_.FreeTensor(meanTypeNanLocal);
     }
 
 private:
-    __aicore__ inline void CopyOut(
-        uint64_t process, uint64_t curLoopElements, LocalTensor<T_MEAN>& runningMeanTypeNanLocal)
+    __aicore__ inline void CopyOut(uint64_t process, uint64_t curLoopElements,
+                                   LocalTensor<T_MEAN>& runningMeanTypeNanLocal)
     {
         DataCopyExtParams copyInParams;
         copyInParams.blockCount = 1;
@@ -101,7 +101,7 @@ private:
     TPipe pipe_;
     const InstanceNormReduceEmptyTilingData* tilingData_;
 
-    // Global memory address 
+    // Global memory address
     GlobalTensor<T_MEAN> meanGm_;
     GlobalTensor<T_MEAN> varianceGm_;
 

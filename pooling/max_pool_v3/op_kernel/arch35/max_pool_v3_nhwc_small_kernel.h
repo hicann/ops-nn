@@ -32,34 +32,31 @@ private:
     template <typename M, typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
     __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRows(
-        int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t inColsElms, uint32_t channels);
-    __aicore__ inline void CopyInMultiChannels(
-        int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels, int64_t alignChannels, int64_t winDim);
-    __aicore__ inline void CopyMaxOut(
-        int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, int64_t channels);
-    __aicore__ inline void CopyOutMultiChannels(
-        int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
+                                           uint32_t inColsElms, uint32_t channels);
+    __aicore__ inline void CopyInMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels,
+                                               int64_t alignChannels, int64_t winDim);
+    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
+                                      int64_t channels);
+    __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols,
+                                                int64_t channels);
     template <typename M, typename U>
-    __aicore__ inline void ComputeMultiRow(
-        int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols);
+    __aicore__ inline void ComputeMultiRow(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
+                                           int64_t outCols);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleRow(
-        int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols);
+    __aicore__ inline void ComputeSingleRow(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
+                                            int64_t outCols);
     template <typename M, typename U>
-    __aicore__ inline void ComputeMultiBatch(
-        int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols);
+    __aicore__ inline void ComputeMultiBatch(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
+                                             int64_t outCols);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleChannels(
-        int64_t inRows, int64_t cols, int64_t outRows, int64_t outCols, int64_t alignChannels);
+    __aicore__ inline void ComputeSingleChannels(int64_t inRows, int64_t cols, int64_t outRows, int64_t outCols,
+                                                 int64_t alignChannels);
     template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(
-        uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms, uint32_t hStride, uint32_t wStride,
-        uint32_t channels, LocalTensor<U>& indexLocal);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms,
+                                          uint32_t hStride, uint32_t wStride, uint32_t channels,
+                                          LocalTensor<U>& indexLocal);
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -132,15 +129,15 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::BaseCompute()
         alignCols = tilingData_->wInDim;
         alignColsElms = alignCols * channels;
     } else {
-        alignColsElms =
-            Ops::Base::CeilAlign(alignCols * channels, static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
+        alignColsElms = Ops::Base::CeilAlign(alignCols * channels,
+                                             static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
     }
-    uint32_t alignChannels =
-        Ops::Base::CeilAlign(channels, static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
+    uint32_t alignChannels = Ops::Base::CeilAlign(channels,
+                                                  static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
     if constexpr (GATHER_MODE != NOT_GATHER) {
         LocalTensor<U> indexLocal = indexBuf_.Get<U>();
-        GenGatherIndex<U, GATHER_MODE>(
-            outUbFactorH, outUbFactorW, tilingData_->hInDim, alignColsElms, sH, sW, channels, indexLocal);
+        GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, tilingData_->hInDim, alignColsElms, sH, sW, channels,
+                                       indexLocal);
     }
 
     for (int64_t idx = startIdx; idx < endIdx; idx++) {
@@ -158,8 +155,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::BaseCompute()
                             rowStart * tilingData_->wInDim * channels + colStart * channels;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->hOutDim * tilingData_->wOutDim * channels +
                             hIdx * outUbFactorH * tilingData_->wOutDim * channels + wIdx * outUbFactorW * channels;
-        int64_t inRows =
-            tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim : (rows - 1) * sH + tilingData_->kH;
+        int64_t inRows = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim :
+                                                                  (rows - 1) * sH + tilingData_->kH;
         int64_t inCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + tilingData_->kW;
 
         if constexpr (GATHER_MODE == NOT_GATHER) {
@@ -205,8 +202,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInSingleRow(int64_t offs
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInMultiRows(
-    int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t inColsElms, uint32_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount,
+                                                                    int64_t blockLen, uint32_t inColsElms,
+                                                                    uint32_t channels)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyPadExtParams<T> padExtParams;
@@ -235,8 +233,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInMultiRows(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInMultiChannels(
-    int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels, int64_t alignChannels, int64_t winDim)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInMultiChannels(int64_t offset, int64_t n, int64_t rows,
+                                                                        int64_t cols, int64_t channels,
+                                                                        int64_t alignChannels, int64_t winDim)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyPadExtParams<T> padExtParams;
@@ -270,8 +269,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyInMultiChannels(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyMaxOut(
-    int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, int64_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
+                                                               int64_t blockLen, int64_t channels)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -284,8 +283,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyMaxOut(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyOutMultiChannels(
-    int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyOutMultiChannels(int64_t offset, int64_t n, int64_t rows,
+                                                                         int64_t cols, int64_t channels)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -299,9 +298,10 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::CopyOutMultiChannels(
 
 template <typename T>
 template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::GenGatherIndex(
-    uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms, uint32_t hStride, uint32_t wStride,
-    uint32_t channels, LocalTensor<U>& indexLocal)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut,
+                                                                   uint32_t hIn, uint32_t wInElms, uint32_t hStride,
+                                                                   uint32_t wStride, uint32_t channels,
+                                                                   LocalTensor<U>& indexLocal)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         NHWCGenGatherIndexSingleRow<U>(wStride, channels, indexLocal);
@@ -314,8 +314,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::GenGatherIndex(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiBatch(
-    int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiBatch(int64_t n, int64_t inRows, int64_t inColsElms,
+                                                                      int64_t outRows, int64_t outCols)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -345,9 +345,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiBatch(
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        MaxPoolSplitBatch<T, U>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements, tailLoopElements,
-            channels);
+        MaxPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements,
+                                tailLoopElements, channels);
     }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -355,8 +354,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiBatch(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiRow(
-    int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiRow(int64_t n, int64_t inRows, int64_t inColsElms,
+                                                                    int64_t outRows, int64_t outCols)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -386,9 +385,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiRow(
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        MaxPoolSplitH<T, U>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, inColsElms, oneLoopStrideH,
-            oneLoopElements, tailLoopElements, channels);
+        MaxPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, inColsElms,
+                            oneLoopStrideH, oneLoopElements, tailLoopElements, channels);
     }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -396,8 +394,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiRow(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(
-    int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(int64_t n, int64_t inRows, int64_t inColsElms,
+                                                                     int64_t outRows, int64_t outCols)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -432,9 +430,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(
         {
             MicroAPI::RegTensor<U> v0;
             MicroAPI::DataCopy(v0, indexAddr);
-            MaxPoolSplitW<M, U>(
-                dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
-                oneLoopElements, tailLoopElements, channels);
+            MaxPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                inColsElms, oneLoopElements, tailLoopElements, channels);
         }
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
@@ -444,9 +441,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(
             {
                 MicroAPI::RegTensor<U> v0;
                 MicroAPI::DataCopy(v0, indexAddr);
-                MaxPoolSplitW<M, U>(
-                    dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
-                    oneLoopElements, tailLoopElements, channels);
+                MaxPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                    inColsElms, oneLoopElements, tailLoopElements, channels);
             }
         }
     }
@@ -456,8 +452,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleChannels(
-    int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols, int64_t alignChannels)
+__aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleChannels(int64_t inRows, int64_t inCols,
+                                                                          int64_t outRows, int64_t outCols,
+                                                                          int64_t alignChannels)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -492,14 +489,14 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleChannels(
             {
                 for (uint16_t k = 0; k < loopW; k++) {
                     for (uint16_t m = 0; m < cLoop; m++) {
-                        auto curSrcAddr =
-                            xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + m * repeatElm;
+                        auto curSrcAddr = xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW +
+                                          m * repeatElm;
                         auto curDstAddr = dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH +
                                           k * alignChannels + m * repeatElm;
                         MaxPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, repeatElm);
                     }
-                    auto curSrcAddr =
-                        xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + cLoop * repeatElm;
+                    auto curSrcAddr = xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW +
+                                      cLoop * repeatElm;
                     auto curDstAddr = dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH +
                                       k * alignChannels + cLoop * repeatElm;
                     MaxPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, tailNum);

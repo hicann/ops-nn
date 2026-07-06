@@ -46,10 +46,10 @@ protected:
     static void TearDownTestCase() { std::cout << "MaxPool3dGradWithArgmaxTiling TearDown" << std::endl; }
 };
 
-void TestMaxPool3dGradWithArgmaxTiling(
-    gert::StorageShape& xShape, gert::StorageShape& gradShape, gert::StorageShape& argmaxShape,
-    gert::StorageShape& dxShape, std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList,
-    ge::DataType dataType, uint64_t expectTilingKey)
+void TestMaxPool3dGradWithArgmaxTiling(gert::StorageShape& xShape, gert::StorageShape& gradShape,
+                                       gert::StorageShape& argmaxShape, gert::StorageShape& dxShape,
+                                       std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList,
+                                       ge::DataType dataType, uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
     map<string, string> socInfos;
@@ -76,19 +76,19 @@ void TestMaxPool3dGradWithArgmaxTiling(
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // TilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -131,7 +131,8 @@ void TestMaxPool3dGradWithArgmaxTiling(
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
     gert::StorageShape xShape = {{1, 40, 16, 90, 160}, {1, 40, 16, 90, 160}};
     gert::StorageShape gradShape = {{1, 40, 16, 45, 80}, {1, 40, 16, 45, 80}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 45, 80}, {1, 40, 16, 45, 80}};
@@ -147,7 +148,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0)
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_case_1)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
     gert::StorageShape xShape = {{1, 40, 16, 9, 9}, {1, 40, 16, 9, 9}};
     gert::StorageShape gradShape = {{1, 40, 16, 4, 4}, {1, 40, 16, 4, 4}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 4, 4}, {1, 40, 16, 4, 4}};
@@ -163,7 +165,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_case_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
     gert::StorageShape xShape = {{1, 40, 16, 16, 16}, {1, 40, 16, 16, 16}};
     gert::StorageShape gradShape = {{1, 40, 16, 8, 8}, {1, 40, 16, 8, 8}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 8, 8}, {1, 40, 16, 8, 8}};
@@ -179,7 +182,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_case_3)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
     gert::StorageShape xShape = {{1, 40, 16, 32, 32}, {1, 40, 16, 32, 32}};
     gert::StorageShape gradShape = {{1, 40, 16, 16, 16}, {1, 40, 16, 16, 16}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 16, 16}, {1, 40, 16, 16, 16}};
@@ -195,7 +199,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_case_4)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
     gert::StorageShape xShape = {{64, 40, 1, 4, 4}, {64, 40, 1, 4, 4}};
     gert::StorageShape gradShape = {{64, 40, 1, 2, 2}, {64, 40, 1, 2, 2}};
     gert::StorageShape argmaxShape = {{64, 40, 1, 2, 2}, {64, 40, 1, 2, 2}};
@@ -211,7 +216,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_case_5)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0_case_5" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0_case_5" << std::endl;
     gert::StorageShape xShape = {{64, 40, 1, 15, 15}, {64, 40, 1, 15, 15}};
     gert::StorageShape gradShape = {{64, 40, 1, 15, 15}, {64, 40, 1, 15, 15}};
     gert::StorageShape argmaxShape = {{64, 40, 1, 15, 15}, {64, 40, 1, 15, 15}};
@@ -227,7 +233,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_case_cut_w)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_0" << std::endl;
     gert::StorageShape xShape = {{64, 1, 1, 4, 400}, {64, 1, 1, 4, 400}};
     gert::StorageShape gradShape = {{64, 1, 1, 2, 200}, {64, 1, 1, 2, 200}};
     gert::StorageShape argmaxShape = {{64, 1, 1, 2, 200}, {64, 1, 1, 2, 200}};
@@ -243,7 +250,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_31_networkcase_0)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_31_networkcase_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_31_networkcase_0" << std::endl;
     // network case
     gert::StorageShape xShape = {{64, 48, 10, 78, 146}, {64, 48, 10, 78, 146}};
     gert::StorageShape gradShape = {{64, 48, 1, 6, 8}, {64, 48, 1, 6, 8}};
@@ -260,7 +268,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_31_n
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_31_networkcase_1)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_31_networkcase_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_31_networkcase_0" << std::endl;
     // network case
     gert::StorageShape xShape = {{64, 1, 10, 78, 146}, {64, 1, 10, 78, 146}};
     gert::StorageShape gradShape = {{64, 1, 1, 6, 8}, {64, 1, 1, 6, 8}};
@@ -277,7 +286,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_31_n
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_100000_to_0)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_100000_to_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_100000_to_0" << std::endl;
     gert::StorageShape xShape = {{1, 8, 6, 6, 6}, {1, 8, 6, 6, 6}};
     gert::StorageShape gradShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
     gert::StorageShape argmaxShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
@@ -293,7 +303,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1000
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_100001_to_0)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_100001_to_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_100001_to_0" << std::endl;
     gert::StorageShape xShape = {{1, 16, 6, 6, 6}, {1, 16, 6, 6, 6}};
     gert::StorageShape gradShape = {{1, 16, 3, 3, 3}, {1, 16, 3, 3, 3}};
     gert::StorageShape argmaxShape = {{1, 16, 3, 3, 3}, {1, 16, 3, 3, 3}};
@@ -309,7 +320,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1000
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_100002_to_0)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_100002_to_0" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_100002_to_0" << std::endl;
     gert::StorageShape xShape = {{1, 8, 6, 6, 6}, {1, 8, 6, 6, 6}};
     gert::StorageShape gradShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
     gert::StorageShape argmaxShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
@@ -325,7 +337,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1000
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_110000_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_110000_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_110000_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
     gert::StorageShape gradShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape argmaxShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
@@ -341,7 +354,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1100
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_210001_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_210001_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_210001_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
     gert::StorageShape gradShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape argmaxShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
@@ -357,7 +371,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2100
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_110002_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_110002_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_110002_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
     gert::StorageShape gradShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape argmaxShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
@@ -373,7 +388,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1100
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_111000_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_111000_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_111000_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 64, 64, 64}, {1, 8, 64, 64, 64}};
     gert::StorageShape gradShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
     gert::StorageShape argmaxShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
@@ -389,7 +405,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1110
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_211001_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_211001_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_211001_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 16, 64, 64, 64}, {1, 16, 64, 64, 64}};
     gert::StorageShape gradShape = {{1, 16, 32, 32, 31}, {1, 16, 32, 32, 31}};
     gert::StorageShape argmaxShape = {{1, 16, 32, 32, 31}, {1, 16, 32, 32, 31}};
@@ -405,7 +422,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2110
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_111002_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_111002_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_111002_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 64, 64, 64}, {1, 8, 64, 64, 64}};
     gert::StorageShape gradShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
     gert::StorageShape argmaxShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
@@ -421,7 +439,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1110
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_111100_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_111100_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_111100_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 16, 16, 1024}, {1, 8, 16, 16, 1024}};
     gert::StorageShape gradShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
     gert::StorageShape argmaxShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
@@ -437,7 +456,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1111
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_211101_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_211101_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_211101_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 16, 16, 16, 1024}, {1, 16, 16, 16, 1024}};
     gert::StorageShape gradShape = {{1, 16, 8, 8, 511}, {1, 16, 8, 8, 511}};
     gert::StorageShape argmaxShape = {{1, 16, 8, 8, 511}, {1, 16, 8, 8, 511}};
@@ -453,7 +473,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2111
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_111102_to_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_111102_to_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_111102_to_2" << std::endl;
     gert::StorageShape xShape = {{1, 8, 16, 16, 1024}, {1, 8, 16, 16, 1024}};
     gert::StorageShape gradShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
     gert::StorageShape argmaxShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
@@ -469,7 +490,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1111
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_case_nc_small)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
     gert::StorageShape xShape = {{4, 1, 190, 126, 96}, {4, 1, 190, 126, 96}};
     gert::StorageShape gradShape = {{4, 1, 8, 6, 24}, {4, 1, 8, 6, 24}};
     gert::StorageShape argmaxShape = {{4, 1, 8, 6, 24}, {4, 1, 8, 6, 24}};
@@ -485,7 +507,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_case_cut_do)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
     gert::StorageShape xShape = {{256, 4, 190, 126, 96}, {256, 4, 190, 126, 96}};
     gert::StorageShape gradShape = {{256, 4, 8, 6, 24}, {256, 4, 8, 6, 24}};
     gert::StorageShape argmaxShape = {{256, 4, 8, 6, 24}, {256, 4, 8, 6, 24}};
@@ -501,7 +524,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_case_cut_ho)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
     gert::StorageShape xShape = {{1, 1, 3200, 126, 96}, {1, 1, 3200, 126, 96}};
     gert::StorageShape gradShape = {{1, 1, 160, 6, 24}, {1, 1, 160, 6, 24}};
     gert::StorageShape argmaxShape = {{1, 1, 160, 6, 24}, {1, 1, 160, 6, 24}};
@@ -517,7 +541,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_case_cut_wo_1)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
     gert::StorageShape xShape = {{1, 1, 1, 26000, 960}, {1, 1, 1, 26000, 960}};
     gert::StorageShape gradShape = {{1, 1, 1, 1300, 20}, {1, 1, 1, 1300, 20}};
     gert::StorageShape argmaxShape = {{1, 1, 1, 1300, 20}, {1, 1, 1, 1300, 20}};
@@ -533,7 +558,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_case_cut_wo_2)
 {
-    std::cout << "run case: " << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
+    std::cout << "run case: "
+              << "max_pool3d_grad_with_argmax_tilingkey_2" << std::endl;
     gert::StorageShape xShape = {{1, 1, 1, 40, 2400000}, {1, 1, 1, 40, 2400000}};
     gert::StorageShape gradShape = {{1, 1, 1, 1, 60000}, {1, 1, 1, 1, 60000}};
     gert::StorageShape argmaxShape = {{1, 1, 1, 1, 60000}, {1, 1, 1, 1, 60000}};
@@ -547,11 +573,11 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
-static void ExecuteTestCase(
-    gert::StorageShape xShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape, gert::StorageShape yShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
-    ge::DataType dtype, int64_t index_dtype, bool ceil_mode, std::string data_format, uint64_t except_tilingkey,
-    std::string expect)
+static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
+                            gert::StorageShape yShape, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+                            std::vector<int64_t> pads, std::vector<int64_t> dilation, ge::DataType dtype,
+                            int64_t index_dtype, bool ceil_mode, std::string data_format, uint64_t except_tilingkey,
+                            std::string expect)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -583,21 +609,21 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -619,14 +645,13 @@ static void ExecuteTestCase(
                       .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, indicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -647,11 +672,11 @@ static void ExecuteTestCase(
     dlog_setlevel(0, 3, 0);
 }
 
-static void ExecuteFailTestCase(
-    gert::StorageShape xShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape, gert::StorageShape yShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
-    ge::DataType dtype, ge::DataType argmaxDtype, ge::DataType yDtype, bool ceil_mode, std::string data_format,
-    int64_t index_dtype, ge::graphStatus expectResult)
+static void ExecuteFailTestCase(gert::StorageShape xShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
+                                gert::StorageShape yShape, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+                                std::vector<int64_t> pads, std::vector<int64_t> dilation, ge::DataType dtype,
+                                ge::DataType argmaxDtype, ge::DataType yDtype, bool ceil_mode, std::string data_format,
+                                int64_t index_dtype, ge::graphStatus expectResult)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -680,21 +705,21 @@ static void ExecuteFailTestCase(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -714,14 +739,13 @@ static void ExecuteFailTestCase(
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeInputTd(2, argmaxDtype, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -744,9 +768,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_format)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "INVALID_FORMAT", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "INVALID_FORMAT", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_input_dims_3d)
@@ -755,9 +778,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_input_dims_3d)
     gert::StorageShape gradShape = {{5, 3, 4}, {5, 3, 4}};
     gert::StorageShape argmaxShape = {{5, 3, 4}, {5, 3, 4}};
     gert::StorageShape yShape = {{5, 6, 8}, {5, 6, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_shape_zero)
@@ -766,9 +788,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_shape_zero)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_grad_argmax_dim_mismatch)
@@ -777,9 +798,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_grad_argmax_dim_mismatch)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 5}, {8, 5, 3, 4, 5}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_nc_dim_mismatch)
@@ -788,9 +808,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_nc_dim_mismatch)
     gert::StorageShape gradShape = {{8, 3, 3, 4, 4}, {8, 3, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 3, 3, 4, 4}, {8, 3, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_grad_dtype_mismatch)
@@ -799,9 +818,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_grad_dtype_mismatch)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT16, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT16, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_y_dtype_mismatch)
@@ -810,9 +828,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_y_dtype_mismatch)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT16, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT16, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_dtype_int32)
@@ -821,9 +838,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_x_dtype_int32)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_INT32, ge::DT_INT32,
-        ge::DT_INT32, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_argmax_dtype_float)
@@ -832,9 +848,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_argmax_dtype_float)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_FLOAT,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_ksize_list_size)
@@ -843,9 +858,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_ksize_list_size)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT,
-        ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_strides_list_size)
@@ -854,9 +868,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_strides_list_size)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT,
-        ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_pads_list_size)
@@ -865,9 +878,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_pads_list_size)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT,
-        ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_dilation_list_size)
@@ -876,9 +888,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_dilation_list_size)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1, 1}, ge::DT_FLOAT,
-        ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_ksize_value_zero)
@@ -887,9 +898,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_ksize_value_zero)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {0, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {0, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_strides_value_zero)
@@ -898,9 +908,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_strides_value_zero)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {0, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {0, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_pads_value_negative)
@@ -909,9 +918,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_pads_value_negative)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {-1, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {-1, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_dilation_value_zero)
@@ -920,9 +928,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_dilation_value_zero)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {0, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {0, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_pad_vs_kernel)
@@ -931,9 +938,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_pad_vs_kernel)
     gert::StorageShape gradShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape argmaxShape = {{8, 5, 3, 4, 4}, {8, 5, 3, 4, 4}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {2, 2, 2}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {2, 2, 2}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_outer_dim)
@@ -942,9 +948,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_outer_dim)
     gert::StorageShape gradShape = {{8, 5, 1, 1, 1}, {8, 5, 1, 1, 1}};
     gert::StorageShape argmaxShape = {{8, 5, 1, 1, 1}, {8, 5, 1, 1, 1}};
     gert::StorageShape yShape = {{8, 5, 6, 8, 8}, {8, 5, 6, 8, 8}};
-    ExecuteFailTestCase(
-        xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1}, ge::DT_FLOAT, ge::DT_INT32,
-        ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
+    ExecuteFailTestCase(xShape, gradShape, argmaxShape, yShape, {2, 2, 2}, {2, 2, 2}, {0, 0, 0}, {1, 1, 1},
+                        ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, false, "NCDHW", 3, ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simt_test_0001_NCDHW)
@@ -963,9 +968,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simt_test_0
     std::string data_format = "NDHWC";
     uint64_t except_tilingkey = 769;
     std::string expect = " ";
-    ExecuteTestCase(
-        xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
-        data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0001_NCDHW)
@@ -984,9 +988,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 1;
     std::string expect = " ";
-    ExecuteTestCase(
-        xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
-        data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0002_NCDHW)
@@ -1005,9 +1008,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 1025;
     std::string expect = " ";
-    ExecuteTestCase(
-        xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
-        data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0003_NCDHW)
@@ -1026,9 +1028,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 2049;
     std::string expect = " ";
-    ExecuteTestCase(
-        xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
-        data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0004_NCDHW)
@@ -1047,9 +1048,8 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 1025;
     std::string expect = " ";
-    ExecuteTestCase(
-        xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
-        data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0005_NCDHW)
@@ -1068,7 +1068,6 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 1025;
     std::string expect = " ";
-    ExecuteTestCase(
-        xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
-        data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    ceil_mode, data_format, except_tilingkey, expect);
 }

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -23,9 +24,10 @@ using namespace AscendC;
 using namespace Common::OpKernel;
 
 template <typename T>
-__aicore__ void AddcMulScalarAdapterForFloat(
-    const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2, const LocalTensor<T>& tensorLocal3,
-    const LocalTensor<T>& float32Tensor, const T scalarValue, const uint32_t maxCastDataCount, const int64_t dataCount)
+__aicore__ void AddcMulScalarAdapterForFloat(const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2,
+                                             const LocalTensor<T>& tensorLocal3, const LocalTensor<T>& float32Tensor,
+                                             const T scalarValue, const uint32_t maxCastDataCount,
+                                             const int64_t dataCount)
 {
     Mul(tensorLocal2, tensorLocal2, tensorLocal3, dataCount);
     PipeBarrier<PIPE_V>();
@@ -33,10 +35,10 @@ __aicore__ void AddcMulScalarAdapterForFloat(
 }
 
 template <typename T>
-__aicore__ void AddcMulScalarAdapterForInt(
-    const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2, const LocalTensor<T>& tensorLocal3,
-    const LocalTensor<float>& float32Tensor, const float scalarValue, const uint32_t maxCastDataCount,
-    const int64_t dataCount)
+__aicore__ void AddcMulScalarAdapterForInt(const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2,
+                                           const LocalTensor<T>& tensorLocal3, const LocalTensor<float>& float32Tensor,
+                                           const float scalarValue, const uint32_t maxCastDataCount,
+                                           const int64_t dataCount)
 {
     Mul(tensorLocal2, tensorLocal2, tensorLocal3, dataCount);
     PipeBarrier<PIPE_V>();
@@ -46,10 +48,11 @@ __aicore__ void AddcMulScalarAdapterForInt(
 }
 
 template <typename T>
-__aicore__ void ComputerPerCastForAddcMulScalar(
-    const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2, const LocalTensor<T>& tensorLocal3,
-    const LocalTensor<float>& float32Tensor, const float scalarValue, const uint32_t maxCastDataCount,
-    const uint32_t index, const int64_t dataCount)
+__aicore__ void ComputerPerCastForAddcMulScalar(const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2,
+                                                const LocalTensor<T>& tensorLocal3,
+                                                const LocalTensor<float>& float32Tensor, const float scalarValue,
+                                                const uint32_t maxCastDataCount, const uint32_t index,
+                                                const int64_t dataCount)
 {
     Cast(float32Tensor, tensorLocal2[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
     PipeBarrier<PIPE_V>();
@@ -67,28 +70,25 @@ __aicore__ void ComputerPerCastForAddcMulScalar(
 }
 
 template <typename T>
-__aicore__ void AddcMulScalarAdapter(
-    const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2, const LocalTensor<T>& tensorLocal3,
-    const LocalTensor<float>& float32Tensor, const float scalarValue, const uint32_t maxCastDataCount,
-    const int64_t dataCount)
+__aicore__ void AddcMulScalarAdapter(const LocalTensor<T>& tensorLocal1, const LocalTensor<T>& tensorLocal2,
+                                     const LocalTensor<T>& tensorLocal3, const LocalTensor<float>& float32Tensor,
+                                     const float scalarValue, const uint32_t maxCastDataCount, const int64_t dataCount)
 {
     uint32_t castTimes = dataCount / maxCastDataCount;
     uint32_t castTimesRemainder = dataCount % maxCastDataCount;
     for (uint32_t i = 0; i < castTimes; i++) {
-        ComputerPerCastForAddcMulScalar<T>(
-            tensorLocal1, tensorLocal2, tensorLocal3, float32Tensor, scalarValue, maxCastDataCount, i,
-            maxCastDataCount);
+        ComputerPerCastForAddcMulScalar<T>(tensorLocal1, tensorLocal2, tensorLocal3, float32Tensor, scalarValue,
+                                           maxCastDataCount, i, maxCastDataCount);
     }
     if (castTimesRemainder > 0) {
-        ComputerPerCastForAddcMulScalar<T>(
-            tensorLocal1, tensorLocal2, tensorLocal3, float32Tensor, scalarValue, maxCastDataCount, castTimes,
-            castTimesRemainder);
+        ComputerPerCastForAddcMulScalar<T>(tensorLocal1, tensorLocal2, tensorLocal3, float32Tensor, scalarValue,
+                                           maxCastDataCount, castTimes, castTimesRemainder);
     }
 }
 
-extern "C" __global__ __aicore__ void foreach_addcmul_scalar(
-    GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcmul_scalar(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3,
+                                                             GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                             GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

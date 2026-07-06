@@ -24,7 +24,7 @@ constexpr int32_t BUFFER_NUM = 2;
 constexpr int32_t QUEUE_DEPTH = 1;
 
 template <typename T>
-__aicore__ inline void CopyInFromGm(TQue<TPosition::VECIN, BUFFER_NUM> &inQueueX, GlobalTensor<T> &xGm,
+__aicore__ inline void CopyInFromGm(TQue<TPosition::VECIN, BUFFER_NUM>& inQueueX, GlobalTensor<T>& xGm,
                                     int64_t progress, int64_t tileLength, int64_t curTileLength)
 {
     LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
@@ -35,7 +35,7 @@ __aicore__ inline void CopyInFromGm(TQue<TPosition::VECIN, BUFFER_NUM> &inQueueX
 }
 
 template <typename T>
-__aicore__ inline void CopyOutToGm(TQue<TPosition::VECOUT, BUFFER_NUM> &outQueueY, GlobalTensor<T> &yGm,
+__aicore__ inline void CopyOutToGm(TQue<TPosition::VECOUT, BUFFER_NUM>& outQueueY, GlobalTensor<T>& yGm,
                                    int64_t progress, int64_t tileLength, int64_t curTileLength)
 {
     LocalTensor<T> yLocal = outQueueY.DeQue<T>();
@@ -45,9 +45,8 @@ __aicore__ inline void CopyOutToGm(TQue<TPosition::VECOUT, BUFFER_NUM> &outQueue
 }
 
 template <typename T>
-__aicore__ inline void CopyInFromGm(
-    TQueBind<TPosition::VECIN, TPosition::VECOUT, QUEUE_DEPTH> &inOutQueue, GlobalTensor<T> &xGm, int64_t progress,
-    int64_t tileLength, int64_t curTileLength)
+__aicore__ inline void CopyInFromGm(TQueBind<TPosition::VECIN, TPosition::VECOUT, QUEUE_DEPTH>& inOutQueue,
+                                    GlobalTensor<T>& xGm, int64_t progress, int64_t tileLength, int64_t curTileLength)
 {
     LocalTensor<T> xLocal = inOutQueue.AllocTensor<T>();
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(curTileLength * sizeof(T)), 0, 0, 0};
@@ -57,9 +56,8 @@ __aicore__ inline void CopyInFromGm(
 }
 
 template <typename T>
-__aicore__ inline void CopyOutToGm(
-    TQueBind<TPosition::VECIN, TPosition::VECOUT, QUEUE_DEPTH> &inOutQueue, GlobalTensor<T> &yGm,
-    int64_t progress, int64_t tileLength, int64_t curTileLength)
+__aicore__ inline void CopyOutToGm(TQueBind<TPosition::VECIN, TPosition::VECOUT, QUEUE_DEPTH>& inOutQueue,
+                                   GlobalTensor<T>& yGm, int64_t progress, int64_t tileLength, int64_t curTileLength)
 {
     LocalTensor<T> yLocal = inOutQueue.template DeQue<QuePosition::VECOUT, QuePosition::GM, T>();
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(curTileLength * sizeof(T)), 0, 0, 0};
@@ -68,27 +66,27 @@ __aicore__ inline void CopyOutToGm(
 }
 
 template <typename T>
-__aicore__ inline void InitBlockGm(GlobalTensor<T> &xGm, GlobalTensor<T> &yGm, int64_t &blockLength,
-                                   int64_t &tileLength, GM_ADDR x, GM_ADDR y, const ReluTilingData *tilingData)
+__aicore__ inline void InitBlockGm(GlobalTensor<T>& xGm, GlobalTensor<T>& yGm, int64_t& blockLength,
+                                   int64_t& tileLength, GM_ADDR x, GM_ADDR y, const ReluTilingData* tilingData)
 {
     int64_t blockIdx = GetBlockIdx();
     if (blockIdx < tilingData->formerNum) {
         blockLength = tilingData->formerLength;
         int64_t offset = tilingData->formerLength * blockIdx;
-        xGm.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->formerLength);
-        yGm.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->formerLength);
+        xGm.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->formerLength);
+        yGm.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->formerLength);
     } else {
         blockLength = tilingData->tailLength;
         int64_t offset = tilingData->formerLength * tilingData->formerNum;
-        xGm.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->tailLength);
-        yGm.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->tailLength);
+        xGm.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->tailLength);
+        yGm.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->tailLength);
     }
 
     tileLength = tilingData->tileLength;
 }
 
 template <typename Kernel>
-__aicore__ inline void ProcessTiles(Kernel &kernel, int64_t blockLength, int64_t tileLength)
+__aicore__ inline void ProcessTiles(Kernel& kernel, int64_t blockLength, int64_t tileLength)
 {
     int64_t tileNum = (blockLength + tileLength - 1) / tileLength;
     if (tileNum == 0) {
@@ -109,16 +107,13 @@ __aicore__ inline void ProcessTiles(Kernel &kernel, int64_t blockLength, int64_t
 template <typename Derived, typename T>
 class KernelReluBase {
 public:
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReluTilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReluTilingData* tilingData)
     {
         InitBlockGm(xGm_, yGm_, blockLength_, tileLength_, x, y, tilingData);
         pipe_.InitBuffer(inOutQueue_, BUFFER_NUM, tileLength_ * sizeof(T));
     }
 
-    __aicore__ inline void Process()
-    {
-        ProcessTiles(static_cast<Derived &>(*this), blockLength_, tileLength_);
-    }
+    __aicore__ inline void Process() { ProcessTiles(static_cast<Derived&>(*this), blockLength_, tileLength_); }
 
     __aicore__ inline void CopyIn(int64_t progress, int64_t curTileLength)
     {
@@ -157,7 +152,7 @@ class KernelReluUpcast : public KernelReluBase<KernelReluUpcast<T, MidT>, T> {
 public:
     __aicore__ inline KernelReluUpcast() {}
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReluTilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReluTilingData* tilingData)
     {
         KernelReluBase<KernelReluUpcast<T, MidT>, T>::Init(x, y, tilingData);
         this->pipe_.InitBuffer(tmpBufX_, this->tileLength_ * sizeof(MidT));
@@ -182,7 +177,7 @@ class KernelReluScalarInt64 {
 public:
     __aicore__ inline KernelReluScalarInt64() {}
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReluTilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReluTilingData* tilingData)
     {
         InitBlockGm(xGm_, yGm_, blockLength_, tileLength_, x, y, tilingData);
         pipe_.InitBuffer(inQueueX_, BUFFER_NUM, tileLength_ * sizeof(T));
@@ -240,6 +235,6 @@ private:
     int64_t tileLength_ = 0;
 };
 
-}  // namespace NsRelu
+} // namespace NsRelu
 
 #endif

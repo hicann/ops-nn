@@ -29,7 +29,7 @@ static const std::initializer_list<op::DataType> COMPRESSINDEX_DTYPE_SUPPORT_LIS
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 
 inline static bool CheckNotNull(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                const aclTensor* compressIndex, const aclTensor *out)
+                                const aclTensor* compressIndex, const aclTensor* out)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(weight, return false);
@@ -40,7 +40,7 @@ inline static bool CheckNotNull(const aclTensor* x, const aclTensor* weight, con
 }
 
 inline static bool CheckDtypeValid(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                   const aclTensor* compressIndex, const aclTensor *out)
+                                   const aclTensor* compressIndex, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x, X1_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(weight, X2_DTYPE_SUPPORT_LIST, return false);
@@ -51,19 +51,20 @@ inline static bool CheckDtypeValid(const aclTensor* x, const aclTensor* weight, 
 }
 
 inline static bool CheckShapeValid(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                   const aclTensor* compressIndex, const aclTensor *out)
+                                   const aclTensor* compressIndex, const aclTensor* out)
 {
-    CHECK_RET(x->GetViewShape().GetDimNum() == 2, ACLNN_ERR_INNER_NULLPTR); // 检查x是否是2维
-    CHECK_RET(weight->GetViewShape().GetDimNum() == 1, ACLNN_ERR_INNER_NULLPTR); // 检查weight是否是1维
-    CHECK_RET(bias->GetViewShape().GetDimNum() == 1, ACLNN_ERR_INNER_NULLPTR); // 检查bias是否是1维
+    CHECK_RET(x->GetViewShape().GetDimNum() == 2, ACLNN_ERR_INNER_NULLPTR);             // 检查x是否是2维
+    CHECK_RET(weight->GetViewShape().GetDimNum() == 1, ACLNN_ERR_INNER_NULLPTR);        // 检查weight是否是1维
+    CHECK_RET(bias->GetViewShape().GetDimNum() == 1, ACLNN_ERR_INNER_NULLPTR);          // 检查bias是否是1维
     CHECK_RET(compressIndex->GetViewShape().GetDimNum() == 1, ACLNN_ERR_INNER_NULLPTR); // 检查compressIndex是否是1维
-    CHECK_RET(out->GetViewShape().GetDimNum() == 2, ACLNN_ERR_INNER_NULLPTR); // 检查out是否是2维
-    CHECK_RET(out->GetViewShape().GetDim(1) == bias->GetViewShape().GetDim(0), ACLNN_ERR_INNER_NULLPTR); // 检查out最后一维是否与bias维度一致
+    CHECK_RET(out->GetViewShape().GetDimNum() == 2, ACLNN_ERR_INNER_NULLPTR);           // 检查out是否是2维
+    CHECK_RET(out->GetViewShape().GetDim(1) == bias->GetViewShape().GetDim(0),
+              ACLNN_ERR_INNER_NULLPTR); // 检查out最后一维是否与bias维度一致
     return true;
 }
 
 inline static aclnnStatus CheckParam(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                     const aclTensor* compressIndex, const aclTensor *out)
+                                     const aclTensor* compressIndex, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, weight, bias, compressIndex, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -74,39 +75,39 @@ inline static aclnnStatus CheckParam(const aclTensor* x, const aclTensor* weight
     return ACLNN_SUCCESS;
 }
 
-inline static const aclTensor *PreProcessWeight(const aclTensor *x, const op::Format& format, aclOpExecutor *executor)
+inline static const aclTensor* PreProcessWeight(const aclTensor* x, const op::Format& format, aclOpExecutor* executor)
 {
-    auto formatTensor = executor == nullptr ? const_cast<aclTensor *>(x)
-                                            : executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
+    auto formatTensor = executor == nullptr ? const_cast<aclTensor*>(x) :
+                                              executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
     formatTensor->SetViewFormat(x->GetViewFormat());
     formatTensor->SetOriginalFormat(x->GetOriginalFormat());
     formatTensor->SetStorageFormat(format);
     return formatTensor;
 }
 
-inline static const aclTensor *PreProcessX(const aclTensor *x, aclOpExecutor *executor)
+inline static const aclTensor* PreProcessX(const aclTensor* x, aclOpExecutor* executor)
 {
     op::Shape newShape;
-    newShape.AppendDim(x->GetStorageShape().GetDim(0)); // 第0维不变
+    newShape.AppendDim(x->GetStorageShape().GetDim(0));                                  // 第0维不变
     newShape.AppendDim(x->GetStorageShape().GetDim(1) * x->GetStorageShape().GetDim(2)); // 合并第1维和第2维
-    newShape.AppendDim(x->GetStorageShape().GetDim(3)); // 第3维变为第2维
-    auto reshapeTensor = executor == nullptr ? const_cast<aclTensor *>(x)
-                                            : executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
+    newShape.AppendDim(x->GetStorageShape().GetDim(3));                                  // 第3维变为第2维
+    auto reshapeTensor = executor == nullptr ? const_cast<aclTensor*>(x) :
+                                               executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
     reshapeTensor->SetViewShape(x->GetViewShape());
     reshapeTensor->SetOriginalShape(x->GetOriginalShape());
     reshapeTensor->SetStorageShape(newShape);
     return reshapeTensor;
 }
 
-inline static const aclTensor *PostProcessC(const aclTensor *x, aclOpExecutor *executor)
+inline static const aclTensor* PostProcessC(const aclTensor* x, aclOpExecutor* executor)
 {
     op::Shape newShape;
-    newShape.AppendDim(x->GetStorageShape().GetDim(0)); // 第0维不变
+    newShape.AppendDim(x->GetStorageShape().GetDim(0));      // 第0维不变
     newShape.AppendDim(x->GetStorageShape().GetDim(1) / 16); // 1维分形，16为分形
-    newShape.AppendDim(16); // 16为分形
-    newShape.AppendDim(x->GetStorageShape().GetDim(2)); // 第2维变为第3维
-    auto reshapeTensor = executor == nullptr ? const_cast<aclTensor *>(x)
-                                            : executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
+    newShape.AppendDim(16);                                  // 16为分形
+    newShape.AppendDim(x->GetStorageShape().GetDim(2));      // 第2维变为第3维
+    auto reshapeTensor = executor == nullptr ? const_cast<aclTensor*>(x) :
+                                               executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
     reshapeTensor->SetViewShape(x->GetViewShape());
     reshapeTensor->SetOriginalShape(x->GetOriginalShape());
     reshapeTensor->SetStorageShape(newShape);
@@ -115,8 +116,9 @@ inline static const aclTensor *PostProcessC(const aclTensor *x, aclOpExecutor *e
 } // namespace
 
 aclnnStatus aclnnMatmulCompressGetWorkspaceSize(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                                const aclTensor* compressIndex, aclTensor* out,
-                                                uint64_t* workspaceSize, aclOpExecutor** executor) {
+                                                const aclTensor* compressIndex, aclTensor* out, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnMatmulCompress, DFX_IN(x, weight, bias, compressIndex), DFX_OUT(out));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -137,16 +139,17 @@ aclnnStatus aclnnMatmulCompressGetWorkspaceSize(const aclTensor* x, const aclTen
     auto xNZ = l0op::TransData(x, Format::FORMAT_FRACTAL_NZ, 1, uniqueExecutor.get());
     CHECK_RET(xNZ != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor *xNZReshape = PreProcessX(xNZ, uniqueExecutor.get());
-    const aclTensor *weightNZ = PreProcessWeight(weight, op::Format::FORMAT_FRACTAL_NZ, uniqueExecutor.get());
+    const aclTensor* xNZReshape = PreProcessX(xNZ, uniqueExecutor.get());
+    const aclTensor* weightNZ = PreProcessWeight(weight, op::Format::FORMAT_FRACTAL_NZ, uniqueExecutor.get());
     if (bias != nullptr) {
         bias = l0op::Contiguous(bias, uniqueExecutor.get());
         CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     // 调用MatmulCompress算子Kernel
-    auto outC = l0op::MatmulCompress(xNZReshape, weightNZ, bias, compressIndex, false, true, 8, 8, uniqueExecutor.get());
+    auto outC = l0op::MatmulCompress(xNZReshape, weightNZ, bias, compressIndex, false, true, 8, 8,
+                                     uniqueExecutor.get());
     CHECK_RET(outC != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    const aclTensor *outCReshape = PostProcessC(outC, uniqueExecutor.get());
+    const aclTensor* outCReshape = PostProcessC(outC, uniqueExecutor.get());
 
     // 调用transdata算子NZ->ND
     auto outND = l0op::TransData(outCReshape, Format::FORMAT_ND, 1, uniqueExecutor.get());
@@ -162,7 +165,7 @@ aclnnStatus aclnnMatmulCompressGetWorkspaceSize(const aclTensor* x, const aclTen
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMatmulCompress(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)
+aclnnStatus aclnnMatmulCompress(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnMatmulCompress);
     // 固定写法，调用框架能力，完成计算

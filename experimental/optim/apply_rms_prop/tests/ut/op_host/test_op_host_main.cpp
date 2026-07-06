@@ -18,10 +18,10 @@ using namespace std;
 // 参考 ops-math/tests/ut/op_host/test_op_host_main.cpp
 class OpHostUtEnvironment : public testing::Environment {
 public:
-    OpHostUtEnvironment(char** argv) : argv_(argv)
-    {}
-    
-    virtual void SetUp() {
+    OpHostUtEnvironment(char** argv) : argv_(argv) {}
+
+    virtual void SetUp()
+    {
         cout << "Global Environment SetUp." << endl;
 
         // 获取可执行文件路径
@@ -35,10 +35,10 @@ public:
         // 加载 libapply_rms_prop_op_host_ut_lib.so（包含算子注册代码）
         string opHostSoPath = currDir.parent_path().string() + string("/libapply_rms_prop_op_host_ut_lib.so");
         cout << "Loading op_host .so from: " << opHostSoPath << endl;
-        
+
         // 创建 OppSoDesc 并加载 .so
         gert::OppSoDesc oppSoDesc({ge::AscendString(opHostSoPath.c_str())}, "op_host_so");
-        
+
         // 创建 SpaceRegistry 并添加 .so 中的注册信息
         shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
         if (opImplSpaceRegistryV2->AddSoToRegistry(oppSoDesc) == ge::GRAPH_FAILED) {
@@ -51,15 +51,14 @@ public:
         cout << "OpImplSpaceRegistryV2 initialized successfully" << endl;
     }
 
-    virtual void TearDown() {
-        cout << "Global Environment TearDown" << endl;
-    }
+    virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 
 private:
     char** argv_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     testing::InitGoogleTest(&argc, argv);
     testing::AddGlobalTestEnvironment(new OpHostUtEnvironment(argv));
     return RUN_ALL_TESTS();

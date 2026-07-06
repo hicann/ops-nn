@@ -13,32 +13,33 @@
  * \brief
  */
 
- #include "sparse_segment_mean_tiling_base.h"
- 
- using Ops::NN::Optiling::TilingRegistry;
- using namespace AscendC;
- namespace optiling {
- 
- ge::graphStatus Tiling4SparseSegmentMean(gert::TilingContext* context) {
-   return TilingRegistry::GetInstance().DoTilingImpl(context);
- }
- 
- ge::graphStatus TilingPrepare4SparseSegmentMean(gert::TilingParseContext* context) {
-   fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-   OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
- 
-   auto compileInfoPtr = context->GetCompiledInfo<SparseSegmentMeanCompileInfo>();
-   OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfoPtr is null");
- 
-   auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-   compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
-   ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
-   return ge::GRAPH_SUCCESS;
- }
- 
- IMPL_OP_OPTILING(SparseSegmentMean)
-     .Tiling(Tiling4SparseSegmentMean)
-     .TilingParse<SparseSegmentMeanCompileInfo>(TilingPrepare4SparseSegmentMean);
- 
- }  // namespace optiling
- 
+#include "sparse_segment_mean_tiling_base.h"
+
+using Ops::NN::Optiling::TilingRegistry;
+using namespace AscendC;
+namespace optiling {
+
+ge::graphStatus Tiling4SparseSegmentMean(gert::TilingContext* context)
+{
+    return TilingRegistry::GetInstance().DoTilingImpl(context);
+}
+
+ge::graphStatus TilingPrepare4SparseSegmentMean(gert::TilingParseContext* context)
+{
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
+
+    auto compileInfoPtr = context->GetCompiledInfo<SparseSegmentMeanCompileInfo>();
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfoPtr is null");
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_OPTILING(SparseSegmentMean)
+    .Tiling(Tiling4SparseSegmentMean)
+    .TilingParse<SparseSegmentMeanCompileInfo>(TilingPrepare4SparseSegmentMean);
+
+} // namespace optiling

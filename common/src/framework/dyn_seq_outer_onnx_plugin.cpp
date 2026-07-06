@@ -17,21 +17,15 @@
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status ParseParamsDynSeqOuter(const Message *op_src, ge::Operator &op_dest) {
-  return SUCCESS;
-}
+static Status ParseParamsDynSeqOuter(const Message* op_src, ge::Operator& op_dest) { return SUCCESS; }
 
 REGISTER_CUSTOM_OP("DynSeqOuter")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("ai.onnx::8::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::9::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::10::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::11::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::12::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::13::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::14::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::15::DynSeqOuter"),
-                 ge::AscendString("ai.onnx::16::DynSeqOuter")})
-  .ParseParamsFn(ParseParamsDynSeqOuter)
-  .ImplyType(ImplyType::TVM);
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("ai.onnx::8::DynSeqOuter"), ge::AscendString("ai.onnx::9::DynSeqOuter"),
+                   ge::AscendString("ai.onnx::10::DynSeqOuter"), ge::AscendString("ai.onnx::11::DynSeqOuter"),
+                   ge::AscendString("ai.onnx::12::DynSeqOuter"), ge::AscendString("ai.onnx::13::DynSeqOuter"),
+                   ge::AscendString("ai.onnx::14::DynSeqOuter"), ge::AscendString("ai.onnx::15::DynSeqOuter"),
+                   ge::AscendString("ai.onnx::16::DynSeqOuter")})
+    .ParseParamsFn(ParseParamsDynSeqOuter)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

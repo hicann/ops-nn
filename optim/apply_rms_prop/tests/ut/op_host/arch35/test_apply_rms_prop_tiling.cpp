@@ -89,15 +89,9 @@ using namespace ge;
 
 class TestApplyRMSPropTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyRMSPropTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyRMSPropTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyRMSPropTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyRMSPropTiling TearDown" << std::endl; }
 };
 
 // TilingKey 公式: D_T_X + BUFFER_MODE * 256
@@ -106,16 +100,16 @@ protected:
 static constexpr uint64_t DTYPE_CODE_FP32 = 0;
 static constexpr uint64_t DTYPE_CODE_FP16 = 1;
 static constexpr uint64_t DTYPE_CODE_BF16 = 27;
-static constexpr uint64_t TILING_KEY_FP32_SINGLE = DTYPE_CODE_FP32 + 0 * 256;       // 0
-static constexpr uint64_t TILING_KEY_FP32_DOUBLE = DTYPE_CODE_FP32 + 1 * 256;       // 256
-static constexpr uint64_t TILING_KEY_FP16_SINGLE = DTYPE_CODE_FP16 + 0 * 256;       // 1
-static constexpr uint64_t TILING_KEY_FP16_DOUBLE = DTYPE_CODE_FP16 + 1 * 256;       // 257
-static constexpr uint64_t TILING_KEY_BF16_SINGLE = DTYPE_CODE_BF16 + 0 * 256;       // 27
-static constexpr uint64_t TILING_KEY_BF16_DOUBLE = DTYPE_CODE_BF16 + 1 * 256;       // 283
+static constexpr uint64_t TILING_KEY_FP32_SINGLE = DTYPE_CODE_FP32 + 0 * 256; // 0
+static constexpr uint64_t TILING_KEY_FP32_DOUBLE = DTYPE_CODE_FP32 + 1 * 256; // 256
+static constexpr uint64_t TILING_KEY_FP16_SINGLE = DTYPE_CODE_FP16 + 0 * 256; // 1
+static constexpr uint64_t TILING_KEY_FP16_DOUBLE = DTYPE_CODE_FP16 + 1 * 256; // 257
+static constexpr uint64_t TILING_KEY_BF16_SINGLE = DTYPE_CODE_BF16 + 0 * 256; // 27
+static constexpr uint64_t TILING_KEY_BF16_DOUBLE = DTYPE_CODE_BF16 + 1 * 256; // 283
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -160,13 +154,13 @@ struct ApplyRMSPropTilingArgs {
     ge::Format inputFormat;
     bool useLocking;
     // dtype overrides for individual inputs (default: ge::DT_UNDEFINED == fall back to tensorDtype)
-    ge::DataType msDtype       = ge::DT_UNDEFINED;
-    ge::DataType momDtype      = ge::DT_UNDEFINED;
-    ge::DataType lrDtype       = ge::DT_UNDEFINED;
-    ge::DataType rhoDtype      = ge::DT_UNDEFINED;
+    ge::DataType msDtype = ge::DT_UNDEFINED;
+    ge::DataType momDtype = ge::DT_UNDEFINED;
+    ge::DataType lrDtype = ge::DT_UNDEFINED;
+    ge::DataType rhoDtype = ge::DT_UNDEFINED;
     ge::DataType momentumDtype = ge::DT_UNDEFINED;
-    ge::DataType epsilonDtype  = ge::DT_UNDEFINED;
-    ge::DataType gradDtype     = ge::DT_UNDEFINED;
+    ge::DataType epsilonDtype = ge::DT_UNDEFINED;
+    ge::DataType gradDtype = ge::DT_UNDEFINED;
 };
 
 static inline ge::DataType ResolveDtype(ge::DataType override, ge::DataType base)
@@ -201,47 +195,44 @@ static ApplyRMSPropTilingResult DoApplyRMSPropTilingCase(const ApplyRMSPropTilin
         return result;
     }
 
-    gert::StorageShape varStorage      = {args.varShape, args.varShape};
-    gert::StorageShape msStorage       = {args.msShape, args.msShape};
-    gert::StorageShape momStorage      = {args.momShape, args.momShape};
-    gert::StorageShape lrStorage       = {args.lrShape, args.lrShape};
-    gert::StorageShape rhoStorage      = {args.rhoShape, args.rhoShape};
+    gert::StorageShape varStorage = {args.varShape, args.varShape};
+    gert::StorageShape msStorage = {args.msShape, args.msShape};
+    gert::StorageShape momStorage = {args.momShape, args.momShape};
+    gert::StorageShape lrStorage = {args.lrShape, args.lrShape};
+    gert::StorageShape rhoStorage = {args.rhoShape, args.rhoShape};
     gert::StorageShape momentumStorage = {args.momentumShape, args.momentumShape};
-    gert::StorageShape epsilonStorage  = {args.epsilonShape, args.epsilonShape};
-    gert::StorageShape gradStorage     = {args.gradShape, args.gradShape};
+    gert::StorageShape epsilonStorage = {args.epsilonShape, args.epsilonShape};
+    gert::StorageShape gradStorage = {args.gradShape, args.gradShape};
 
     ApplyRMSPropUtCompileInfo compileInfo;
 
-    ge::DataType msDt       = ResolveDtype(args.msDtype,       args.tensorDtype);
-    ge::DataType momDt      = ResolveDtype(args.momDtype,      args.tensorDtype);
-    ge::DataType lrDt       = ResolveDtype(args.lrDtype,       args.tensorDtype);
-    ge::DataType rhoDt      = ResolveDtype(args.rhoDtype,      args.tensorDtype);
+    ge::DataType msDt = ResolveDtype(args.msDtype, args.tensorDtype);
+    ge::DataType momDt = ResolveDtype(args.momDtype, args.tensorDtype);
+    ge::DataType lrDt = ResolveDtype(args.lrDtype, args.tensorDtype);
+    ge::DataType rhoDt = ResolveDtype(args.rhoDtype, args.tensorDtype);
     ge::DataType momentumDt = ResolveDtype(args.momentumDtype, args.tensorDtype);
-    ge::DataType epsilonDt  = ResolveDtype(args.epsilonDtype,  args.tensorDtype);
-    ge::DataType gradDt     = ResolveDtype(args.gradDtype,     args.tensorDtype);
+    ge::DataType epsilonDt = ResolveDtype(args.epsilonDtype, args.tensorDtype);
+    ge::DataType gradDt = ResolveDtype(args.gradDtype, args.tensorDtype);
 
     auto holder = gert::TilingContextFaker()
                       .SetOpType(opType)
                       .NodeIoNum(8, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &msStorage, &momStorage,
-                           &lrStorage, &rhoStorage, &momentumStorage,
-                           &epsilonStorage, &gradStorage})
+                      .InputShapes({&varStorage, &msStorage, &momStorage, &lrStorage, &rhoStorage, &momentumStorage,
+                                    &epsilonStorage, &gradStorage})
                       .OutputShapes({&varStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
                       .NodeInputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)  // var
-                      .NodeInputTd(1, msDt,             args.inputFormat, args.inputFormat)  // ms
-                      .NodeInputTd(2, momDt,            args.inputFormat, args.inputFormat)  // mom
-                      .NodeInputTd(3, lrDt,             args.inputFormat, args.inputFormat)  // lr
-                      .NodeInputTd(4, rhoDt,            args.inputFormat, args.inputFormat)  // rho
-                      .NodeInputTd(5, momentumDt,       args.inputFormat, args.inputFormat)  // momentum
-                      .NodeInputTd(6, epsilonDt,        args.inputFormat, args.inputFormat)  // epsilon
-                      .NodeInputTd(7, gradDt,           args.inputFormat, args.inputFormat)  // grad
+                      .NodeInputTd(1, msDt, args.inputFormat, args.inputFormat)              // ms
+                      .NodeInputTd(2, momDt, args.inputFormat, args.inputFormat)             // mom
+                      .NodeInputTd(3, lrDt, args.inputFormat, args.inputFormat)              // lr
+                      .NodeInputTd(4, rhoDt, args.inputFormat, args.inputFormat)             // rho
+                      .NodeInputTd(5, momentumDt, args.inputFormat, args.inputFormat)        // momentum
+                      .NodeInputTd(6, epsilonDt, args.inputFormat, args.inputFormat)         // epsilon
+                      .NodeInputTd(7, gradDt, args.inputFormat, args.inputFormat)            // grad
                       .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat) // var
-                      .NodeAttrs(
-                          {{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(args.useLocking)}})
+                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(args.useLocking)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -258,14 +249,12 @@ static ApplyRMSPropTilingResult DoApplyRMSPropTilingCase(const ApplyRMSPropTilin
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ApplyRmsPropTilingData)) {
-            const auto* td = reinterpret_cast<const ApplyRmsPropTilingData*>(
-                rawTilingData->GetData());
-            result.totalNum    = td->totalNum;
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ApplyRmsPropTilingData)) {
+            const auto* td = reinterpret_cast<const ApplyRmsPropTilingData*>(rawTilingData->GetData());
+            result.totalNum = td->totalNum;
             result.blockFactor = td->blockFactor;
-            result.ubFactor    = td->ubFactor;
-            result.useLocking  = td->useLocking;
+            result.ubFactor = td->ubFactor;
+            result.useLocking = td->useLocking;
         }
     }
     return result;
@@ -274,16 +263,11 @@ static ApplyRMSPropTilingResult DoApplyRMSPropTilingCase(const ApplyRMSPropTilin
 // Convenience wrapper: build a "valid" context where var/ms/mom/grad share
 // the same shape and lr/rho/momentum/epsilon are shape {1}. All dtypes equal
 // `tensorDtype`.
-static ApplyRMSPropTilingResult DoApplyRMSPropValidCase(
-    const std::initializer_list<int64_t>& tensorShape,
-    ge::DataType tensorDtype,
-    bool useLocking = false)
+static ApplyRMSPropTilingResult DoApplyRMSPropValidCase(const std::initializer_list<int64_t>& tensorShape,
+                                                        ge::DataType tensorDtype, bool useLocking = false)
 {
-    ApplyRMSPropTilingArgs args{
-        tensorShape, tensorShape, tensorShape,
-        {1}, {1}, {1}, {1},
-        tensorShape,
-        tensorDtype, ge::FORMAT_ND, useLocking};
+    ApplyRMSPropTilingArgs args{tensorShape, tensorShape, tensorShape, {1},           {1},       {1},
+                                {1},         tensorShape, tensorDtype, ge::FORMAT_ND, useLocking};
     return DoApplyRMSPropTilingCase(args);
 }
 
@@ -418,11 +402,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_threshold_1025_double)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c1_ms_shape_mismatch)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{1024}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{1024}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -432,11 +414,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c1_ms_shape_mismatch)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c1_mom_shape_mismatch)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{1024},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{1024},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -446,11 +426,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c1_mom_shape_mismatch)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c1_grad_shape_mismatch)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{1024},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{1024}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -460,11 +438,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c1_grad_shape_mismatch)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_lr_not_scalar)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{2}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{2},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -474,11 +450,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_lr_not_scalar)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_rho_not_scalar)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{2}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{2},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -488,11 +462,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_rho_not_scalar)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_momentum_not_scalar)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{4}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{4}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -502,11 +474,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_momentum_not_scalar)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_epsilon_not_scalar)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{8},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{8},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -520,12 +490,10 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_c3_epsilon_not_scalar)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_dtype_mismatch_ms_fp16)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
-    args.msDtype = ge::DT_FLOAT16;  // var=fp32 but ms=fp16 -> reject
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
+    args.msDtype = ge::DT_FLOAT16; // var=fp32 but ms=fp16 -> reject
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -536,12 +504,10 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_dtype_mismatch_ms_fp16)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_dtype_mismatch_epsilon_bf16)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
-    args.epsilonDtype = ge::DT_BF16;  // var=fp32 but epsilon=bf16 -> reject
+    ApplyRMSPropTilingArgs args{/*var=*/{2048},  /*ms=*/{2048}, /*mom=*/{2048},
+                                /*lr=*/{1},      /*rho=*/{1},   /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND,    /*useLocking=*/false};
+    args.epsilonDtype = ge::DT_BF16; // var=fp32 but epsilon=bf16 -> reject
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -583,13 +549,17 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_8_boundary)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_9_invalid)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
-        /*ms=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
-        /*mom=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
+                                /*ms=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
+                                /*mom=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
+                                /*lr=*/{1},
+                                /*rho=*/{1},
+                                /*momentum=*/{1},
+                                /*epsilon=*/{1},
+                                /*grad=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
+                                ge::DT_FLOAT,
+                                ge::FORMAT_ND,
+                                /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
@@ -599,11 +569,9 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_9_invalid)
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_0_invalid)
 {
-    ApplyRMSPropTilingArgs args{
-        /*var=*/{}, /*ms=*/{}, /*mom=*/{},
-        /*lr=*/{1}, /*rho=*/{1}, /*momentum=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false};
+    ApplyRMSPropTilingArgs args{/*var=*/{},  /*ms=*/{},    /*mom=*/{},
+                                /*lr=*/{1},  /*rho=*/{1},  /*momentum=*/{1}, /*epsilon=*/{1},
+                                /*grad=*/{}, ge::DT_FLOAT, ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }

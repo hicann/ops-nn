@@ -133,4 +133,4 @@ void UnsortedSegmentSumOutFlTiling::DumpTilingInfo()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumOutFlTiling, 10);
-}
+} // namespace optiling

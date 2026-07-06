@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -27,20 +28,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void layer_norm_v4(
-    GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void layer_norm_v4(GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta,
+                                                    GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
 class layer_norm_v4_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_v4_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_v4_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_v4_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "layer_norm_v4_test TearDown\n" << endl; }
 };
 
 TEST_F(layer_norm_v4_test, test_case_0001_100)
@@ -85,8 +80,8 @@ TEST_F(layer_norm_v4_test, test_case_0001_100)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -126,7 +121,7 @@ TEST_F(layer_norm_v4_test, test_case_0002)
 
     tilingDatafromBin->col = 48;                // 输入tensor的行
     tilingDatafromBin->row = 2;                 // 输入tensor的列，即reduce的轴
-    tilingDatafromBin->numBlocks = 48;           // 实际使用的core数量
+    tilingDatafromBin->numBlocks = 48;          // 实际使用的core数量
     tilingDatafromBin->blockFormer = 1;         // 整核处理的row大小
     tilingDatafromBin->blockTail = 1;           // 尾核处理的row大小
     tilingDatafromBin->ubFormer = 1;            // ub整循环处理的row大小
@@ -143,20 +138,20 @@ TEST_F(layer_norm_v4_test, test_case_0002)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(200);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(210);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(211);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(220);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(222);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -200,13 +195,13 @@ TEST_F(layer_norm_v4_test, test_case_0004)
     tilingDatafromBin->space = 192 * 1024;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->coefficient = 0.005;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(700);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -250,13 +245,13 @@ TEST_F(layer_norm_v4_test, test_case_0005)
     tilingDatafromBin->space = 192 * 1024;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->coefficient = 0.005;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(700);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -294,30 +289,30 @@ TEST_F(layer_norm_v4_test, test_case_0006)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> numBlocks = 48;
-    tilingDatafromBin-> colSize = 48;
-    tilingDatafromBin-> rowSize = 256;
+    tilingDatafromBin->numBlocks = 48;
+    tilingDatafromBin->colSize = 48;
+    tilingDatafromBin->rowSize = 256;
     float eps = 0.00001;
     float coefficient = 0.005;
-    tilingDatafromBin-> rowAlign = 256;
-    tilingDatafromBin-> nRow = 1;
-    tilingDatafromBin-> ableNRow = 10;
-    tilingDatafromBin-> loopCount = 1;
-    tilingDatafromBin-> formerNum = 48;
-    tilingDatafromBin-> formerRemainNum = 0;
-    tilingDatafromBin-> tailNRow = 0;
-    tilingDatafromBin-> tailLoop = 0;
-    tilingDatafromBin-> tailNum = 0;
-    tilingDatafromBin-> tailRemainNum = 0;
-    tilingDatafromBin-> tileLength = 256;
-    tilingDatafromBin-> blockLength = 2560;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->rowAlign = 256;
+    tilingDatafromBin->nRow = 1;
+    tilingDatafromBin->ableNRow = 10;
+    tilingDatafromBin->loopCount = 1;
+    tilingDatafromBin->formerNum = 48;
+    tilingDatafromBin->formerRemainNum = 0;
+    tilingDatafromBin->tailNRow = 0;
+    tilingDatafromBin->tailLoop = 0;
+    tilingDatafromBin->tailNum = 0;
+    tilingDatafromBin->tailRemainNum = 0;
+    tilingDatafromBin->tileLength = 256;
+    tilingDatafromBin->blockLength = 2560;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1600);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -355,30 +350,30 @@ TEST_F(layer_norm_v4_test, test_case_0007)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> numBlocks = 48;
-    tilingDatafromBin-> colSize = 193;
-    tilingDatafromBin-> rowSize = 256;
+    tilingDatafromBin->numBlocks = 48;
+    tilingDatafromBin->colSize = 193;
+    tilingDatafromBin->rowSize = 256;
     float eps = 0.00001;
     float coefficient = 0.005;
-    tilingDatafromBin-> rowAlign = 256;
-    tilingDatafromBin-> nRow = 3;
-    tilingDatafromBin-> ableNRow = 3;
-    tilingDatafromBin-> loopCount = 1;
-    tilingDatafromBin-> formerNum = 1;
-    tilingDatafromBin-> formerRemainNum = 2;
-    tilingDatafromBin-> tailNRow = 3;
-    tilingDatafromBin-> tailLoop = 1;
-    tilingDatafromBin-> tailNum = 47;
-    tilingDatafromBin-> tailRemainNum = 1;
-    tilingDatafromBin-> tileLength = 784;
-    tilingDatafromBin-> blockLength = 784;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->rowAlign = 256;
+    tilingDatafromBin->nRow = 3;
+    tilingDatafromBin->ableNRow = 3;
+    tilingDatafromBin->loopCount = 1;
+    tilingDatafromBin->formerNum = 1;
+    tilingDatafromBin->formerRemainNum = 2;
+    tilingDatafromBin->tailNRow = 3;
+    tilingDatafromBin->tailLoop = 1;
+    tilingDatafromBin->tailNum = 47;
+    tilingDatafromBin->tailRemainNum = 1;
+    tilingDatafromBin->tileLength = 784;
+    tilingDatafromBin->blockLength = 784;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1600);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -416,30 +411,30 @@ TEST_F(layer_norm_v4_test, test_case_0008)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> numBlocks = 48;
-    tilingDatafromBin-> colSize = 48;
-    tilingDatafromBin-> rowSize = 2560;
+    tilingDatafromBin->numBlocks = 48;
+    tilingDatafromBin->colSize = 48;
+    tilingDatafromBin->rowSize = 2560;
     float eps = 0.00001;
     float coefficient = 0.005;
-    tilingDatafromBin-> rowAlign = 2560;
-    tilingDatafromBin-> nRow = 1;
-    tilingDatafromBin-> ableNRow = 10;
-    tilingDatafromBin-> loopCount = 1;
-    tilingDatafromBin-> formerNum = 48;
-    tilingDatafromBin-> formerRemainNum = 0;
-    tilingDatafromBin-> tailNRow = 0;
-    tilingDatafromBin-> tailLoop = 0;
-    tilingDatafromBin-> tailNum = 0;
-    tilingDatafromBin-> tailRemainNum = 0;
-    tilingDatafromBin-> tileLength = 2560;
-    tilingDatafromBin-> blockLength = 5120;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->rowAlign = 2560;
+    tilingDatafromBin->nRow = 1;
+    tilingDatafromBin->ableNRow = 10;
+    tilingDatafromBin->loopCount = 1;
+    tilingDatafromBin->formerNum = 48;
+    tilingDatafromBin->formerRemainNum = 0;
+    tilingDatafromBin->tailNRow = 0;
+    tilingDatafromBin->tailLoop = 0;
+    tilingDatafromBin->tailNum = 0;
+    tilingDatafromBin->tailRemainNum = 0;
+    tilingDatafromBin->tileLength = 2560;
+    tilingDatafromBin->blockLength = 5120;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(600);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -477,30 +472,30 @@ TEST_F(layer_norm_v4_test, test_case_0009)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> numBlocks = 48;
-    tilingDatafromBin-> colSize = 193;
-    tilingDatafromBin-> rowSize = 2560;
+    tilingDatafromBin->numBlocks = 48;
+    tilingDatafromBin->colSize = 193;
+    tilingDatafromBin->rowSize = 2560;
     float eps = 0.00001;
     float coefficient = 0.005;
-    tilingDatafromBin-> rowAlign = 2560;
-    tilingDatafromBin-> nRow = 3;
-    tilingDatafromBin-> ableNRow = 3;
-    tilingDatafromBin-> loopCount = 1;
-    tilingDatafromBin-> formerNum = 1;
-    tilingDatafromBin-> formerRemainNum = 2;
-    tilingDatafromBin-> tailNRow = 3;
-    tilingDatafromBin-> tailLoop = 1;
-    tilingDatafromBin-> tailNum = 47;
-    tilingDatafromBin-> tailRemainNum = 1;
-    tilingDatafromBin-> tileLength = 7840;
-    tilingDatafromBin-> blockLength = 7840;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->rowAlign = 2560;
+    tilingDatafromBin->nRow = 3;
+    tilingDatafromBin->ableNRow = 3;
+    tilingDatafromBin->loopCount = 1;
+    tilingDatafromBin->formerNum = 1;
+    tilingDatafromBin->formerRemainNum = 2;
+    tilingDatafromBin->tailNRow = 3;
+    tilingDatafromBin->tailLoop = 1;
+    tilingDatafromBin->tailNum = 47;
+    tilingDatafromBin->tailRemainNum = 1;
+    tilingDatafromBin->tileLength = 7840;
+    tilingDatafromBin->blockLength = 7840;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(600);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -538,30 +533,30 @@ TEST_F(layer_norm_v4_test, test_case_0010)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> numBlocks = 48;
-    tilingDatafromBin-> colSize = 48;
-    tilingDatafromBin-> rowSize = 1;
+    tilingDatafromBin->numBlocks = 48;
+    tilingDatafromBin->colSize = 48;
+    tilingDatafromBin->rowSize = 1;
     float eps = 0.00001;
     float coefficient = 0.005;
-    tilingDatafromBin-> rowAlign = 8;
-    tilingDatafromBin-> nRow = 1;
-    tilingDatafromBin-> ableNRow = 10;
-    tilingDatafromBin-> loopCount = 1;
-    tilingDatafromBin-> formerNum = 48;
-    tilingDatafromBin-> formerRemainNum = 0;
-    tilingDatafromBin-> tailNRow = 0;
-    tilingDatafromBin-> tailLoop = 0;
-    tilingDatafromBin-> tailNum = 0;
-    tilingDatafromBin-> tailRemainNum = 0;
-    tilingDatafromBin-> tileLength = 8;
-    tilingDatafromBin-> blockLength = 5120;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->rowAlign = 8;
+    tilingDatafromBin->nRow = 1;
+    tilingDatafromBin->ableNRow = 10;
+    tilingDatafromBin->loopCount = 1;
+    tilingDatafromBin->formerNum = 48;
+    tilingDatafromBin->formerRemainNum = 0;
+    tilingDatafromBin->tailNRow = 0;
+    tilingDatafromBin->tailLoop = 0;
+    tilingDatafromBin->tailNum = 0;
+    tilingDatafromBin->tailRemainNum = 0;
+    tilingDatafromBin->tileLength = 8;
+    tilingDatafromBin->blockLength = 5120;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2600);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -599,30 +594,30 @@ TEST_F(layer_norm_v4_test, test_case_0011)
 
     LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
 
-    tilingDatafromBin-> numBlocks = 48;
-    tilingDatafromBin-> colSize = 193;
-    tilingDatafromBin-> rowSize = 1;
+    tilingDatafromBin->numBlocks = 48;
+    tilingDatafromBin->colSize = 193;
+    tilingDatafromBin->rowSize = 1;
     float eps = 0.00001;
     float coefficient = 0.005;
-    tilingDatafromBin-> rowAlign = 8;
-    tilingDatafromBin-> nRow = 3;
-    tilingDatafromBin-> ableNRow = 3;
-    tilingDatafromBin-> loopCount = 1;
-    tilingDatafromBin-> formerNum = 1;
-    tilingDatafromBin-> formerRemainNum = 2;
-    tilingDatafromBin-> tailNRow = 3;
-    tilingDatafromBin-> tailLoop = 1;
-    tilingDatafromBin-> tailNum = 47;
-    tilingDatafromBin-> tailRemainNum = 1;
-    tilingDatafromBin-> tileLength = 24;
-    tilingDatafromBin-> blockLength = 24;
-    tilingDatafromBin-> nullptrGamma = false;
-    tilingDatafromBin-> nullptrBeta = false;
+    tilingDatafromBin->rowAlign = 8;
+    tilingDatafromBin->nRow = 3;
+    tilingDatafromBin->ableNRow = 3;
+    tilingDatafromBin->loopCount = 1;
+    tilingDatafromBin->formerNum = 1;
+    tilingDatafromBin->formerRemainNum = 2;
+    tilingDatafromBin->tailNRow = 3;
+    tilingDatafromBin->tailLoop = 1;
+    tilingDatafromBin->tailNum = 47;
+    tilingDatafromBin->tailRemainNum = 1;
+    tilingDatafromBin->tileLength = 24;
+    tilingDatafromBin->blockLength = 24;
+    tilingDatafromBin->nullptrGamma = false;
+    tilingDatafromBin->nullptrBeta = false;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2600);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

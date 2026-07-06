@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -16,8 +16,7 @@
 #include <iostream>
 #include <vector>
 #include "layer_norm_grad_tiling.h"
-namespace optiling
-{
+namespace optiling {
 constexpr static int64_t CONST_ZERO = 0;
 constexpr static int64_t CONST_ONE = 1;
 constexpr static int64_t CONST_TWO = 2;
@@ -28,7 +27,6 @@ constexpr static int64_t CONST_SIX = 6;
 constexpr static int64_t CONST_EIGHT = 8;
 constexpr static int64_t CONST_NINE = 9;
 constexpr static int64_t MAX_CORE_NUM = 64;
-
 
 bool LayerNormGradGroupedReduceBigMTiling::IsCapable()
 {
@@ -78,7 +76,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigMTiling::GammaBetaKernelTiling()
     int64_t cacheBufferCountMainBlock = 1;
     int64_t resultCacheIDMainBlock = 0;
     if (basicBlockLoopMainBlock != 0) {
-        cacheBufferCountMainBlock = ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
+        cacheBufferCountMainBlock = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
         resultCacheIDMainBlock = GetCacheID(basicBlockLoopMainBlock - 1);
     }
 
@@ -90,7 +89,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigMTiling::GammaBetaKernelTiling()
     int64_t cacheBufferCountTailBlock = 1;
     int64_t resultCacheIDTailBlock = 0;
     if (basicBlockLoopTailBlock != 0) {
-        cacheBufferCountTailBlock = ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
+        cacheBufferCountTailBlock = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
         resultCacheIDTailBlock = GetCacheID(basicBlockLoopTailBlock - 1);
     }
 
@@ -119,8 +119,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigMTiling::GammaBetaKernelTiling()
                     OP_LOGI(context_->GetNodeName(),
                             "Big M template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
                             "betaGammaCacheBufferCount: %ld, betaGammaCacheBufferCountStg2: %ld.",
-                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm, cacheBufferCountMainBlock,
-                            mBasicBlockLoopStg2),
+                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm,
+                            cacheBufferCountMainBlock, mBasicBlockLoopStg2),
                     return ge::GRAPH_PARAM_INVALID);
 
     td_.set_gammaBetaUsableBlocks(usableBlocks);
@@ -157,10 +157,7 @@ ge::graphStatus LayerNormGradGroupedReduceBigMTiling::GammaBetaKernelTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LayerNormGradGroupedReduceBigMTiling::BackwardKernelTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormGradGroupedReduceBigMTiling::BackwardKernelTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus LayerNormGradGroupedReduceBigMTiling::DoOpTiling()
 {
@@ -171,11 +168,9 @@ ge::graphStatus LayerNormGradGroupedReduceBigMTiling::DoOpTiling()
     td_.set_pdbetaIsRequire(static_cast<int32_t>(commonParams.pdbetaIsRequire));
     td_.set_epsilon(commonParams.epsilon);
     ge::graphStatus statusGammaBeta = GammaBetaKernelTiling();
-    OP_TILING_CHECK(statusGammaBeta != ge::GRAPH_SUCCESS,,
-            return statusGammaBeta);
+    OP_TILING_CHECK(statusGammaBeta != ge::GRAPH_SUCCESS, , return statusGammaBeta);
     ge::graphStatus statusBackward = BackwardKernelTiling();
-    OP_TILING_CHECK(statusBackward != ge::GRAPH_SUCCESS,,
-            return statusBackward);
+    OP_TILING_CHECK(statusBackward != ge::GRAPH_SUCCESS, , return statusBackward);
     return ge::GRAPH_SUCCESS;
 }
 

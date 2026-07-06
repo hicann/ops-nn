@@ -29,10 +29,8 @@ using namespace AscendC;
 constexpr uint32_t THREAD_NUM = 256;
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void ScatterAddCompute32(
-    uint32_t M, uint32_t N, uint32_t coreStartIdx, uint32_t coreIndicesNum,
-    uint32_t magic, uint32_t shift,
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddCompute32(
+    uint32_t M, uint32_t N, uint32_t coreStartIdx, uint32_t coreIndicesNum, uint32_t magic, uint32_t shift,
     __gm__ T* var, __gm__ IDX_T* indices, __gm__ T* updates)
 {
     uint32_t totalElements = coreIndicesNum * N;
@@ -52,7 +50,8 @@ inline void ScatterAddCompute32(
             IDX_T idx = indices[globalRow];
             if (idx >= 0 && static_cast<uint64_t>(idx) < static_cast<uint64_t>(M)) {
                 uint64_t varOffset = static_cast<uint64_t>(idx) * static_cast<uint64_t>(N) + static_cast<uint64_t>(col);
-                uint64_t updatesOffset = static_cast<uint64_t>(globalRow) * static_cast<uint64_t>(N) + static_cast<uint64_t>(col);
+                uint64_t updatesOffset = static_cast<uint64_t>(globalRow) * static_cast<uint64_t>(N) +
+                                         static_cast<uint64_t>(col);
                 asc_atomic_add(&var[varOffset], updates[updatesOffset]);
             }
         }
@@ -60,10 +59,8 @@ inline void ScatterAddCompute32(
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void ScatterAddCompute64(
-    uint64_t M, uint64_t N, uint64_t coreStartIdx, uint64_t coreIndicesNum,
-    uint64_t magic, uint64_t shift,
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddCompute64(
+    uint64_t M, uint64_t N, uint64_t coreStartIdx, uint64_t coreIndicesNum, uint64_t magic, uint64_t shift,
     __gm__ T* var, __gm__ IDX_T* indices, __gm__ T* updates)
 {
     uint64_t totalElements = coreIndicesNum * N;
@@ -93,40 +90,34 @@ inline void ScatterAddCompute64(
 }
 
 template <typename T, typename IDX_T>
-__aicore__ inline void Process32Bit(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-    uint32_t M, uint32_t N, uint32_t coreStartIdx, uint32_t coreIndicesNum)
+__aicore__ inline void Process32Bit(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, uint32_t M, uint32_t N,
+                                    uint32_t coreStartIdx, uint32_t coreIndicesNum)
 {
     uint32_t magic = 0;
     uint32_t shift = 0;
     if (N > 1) {
         AscendC::GetUintDivMagicAndShift<uint32_t>(magic, shift, N);
     }
-    asc_vf_call<ScatterAddCompute32<T, IDX_T>>(
-        dim3(THREAD_NUM),
-        M, N, coreStartIdx, coreIndicesNum,
-        magic, shift,
-        (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
+    asc_vf_call<ScatterAddCompute32<T, IDX_T>>(dim3(THREAD_NUM), M, N, coreStartIdx, coreIndicesNum, magic, shift,
+                                               (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
 }
 
 template <typename T, typename IDX_T>
-__aicore__ inline void Process64Bit(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-    uint64_t M, uint64_t N, uint64_t coreStartIdx, uint64_t coreIndicesNum)
+__aicore__ inline void Process64Bit(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, uint64_t M, uint64_t N,
+                                    uint64_t coreStartIdx, uint64_t coreIndicesNum)
 {
     uint64_t magic = 0;
     uint64_t shift = 0;
     if (N > 1) {
         AscendC::GetUintDivMagicAndShift<uint64_t>(magic, shift, N);
     }
-    asc_vf_call<ScatterAddCompute64<T, IDX_T>>(
-        dim3(THREAD_NUM),
-        M, N, coreStartIdx, coreIndicesNum,
-        magic, shift,
-        (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
+    asc_vf_call<ScatterAddCompute64<T, IDX_T>>(dim3(THREAD_NUM), M, N, coreStartIdx, coreIndicesNum, magic, shift,
+                                               (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
 }
 
 template <typename T, typename IDX_T>
 __aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                const InplaceScatterAddTilingData* tilingData)
+                               const InplaceScatterAddTilingData* tilingData)
 {
     int64_t M = tilingData->M;
     int64_t N = tilingData->N;
@@ -153,18 +144,15 @@ __aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
     }
 
     int64_t totalElements64 = coreIndicesNum * N;
-    bool canUse32BitPath = (M <= UINT32_MAX) && (N <= UINT32_MAX) &&
-                           (coreStartIdx <= UINT32_MAX) && (coreIndicesNum <= UINT32_MAX) &&
-                           (totalElements64 <= UINT32_MAX);
+    bool canUse32BitPath = (M <= UINT32_MAX) && (N <= UINT32_MAX) && (coreStartIdx <= UINT32_MAX) &&
+                           (coreIndicesNum <= UINT32_MAX) && (totalElements64 <= UINT32_MAX);
 
     if (canUse32BitPath) {
-        Process32Bit<T, IDX_T>(var, indices, updates,
-            static_cast<uint32_t>(M), static_cast<uint32_t>(N),
-            static_cast<uint32_t>(coreStartIdx), static_cast<uint32_t>(coreIndicesNum));
+        Process32Bit<T, IDX_T>(var, indices, updates, static_cast<uint32_t>(M), static_cast<uint32_t>(N),
+                               static_cast<uint32_t>(coreStartIdx), static_cast<uint32_t>(coreIndicesNum));
     } else {
-        Process64Bit<T, IDX_T>(var, indices, updates,
-            static_cast<uint64_t>(M), static_cast<uint64_t>(N),
-            static_cast<uint64_t>(coreStartIdx), static_cast<uint64_t>(coreIndicesNum));
+        Process64Bit<T, IDX_T>(var, indices, updates, static_cast<uint64_t>(M), static_cast<uint64_t>(N),
+                               static_cast<uint64_t>(coreStartIdx), static_cast<uint64_t>(coreIndicesNum));
     }
 }
 

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <vector>
 #include <array>
@@ -24,15 +25,9 @@ using namespace std;
 
 class l2_max_pool3d_with_argmax_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_max_pool3d_with_argmax_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_max_pool3d_with_argmax_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_max_pool3d_with_argmax_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_max_pool3d_with_argmax_backward_test TearDown" << std::endl; }
 };
 
 // 正常场景：数据类型为float
@@ -57,12 +52,10 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_normal_float)
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool3dWithArgmaxBackward,
-        INPUT(
-            tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc, padding_desc, dilation_desc,
-            ceilMode),
-        OUTPUT(gradInput_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool3dWithArgmaxBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -91,12 +84,10 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_normal_float16)
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool3dWithArgmaxBackward,
-        INPUT(
-            tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc, padding_desc, dilation_desc,
-            ceilMode),
-        OUTPUT(gradInput_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool3dWithArgmaxBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -125,12 +116,10 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_normal_4d)
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool3dWithArgmaxBackward,
-        INPUT(
-            tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc, padding_desc, dilation_desc,
-            ceilMode),
-        OUTPUT(gradInput_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool3dWithArgmaxBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -163,12 +152,10 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_exception_kernel_siz
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool3dWithArgmaxBackward,
-        INPUT(
-            tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc, padding_desc, dilation_desc,
-            ceilMode),
-        OUTPUT(gradInput_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool3dWithArgmaxBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -197,12 +184,10 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_exception_padding_si
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool3dWithArgmaxBackward,
-        INPUT(
-            tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc, padding_desc, dilation_desc,
-            ceilMode),
-        OUTPUT(gradInput_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool3dWithArgmaxBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -231,12 +216,10 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_exception_dilation_s
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool3dWithArgmaxBackward,
-        INPUT(
-            tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc, padding_desc, dilation_desc,
-            ceilMode),
-        OUTPUT(gradInput_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool3dWithArgmaxBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

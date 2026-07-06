@@ -6,12 +6,12 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
-* \file reverse_v2_simt.h
-* \brief reverse_v2
-*/
+ * \file reverse_v2_simt.h
+ * \brief reverse_v2
+ */
 
 #ifndef ASCENDC_REVERSE_V2_SIMT_H
 #define ASCENDC_REVERSE_V2_SIMT_H
@@ -88,7 +88,7 @@ struct FastDivParam {
     T shift6 = 0;
 };
 
-template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum> 
+template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
 class ReverseV2Simt {
 public:
     __aicore__ inline ReverseV2Simt(){};
@@ -96,56 +96,61 @@ public:
     __aicore__ inline void Process();
 
 private:
-    static __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void SimtCompute(__gm__ T2* input, __gm__ T2* output, T1 blockIdx,
-                                                          __local_mem__ T1* simtParam);
-    
-    static __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void SimtComputeDim1ToDim2(__gm__ T2* input, __gm__ T2* output, T1 blockIdx,
-                                                          __local_mem__ T1* simtParam);
+    static __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void SimtCompute(__gm__ T2* input,
+                                                                                          __gm__ T2* output,
+                                                                                          T1 blockIdx,
+                                                                                          __local_mem__ T1* simtParam);
 
-    static __simt_callee__ __aicore__ inline void ProcDim8(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &param2, T1 &param3,  T1 &param4, T1 &param5, T1 &param6, T1 &dim0, T1 &dim1,
-                                           T1 &dim2, T1 &dim3, T1 &dim4, T1 &dim5, T1 &dim6, T1 &dim7, 
-                                           const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2,
-                                           T1 &idx3, T1 &idx4, T1 &idx5, T1 &idx6, T1 &idx7, T1 &y0, T1 &y1, T1 &y2, T1 &y3,
-                                           T1 &y4, T1 &y5, T1 &y6, T1 &idx, T1 &inputIdx);
+    static __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void SimtComputeDim1ToDim2(
+        __gm__ T2* input, __gm__ T2* output, T1 blockIdx, __local_mem__ T1* simtParam);
 
-    static __simt_callee__ __aicore__ inline void ProcDim7(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &param2, T1 &param3,  T1 &param4, T1 &param5, T1 &param6, 
-                                           T1 &dim0, T1 &dim1, T1 &dim2, T1 &dim3, T1 &dim4, T1 &dim5, T1 &dim6,
-                                           const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2,
-                                           T1 &idx3, T1 &idx4, T1 &idx5, T1 &idx6, T1 &y0, T1 &y1, T1 &y2, T1 &y3,
-                                           T1 &y4, T1 &y5, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim8(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& param2, T1& param3, T1& param4, T1& param5, T1& param6,
+                                                           T1& dim0, T1& dim1, T1& dim2, T1& dim3, T1& dim4, T1& dim5,
+                                                           T1& dim6, T1& dim7, const FastDivParam<T1>& fastDivParam,
+                                                           T1& idx0, T1& idx1, T1& idx2, T1& idx3, T1& idx4, T1& idx5,
+                                                           T1& idx6, T1& idx7, T1& y0, T1& y1, T1& y2, T1& y3, T1& y4,
+                                                           T1& y5, T1& y6, T1& idx, T1& inputIdx);
 
-    static __simt_callee__ __aicore__ inline void ProcDim6(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &param2, T1 &param3,  T1 &param4, T1 &param5,
-                                           T1 &dim0, T1 &dim1, T1 &dim2, T1 &dim3, T1 &dim4, T1 &dim5,
-                                           const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2,
-                                           T1 &idx3, T1 &idx4, T1 &idx5, T1 &y0, T1 &y1, T1 &y2, T1 &y3,
-                                           T1 &y4, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim7(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& param2, T1& param3, T1& param4, T1& param5, T1& param6,
+                                                           T1& dim0, T1& dim1, T1& dim2, T1& dim3, T1& dim4, T1& dim5,
+                                                           T1& dim6, const FastDivParam<T1>& fastDivParam, T1& idx0,
+                                                           T1& idx1, T1& idx2, T1& idx3, T1& idx4, T1& idx5, T1& idx6,
+                                                           T1& y0, T1& y1, T1& y2, T1& y3, T1& y4, T1& y5, T1& idx,
+                                                           T1& inputIdx);
 
-    static __simt_callee__ __aicore__ inline void ProcDim5(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &param2, T1 &param3, T1 &param4, T1 &dim0, T1 &dim1, T1 &dim2, 
-                                           T1 &dim3, T1 &dim4, const FastDivParam<T1> &fastDivParam, T1 &idx0, 
-                                           T1 &idx1, T1 &idx2, T1 &idx3, T1 &idx4, T1 &y0, T1 &y1, 
-                                           T1 &y2, T1 &y3, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim6(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& param2, T1& param3, T1& param4, T1& param5, T1& dim0,
+                                                           T1& dim1, T1& dim2, T1& dim3, T1& dim4, T1& dim5,
+                                                           const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1,
+                                                           T1& idx2, T1& idx3, T1& idx4, T1& idx5, T1& y0, T1& y1,
+                                                           T1& y2, T1& y3, T1& y4, T1& idx, T1& inputIdx);
 
-    static __simt_callee__ __aicore__ inline void ProcDim4(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &param2, T1 &param3, T1 &dim0, T1 &dim1, T1 &dim2, 
-                                           T1 &dim3, T1 &dim4, const FastDivParam<T1> &fastDivParam, T1 &idx0, 
-                                           T1 &idx1, T1 &idx2, T1 &idx3, T1 &y0, T1 &y1, 
-                                           T1 &y2, T1 &y3, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim5(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& param2, T1& param3, T1& param4, T1& dim0, T1& dim1,
+                                                           T1& dim2, T1& dim3, T1& dim4,
+                                                           const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1,
+                                                           T1& idx2, T1& idx3, T1& idx4, T1& y0, T1& y1, T1& y2, T1& y3,
+                                                           T1& idx, T1& inputIdx);
 
-    static __simt_callee__ __aicore__ inline void ProcDim3(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &param2, T1 &dim0, T1 &dim1, T1 &dim2, 
-                                           const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2,
-                                           T1 &y0, T1 &y1, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim4(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& param2, T1& param3, T1& dim0, T1& dim1, T1& dim2,
+                                                           T1& dim3, T1& dim4, const FastDivParam<T1>& fastDivParam,
+                                                           T1& idx0, T1& idx1, T1& idx2, T1& idx3, T1& y0, T1& y1,
+                                                           T1& y2, T1& y3, T1& idx, T1& inputIdx);
 
-    static __simt_callee__ __aicore__ inline void ProcDim2(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
-                                           T1 &dim0, T1 &dim1, const FastDivParam<T1> &fastDivParam,
-                                           T1 &idx0, T1 &idx1, T1 &y0, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim3(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& param2, T1& dim0, T1& dim1, T1& dim2,
+                                                           const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1,
+                                                           T1& idx2, T1& y0, T1& y1, T1& idx, T1& inputIdx);
 
-    static __simt_callee__ __aicore__ inline void ProcDim1(__gm__ T2* input, __gm__ T2* output, 
-                                           T1 &param0, T1 &idx0,T1 &dim0, T1 &idx, T1 &inputIdx);
+    static __simt_callee__ __aicore__ inline void ProcDim2(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1,
+                                                           T1& dim0, T1& dim1, const FastDivParam<T1>& fastDivParam,
+                                                           T1& idx0, T1& idx1, T1& y0, T1& idx, T1& inputIdx);
+
+    static __simt_callee__ __aicore__ inline void ProcDim1(__gm__ T2* input, __gm__ T2* output, T1& param0, T1& idx0,
+                                                           T1& dim0, T1& idx, T1& inputIdx);
 
 private:
     TPipe pipe_;
@@ -157,8 +162,8 @@ private:
 };
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Init(GM_ADDR x, GM_ADDR y, 
-    const ReverseV2TilingData4AscendC* __restrict tilingData)
+__aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Init(
+    GM_ADDR x, GM_ADDR y, const ReverseV2TilingData4AscendC* __restrict tilingData)
 {
     inputGm_.SetGlobalBuffer((__gm__ T2*)(x));
     outputGm_.SetGlobalBuffer((__gm__ T2*)(y));
@@ -168,11 +173,11 @@ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Init(GM_ADDR x,
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim8(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &param2, T1 &param3,  T1 &param4, T1 &param5, T1 &param6, T1 &dim0, T1 &dim1,
-    T1 &dim2, T1 &dim3, T1 &dim4, T1 &dim5, T1 &dim6, T1 &dim7, const FastDivParam<T1> &fastDivParam, T1 &idx0,
-    T1 &idx1, T1 &idx2, T1 &idx3, T1 &idx4, T1 &idx5, T1 &idx6, T1 &idx7, T1 &y0, T1 &y1, T1 &y2, T1 &y3, T1 &y4,
-    T1 &y5, T1 &y6, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim8(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& param2, T1& param3, T1& param4, T1& param5,
+    T1& param6, T1& dim0, T1& dim1, T1& dim2, T1& dim3, T1& dim4, T1& dim5, T1& dim6, T1& dim7,
+    const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1, T1& idx2, T1& idx3, T1& idx4, T1& idx5, T1& idx6,
+    T1& idx7, T1& y0, T1& y1, T1& y2, T1& y3, T1& y4, T1& y5, T1& y6, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     y1 = idx - idx0 * param0;
@@ -201,15 +206,17 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
         idx5 = dim5 - idx5 - 1;
         idx7 = dim7 - idx7 - 1;
     }
-    inputIdx = idx0 * param0 + idx1 * param1 + idx2 * param2 + idx3 * param3 + idx4 * param4 + idx5 * param5 + idx6 * param6 + idx7;
+    inputIdx = idx0 * param0 + idx1 * param1 + idx2 * param2 + idx3 * param3 + idx4 * param4 + idx5 * param5 +
+               idx6 * param6 + idx7;
     output[idx] = input[inputIdx];
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim7(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &param2, T1 &param3,  T1 &param4, T1 &param5, T1 &param6, T1 &dim0, T1 &dim1,
-    T1 &dim2, T1 &dim3, T1 &dim4, T1 &dim5, T1 &dim6, const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1,
-    T1 &idx2, T1 &idx3, T1 &idx4, T1 &idx5, T1 &idx6, T1 &y0, T1 &y1, T1 &y2, T1 &y3, T1 &y4, T1 &y5, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim7(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& param2, T1& param3, T1& param4, T1& param5,
+    T1& param6, T1& dim0, T1& dim1, T1& dim2, T1& dim3, T1& dim4, T1& dim5, T1& dim6,
+    const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1, T1& idx2, T1& idx3, T1& idx4, T1& idx5, T1& idx6, T1& y0,
+    T1& y1, T1& y2, T1& y3, T1& y4, T1& y5, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     y1 = idx - idx0 * param0;
@@ -239,10 +246,10 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim6(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &param2, T1 &param3,  T1 &param4, T1 &param5, T1 &dim0, T1 &dim1, T1 &dim2, T1 &dim3,
-    T1 &dim4, T1 &dim5, const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2, T1 &idx3, T1 &idx4,
-    T1 &idx5, T1 &y0, T1 &y1, T1 &y2, T1 &y3, T1 &y4, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim6(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& param2, T1& param3, T1& param4, T1& param5,
+    T1& dim0, T1& dim1, T1& dim2, T1& dim3, T1& dim4, T1& dim5, const FastDivParam<T1>& fastDivParam, T1& idx0,
+    T1& idx1, T1& idx2, T1& idx3, T1& idx4, T1& idx5, T1& y0, T1& y1, T1& y2, T1& y3, T1& y4, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     y1 = idx - idx0 * param0;
@@ -269,10 +276,10 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim5(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &param2, T1 &param3, T1 &param4, T1 &dim0, T1 &dim1, T1 &dim2, T1 &dim3, T1 &dim4,
-    const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2, T1 &idx3, T1 &idx4, T1 &y0, T1 &y1, 
-    T1 &y2, T1 &y3, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim5(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& param2, T1& param3, T1& param4, T1& dim0, T1& dim1,
+    T1& dim2, T1& dim3, T1& dim4, const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1, T1& idx2, T1& idx3,
+    T1& idx4, T1& y0, T1& y1, T1& y2, T1& y3, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     y1 = idx - idx0 * param0;
@@ -296,10 +303,10 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim4(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &param2, T1 &param3, T1 &dim0, T1 &dim1, T1 &dim2, T1 &dim3, T1 &dim4,
-    const FastDivParam<T1> &fastDivParam, T1 &idx0, T1 &idx1, T1 &idx2, T1 &idx3, T1 &y0, T1 &y1, T1 &y2, 
-    T1 &y3, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim4(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& param2, T1& param3, T1& dim0, T1& dim1, T1& dim2,
+    T1& dim3, T1& dim4, const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1, T1& idx2, T1& idx3, T1& y0, T1& y1,
+    T1& y2, T1& y3, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     y1 = idx - idx0 * param0;
@@ -320,9 +327,9 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim3(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &param2, T1 &dim0, T1 &dim1, T1 &dim2, const FastDivParam<T1> &fastDivParam,
-    T1 &idx0, T1 &idx1, T1 &idx2, T1 &y0, T1 &y1, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim3(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& param2, T1& dim0, T1& dim1, T1& dim2,
+    const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1, T1& idx2, T1& y0, T1& y1, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     y1 = idx - idx0 * param0;
@@ -340,13 +347,13 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim2(__gm__ T2* input, __gm__ T2* output,
-    T1 &param0, T1 &param1, T1 &dim0, T1 &dim1, const FastDivParam<T1> &fastDivParam,
-    T1 &idx0, T1 &idx1, T1 &y0, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim2(
+    __gm__ T2* input, __gm__ T2* output, T1& param0, T1& param1, T1& dim0, T1& dim1,
+    const FastDivParam<T1>& fastDivParam, T1& idx0, T1& idx1, T1& y0, T1& idx, T1& inputIdx)
 {
     idx0 = Simt::UintDiv(idx, fastDivParam.magic0, fastDivParam.shift0);
     idx1 = idx - idx0 * param0;
-    
+
     if constexpr (isReverse) {
         idx0 = dim0 - idx0 - 1;
     } else {
@@ -357,9 +364,10 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim1(
-    __gm__ T2* input, __gm__ T2* output, 
-    T1 &param0, T1 &idx0,T1 &dim0, T1 &idx, T1 &inputIdx)
+__simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::ProcDim1(__gm__ T2* input,
+                                                                                          __gm__ T2* output, T1& param0,
+                                                                                          T1& idx0, T1& dim0, T1& idx,
+                                                                                          T1& inputIdx)
 {
     idx0 = idx;
     idx0 = dim0 - idx0 - 1;
@@ -368,8 +376,10 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtCompute(__gm__ T2* input, 
-    __gm__ T2* output, T1 blockIdx, __local_mem__ T1* simtParam)
+__simt_vf__ __aicore__ LAUNCH_BOUND(
+    LAUNCH_THREAD_NUM) inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtCompute(__gm__ T2* input,
+                                                                                         __gm__ T2* output, T1 blockIdx,
+                                                                                         __local_mem__ T1* simtParam)
 
 {
     T1 param0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX0)];
@@ -389,7 +399,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void ReverseV2Simt
     T1 dim7 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX14)];
     T1 blockFactor = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX15)];
     T1 inputSize = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX16)];
-    
+
     FastDivParam<T1> fastDivParam;
     fastDivParam.magic0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX17)];
     fastDivParam.magic1 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX18)];
@@ -407,7 +417,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void ReverseV2Simt
     fastDivParam.shift6 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX30)];
 
     T1 curCoreEndIdx = (blockIdx + 1) * blockFactor;
-    curCoreEndIdx =  curCoreEndIdx > inputSize ? inputSize : curCoreEndIdx;
+    curCoreEndIdx = curCoreEndIdx > inputSize ? inputSize : curCoreEndIdx;
     T1 idx0 = 0;
     T1 idx1 = 0;
     T1 idx2 = 0;
@@ -426,32 +436,33 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void ReverseV2Simt
     T1 inputIdx = 0;
     for (T1 idx = blockIdx * blockFactor + threadIdx.x; idx < curCoreEndIdx; idx += blockDim.x) {
         if constexpr (dimNum == DIM8) {
-            ProcDim8(input, output, param0, param1, param2, param3, param4, param5, param6, dim0, dim1,
-                     dim2, dim3, dim4, dim5, dim6, dim7, fastDivParam, idx0, idx1, idx2,
-                     idx3, idx4, idx5, idx6, idx7, y0, y1, y2, y3, y4, y5, y6, idx,inputIdx);
+            ProcDim8(input, output, param0, param1, param2, param3, param4, param5, param6, dim0, dim1, dim2, dim3,
+                     dim4, dim5, dim6, dim7, fastDivParam, idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7, y0, y1, y2,
+                     y3, y4, y5, y6, idx, inputIdx);
         } else if constexpr (dimNum == DIM7) {
-            ProcDim7(input, output, param0, param1, param2, param3,  param4, param5, param6, dim0, dim1,
-                     dim2, dim3, dim4, dim5, dim6, fastDivParam, idx0, idx1, idx2, idx3, idx4, idx5,
-                     idx6, y0, y1, y2, y3, y4, y5, idx,inputIdx);
+            ProcDim7(input, output, param0, param1, param2, param3, param4, param5, param6, dim0, dim1, dim2, dim3,
+                     dim4, dim5, dim6, fastDivParam, idx0, idx1, idx2, idx3, idx4, idx5, idx6, y0, y1, y2, y3, y4, y5,
+                     idx, inputIdx);
         } else if constexpr (dimNum == DIM6) {
-            ProcDim6(input, output, param0, param1, param2, param3,  param4, param5, dim0, dim1, dim2, dim3,
-                     dim4, dim5, fastDivParam, idx0, idx1, idx2, idx3, idx4, idx5, y0, y1, y2, y3, y4, idx,inputIdx);
+            ProcDim6(input, output, param0, param1, param2, param3, param4, param5, dim0, dim1, dim2, dim3, dim4, dim5,
+                     fastDivParam, idx0, idx1, idx2, idx3, idx4, idx5, y0, y1, y2, y3, y4, idx, inputIdx);
         } else if constexpr (dimNum == DIM5) {
-            ProcDim5(input, output, param0, param1, param2, param3, param4, dim0, dim1, dim2, dim3, dim4,
-                     fastDivParam, idx0, idx1, idx2, idx3, idx4, y0, y1, y2, y3, idx,inputIdx);
+            ProcDim5(input, output, param0, param1, param2, param3, param4, dim0, dim1, dim2, dim3, dim4, fastDivParam,
+                     idx0, idx1, idx2, idx3, idx4, y0, y1, y2, y3, idx, inputIdx);
         } else if constexpr (dimNum == DIM4) {
-            ProcDim4(input, output, param0, param1, param2, param3, dim0, dim1, dim2, dim3, dim4, fastDivParam,
-                     idx0, idx1, idx2, idx3, y0, y1, y2, y3, idx,inputIdx);
+            ProcDim4(input, output, param0, param1, param2, param3, dim0, dim1, dim2, dim3, dim4, fastDivParam, idx0,
+                     idx1, idx2, idx3, y0, y1, y2, y3, idx, inputIdx);
         } else if constexpr (dimNum == DIM3) {
-            ProcDim3(input, output, param0, param1, param2, dim0, dim1, dim2, fastDivParam, idx0, idx1, idx2,
-                     y0, y1, idx,inputIdx);
+            ProcDim3(input, output, param0, param1, param2, dim0, dim1, dim2, fastDivParam, idx0, idx1, idx2, y0, y1,
+                     idx, inputIdx);
         }
     }
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtComputeDim1ToDim2(__gm__ T2* input, 
-    __gm__ T2* output, T1 blockIdx, __local_mem__ T1* simtParam)
+__simt_vf__ __aicore__
+LAUNCH_BOUND(THREAD_DIM_2048) inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtComputeDim1ToDim2(
+    __gm__ T2* input, __gm__ T2* output, T1 blockIdx, __local_mem__ T1* simtParam)
 {
     T1 param0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX0)];
     T1 param1 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX1)];
@@ -459,7 +470,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void ReverseV2Simt<T
     T1 dim1 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX8)];
     T1 blockFactor = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX15)];
     T1 inputSize = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX16)];
-    
+
     FastDivParam<T1> fastDivParam;
     fastDivParam.magic0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX17)];
     fastDivParam.shift0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX24)];
@@ -470,7 +481,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void ReverseV2Simt<T
     T1 idx1 = 0;
     T1 y0 = 0;
     T1 inputIdx = 0;
-    
+
     for (T1 idx = blockIdx * blockFactor + threadIdx.x; idx < curCoreEndIdx; idx += blockDim.x) {
         if constexpr (dimNum == DIM2) {
             ProcDim2(input, output, param0, param1, dim0, dim1, fastDivParam, idx0, idx1, y0, idx, inputIdx);
@@ -537,8 +548,10 @@ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Process()
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX12)) = static_cast<T1>(tilingData_->dim5);
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX13)) = static_cast<T1>(tilingData_->dim6);
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX14)) = static_cast<T1>(tilingData_->dim7);
-    simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX15)) = static_cast<T1>(tilingData_->blockFactor);
-    simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX16)) = static_cast<T1>(tilingData_->inputSize);
+    simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX15)) = static_cast<T1>(
+        tilingData_->blockFactor);
+    simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX16)) = static_cast<T1>(
+        tilingData_->inputSize);
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX17)) = fastDivParam.magic0;
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX18)) = fastDivParam.magic1;
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX19)) = fastDivParam.magic2;
@@ -557,11 +570,13 @@ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Process()
     DataSyncBarrier<MemDsbT::UB>();
 
     if constexpr (dimNum == DIM1 || dimNum == DIM2) {
-        asc_vf_call<SimtComputeDim1ToDim2>(dim3(THREAD_DIM_2048), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
-            blockIdx_, (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
+        asc_vf_call<SimtComputeDim1ToDim2>(dim3(THREAD_DIM_2048), (__gm__ T2*)(inputGm_.GetPhyAddr()),
+                                           (__gm__ T2*)(outputGm_.GetPhyAddr()), blockIdx_,
+                                           (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
     } else {
-        asc_vf_call<SimtCompute>(dim3(LAUNCH_THREAD_NUM), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
-            blockIdx_, (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
+        asc_vf_call<SimtCompute>(dim3(LAUNCH_THREAD_NUM), (__gm__ T2*)(inputGm_.GetPhyAddr()),
+                                 (__gm__ T2*)(outputGm_.GetPhyAddr()), blockIdx_,
+                                 (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
     }
 }
 } // namespace ReverseV2

@@ -19,8 +19,7 @@
 #include "max_pool3d_with_argmax_v2_tiling_base.h"
 #include "../op_kernel/arch35/max_pool3d_with_argmax_v2_tiling_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 struct MaxPool3DWithArgmaxV2GatherBaseInfo {
     int64_t inputBytes = 0;
     int64_t indexBytes = 0;
@@ -55,40 +54,23 @@ struct MaxPool3DWithArgmaxV2GatherBaseInfo {
         std::stringstream info;
         info << "MaxPool3DWithArgmaxV2GatherBaseInfo {";
 
-        info << "inputBytes:" << inputBytes 
-             << ", indexBytes:" << indexBytes 
-             << ", availableUb:" << availableUb
-             << ", totalCoreNum:" << totalCoreNum 
-             << ", oneBlockNumT1:" << oneBlockNumT1 
-             << ", oneBlockNumT2:" << oneBlockNumT2
-             << ", coreUsedForBestPerformance:" << coreUsedForBestPerformance;
+        info << "inputBytes:" << inputBytes << ", indexBytes:" << indexBytes << ", availableUb:" << availableUb
+             << ", totalCoreNum:" << totalCoreNum << ", oneBlockNumT1:" << oneBlockNumT1
+             << ", oneBlockNumT2:" << oneBlockNumT2 << ", coreUsedForBestPerformance:" << coreUsedForBestPerformance;
 
-        info << ", padFront:" << padFront 
-             << ", padTop:" << padTop 
-             << ", padLeft:" << padLeft;
+        info << ", padFront:" << padFront << ", padTop:" << padTop << ", padLeft:" << padLeft;
 
-        info << ", dStride:" << dStride 
-             << ", hStride:" << hStride 
-             << ", wStride:" << wStride;
+        info << ", dStride:" << dStride << ", hStride:" << hStride << ", wStride:" << wStride;
 
-        info << ", dKernel:" << dKernel 
-             << ", hKernel:" << hKernel 
-             << ", wKernel:" << wKernel;
+        info << ", dKernel:" << dKernel << ", hKernel:" << hKernel << ", wKernel:" << wKernel;
 
-        info << ", dInput:" << dInput 
-             << ", hInput:" << hInput 
-             << ", wInput:" << wInput;
+        info << ", dInput:" << dInput << ", hInput:" << hInput << ", wInput:" << wInput;
 
-        info << ", dOutput:" << dOutput 
-             << ", hOutput:" << hOutput 
-             << ", wOutput:" << wOutput;
+        info << ", dOutput:" << dOutput << ", hOutput:" << hOutput << ", wOutput:" << wOutput;
 
-        info << ", highAxisTotal:" << highAxisTotal 
-             << ", isPad:" << isPad;
+        info << ", highAxisTotal:" << highAxisTotal << ", isPad:" << isPad;
 
-        info << ", dDilation:" << dDilation 
-             << ", hDilation:" << hDilation 
-             << ", wDilation:" << wDilation;
+        info << ", dDilation:" << dDilation << ", hDilation:" << hDilation << ", wDilation:" << wDilation;
         info << " }";
         return info.str();
     }
@@ -131,51 +113,35 @@ struct MaxPool3DWithArgmaxV2GatherSplitInfo {
     {
         std::stringstream info;
         info << "MaxPool3DWithArgmaxV2GatherSplitInfo {";
-        
-        info << " highAxisInner:" << highAxisInner
-             << ", highAxisTail:" << highAxisTail
-             << ", highAxisOuter:" << highAxisOuter
-             << ", highAxisAligned:" << highAxisAligned;
-         
-        info << ", dOutputInner:" << dOutputInner
-             << ", dOutputTail:" << dOutputTail
-             << ", dOutputOuter:" << dOutputOuter
-             << ", hOutputInner:" << hOutputInner
-             << ", hOutputTail:" << hOutputTail
-             << ", hOutputOuter:" << hOutputOuter
-             << ", wOutputInner:" << wOutputInner
-             << ", wOutputTail:" << wOutputTail
+
+        info << " highAxisInner:" << highAxisInner << ", highAxisTail:" << highAxisTail
+             << ", highAxisOuter:" << highAxisOuter << ", highAxisAligned:" << highAxisAligned;
+
+        info << ", dOutputInner:" << dOutputInner << ", dOutputTail:" << dOutputTail
+             << ", dOutputOuter:" << dOutputOuter << ", hOutputInner:" << hOutputInner
+             << ", hOutputTail:" << hOutputTail << ", hOutputOuter:" << hOutputOuter
+             << ", wOutputInner:" << wOutputInner << ", wOutputTail:" << wOutputTail
              << ", wOutputOuter:" << wOutputOuter;
-        
-        info << ", normalCoreProcessNum:" << normalCoreProcessNum
-             << ", tailCoreProcessNum:" << tailCoreProcessNum
-             << ", usedCoreNum:" << usedCoreNum
-             << ", totalBaseBlockNum:" << totalBaseBlockNum;
-        
-        info << ", dInputInner:" << dInputInner
-             << ", hInputInner:" << hInputInner
-             << ", wInputInner:" << wInputInner
-             << ", baseBlockPlaneSizeAligned:" << baseBlockPlaneSizeAligned
-             << ", inputBufferSize:" << inputBufferSize
-             << ", maxValueBufferSize:" << maxValueBufferSize
-             << ", argmaxBufferSize:" << argmaxBufferSize
+
+        info << ", normalCoreProcessNum:" << normalCoreProcessNum << ", tailCoreProcessNum:" << tailCoreProcessNum
+             << ", usedCoreNum:" << usedCoreNum << ", totalBaseBlockNum:" << totalBaseBlockNum;
+
+        info << ", dInputInner:" << dInputInner << ", hInputInner:" << hInputInner << ", wInputInner:" << wInputInner
+             << ", baseBlockPlaneSizeAligned:" << baseBlockPlaneSizeAligned << ", inputBufferSize:" << inputBufferSize
+             << ", maxValueBufferSize:" << maxValueBufferSize << ", argmaxBufferSize:" << argmaxBufferSize
              << ", totalBufferSize:" << totalBufferSize;
-        
+
         info << " }";
         return info.str();
     }
 };
 
-class MaxPool3DWithArgmaxV2GatherTiling : public MaxPool3DWithArgmaxV2BaseTiling
-{
+class MaxPool3DWithArgmaxV2GatherTiling : public MaxPool3DWithArgmaxV2BaseTiling {
 public:
-     explicit MaxPool3DWithArgmaxV2GatherTiling(gert::TilingContext* context) : MaxPool3DWithArgmaxV2BaseTiling(context)
-    {
-    }
+    explicit MaxPool3DWithArgmaxV2GatherTiling(gert::TilingContext* context) : MaxPool3DWithArgmaxV2BaseTiling(context)
+    {}
 
-    ~MaxPool3DWithArgmaxV2GatherTiling() override
-    {
-    }
+    ~MaxPool3DWithArgmaxV2GatherTiling() override {}
 
 private:
     void DoUBTiling();
@@ -196,23 +162,22 @@ private:
     void DoBufferCalculate();
     bool IsCapable() override;
     bool IsBasicConfigUnsupported() const;
-    bool IsExcludedByDegenerateCheck(
-        int64_t noOverlapCount, int64_t degenerateCount, bool wDegenerate, int64_t kernelElements) const;
-    bool IsExcludedByKernelHeuristics(
-        int64_t noOverlapCount, int64_t strictNoOverlap, int64_t kernelElements, bool allNonOverlap,
-        int64_t degenerateCount) const;
+    bool IsExcludedByDegenerateCheck(int64_t noOverlapCount, int64_t degenerateCount, bool wDegenerate,
+                                     int64_t kernelElements) const;
+    bool IsExcludedByKernelHeuristics(int64_t noOverlapCount, int64_t strictNoOverlap, int64_t kernelElements,
+                                      bool allNonOverlap, int64_t degenerateCount) const;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 
-    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* tilingData_ = 
-        context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData>();
+    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData*
+        tilingData_ = context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData>();
     MaxPool3DWithArgmaxV2GatherBaseInfo baseData_;
     MaxPool3DWithArgmaxV2GatherSplitInfo splitData_;
     int64_t calIndexType_ = 0;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

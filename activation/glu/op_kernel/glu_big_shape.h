@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -21,12 +21,10 @@ namespace Glu {
 using namespace AscendC;
 
 template <typename T>
-class GluBigShape
-{
+class GluBigShape {
 public:
     __aicore__ inline GluBigShape(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
     __aicore__ inline void Process();
 
     constexpr static int32_t bufferNum = 2;
@@ -61,8 +59,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GluBigShape<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
+__aicore__ inline void GluBigShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -79,7 +76,7 @@ __aicore__ inline void GluBigShape<T>::Init(
 
     one_process_in_stride = ny * 2;
     one_process_out_stride = ny;
-    
+
     pipe.InitBuffer(inQueueX1, bufferNum, bufferSize * sizeof(float));
     pipe.InitBuffer(inQueueX2, bufferNum, bufferSize * sizeof(float));
     pipe.InitBuffer(outQueue, 1, bufferSize * sizeof(float));
@@ -124,8 +121,7 @@ __aicore__ inline void GluBigShape<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void GluBigShape<T>::CopyIn(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
+__aicore__ inline void GluBigShape<T>::CopyIn(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
 {
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
@@ -191,8 +187,7 @@ __aicore__ inline void GluBigShape<T>::ComputeSigmoidAndMul(const int64_t& lengt
 }
 
 template <typename T>
-__aicore__ inline void GluBigShape<T>::CopyOut(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
+__aicore__ inline void GluBigShape<T>::CopyOut(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length)
 {
     LocalTensor<T> outLocal = outQueue.DeQue<T>();
     DataCopyParams intriParams;

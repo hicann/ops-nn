@@ -26,26 +26,16 @@ using namespace AscendC;
 
 template <typename INDICES_T, typename PARAMS_T, typename TYPE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut(
-    __gm__ PARAMS_T* varGmAddr, 
-    __ubuf__ INDICES_T* indiceLocalAddr, 
-    __ubuf__ PARAMS_T* updateLocalAddr,
-    int64_t colLen,
-    uint32_t uniqueIdNum,
-    int64_t updateOfset,
-    int64_t afterAxisFactor,
-    int64_t afterAxis,
-    int64_t varInAxis,
-    TYPE_T magic, 
-    TYPE_T shift)
+    __gm__ PARAMS_T* varGmAddr, __ubuf__ INDICES_T* indiceLocalAddr, __ubuf__ PARAMS_T* updateLocalAddr, int64_t colLen,
+    uint32_t uniqueIdNum, int64_t updateOfset, int64_t afterAxisFactor, int64_t afterAxis, int64_t varInAxis,
+    TYPE_T magic, TYPE_T shift)
 {
     for (TYPE_T index = threadIdx.x; index < afterAxisFactor * uniqueIdNum; index += blockDim.x) {
-        
         TYPE_T quotient = Simt::UintDiv(index, magic, shift);
         TYPE_T updateAxisIdx = index - quotient * afterAxisFactor;
-        if (updateAxisIdx < colLen)
-        {
+        if (updateAxisIdx < colLen) {
             INDICES_T varRowIndex = indiceLocalAddr[quotient];
-        
+
             if (varRowIndex >= 0 && varRowIndex < varInAxis) {
                 int64_t varRowOfest = varRowIndex * afterAxis;
                 int64_t varColOfest = updateOfset + updateAxisIdx;
@@ -65,8 +55,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
-class ScatterNdAddSimtSort : public ScatterNdAddBase<PARAMS_T, INDICES_T, CAST_T, castType>
-{
+class ScatterNdAddSimtSort : public ScatterNdAddBase<PARAMS_T, INDICES_T, CAST_T, castType> {
 public:
     __aicore__ inline ScatterNdAddSimtSort(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
@@ -96,16 +85,17 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T,
     this->eachCoreIndexCount_ = tilingData_.eachCoreIndexCount;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y);
 
-    curCoreIndexCount_ =
-        (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
-                                                                tilingData_.tailCoreIndexCount);
+    curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
+                                                                                 tilingData_.tailCoreIndexCount);
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType>
-__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::SimtOutUpdate(int64_t rowLen, int64_t colLen, int64_t updateOfset){
+__aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType>::SimtOutUpdate(
+    int64_t rowLen, int64_t colLen, int64_t updateOfset)
+{
     LocalTensor<INDICES_T> updateSumIdxLocal = this->updateSumIdxQue_.template DeQue<INDICES_T>();
     LocalTensor<PARAMS_T> updatesLocal = this->dataQueue_.template DeQue<PARAMS_T>();
-    
+
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     int64_t afterAxisFactor = tilingData_.afterAxisFactor;
@@ -114,47 +104,29 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T,
     uint32_t uniqueIdNum = this->uniqueIdNum_;
 
     GetUintDivMagicAndShift(magic, shift, static_cast<TYPE_T>(afterAxisFactor));
-    
+
     if constexpr (IsSameType<PARAMS_T, half>::value || IsSameType<PARAMS_T, bfloat16_t>::value) {
         LocalTensor<float> updateSumLocal = this->updateSumQue_.template DeQue<float>();
         this->ExecConvertAlign(updatesLocal, updateSumLocal, rowLen, colLen);
         event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-        
+
         asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
-        dim3(THREAD_NUM), 
-        (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()), 
-        (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(),
-        (__ubuf__ PARAMS_T*)updatesLocal.GetPhyAddr(),
-        colLen, 
-        uniqueIdNum,
-        updateOfset, 
-        afterAxisFactor,
-        afterAxis,
-        varInAxis,
-        magic,
-        shift);
+            dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
+            (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)updatesLocal.GetPhyAddr(), colLen,
+            uniqueIdNum, updateOfset, afterAxisFactor, afterAxis, varInAxis, magic, shift);
         this->updateSumQue_.template FreeTensor(updateSumLocal);
     } else {
         LocalTensor<PARAMS_T> updateSumLocal = this->updateSumQue_.template DeQue<PARAMS_T>();
 
         asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
-        dim3(THREAD_NUM), 
-        (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()), 
-        (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(),
-        (__ubuf__ PARAMS_T*)updateSumLocal.GetPhyAddr(),
-        colLen, 
-        uniqueIdNum,
-        updateOfset,
-        afterAxisFactor,
-        afterAxis,
-        varInAxis,
-        magic,
-        shift);
+            dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
+            (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)updateSumLocal.GetPhyAddr(),
+            colLen, uniqueIdNum, updateOfset, afterAxisFactor, afterAxis, varInAxis, magic, shift);
         this->updateSumQue_.template FreeTensor(updateSumLocal);
     }
-    
+
     this->dataQueue_.template FreeTensor(updatesLocal);
     this->updateSumIdxQue_.template EnQue(updateSumIdxLocal);
 }
@@ -180,9 +152,9 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T,
     GetUintDivMagicAndShift(magic, shift, static_cast<TYPE_T>(afterAxisFactor));
 
     asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
-        dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
-        (__ubuf__ INDICES_T*)outOfstLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)updatesLocal.GetPhyAddr(), colLen,
-        uniqueIdNum, updateOfset, afterAxisFactor, afterAxis, varInAxis, magic, shift);
+        dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()), (__ubuf__ INDICES_T*)outOfstLocal.GetPhyAddr(),
+        (__ubuf__ PARAMS_T*)updatesLocal.GetPhyAddr(), colLen, uniqueIdNum, updateOfset, afterAxisFactor, afterAxis,
+        varInAxis, magic, shift);
 
     this->dataQueue_.template FreeTensor(updatesLocal);
 }

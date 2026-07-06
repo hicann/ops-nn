@@ -56,8 +56,7 @@ public:
             lastLoopElements_ = tilingData_->lastCoreLastLoopElements;
         }
 
-        rstdGm_.SetGlobalBuffer(
-            (__gm__ float*)rstd + perCoreElements_ * blockIdx_, curCoreElements_);
+        rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + perCoreElements_ * blockIdx_, curCoreElements_);
 
         pipe_.InitBuffer(outNanQueue_, BUFFER_NUM, perLoopElements_ * sizeof(float));
     }

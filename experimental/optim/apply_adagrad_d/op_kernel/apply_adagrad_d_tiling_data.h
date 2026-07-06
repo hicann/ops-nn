@@ -28,7 +28,7 @@ struct ApplyAdagradDTilingData {
     int64_t finalBigTileNum;
     int64_t tailBlockNum;
     int64_t totalDataNum;
-    int32_t updateSlots;   // 1 = true, 0 = false
+    int32_t updateSlots; // 1 = true, 0 = false
 };
 
 #endif // APPLY_ADAGRAD_D_TILING_DATA_H

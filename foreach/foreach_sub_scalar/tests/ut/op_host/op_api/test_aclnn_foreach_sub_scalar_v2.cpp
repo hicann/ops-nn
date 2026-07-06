@@ -22,18 +22,11 @@
 
 using namespace std;
 
-class l2_foreach_sub_scalar_v2_test : public testing::Test
-{
+class l2_foreach_sub_scalar_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "foreach_sub_scalar_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "foreach_sub_scalar_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "foreach_sub_scalar_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "foreach_sub_scalar_test TearDown" << endl; }
 };
 
 // dtype DOUBLE

@@ -30,364 +30,363 @@
 #include "opdev/platform.h"
 using namespace op;
 
-template<typename T, typename... Ts>
-static bool CheckDimension(const T &t, const Ts &... args) {
-  if constexpr (std::is_same_v<std::remove_const_t<T>, aclTensor *>) {
-    if (t) {
-      OP_CHECK_MAX_DIM(t, MAX_SUPPORT_DIMS_NUMS, return false);
+template <typename T, typename... Ts>
+static bool CheckDimension(const T& t, const Ts&... args)
+{
+    if constexpr (std::is_same_v<std::remove_const_t<T>, aclTensor*>) {
+        if (t) {
+            OP_CHECK_MAX_DIM(t, MAX_SUPPORT_DIMS_NUMS, return false);
+        }
     }
-  }
 
-  if constexpr (sizeof...(args) > 0) {
-    return CheckDimension(args...);
-  }
-  return true;
+    if constexpr (sizeof...(args) > 0) {
+        return CheckDimension(args...);
+    }
+    return true;
 }
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum Reductions {
-  None,
-  Mean,
-  Sum,
-  END
-};
+enum Reductions { None, Mean, Sum, END };
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
-  DataType::DT_FLOAT16,
-  DataType::DT_FLOAT,
-  DataType::DT_BF16
-};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                             DataType::DT_BF16};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-  DataType::DT_FLOAT16,
-  DataType::DT_FLOAT
-};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >=  SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-    return DTYPE_SUPPORT_LIST_WITH_BF16;
-  }
-  return DTYPE_SUPPORT_LIST;
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B ||
+        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+        return DTYPE_SUPPORT_LIST_WITH_BF16;
+    }
+    return DTYPE_SUPPORT_LIST;
 }
 
-static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self,
-    const aclTensor *target, aclTensor *gradTarget) {
-  OP_CHECK_NULL(gradOutput, return false);
-  OP_CHECK_NULL(self, return false);
-  OP_CHECK_NULL(target, return false);
-  OP_CHECK_NULL(gradTarget, return false);
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                         aclTensor* gradTarget)
+{
+    OP_CHECK_NULL(gradOutput, return false);
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(target, return false);
+    OP_CHECK_NULL(gradTarget, return false);
 
-  return true;
+    return true;
 }
 
-static bool CheckPromoteType(const aclTensor *gradOutput, const aclTensor *self,
-    const aclTensor *target, const aclTensor *weightOptional, const aclTensor *posWeightOptional,
-    const aclTensor *gradTarget, op::DataType &promoteType) {
-  // 检查self和other能否做数据类型推导
-  promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
-  if (promoteType == DataType::DT_UNDEFINED) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and target dtype %s can not promote dtype.",
-        op::ToString(self->GetDataType()).GetString(), op::ToString(target->GetDataType()).GetString());
-    return false;
-  }
-
-  op::DataType savedPromoteType = promoteType;
-  promoteType = op::PromoteType(promoteType, gradOutput->GetDataType());
-  if (promoteType == DataType::DT_UNDEFINED) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and target dtype %s can not promote dtype.",
-        op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(savedPromoteType).GetString());
-    return false;
-  }
-
-  if (weightOptional) {
-    savedPromoteType = promoteType;
-    promoteType = op::PromoteType(promoteType, weightOptional->GetDataType());
+static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                             const aclTensor* weightOptional, const aclTensor* posWeightOptional,
+                             const aclTensor* gradTarget, op::DataType& promoteType)
+{
+    // 检查self和other能否做数据类型推导
+    promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight dtype %s and target dtype %s can not promote dtype.",
-          op::ToString(weightOptional->GetDataType()).GetString(), op::ToString(savedPromoteType).GetString());
-      return false;
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and target dtype %s can not promote dtype.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(target->GetDataType()).GetString());
+        return false;
     }
-  }
 
-  if (posWeightOptional) {
-    savedPromoteType = promoteType;
-    promoteType = op::PromoteType(promoteType, posWeightOptional->GetDataType());
+    op::DataType savedPromoteType = promoteType;
+    promoteType = op::PromoteType(promoteType, gradOutput->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pos_weight dtype %s and target dtype %s can not promote dtype.",
-          op::ToString(posWeightOptional->GetDataType()).GetString(), op::ToString(savedPromoteType).GetString());
-      return false;
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and target dtype %s can not promote dtype.",
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(savedPromoteType).GetString());
+        return false;
     }
-  }
 
-  // 如果promoteType为BF16或者FP16防止精度损失,转为FLOAT
-  if (promoteType == DataType::DT_BF16 || promoteType == DataType::DT_FLOAT16) {
-    promoteType = DataType::DT_FLOAT;
-  }
+    if (weightOptional) {
+        savedPromoteType = promoteType;
+        promoteType = op::PromoteType(promoteType, weightOptional->GetDataType());
+        if (promoteType == DataType::DT_UNDEFINED) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight dtype %s and target dtype %s can not promote dtype.",
+                    op::ToString(weightOptional->GetDataType()).GetString(),
+                    op::ToString(savedPromoteType).GetString());
+            return false;
+        }
+    }
 
-  // 检查推导后的数据类型能否转换为输出的数据类型
-  OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, gradTarget->GetDataType(), return false);
-  return true;
+    if (posWeightOptional) {
+        savedPromoteType = promoteType;
+        promoteType = op::PromoteType(promoteType, posWeightOptional->GetDataType());
+        if (promoteType == DataType::DT_UNDEFINED) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pos_weight dtype %s and target dtype %s can not promote dtype.",
+                    op::ToString(posWeightOptional->GetDataType()).GetString(),
+                    op::ToString(savedPromoteType).GetString());
+            return false;
+        }
+    }
+
+    // 如果promoteType为BF16或者FP16防止精度损失,转为FLOAT
+    if (promoteType == DataType::DT_BF16 || promoteType == DataType::DT_FLOAT16) {
+        promoteType = DataType::DT_FLOAT;
+    }
+
+    // 检查推导后的数据类型能否转换为输出的数据类型
+    OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, gradTarget->GetDataType(), return false);
+    return true;
 }
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                            const aclTensor* weightOptional, const aclTensor* posWeightOptional, const aclTensor* gradTarget) {
-  auto supportList = GetDtypeSupportList();
-  // 检查gradOutput的数据类型是否在支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
+                            const aclTensor* weightOptional, const aclTensor* posWeightOptional,
+                            const aclTensor* gradTarget)
+{
+    auto supportList = GetDtypeSupportList();
+    // 检查gradOutput的数据类型是否在支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
 
-  // 检查self的数据类型是否在支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+    // 检查self的数据类型是否在支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
 
-  // 检查target的数据类型是否在支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);
+    // 检查target的数据类型是否在支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);
 
-  // 检查weightOptional的数据类型是否在支持列表内，weightOptional为空例外
-  if (weightOptional != nullptr) {
-    OP_CHECK_DTYPE_NOT_SUPPORT(weightOptional, supportList, return false);
-  }
+    // 检查weightOptional的数据类型是否在支持列表内，weightOptional为空例外
+    if (weightOptional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(weightOptional, supportList, return false);
+    }
 
-  // 检查posWeightOptional的数据类型是否在支持列表内，posWeightOptional为空例外
-  if (posWeightOptional != nullptr) {
-    OP_CHECK_DTYPE_NOT_SUPPORT(posWeightOptional, supportList, return false);
-  }
+    // 检查posWeightOptional的数据类型是否在支持列表内，posWeightOptional为空例外
+    if (posWeightOptional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(posWeightOptional, supportList, return false);
+    }
 
-  // 检查gradTarget的数据类型是否在支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(gradTarget, supportList, return false);
+    // 检查gradTarget的数据类型是否在支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradTarget, supportList, return false);
 
-  // 输出类型与target类型一致
-  OP_CHECK_DTYPE_NOT_MATCH(gradTarget, target->GetDataType(), return false);
+    // 输出类型与target类型一致
+    OP_CHECK_DTYPE_NOT_MATCH(gradTarget, target->GetDataType(), return false);
 
-  return true;
+    return true;
 }
 
-static bool CheckFormat([[maybe_unused]] const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target,
-    [[maybe_unused]] const aclTensor *weightOptional, [[maybe_unused]] const aclTensor *posWeightOptional,
-    const aclTensor* gradTarget) {
-  // self、target的数据格式必须相同
-  if (self->GetStorageFormat() != target->GetStorageFormat()) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and target can't be different, self [%s], target [%s].",
-        op::ToString(self->GetStorageFormat()).GetString(), op::ToString(target->GetStorageFormat()).GetString());
-    return false;
-  }
+static bool CheckFormat([[maybe_unused]] const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                        [[maybe_unused]] const aclTensor* weightOptional,
+                        [[maybe_unused]] const aclTensor* posWeightOptional, const aclTensor* gradTarget)
+{
+    // self、target的数据格式必须相同
+    if (self->GetStorageFormat() != target->GetStorageFormat()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and target can't be different, self [%s], target [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(target->GetStorageFormat()).GetString());
+        return false;
+    }
 
-  // self、gradTarget的数据格式必须相同
-  if (self->GetStorageFormat() != gradTarget->GetStorageFormat()) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and gradTarget can't be different, self [%s], gradTarget [%s].",
-        op::ToString(self->GetStorageFormat()).GetString(), op::ToString(gradTarget->GetStorageFormat()).GetString());
-    return false;
-  }
+    // self、gradTarget的数据格式必须相同
+    if (self->GetStorageFormat() != gradTarget->GetStorageFormat()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format of self and gradTarget can't be different, self [%s], gradTarget [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(gradTarget->GetStorageFormat()).GetString());
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                       const aclTensor* weightOptional, const aclTensor* posWeightOptional, const aclTensor* gradTarget) {
-  if (self->IsEmpty()) {
+                       const aclTensor* weightOptional, const aclTensor* posWeightOptional, const aclTensor* gradTarget)
+{
+    if (self->IsEmpty()) {
+        return true;
+    }
+
+    // target与self, gradTarget的shape必须一致
+    OP_CHECK_SHAPE_NOT_EQUAL(self, target, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL(self, gradTarget, return false);
+
+    // gradOutput、weightOptional应能broadcast到self
+    const op::Shape& selfShape = self->GetViewShape();
+    op::Shape broadcastShape;
+    OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return false);
+    CHECK_RET(selfShape == broadcastShape, false);
+
+    if (weightOptional) {
+        OP_CHECK_BROADCAST_AND_INFER_SHAPE(weightOptional, self, broadcastShape, return false);
+        CHECK_RET(selfShape == broadcastShape, false);
+    }
+
+    if (posWeightOptional) {
+        OP_CHECK_BROADCAST_AND_INFER_SHAPE(posWeightOptional, self, broadcastShape, return false);
+        CHECK_RET(selfShape == broadcastShape, false);
+    }
+
     return true;
-  }
-
-  // target与self, gradTarget的shape必须一致
-  OP_CHECK_SHAPE_NOT_EQUAL(self, target, return false);
-  OP_CHECK_SHAPE_NOT_EQUAL(self, gradTarget, return false);
-
-  // gradOutput、weightOptional应能broadcast到self
-  const op::Shape& selfShape = self->GetViewShape();
-  op::Shape broadcastShape;
-  OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return false);
-  CHECK_RET(selfShape == broadcastShape, false);
-
-  if (weightOptional) {
-    OP_CHECK_BROADCAST_AND_INFER_SHAPE(weightOptional, self, broadcastShape, return false);
-    CHECK_RET(selfShape == broadcastShape, false);
-  }
-
-  if (posWeightOptional) {
-    OP_CHECK_BROADCAST_AND_INFER_SHAPE(posWeightOptional, self, broadcastShape, return false);
-    CHECK_RET(selfShape == broadcastShape, false);
-  }
-
-  return true;
 }
 
-static bool CheckReduction(int64_t reduction) {
-  if (reduction > Sum || reduction < None) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but current is %ld", reduction);
-    return false;
-  }
-  return true;
+static bool CheckReduction(int64_t reduction)
+{
+    if (reduction > Sum || reduction < None) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but current is %ld", reduction);
+        return false;
+    }
+    return true;
 }
 
 static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
                                const aclTensor* weightOptional, const aclTensor* posWeightOptional, int64_t reduction,
-                               aclTensor* gradTarget) {
-  // 1. 检查参数是否为空指针
-  CHECK_RET(CheckNotNull(gradOutput, self, target, gradTarget), ACLNN_ERR_PARAM_NULLPTR);
+                               aclTensor* gradTarget)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(gradOutput, self, target, gradTarget), ACLNN_ERR_PARAM_NULLPTR);
 
-  // 2. 检查输入的tensor维度是否小于等于8
-  CHECK_RET(CheckDimension(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget), ACLNN_ERR_PARAM_INVALID);
+    // 2. 检查输入的tensor维度是否小于等于8
+    CHECK_RET(CheckDimension(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget),
+              ACLNN_ERR_PARAM_INVALID);
 
-  // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据API定义校验
-  CHECK_RET(CheckDtypeValid(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据API定义校验
+    CHECK_RET(CheckDtypeValid(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget),
+              ACLNN_ERR_PARAM_INVALID);
 
-  // 4. 检查数据格式是否支持
-  CHECK_RET(CheckFormat(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查数据格式是否支持
+    CHECK_RET(CheckFormat(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget),
+              ACLNN_ERR_PARAM_INVALID);
 
-  // 5. 检查shape是否满足约束
-  CHECK_RET(CheckShape(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget), ACLNN_ERR_PARAM_INVALID);
+    // 5. 检查shape是否满足约束
+    CHECK_RET(CheckShape(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget),
+              ACLNN_ERR_PARAM_INVALID);
 
-  // 6. 检查reduction是否合法
-  CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
+    // 6. 检查reduction是否合法
+    CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
-static const aclTensor* PrepareInput(const aclTensor* input,
-                                     op::DataType promoteType, aclOpExecutor* exec) {
-  // 如果非连续，需要转连续
-  auto contiguous = l0op::Contiguous(input, exec);
-  CHECK_RET(contiguous != nullptr, nullptr);
-  auto casted = l0op::Cast(contiguous, promoteType, exec);
-  CHECK_RET(casted != nullptr, nullptr);
-  return casted;
+static const aclTensor* PrepareInput(const aclTensor* input, op::DataType promoteType, aclOpExecutor* exec)
+{
+    // 如果非连续，需要转连续
+    auto contiguous = l0op::Contiguous(input, exec);
+    CHECK_RET(contiguous != nullptr, nullptr);
+    auto casted = l0op::Cast(contiguous, promoteType, exec);
+    CHECK_RET(casted != nullptr, nullptr);
+    return casted;
 }
 
-static const aclTensor* PrepareOptional(const aclTensor* optional, const aclTensor* ref,
-                                        op::DataType promoteType, aclOpExecutor* exec) {
-  // 如果为空，按ref的shape创建全1的tensor
-  auto tensor = (optional == nullptr) ? l0op::OnesLike(ref, exec)
-                                      : l0op::Contiguous(optional, exec);
-  CHECK_RET(tensor != nullptr, nullptr);
-  auto casted = l0op::Cast(tensor, promoteType, exec);
-  CHECK_RET(casted != nullptr, nullptr);
-  return casted;
+static const aclTensor* PrepareOptional(const aclTensor* optional, const aclTensor* ref, op::DataType promoteType,
+                                        aclOpExecutor* exec)
+{
+    // 如果为空，按ref的shape创建全1的tensor
+    auto tensor = (optional == nullptr) ? l0op::OnesLike(ref, exec) : l0op::Contiguous(optional, exec);
+    CHECK_RET(tensor != nullptr, nullptr);
+    auto casted = l0op::Cast(tensor, promoteType, exec);
+    CHECK_RET(casted != nullptr, nullptr);
+    return casted;
 }
 
 static aclnnStatus ComputeGradTarget(const aclTensor* selfCasted, const aclTensor* targetCasted,
                                      const aclTensor* gradOutputCasted, const aclTensor* weightCasted,
-                                     const aclTensor* posWeightCasted, int64_t reduction,
-                                     aclTensor* gradTarget, aclOpExecutor* exec) {
-  // 调用l0算子进行计算
-  auto zerosTensor = l0op::ZerosLike(selfCasted, exec);
-  CHECK_RET(zerosTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto negativeSelf = l0op::Sub(zerosTensor, selfCasted, exec);
-  CHECK_RET(negativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto logSigmoidNegativeSelf = l0op::LogSigmoid(negativeSelf, exec);
-  CHECK_RET(logSigmoidNegativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto logSigmoidSelf = l0op::LogSigmoid(selfCasted, exec);
-  CHECK_RET(logSigmoidSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto intermediateResult1 = l0op::Mul(logSigmoidSelf, posWeightCasted, exec);
-  CHECK_RET(intermediateResult1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto intermediateResult2 = l0op::Sub(logSigmoidNegativeSelf, intermediateResult1, exec);
-  CHECK_RET(intermediateResult2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto intermediateResult3 = l0op::Mul(gradOutputCasted, intermediateResult2, exec);
-  CHECK_RET(intermediateResult3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto tempGradTarget = l0op::Mul(intermediateResult3, weightCasted, exec);
-  CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  // 根据reduction是否为Mean进一步处理
-  if (reduction == 1) {
-    int64_t size = targetCasted->GetViewShape().GetShapeSize();
-    CHECK_RET(size != 0, ACLNN_ERR_PARAM_INVALID);
-    tempGradTarget = l0op::Muls(tempGradTarget, 1.0 / size, exec);
+                                     const aclTensor* posWeightCasted, int64_t reduction, aclTensor* gradTarget,
+                                     aclOpExecutor* exec)
+{
+    // 调用l0算子进行计算
+    auto zerosTensor = l0op::ZerosLike(selfCasted, exec);
+    CHECK_RET(zerosTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto negativeSelf = l0op::Sub(zerosTensor, selfCasted, exec);
+    CHECK_RET(negativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto logSigmoidNegativeSelf = l0op::LogSigmoid(negativeSelf, exec);
+    CHECK_RET(logSigmoidNegativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto logSigmoidSelf = l0op::LogSigmoid(selfCasted, exec);
+    CHECK_RET(logSigmoidSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto intermediateResult1 = l0op::Mul(logSigmoidSelf, posWeightCasted, exec);
+    CHECK_RET(intermediateResult1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto intermediateResult2 = l0op::Sub(logSigmoidNegativeSelf, intermediateResult1, exec);
+    CHECK_RET(intermediateResult2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto intermediateResult3 = l0op::Mul(gradOutputCasted, intermediateResult2, exec);
+    CHECK_RET(intermediateResult3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto tempGradTarget = l0op::Mul(intermediateResult3, weightCasted, exec);
     CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-  auto gradTargetCasted = l0op::Cast(tempGradTarget, gradTarget->GetDataType(), exec);
-  CHECK_RET(gradTargetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  // 如果出参是非连续Tensor，需要把计算完的连续Tensor转非连续
-  auto viewCopyResult = l0op::ViewCopy(gradTargetCasted, gradTarget, exec);
-  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  return ACLNN_SUCCESS;
+    // 根据reduction是否为Mean进一步处理
+    if (reduction == 1) {
+        int64_t size = targetCasted->GetViewShape().GetShapeSize();
+        CHECK_RET(size != 0, ACLNN_ERR_PARAM_INVALID);
+        tempGradTarget = l0op::Muls(tempGradTarget, 1.0 / size, exec);
+        CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    auto gradTargetCasted = l0op::Cast(tempGradTarget, gradTarget->GetDataType(), exec);
+    CHECK_RET(gradTargetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 如果出参是非连续Tensor，需要把计算完的连续Tensor转非连续
+    auto viewCopyResult = l0op::ViewCopy(gradTargetCasted, gradTarget, exec);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
 }
 
 static aclnnStatus BinaryCrossEntropyWithLogitsTargetBackwardStub(
-    const aclTensor *gradOutput,
-    const aclTensor *self,
-    const aclTensor *target,
-    const aclTensor *weightOptional,
-    const aclTensor *posWeightOptional,
-    int64_t reduction,
-    aclTensor *gradTarget,
-    [[maybe_unused]] uint64_t *workspaceSize,
-    aclOpExecutor *executor) {
-  // 检查self能否做dtype指定的数据类型推导以及推导的数据类型能否转换为输出数据类型
-  op::DataType promoteType;
-  CHECK_RET(CheckPromoteType(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget, promoteType),
-            ACLNN_ERR_PARAM_INVALID);
+    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weightOptional,
+    const aclTensor* posWeightOptional, int64_t reduction, aclTensor* gradTarget,
+    [[maybe_unused]] uint64_t* workspaceSize, aclOpExecutor* executor)
+{
+    // 检查self能否做dtype指定的数据类型推导以及推导的数据类型能否转换为输出数据类型
+    op::DataType promoteType;
+    CHECK_RET(CheckPromoteType(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget, promoteType),
+              ACLNN_ERR_PARAM_INVALID);
 
-  // gradOutput如果非连续，需要转连续并cast
-  auto gradOutputCasted = PrepareInput(gradOutput, promoteType, executor);
-  CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // gradOutput如果非连续，需要转连续并cast
+    auto gradOutputCasted = PrepareInput(gradOutput, promoteType, executor);
+    CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // self如果非连续，需要转连续并cast
-  auto selfCasted = PrepareInput(self, promoteType, executor);
-  CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // self如果非连续，需要转连续并cast
+    auto selfCasted = PrepareInput(self, promoteType, executor);
+    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // target如果非连续，需要转连续并cast
-  auto targetCasted = PrepareInput(target, promoteType, executor);
-  CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // target如果非连续，需要转连续并cast
+    auto targetCasted = PrepareInput(target, promoteType, executor);
+    CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // weightOptional如果为空，按self的shape创建全1的tensor并cast
-  auto weightCasted = PrepareOptional(weightOptional, selfCasted, promoteType, executor);
-  CHECK_RET(weightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // weightOptional如果为空，按self的shape创建全1的tensor并cast
+    auto weightCasted = PrepareOptional(weightOptional, selfCasted, promoteType, executor);
+    CHECK_RET(weightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // posWeightOptional如果为空，按self的shape创建全1的tensor并cast
-  auto posWeightCasted = PrepareOptional(posWeightOptional, selfCasted, promoteType, executor);
-  CHECK_RET(posWeightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // posWeightOptional如果为空，按self的shape创建全1的tensor并cast
+    auto posWeightCasted = PrepareOptional(posWeightOptional, selfCasted, promoteType, executor);
+    CHECK_RET(posWeightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  auto ret = ComputeGradTarget(selfCasted, targetCasted, gradOutputCasted, weightCasted,
-                               posWeightCasted, reduction, gradTarget, executor);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
-  return ACLNN_SUCCESS;
+    auto ret = ComputeGradTarget(selfCasted, targetCasted, gradOutputCasted, weightCasted, posWeightCasted, reduction,
+                                 gradTarget, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    return ACLNN_SUCCESS;
 }
 
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize(
-    const aclTensor *gradOutput,
-    const aclTensor *self,
-    const aclTensor *target,
-    const aclTensor *weightOptional,
-    const aclTensor *posWeightOptional,
-    int64_t reduction,
-    aclTensor *gradTarget,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor) {
-  L2_DFX_PHASE_1(aclnnBinaryCrossEntropyWithLogitsTargetBackward,
-      DFX_IN(gradOutput, self, target, weightOptional, posWeightOptional, reduction),
-      DFX_OUT(gradTarget));
+    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weightOptional,
+    const aclTensor* posWeightOptional, int64_t reduction, aclTensor* gradTarget, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnBinaryCrossEntropyWithLogitsTargetBackward,
+                   DFX_IN(gradOutput, self, target, weightOptional, posWeightOptional, reduction), DFX_OUT(gradTarget));
 
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  // 固定写法，参数检查
-  auto ret = CheckParams(gradOutput, self, target, weightOptional, posWeightOptional, reduction, gradTarget);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // 固定写法，参数检查
+    auto ret = CheckParams(gradOutput, self, target, weightOptional, posWeightOptional, reduction, gradTarget);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  // 空Tensor处理
-  if (self->IsEmpty()) {
-    *workspaceSize = 0;
+    // 空Tensor处理
+    if (self->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 开始计算
+    ret = BinaryCrossEntropyWithLogitsTargetBackwardStub(gradOutput, self, target, weightOptional, posWeightOptional,
+                                                         reduction, gradTarget, workspaceSize, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
-  }
-
-  // 开始计算
-  ret = BinaryCrossEntropyWithLogitsTargetBackwardStub(gradOutput, self, target, weightOptional, posWeightOptional,
-                                                      reduction, gradTarget, workspaceSize, uniqueExecutor.get());
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
-  // 固定写法，获取计算过程中需要使用的workspace大小
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(void *workspace, uint64_t workspaceSize,
-    aclOpExecutor *executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnBinaryCrossEntropyWithLogitsTargetBackward);
-  // 固定写法，调用框架能力，完成计算
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(void* workspace, uint64_t workspaceSize,
+                                                            aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnBinaryCrossEntropyWithLogitsTargetBackward);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

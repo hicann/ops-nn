@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
@@ -22,15 +22,9 @@ using namespace std;
 
 class l2_ctc_loss_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ctc_loss_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ctc_loss_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ctc_loss_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ctc_loss_backward_test TearDown" << std::endl; }
 };
 
 int64_t TT = 12;
@@ -43,8 +37,9 @@ int64_t CC_V3 = 20000;
 // 正常情況aicore target is bool
 TEST_F(l2_ctc_loss_backward_test, test_ctc_loss_backward_float_target_is_bool)
 {
-    auto gradOut =
-        TensorDesc({NN}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10).Value(vector<float>{1.0, 1.0, 1.0, 1.0});
+    auto gradOut = TensorDesc({NN}, ACL_FLOAT, ACL_FORMAT_ND)
+                       .ValueRange(-10, 10)
+                       .Value(vector<float>{1.0, 1.0, 1.0, 1.0});
     auto logProbs = TensorDesc({TT, NN, CC}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto targets = TensorDesc({NN, SS}, ACL_BOOL, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto inputLengths = IntArrayDesc(vector<int64_t>{TT, TT, TT, TT});

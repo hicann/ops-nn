@@ -22,18 +22,21 @@
 
 using namespace Ops::Base;
 using namespace AscendC;
-using SyncBatchNormBackwardElemtNs::SyncBatchNormBackwardElemtTilingData;
 using SyncBatchNormBackwardElemt::SyncBatchNormBackwardElemtDag;
+using SyncBatchNormBackwardElemtNs::SyncBatchNormBackwardElemtTilingData;
 
-extern "C" __global__ __aicore__ void sync_batch_norm_backward_elemt(
-    GM_ADDR grad_output, GM_ADDR save_input, GM_ADDR mean, GM_ADDR invstd, GM_ADDR weight, GM_ADDR mean_dy,
-    GM_ADDR mean_dy_xmu, GM_ADDR grad_input, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sync_batch_norm_backward_elemt(GM_ADDR grad_output, GM_ADDR save_input,
+                                                                     GM_ADDR mean, GM_ADDR invstd, GM_ADDR weight,
+                                                                     GM_ADDR mean_dy, GM_ADDR mean_dy_xmu,
+                                                                     GM_ADDR grad_input, GM_ADDR workspace,
+                                                                     GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SyncBatchNormBackwardElemtTilingData);
     GET_TILING_DATA_WITH_STRUCT(SyncBatchNormBackwardElemtTilingData, tilingData, tiling);
     TPipe pipe;
     if (TILING_KEY_IS(0)) {
-        ElementwiseSch<0UL, SyncBatchNormBackwardElemtDag<DTYPE_GRAD_OUTPUT, DTYPE_MEAN>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        ElementwiseSch<0UL, SyncBatchNormBackwardElemtDag<DTYPE_GRAD_OUTPUT, DTYPE_MEAN>::OpDag> sch(
+            &(tilingData.baseTiling), &pipe);
         sch.Init(grad_output, save_input, mean, invstd, weight, mean_dy, mean_dy_xmu, grad_input);
         sch.Process();
     }

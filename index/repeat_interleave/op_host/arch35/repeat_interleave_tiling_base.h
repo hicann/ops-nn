@@ -27,10 +27,8 @@ constexpr uint32_t REPEAT_INTERLEAVE_MERGED_DIM_LENGTH = 3;
 
 class RepeatInterleaveBaseTiling : public TilingBaseClass {
 public:
-    explicit RepeatInterleaveBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~RepeatInterleaveBaseTiling() override
-    {}
+    explicit RepeatInterleaveBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~RepeatInterleaveBaseTiling() override {}
 
 protected:
     bool IsCapable() override;

@@ -68,8 +68,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SINGLE_THREAD_NUM) inline void SimtSmallInne
 template <typename X_T, typename IDS_T>
 class USSKernelDeterministicSmallInnerDim {
 public:
-    __aicore__ inline USSKernelDeterministicSmallInnerDim(
-        const UnsortedSegmentSumDetermSmallInnerDimTilingData* tiling, TPipe* pipe)
+    __aicore__ inline USSKernelDeterministicSmallInnerDim(const UnsortedSegmentSumDetermSmallInnerDimTilingData* tiling,
+                                                          TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output);
     __aicore__ inline void Process();
@@ -95,8 +95,8 @@ private:
 };
 
 template <typename X_T, typename IDS_T>
-__aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::Init(
-    GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+__aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::Init(GM_ADDR x, GM_ADDR segmentIds,
+                                                                             GM_ADDR output)
 {
     inputOuterDim_ = td_->inputOuterDim;
     outputOuterDim_ = td_->outputOuterDim;
@@ -112,12 +112,12 @@ __aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::Init(
 
     pipe_->Reset();
 
-    uint32_t xQueueSize =
-        Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * innerDim_ * sizeof(X_T)), UB_AGLIN_VALUE);
-    uint32_t segmentIdQueueSize =
-        Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * sizeof(IDS_T)), UB_AGLIN_VALUE);
-    uint32_t sortedIdIndexBufSize =
-        Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * sizeof(uint32_t)), UB_AGLIN_VALUE);
+    uint32_t xQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * innerDim_ * sizeof(X_T)),
+                                               UB_AGLIN_VALUE);
+    uint32_t segmentIdQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * sizeof(IDS_T)),
+                                                       UB_AGLIN_VALUE);
+    uint32_t sortedIdIndexBufSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * sizeof(uint32_t)),
+                                                         UB_AGLIN_VALUE);
 
     pipe_->InitBuffer(xQueue_, 1, xQueueSize);
     pipe_->InitBuffer(segmentIdQueue_, 1, segmentIdQueueSize);
@@ -127,8 +127,8 @@ __aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::Init(
 }
 
 template <typename X_T, typename IDS_T>
-__aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::CopyInData(
-    uint32_t rowNums, uint64_t segmentIdOffset)
+__aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::CopyInData(uint32_t rowNums,
+                                                                                   uint64_t segmentIdOffset)
 {
     LocalTensor<X_T> xLocal = xQueue_.AllocTensor<X_T>();
     uint64_t inputOffset = segmentIdOffset * innerDim_;
@@ -167,8 +167,8 @@ __aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::Process(
         LocalTensor<uint32_t> sortedIdIndexTensor = sortedIdIndexBuf.Get<uint32_t>();
         LocalTensor<uint8_t> sharedTmpTensor = sharedTmpBuf.Get<uint8_t>();
 
-        AscendC::Sort<IDS_T, false, sortConfig>(
-            sortedIdTensor, sortedIdIndexTensor, segmentIdLocal, sharedTmpTensor, curProcessRowsNum);
+        AscendC::Sort<IDS_T, false, sortConfig>(sortedIdTensor, sortedIdIndexTensor, segmentIdLocal, sharedTmpTensor,
+                                                curProcessRowsNum);
 
         asc_vf_call<SimtSmallInnerDimAccumulate<X_T, IDS_T>>(
             dim3(SINGLE_THREAD_NUM), (__gm__ X_T*)(yGm_.GetPhyAddr()), (__local_mem__ X_T*)(xLocal.GetPhyAddr()),

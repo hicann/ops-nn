@@ -49,7 +49,6 @@ public:
     explicit ConvBackpropFusionBasePass(const std::vector<ge::AscendString>& opTypes) : DecomposePass(opTypes) {}
 
 protected:
-
     virtual void InitMember();
 
     virtual bool CheckSocAndIntrinsic();
@@ -60,7 +59,7 @@ protected:
 
     virtual bool GetNodeAttrs(const ge::GNode& node);
 
-    virtual bool UpdateNodeInputDescInfo(ge::GNode *node);
+    virtual bool UpdateNodeInputDescInfo(ge::GNode* node);
 
     virtual ge::AscendString GetNodeType() const = 0;
 

@@ -24,23 +24,26 @@ namespace l0op {
 OP_TYPE_REGISTER(Scatter);
 
 // AiCore的执行逻辑
-aclTensor* ScatterAiCore(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
-                          int64_t axis, aclTensor* out, aclOpExecutor* executor) {
-  static const string reduce("update");
-  L0_DFX(ScatterAiCore, data, indices, updates, out, reduce, axis);
+aclTensor* ScatterAiCore(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
+                         aclTensor* out, aclOpExecutor* executor)
+{
+    static const string reduce("update");
+    L0_DFX(ScatterAiCore, data, indices, updates, out, reduce, axis);
 
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Scatter, OP_INPUT(data, indices, updates), OP_OUTPUT(out), OP_ATTR(reduce, axis));
-  if (ret !=  ACL_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
-    return nullptr;
-  }
-  return out;
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Scatter, OP_INPUT(data, indices, updates), OP_OUTPUT(out),
+                                           OP_ATTR(reduce, axis));
+    if (ret != ACL_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        return nullptr;
+    }
+    return out;
 }
 
 const aclTensor* Scatter(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
-                         aclOpExecutor* executor) {
-  auto out = executor->AllocTensor(data->GetViewShape(), data->GetDataType());
-  ScatterAiCore(data, indices, updates, axis, out, executor);
-  return out;
+                         aclOpExecutor* executor)
+{
+    auto out = executor->AllocTensor(data->GetViewShape(), data->GetDataType());
+    ScatterAiCore(data, indices, updates, axis, out, executor);
+    return out;
 }
-}  // namespace l0op
+} // namespace l0op

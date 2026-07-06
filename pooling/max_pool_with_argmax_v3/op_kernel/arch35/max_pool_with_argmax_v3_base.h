@@ -62,8 +62,8 @@ __simd_callee__ inline void GenGatterIndex2DVF(MicroAPI::RegTensor<T>& indexReg,
 }
 
 template <typename T>
-__aicore__ inline void GenGatterIndex3D(
-    MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void GenGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
+                                        T rate1D = 1)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -89,8 +89,8 @@ __aicore__ inline void GenGatterIndex3D(
 }
 
 template <typename T>
-__simd_callee__ inline void GenGatterIndex3DVF(
-    MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__simd_callee__ inline void GenGatterIndex3DVF(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
+                                               T rate1D = 1)
 {
     MicroAPI::Arange(indexReg, 0);
     MicroAPI::RegTensor<T> segmentScalarReg;
@@ -116,8 +116,8 @@ __simd_callee__ inline void GenGatterIndex3DVF(
 }
 
 template <typename T>
-__aicore__ inline void GenGatterIndex4D(
-    MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void GenGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D,
+                                        T rate2D, T num1D, T rate1D = 1)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -209,18 +209,18 @@ __aicore__ inline void DupBufferNegInfCommon(__local_mem__ T* dstAddr, uint32_t 
  * \brief Copy data to calculation buffer with padding support (2D)
  */
 template <typename T>
-__aicore__ inline void CopyToCalcBuffer2DCommon(
-    __local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch, uint16_t rows, uint16_t loopCols,
-    uint16_t tailCols, uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
-    uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
+__aicore__ inline void CopyToCalcBuffer2DCommon(__local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch,
+                                                uint16_t rows, uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm,
+                                                uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
+                                                uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
 {
     MicroAPI::RegTensor<T> v0;
     MicroAPI::UnalignReg u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t j = 0; j < rows; j++) {
             __local_mem__ T* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
-            __local_mem__ T* curDstAddr =
-                dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
+            __local_mem__ T* curDstAddr = dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride +
+                                          dstColOffset;
             for (uint16_t k = 0; k < loopCols; k++) {
                 MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
                 MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
@@ -236,11 +236,12 @@ __aicore__ inline void CopyToCalcBuffer2DCommon(
  * \brief Copy data to calculation buffer with depth dimension support (3D)
  */
 template <typename T>
-__aicore__ inline void CopyToCalcBuffer3DCommon(
-    __local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch, uint16_t deps, uint16_t rows, uint16_t loopCols,
-    uint16_t tailCols, uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcDepStride, uint32_t srcRowStride,
-    uint32_t dstBatchStride, uint32_t dstDepStride, uint32_t dstRowStride, uint32_t dstDepOffset, uint32_t dstRowOffset,
-    uint32_t dstColOffset)
+__aicore__ inline void CopyToCalcBuffer3DCommon(__local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch,
+                                                uint16_t deps, uint16_t rows, uint16_t loopCols, uint16_t tailCols,
+                                                uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcDepStride,
+                                                uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstDepStride,
+                                                uint32_t dstRowStride, uint32_t dstDepOffset, uint32_t dstRowOffset,
+                                                uint32_t dstColOffset)
 {
     MicroAPI::RegTensor<T> v0;
     MicroAPI::UnalignReg u0;
@@ -275,9 +276,9 @@ __aicore__ inline void CopyToCalcBuffer3DCommon(
  * \param ncInputOffset NC batch input offset
  */
 template <typename T2, const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexWithoutPadAlignCommon(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-    MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset)
+__aicore__ inline void ConvertIndexWithoutPadAlignCommon(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+                                                         T2 left, T2 wInputActualNoPad, T2 hIndexBase,
+                                                         MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset)
 {
     MicroAPI::RegTensor<T2> hIndexReg;
     MicroAPI::RegTensor<int32_t> constReg;
@@ -335,9 +336,10 @@ __aicore__ inline void ConvertIndexWithoutPadAlignCommon(
  * \param inputNcSize Input NC size
  */
 template <typename T2, const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexWithoutPadAlignNcCommon(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-    MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
+__aicore__ inline void ConvertIndexWithoutPadAlignNcCommon(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+                                                           T2 left, T2 wInputActualNoPad, T2 hIndexBase,
+                                                           MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset,
+                                                           int32_t ncOutputCount, int32_t inputNcSize)
 {
     MicroAPI::RegTensor<int32_t> ncIndexReg;
     MicroAPI::RegTensor<int32_t> divResultReg;
@@ -349,14 +351,16 @@ __aicore__ inline void ConvertIndexWithoutPadAlignNcCommon(
     MicroAPI::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
     MicroAPI::Sub(srcReg, srcReg, divResultReg, allMaskB32);
 
-    ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(
-        srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg, ncInputOffset);
+    ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
+                                                  ncInputOffset);
 }
 
 template <const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexWithoutPadAlignCommonFastDiv(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInputActualNoPad,
-    int32_t hIndexBase, MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, uint32_t magic, uint32_t shift)
+__aicore__ inline void ConvertIndexWithoutPadAlignCommonFastDiv(MicroAPI::RegTensor<int32_t>& srcReg,
+                                                                uint32_t wStrideOffset, int32_t left,
+                                                                int32_t wInputActualNoPad, int32_t hIndexBase,
+                                                                MicroAPI::RegTensor<int32_t>& dstReg,
+                                                                int32_t ncInputOffset, uint32_t magic, uint32_t shift)
 {
     MicroAPI::RegTensor<int32_t> hIndexReg;
     MicroAPI::RegTensor<int32_t> wIndexReg;
@@ -370,8 +374,8 @@ __aicore__ inline void ConvertIndexWithoutPadAlignCommonFastDiv(
     MicroAPI::Duplicate(magicReg, magic);
     MicroAPI::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
 
-    FastDivImpl(
-        divResultU32, (MicroAPI::RegTensor<uint32_t>&)srcReg, magicReg, static_cast<int16_t>(shift), allMaskB32);
+    FastDivImpl(divResultU32, (MicroAPI::RegTensor<uint32_t>&)srcReg, magicReg, static_cast<int16_t>(shift),
+                allMaskB32);
 
     MicroAPI::Adds(hIndexReg, (MicroAPI::RegTensor<int32_t>&)divResultU32, hIndexBase, allMaskB32);
 
@@ -383,8 +387,8 @@ __aicore__ inline void ConvertIndexWithoutPadAlignCommonFastDiv(
     MicroAPI::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskB32);
 
     MicroAPI::Muls(divResultU32, divResultU32, wStrideOffset, allMaskB32);
-    MicroAPI::Sub(
-        (MicroAPI::RegTensor<uint32_t>&)srcReg, (MicroAPI::RegTensor<uint32_t>&)srcReg, divResultU32, allMaskB32);
+    MicroAPI::Sub((MicroAPI::RegTensor<uint32_t>&)srcReg, (MicroAPI::RegTensor<uint32_t>&)srcReg, divResultU32,
+                  allMaskB32);
     MicroAPI::Adds(wIndexReg, srcReg, left, allMaskB32);
 
     if constexpr (IS_PAD) {
@@ -408,13 +412,13 @@ __aicore__ inline void ConvertIndexWithoutPadAlignNcCommonFastDiv(
 
     MicroAPI::Duplicate(magicReg, magicNc);
     MicroAPI::Arange(ncIndexReg, static_cast<int32_t>(0));
-    FastDivImpl(
-        divResultU32, (MicroAPI::RegTensor<uint32_t>&)ncIndexReg, magicReg, static_cast<int16_t>(shiftNc), allMaskB32);
+    FastDivImpl(divResultU32, (MicroAPI::RegTensor<uint32_t>&)ncIndexReg, magicReg, static_cast<int16_t>(shiftNc),
+                allMaskB32);
     MicroAPI::Muls(ncIndexReg, (MicroAPI::RegTensor<int32_t>&)divResultU32, inputNcSize, allMaskB32);
     MicroAPI::Sub(srcReg, srcReg, ncIndexReg, allMaskB32);
 
-    ConvertIndexWithoutPadAlignCommonFastDiv<IS_PAD>(
-        srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg, ncInputOffset, magicWStride, shiftWStride);
+    ConvertIndexWithoutPadAlignCommonFastDiv<IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
+                                                     ncInputOffset, magicWStride, shiftWStride);
 }
 
 #endif // MAX_POOL_WITH_ARGMAX_V3_BASE_H_

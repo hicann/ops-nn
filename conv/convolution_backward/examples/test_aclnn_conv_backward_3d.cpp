@@ -9,14 +9,14 @@
  */
 /**
  * @brief 编译运行流程说明
- * 
+ *
  * 参照 docs/zh/invocation/op_invocation.md 内 [编译与运行] 章节调用
- * 
+ *
  * 调用流程示例：
- * 1. 安装nn包: 
+ * 1. 安装nn包:
  *  ./cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run --full --install-path=/usr/local/Ascend/ascend-toolkit
  *  export ASCEND_OPS_NN_PATH=/usr/local/Ascend/ascend-toolkit/latest/ops_nn
- * 2. 编译出自定义算子包: 
+ * 2. 编译出自定义算子包:
  *  bash build.sh --pkg --ops=conv3d_backprop_filter_v2,conv3d_backprop_input_v2
  * 3. 安装自定义算子包:
  *  ./build_out/cann-ops-nn-custom-linux.aarch64.run
@@ -38,12 +38,12 @@
         }                            \
     } while (0)
 
-#define CHECK_FREE_RET(cond, return_expr)        \
-    do {                                         \
-        if (!(cond)) {                           \
-            Finalize(deviceId, stream); \
-            return_expr;                         \
-        }                                        \
+#define CHECK_FREE_RET(cond, return_expr) \
+    do {                                  \
+        if (!(cond)) {                    \
+            Finalize(deviceId, stream);   \
+            return_expr;                  \
+        }                                 \
     } while (0)
 
 #define LOG_PRINT(message, ...)         \
@@ -51,7 +51,7 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
     for (auto i : shape) {
@@ -60,7 +60,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream *stream)
+int Init(int32_t deviceId, aclrtStream* stream)
 {
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
@@ -73,8 +73,8 @@ int Init(int32_t deviceId, aclrtStream *stream)
 }
 
 template <typename T>
-int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **DeviceAddr,
-                    aclDataType dataType, aclTensor **tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** DeviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -109,7 +109,7 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
+int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream& stream)
 {
     // 1. 初始化
     auto ret = Init(deviceId, &stream);
@@ -134,91 +134,91 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
 
     // 创建gradOutput aclTensor
     std::vector<float> gradOutputData(GetShapeSize(gradOutputShape), 1);
-    aclTensor *gradOutput = nullptr;
-    void *gradOutputDeviceAddr = nullptr;
+    aclTensor* gradOutput = nullptr;
+    void* gradOutputDeviceAddr = nullptr;
     ret = CreateAclTensor(gradOutputData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradOutputTensorPtr(gradOutput, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradOutputDeviceAddrPtr(gradOutputDeviceAddr, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> gradOutputTensorPtr(gradOutput, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> gradOutputDeviceAddrPtr(gradOutputDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建input aclTensor
     std::vector<float> inputData(GetShapeSize(inputShape), 1);
-    aclTensor *input = nullptr;
-    void *inputDeviceAddr = nullptr;
+    aclTensor* input = nullptr;
+    void* inputDeviceAddr = nullptr;
     ret = CreateAclTensor(inputData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> inputTensorPtr(input, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> inputDeviceAddrPtr(inputDeviceAddr, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> inputTensorPtr(input, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> inputDeviceAddrPtr(inputDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建weight aclTensor
     std::vector<float> weightData(GetShapeSize(weightShape), 1);
-    aclTensor *weight = nullptr;
-    void *weightDeviceAddr = nullptr;
+    aclTensor* weight = nullptr;
+    void* weightDeviceAddr = nullptr;
     ret = CreateAclTensor(weightData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> weightTensorPtr(weight, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> weightDeviceAddrPtr(weightDeviceAddr, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> weightTensorPtr(weight, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> weightDeviceAddrPtr(weightDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建gradInput aclTensor
     std::vector<float> gradInputData(GetShapeSize(inputShape), 1);
-    aclTensor *gradInput = nullptr;
-    void *gradInputDeviceAddr = nullptr;
+    aclTensor* gradInput = nullptr;
+    void* gradInputDeviceAddr = nullptr;
     ret = CreateAclTensor(gradInputData, inputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT, &gradInput);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradInputTensorPtr(gradInput, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradInputDeviceAddrPtr(gradInputDeviceAddr, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> gradInputTensorPtr(gradInput, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> gradInputDeviceAddrPtr(gradInputDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建gradWeight aclTensor
     std::vector<float> gradWeightData(GetShapeSize(weightShape), 1);
-    aclTensor *gradWeight = nullptr;
-    void *gradWeightDeviceAddr = nullptr;
+    aclTensor* gradWeight = nullptr;
+    void* gradWeightDeviceAddr = nullptr;
     ret = CreateAclTensor(gradWeightData, weightShape, &gradWeightDeviceAddr, aclDataType::ACL_FLOAT, &gradWeight);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradWeightTensorPtr(gradWeight, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradWeightDeviceAddrPtr(gradWeightDeviceAddr, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> gradWeightTensorPtr(gradWeight, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> gradWeightDeviceAddrPtr(gradWeightDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建gradBias aclTensor
     std::vector<float> gradBiasData(GetShapeSize(biasSize), 1);
-    aclTensor *gradBias = nullptr;
-    void *gradBiasDeviceAddr = nullptr;
+    aclTensor* gradBias = nullptr;
+    void* gradBiasDeviceAddr = nullptr;
     ret = CreateAclTensor(gradBiasData, biasSize, &gradBiasDeviceAddr, aclDataType::ACL_FLOAT, &gradBias);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradBiasTensorPtr(gradBias, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradBiasDeviceAddrPtr(gradBiasDeviceAddr, aclrtFree);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> gradBiasTensorPtr(gradBias, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> gradBiasDeviceAddrPtr(gradBiasDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建biasSizes aclIntArray
-    aclIntArray *biasSizes = aclCreateIntArray(biasSize.data(), 1);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> biasSizesPtr(biasSizes, aclDestroyIntArray);
+    aclIntArray* biasSizes = aclCreateIntArray(biasSize.data(), 1);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> biasSizesPtr(biasSizes, aclDestroyIntArray);
     CHECK_FREE_RET(biasSizes != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建strides aclIntArray
-    aclIntArray *strides = aclCreateIntArray(stride.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> stridesPtr(strides, aclDestroyIntArray);
+    aclIntArray* strides = aclCreateIntArray(stride.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> stridesPtr(strides, aclDestroyIntArray);
     CHECK_FREE_RET(strides != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建pads aclIntArray
-    aclIntArray *pads = aclCreateIntArray(padding.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
+    aclIntArray* pads = aclCreateIntArray(padding.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> padsPtr(pads, aclDestroyIntArray);
     CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建dilations aclIntArray
-    aclIntArray *dilations = aclCreateIntArray(dilation.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
+    aclIntArray* dilations = aclCreateIntArray(dilation.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> dilationsPtr(dilations, aclDestroyIntArray);
     CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建outputPads aclIntArray
-    aclIntArray *outputPads = aclCreateIntArray(outputPadding.data(), 3);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outputPadsPtr(outputPads, aclDestroyIntArray);
+    aclIntArray* outputPads = aclCreateIntArray(outputPadding.data(), 3);
+    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray*)> outputPadsPtr(outputPads, aclDestroyIntArray);
     CHECK_FREE_RET(outputPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建outMask aclBoolArray
-    aclBoolArray *outMask = aclCreateBoolArray(outputMask, 3);
-    std::unique_ptr<aclBoolArray, aclnnStatus (*)(const aclBoolArray *)> outMaskPtr(outMask, aclDestroyBoolArray);
+    aclBoolArray* outMask = aclCreateBoolArray(outputMask, 3);
+    std::unique_ptr<aclBoolArray, aclnnStatus (*)(const aclBoolArray*)> outMaskPtr(outMask, aclDestroyBoolArray);
     CHECK_FREE_RET(outMask != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
-    aclOpExecutor *executor;
+    aclOpExecutor* executor;
     // 调用aclnnConvolutionBackwardGetWorkspaceSize第一段接口
     ret = aclnnConvolutionBackwardGetWorkspaceSize(gradOutput, input, weight, biasSizes, strides, pads, dilations,
                                                    transposed, outputPads, groups, outMask, cubeMathType, gradInput,
@@ -226,8 +226,8 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
                    return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void *workspaceAddr = nullptr;
-    std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtr(nullptr, aclrtFree);
+    void* workspaceAddr = nullptr;
+    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
@@ -252,8 +252,8 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
 
     size = GetShapeSize(gradWeightShape);
     std::vector<float> gradWeightResult(size, 0);
-    ret = aclrtMemcpy(gradWeightResult.data(), gradWeightResult.size() * sizeof(gradWeightResult[0]), gradWeightDeviceAddr,
-                      size * sizeof(gradWeightResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(gradWeightResult.data(), gradWeightResult.size() * sizeof(gradWeightResult[0]),
+                      gradWeightDeviceAddr, size * sizeof(gradWeightResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
     for (int64_t i = 0; i < size; i++) {

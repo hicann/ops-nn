@@ -27,20 +27,15 @@ using namespace std;
 
 using TilingDataType = SigmoidCrossEntropyWithLogitsV2TilingData;
 
-extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_v2(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR weight, GM_ADDR posWeight, GM_ADDR loss, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void sigmoid_cross_entropy_with_logits_v2(GM_ADDR predict, GM_ADDR target,
+                                                                           GM_ADDR weight, GM_ADDR posWeight,
+                                                                           GM_ADDR loss, GM_ADDR workspace,
+                                                                           GM_ADDR tiling);
 
 class sigmoid_cross_entropy_with_logits_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sigmoid_cross_entropy_with_logits_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sigmoid_cross_entropy_with_logits_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sigmoid_cross_entropy_with_logits_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sigmoid_cross_entropy_with_logits_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(sigmoid_cross_entropy_with_logits_v2_test, test_case_0)
@@ -73,9 +68,8 @@ TEST_F(sigmoid_cross_entropy_with_logits_v2_test, test_case_0)
 
     ICPU_SET_TILING_KEY(TILING_KEY_FLOAT);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        sigmoid_cross_entropy_with_logits_v2, blockDim, predict, target, weight, posWeight, loss, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(sigmoid_cross_entropy_with_logits_v2, blockDim, predict, target, weight, posWeight, loss, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(predict);
     AscendC::GmFree(target);

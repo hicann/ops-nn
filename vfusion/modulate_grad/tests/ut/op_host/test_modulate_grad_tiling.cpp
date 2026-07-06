@@ -26,17 +26,14 @@ using namespace ge;
 using namespace std;
 using namespace ut_util;
 class ModulateGradTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ModulateGradTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ModulateGradTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ModulateGradTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ModulateGradTiling TearDown" << std::endl; }
 };
 
-TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000) {
+TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000)
+{
     std::string opType("ModulateGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -55,36 +52,36 @@ TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000) {
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
-    std::cout<<"------test------1;"<<std::endl;
+    std::cout << "------test------1;" << std::endl;
     // platform info
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     // compile info
     struct ModulateGradCompileInfo {
-      int32_t totalCoreNum = 48;
-      uint64_t ubSizePlatForm = 0;
+        int32_t totalCoreNum = 48;
+        uint64_t ubSizePlatForm = 0;
     } compileInfo;
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
-    std::cout<<"------test------2;"<<std::endl;                                                                                        
+                                                                                           intrinsics);
+    std::cout << "------test------2;" << std::endl;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
-    std::cout<<"------test------3;"<<std::endl;
+    std::cout << "------test------3;" << std::endl;
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    std::cout<<"------test------4;"<<std::endl;
-    ASSERT_NE(param, nullptr);\
-    std::cout<<"------test------5;"<<std::endl;
+    std::cout << "------test------4;" << std::endl;
+    ASSERT_NE(param, nullptr);
+    std::cout << "------test------5;" << std::endl;
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     gert::StorageShape gradoutputShape = {{32, 8, 1024}, {32, 8, 1024}};
@@ -94,31 +91,30 @@ TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000) {
     gert::StorageShape gradinputShape = {{32, 8, 1024}, {32, 8, 1024}};
     gert::StorageShape gradscaleShape = {{32, 1024}, {32, 1024}};
     gert::StorageShape gradshiftShape = {{32, 1024}, {32, 1024}};
-    std::cout<<"------test------6;"<<std::endl;
+    std::cout << "------test------6;" << std::endl;
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .SetOpType("ModulateGrad")
-          .NodeIoNum(4, 3)
-          .IrInstanceNum({1, 1, 1, 1})
-          .InputShapes({&gradoutputShape, &inputShape, &scaleShape, &shiftShape})
-          .OutputShapes({&gradinputShape,&gradscaleShape, &gradshiftShape})
-          .CompileInfo(&compileInfo)
-          .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(wsSize)
-          .Build();
-    std::cout<<"------test------7;"<<std::endl;
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("ModulateGrad")
+                      .NodeIoNum(4, 3)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&gradoutputShape, &inputShape, &scaleShape, &shiftShape})
+                      .OutputShapes({&gradinputShape, &gradscaleShape, &gradshiftShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+    std::cout << "------test------7;" << std::endl;
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
-    std::cout<<"------test------8;"<<std::endl;
+    std::cout << "------test------8;" << std::endl;
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -210,7 +206,8 @@ TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000) {
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+//     intrinsics);
 
 //     // workspaces nullptr return failed
 //     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
@@ -271,7 +268,6 @@ TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000) {
 //     gert::StorageShape gradinputShape = {{8, 4, 20480}, {8, 4, 20480}};
 //     gert::StorageShape gradscaleShape = {{8, 20480}, {8, 20480}};
 //     gert::StorageShape gradshiftShape = {{8, 20480}, {8, 20480}};
-    
 
 //     // tilingParseFunc simulate
 //     auto holder =
@@ -296,7 +292,8 @@ TEST_F(ModulateGradTiling, test_modulate_grad_tiling_000) {
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+//     intrinsics);
 
 //     // workspaces nullptr return failed
 //     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);

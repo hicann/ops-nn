@@ -26,34 +26,21 @@ ge::graphStatus MaxPool3DGradWithArgmaxScatterTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool MaxPool3DGradWithArgmaxScatterTiling::IsCapable()
-{
-    return true;
-}
+bool MaxPool3DGradWithArgmaxScatterTiling::IsCapable() { return true; }
 
 bool MaxPool3DGradWithArgmaxScatterTiling::SetScatterTilingParams()
 {
-    return CalculateScatterTilingParams(
-        maxPoolGradParams,
-        maxPoolGradParams.doDim,
-        maxPoolGradParams.hoDim,
-        maxPoolGradParams.woDim,
-        maxPoolGradParams.xDtypeSize,
-        maxPoolGradParams.indexDtypeSize,
-        MAX_BLOCK_COUNT,
-        BLOCK_SIZE);
+    return CalculateScatterTilingParams(maxPoolGradParams, maxPoolGradParams.doDim, maxPoolGradParams.hoDim,
+                                        maxPoolGradParams.woDim, maxPoolGradParams.xDtypeSize,
+                                        maxPoolGradParams.indexDtypeSize, MAX_BLOCK_COUNT, BLOCK_SIZE);
 }
 
 void MaxPool3DGradWithArgmaxScatterTiling::SetOtherTilingParams()
 {
     SetCntTailTilingParams();
-    
-    CalculateRoundParams(
-        maxPoolGradParams,
-        maxPoolGradParams.isOverLap,
-        maxPoolGradParams.diDim,
-        maxPoolGradParams.hiDim,
-        maxPoolGradParams.wiDim);
+
+    CalculateRoundParams(maxPoolGradParams, maxPoolGradParams.isOverLap, maxPoolGradParams.diDim,
+                         maxPoolGradParams.hiDim, maxPoolGradParams.wiDim);
 }
 
 void MaxPool3DGradWithArgmaxScatterTiling::SetScatterTilingData()
@@ -76,11 +63,10 @@ ge::graphStatus MaxPool3DGradWithArgmaxScatterTiling::DoOpTiling()
     SetScatterTilingData();
     PrintTilingData();
     PrintScatterTilingData();
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", 
-                         MaxPool3DGradWithArgmaxScatterTiling, 16);
+REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", MaxPool3DGradWithArgmaxScatterTiling, 16);
 
 } // namespace optiling

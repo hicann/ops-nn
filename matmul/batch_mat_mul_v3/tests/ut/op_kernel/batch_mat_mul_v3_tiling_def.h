@@ -19,7 +19,7 @@ inline void InitMatmulTilingData(uint8_t* tiling, BatchMatmulTilingData* const_d
     memcpy(const_data, tiling, sizeof(BatchMatmulTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                       \
-    BatchMatmulTilingData tiling_data;                                                 \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    BatchMatmulTilingData tiling_data;           \
     InitMatmulTilingData(tiling_arg, &tiling_data)
-#endif  // _TEST_BATCH_MAT_MUL_V3_TILING_TILING_H_
+#endif // _TEST_BATCH_MAT_MUL_V3_TILING_TILING_H_

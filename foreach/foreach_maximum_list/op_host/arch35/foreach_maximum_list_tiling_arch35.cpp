@@ -35,10 +35,7 @@ constexpr int32_t MAX_TENSOR_NUM = 256;
 
 struct ForeachMaximumListCompileInfo {};
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
-{
-    return in_shape;
-}
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape) { return in_shape; }
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
@@ -56,10 +53,8 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -74,15 +69,11 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
     int64_t totalElements = 0;
     ForeachMaximumListTilingData* tiling = context->GetTilingData<ForeachMaximumListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachMaximumListTilingData), 0, sizeof(ForeachMaximumListTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachMaximumListTilingData), 0, sizeof(ForeachMaximumListTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        tensorNum > MAX_TENSOR_NUM,
-        OP_LOGE(context, "tensorNum should be less than or equal to 256"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM, OP_LOGE(context, "tensorNum should be less than or equal to 256"),
+                return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
@@ -100,8 +91,7 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
         tiling->lastCoreElements = 0;
         context->SetBlockDim(1);
     } else {
-        tiling->perCoreElements = std::min(static_cast<int64_t>(65536),
-            Ops::Base::CeilDiv(totalElements, coreNum));
+        tiling->perCoreElements = std::min(static_cast<int64_t>(65536), Ops::Base::CeilDiv(totalElements, coreNum));
         tiling->perCoreElements = Ops::Base::CeilAlign(tiling->perCoreElements, ALIGN_SIZE);
         tiling->needCoreNum = Ops::Base::CeilDiv(totalElements, tiling->perCoreElements);
         tiling->lastCoreElements = totalElements - tiling->perCoreElements * (tiling->needCoreNum - 1);
@@ -132,8 +122,7 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForForeachMaximumList(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachMaximumList([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

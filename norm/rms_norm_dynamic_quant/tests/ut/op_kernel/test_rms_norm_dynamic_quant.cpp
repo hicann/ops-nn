@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -19,21 +20,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void rms_norm_dynamic_quant(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void rms_norm_dynamic_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta,
+                                                             GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
+                                                             GM_ADDR tiling);
 
-class RmsNormDynamicQuantKernelTest : public testing::Test
-{
+class RmsNormDynamicQuantKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "RmsNormDynamicQuantKernelTest SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "RmsNormDynamicQuantKernelTest TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "RmsNormDynamicQuantKernelTest SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "RmsNormDynamicQuantKernelTest TearDown\n" << endl; }
 };
 
 TEST_F(RmsNormDynamicQuantKernelTest, test_case_basic)
@@ -82,14 +76,12 @@ TEST_F(RmsNormDynamicQuantKernelTest, test_case_basic)
 
     // normal tiling
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(
-        rms_norm_dynamic_quant, blockDim, x, gamma, smooth, beta, y, outScale,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_dynamic_quant, blockDim, x, gamma, smooth, beta, y, outScale, workspace,
+                (uint8_t*)(tilingDatafromBin));
     // single row tiling
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        rms_norm_dynamic_quant, blockDim, x, gamma, smooth, beta, y, outScale,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_dynamic_quant, blockDim, x, gamma, smooth, beta, y, outScale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

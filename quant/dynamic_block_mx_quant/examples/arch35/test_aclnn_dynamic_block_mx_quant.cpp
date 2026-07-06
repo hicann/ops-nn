@@ -58,9 +58,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -77,9 +76,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -127,14 +125,14 @@ int aclnnDynamicBlockMxQuantTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(yOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建scale1Out aclTensor
-    ret = CreateAclTensor(
-        scale1OutHostData, scale1OutShape, &scale1OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &scale1Out);
+    ret = CreateAclTensor(scale1OutHostData, scale1OutShape, &scale1OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &scale1Out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scale1OutTensorPtr(scale1Out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> scale1OutDeviceAddrPtr(scale1OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建scale2Out aclTensor
-    ret = CreateAclTensor(
-        scale2OutHostData, scale2OutShape, &scale2OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &scale2Out);
+    ret = CreateAclTensor(scale2OutHostData, scale2OutShape, &scale2OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &scale2Out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scale2OutTensorPtr(scale2Out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> scale2OutDeviceAddrPtr(scale2OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -144,8 +142,8 @@ int aclnnDynamicBlockMxQuantTest(int32_t deviceId, aclrtStream& stream)
     aclOpExecutor* executor;
 
     // 调用aclnnDynamicBlockMxQuant第一段接口
-    ret = aclnnDynamicBlockMxQuantGetWorkspaceSize(
-        x, roundModeOptional, dstType, scaleAlg, dstTypeMax, yOut, scale1Out, scale2Out, &workspaceSize, &executor);
+    ret = aclnnDynamicBlockMxQuantGetWorkspaceSize(x, roundModeOptional, dstType, scaleAlg, dstTypeMax, yOut, scale1Out,
+                                                   scale2Out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -167,26 +165,23 @@ int aclnnDynamicBlockMxQuantTest(int32_t deviceId, aclrtStream& stream)
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size1 = GetShapeSize(yOutShape);
     std::vector<uint8_t> yOutData(size1, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
-    ret = aclrtMemcpy(
-        yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr, size1 * sizeof(yOutData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
+                      size1 * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size1; i++) {
         LOG_PRINT("yOut[%ld] is: %d\n", i, yOutData[i]);
     }
     auto size2 = GetShapeSize(scale1OutShape);
     auto size3 = GetShapeSize(scale2OutShape);
-    std::vector<uint8_t> scale1OutData(
-        size2, 0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
-    std::vector<uint8_t> scale2OutData(
-        size3, 0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
-    ret = aclrtMemcpy(
-        scale1OutData.data(), scale1OutData.size() * sizeof(scale1OutData[0]), scale1OutDeviceAddr,
-        size2 * sizeof(scale1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    std::vector<uint8_t> scale1OutData(size2,
+                                       0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    std::vector<uint8_t> scale2OutData(size3,
+                                       0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    ret = aclrtMemcpy(scale1OutData.data(), scale1OutData.size() * sizeof(scale1OutData[0]), scale1OutDeviceAddr,
+                      size2 * sizeof(scale1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale1Out from device to host failed. ERROR: %d\n", ret); return ret);
-    ret = aclrtMemcpy(
-        scale2OutData.data(), scale2OutData.size() * sizeof(scale2OutData[0]), scale2OutDeviceAddr,
-        size3 * sizeof(scale2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(scale2OutData.data(), scale2OutData.size() * sizeof(scale2OutData[0]), scale2OutDeviceAddr,
+                      size3 * sizeof(scale2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale2Out from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size2; i++) {
         LOG_PRINT("scale1Out[%ld] is: %d\n", i, scale1OutData[i]);

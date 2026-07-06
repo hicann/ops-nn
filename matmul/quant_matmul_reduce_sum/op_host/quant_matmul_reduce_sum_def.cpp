@@ -89,16 +89,16 @@ public:
 
         OpAICoreConfig aicConfig;
         aicConfig.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .NeedCheckSupportFlag(false)
-                .PrecisionReduceFlag(false)
-                .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(false)
+            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
     }
 };
 
 OP_ADD(QuantMatmulReduceSum);
-}
+} // namespace ops

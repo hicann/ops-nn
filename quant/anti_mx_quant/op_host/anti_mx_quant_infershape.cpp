@@ -32,8 +32,7 @@ constexpr size_t MIN_MXSCALE_DIM_NUM = 2;
 constexpr size_t MAX_MXSCALE_DIM_NUM = 8;
 constexpr int64_t BLOCK_SIZE = 32;
 
-static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
+static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 
 graphStatus InferShapeForAntiMxQuant(gert::InferShapeContext* context)
 {
@@ -47,10 +46,9 @@ graphStatus InferShapeForAntiMxQuant(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    OP_CHECK_IF(
-        xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "x shape is UnknownRank, set y shape to (-2, )");
@@ -85,7 +83,5 @@ ge::graphStatus InferDataTypeForAntiMxQuant(gert::InferDataTypeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(AntiMxQuant)
-    .InferShape(InferShapeForAntiMxQuant)
-    .InferDataType(InferDataTypeForAntiMxQuant);
+IMPL_OP_INFERSHAPE(AntiMxQuant).InferShape(InferShapeForAntiMxQuant).InferDataType(InferDataTypeForAntiMxQuant);
 } // namespace ops

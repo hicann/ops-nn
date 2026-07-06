@@ -45,8 +45,8 @@ uint64_t UnsortedSegmentSimdDynSortTiling::GetTilingKey() const
 
 void UnsortedSegmentSimdDynSortTiling::SetTilingData()
 {
-    UnsortedSegment::UnsortedSegmentSimdDynSortTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdDynSortTilingData>();
+    UnsortedSegment::UnsortedSegmentSimdDynSortTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdDynSortTilingData>();
 
     tilingData->outputOuterDim = outputOuterDim_;
     tilingData->innerDim = innerDim_;
@@ -67,8 +67,8 @@ void UnsortedSegmentSimdDynSortTiling::SetTilingData()
 void UnsortedSegmentSimdDynSortTiling::DoBlockTiling()
 {
     uint64_t colNumAlign = Ops::Base::CeilDiv(innerDim_, baseA_);
-    usedCoreNum_ =
-        std::min(totalCoreNum_, static_cast<uint64_t>(inputOuterDim_ * colNumAlign * BASE_A_SIZE / BASE_BLOCK_SIZE));
+    usedCoreNum_ = std::min(totalCoreNum_,
+                            static_cast<uint64_t>(inputOuterDim_ * colNumAlign * BASE_A_SIZE / BASE_BLOCK_SIZE));
     usedCoreNum_ = usedCoreNum_ == 0 ? 1 : usedCoreNum_;
     std::tie(sTileNum_, aTileNum_) = AutoTiling(usedCoreNum_, colNumAlign, COL_LIMIT_SIZE, true);
 
@@ -98,23 +98,29 @@ uint64_t UnsortedSegmentSimdDynSortTiling::CalBestBaseSize(uint64_t baseXoStart,
         baseXoMid = (baseXoStart + baseXoEnd) / DOUBLE;
         if (idCastMode_ == 0) {
             uint64_t sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(idType_, baseXoMid, false));
-            tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) * BUFFER_NUM + // xQue
-                        Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +                 // idQue
-                        Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) +              // resBuf
-                        Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) +                     // sortedkeyBuf
-                        Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt + // sortedIdxBuf
-                        SORT_STAT_PADDING + SORT_STAT_PADDING +                                      // sort padding
-                        Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
+            tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) *
+                               BUFFER_NUM +                                                              // xQue
+                           Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +   // idQue
+                           Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) + // resBuf
+                           Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) +                // sortedkeyBuf
+                           Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) *
+                               idsSortBufCnt + // sortedIdxBuf
+                           SORT_STAT_PADDING +
+                           SORT_STAT_PADDING +                                  // sort padding
+                           Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
         } else {
             uint64_t sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(idCastDtype_, baseXoMid, false));
-            tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) * BUFFER_NUM + // xQue
-                        Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +                 // idQue
-                        Ops::Base::CeilAlign(baseXoMid * idCastDtypeSize_, ubBlockSize_) * BUFFER_NUM +        // idCastQue
-                        Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) +              // resBuf
-                        Ops::Base::CeilAlign(baseXoMid * idCastDtypeSize_, ubBlockSize_) +                     // sortedkeyBuf
-                        Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt + // sortedIdxBuf
-                        SORT_STAT_PADDING + SORT_STAT_PADDING +                                      // sort padding
-                        Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
+            tmpTotalSize = Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) *
+                               BUFFER_NUM +                                                                // xQue
+                           Ops::Base::CeilAlign(baseXoMid * idTypeBytes_, ubBlockSize_) * BUFFER_NUM +     // idQue
+                           Ops::Base::CeilAlign(baseXoMid * idCastDtypeSize_, ubBlockSize_) * BUFFER_NUM + // idCastQue
+                           Ops::Base::CeilAlign(baseXoMid * sortBaseA_ * dataTypeBytes_, ubBlockSize_) +   // resBuf
+                           Ops::Base::CeilAlign(baseXoMid * idCastDtypeSize_, ubBlockSize_) + // sortedkeyBuf
+                           Ops::Base::CeilAlign(baseXoMid * sizeof(uint32_t), ubBlockSize_) *
+                               idsSortBufCnt + // sortedIdxBuf
+                           SORT_STAT_PADDING +
+                           SORT_STAT_PADDING +                                  // sort padding
+                           Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_); // sort shared buf size
         }
         if (tmpTotalSize <= ubSize_) {
             baseXoStart = baseXoMid;
@@ -143,8 +149,8 @@ ge::graphStatus UnsortedSegmentSimdDynSortTiling::DoOpTiling()
     baseS_ = maxBaseS;
     if (coreMaxS < baseS_) {
         baseS_ = coreMaxS;
-        baseA_ =
-            (ubSize_ - BUFFER_NUM * (ubBlockSize_ + baseS_ * idTypeBytes_)) / BUFFER_NUM / (baseS_ * dataTypeBytes_);
+        baseA_ = (ubSize_ - BUFFER_NUM * (ubBlockSize_ + baseS_ * idTypeBytes_)) / BUFFER_NUM /
+                 (baseS_ * dataTypeBytes_);
         baseA_ = Ops::Base::FloorAlign(baseA_, ubBlockSize_ / dataTypeBytes_);
     }
 
@@ -158,19 +164,19 @@ ge::graphStatus UnsortedSegmentSimdDynSortTiling::DoOpTiling()
         if (idCastMode_ == 0) {
             sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(idType_, sortBaseS_, false));
             remainSize = ubSize_ - Ops::Base::CeilAlign(sortBaseS_ * idTypeBytes_, ubBlockSize_) * BUFFER_NUM -
-                        Ops::Base::CeilAlign(sortBaseS_ * idTypeBytes_, ubBlockSize_) -
-                        Ops::Base::CeilAlign(sortBaseS_ * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt -
-                        Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_) - SORT_STAT_PADDING - SORT_STAT_PADDING;
+                         Ops::Base::CeilAlign(sortBaseS_ * idTypeBytes_, ubBlockSize_) -
+                         Ops::Base::CeilAlign(sortBaseS_ * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt -
+                         Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_) - SORT_STAT_PADDING - SORT_STAT_PADDING;
         } else {
             sortNeedTmpSize = static_cast<uint64_t>(GetSortTmpSize(idCastDtype_, sortBaseS_, false));
             remainSize = ubSize_ - Ops::Base::CeilAlign(sortBaseS_ * idTypeBytes_, ubBlockSize_) * BUFFER_NUM -
-                        Ops::Base::CeilAlign(sortBaseS_ * idCastDtypeSize_, ubBlockSize_) * BUFFER_NUM -
-                        Ops::Base::CeilAlign(sortBaseS_ * idCastDtypeSize_, ubBlockSize_) -
-                        Ops::Base::CeilAlign(sortBaseS_ * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt -
-                        Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_) - SORT_STAT_PADDING - SORT_STAT_PADDING;
+                         Ops::Base::CeilAlign(sortBaseS_ * idCastDtypeSize_, ubBlockSize_) * BUFFER_NUM -
+                         Ops::Base::CeilAlign(sortBaseS_ * idCastDtypeSize_, ubBlockSize_) -
+                         Ops::Base::CeilAlign(sortBaseS_ * sizeof(uint32_t), ubBlockSize_) * idsSortBufCnt -
+                         Ops::Base::CeilAlign(sortNeedTmpSize, ubBlockSize_) - SORT_STAT_PADDING - SORT_STAT_PADDING;
         }
-        sortBaseA_ =
-            (remainSize - BUFFER_NUM * ubBlockSize_ - ubBlockSize_) / (BUFFER_NUM + 1) / (sortBaseS_ * dataTypeBytes_);
+        sortBaseA_ = (remainSize - BUFFER_NUM * ubBlockSize_ - ubBlockSize_) / (BUFFER_NUM + 1) /
+                     (sortBaseS_ * dataTypeBytes_);
         sortBaseA_ = Ops::Base::FloorAlign(sortBaseA_, ubBlockSize_ / dataTypeBytes_);
     }
 
@@ -179,7 +185,7 @@ ge::graphStatus UnsortedSegmentSimdDynSortTiling::DoOpTiling()
     } else {
         sortSharedBufSize_ = GetSortTmpSize(idCastDtype_, sortBaseS_, false);
     }
-    SetTilingData(); 
+    SetTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -192,8 +198,8 @@ ge::graphStatus UnsortedSegmentSimdDynSortTiling::PostTiling()
 
 void UnsortedSegmentSimdDynSortTiling::DumpTilingInfo()
 {
-    UnsortedSegment::UnsortedSegmentSimdDynSortTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdDynSortTilingData>();
+    UnsortedSegment::UnsortedSegmentSimdDynSortTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdDynSortTilingData>();
 
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();

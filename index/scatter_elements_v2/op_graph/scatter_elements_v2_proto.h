@@ -48,13 +48,13 @@ namespace ge {
 * var: A Tensor. Has the same type and format as input "var" . \n
 */
 REG_OP(ScatterElementsV2)
-    .INPUT(var, TensorType({DT_FLOAT,DT_FLOAT16,DT_INT16,DT_INT32,DT_INT64,DT_INT8,DT_UINT8,DT_BF16}))
+    .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64, DT_INT8, DT_UINT8, DT_BF16}))
     .INPUT(indices, TensorType::IndexNumberType())
-    .INPUT(updates, TensorType({DT_FLOAT,DT_FLOAT16,DT_INT16,DT_INT32,DT_INT64,DT_INT8,DT_UINT8,DT_BF16}))
-    .OUTPUT(var, TensorType({DT_FLOAT,DT_FLOAT16,DT_INT16,DT_INT32,DT_INT64,DT_INT8,DT_UINT8,DT_BF16}))
+    .INPUT(updates, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64, DT_INT8, DT_UINT8, DT_BF16}))
+    .OUTPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64, DT_INT8, DT_UINT8, DT_BF16}))
     .ATTR(axis, Int, 0)
     .ATTR(reduction, String, "none")
     .ATTR(include_self, Bool, true)
     .OP_END_FACTORY_REG(ScatterElementsV2) // namespace ge
-}
+} // namespace ge
 #endif // OPS_OP_PROTO_INC_SCATTER_ELEMENTS_V2_H_

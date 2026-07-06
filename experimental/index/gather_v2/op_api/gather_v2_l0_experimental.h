@@ -15,13 +15,11 @@
 #include "opdev/shape_utils.h"
 
 namespace l0op {
-const aclTensor* GatherV2(
-    const aclTensor* self, int64_t axis, const aclTensor* indices, const op::Shape& outShape, aclOpExecutor* executor,
-    int64_t batchDims = 0, bool negativeIndexSupport = false);
+const aclTensor* GatherV2(const aclTensor* self, int64_t axis, const aclTensor* indices, const op::Shape& outShape,
+                          aclOpExecutor* executor, int64_t batchDims = 0, bool negativeIndexSupport = false);
 
-const aclTensor* GatherV2(
-    const aclTensor* self, int64_t axis, const aclTensor* indices, const aclTensor* out, aclOpExecutor* executor,
-    int64_t batchDims = 0, bool negativeIndexSupport = false);
+const aclTensor* GatherV2(const aclTensor* self, int64_t axis, const aclTensor* indices, const aclTensor* out,
+                          aclOpExecutor* executor, int64_t batchDims = 0, bool negativeIndexSupport = false);
 } // namespace l0op
 
 #endif // OP_API_GATHER_V2_L0_EXPERIMENTAL_H

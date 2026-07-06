@@ -30,18 +30,18 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> STEP_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> STEP_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                            op::DataType::DT_INT64};
 
-static bool CheckNotNull(
-    const aclTensor* varRef, const aclTensor* mRef, const aclTensor* vRef, const aclTensor* maxGradNormOptionalRef,
-    const aclTensor* grad, const aclTensor* step, bool amsgrad)
+static bool CheckNotNull(const aclTensor* varRef, const aclTensor* mRef, const aclTensor* vRef,
+                         const aclTensor* maxGradNormOptionalRef, const aclTensor* grad, const aclTensor* step,
+                         bool amsgrad)
 {
     OP_CHECK_NULL(varRef, return false);
     OP_CHECK_NULL(mRef, return false);
@@ -71,9 +71,8 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
     }
 }
 
-static bool CheckShape(
-    const aclTensor* varRef, const aclTensor* mRef, const aclTensor* vRef, const aclTensor* maxGradNormOptionalRef,
-    const aclTensor* grad, const aclTensor* step)
+static bool CheckShape(const aclTensor* varRef, const aclTensor* mRef, const aclTensor* vRef,
+                       const aclTensor* maxGradNormOptionalRef, const aclTensor* grad, const aclTensor* step)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(mRef, varRef, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(vRef, varRef, return false);
@@ -88,9 +87,9 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* varRef, const aclTensor* mRef, const aclTensor* vRef, const aclTensor* maxGradNormOptionalRef,
-    const aclTensor* grad, const aclTensor* step, bool amsgrad)
+static aclnnStatus CheckParams(const aclTensor* varRef, const aclTensor* mRef, const aclTensor* vRef,
+                               const aclTensor* maxGradNormOptionalRef, const aclTensor* grad, const aclTensor* step,
+                               bool amsgrad)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(varRef, mRef, vRef, maxGradNormOptionalRef, grad, step, amsgrad), ACLNN_ERR_PARAM_NULLPTR);
@@ -118,8 +117,8 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static inline bool IsNeedDtypeCast(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* maxGradNorm, const aclTensor* grad)
+static inline bool IsNeedDtypeCast(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                   const aclTensor* maxGradNorm, const aclTensor* grad)
 {
     bool isSameDtype = (var->GetDataType() == m->GetDataType()) && (var->GetDataType() == v->GetDataType()) &&
                        (var->GetDataType() == grad->GetDataType()) &&
@@ -145,17 +144,16 @@ static inline aclTensor* CheckAndExecuteTypeCast(bool isNeedCast, const aclTenso
     return const_cast<aclTensor*>(input);
 }
 
-aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
-    aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* maxGradNormOptionalRef, const aclTensor* grad,
-    const aclTensor* step, float lr, float beta1, float beta2, float weightDecay, float eps, bool amsgrad,
-    bool maximize, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef,
+                                              aclTensor* maxGradNormOptionalRef, const aclTensor* grad,
+                                              const aclTensor* step, float lr, float beta1, float beta2,
+                                              float weightDecay, float eps, bool amsgrad, bool maximize,
+                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnApplyAdamWV2,
-        DFX_IN(
-            varRef, mRef, vRef, maxGradNormOptionalRef, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad,
-            maximize),
-        DFX_OUT());
+    L2_DFX_PHASE_1(aclnnApplyAdamWV2,
+                   DFX_IN(varRef, mRef, vRef, maxGradNormOptionalRef, grad, step, lr, beta1, beta2, weightDecay, eps,
+                          amsgrad, maximize),
+                   DFX_OUT());
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -185,14 +183,15 @@ aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
     CHECK_RET(vContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将输入maxGradNorm转换成连续的tensor
-    auto maxGradNormContiguous =
-        maxGradNormOptionalRef == nullptr ? nullptr : l0op::Contiguous(maxGradNormOptionalRef, uniqueExecutor.get());
+    auto maxGradNormContiguous = maxGradNormOptionalRef == nullptr ?
+                                     nullptr :
+                                     l0op::Contiguous(maxGradNormOptionalRef, uniqueExecutor.get());
     CHECK_RET(maxGradNormOptionalRef == nullptr || maxGradNormContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将输入grad转换成连续的tensor
     auto gradContiguous = l0op::Contiguous(grad, uniqueExecutor.get());
     CHECK_RET(gradContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    
+
     // 固定写法，将输入step转换成连续的tensor
     auto stepContiguous = l0op::Contiguous(step, uniqueExecutor.get());
     CHECK_RET(stepContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -215,9 +214,8 @@ aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
     CHECK_RET(gradCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，调用ApplyAdamWV2算子完成计算
-    l0op::ApplyAdamWV2(
-        varCast, mCast, vCast, maxGradNormCast, gradCast, stepContiguous, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize,
-        uniqueExecutor.get());
+    l0op::ApplyAdamWV2(varCast, mCast, vCast, maxGradNormCast, gradCast, stepContiguous, lr, beta1, beta2, weightDecay,
+                       eps, amsgrad, maximize, uniqueExecutor.get());
 
     // 固定写法，将计算结果转换成输出的数据类型
     auto varOut = isNeedCast ? l0op::Cast(varCast, varRef->GetDataType(), uniqueExecutor.get()) : varCast;
@@ -240,9 +238,9 @@ aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (maxGradNormOptionalRef != nullptr) {
-        auto maxGradNormOut =
-            (isNeedCast ? l0op::Cast(maxGradNormCast, maxGradNormOptionalRef->GetDataType(), uniqueExecutor.get()) :
-                          maxGradNormCast);
+        auto maxGradNormOut = (isNeedCast ? l0op::Cast(maxGradNormCast, maxGradNormOptionalRef->GetDataType(),
+                                                       uniqueExecutor.get()) :
+                                            maxGradNormCast);
         CHECK_RET(maxGradNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         viewCopyResult = l0op::ViewCopy(maxGradNormOut, maxGradNormOptionalRef, uniqueExecutor.get());

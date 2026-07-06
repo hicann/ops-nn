@@ -20,18 +20,11 @@
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
-class ScaledMaskedSoftmaxGradV2Proto : public testing::Test
-{
+class ScaledMaskedSoftmaxGradV2Proto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ScaledMaskedSoftmaxGradV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ScaledMaskedSoftmaxGradV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ScaledMaskedSoftmaxGradV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ScaledMaskedSoftmaxGradV2 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(ScaledMaskedSoftmaxGradV2Proto, scaled_masked_softmax_grad_v2_infershape_test)
@@ -49,9 +42,8 @@ TEST_F(ScaledMaskedSoftmaxGradV2Proto, scaled_masked_softmax_grad_v2_infershape_
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&yGradShape, &yShape, &maskShape})
                       .OutputShapes({&xGradShape})
-                      .NodeAttrs(
-                          {{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);

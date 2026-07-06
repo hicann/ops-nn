@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_sub_list_proto.h"
 
-class ForeachSubListTest : public testing::Test
-{
+class ForeachSubListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSubList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSubList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSubList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSubList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachSubListTest, infer_shape_known_success)

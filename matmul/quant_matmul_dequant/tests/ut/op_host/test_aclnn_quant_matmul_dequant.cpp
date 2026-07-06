@@ -22,97 +22,102 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 
-
 using namespace std;
 namespace {
 class l2_quant_matmul_dequant_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "l2_quant_matmul_dequant_test SetUp" << endl;
-  }
+protected:
+    static void SetUpTestCase() { cout << "l2_quant_matmul_dequant_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "l2_quant_matmul_dequant_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "l2_quant_matmul_dequant_test TearDown" << endl; }
 };
 
-TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_1) {
-  auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto weight_desc = TensorDesc({512, 256}, ACL_INT8, ACL_FORMAT_ND);
-  auto weight_scale_desc = TensorDesc({512}, ACL_FLOAT, ACL_FORMAT_ND);
-  aclTensor *bias_desc = nullptr;
-  auto x_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
-  aclTensor *x_offset_desc = nullptr;
-  auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
-  char* quantMode = "pertoken";
-  bool weightTrans = true;
-  auto ut = OP_API_UT(aclnnQuantMatmulDequant, INPUT(x_desc, weight_desc, weight_scale_desc,
-                                                     bias_desc, x_scale_desc, x_offset_desc, smooth_scale_desc,
-                                                     quantMode, weightTrans), OUTPUT(out_desc));
+TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_1)
+{
+    auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto weight_desc = TensorDesc({512, 256}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({512}, ACL_FLOAT, ACL_FORMAT_ND);
+    aclTensor* bias_desc = nullptr;
+    auto x_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    aclTensor* x_offset_desc = nullptr;
+    auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
+    char* quantMode = "pertoken";
+    bool weightTrans = true;
+    auto ut = OP_API_UT(aclnnQuantMatmulDequant,
+                        INPUT(x_desc, weight_desc, weight_scale_desc, bias_desc, x_scale_desc, x_offset_desc,
+                              smooth_scale_desc, quantMode, weightTrans),
+                        OUTPUT(out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_2) {
-  auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto weight_desc = TensorDesc({8, 32, 16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
-  auto weight_scale_desc = TensorDesc({512}, ACL_FLOAT, ACL_FORMAT_ND);
-  aclTensor *bias_desc = nullptr;
-  auto x_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
-  aclTensor *x_offset_desc = nullptr;
-  auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  char* quantMode = "pertoken";
-  auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
-  bool weightTrans = true;
-  auto ut = OP_API_UT(aclnnQuantMatmulDequant, INPUT(x_desc, weight_desc, weight_scale_desc,
-                                                     bias_desc, x_scale_desc, x_offset_desc, smooth_scale_desc,
-                                                     quantMode, weightTrans), OUTPUT(out_desc));
+TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_2)
+{
+    auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto weight_desc = TensorDesc({8, 32, 16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    auto weight_scale_desc = TensorDesc({512}, ACL_FLOAT, ACL_FORMAT_ND);
+    aclTensor* bias_desc = nullptr;
+    auto x_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    aclTensor* x_offset_desc = nullptr;
+    auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    char* quantMode = "pertoken";
+    auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
+    bool weightTrans = true;
+    auto ut = OP_API_UT(aclnnQuantMatmulDequant,
+                        INPUT(x_desc, weight_desc, weight_scale_desc, bias_desc, x_scale_desc, x_offset_desc,
+                              smooth_scale_desc, quantMode, weightTrans),
+                        OUTPUT(out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_3) {
-  auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto weight_desc = TensorDesc({8, 32, 16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
-  auto weight_scale_desc = TensorDesc({512}, ACL_INT64, ACL_FORMAT_ND);
-  aclTensor *bias_desc = nullptr;
-  auto x_scale_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
-  aclTensor *x_offset_desc = nullptr;
-  auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
-  bool weightTrans = true;
-  char* quantMode = "pertoken";
+TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_3)
+{
+    auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto weight_desc = TensorDesc({8, 32, 16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    auto weight_scale_desc = TensorDesc({512}, ACL_INT64, ACL_FORMAT_ND);
+    aclTensor* bias_desc = nullptr;
+    auto x_scale_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    aclTensor* x_offset_desc = nullptr;
+    auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
+    bool weightTrans = true;
+    char* quantMode = "pertoken";
 
-  auto ut = OP_API_UT(aclnnQuantMatmulDequant, INPUT(x_desc, weight_desc, weight_scale_desc,
-                                                     bias_desc, x_scale_desc, x_offset_desc, smooth_scale_desc,
-                                                     quantMode, weightTrans), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulDequant,
+                        INPUT(x_desc, weight_desc, weight_scale_desc, bias_desc, x_scale_desc, x_offset_desc,
+                              smooth_scale_desc, quantMode, weightTrans),
+                        OUTPUT(out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_4) {
-  auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto weight_desc = TensorDesc({8, 32, 16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
-  auto weight_scale_desc = TensorDesc({512}, ACL_INT64, ACL_FORMAT_ND);
-  aclTensor *bias_desc = nullptr;
-  auto x_scale_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
-  aclTensor *x_offset_desc = nullptr;
-  auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
-  bool weightTrans = true;
-  char* quantMode = "pertoken";
+TEST_F(l2_quant_matmul_dequant_test, ascend310P_normal_4)
+{
+    auto x_desc = TensorDesc({64, 256}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto weight_desc = TensorDesc({8, 32, 16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    auto weight_scale_desc = TensorDesc({512}, ACL_INT64, ACL_FORMAT_ND);
+    aclTensor* bias_desc = nullptr;
+    auto x_scale_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    aclTensor* x_offset_desc = nullptr;
+    auto smooth_scale_desc = TensorDesc({256}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({64, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
+    bool weightTrans = true;
+    char* quantMode = "pertoken";
 
-  auto ut = OP_API_UT(aclnnQuantMatmulDequant, INPUT(x_desc, weight_desc, weight_scale_desc,
-                                                     bias_desc, x_scale_desc, x_offset_desc, smooth_scale_desc,
-                                                     quantMode, weightTrans), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulDequant,
+                        INPUT(x_desc, weight_desc, weight_scale_desc, bias_desc, x_scale_desc, x_offset_desc,
+                              smooth_scale_desc, quantMode, weightTrans),
+                        OUTPUT(out_desc));
 
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-}
+} // namespace

@@ -13,12 +13,12 @@
  * \brief rmsnorm kernel file
  */
 #include "rms_norm.h"
-#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ != 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) \
-         && (defined(__NPU_ARCH__) && __NPU_ARCH__ != 5102)
+#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ != 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) && \
+    (defined(__NPU_ARCH__) && __NPU_ARCH__ != 5102)
 #include "rms_norm_split_d.h"
 #endif
-#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ == 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)) \
- 	     && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
+#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ == 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)) && \
+    !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
 #include "arch35/rms_norm_regbase.h"
 #include "arch35/rms_norm_regbase_split_d.h"
 #endif
@@ -43,13 +43,13 @@ using namespace RmsNorm;
         op.Process();                            \
     } while (0)
 
-extern "C" __global__ __aicore__ void rms_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void rms_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR workspace,
+                                               GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
-#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ != 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) \
- 	     && (defined(__NPU_ARCH__) && __NPU_ARCH__ != 5102)
+#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ != 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) && \
+    (defined(__NPU_ARCH__) && __NPU_ARCH__ != 5102)
     if (TILING_KEY_IS(RMSNORM_TILING_NORMAL)) {
         KernelRmsNorm<DTYPE_X, DTYPE_GAMMA> rms_norm_normal;
         rms_norm_normal.Init(x, gamma, y, rstd, &tilingData, usrWorkspace);
@@ -78,8 +78,8 @@ extern "C" __global__ __aicore__ void rms_norm(
 #endif
     }
 #endif
-#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ == 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)) \
- 	     && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
+#if ((defined(__CCE_AICORE__) && __CCE_AICORE__ == 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)) && \
+    !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (TILING_KEY_IS(5000)) {
         GENERAL_OP_IMPL(RmsNorm::KernelRmsNormRegBase, DTYPE_X, DTYPE_GAMMA);

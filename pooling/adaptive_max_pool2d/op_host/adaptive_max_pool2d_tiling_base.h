@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file adaptive_max_pool2d_tiling_base.h
  * \brief tiling base imply for adaptive_max_pool2d
  */
@@ -27,7 +27,7 @@
 using namespace std;
 
 namespace optiling {
-using Ops::NN::Optiling::TilingBaseClass;    
+using Ops::NN::Optiling::TilingBaseClass;
 const int HW_DIMS = 2;
 const uint32_t H_DIM = 0;
 const uint32_t W_DIM = 1;
@@ -106,14 +106,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AdaptiveMaxPool2d, AdaptiveMaxPool2dTilingData);
 
-
 class AdaMaxPool2dBaseTiling : public TilingBaseClass {
 public:
-    explicit AdaMaxPool2dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit AdaMaxPool2dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~AdaMaxPool2dBaseTiling() override
-    {}
+    ~AdaMaxPool2dBaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -133,4 +130,4 @@ public:
 };
 } // namespace optiling
 
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPTIVE_MAX_POOL2D_TILING_BASE_H_
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPTIVE_MAX_POOL2D_TILING_BASE_H_

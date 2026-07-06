@@ -54,6 +54,6 @@ REG_OP(LpNormV2)
     .ATTR(keepdim, Bool, false)
     .ATTR(epsilon, Float, 1e-12f)
     .OP_END_FACTORY_REG(LpNormV2)
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_MATH_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_MATH_OPS_H_

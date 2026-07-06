@@ -64,23 +64,15 @@ __aicore__ inline int64_t GetTensorElemCount(GM_ADDR tensorListPtr, int32_t idx)
 // ========== SIMT VF kernel: per-tensor element computation ==========
 
 template <typename T, typename CalcT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAddcmulScalarListSimt(
-    int64_t tensorElemCount,
-    __gm__ T* x1Ptr,
-    __gm__ T* x2Ptr,
-    __gm__ T* x3Ptr,
-    T scalarValRaw,
-    __gm__ T* yPtr)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcmulScalarListSimt(
+    int64_t tensorElemCount, __gm__ T* x1Ptr, __gm__ T* x2Ptr, __gm__ T* x3Ptr, T scalarValRaw, __gm__ T* yPtr)
 {
     // Cast scalar from original dtype T to CalcT inside VF (bf16 cast not supported in __aicore__)
     CalcT scalarVal = static_cast<CalcT>(scalarValRaw);
-    for (uint64_t index = static_cast<uint64_t>(
-             AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum()
-             + AscendC::Simt::GetThreadIdx());
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                                AscendC::Simt::GetThreadIdx());
          index < static_cast<uint64_t>(tensorElemCount);
-         index += static_cast<uint64_t>(
-             AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
+         index += static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         CalcT cx1 = static_cast<CalcT>(x1Ptr[index]);
         CalcT cx2 = static_cast<CalcT>(x2Ptr[index]);
         CalcT cx3 = static_cast<CalcT>(x3Ptr[index]);
@@ -92,10 +84,8 @@ inline void OpForeachAddcmulScalarListSimt(
 // ========== Process entry: iterate tensors, launch VF per tensor ==========
 
 template <typename T, typename CalcT>
-__aicore__ inline void Process(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3,
-    GM_ADDR scalars, GM_ADDR y,
-    const ForeachAddcmulScalarListTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y,
+                               const ForeachAddcmulScalarListTilingData* tilingData)
 {
     int32_t tensorCount = tilingData->tensorCount;
 
@@ -120,9 +110,8 @@ __aicore__ inline void Process(
         T scalarValRaw = scalarsGm[i];
 
         // Launch SIMT computation for this tensor
-        AscendC::Simt::VF_CALL<OpForeachAddcmulScalarListSimt<T, CalcT>>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            elemCount, x1Ptr, x2Ptr, x3Ptr, scalarValRaw, yPtr);
+        AscendC::Simt::VF_CALL<OpForeachAddcmulScalarListSimt<T, CalcT>>(AscendC::Simt::Dim3(THREAD_NUM), elemCount,
+                                                                         x1Ptr, x2Ptr, x3Ptr, scalarValRaw, yPtr);
     }
 }
 

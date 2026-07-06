@@ -39,7 +39,7 @@ public:
     __aicore__ inline void ParseTilingData(GM_ADDR tiling)
     {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantGradTilingData, tilingData, tiling);
-        
+
         blockIdx = GetBlockIdx();
         coreNumAll = tilingData.coreNumAll;
         totalTokens = tilingData.totalTokens;
@@ -54,7 +54,7 @@ public:
         hasGroupIndex = tilingData.hasGroupIndex;
         hasClampLimit = tilingData.hasClampLimit;
         clampLimit = tilingData.clampLimit;
-        
+
         tileLength = tileTokens * tileH;
         tileDataSize = tileLength * sizeof(float);
     }
@@ -74,10 +74,10 @@ public:
         } else {
             pipe.InitBuffer(xQueue, BUFFER_NUM, tileLength * BASE_SCENE_TILE_NUM * sizeof(float));
         }
-        
+
         if (hasWeight) {
-            pipe.InitBuffer(weightQueue, BUFFER_NUM, AlignUp(tileTokens, FP32_32B_ALIGN_NUM) * sizeof(float) +
-                                                     tileLength * sizeof(float));
+            pipe.InitBuffer(weightQueue, BUFFER_NUM,
+                            AlignUp(tileTokens, FP32_32B_ALIGN_NUM) * sizeof(float) + tileLength * sizeof(float));
             pipe.InitBuffer(yOriginQueue, BUFFER_NUM, tileLength * sizeof(float));
         }
     }
@@ -111,13 +111,13 @@ public:
 
 protected:
     TPipe pipe;
-    
+
     TQue<TPosition::VECIN, BUFFER_NUM> gradYQueue;
     TQue<TPosition::VECIN, BUFFER_NUM> xQueue;
     TQue<TPosition::VECIN, BUFFER_NUM> weightQueue;
     TQue<TPosition::VECIN, BUFFER_NUM> yOriginQueue;
     TQue<TPosition::VECIN, BUFFER_NUM> zeroQueue;
-    
+
     uint32_t blockIdx = 0;
     uint32_t coreNumAll = 0;
     uint32_t totalTokens = 0;
@@ -136,7 +136,7 @@ protected:
     uint32_t hasGroupIndex = 0;
     uint32_t hasClampLimit = 0;
     float clampLimit = -1.0f;
-    
+
     uint32_t tileLength = 0;
     uint32_t tileDataSize = 0;
 };

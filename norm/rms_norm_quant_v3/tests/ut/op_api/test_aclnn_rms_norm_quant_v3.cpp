@@ -24,15 +24,9 @@ using namespace std;
 
 class l2_rms_norm_quant_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_quant_v3_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_quant_v3_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_quant_v3_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "rms_norm_quant_v3_test TearDown" << endl; }
 };
 
 TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_001)
@@ -51,12 +45,10 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_001)
     bool divMode = true;
     bool outputRstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, tensor_desc_offset, tensor_desc_beta, epsilon, divMode,
-            outputRstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnRmsNormQuantV3,
+                        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, tensor_desc_offset, tensor_desc_beta,
+                              epsilon, divMode, outputRstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -79,8 +71,7 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_002)
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
+        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
         OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
@@ -104,8 +95,7 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_003)
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
+        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
         OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
@@ -129,8 +119,7 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_004)
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
+        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
         OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
@@ -155,8 +144,7 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_005)
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
+        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
         OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
@@ -180,8 +168,7 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_006)
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
+        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
         OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
@@ -204,12 +191,10 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_007)
     bool divMode = true;
     bool outputRstd = true;
 
-    auto ut = OP_API_UT(
-        aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, tensor_desc_offset, nullptr, epsilon, divMode,
-            outputRstd),
-        OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
+    auto ut = OP_API_UT(aclnnRmsNormQuantV3,
+                        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, tensor_desc_offset, nullptr, epsilon,
+                              divMode, outputRstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -232,8 +217,7 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_008)
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuantV3,
-        INPUT(
-            tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
+        INPUT(tensor_desc_x, tensor_desc_gamma, tensor_desc_scale, nullptr, nullptr, epsilon, divMode, outputRstd),
         OUTPUT(tensor_desc_y_out, tensor_desc_rstd_out));
 
     uint64_t workspace_size = 0;

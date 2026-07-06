@@ -23,14 +23,13 @@ using namespace AscendC;
 // CRTP intermediate: Derived supplies ApplyOp(dst, src, dataCount) (the unary math op).
 // half/float compute directly; bfloat16 casts to float, applies, then casts back.
 template <typename T, typename Tiling, typename Derived>
-class ForeachUnaryCastInplaceRegbase : public ForeachRegbaseUnary<T, Tiling, Derived>
-{
+class ForeachUnaryCastInplaceRegbase : public ForeachRegbaseUnary<T, Tiling, Derived> {
 public:
     using Base = ForeachRegbaseUnary<T, Tiling, Derived>;
     using Base::Process;
     __aicore__ inline ForeachUnaryCastInplaceRegbase() : Base(static_cast<Derived&>(*this)){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData,
+                                TPipe* tPipe)
     {
         Base::Init(inputs, outputs, workspace, tilingData, tPipe);
         if constexpr (IsSameType<T, bfloat16_t>::value) {

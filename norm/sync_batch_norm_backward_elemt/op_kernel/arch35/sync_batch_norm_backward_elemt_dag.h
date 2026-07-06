@@ -35,7 +35,7 @@ struct SyncBatchNormBackwardElemtDag {
     using OpCopyInWeight = Bind<Vec::CopyIn<T>, Placeholder::In4<T>>;
     using OpCopyInMeanDy = Bind<Vec::CopyIn<T>, Placeholder::In5<T>>;
     using OpCopyInMeanDyXmu = Bind<Vec::CopyIn<T>, Placeholder::In6<T>>;
-    
+
     using OpCopyInGradOutCast = Bind<Vec::Cast<float, U, CAST_NONE>, OpCopyInGradOut>;
     using OpCopyInInputCast = Bind<Vec::Cast<float, U, CAST_NONE>, OpCopyInInput>;
     using OpCopyInMeanCast = Bind<Vec::Cast<float, T, CAST_NONE>, OpCopyInMean>;
@@ -51,7 +51,7 @@ struct SyncBatchNormBackwardElemtDag {
     using OpResultMul3 = Bind<Vec::Mul<float>, OpResultSub2, OpResultMul2>;
     using OpResultSub3 = Bind<Vec::Sub<float>, OpResultSub1, OpResultMul3>;
     using OpResultMulWeight = Bind<Vec::Mul<float>, OpCopyInInvstdCast, OpCopyInWeightCast>;
-    
+
     using OpResultMulGradInput = Bind<Vec::Mul<float>, OpResultSub3, OpResultMulWeight>;
     using OpResultMulGradInputCast = Bind<Vec::Cast<U, float, CAST_RINT>, OpResultMulGradInput>;
     using OpCopyOutGradInput = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpResultMulGradInputCast>;
@@ -62,4 +62,4 @@ struct SyncBatchNormBackwardElemtDag {
 };
 
 } // namespace SyncBatchNormBackwardElemt
-#endif  // SYNC_BATCH_NORM_BACKWARD_ELEMT_DAG_H
+#endif // SYNC_BATCH_NORM_BACKWARD_ELEMT_DAG_H

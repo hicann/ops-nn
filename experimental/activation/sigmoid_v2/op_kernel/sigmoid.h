@@ -28,19 +28,19 @@ class KernelSigmoidBase {
 public:
     __aicore__ inline KernelSigmoidBase() {}
 
-    __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR y, const SigmoidTilingData *tilingData)
+    __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR y, const SigmoidTilingData* tilingData)
     {
         int64_t blockIdx = GetBlockIdx();
         if (blockIdx < tilingData->formerNum) {
             blockLength_ = tilingData->formerLength;
             int64_t offset = tilingData->formerLength * blockIdx;
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->formerLength);
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->formerLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->formerLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->formerLength);
         } else {
             blockLength_ = tilingData->tailLength;
             int64_t offset = tilingData->formerLength * tilingData->formerNum;
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->tailLength);
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->tailLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->tailLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->tailLength);
         }
 
         tileLength_ = tilingData->tileLength;
@@ -48,7 +48,7 @@ public:
     }
 
     template <typename ComputeFunc>
-    __aicore__ inline void ProcessBase(ComputeFunc &&compute)
+    __aicore__ inline void ProcessBase(ComputeFunc&& compute)
     {
         int64_t tileNum = (blockLength_ + tileLength_ - 1) / tileLength_;
         if (tileNum == 0) {
@@ -69,9 +69,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        this->ProcessBase([this](int64_t curTileLength) {
-            static_cast<Derived *>(this)->ComputeBase(curTileLength);
-        });
+        this->ProcessBase([this](int64_t curTileLength) { static_cast<Derived*>(this)->ComputeBase(curTileLength); });
     }
 
 protected:
@@ -86,8 +84,7 @@ protected:
 
     __aicore__ inline void CopyOutBase(int64_t progress, int64_t curTileLength)
     {
-        LocalTensor<T> yLocal =
-            inOutQueue_.template DeQue<QuePosition::VECOUT, QuePosition::GM, T>();
+        LocalTensor<T> yLocal = inOutQueue_.template DeQue<QuePosition::VECOUT, QuePosition::GM, T>();
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(curTileLength * sizeof(T)), 0, 0, 0};
         DataCopyPad(yGm_[progress * tileLength_], yLocal, copyParams);
         inOutQueue_.FreeTensor(yLocal);
@@ -107,7 +104,7 @@ class KernelSigmoid : public KernelSigmoidBase<T, KernelSigmoid<T>> {
 public:
     __aicore__ inline KernelSigmoid() {}
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SigmoidTilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SigmoidTilingData* tilingData)
     {
         this->InitBase(x, y, tilingData);
         this->pipe_.InitBuffer(tmpBufOne_, this->tileLength_ * sizeof(float));
@@ -135,7 +132,7 @@ class KernelSigmoidUpcast : public KernelSigmoidBase<T, KernelSigmoidUpcast<T>> 
 public:
     __aicore__ inline KernelSigmoidUpcast() {}
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SigmoidTilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SigmoidTilingData* tilingData)
     {
         this->InitBase(x, y, tilingData);
         this->pipe_.InitBuffer(tmpBufXFp32_, this->tileLength_ * sizeof(float));
@@ -163,6 +160,6 @@ public:
     TBuf<TPosition::VECCALC> tmpBufFp32_;
 };
 
-}  // namespace NsSigmoid
+} // namespace NsSigmoid
 
 #endif

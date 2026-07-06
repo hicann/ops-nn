@@ -33,17 +33,17 @@ static inline void InferReduceShape(const op::Shape& xShape, op::Shape& outputSh
     return;
 }
 
-std::tuple<aclTensor*, aclTensor*> GeluQuant(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const char* approximate, const char* quantMode, const char* roundMode, int64_t dstType, aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*> GeluQuant(const aclTensor* self, const aclTensor* inputScaleOptional,
+                                             const aclTensor* inputOffsetOptional, const char* approximate,
+                                             const char* quantMode, const char* roundMode, int64_t dstType,
+                                             aclOpExecutor* executor)
 {
     Shape outputShape;
     Shape dummyShape({1});
     InferReduceShape(self->GetViewShape(), outputShape, quantMode);
     L0_DFX(GeluQuant, self, inputScaleOptional, inputOffsetOptional, approximate, quantMode, roundMode, dstType);
-    auto yOut = executor->AllocTensor(
-        self->GetStorageShape(), self->GetViewShape(), op::DataType(dstType), self->GetStorageFormat(),
-        self->GetOriginalFormat());
+    auto yOut = executor->AllocTensor(self->GetStorageShape(), self->GetViewShape(), op::DataType(dstType),
+                                      self->GetStorageFormat(), self->GetOriginalFormat());
     bool isDyn = (strncmp(quantMode, "dynamic", strlen("dynamic")) == 0);
     auto output = (isDyn) ? executor->AllocTensor(outputShape, DataType::DT_FLOAT, op::Format::FORMAT_ND) :
                             executor->AllocTensor(dummyShape, DataType::DT_FLOAT, op::Format::FORMAT_ND);
@@ -52,13 +52,12 @@ std::tuple<aclTensor*, aclTensor*> GeluQuant(
         return std::tie(yOut, output);
     }
 
-    OP_LOGD(
-        "y shape=[%s], output shape=[%s].", op::ToString(yOut->GetViewShape()).GetString(),
-        op::ToString(output->GetViewShape()).GetString());
+    OP_LOGD("y shape=[%s], output shape=[%s].", op::ToString(yOut->GetViewShape()).GetString(),
+            op::ToString(output->GetViewShape()).GetString());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        GeluQuant, OP_INPUT(self, inputScaleOptional, inputOffsetOptional), OP_OUTPUT(yOut, output),
-        OP_ATTR(approximate, quantMode, dstType, roundMode));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(GeluQuant, OP_INPUT(self, inputScaleOptional, inputOffsetOptional),
+                                           OP_OUTPUT(yOut, output),
+                                           OP_ATTR(approximate, quantMode, dstType, roundMode));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GeluQuant launch kernel failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

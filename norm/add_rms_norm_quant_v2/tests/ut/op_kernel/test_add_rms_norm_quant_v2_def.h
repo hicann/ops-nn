@@ -34,28 +34,28 @@ struct AddRMSNormQuantV2TilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer))
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer))
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                       \
-        AddRMSNormQuantV2TilingData tilingData;                                          \
-        INIT_TILING_DATA(AddRMSNormQuantV2TilingData, tilingDataPointer, tilingPointer); \
-        (tilingData).numRow = tilingDataPointer->numRow;                                 \
-        (tilingData).numCol = tilingDataPointer->numCol;                                 \
-        (tilingData).blockFactor = tilingDataPointer->blockFactor;                       \
-        (tilingData).rowFactor = tilingDataPointer->rowFactor;                           \
-        (tilingData).ubFactor = tilingDataPointer->ubFactor;                             \
-        (tilingData).epsilon = tilingDataPointer->epsilon;                               \
-        (tilingData).avgFactor = tilingDataPointer->avgFactor;                           \
-        (tilingData).hasZeroPoints1 = tilingDataPointer->hasZeroPoints1;                 \
-        (tilingData).hasBeta = tilingDataPointer->hasBeta;                               \
-        (tilingData).divMode = tilingDataPointer->divMode;                               \
-        (tilingData).hasScales2 = tilingDataPointer->hasScales2;                         \
-        (tilingData).hasZeroPoints2 = tilingDataPointer->hasZeroPoints2                  
+#define GET_TILING_DATA(tilingData, tilingPointer)                                   \
+    AddRMSNormQuantV2TilingData tilingData;                                          \
+    INIT_TILING_DATA(AddRMSNormQuantV2TilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).numRow = tilingDataPointer->numRow;                                 \
+    (tilingData).numCol = tilingDataPointer->numCol;                                 \
+    (tilingData).blockFactor = tilingDataPointer->blockFactor;                       \
+    (tilingData).rowFactor = tilingDataPointer->rowFactor;                           \
+    (tilingData).ubFactor = tilingDataPointer->ubFactor;                             \
+    (tilingData).epsilon = tilingDataPointer->epsilon;                               \
+    (tilingData).avgFactor = tilingDataPointer->avgFactor;                           \
+    (tilingData).hasZeroPoints1 = tilingDataPointer->hasZeroPoints1;                 \
+    (tilingData).hasBeta = tilingDataPointer->hasBeta;                               \
+    (tilingData).divMode = tilingDataPointer->divMode;                               \
+    (tilingData).hasScales2 = tilingDataPointer->hasScales2;                         \
+    (tilingData).hasZeroPoints2 = tilingDataPointer->hasZeroPoints2
 
 #define DTYPE_X1 half
 #define DTYPE_SCALES1 float

@@ -74,35 +74,41 @@
 // 数据格式枚举
 // ============================================================================
 enum class DataFormat {
-    NCHW,       // 4D: (N, C, H, W)     -> TilingKey=0 CONTIGUOUS
-    NHWC,       // 4D: (N, H, W, C)     -> TilingKey=0 CONTIGUOUS
-    NC1HWC0     // 5D: (N, C1, H, W, C0) -> TilingKey=1
+    NCHW,   // 4D: (N, C, H, W)     -> TilingKey=0 CONTIGUOUS
+    NHWC,   // 4D: (N, H, W, C)     -> TilingKey=0 CONTIGUOUS
+    NC1HWC0 // 5D: (N, C1, H, W, C0) -> TilingKey=1
 };
 
-const char* FormatToString(DataFormat fmt) {
+const char* FormatToString(DataFormat fmt)
+{
     switch (fmt) {
-        case DataFormat::NCHW:    return "NCHW";
-        case DataFormat::NHWC:    return "NHWC";
-        case DataFormat::NC1HWC0: return "NC1HWC0";
-        default:                  return "UNKNOWN";
+        case DataFormat::NCHW:
+            return "NCHW";
+        case DataFormat::NHWC:
+            return "NHWC";
+        case DataFormat::NC1HWC0:
+            return "NC1HWC0";
+        default:
+            return "UNKNOWN";
     }
 }
 
 // ============================================================================
 // 数据类型枚举
 // ============================================================================
-enum class DType {
-    FLOAT32,
-    FLOAT16,
-    BFLOAT16
-};
+enum class DType { FLOAT32, FLOAT16, BFLOAT16 };
 
-const char* DTypeToString(DType dt) {
+const char* DTypeToString(DType dt)
+{
     switch (dt) {
-        case DType::FLOAT32:  return "fp32";
-        case DType::FLOAT16:  return "fp16";
-        case DType::BFLOAT16: return "bf16";
-        default:              return "UNKNOWN";
+        case DType::FLOAT32:
+            return "fp32";
+        case DType::FLOAT16:
+            return "fp16";
+        case DType::BFLOAT16:
+            return "bf16";
+        default:
+            return "UNKNOWN";
     }
 }
 
@@ -121,7 +127,8 @@ struct fp16_t {
 
     fp16_t() : value(0) {}
 
-    static fp16_t fromFloat(float f) {
+    static fp16_t fromFloat(float f)
+    {
         fp16_t result;
         uint32_t fbits;
         std::memcpy(&fbits, &f, sizeof(float));
@@ -146,15 +153,14 @@ struct fp16_t {
             if (exponent >= 31) {
                 result.value = static_cast<uint16_t>(sign | 0x7C00);
             } else {
-                result.value = static_cast<uint16_t>(sign |
-                    (static_cast<uint32_t>(exponent) << 10) |
-                    (rounded >> 13));
+                result.value = static_cast<uint16_t>(sign | (static_cast<uint32_t>(exponent) << 10) | (rounded >> 13));
             }
         }
         return result;
     }
 
-    float toFloat() const {
+    float toFloat() const
+    {
         uint32_t sign = (value & 0x8000) << 16;
         uint32_t exponent = (value >> 10) & 0x1F;
         uint32_t mantissa = value & 0x03FF;
@@ -162,7 +168,7 @@ struct fp16_t {
         uint32_t fbits;
         if (exponent == 0) {
             if (mantissa == 0) {
-                fbits = sign;  // +/- 0
+                fbits = sign; // +/- 0
             } else {
                 // 非规格化数
                 exponent = 1;
@@ -174,7 +180,7 @@ struct fp16_t {
                 fbits = sign | ((exponent + 127 - 15) << 23) | (mantissa << 13);
             }
         } else if (exponent == 31) {
-            fbits = sign | 0x7F800000 | (mantissa << 13);  // Inf or NaN
+            fbits = sign | 0x7F800000 | (mantissa << 13); // Inf or NaN
         } else {
             fbits = sign | ((exponent + 127 - 15) << 23) | (mantissa << 13);
         }
@@ -196,7 +202,8 @@ struct bf16_t {
 
     bf16_t() : value(0) {}
 
-    static bf16_t fromFloat(float f) {
+    static bf16_t fromFloat(float f)
+    {
         bf16_t result;
         uint32_t fbits;
         std::memcpy(&fbits, &f, sizeof(float));
@@ -207,7 +214,8 @@ struct bf16_t {
         return result;
     }
 
-    float toFloat() const {
+    float toFloat() const
+    {
         uint32_t fbits = static_cast<uint32_t>(value) << 16;
         float result;
         std::memcpy(&result, &fbits, sizeof(float));
@@ -221,7 +229,8 @@ struct bf16_t {
  * 模拟 NPU 上 fp16/bf16 输入数据的实际精度。
  * fp32 不做转换，fp16/bf16 经过 float->半精度->float 的精度损失。
  */
-void QuantizeToFloat(const float* input, float* output, size_t size, DType dtype) {
+void QuantizeToFloat(const float* input, float* output, size_t size, DType dtype)
+{
     for (size_t i = 0; i < size; ++i) {
         switch (dtype) {
             case DType::FLOAT32:
@@ -241,17 +250,21 @@ void QuantizeToFloat(const float* input, float* output, size_t size, DType dtype
 // 辅助函数
 // ============================================================================
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t size = 1;
-    for (auto dim : shape) size *= dim;
+    for (auto dim : shape)
+        size *= dim;
     return size;
 }
 
-std::string ShapeToString(const std::vector<int64_t>& shape) {
+std::string ShapeToString(const std::vector<int64_t>& shape)
+{
     std::ostringstream oss;
     oss << "(";
     for (size_t i = 0; i < shape.size(); ++i) {
-        if (i > 0) oss << ", ";
+        if (i > 0)
+            oss << ", ";
         oss << shape[i];
     }
     oss << ")";
@@ -262,33 +275,39 @@ std::string ShapeToString(const std::vector<int64_t>& shape) {
 // 随机数据生成
 // ============================================================================
 
-std::vector<float> GenerateRandomData(size_t size, unsigned int seed = 123) {
+std::vector<float> GenerateRandomData(size_t size, unsigned int seed = 123)
+{
     std::mt19937 gen(seed);
     std::uniform_real_distribution<float> dist(-2.0f, 2.0f);
     std::vector<float> data(size);
-    for (auto& v : data) v = dist(gen);
+    for (auto& v : data)
+        v = dist(gen);
     return data;
 }
 
 /**
  * @brief 生成正的 variance 数据（方差必须为正值）
  */
-std::vector<float> GeneratePositiveData(size_t size, unsigned int seed = 456) {
+std::vector<float> GeneratePositiveData(size_t size, unsigned int seed = 456)
+{
     std::mt19937 gen(seed);
     std::uniform_real_distribution<float> dist(0.1f, 5.0f);
     std::vector<float> data(size);
-    for (auto& v : data) v = dist(gen);
+    for (auto& v : data)
+        v = dist(gen);
     return data;
 }
 
 /**
  * @brief 生成 scale 数据（可正可负）
  */
-std::vector<float> GenerateScaleData(size_t size, unsigned int seed = 789) {
+std::vector<float> GenerateScaleData(size_t size, unsigned int seed = 789)
+{
     std::mt19937 gen(seed);
     std::uniform_real_distribution<float> dist(-3.0f, 3.0f);
     std::vector<float> data(size);
-    for (auto& v : data) v = dist(gen);
+    for (auto& v : data)
+        v = dist(gen);
     return data;
 }
 
@@ -311,24 +330,21 @@ std::vector<float> GenerateScaleData(size_t size, unsigned int seed = 789) {
  * @param W               width
  * @param epsilon         小常数，防止除零
  */
-void ComputeBnInferGradGolden(const float* grads, const float* scale,
-                               const float* batch_variance, float* output,
-                               int64_t N, int64_t C, int64_t H, int64_t W,
-                               float epsilon) {
+void ComputeBnInferGradGolden(const float* grads, const float* scale, const float* batch_variance, float* output,
+                              int64_t N, int64_t C, int64_t H, int64_t W, float epsilon)
+{
     int64_t HW = H * W;
     int64_t CHW = C * H * W;
 
     for (int64_t n = 0; n < N; ++n) {
         for (int64_t c = 0; c < C; ++c) {
-            double inv_std = 1.0 / std::sqrt(static_cast<double>(batch_variance[c]) +
-                                              static_cast<double>(epsilon));
+            double inv_std = 1.0 / std::sqrt(static_cast<double>(batch_variance[c]) + static_cast<double>(epsilon));
             double factor = static_cast<double>(scale[c]) * inv_std;
 
             for (int64_t h = 0; h < H; ++h) {
                 for (int64_t w = 0; w < W; ++w) {
                     int64_t idx = n * CHW + c * HW + h * W + w;
-                    output[idx] = static_cast<float>(
-                        static_cast<double>(grads[idx]) * factor);
+                    output[idx] = static_cast<float>(static_cast<double>(grads[idx]) * factor);
                 }
             }
         }
@@ -350,15 +366,13 @@ void ComputeBnInferGradGolden(const float* grads, const float* scale,
  * @param C               channel count
  * @param epsilon         小常数，防止除零
  */
-void ComputeBnInferGradGoldenNHWC(const float* grads, const float* scale,
-                                   const float* batch_variance, float* output,
-                                   int64_t N, int64_t H, int64_t W, int64_t C,
-                                   float epsilon) {
+void ComputeBnInferGradGoldenNHWC(const float* grads, const float* scale, const float* batch_variance, float* output,
+                                  int64_t N, int64_t H, int64_t W, int64_t C, float epsilon)
+{
     // 预计算每个通道的 factor
     std::vector<double> factors(static_cast<size_t>(C));
     for (int64_t c = 0; c < C; ++c) {
-        double inv_std = 1.0 / std::sqrt(static_cast<double>(batch_variance[c]) +
-                                          static_cast<double>(epsilon));
+        double inv_std = 1.0 / std::sqrt(static_cast<double>(batch_variance[c]) + static_cast<double>(epsilon));
         factors[c] = static_cast<double>(scale[c]) * inv_std;
     }
 
@@ -370,8 +384,7 @@ void ComputeBnInferGradGoldenNHWC(const float* grads, const float* scale,
             for (int64_t w = 0; w < W; ++w) {
                 for (int64_t c = 0; c < C; ++c) {
                     int64_t idx = n * HWC + h * WC + w * C + c;
-                    output[idx] = static_cast<float>(
-                        static_cast<double>(grads[idx]) * factors[c]);
+                    output[idx] = static_cast<float>(static_cast<double>(grads[idx]) * factors[c]);
                 }
             }
         }
@@ -395,16 +408,14 @@ void ComputeBnInferGradGoldenNHWC(const float* grads, const float* scale,
  * @param C0              C0 维度 (通常=16)
  * @param epsilon         小常数，防止除零
  */
-void ComputeBnInferGradGoldenNC1HWC0(const float* grads, const float* scale,
-                                      const float* batch_variance, float* output,
-                                      int64_t N, int64_t C1, int64_t H, int64_t W,
-                                      int64_t C0, float epsilon) {
+void ComputeBnInferGradGoldenNC1HWC0(const float* grads, const float* scale, const float* batch_variance, float* output,
+                                     int64_t N, int64_t C1, int64_t H, int64_t W, int64_t C0, float epsilon)
+{
     int64_t C = C1 * C0;
     // 预计算每个通道的 factor
     std::vector<double> factors(static_cast<size_t>(C));
     for (int64_t c = 0; c < C; ++c) {
-        double inv_std = 1.0 / std::sqrt(static_cast<double>(batch_variance[c]) +
-                                          static_cast<double>(epsilon));
+        double inv_std = 1.0 / std::sqrt(static_cast<double>(batch_variance[c]) + static_cast<double>(epsilon));
         factors[c] = static_cast<double>(scale[c]) * inv_std;
     }
 
@@ -418,8 +429,7 @@ void ComputeBnInferGradGoldenNC1HWC0(const float* grads, const float* scale,
                     for (int64_t c0 = 0; c0 < C0; ++c0) {
                         int64_t idx = n * C1 * HWC0 + c1 * HWC0 + h * WC0 + w * C0 + c0;
                         int64_t ch = c1 * C0 + c0;
-                        output[idx] = static_cast<float>(
-                            static_cast<double>(grads[idx]) * factors[ch]);
+                        output[idx] = static_cast<float>(static_cast<double>(grads[idx]) * factors[ch]);
                     }
                 }
             }
@@ -431,15 +441,14 @@ void ComputeBnInferGradGoldenNC1HWC0(const float* grads, const float* scale,
 // 精度比对函数
 // ============================================================================
 
-bool CompareResults(const float* golden, const float* actual, size_t size,
-                    double atol = 1e-4, double rtol = 1e-4) {
+bool CompareResults(const float* golden, const float* actual, size_t size, double atol = 1e-4, double rtol = 1e-4)
+{
     int mismatch = 0;
     for (size_t i = 0; i < size; ++i) {
         if (std::isnan(actual[i])) {
             mismatch++;
             if (mismatch <= 5) {
-                LOG_PRINT("  [ERROR] 输出包含 NaN at [%zu]: golden=%.6f", i,
-                          static_cast<double>(golden[i]));
+                LOG_PRINT("  [ERROR] 输出包含 NaN at [%zu]: golden=%.6f", i, static_cast<double>(golden[i]));
             }
             continue;
         }
@@ -456,8 +465,8 @@ bool CompareResults(const float* golden, const float* actual, size_t size,
             } else {
                 mismatch++;
                 if (mismatch <= 5) {
-                    LOG_PRINT("  不匹配 [%zu]: 期望=%f, 实际=%f (无穷符号不同)",
-                              i, static_cast<double>(golden[i]), static_cast<double>(actual[i]));
+                    LOG_PRINT("  不匹配 [%zu]: 期望=%f, 实际=%f (无穷符号不同)", i, static_cast<double>(golden[i]),
+                              static_cast<double>(actual[i]));
                 }
                 continue;
             }
@@ -468,9 +477,8 @@ bool CompareResults(const float* golden, const float* actual, size_t size,
         if (diff > tolerance) {
             mismatch++;
             if (mismatch <= 5) {
-                LOG_PRINT("  不匹配 [%zu]: 期望=%.6f, 实际=%.6f, 差值=%.6e, 容忍=%.6e",
-                          i, static_cast<double>(golden[i]), static_cast<double>(actual[i]),
-                          diff, tolerance);
+                LOG_PRINT("  不匹配 [%zu]: 期望=%.6f, 实际=%.6f, 差值=%.6e, 容忍=%.6e", i,
+                          static_cast<double>(golden[i]), static_cast<double>(actual[i]), diff, tolerance);
             }
         }
     }
@@ -488,7 +496,8 @@ bool CompareResults(const float* golden, const float* actual, size_t size,
 // CPU Golden 正确性自测
 // ============================================================================
 
-void TestGoldenCorrectness() {
+void TestGoldenCorrectness()
+{
     LOG_PRINT("\n========================================");
     LOG_PRINT("CPU Golden 正确性自测");
     LOG_PRINT("========================================");
@@ -576,15 +585,20 @@ void TestGoldenCorrectness() {
 
 #ifndef USE_MOCK_ACLNN
 
-aclFormat DataFormatToAclFormat(DataFormat fmt) {
+aclFormat DataFormatToAclFormat(DataFormat fmt)
+{
     switch (fmt) {
-        case DataFormat::NHWC:    return aclFormat::ACL_FORMAT_NHWC;
-        case DataFormat::NC1HWC0: return aclFormat::ACL_FORMAT_NC1HWC0;
-        default:                  return aclFormat::ACL_FORMAT_ND;
+        case DataFormat::NHWC:
+            return aclFormat::ACL_FORMAT_NHWC;
+        case DataFormat::NC1HWC0:
+            return aclFormat::ACL_FORMAT_NC1HWC0;
+        default:
+            return aclFormat::ACL_FORMAT_ND;
     }
 }
 
-std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape) {
+std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape)
+{
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = shape.size() - 2; i >= 0; i--) {
         strides[i] = shape[i + 1] * strides[i + 1];
@@ -592,24 +606,23 @@ std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape) {
     return strides;
 }
 
-template<typename T>
-int CreateAclTensor(const std::vector<T>& hostData,
-                    const std::vector<int64_t>& shape,
-                    void** deviceAddr,
-                    aclDataType dataType,
-                    aclTensor** tensor,
-                    aclFormat format = aclFormat::ACL_FORMAT_ND) {
+template <typename T>
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor, aclFormat format = aclFormat::ACL_FORMAT_ND)
+{
     size_t size = GetShapeSize(shape) * sizeof(T);
 
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
-    if (ret != ACL_SUCCESS) return ret;
+    if (ret != ACL_SUCCESS)
+        return ret;
 
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    if (ret != ACL_SUCCESS) return ret;
+    if (ret != ACL_SUCCESS)
+        return ret;
 
     auto strides = ComputeStrides(shape);
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(),
-                              0, format, shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, format, shape.data(),
+                              shape.size(), *deviceAddr);
     return ACL_SUCCESS;
 }
 
@@ -620,8 +633,8 @@ int CreateAclTensor(const std::vector<T>& hostData,
 // ============================================================================
 
 struct TestCase {
-    const char* case_id;             // 用例编号
-    const char* description;         // 用例描述
+    const char* case_id;              // 用例编号
+    const char* description;          // 用例描述
     std::vector<int64_t> grads_shape; // grads shape (N,C,H,W) or (N,H,W,C) or (N,C1,H,W,C0)
     DataFormat format;                // 数据格式
     DType dtype;                      // 数据类型 (FLOAT32/FLOAT16/BFLOAT16)
@@ -637,87 +650,232 @@ struct TestCase {
 // 迭代一测试用例定义
 // ============================================================================
 
-std::vector<TestCase> GetIteration1TestCases() {
+std::vector<TestCase> GetIteration1TestCases()
+{
     return {
         // ================================================================
         // 场景 S1: 基础功能测试 - 标准 4D shape fp32
         // ================================================================
 
         // L0_S1_001: 小规格基础测试
-        {"L0_S1_001", "小规格基础 shape=(1,3,4,4) eps=1e-5",
-         {1, 3, 4, 4}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 100, 200, 300},
+        {"L0_S1_001",
+         "小规格基础 shape=(1,3,4,4) eps=1e-5",
+         {1, 3, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         100,
+         200,
+         300},
 
         // L0_S1_002: 典型 batch size
-        {"L0_S1_002", "典型batch shape=(2,16,8,8) eps=1e-5",
-         {2, 16, 8, 8}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 101, 201, 301},
+        {"L0_S1_002",
+         "典型batch shape=(2,16,8,8) eps=1e-5",
+         {2, 16, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         101,
+         201,
+         301},
 
         // L0_S1_003: 较大空间维度
-        {"L0_S1_003", "较大HW shape=(1,32,16,16) eps=1e-5",
-         {1, 32, 16, 16}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 102, 202, 302},
+        {"L0_S1_003",
+         "较大HW shape=(1,32,16,16) eps=1e-5",
+         {1, 32, 16, 16},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         102,
+         202,
+         302},
 
         // L0_S1_004: 多 batch
-        {"L0_S1_004", "多batch shape=(4,8,4,4) eps=1e-5",
-         {4, 8, 4, 4}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 103, 203, 303},
+        {"L0_S1_004",
+         "多batch shape=(4,8,4,4) eps=1e-5",
+         {4, 8, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         103,
+         203,
+         303},
 
         // L0_S1_005: 较大通道数
-        {"L0_S1_005", "较大通道 shape=(2,64,8,8) eps=1e-5",
-         {2, 64, 8, 8}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 104, 204, 304},
+        {"L0_S1_005",
+         "较大通道 shape=(2,64,8,8) eps=1e-5",
+         {2, 64, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         104,
+         204,
+         304},
 
         // L0_S1_006: 较大完整 shape
-        {"L0_S1_006", "较大shape shape=(2,32,32,32) eps=1e-5",
-         {2, 32, 32, 32}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 105, 205, 305},
+        {"L0_S1_006",
+         "较大shape shape=(2,32,32,32) eps=1e-5",
+         {2, 32, 32, 32},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         105,
+         205,
+         305},
 
         // ================================================================
         // 场景 S2: 边界条件测试
         // ================================================================
 
         // L0_S2_001: 最小 shape N=1,C=1,H=1,W=1
-        {"L0_S2_001", "最小shape shape=(1,1,1,1) eps=1e-5",
-         {1, 1, 1, 1}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 110, 210, 310},
+        {"L0_S2_001",
+         "最小shape shape=(1,1,1,1) eps=1e-5",
+         {1, 1, 1, 1},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         110,
+         210,
+         310},
 
         // L0_S2_002: C=1 单通道
-        {"L0_S2_002", "单通道 shape=(2,1,4,4) eps=1e-5",
-         {2, 1, 4, 4}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 111, 211, 311},
+        {"L0_S2_002",
+         "单通道 shape=(2,1,4,4) eps=1e-5",
+         {2, 1, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         111,
+         211,
+         311},
 
         // L0_S2_003: H=1, W=1 (空间维度最小)
-        {"L0_S2_003", "空间最小 shape=(2,8,1,1) eps=1e-5",
-         {2, 8, 1, 1}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 112, 212, 312},
+        {"L0_S2_003",
+         "空间最小 shape=(2,8,1,1) eps=1e-5",
+         {2, 8, 1, 1},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         112,
+         212,
+         312},
 
         // L0_S2_004: W=1 (宽度为1)
-        {"L0_S2_004", "W=1 shape=(1,4,8,1) eps=1e-5",
-         {1, 4, 8, 1}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 113, 213, 313},
+        {"L0_S2_004",
+         "W=1 shape=(1,4,8,1) eps=1e-5",
+         {1, 4, 8, 1},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         113,
+         213,
+         313},
 
         // L0_S2_005: H=1 (高度为1)
-        {"L0_S2_005", "H=1 shape=(1,4,1,8) eps=1e-5",
-         {1, 4, 1, 8}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 114, 214, 314},
+        {"L0_S2_005",
+         "H=1 shape=(1,4,1,8) eps=1e-5",
+         {1, 4, 1, 8},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         114,
+         214,
+         314},
 
         // ================================================================
         // 场景 S3: epsilon 变体测试
         // ================================================================
 
         // L0_S3_001: 较大 epsilon
-        {"L0_S3_001", "较大eps shape=(1,8,4,4) eps=1e-3",
-         {1, 8, 4, 4}, DataFormat::NCHW, DType::FLOAT32, 1e-3f, 1e-4, 1e-4, 120, 220, 320},
+        {"L0_S3_001",
+         "较大eps shape=(1,8,4,4) eps=1e-3",
+         {1, 8, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-3f,
+         1e-4,
+         1e-4,
+         120,
+         220,
+         320},
 
         // L0_S3_002: 很小 epsilon
-        {"L0_S3_002", "很小eps shape=(1,8,4,4) eps=1e-7",
-         {1, 8, 4, 4}, DataFormat::NCHW, DType::FLOAT32, 1e-7f, 1e-3, 1e-3, 121, 221, 321},
+        {"L0_S3_002",
+         "很小eps shape=(1,8,4,4) eps=1e-7",
+         {1, 8, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-7f,
+         1e-3,
+         1e-3,
+         121,
+         221,
+         321},
 
         // ================================================================
         // 场景 S4: 非对齐维度
         // ================================================================
 
         // L0_S4_001: 非对齐 C
-        {"L0_S4_001", "非对齐C shape=(1,3,8,8) eps=1e-5",
-         {1, 3, 8, 8}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 130, 230, 330},
+        {"L0_S4_001",
+         "非对齐C shape=(1,3,8,8) eps=1e-5",
+         {1, 3, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         130,
+         230,
+         330},
 
         // L0_S4_002: 非对齐 H/W
-        {"L0_S4_002", "非对齐HW shape=(2,8,7,7) eps=1e-5",
-         {2, 8, 7, 7}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 131, 231, 331},
+        {"L0_S4_002",
+         "非对齐HW shape=(2,8,7,7) eps=1e-5",
+         {2, 8, 7, 7},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         131,
+         231,
+         331},
 
         // L0_S4_003: 全非对齐
-        {"L0_S4_003", "全非对齐 shape=(3,5,7,9) eps=1e-5",
-         {3, 5, 7, 9}, DataFormat::NCHW, DType::FLOAT32, 1e-5f, 1e-4, 1e-4, 132, 232, 332},
+        {"L0_S4_003",
+         "全非对齐 shape=(3,5,7,9) eps=1e-5",
+         {3, 5, 7, 9},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-5f,
+         1e-4,
+         1e-4,
+         132,
+         232,
+         332},
     };
 }
 
@@ -725,14 +883,15 @@ std::vector<TestCase> GetIteration1TestCases() {
 // 辅助函数：根据 format 和 shape 获取通道数 C
 // ============================================================================
 
-int64_t GetChannelCount(const TestCase& tc) {
+int64_t GetChannelCount(const TestCase& tc)
+{
     switch (tc.format) {
         case DataFormat::NCHW:
-            return tc.grads_shape[1];  // (N, C, H, W)
+            return tc.grads_shape[1]; // (N, C, H, W)
         case DataFormat::NHWC:
-            return tc.grads_shape[3];  // (N, H, W, C)
+            return tc.grads_shape[3]; // (N, H, W, C)
         case DataFormat::NC1HWC0:
-            return tc.grads_shape[1] * tc.grads_shape[4];  // C1 * C0
+            return tc.grads_shape[1] * tc.grads_shape[4]; // C1 * C0
         default:
             return tc.grads_shape[1];
     }
@@ -742,67 +901,176 @@ int64_t GetChannelCount(const TestCase& tc) {
 // 迭代二测试用例定义
 // ============================================================================
 
-std::vector<TestCase> GetIteration2TestCases() {
+std::vector<TestCase> GetIteration2TestCases()
+{
     return {
         // ================================================================
         // NHWC 格式用例 (TilingKey=0 CONTIGUOUS 分支)
         // ================================================================
 
         // L0_S1_I2_001: NHWC 基础 shape
-        {"L0_S1_I2_001", "NHWC fp32 基础shape=(2,32,32,64) eps=1e-4",
-         {2, 32, 32, 64}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 200, 300, 400},
+        {"L0_S1_I2_001",
+         "NHWC fp32 基础shape=(2,32,32,64) eps=1e-4",
+         {2, 32, 32, 64},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         200,
+         300,
+         400},
 
         // L0_S1_I2_002: NHWC 较大通道
-        {"L0_S1_I2_002", "NHWC fp32 shape=(4,16,16,128) eps=1e-4",
-         {4, 16, 16, 128}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 201, 301, 401},
+        {"L0_S1_I2_002",
+         "NHWC fp32 shape=(4,16,16,128) eps=1e-4",
+         {4, 16, 16, 128},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         201,
+         301,
+         401},
 
         // L0_S3_I2_001: NHWC CONTIGUOUS 分支验证
-        {"L0_S3_I2_001", "NHWC CONTIGUOUS分支 shape=(2,32,32,64) eps=1e-4",
-         {2, 32, 32, 64}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 202, 302, 402},
+        {"L0_S3_I2_001",
+         "NHWC CONTIGUOUS分支 shape=(2,32,32,64) eps=1e-4",
+         {2, 32, 32, 64},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         202,
+         302,
+         402},
 
         // L0_S4_I2_001: NHWC 非对齐 C=33
-        {"L0_S4_I2_001", "NHWC 非对齐C=33 shape=(2,8,8,33) eps=1e-4",
-         {2, 8, 8, 33}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 203, 303, 403},
+        {"L0_S4_I2_001",
+         "NHWC 非对齐C=33 shape=(2,8,8,33) eps=1e-4",
+         {2, 8, 8, 33},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         203,
+         303,
+         403},
 
         // L0_S1_I2_003: NHWC 小shape
-        {"L0_S1_I2_003", "NHWC fp32 小shape=(1,4,4,16) eps=1e-4",
-         {1, 4, 4, 16}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 204, 304, 404},
+        {"L0_S1_I2_003",
+         "NHWC fp32 小shape=(1,4,4,16) eps=1e-4",
+         {1, 4, 4, 16},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         204,
+         304,
+         404},
 
         // ================================================================
         // NC1HWC0 格式用例 (TilingKey=1)
         // ================================================================
 
         // L0_S1_I2_004: NC1HWC0 基础 shape C1=4
-        {"L0_S1_I2_004", "NC1HWC0 fp32 基础shape=(2,4,32,32,16) C1=4 C0=16 eps=1e-4",
-         {2, 4, 32, 32, 16}, DataFormat::NC1HWC0, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 210, 310, 410},
+        {"L0_S1_I2_004",
+         "NC1HWC0 fp32 基础shape=(2,4,32,32,16) C1=4 C0=16 eps=1e-4",
+         {2, 4, 32, 32, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         210,
+         310,
+         410},
 
         // L0_S1_I2_005: NC1HWC0 C1=8
-        {"L0_S1_I2_005", "NC1HWC0 fp32 shape=(1,8,16,16,16) C1=8 C0=16 eps=1e-4",
-         {1, 8, 16, 16, 16}, DataFormat::NC1HWC0, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 211, 311, 411},
+        {"L0_S1_I2_005",
+         "NC1HWC0 fp32 shape=(1,8,16,16,16) C1=8 C0=16 eps=1e-4",
+         {1, 8, 16, 16, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         211,
+         311,
+         411},
 
         // L0_S3_I2_002: NC1HWC0 分支验证
-        {"L0_S3_I2_002", "NC1HWC0分支 shape=(2,4,32,32,16) eps=1e-4",
-         {2, 4, 32, 32, 16}, DataFormat::NC1HWC0, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 212, 312, 412},
+        {"L0_S3_I2_002",
+         "NC1HWC0分支 shape=(2,4,32,32,16) eps=1e-4",
+         {2, 4, 32, 32, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         212,
+         312,
+         412},
 
         // L0_S3_I2_003: NC1HWC0 N=4 C1=2
-        {"L0_S3_I2_003", "NC1HWC0分支 N=4 C1=2 shape=(4,2,16,16,16) eps=1e-4",
-         {4, 2, 16, 16, 16}, DataFormat::NC1HWC0, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 213, 313, 413},
+        {"L0_S3_I2_003",
+         "NC1HWC0分支 N=4 C1=2 shape=(4,2,16,16,16) eps=1e-4",
+         {4, 2, 16, 16, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         213,
+         313,
+         413},
 
         // L0_S1_I2_006: NC1HWC0 小 spatial
-        {"L0_S1_I2_006", "NC1HWC0 fp32 小spatial shape=(1,2,4,4,16) eps=1e-4",
-         {1, 2, 4, 4, 16}, DataFormat::NC1HWC0, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 214, 314, 414},
+        {"L0_S1_I2_006",
+         "NC1HWC0 fp32 小spatial shape=(1,2,4,4,16) eps=1e-4",
+         {1, 2, 4, 4, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         214,
+         314,
+         414},
 
         // ================================================================
         // 多shape NCHW 用例 (验证多核切分 + 大 spatial)
         // ================================================================
 
         // L0_S3_I2_004: 大 spatial NCHW
-        {"L0_S3_I2_004", "NCHW 大spatial shape=(1,3,224,224) eps=1e-4",
-         {1, 3, 224, 224}, DataFormat::NCHW, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 220, 320, 420},
+        {"L0_S3_I2_004",
+         "NCHW 大spatial shape=(1,3,224,224) eps=1e-4",
+         {1, 3, 224, 224},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         220,
+         320,
+         420},
 
         // L0_S4_I2_002: NCHW 非对齐 C=33
-        {"L0_S4_I2_002", "NCHW 非对齐C=33 shape=(2,33,8,8) eps=1e-4",
-         {2, 33, 8, 8}, DataFormat::NCHW, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 221, 321, 421},
+        {"L0_S4_I2_002",
+         "NCHW 非对齐C=33 shape=(2,33,8,8) eps=1e-4",
+         {2, 33, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         221,
+         321,
+         421},
     };
 }
 
@@ -810,16 +1078,16 @@ std::vector<TestCase> GetIteration2TestCases() {
 // 通用 Golden 计算调度函数
 // ============================================================================
 
-void ComputeGolden(const TestCase& tc, const float* grads, const float* scale,
-                   const float* batch_variance, float* output) {
+void ComputeGolden(const TestCase& tc, const float* grads, const float* scale, const float* batch_variance,
+                   float* output)
+{
     switch (tc.format) {
         case DataFormat::NCHW: {
             int64_t N = tc.grads_shape[0];
             int64_t C = tc.grads_shape[1];
             int64_t H = tc.grads_shape[2];
             int64_t W = tc.grads_shape[3];
-            ComputeBnInferGradGolden(grads, scale, batch_variance, output,
-                                      N, C, H, W, tc.epsilon);
+            ComputeBnInferGradGolden(grads, scale, batch_variance, output, N, C, H, W, tc.epsilon);
             break;
         }
         case DataFormat::NHWC: {
@@ -827,18 +1095,16 @@ void ComputeGolden(const TestCase& tc, const float* grads, const float* scale,
             int64_t H = tc.grads_shape[1];
             int64_t W = tc.grads_shape[2];
             int64_t C = tc.grads_shape[3];
-            ComputeBnInferGradGoldenNHWC(grads, scale, batch_variance, output,
-                                          N, H, W, C, tc.epsilon);
+            ComputeBnInferGradGoldenNHWC(grads, scale, batch_variance, output, N, H, W, C, tc.epsilon);
             break;
         }
         case DataFormat::NC1HWC0: {
-            int64_t N  = tc.grads_shape[0];
+            int64_t N = tc.grads_shape[0];
             int64_t C1 = tc.grads_shape[1];
-            int64_t H  = tc.grads_shape[2];
-            int64_t W  = tc.grads_shape[3];
+            int64_t H = tc.grads_shape[2];
+            int64_t W = tc.grads_shape[3];
             int64_t C0 = tc.grads_shape[4];
-            ComputeBnInferGradGoldenNC1HWC0(grads, scale, batch_variance, output,
-                                             N, C1, H, W, C0, tc.epsilon);
+            ComputeBnInferGradGoldenNC1HWC0(grads, scale, batch_variance, output, N, C1, H, W, C0, tc.epsilon);
             break;
         }
     }
@@ -846,16 +1112,14 @@ void ComputeGolden(const TestCase& tc, const float* grads, const float* scale,
 
 #ifdef USE_MOCK_ACLNN
 
-bool RunTest(const TestCase& tc) {
+bool RunTest(const TestCase& tc)
+{
     int64_t C = GetChannelCount(tc);
     size_t grads_size = static_cast<size_t>(GetShapeSize(tc.grads_shape));
 
     LOG_PRINT("\n[Mock] %s: %s", tc.case_id, tc.description);
-    LOG_PRINT("  format=%s dtype=%s grads_shape=%s, epsilon=%.1e",
-              FormatToString(tc.format),
-              DTypeToString(tc.dtype),
-              ShapeToString(tc.grads_shape).c_str(),
-              static_cast<double>(tc.epsilon));
+    LOG_PRINT("  format=%s dtype=%s grads_shape=%s, epsilon=%.1e", FormatToString(tc.format), DTypeToString(tc.dtype),
+              ShapeToString(tc.grads_shape).c_str(), static_cast<double>(tc.epsilon));
 
     // 生成输入数据（fp32 精度）
     auto grads_data_fp32 = GenerateRandomData(grads_size, tc.grads_seed);
@@ -869,8 +1133,7 @@ bool RunTest(const TestCase& tc) {
 
     // 计算 Golden 结果（使用量化后的 grads，double 精度计算）
     std::vector<float> golden(grads_size);
-    ComputeGolden(tc, grads_data.data(), scale_data.data(),
-                  variance_data.data(), golden.data());
+    ComputeGolden(tc, grads_data.data(), scale_data.data(), variance_data.data(), golden.data());
 
     // 模拟输出 dtype 量化：输出也要经过 fp16/bf16 的精度损失
     std::vector<float> golden_quantized(grads_size);
@@ -888,16 +1151,14 @@ bool RunTest(const TestCase& tc) {
 // Real 模式测试执行器
 // ============================================================================
 
-bool RunTest(const TestCase& tc, aclrtStream stream) {
+bool RunTest(const TestCase& tc, aclrtStream stream)
+{
     int64_t C = GetChannelCount(tc);
     size_t grads_size = static_cast<size_t>(GetShapeSize(tc.grads_shape));
 
     LOG_PRINT("\n[Real] %s: %s", tc.case_id, tc.description);
-    LOG_PRINT("  format=%s dtype=%s grads_shape=%s, epsilon=%.1e",
-              FormatToString(tc.format),
-              DTypeToString(tc.dtype),
-              ShapeToString(tc.grads_shape).c_str(),
-              static_cast<double>(tc.epsilon));
+    LOG_PRINT("  format=%s dtype=%s grads_shape=%s, epsilon=%.1e", FormatToString(tc.format), DTypeToString(tc.dtype),
+              ShapeToString(tc.grads_shape).c_str(), static_cast<double>(tc.epsilon));
 
     // 生成输入数据
     auto grads_data = GenerateRandomData(grads_size, tc.grads_seed);
@@ -906,14 +1167,14 @@ bool RunTest(const TestCase& tc, aclrtStream stream) {
 
     // 计算 Golden
     std::vector<float> golden(grads_size);
-    ComputeGolden(tc, grads_data.data(), scale_data.data(),
-                  variance_data.data(), golden.data());
+    ComputeGolden(tc, grads_data.data(), scale_data.data(), variance_data.data(), golden.data());
 
     // 创建 grads tensor (4D/5D)
     aclFormat tensorFormat = DataFormatToAclFormat(tc.format);
     void* grads_dev = nullptr;
     aclTensor* grads_tensor = nullptr;
-    if (CreateAclTensor(grads_data, tc.grads_shape, &grads_dev, ACL_FLOAT, &grads_tensor, tensorFormat) != ACL_SUCCESS) {
+    if (CreateAclTensor(grads_data, tc.grads_shape, &grads_dev, ACL_FLOAT, &grads_tensor, tensorFormat) !=
+        ACL_SUCCESS) {
         LOG_PRINT("  创建 grads tensor 失败");
         return false;
     }
@@ -946,7 +1207,8 @@ bool RunTest(const TestCase& tc, aclrtStream stream) {
     std::vector<float> output_host(grads_size, 0.0f);
     void* output_dev = nullptr;
     aclTensor* output_tensor = nullptr;
-    if (CreateAclTensor(output_host, tc.grads_shape, &output_dev, ACL_FLOAT, &output_tensor, tensorFormat) != ACL_SUCCESS) {
+    if (CreateAclTensor(output_host, tc.grads_shape, &output_dev, ACL_FLOAT, &output_tensor, tensorFormat) !=
+        ACL_SUCCESS) {
         LOG_PRINT("  创建输出 tensor 失败");
         aclDestroyTensor(grads_tensor);
         aclDestroyTensor(scale_tensor);
@@ -962,14 +1224,13 @@ bool RunTest(const TestCase& tc, aclrtStream stream) {
     aclOpExecutor* executor = nullptr;
 
     auto ret = aclnnBnInferGradGetWorkspaceSize(
-        grads_tensor,       // grads
-        scale_tensor,       // scale
-        variance_tensor,    // batchVariance
-        tc.epsilon,         // epsilon
-        static_cast<int64_t>(tc.format),  // formatMode: 0=NCHW, 1=NHWC, 2=NC1HWC0
-        output_tensor,      // xBackprop (out)
-        &workspaceSize,
-        &executor);
+        grads_tensor,                    // grads
+        scale_tensor,                    // scale
+        variance_tensor,                 // batchVariance
+        tc.epsilon,                      // epsilon
+        static_cast<int64_t>(tc.format), // formatMode: 0=NCHW, 1=NHWC, 2=NC1HWC0
+        output_tensor,                   // xBackprop (out)
+        &workspaceSize, &executor);
 
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("  GetWorkspaceSize 失败: %d", ret);
@@ -994,7 +1255,8 @@ bool RunTest(const TestCase& tc, aclrtStream stream) {
     ret = aclnnBnInferGrad(workspace, workspaceSize, executor, stream);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("  aclnnBnInferGrad 执行失败: %d", ret);
-        if (workspace) aclrtFree(workspace);
+        if (workspace)
+            aclrtFree(workspace);
         aclDestroyTensor(grads_tensor);
         aclDestroyTensor(scale_tensor);
         aclDestroyTensor(variance_tensor);
@@ -1010,14 +1272,15 @@ bool RunTest(const TestCase& tc, aclrtStream stream) {
 
     // 拷贝结果回 host
     std::vector<float> npu_output(grads_size);
-    aclrtMemcpy(npu_output.data(), grads_size * sizeof(float), output_dev,
-                grads_size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    aclrtMemcpy(npu_output.data(), grads_size * sizeof(float), output_dev, grads_size * sizeof(float),
+                ACL_MEMCPY_DEVICE_TO_HOST);
 
     // 精度比对
     bool passed = CompareResults(golden.data(), npu_output.data(), grads_size, tc.atol, tc.rtol);
 
     // 清理资源
-    if (workspace) aclrtFree(workspace);
+    if (workspace)
+        aclrtFree(workspace);
     aclDestroyTensor(grads_tensor);
     aclDestroyTensor(scale_tensor);
     aclDestroyTensor(variance_tensor);
@@ -1036,199 +1299,515 @@ bool RunTest(const TestCase& tc, aclrtStream stream) {
 // 迭代三测试用例定义
 // ============================================================================
 
-std::vector<TestCase> GetIteration3TestCases() {
+std::vector<TestCase> GetIteration3TestCases()
+{
     return {
         // ================================================================
         // fp16 数据类型测试 (NCHW format)
         // ================================================================
 
         // L0_S1_008: NCHW fp16 基础shape
-        {"L0_S1_008", "NCHW fp16 基础shape=(2,64,32,32) eps=1e-4",
-         {2, 64, 32, 32}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 500, 600, 700},
+        {"L0_S1_008",
+         "NCHW fp16 基础shape=(2,64,32,32) eps=1e-4",
+         {2, 64, 32, 32},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         500,
+         600,
+         700},
 
         // L0_S1_009: NCHW fp16 小spatial
-        {"L0_S1_009", "NCHW fp16 shape=(1,128,8,8) eps=1e-4",
-         {1, 128, 8, 8}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 501, 601, 701},
+        {"L0_S1_009",
+         "NCHW fp16 shape=(1,128,8,8) eps=1e-4",
+         {1, 128, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         501,
+         601,
+         701},
 
         // L0_S1_I3_001: NCHW fp16 多batch
-        {"L0_S1_I3_001", "NCHW fp16 多batch shape=(4,32,16,16) eps=1e-4",
-         {4, 32, 16, 16}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 502, 602, 702},
+        {"L0_S1_I3_001",
+         "NCHW fp16 多batch shape=(4,32,16,16) eps=1e-4",
+         {4, 32, 16, 16},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         502,
+         602,
+         702},
 
         // ================================================================
         // fp16 数据类型测试 (NHWC format)
         // ================================================================
 
         // L0_S1_I3_002: NHWC fp16 基础shape
-        {"L0_S1_I3_002", "NHWC fp16 基础shape=(2,32,32,64) eps=1e-4",
-         {2, 32, 32, 64}, DataFormat::NHWC, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 503, 603, 703},
+        {"L0_S1_I3_002",
+         "NHWC fp16 基础shape=(2,32,32,64) eps=1e-4",
+         {2, 32, 32, 64},
+         DataFormat::NHWC,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         503,
+         603,
+         703},
 
         // L0_S1_I3_003: NHWC fp16 小shape
-        {"L0_S1_I3_003", "NHWC fp16 shape=(1,8,8,32) eps=1e-4",
-         {1, 8, 8, 32}, DataFormat::NHWC, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 504, 604, 704},
+        {"L0_S1_I3_003",
+         "NHWC fp16 shape=(1,8,8,32) eps=1e-4",
+         {1, 8, 8, 32},
+         DataFormat::NHWC,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         504,
+         604,
+         704},
 
         // ================================================================
         // fp16 数据类型测试 (NC1HWC0 format)
         // ================================================================
 
         // L0_S1_012: NC1HWC0 fp16 基础shape
-        {"L0_S1_012", "NC1HWC0 fp16 基础shape=(2,4,32,32,16) eps=1e-4",
-         {2, 4, 32, 32, 16}, DataFormat::NC1HWC0, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 505, 605, 705},
+        {"L0_S1_012",
+         "NC1HWC0 fp16 基础shape=(2,4,32,32,16) eps=1e-4",
+         {2, 4, 32, 32, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         505,
+         605,
+         705},
 
         // L0_S1_I3_004: NC1HWC0 fp16 小spatial
-        {"L0_S1_I3_004", "NC1HWC0 fp16 shape=(1,8,16,16,16) eps=1e-4",
-         {1, 8, 16, 16, 16}, DataFormat::NC1HWC0, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 506, 606, 706},
+        {"L0_S1_I3_004",
+         "NC1HWC0 fp16 shape=(1,8,16,16,16) eps=1e-4",
+         {1, 8, 16, 16, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         506,
+         606,
+         706},
 
         // ================================================================
         // bf16 数据类型测试 (NCHW format)
         // ================================================================
 
         // L0_S1_010: NCHW bf16 基础shape
-        {"L0_S1_010", "NCHW bf16 基础shape=(2,64,32,32) eps=1e-4",
-         {2, 64, 32, 32}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 510, 610, 710},
+        {"L0_S1_010",
+         "NCHW bf16 基础shape=(2,64,32,32) eps=1e-4",
+         {2, 64, 32, 32},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         510,
+         610,
+         710},
 
         // L0_S1_011: NCHW bf16 小spatial
-        {"L0_S1_011", "NCHW bf16 shape=(1,128,8,8) eps=1e-4",
-         {1, 128, 8, 8}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 511, 611, 711},
+        {"L0_S1_011",
+         "NCHW bf16 shape=(1,128,8,8) eps=1e-4",
+         {1, 128, 8, 8},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         511,
+         611,
+         711},
 
         // L0_S1_I3_005: NCHW bf16 多batch
-        {"L0_S1_I3_005", "NCHW bf16 多batch shape=(4,32,16,16) eps=1e-4",
-         {4, 32, 16, 16}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 512, 612, 712},
+        {"L0_S1_I3_005",
+         "NCHW bf16 多batch shape=(4,32,16,16) eps=1e-4",
+         {4, 32, 16, 16},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         512,
+         612,
+         712},
 
         // ================================================================
         // bf16 数据类型测试 (NHWC format)
         // ================================================================
 
         // L0_S1_I3_006: NHWC bf16 基础shape
-        {"L0_S1_I3_006", "NHWC bf16 基础shape=(2,32,32,64) eps=1e-4",
-         {2, 32, 32, 64}, DataFormat::NHWC, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 513, 613, 713},
+        {"L0_S1_I3_006",
+         "NHWC bf16 基础shape=(2,32,32,64) eps=1e-4",
+         {2, 32, 32, 64},
+         DataFormat::NHWC,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         513,
+         613,
+         713},
 
         // L0_S1_I3_007: NHWC bf16 小shape
-        {"L0_S1_I3_007", "NHWC bf16 shape=(1,8,8,32) eps=1e-4",
-         {1, 8, 8, 32}, DataFormat::NHWC, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 514, 614, 714},
+        {"L0_S1_I3_007",
+         "NHWC bf16 shape=(1,8,8,32) eps=1e-4",
+         {1, 8, 8, 32},
+         DataFormat::NHWC,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         514,
+         614,
+         714},
 
         // ================================================================
         // bf16 数据类型测试 (NC1HWC0 format)
         // ================================================================
 
         // L0_S1_I3_008: NC1HWC0 bf16 基础shape
-        {"L0_S1_I3_008", "NC1HWC0 bf16 基础shape=(2,4,32,32,16) eps=1e-4",
-         {2, 4, 32, 32, 16}, DataFormat::NC1HWC0, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 515, 615, 715},
+        {"L0_S1_I3_008",
+         "NC1HWC0 bf16 基础shape=(2,4,32,32,16) eps=1e-4",
+         {2, 4, 32, 32, 16},
+         DataFormat::NC1HWC0,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         515,
+         615,
+         715},
 
         // L0_S1_I3_009: NC1HWC0 bf16 小spatial
-        {"L0_S1_I3_009", "NC1HWC0 bf16 shape=(1,4,16,16,16) eps=1e-4",
-         {1, 4, 16, 16, 16}, DataFormat::NC1HWC0, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 516, 616, 716},
+        {"L0_S1_I3_009",
+         "NC1HWC0 bf16 shape=(1,4,16,16,16) eps=1e-4",
+         {1, 4, 16, 16, 16},
+         DataFormat::NC1HWC0,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         516,
+         616,
+         716},
 
         // ================================================================
         // format x dtype 交叉覆盖 (L0_S5)
         // ================================================================
 
         // L0_S5_001: NCHW fp16 交叉
-        {"L0_S5_001", "format交叉 NCHW fp16 shape=(2,64,16,16) eps=1e-4",
-         {2, 64, 16, 16}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 520, 620, 720},
+        {"L0_S5_001",
+         "format交叉 NCHW fp16 shape=(2,64,16,16) eps=1e-4",
+         {2, 64, 16, 16},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         520,
+         620,
+         720},
 
         // L0_S5_002: NCHW bf16 交叉
-        {"L0_S5_002", "format交叉 NCHW bf16 shape=(2,64,16,16) eps=1e-4",
-         {2, 64, 16, 16}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 521, 621, 721},
+        {"L0_S5_002",
+         "format交叉 NCHW bf16 shape=(2,64,16,16) eps=1e-4",
+         {2, 64, 16, 16},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         521,
+         621,
+         721},
 
         // L0_S5_005: NC1HWC0 fp16 交叉
-        {"L0_S5_005", "format交叉 NC1HWC0 fp16 shape=(2,4,16,16,16) eps=1e-4",
-         {2, 4, 16, 16, 16}, DataFormat::NC1HWC0, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 522, 622, 722},
+        {"L0_S5_005",
+         "format交叉 NC1HWC0 fp16 shape=(2,4,16,16,16) eps=1e-4",
+         {2, 4, 16, 16, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         522,
+         622,
+         722},
 
         // ================================================================
         // 边界用例 - 极小shape
         // ================================================================
 
         // L0_S4_I3_001: 最小shape fp16
-        {"L0_S4_I3_001", "最小shape fp16 shape=(1,1,1,1) eps=1e-4",
-         {1, 1, 1, 1}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 530, 630, 730},
+        {"L0_S4_I3_001",
+         "最小shape fp16 shape=(1,1,1,1) eps=1e-4",
+         {1, 1, 1, 1},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         530,
+         630,
+         730},
 
         // L0_S4_I3_002: 最小shape bf16
-        {"L0_S4_I3_002", "最小shape bf16 shape=(1,1,1,1) eps=1e-4",
-         {1, 1, 1, 1}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 531, 631, 731},
+        {"L0_S4_I3_002",
+         "最小shape bf16 shape=(1,1,1,1) eps=1e-4",
+         {1, 1, 1, 1},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         531,
+         631,
+         731},
 
         // L0_S4_I3_003: 极小shape NHWC fp16
-        {"L0_S4_I3_003", "极小shape NHWC fp16 shape=(1,1,1,1) eps=1e-4",
-         {1, 1, 1, 1}, DataFormat::NHWC, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 532, 632, 732},
+        {"L0_S4_I3_003",
+         "极小shape NHWC fp16 shape=(1,1,1,1) eps=1e-4",
+         {1, 1, 1, 1},
+         DataFormat::NHWC,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         532,
+         632,
+         732},
 
         // L0_S4_I3_004: 极小shape NC1HWC0 fp32
-        {"L0_S4_I3_004", "极小shape NC1HWC0 fp32 shape=(1,1,1,1,16) eps=1e-4",
-         {1, 1, 1, 1, 16}, DataFormat::NC1HWC0, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 533, 633, 733},
+        {"L0_S4_I3_004",
+         "极小shape NC1HWC0 fp32 shape=(1,1,1,1,16) eps=1e-4",
+         {1, 1, 1, 1, 16},
+         DataFormat::NC1HWC0,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         533,
+         633,
+         733},
 
         // ================================================================
         // 边界用例 - channel=1
         // ================================================================
 
         // L0_S4_I3_005: 单通道 fp16
-        {"L0_S4_I3_005", "单通道C=1 fp16 shape=(2,1,32,32) eps=1e-4",
-         {2, 1, 32, 32}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 534, 634, 734},
+        {"L0_S4_I3_005",
+         "单通道C=1 fp16 shape=(2,1,32,32) eps=1e-4",
+         {2, 1, 32, 32},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         534,
+         634,
+         734},
 
         // L0_S4_I3_006: 单通道 bf16
-        {"L0_S4_I3_006", "单通道C=1 bf16 shape=(2,1,32,32) eps=1e-4",
-         {2, 1, 32, 32}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 535, 635, 735},
+        {"L0_S4_I3_006",
+         "单通道C=1 bf16 shape=(2,1,32,32) eps=1e-4",
+         {2, 1, 32, 32},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         535,
+         635,
+         735},
 
         // L0_S4_I3_007: 单通道 NHWC fp32
-        {"L0_S4_I3_007", "单通道C=1 NHWC fp32 shape=(2,32,32,1) eps=1e-4",
-         {2, 32, 32, 1}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 536, 636, 736},
+        {"L0_S4_I3_007",
+         "单通道C=1 NHWC fp32 shape=(2,32,32,1) eps=1e-4",
+         {2, 32, 32, 1},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         536,
+         636,
+         736},
 
         // ================================================================
         // 边界用例 - 大batch
         // ================================================================
 
         // L0_S4_I3_008: 大batch fp32
-        {"L0_S4_I3_008", "大batch fp32 shape=(16,64,8,8) eps=1e-4",
-         {16, 64, 8, 8}, DataFormat::NCHW, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 537, 637, 737},
+        {"L0_S4_I3_008",
+         "大batch fp32 shape=(16,64,8,8) eps=1e-4",
+         {16, 64, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         537,
+         637,
+         737},
 
         // L0_S4_I3_009: 大batch fp16
-        {"L0_S4_I3_009", "大batch fp16 shape=(16,64,8,8) eps=1e-4",
-         {16, 64, 8, 8}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 538, 638, 738},
+        {"L0_S4_I3_009",
+         "大batch fp16 shape=(16,64,8,8) eps=1e-4",
+         {16, 64, 8, 8},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         538,
+         638,
+         738},
 
         // L0_S4_I3_010: 大batch bf16
-        {"L0_S4_I3_010", "大batch bf16 shape=(16,64,8,8) eps=1e-4",
-         {16, 64, 8, 8}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 539, 639, 739},
+        {"L0_S4_I3_010",
+         "大batch bf16 shape=(16,64,8,8) eps=1e-4",
+         {16, 64, 8, 8},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         539,
+         639,
+         739},
 
         // ================================================================
         // 边界用例 - 非对齐shape + 非fp32 dtype
         // ================================================================
 
         // L0_S4_I3_011: 非对齐HW fp16
-        {"L0_S4_I3_011", "非对齐HW=49 fp16 shape=(2,64,7,7) eps=1e-4",
-         {2, 64, 7, 7}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 540, 640, 740},
+        {"L0_S4_I3_011",
+         "非对齐HW=49 fp16 shape=(2,64,7,7) eps=1e-4",
+         {2, 64, 7, 7},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         540,
+         640,
+         740},
 
         // L0_S4_I3_012: 非对齐C bf16
-        {"L0_S4_I3_012", "非对齐C=33 bf16 shape=(2,33,8,8) eps=1e-4",
-         {2, 33, 8, 8}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 541, 641, 741},
+        {"L0_S4_I3_012",
+         "非对齐C=33 bf16 shape=(2,33,8,8) eps=1e-4",
+         {2, 33, 8, 8},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         541,
+         641,
+         741},
 
         // L0_S4_I3_013: 非对齐C NHWC fp16
-        {"L0_S4_I3_013", "非对齐C=33 NHWC fp16 shape=(2,8,8,33) eps=1e-4",
-         {2, 8, 8, 33}, DataFormat::NHWC, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 542, 642, 742},
+        {"L0_S4_I3_013",
+         "非对齐C=33 NHWC fp16 shape=(2,8,8,33) eps=1e-4",
+         {2, 8, 8, 33},
+         DataFormat::NHWC,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         542,
+         642,
+         742},
 
         // ================================================================
         // 边界用例 - H=1/W=1 退化shape + 非fp32 dtype
         // ================================================================
 
         // L0_S4_I3_014: H=W=1 fp16
-        {"L0_S4_I3_014", "H=W=1退化 fp16 shape=(2,64,1,1) eps=1e-4",
-         {2, 64, 1, 1}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 543, 643, 743},
+        {"L0_S4_I3_014",
+         "H=W=1退化 fp16 shape=(2,64,1,1) eps=1e-4",
+         {2, 64, 1, 1},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         543,
+         643,
+         743},
 
         // L0_S4_I3_015: H=W=1 bf16
-        {"L0_S4_I3_015", "H=W=1退化 bf16 shape=(2,64,1,1) eps=1e-4",
-         {2, 64, 1, 1}, DataFormat::NCHW, DType::BFLOAT16, 1e-4f, 4e-3, 4e-3, 544, 644, 744},
+        {"L0_S4_I3_015",
+         "H=W=1退化 bf16 shape=(2,64,1,1) eps=1e-4",
+         {2, 64, 1, 1},
+         DataFormat::NCHW,
+         DType::BFLOAT16,
+         1e-4f,
+         4e-3,
+         4e-3,
+         544,
+         644,
+         744},
 
         // ================================================================
         // 边界用例 - 大通道数
         // ================================================================
 
         // L0_S4_I3_016: 大通道 fp32
-        {"L0_S4_I3_016", "大通道C=512 fp32 shape=(1,512,4,4) eps=1e-4",
-         {1, 512, 4, 4}, DataFormat::NCHW, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 545, 645, 745},
+        {"L0_S4_I3_016",
+         "大通道C=512 fp32 shape=(1,512,4,4) eps=1e-4",
+         {1, 512, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         545,
+         645,
+         745},
 
         // L0_S4_I3_017: 大通道 NHWC fp32
-        {"L0_S4_I3_017", "大通道C=512 NHWC fp32 shape=(1,4,4,512) eps=1e-4",
-         {1, 4, 4, 512}, DataFormat::NHWC, DType::FLOAT32, 1e-4f, 1e-4, 1e-4, 546, 646, 746},
+        {"L0_S4_I3_017",
+         "大通道C=512 NHWC fp32 shape=(1,4,4,512) eps=1e-4",
+         {1, 4, 4, 512},
+         DataFormat::NHWC,
+         DType::FLOAT32,
+         1e-4f,
+         1e-4,
+         1e-4,
+         546,
+         646,
+         746},
 
         // L0_S4_I3_018: 大通道 fp16
-        {"L0_S4_I3_018", "大通道C=256 fp16 shape=(1,256,4,4) eps=1e-4",
-         {1, 256, 4, 4}, DataFormat::NCHW, DType::FLOAT16, 1e-4f, 1e-3, 1e-3, 547, 647, 747},
+        {"L0_S4_I3_018",
+         "大通道C=256 fp16 shape=(1,256,4,4) eps=1e-4",
+         {1, 256, 4, 4},
+         DataFormat::NCHW,
+         DType::FLOAT16,
+         1e-4f,
+         1e-3,
+         1e-3,
+         547,
+         647,
+         747},
     };
 }
 
@@ -1236,7 +1815,8 @@ std::vector<TestCase> GetIteration3TestCases() {
 // main
 // ============================================================================
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     LOG_PRINT("\n========================================");
     LOG_PRINT("BnInferGrad 算子 ST 测试 (迭代一 + 迭代二 + 迭代三)");
     LOG_PRINT("========================================");
@@ -1278,15 +1858,19 @@ int main(int argc, char* argv[]) {
     for (const auto& tc : iter1_cases) {
 #ifdef USE_MOCK_ACLNN
         if (RunTest(tc)) {
-            passed++; iter1_passed++;
+            passed++;
+            iter1_passed++;
         } else {
-            failed++; iter1_failed++;
+            failed++;
+            iter1_failed++;
         }
 #else
         if (RunTest(tc, stream)) {
-            passed++; iter1_passed++;
+            passed++;
+            iter1_passed++;
         } else {
-            failed++; iter1_failed++;
+            failed++;
+            iter1_failed++;
         }
 #endif
     }
@@ -1306,15 +1890,19 @@ int main(int argc, char* argv[]) {
     for (const auto& tc : iter2_cases) {
 #ifdef USE_MOCK_ACLNN
         if (RunTest(tc)) {
-            passed++; iter2_passed++;
+            passed++;
+            iter2_passed++;
         } else {
-            failed++; iter2_failed++;
+            failed++;
+            iter2_failed++;
         }
 #else
         if (RunTest(tc, stream)) {
-            passed++; iter2_passed++;
+            passed++;
+            iter2_passed++;
         } else {
-            failed++; iter2_failed++;
+            failed++;
+            iter2_failed++;
         }
 #endif
     }
@@ -1334,15 +1922,19 @@ int main(int argc, char* argv[]) {
     for (const auto& tc : iter3_cases) {
 #ifdef USE_MOCK_ACLNN
         if (RunTest(tc)) {
-            passed++; iter3_passed++;
+            passed++;
+            iter3_passed++;
         } else {
-            failed++; iter3_failed++;
+            failed++;
+            iter3_failed++;
         }
 #else
         if (RunTest(tc, stream)) {
-            passed++; iter3_passed++;
+            passed++;
+            iter3_passed++;
         } else {
-            failed++; iter3_failed++;
+            failed++;
+            iter3_failed++;
         }
 #endif
     }

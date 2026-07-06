@@ -30,8 +30,7 @@ struct PoolShape {
     int64_t hstride;
     int64_t wstride;
 
-    __aicore__ inline PoolShape()
-    {}
+    __aicore__ inline PoolShape() {}
 
     __aicore__ inline PoolShape(int64_t d, int64_t h, int64_t w)
         : d(d), h(h), w(w), nstride(d * h * w), dstride(h * w), hstride(w), wstride(1)
@@ -46,8 +45,7 @@ struct Index {
     int64_t wstart;
     int64_t wend;
 
-    __aicore__ inline Index()
-    {}
+    __aicore__ inline Index() {}
 
     __aicore__ inline Index(int64_t dstart, int64_t dend, int64_t hstart, int64_t hend, int64_t wstart, int64_t wend)
         : dstart(dstart), dend(dend), hstart(hstart), hend(hend), wstart(wstart), wend(wend)
@@ -62,8 +60,7 @@ struct IndexBuffer {
     TBuf<TPosition::VECCALC> startWIndexBuf;
     TBuf<TPosition::VECCALC> endWIndexBuf;
 
-    __aicore__ inline IndexBuffer()
-    {}
+    __aicore__ inline IndexBuffer() {}
 };
 
 __aicore__ inline int64_t StartIndex(int64_t idx, int64_t osize, int64_t isize)
@@ -81,8 +78,8 @@ __aicore__ inline int64_t StartIndexToOffset(const Index& index, const PoolShape
     return index.dstart * shape.dstride + index.hstart * shape.hstride + index.wstart * shape.wstride;
 }
 
-__aicore__ inline void OutputOffsetToInputIndex(
-    int64_t offset, const PoolShape& outputShape, const PoolShape& inputShape, Index& index)
+__aicore__ inline void OutputOffsetToInputIndex(int64_t offset, const PoolShape& outputShape,
+                                                const PoolShape& inputShape, Index& index)
 {
     int64_t od = offset % outputShape.nstride / outputShape.dstride;
     int64_t oh = offset % outputShape.dstride / outputShape.hstride;
@@ -96,8 +93,8 @@ __aicore__ inline void OutputOffsetToInputIndex(
     index.wend = EndIndex(ow, outputShape.w, inputShape.w);
 }
 
-__aicore__ inline void CalculateIndex(
-    IndexBuffer& indexBuf, PoolShape& inputShape, PoolShape& outputShape, int64_t offset, int64_t len)
+__aicore__ inline void CalculateIndex(IndexBuffer& indexBuf, PoolShape& inputShape, PoolShape& outputShape,
+                                      int64_t offset, int64_t len)
 {
     LocalTensor<int64_t> startDIndexLocal = indexBuf.startDIndexBuf.Get<int64_t>();
     LocalTensor<int64_t> endDIndexLocal = indexBuf.endDIndexBuf.Get<int64_t>();

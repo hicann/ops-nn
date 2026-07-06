@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file avg_pool_big_kernel_tiling.cpp
-* \brief big kernel imply for avg_pool
-*/
+ * \file avg_pool_big_kernel_tiling.cpp
+ * \brief big kernel imply for avg_pool
+ */
 
 #include "platform_util.h"
 #include "util/math_util.h"
@@ -19,8 +19,7 @@
 #include "log/log.h"
 #include "avg_pool_big_kernel_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace AscendC;
 
 static constexpr uint64_t AVG_POOL_BIG_KERNEL_FORMAT_NCHW = 511110;
@@ -41,12 +40,15 @@ bool AvgPoolCommonBigKernelTiling::IsCapable()
     if (inputData_.inputFormat != ge::Format::FORMAT_NCHW) {
         return false;
     }
-    if ((inputData_.stride[W_DIM] < inputData_.kernelSize[W_DIM] / EIGHT || inputData_.stride[W_DIM] < SIMT_STRIDE_THREHOLD) &&
+    if ((inputData_.stride[W_DIM] < inputData_.kernelSize[W_DIM] / EIGHT ||
+         inputData_.stride[W_DIM] < SIMT_STRIDE_THREHOLD) &&
         (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] < SIMT_kSIZE_THREHOLD) &&
-        (inputData_.batches * inputData_.channels * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] > NCHW_THREHOLD)) {
+        (inputData_.batches * inputData_.channels * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] >
+         NCHW_THREHOLD)) {
         return false;
     }
-    if (inputData_.batches * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] < static_cast<int64_t>(coreNum_ * TWO)) {
+    if (inputData_.batches * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <
+        static_cast<int64_t>(coreNum_ * TWO)) {
         return true;
     }
     if (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.dtypeSize < NUM256) {
@@ -83,8 +85,7 @@ void AvgPoolCommonBigKernelTiling::DoUBTiling()
 void AvgPoolCommonBigKernelTiling::SetTilingData()
 {
     OP_LOGD(context_, "AvgPoolCommonBigKernelTiling SetTilingData begin.");
-    AvgPool::AvgPoolBigKernelTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolBigKernelTilingData>();
+    AvgPool::AvgPoolBigKernelTilingData* tilingData = context_->GetTilingData<AvgPool::AvgPoolBigKernelTilingData>();
 
     tilingData->hInDim = inputData_.inputShape[H_DIM];
     tilingData->wInDim = inputData_.inputShape[W_DIM];
@@ -116,10 +117,7 @@ ge::graphStatus AvgPoolCommonBigKernelTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AvgPoolCommonBigKernelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AvgPoolCommonBigKernelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AvgPoolCommonBigKernelTiling::GetWorkspaceSize()
 {
@@ -139,8 +137,7 @@ ge::graphStatus AvgPoolCommonBigKernelTiling::PostTiling()
 
 void AvgPoolCommonBigKernelTiling::DumpTilingInfo()
 {
-    AvgPool::AvgPoolBigKernelTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolBigKernelTilingData>();
+    AvgPool::AvgPoolBigKernelTilingData* tilingData = context_->GetTilingData<AvgPool::AvgPoolBigKernelTilingData>();
     std::ostringstream str;
     str << " hInDim:" << tilingData->hInDim;
     str << " wInDim:" << tilingData->wInDim;
@@ -171,10 +168,7 @@ ge::graphStatus AvgPoolBigKernelTiling::GetPlatformInfo()
     return GetAvgPoolPlatformInfo(context_, ubSize_, coreNum_);
 }
 
-ge::graphStatus AvgPoolBigKernelTiling::GetShapeAttrsInfo()
-{
-    return GetAvgPoolShapeAttrsInfo(context_, inputData_);
-}
+ge::graphStatus AvgPoolBigKernelTiling::GetShapeAttrsInfo() { return GetAvgPoolShapeAttrsInfo(context_, inputData_); }
 
 //////////////////////////////// AvgPoolV2BigKernelTiling /////////////////////////////////
 ge::graphStatus AvgPoolV2BigKernelTiling::GetPlatformInfo()
@@ -190,4 +184,4 @@ ge::graphStatus AvgPoolV2BigKernelTiling::GetShapeAttrsInfo()
 REGISTER_TILING_TEMPLATE("AvgPoolV2", AvgPoolV2BigKernelTiling, 2);
 REGISTER_TILING_TEMPLATE("AvgPool", AvgPoolBigKernelTiling, 2);
 
-}  // namespace optiling
+} // namespace optiling

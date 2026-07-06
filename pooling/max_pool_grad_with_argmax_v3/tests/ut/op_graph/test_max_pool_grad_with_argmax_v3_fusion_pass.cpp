@@ -25,7 +25,7 @@ using namespace fusion;
 using namespace ops;
 
 namespace {
-void SetPlatform(const std::string &soc)
+void SetPlatform(const std::string& soc)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
@@ -36,14 +36,13 @@ void SetPlatform(const std::string &soc)
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
 }
 
-es::EsTensorHolder CreatePoolGradNode(es::EsGraphBuilder &graphBuilder, const char *opType,
-    const es::EsTensorHolder &x, const es::EsTensorHolder &grad, const es::EsTensorHolder &argmax,
-    const std::vector<int64_t> &ksize, const std::vector<int64_t> &strides,
-    const std::vector<int64_t> &pads, const std::vector<int64_t> &dilation,
-    const bool setInvalidDilation = false, const char *v0Padding = "VALID")
+es::EsTensorHolder CreatePoolGradNode(es::EsGraphBuilder& graphBuilder, const char* opType, const es::EsTensorHolder& x,
+                                      const es::EsTensorHolder& grad, const es::EsTensorHolder& argmax,
+                                      const std::vector<int64_t>& ksize, const std::vector<int64_t>& strides,
+                                      const std::vector<int64_t>& pads, const std::vector<int64_t>& dilation,
+                                      const bool setInvalidDilation = false, const char* v0Padding = "VALID")
 {
-    auto CheckGraphSuccess = [](graphStatus status, const char *expr)
-    {
+    auto CheckGraphSuccess = [](graphStatus status, const char* expr) {
         if (status != GRAPH_SUCCESS) {
             ADD_FAILURE() << expr << " failed, status=" << status;
             return false;
@@ -51,30 +50,28 @@ es::EsTensorHolder CreatePoolGradNode(es::EsGraphBuilder &graphBuilder, const ch
         return true;
     };
 
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto node = es::CompliantNodeBuilder(graph)
                     .OpType(opType)
                     .Name(opType)
                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                        {"grad", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                        {"argmax", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                                  {"grad", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"argmax", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                    .IrDefAttrs({
-                        {"ksize", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
-                        {"strides", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
-                        {"padding", es::CompliantNodeBuilder::kEsAttrOptional, "VT_STRING", AttrValue()},
-                        {"pads", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
-                        {"dilation", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
-                        {"ceil_mode", es::CompliantNodeBuilder::kEsAttrOptional, "VT_BOOL", AttrValue()},
-                        {"dtype", es::CompliantNodeBuilder::kEsAttrOptional, "VT_INT", AttrValue()}})
+                    .IrDefAttrs({{"ksize", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
+                                 {"strides", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
+                                 {"padding", es::CompliantNodeBuilder::kEsAttrOptional, "VT_STRING", AttrValue()},
+                                 {"pads", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
+                                 {"dilation", es::CompliantNodeBuilder::kEsAttrOptional, "VT_LIST_INT", AttrValue()},
+                                 {"ceil_mode", es::CompliantNodeBuilder::kEsAttrOptional, "VT_BOOL", AttrValue()},
+                                 {"dtype", es::CompliantNodeBuilder::kEsAttrOptional, "VT_INT", AttrValue()}})
                     .InstanceOutputDataType("y", DT_FLOAT)
                     .InstanceOutputShape("y", {64, 32, 32, 32})
                     .InstanceOutputFormat("y", FORMAT_NCHW)
                     .Build();
 
-    if (!CheckGraphSuccess(
-            es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0),
-            "AddEdgeAndUpdatePeerDesc x")) {
+    if (!CheckGraphSuccess(es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0),
+                           "AddEdgeAndUpdatePeerDesc x")) {
         return {};
     }
     if (!CheckGraphSuccess(
@@ -121,11 +118,11 @@ es::EsTensorHolder CreatePoolGradNode(es::EsGraphBuilder &graphBuilder, const ch
         return {};
     }
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0);
     return es::EsTensorHolder(yHolder);
 }
 
-GNode FindNodeByType(const std::shared_ptr<Graph> &graph, const char *type)
+GNode FindNodeByType(const std::shared_ptr<Graph>& graph, const char* type)
 {
     for (auto node : graph->GetAllNodes()) {
         AscendString nodeType;
@@ -137,14 +134,14 @@ GNode FindNodeByType(const std::shared_ptr<Graph> &graph, const char *type)
     return GNode();
 }
 
-void ExpectNodeTypeNotFound(const std::shared_ptr<Graph> &graph, const char *type)
+void ExpectNodeTypeNotFound(const std::shared_ptr<Graph>& graph, const char* type)
 {
     GNode node = FindNodeByType(graph, type);
     AscendString nodeType;
     EXPECT_NE(node.GetType(nodeType), GRAPH_SUCCESS);
 }
 
-void CheckFusedNodeExists(const std::shared_ptr<Graph> &graph, bool expectFound)
+void CheckFusedNodeExists(const std::shared_ptr<Graph>& graph, bool expectFound)
 {
     bool found = false;
     for (auto node : graph->GetAllNodes()) {
@@ -161,10 +158,7 @@ void CheckFusedNodeExists(const std::shared_ptr<Graph> &graph, bool expectFound)
 
 class MaxPoolGradWithArgmaxV3FusionPassTest : public testing::Test {
 protected:
-    void SetUp() override
-    {
-        SetPlatform("Ascend950");
-    }
+    void SetUp() override { SetPlatform("Ascend950"); }
 };
 
 // ========== 旧版4个测试用例 ==========
@@ -175,8 +169,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmaxv3_fusion_pas
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NCHW, {1, 16, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {1, 16, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -191,8 +185,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmaxv3_fusion_pas
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NCHW, {1, 16, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {1, 16, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, true);
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1}, true);
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -207,8 +201,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmaxv3_fusion_pas
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NHWC, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NHWC, {1, 16, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NHWC, {1, 16, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -225,8 +219,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v1_to_v3_suc
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NCHW, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -242,8 +236,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v1_invalid_d
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NCHW, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, true);
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1}, true);
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -258,8 +252,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v1_nhwc_to_v
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NHWC, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NHWC, {64, 16, 16, 32});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NHWC, {64, 16, 16, 32});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -275,8 +269,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v2_nchw_to_v
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NCHW, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax,
-        {1, 1, 2, 3}, {1, 1, 2, 3}, {0, 2, 1, 0}, {1, 1, 2, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax, {1, 1, 2, 3}, {1, 1, 2, 3},
+                                {0, 2, 1, 0}, {1, 1, 2, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -292,8 +286,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v2_nhwc_to_v
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NHWC, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT16, FORMAT_NHWC, {64, 16, 16, 32});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NHWC, {64, 16, 16, 32});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -310,8 +304,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_unsupported_
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_NCHW, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -326,8 +320,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_unsupported_
     auto x = graphBuilder.CreateInput(0, "x", DT_INT32, FORMAT_NCHW, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_INT32, FORMAT_NCHW, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -342,8 +336,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v1_bf16_to_v
     auto x = graphBuilder.CreateInput(0, "x", DT_BF16, FORMAT_NCHW, {32, 16, 28, 28});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_BF16, FORMAT_NCHW, {32, 16, 14, 14});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {32, 16, 14, 14});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 3, 4, 1}, {1, 2, 5, 1}, {0, 2, 1, 0}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 3, 4, 1}, {1, 2, 5, 1},
+                                {0, 2, 1, 0}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -359,8 +353,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v2_bf16_nhwc
     auto x = graphBuilder.CreateInput(0, "x", DT_BF16, FORMAT_NHWC, {4, 20, 20, 64});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_BF16, FORMAT_NHWC, {4, 10, 10, 64});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NHWC, {4, 10, 10, 64});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax,
-        {1, 4, 2, 1}, {1, 3, 2, 1}, {0, 0, 1, 0}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax, {1, 4, 2, 1}, {1, 3, 2, 1},
+                                {0, 0, 1, 0}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -376,8 +370,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v1_zero_pad_
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {16, 64, 14, 14});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT16, FORMAT_NCHW, {16, 64, 7, 7});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {16, 64, 7, 7});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax,
-        {1, 2, 3, 1}, {1, 2, 3, 1}, {0, 0, 0, 0}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV1", x, grad, argmax, {1, 2, 3, 1}, {1, 2, 3, 1},
+                                {0, 0, 0, 0}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -393,8 +387,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v2_nchw_iden
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 8, 18, 18});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT16, FORMAT_NCHW, {2, 8, 9, 9});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_NCHW, {2, 8, 9, 9});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax,
-        {1, 1, 3, 3}, {1, 1, 2, 2}, {0, 1, 1, 0}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax, {1, 1, 3, 3}, {1, 1, 2, 2},
+                                {0, 1, 1, 0}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -410,8 +404,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v0_invalid_f
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_ND, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT, FORMAT_ND, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_ND, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmax", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {0, 0, 0, 0}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmax", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {0, 0, 0, 0}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
@@ -426,8 +420,8 @@ TEST_F(MaxPoolGradWithArgmaxV3FusionPassTest, maxpoolgradwithargmax_v2_invalid_f
     auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {64, 32, 32, 32});
     auto grad = graphBuilder.CreateInput(1, "grad", DT_FLOAT16, FORMAT_ND, {64, 32, 16, 16});
     auto argmax = graphBuilder.CreateInput(2, "argmax", DT_INT64, FORMAT_ND, {64, 32, 16, 16});
-    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax,
-        {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 1, 1, 1}, {1, 1, 1, 1});
+    auto y = CreatePoolGradNode(graphBuilder, "MaxPoolGradWithArgmaxV2", x, grad, argmax, {1, 2, 2, 1}, {1, 2, 2, 1},
+                                {1, 1, 1, 1}, {1, 1, 1, 1});
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;

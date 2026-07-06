@@ -30,9 +30,9 @@
 
 namespace optiling {
 namespace conv_ops_tiling {
+using conv_tiling::BoundType;
 using conv_tiling::IterateMNOrder;
 using conv_tiling::TPosition;
-using conv_tiling::BoundType;
 class Conv2dTilingCache : public ConvTilingCache<Conv2dCacheTilingData> {
 public:
     static Conv2dTilingCache& GetInstance()
@@ -43,15 +43,12 @@ public:
 };
 class Conv2dBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit Conv2dBaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {};
-    ~Conv2dBaseTiling() override {};
+    explicit Conv2dBaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){};
+    ~Conv2dBaseTiling() override{};
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
-    ge::graphStatus GetPlatformInfo() override {return ge::GRAPH_SUCCESS;};
+    bool IsCapable() override { return true; };
+    ge::graphStatus GetPlatformInfo() override { return ge::GRAPH_SUCCESS; };
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
@@ -66,11 +63,11 @@ protected:
     void SetNumBlocksRes();
     bool GetTilingFromRepo();
     bool QueryTilingBank(std::string socHardWareVersion, uint32_t aicoreNum);
-    bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
+    bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& tuningTiling);
     void TranslateApiTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void TranslateRunInfo(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
-    void GetTilingInputArgs(shared_ptr<void> &inputArgs, size_t &size);
+    void GetTilingInputArgs(shared_ptr<void>& inputArgs, size_t& size);
     uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
 
     void BasicBlock();
@@ -82,17 +79,18 @@ protected:
     unordered_set<pair<uint32_t, uint32_t>, pair_hash> BasicBlockGroupDimCandidates();
     unordered_set<pair<uint32_t, uint32_t>, pair_hash> BasicBlockFWDimCandidates();
     unordered_set<pair<uint32_t, uint32_t>, pair_hash> BasicBlockBatchMDimCandidates();
-    unordered_set<pair<uint32_t, uint32_t>, pair_hash> GenerateCandidates(
-        const uint32_t cores, const uint64_t cut1, const uint32_t cut2, const uint32_t calCut1,
-        const uint32_t calCut2) const;
-    void SetConv2dBasicBlockInfo(const vector<pair<uint32_t, uint32_t>> &ordered_candidates,
-        const vector<tuple<IterateMNOrder, bool, bool, bool, bool, bool, bool, float>> &strategies,
-        const vector<tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t>> &tileInfo, const int32_t &index);
-    void GenerateSingleCandidateCaseCommon(const uint32_t cores, const uint32_t dim,
-        const uint32_t cut2, unordered_set<pair<uint32_t, uint32_t>, pair_hash> &candidates) const;
-    void GenerateSingleCandidateCase(const uint32_t cores, const float candidateCut,
-        const uint64_t cut1, const uint32_t cut2, unordered_set<pair<uint32_t, uint32_t>,
-        pair_hash> &candidates) const;
+    unordered_set<pair<uint32_t, uint32_t>, pair_hash> GenerateCandidates(const uint32_t cores, const uint64_t cut1,
+                                                                          const uint32_t cut2, const uint32_t calCut1,
+                                                                          const uint32_t calCut2) const;
+    void SetConv2dBasicBlockInfo(
+        const vector<pair<uint32_t, uint32_t>>& ordered_candidates,
+        const vector<tuple<IterateMNOrder, bool, bool, bool, bool, bool, bool, float>>& strategies,
+        const vector<tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t>>& tileInfo, const int32_t& index);
+    void GenerateSingleCandidateCaseCommon(const uint32_t cores, const uint32_t dim, const uint32_t cut2,
+                                           unordered_set<pair<uint32_t, uint32_t>, pair_hash>& candidates) const;
+    void GenerateSingleCandidateCase(const uint32_t cores, const float candidateCut, const uint64_t cut1,
+                                     const uint32_t cut2,
+                                     unordered_set<pair<uint32_t, uint32_t>, pair_hash>& candidates) const;
     bool CheckSupportCacheTiling();
     void GetCacheTilingInputArgs();
     bool GetTilingFromCache();
@@ -169,8 +167,8 @@ private:
     ge::graphStatus CheckExtendDualOutputSpecial();
     ge::graphStatus GetFeatureFlag();
     void SelectMModeAlgorithm();
-    bool CmpFirstAdjustMnTile(int64_t availableL1Size, int64_t& mTile, int64_t& nTile,
-        uint64_t basicBlockM, uint64_t basicBlockN);
+    bool CmpFirstAdjustMnTile(int64_t availableL1Size, int64_t& mTile, int64_t& nTile, uint64_t basicBlockM,
+                              uint64_t basicBlockN);
     void EnableInnerBatchBasicBlock(int64_t availableL1Size);
     void GetInitBasicBlockMN(uint64_t& basicBlockM, uint64_t& basicBlockN);
     void SetQuantFlag();
@@ -185,7 +183,7 @@ private:
     void PrintTilingInfo() const;
     void PrintOpTilingData();
     void PrintLibApiTilingData();
-    void PrintLibApiTilingDataPartOne(std::stringstream &ss);
+    void PrintLibApiTilingDataPartOne(std::stringstream& ss);
     void Conv2dOpTilingSetShape();
     void Conv2dOpTilingSetAttr();
     void Conv2dApiTilingSetShape();
@@ -215,8 +213,8 @@ private:
 
     int32_t BasicBlockSortFWDimScores(vector<tuple<uint64_t, float, uint32_t, double>>& scores);
     ge::graphStatus GetConv2DAxisPosInfo();
-    bool GetPosByFormat(const ge::Format format, const std::string &pos, const std::string &inputStr,
-        size_t &posIdx) const;
+    bool GetPosByFormat(const ge::Format format, const std::string& pos, const std::string& inputStr,
+                        size_t& posIdx) const;
     bool IsEnableC04();
     void SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     uint64_t GetC04UbLoadMaxNsize();
@@ -248,6 +246,6 @@ private:
     void SetUnionDataXt(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void PrintInputArgs(shared_ptr<tuningtiling::Conv2DV2InputArgs> conv2DInput);
 };
-}
-}
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_CONV2D_V2_BASE_TILING_H
+} // namespace conv_ops_tiling
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_CONV2D_V2_BASE_TILING_H

@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file foreach_mul_scalar_inplace_regbase.h
  * \brief
@@ -25,8 +24,7 @@ using namespace AscendC;
 template <typename T, typename ScalarT, typename Tiling>
 class ForeachMulScalarInplaceRegbase
     : public ForeachUnaryScalarCastInplaceRegbase<T, ScalarT, Tiling,
-          ForeachMulScalarInplaceRegbase<T, ScalarT, Tiling>>
-{
+                                                  ForeachMulScalarInplaceRegbase<T, ScalarT, Tiling>> {
 public:
     template <typename U>
     __aicore__ inline void ApplyScalarOp(LocalTensor<U> dst, LocalTensor<U> src, U scalar, int64_t dataCount)

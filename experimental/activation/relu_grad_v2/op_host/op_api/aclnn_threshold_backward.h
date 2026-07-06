@@ -18,11 +18,11 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self,
-                                                             const aclScalar *threshold, aclTensor *out,
-                                                             uint64_t *workspaceSize, aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                             const aclScalar* threshold, aclTensor* out,
+                                                             uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnThresholdBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+ACLNN_API aclnnStatus aclnnThresholdBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                              const aclrtStream stream);
 
 #ifdef __cplusplus

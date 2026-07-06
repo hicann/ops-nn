@@ -78,17 +78,9 @@ struct BasicRunInfoTiling {
     uint32_t iterBatch = 0;
 };
 
-enum class BiasMode : uint32_t {
-    EXCLUEDE_FROM_TEMPLATE = 0,
-    CUBE_BIAS_BF16_TEMPLATE = 1,
-    CUBE_BIAS_FP16_TEMPLATE = 2
-};
+enum class BiasMode : uint32_t { EXCLUEDE_FROM_TEMPLATE = 0, CUBE_BIAS_BF16_TEMPLATE = 1, CUBE_BIAS_FP16_TEMPLATE = 2 };
 
-enum class QMMApiLevel : uint32_t {
-    HIGH_LEVEL = 0,
-    BASIC_LEVEL = 1,
-    BLAZE_LEVEL = 2
-};
+enum class QMMApiLevel : uint32_t { HIGH_LEVEL = 0, BASIC_LEVEL = 1, BLAZE_LEVEL = 2 };
 
 inline bool IsTensorapiCapable()
 {
@@ -101,16 +93,17 @@ inline bool IsTensorapiCapable()
 
 inline bool IsCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
-    const auto aDtype = (inputParams.aDtype == ge::DT_INT4 && inputParams.bDtype == ge::DT_INT4) ?
-        ge::DT_INT8 : inputParams.aDtype;
-    bool isCubePerTensor =
-        inputParams.isPerTensor &&
-        ((aDtype == ge::DT_INT8 && inputParams.biasDtype == ge::DT_INT32 && !inputParams.isPertoken) ||
-         ((aDtype == ge::DT_FLOAT8_E4M3FN || aDtype == ge::DT_FLOAT8_E5M2 || aDtype == ge::DT_HIFLOAT8) &&
-          (inputParams.scaleDtype == ge::DT_UINT64 || inputParams.scaleDtype == ge::DT_INT64)));
-    bool isCubePerChannel =
-        inputParams.isPerChannel && (inputParams.scaleDtype == ge::DT_UINT64 ||
-                                     inputParams.scaleDtype == ge::DT_INT64 || inputParams.cDtype == ge::DT_INT32);
+    const auto aDtype = (inputParams.aDtype == ge::DT_INT4 && inputParams.bDtype == ge::DT_INT4) ? ge::DT_INT8 :
+                                                                                                   inputParams.aDtype;
+    bool isCubePerTensor = inputParams.isPerTensor &&
+                           ((aDtype == ge::DT_INT8 && inputParams.biasDtype == ge::DT_INT32 &&
+                             !inputParams.isPertoken) ||
+                            ((aDtype == ge::DT_FLOAT8_E4M3FN || aDtype == ge::DT_FLOAT8_E5M2 ||
+                              aDtype == ge::DT_HIFLOAT8) &&
+                             (inputParams.scaleDtype == ge::DT_UINT64 || inputParams.scaleDtype == ge::DT_INT64)));
+    bool isCubePerChannel = inputParams.isPerChannel &&
+                            (inputParams.scaleDtype == ge::DT_UINT64 || inputParams.scaleDtype == ge::DT_INT64 ||
+                             inputParams.cDtype == ge::DT_INT32);
     return (inputParams.isDoubleScale && !inputParams.isPerChannel) || isCubePerTensor || isCubePerChannel;
 }
 
@@ -131,8 +124,7 @@ inline bool IsPerblockBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 
 inline bool IsFp8OrHif8TTFloatBiasMix(const QuantBatchMatmulInfo& inputParams)
 {
-    bool isFp8OrHif8Input = inputParams.aDtype == ge::DT_FLOAT8_E4M3FN ||
-                            inputParams.aDtype == ge::DT_FLOAT8_E5M2 ||
+    bool isFp8OrHif8Input = inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2 ||
                             inputParams.aDtype == ge::DT_HIFLOAT8;
     bool isPertensorDoubleScale = inputParams.isDoubleScale && inputParams.isPerTensor && !inputParams.isPerChannel;
     bool isFp32Scale = inputParams.scaleDtype == ge::DT_FLOAT && inputParams.perTokenScaleDtype == ge::DT_FLOAT;
@@ -197,14 +189,12 @@ public:
                                    DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData);
     static void SetBasicLibApiTiling(const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
                                      DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData);
-    static bool CheckDtype(
-        gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
-        const QuantBatchMatmulV3CompileInfo& compileInfo);
-    static bool CheckShape(
-        gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
-        const QuantBatchMatmulV3CompileInfo& compileInfo, const std::vector<gert::Shape *>& mandatoryShape,
-        const gert::StorageShape *biasShape, const gert::StorageShape *pertokenShape,
-        const std::vector<int64_t>& dimValueOfMKN);
+    static bool CheckDtype(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams,
+                           const QuantBatchMatmulV3CompileInfo& compileInfo);
+    static bool CheckShape(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams,
+                           const QuantBatchMatmulV3CompileInfo& compileInfo,
+                           const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
+                           const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN);
     static uint64_t GetKernelType(const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
                                   bool isBf16Mix, bool isAFullLoad, bool isBFullLoad, bool isABFullLoad);
     static uint64_t GetBiasMode(const QuantBatchMatmulInfo& inputParams);

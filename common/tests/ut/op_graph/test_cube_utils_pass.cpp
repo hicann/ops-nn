@@ -41,7 +41,8 @@ constexpr uint32_t TWOINPUTSIZE = 2U;
 
 class cube_utils_ut : public testing::Test {
 protected:
-    static void SetUpTestCase() {
+    static void SetUpTestCase()
+    {
         std::cout << "cube_utils_ut SetUp" << std::endl;
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
@@ -68,12 +69,11 @@ protected:
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfos);
     }
 
-    static void TearDownTestCase() {
-        std::cout << "cube_utils_ut TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "cube_utils_ut TearDown" << std::endl; }
 
     // 创建常量节点
-    static ge::GNodePtr CreateConstNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateConstNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc tensor_desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
         tensor_desc.SetOriginFormat(ge::FORMAT_NCHW);
@@ -92,22 +92,22 @@ protected:
         }
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Const")
-            .Name(opname.c_str())
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Const")
+                             .Name(opname.c_str())
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateOutputDesc(0, tensor_desc);
-        ge::Tensor weight_tensor(tensor_desc,
-            reinterpret_cast<const uint8_t*>(data.data()),
-            data.size() * sizeof(float));
+        ge::Tensor weight_tensor(tensor_desc, reinterpret_cast<const uint8_t*>(data.data()),
+                                 data.size() * sizeof(float));
         node.SetAttr(kAscendNameWeightAsc, weight_tensor);
 
         return std::make_shared<ge::GNode>(node);
     }
 
     // 创建 Conv2D 节点
-    static ge::GNodePtr CreateConv2DNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateConv2DNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
@@ -115,14 +115,12 @@ protected:
         auto weight_node = CreateConstNode(graph, opname + "_weight");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Conv2D")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"filter", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Conv2D")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"filter", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -135,16 +133,17 @@ protected:
     }
 
     // 创建 Relu 节点
-    static ge::GNodePtr CreateReluNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateReluNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Relu")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Relu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -153,7 +152,8 @@ protected:
     }
 
     // 创建 Quant 节点
-    static ge::GNodePtr CreateQuantNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateQuantNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_INT8);
 
@@ -161,14 +161,12 @@ protected:
         auto scale_node = CreateConstNode(graph, opname + "_scale");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendQuant")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendQuant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -186,23 +184,21 @@ protected:
     }
 
     // 创建 Dequant 节点
-    static ge::GNodePtr CreateDequantNode(ge::Graph &graph, const std::string &opname,
-                                          bool hasattr = false,
-                                          float scale = 0.0f, float offset = 0.0f) {
+    static ge::GNodePtr CreateDequantNode(ge::Graph& graph, const std::string& opname, bool hasattr = false,
+                                          float scale = 0.0f, float offset = 0.0f)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_constinput");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendDequant")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"deq_scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendDequant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"deq_scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -219,17 +215,17 @@ protected:
     }
 
     // 创建 LeakyRelu 节点
-    static ge::GNodePtr CreateLeakyReluNode(ge::Graph &graph, const std::string &opname,
-                                             float negative_slope = 0.1f) {
+    static ge::GNodePtr CreateLeakyReluNode(ge::Graph& graph, const std::string& opname, float negative_slope = 0.1f)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("LeakyRelu")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("LeakyRelu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -239,21 +235,20 @@ protected:
     }
 
     // 创建 PReLU 节点
-    static ge::GNodePtr CreatePReluNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreatePReluNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_slope");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("PRelu")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("PRelu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -265,16 +260,17 @@ protected:
     }
 
     // 创建 Relu6 节点
-    static ge::GNodePtr CreateRelu6Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateRelu6Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Relu6")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Relu6")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -283,19 +279,19 @@ protected:
     }
 
     // 创建 Cast 节点
-    static ge::GNodePtr CreateCastNode(ge::Graph &graph, const std::string &opname,
-                                        ge::DataType src_dtype = ge::DT_FLOAT,
-                                        ge::DataType dst_dtype = ge::DT_FLOAT16) {
+    static ge::GNodePtr CreateCastNode(ge::Graph& graph, const std::string& opname,
+                                       ge::DataType src_dtype = ge::DT_FLOAT, ge::DataType dst_dtype = ge::DT_FLOAT16)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc_in(shape, ge::FORMAT_NCHW, src_dtype);
         ge::TensorDesc desc_out(shape, ge::FORMAT_NCHW, dst_dtype);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Cast")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Cast")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc_in);
         node.UpdateOutputDesc(0, desc_out);
@@ -304,18 +300,19 @@ protected:
     }
 
     // 创建 TransData 节点
-    static ge::GNodePtr CreateTransDataNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateTransDataNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape_in({1, 64, 112, 112});
         ge::Shape shape_out({1, 64, 112, 112});
         ge::TensorDesc desc_in(shape_in, ge::FORMAT_FRACTAL_NZ, ge::DT_FLOAT16);
         ge::TensorDesc desc_out(shape_out, ge::FORMAT_ND, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("TransData")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("TransData")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc_in);
         node.UpdateOutputDesc(0, desc_out);
@@ -324,19 +321,20 @@ protected:
     }
 
     // 创建 AntiQuant 节点
-    static ge::GNodePtr CreateAntiQuantNode(ge::Graph &graph, const std::string &opname,
-                                            float scale = 4.0f, float offset = 8.0f) {
+    static ge::GNodePtr CreateAntiQuantNode(ge::Graph& graph, const std::string& opname, float scale = 4.0f,
+                                            float offset = 8.0f)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_inputconstnode");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendAntiQuant")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendAntiQuant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -349,21 +347,20 @@ protected:
     }
 
     // 创建 Add 节点 (Eltwise)
-    static ge::GNodePtr CreateAddNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateAddNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto inputnode_ptr = CreateAntiQuantNode(graph, opname + "_inputantinode");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Add")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Add")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -375,27 +372,28 @@ protected:
     }
 
     // 创建 PostCube 节点
-    static ge::GNodePtr CreatePostCubeNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreatePostCubeNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({1, 64, 112, 112});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("FixPipe")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x0", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x3", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x4", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x5", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x6", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x7", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x8", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x9", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("FixPipe")
+                             .Name(opname.c_str())
+                             .IrDefInputs({
+                                 {"x0", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                 {"x1", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x2", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x3", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x4", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x5", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x6", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x7", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x8", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x9", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                             })
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         for (size_t i = 0; i < 10; ++i) {
             node.UpdateInputDesc(i, desc);
@@ -406,14 +404,14 @@ protected:
     }
 
     // 连接两个节点
-    static void LinkNodes(ge::Graph &graph, const ge::GNodePtr &src, int src_idx,
-                          const ge::GNodePtr &dst, int dst_idx) {
+    static void LinkNodes(ge::Graph& graph, const ge::GNodePtr& src, int src_idx, const ge::GNodePtr& dst, int dst_idx)
+    {
         (void)graph.AddDataEdge(*src, src_idx, *dst, dst_idx);
     }
 
     // 创建 Conv -> Relu 链
-    static std::pair<ge::GNodePtr, ge::GNodePtr> BuildConvReluChain(
-        ge::Graph &graph, const std::string &prefix) {
+    static std::pair<ge::GNodePtr, ge::GNodePtr> BuildConvReluChain(ge::Graph& graph, const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto relu = CreateReluNode(graph, prefix + "_relu");
         LinkNodes(graph, conv, 0, relu, 0);
@@ -421,8 +419,9 @@ protected:
     }
 
     // 创建 Conv -> Relu -> Quant 链
-    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvReluQuantChain(
-        ge::Graph &graph, const std::string &prefix) {
+    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvReluQuantChain(ge::Graph& graph,
+                                                                                        const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto relu = CreateReluNode(graph, prefix + "_relu");
         auto quant = CreateQuantNode(graph, prefix + "_quant");
@@ -432,8 +431,9 @@ protected:
     }
 
     // 创建 Conv -> Dequant -> Relu 链
-    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantReluChain(
-        ge::Graph &graph, const std::string &prefix) {
+    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantReluChain(ge::Graph& graph,
+                                                                                          const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto dequant = CreateDequantNode(graph, prefix + "_dequant", true, 1.0f, 0.0f);
         auto relu = CreateReluNode(graph, prefix + "_relu");
@@ -443,8 +443,9 @@ protected:
     }
 
     // 创建 Conv -> Dequant -> PReLU 链
-    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantPReluChain(
-        ge::Graph &graph, const std::string &prefix) {
+    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantPReluChain(ge::Graph& graph,
+                                                                                           const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto dequant = CreateDequantNode(graph, prefix + "_dequant", true, 1.0f, 0.0f);
         auto prelu = CreatePReluNode(graph, prefix + "_prelu");
@@ -455,7 +456,8 @@ protected:
 
     // 创建 Conv -> Dequant -> LeakyRelu 链
     static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantLeakyReluChain(
-        ge::Graph &graph, const std::string &prefix) {
+        ge::Graph& graph, const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto dequant = CreateDequantNode(graph, prefix + "_dequant", true, 1.0f, 0.0f);
         auto leaky_relu = CreateLeakyReluNode(graph, prefix + "_leaky_relu", 0.1f);
@@ -465,8 +467,9 @@ protected:
     }
 
     // 创建 Conv -> Dequant -> Relu6 链
-    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantRelu6Chain(
-        ge::Graph &graph, const std::string &prefix) {
+    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantRelu6Chain(ge::Graph& graph,
+                                                                                           const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto dequant = CreateDequantNode(graph, prefix + "_dequant", true, 1.0f, 0.0f);
         auto relu6 = CreateRelu6Node(graph, prefix + "_relu6");
@@ -476,8 +479,9 @@ protected:
     }
 
     // 创建 Conv -> Dequant -> Quant 链
-    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantQuantChain(
-        ge::Graph &graph, const std::string &prefix) {
+    static std::tuple<ge::GNodePtr, ge::GNodePtr, ge::GNodePtr> BuildConvDequantQuantChain(ge::Graph& graph,
+                                                                                           const std::string& prefix)
+    {
         auto conv = CreateConv2DNode(graph, prefix + "_conv");
         auto dequant = CreateDequantNode(graph, prefix + "_dequant", true, 1.0f, 0.0f);
         auto quant = CreateQuantNode(graph, prefix + "_quant");
@@ -491,31 +495,36 @@ protected:
 // Test Suite: GetIsaArchVersionStr
 // ============================================================================
 
-TEST_F(cube_utils_ut, GetIsaArchVersionStr_V100) {
+TEST_F(cube_utils_ut, GetIsaArchVersionStr_V100)
+{
     PostCubeUtils post_cube_utils;
     std::string result = post_cube_utils.GetIsaArchVersionStr(ISAArchVersion::EN_ISA_ARCH_V100);
     EXPECT_EQ(result, "v100");
 }
 
-TEST_F(cube_utils_ut, GetIsaArchVersionStr_V200) {
+TEST_F(cube_utils_ut, GetIsaArchVersionStr_V200)
+{
     PostCubeUtils post_cube_utils;
     std::string result = post_cube_utils.GetIsaArchVersionStr(ISAArchVersion::EN_ISA_ARCH_V200);
     EXPECT_EQ(result, "v200");
 }
 
-TEST_F(cube_utils_ut, GetIsaArchVersionStr_V220) {
+TEST_F(cube_utils_ut, GetIsaArchVersionStr_V220)
+{
     PostCubeUtils post_cube_utils;
     std::string result = post_cube_utils.GetIsaArchVersionStr(ISAArchVersion::EN_ISA_ARCH_V220);
     EXPECT_EQ(result, "v220");
 }
 
-TEST_F(cube_utils_ut, GetIsaArchVersionStr_V300) {
+TEST_F(cube_utils_ut, GetIsaArchVersionStr_V300)
+{
     PostCubeUtils post_cube_utils;
     std::string result = post_cube_utils.GetIsaArchVersionStr(ISAArchVersion::EN_ISA_ARCH_V300);
     EXPECT_EQ(result, "v300");
 }
 
-TEST_F(cube_utils_ut, GetIsaArchVersionStr_V350) {
+TEST_F(cube_utils_ut, GetIsaArchVersionStr_V350)
+{
     PostCubeUtils post_cube_utils;
     std::string result = post_cube_utils.GetIsaArchVersionStr(ISAArchVersion::EN_ISA_ARCH_V350);
     EXPECT_EQ(result, "v350");
@@ -525,7 +534,8 @@ TEST_F(cube_utils_ut, GetIsaArchVersionStr_V350) {
 // Test Suite: ClearPasses
 // ============================================================================
 
-TEST_F(cube_utils_ut, ClearPasses_Empty) {
+TEST_F(cube_utils_ut, ClearPasses_Empty)
+{
     PostCubeUtils post_cube_utils;
     post_cube_utils.ClearPasses();
     EXPECT_TRUE(post_cube_utils.m_matchpasses_.empty());
@@ -534,7 +544,8 @@ TEST_F(cube_utils_ut, ClearPasses_Empty) {
     EXPECT_TRUE(post_cube_utils.unitmapindex_.empty());
 }
 
-TEST_F(cube_utils_ut, ClearPasses_WithData) {
+TEST_F(cube_utils_ut, ClearPasses_WithData)
+{
     PostCubeUtils post_cube_utils;
     // 手动添加一些数据
     ge::Graph graph("test_graph");
@@ -560,7 +571,8 @@ TEST_F(cube_utils_ut, ClearPasses_WithData) {
 // Test Suite: IsInWhitelist
 // ============================================================================
 
-TEST_F(cube_utils_ut, IsInWhitelist_Relu) {
+TEST_F(cube_utils_ut, IsInWhitelist_Relu)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu = CreateReluNode(graph, "relu1");
@@ -575,7 +587,8 @@ TEST_F(cube_utils_ut, IsInWhitelist_Relu) {
     EXPECT_FALSE(result);
 }
 
-TEST_F(cube_utils_ut, IsInWhitelist_PRelu) {
+TEST_F(cube_utils_ut, IsInWhitelist_PRelu)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto prelu = CreatePReluNode(graph, "prelu1");
@@ -589,7 +602,8 @@ TEST_F(cube_utils_ut, IsInWhitelist_PRelu) {
     EXPECT_FALSE(result);
 }
 
-TEST_F(cube_utils_ut, IsInWhitelist_LeakyRelu) {
+TEST_F(cube_utils_ut, IsInWhitelist_LeakyRelu)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto leaky_relu = CreateLeakyReluNode(graph, "leaky_relu1");
@@ -603,7 +617,8 @@ TEST_F(cube_utils_ut, IsInWhitelist_LeakyRelu) {
     EXPECT_FALSE(result);
 }
 
-TEST_F(cube_utils_ut, IsInWhitelist_Relu6) {
+TEST_F(cube_utils_ut, IsInWhitelist_Relu6)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu6 = CreateRelu6Node(graph, "relu6_1");
@@ -617,7 +632,8 @@ TEST_F(cube_utils_ut, IsInWhitelist_Relu6) {
     EXPECT_FALSE(result);
 }
 
-TEST_F(cube_utils_ut, IsInWhitelist_Quant) {
+TEST_F(cube_utils_ut, IsInWhitelist_Quant)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto quant = CreateQuantNode(graph, "quant1");
@@ -631,7 +647,8 @@ TEST_F(cube_utils_ut, IsInWhitelist_Quant) {
     EXPECT_FALSE(result);
 }
 
-TEST_F(cube_utils_ut, IsInWhitelist_Dequant) {
+TEST_F(cube_utils_ut, IsInWhitelist_Dequant)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto dequant = CreateDequantNode(graph, "dequant1", true, 1.0f, 0.0f);
@@ -649,7 +666,8 @@ TEST_F(cube_utils_ut, IsInWhitelist_Dequant) {
 // Test Suite: FiltrNodeStrategy
 // ============================================================================
 
-TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_FP16) {
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_FP16)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu = CreateReluNode(graph, "relu1");
@@ -663,7 +681,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_FP16) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_Int8) {
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_Int8)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu = CreateReluNode(graph, "relu1");
@@ -683,7 +702,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_Int8) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToFP16) {
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToFP16)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto cast = CreateCastNode(graph, "cast1", ge::DT_FLOAT, ge::DT_FLOAT16);
@@ -697,7 +717,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToFP16) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToBF16) {
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToBF16)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto cast = CreateCastNode(graph, "cast1", ge::DT_FLOAT, ge::DT_BF16);
@@ -711,7 +732,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToBF16) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, FiltrNodeStrategy_TransData_Valid) {
+TEST_F(cube_utils_ut, FiltrNodeStrategy_TransData_Valid)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto transdata = CreateTransDataNode(graph, "transdata1");
@@ -729,7 +751,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategy_TransData_Valid) {
 // Test Suite: GetMergeInputNodeType
 // ============================================================================
 
-TEST_F(cube_utils_ut, GetMergeInputNodeType_Conv2D) {
+TEST_F(cube_utils_ut, GetMergeInputNodeType_Conv2D)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -739,7 +762,8 @@ TEST_F(cube_utils_ut, GetMergeInputNodeType_Conv2D) {
     EXPECT_EQ(type, CONV2D);
 }
 
-TEST_F(cube_utils_ut, GetMergeInputNodeType_Dequant) {
+TEST_F(cube_utils_ut, GetMergeInputNodeType_Dequant)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto dequant = CreateDequantNode(graph, "dequant1", true, 1.0f, 0.0f);
@@ -749,7 +773,8 @@ TEST_F(cube_utils_ut, GetMergeInputNodeType_Dequant) {
     EXPECT_EQ(type, kAscendDequant);
 }
 
-TEST_F(cube_utils_ut, GetMergeInputNodeType_Relu) {
+TEST_F(cube_utils_ut, GetMergeInputNodeType_Relu)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu = CreateReluNode(graph, "relu1");
@@ -759,7 +784,8 @@ TEST_F(cube_utils_ut, GetMergeInputNodeType_Relu) {
     EXPECT_EQ(type, RELU);
 }
 
-TEST_F(cube_utils_ut, GetMergeInputNodeType_TransData) {
+TEST_F(cube_utils_ut, GetMergeInputNodeType_TransData)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -775,7 +801,8 @@ TEST_F(cube_utils_ut, GetMergeInputNodeType_TransData) {
 // Test Suite: GetEltWiseType
 // ============================================================================
 
-TEST_F(cube_utils_ut, GetEltWiseType_Add) {
+TEST_F(cube_utils_ut, GetEltWiseType_Add)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto add = CreateAddNode(graph, "add1");
@@ -790,7 +817,8 @@ TEST_F(cube_utils_ut, GetEltWiseType_Add) {
 // Test Suite: IsConfictWithSkipConfig
 // ============================================================================
 
-TEST_F(cube_utils_ut, IsConfictWithSkipConfig_EmptyIndex) {
+TEST_F(cube_utils_ut, IsConfictWithSkipConfig_EmptyIndex)
+{
     PostCubeUtils post_cube_utils;
     ge::CustomPassContext context;
     (void)post_cube_utils.ReadConfig(context);
@@ -801,7 +829,8 @@ TEST_F(cube_utils_ut, IsConfictWithSkipConfig_EmptyIndex) {
     EXPECT_TRUE(result);
 }
 
-TEST_F(cube_utils_ut, IsConfictWithSkipConfig_WithIndex) {
+TEST_F(cube_utils_ut, IsConfictWithSkipConfig_WithIndex)
+{
     PostCubeUtils post_cube_utils;
     ge::CustomPassContext context;
     (void)post_cube_utils.ReadConfig(context);
@@ -818,7 +847,8 @@ TEST_F(cube_utils_ut, IsConfictWithSkipConfig_WithIndex) {
 // Test Suite: GetPostCubeNodeList
 // ============================================================================
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_SingleConv_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_SingleConv_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -829,7 +859,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_SingleConv_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvRelu_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvRelu_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -840,7 +871,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvRelu_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvReluQuant_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvReluQuant_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu, quant] = BuildConvReluQuantChain(graph, "chain1");
@@ -851,7 +883,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvReluQuant_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantRelu_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantRelu_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, relu] = BuildConvDequantReluChain(graph, "chain1");
@@ -862,7 +895,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantRelu_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantPRelu_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantPRelu_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, prelu] = BuildConvDequantPReluChain(graph, "chain1");
@@ -873,7 +907,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantPRelu_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantLeakyRelu_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantLeakyRelu_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, leaky_relu] = BuildConvDequantLeakyReluChain(graph, "chain1");
@@ -884,7 +919,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantLeakyRelu_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantRelu6_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantRelu6_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, relu6] = BuildConvDequantRelu6Chain(graph, "chain1");
@@ -895,7 +931,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantRelu6_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantQuant_ReturnsSuccess) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantQuant_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, quant] = BuildConvDequantQuantChain(graph, "chain1");
@@ -906,7 +943,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_ConvDequantQuant_ReturnsSuccess) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GetPostCubeNodeList_Nullptr_ReturnsFailed) {
+TEST_F(cube_utils_ut, GetPostCubeNodeList_Nullptr_ReturnsFailed)
+{
     PostCubeUtils post_cube_utils;
     ge::GNodePtr null_conv = nullptr;
     ge::CustomPassContext context;
@@ -918,7 +956,8 @@ TEST_F(cube_utils_ut, GetPostCubeNodeList_Nullptr_ReturnsFailed) {
 // Test Suite: SelectPostCubeNodeList
 // ============================================================================
 
-TEST_F(cube_utils_ut, SelectPostCubeNodeList_FirstRoundCut_True) {
+TEST_F(cube_utils_ut, SelectPostCubeNodeList_FirstRoundCut_True)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -931,7 +970,8 @@ TEST_F(cube_utils_ut, SelectPostCubeNodeList_FirstRoundCut_True) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, SelectPostCubeNodeList_FirstRoundCut_False) {
+TEST_F(cube_utils_ut, SelectPostCubeNodeList_FirstRoundCut_False)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -948,7 +988,8 @@ TEST_F(cube_utils_ut, SelectPostCubeNodeList_FirstRoundCut_False) {
 // Test Suite: CreatePostCubeNode
 // ============================================================================
 
-TEST_F(cube_utils_ut, CreatePostCubeNode_Basic) {
+TEST_F(cube_utils_ut, CreatePostCubeNode_Basic)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -964,7 +1005,8 @@ TEST_F(cube_utils_ut, CreatePostCubeNode_Basic) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, CreatePostCubeNode_ConvReluQuantChain) {
+TEST_F(cube_utils_ut, CreatePostCubeNode_ConvReluQuantChain)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu, quant] = BuildConvReluQuantChain(graph, "chain1");
@@ -980,7 +1022,8 @@ TEST_F(cube_utils_ut, CreatePostCubeNode_ConvReluQuantChain) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, CreatePostCubeNode_ConvDequantPReluChain) {
+TEST_F(cube_utils_ut, CreatePostCubeNode_ConvDequantPReluChain)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, prelu] = BuildConvDequantPReluChain(graph, "chain1");
@@ -1000,13 +1043,15 @@ TEST_F(cube_utils_ut, CreatePostCubeNode_ConvDequantPReluChain) {
 // Test Suite: ModfiyMatchedPasses
 // ============================================================================
 
-TEST_F(cube_utils_ut, ModfiyMatchedPasses_EmptyPasses_ReturnsFailed) {
+TEST_F(cube_utils_ut, ModfiyMatchedPasses_EmptyPasses_ReturnsFailed)
+{
     PostCubeUtils post_cube_utils;
     auto status = post_cube_utils.ModfiyMatchedPasses(true);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }
 
-TEST_F(cube_utils_ut, ModfiyMatchedPasses_WithPasses_ReturnsSuccess) {
+TEST_F(cube_utils_ut, ModfiyMatchedPasses_WithPasses_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -1023,7 +1068,8 @@ TEST_F(cube_utils_ut, ModfiyMatchedPasses_WithPasses_ReturnsSuccess) {
 // Test Suite: RelinkHeadEdges
 // ============================================================================
 
-TEST_F(cube_utils_ut, RelinkHeadEdges_ValidNodes) {
+TEST_F(cube_utils_ut, RelinkHeadEdges_ValidNodes)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1048,7 +1094,8 @@ TEST_F(cube_utils_ut, RelinkHeadEdges_ValidNodes) {
 // Test Suite: RelinkOutputEdges
 // ============================================================================
 
-TEST_F(cube_utils_ut, RelinkOutputEdges_ValidPass) {
+TEST_F(cube_utils_ut, RelinkOutputEdges_ValidPass)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1081,7 +1128,8 @@ TEST_F(cube_utils_ut, RelinkOutputEdges_ValidPass) {
 // Test Suite: GetNodeIndex
 // ============================================================================
 
-TEST_F(cube_utils_ut, GetNodeIndex_Conv2D) {
+TEST_F(cube_utils_ut, GetNodeIndex_Conv2D)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1095,7 +1143,8 @@ TEST_F(cube_utils_ut, GetNodeIndex_Conv2D) {
     EXPECT_TRUE(result);
 }
 
-TEST_F(cube_utils_ut, GetNodeIndex_Relu) {
+TEST_F(cube_utils_ut, GetNodeIndex_Relu)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu = CreateReluNode(graph, "relu1");
@@ -1115,7 +1164,8 @@ TEST_F(cube_utils_ut, GetNodeIndex_Relu) {
 // Test Suite: FiltrNodeStrategyForQuant
 // ============================================================================
 
-TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_ValidScale) {
+TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_ValidScale)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto dequant = CreateDequantNode(graph, "dequant1", true, 1.0f, 0.0f);
@@ -1134,7 +1184,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_ValidScale) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_NegativeScale) {
+TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_NegativeScale)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto dequant = CreateDequantNode(graph, "dequant1", true, -1.0f, 0.0f);
@@ -1157,7 +1208,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_NegativeScale) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_Relu6WithValidOffset) {
+TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_Relu6WithValidOffset)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu6 = CreateRelu6Node(graph, "relu6_1");
@@ -1186,7 +1238,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategyForQuant_Relu6WithValidOffset) {
 // Test Suite: FiltrNodeStrategyForEltWise
 // ============================================================================
 
-TEST_F(cube_utils_ut, FiltrNodeStrategyForEltWise_Add_TwoInputs) {
+TEST_F(cube_utils_ut, FiltrNodeStrategyForEltWise_Add_TwoInputs)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto add = CreateAddNode(graph, "add1");
@@ -1204,7 +1257,8 @@ TEST_F(cube_utils_ut, FiltrNodeStrategyForEltWise_Add_TwoInputs) {
 // Test Suite: ReadConfig
 // ============================================================================
 
-TEST_F(cube_utils_ut, ReadConfig_ValidContext) {
+TEST_F(cube_utils_ut, ReadConfig_ValidContext)
+{
     PostCubeUtils post_cube_utils;
     ge::CustomPassContext context;
     bool result = post_cube_utils.ReadConfig(context);
@@ -1217,7 +1271,8 @@ TEST_F(cube_utils_ut, ReadConfig_ValidContext) {
 // Test Suite: GenerateMatchedPasses
 // ============================================================================
 
-TEST_F(cube_utils_ut, GenerateMatchedPasses_ConvRelu) {
+TEST_F(cube_utils_ut, GenerateMatchedPasses_ConvRelu)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -1233,7 +1288,8 @@ TEST_F(cube_utils_ut, GenerateMatchedPasses_ConvRelu) {
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_utils_ut, GenerateMatchedPasses_ConvDequantRelu6) {
+TEST_F(cube_utils_ut, GenerateMatchedPasses_ConvDequantRelu6)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, dequant, relu6] = BuildConvDequantRelu6Chain(graph, "chain1");
@@ -1253,7 +1309,8 @@ TEST_F(cube_utils_ut, GenerateMatchedPasses_ConvDequantRelu6) {
 // Test Suite: AddInputStrategy
 // ============================================================================
 
-TEST_F(cube_utils_ut, AddInputStrategy_QuantScale0) {
+TEST_F(cube_utils_ut, AddInputStrategy_QuantScale0)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1271,7 +1328,8 @@ TEST_F(cube_utils_ut, AddInputStrategy_QuantScale0) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInputStrategy_ReluWeight0) {
+TEST_F(cube_utils_ut, AddInputStrategy_ReluWeight0)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1289,7 +1347,8 @@ TEST_F(cube_utils_ut, AddInputStrategy_ReluWeight0) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInputStrategy_ClipValue0) {
+TEST_F(cube_utils_ut, AddInputStrategy_ClipValue0)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1311,7 +1370,8 @@ TEST_F(cube_utils_ut, AddInputStrategy_ClipValue0) {
 // Test Suite: InitInput
 // ============================================================================
 
-TEST_F(cube_utils_ut, InitInput_ReturnsSuccess) {
+TEST_F(cube_utils_ut, InitInput_ReturnsSuccess)
+{
     PostCubeUtils post_cube_utils;
     ge::CustomPassContext context;
     (void)post_cube_utils.ReadConfig(context);
@@ -1324,7 +1384,8 @@ TEST_F(cube_utils_ut, InitInput_ReturnsSuccess) {
 // Test Suite: UpdateInputDesc
 // ============================================================================
 
-TEST_F(cube_utils_ut, UpdateInputDesc_ValidNode) {
+TEST_F(cube_utils_ut, UpdateInputDesc_ValidNode)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1337,7 +1398,8 @@ TEST_F(cube_utils_ut, UpdateInputDesc_ValidNode) {
 // Test Suite: IsNodeInPass
 // ============================================================================
 
-TEST_F(cube_utils_ut, IsNodeInPass_NodeExists) {
+TEST_F(cube_utils_ut, IsNodeInPass_NodeExists)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1352,7 +1414,8 @@ TEST_F(cube_utils_ut, IsNodeInPass_NodeExists) {
     EXPECT_TRUE(result);
 }
 
-TEST_F(cube_utils_ut, IsNodeInPass_NodeNotExists) {
+TEST_F(cube_utils_ut, IsNodeInPass_NodeNotExists)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1373,7 +1436,8 @@ TEST_F(cube_utils_ut, IsNodeInPass_NodeNotExists) {
 // Test Suite: NeedToCutPass
 // ============================================================================
 
-TEST_F(cube_utils_ut, NeedToCutPass_SingleNode) {
+TEST_F(cube_utils_ut, NeedToCutPass_SingleNode)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1393,7 +1457,8 @@ TEST_F(cube_utils_ut, NeedToCutPass_SingleNode) {
 // Test Suite: CheckEltWiseShapeIsSame
 // ============================================================================
 
-TEST_F(cube_utils_ut, CheckEltWiseShapeIsSame_SameShape) {
+TEST_F(cube_utils_ut, CheckEltWiseShapeIsSame_SameShape)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto add = CreateAddNode(graph, "add1");
@@ -1417,7 +1482,8 @@ TEST_F(cube_utils_ut, CheckEltWiseShapeIsSame_SameShape) {
 // Test Suite: DeleteToFusedNodeEdge
 // ============================================================================
 
-TEST_F(cube_utils_ut, DeleteToFusedNodeEdge_ValidPass) {
+TEST_F(cube_utils_ut, DeleteToFusedNodeEdge_ValidPass)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -1446,7 +1512,8 @@ TEST_F(cube_utils_ut, DeleteToFusedNodeEdge_ValidPass) {
 // Test Suite: DeleteNode
 // ============================================================================
 
-TEST_F(cube_utils_ut, DeleteNode_ValidNodes) {
+TEST_F(cube_utils_ut, DeleteNode_ValidNodes)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto relu = CreateReluNode(graph, "relu1");
@@ -1462,7 +1529,8 @@ TEST_F(cube_utils_ut, DeleteNode_ValidNodes) {
 // Test Suite: CollectSwitchMergeNodes & CollectPostCube
 // ============================================================================
 
-TEST_F(cube_utils_ut, CollectSwitchMergeNodes_Conv) {
+TEST_F(cube_utils_ut, CollectSwitchMergeNodes_Conv)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1474,7 +1542,8 @@ TEST_F(cube_utils_ut, CollectSwitchMergeNodes_Conv) {
     EXPECT_EQ(post_cube_nodes.size(), 1U);
 }
 
-TEST_F(cube_utils_ut, CollectPostCube_ConvWithoutPostCube) {
+TEST_F(cube_utils_ut, CollectPostCube_ConvWithoutPostCube)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto conv = CreateConv2DNode(graph, "conv1");
@@ -1489,7 +1558,8 @@ TEST_F(cube_utils_ut, CollectPostCube_ConvWithoutPostCube) {
 // Test Suite: SetPostCubeRealtiveNodeScopeId & GetPostCubeAtomicId
 // ============================================================================
 
-TEST_F(cube_utils_ut, GetPostCubeAtomicId_ReturnsPositiveId) {
+TEST_F(cube_utils_ut, GetPostCubeAtomicId_ReturnsPositiveId)
+{
     PostCubeUtils post_cube_utils;
     uint32_t id1 = post_cube_utils.GetPostCubeAtomicId();
     uint32_t id2 = post_cube_utils.GetPostCubeAtomicId();
@@ -1498,7 +1568,8 @@ TEST_F(cube_utils_ut, GetPostCubeAtomicId_ReturnsPositiveId) {
     EXPECT_NE(id1, id2);
 }
 
-TEST_F(cube_utils_ut, SetPostCubeRealtiveNodeScopeId_PostCubeNode) {
+TEST_F(cube_utils_ut, SetPostCubeRealtiveNodeScopeId_PostCubeNode)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1516,7 +1587,8 @@ TEST_F(cube_utils_ut, SetPostCubeRealtiveNodeScopeId_PostCubeNode) {
 // Test Suite: AddInput2Strategy - AddInput9Strategy
 // ============================================================================
 
-TEST_F(cube_utils_ut, AddInput2Strategy) {
+TEST_F(cube_utils_ut, AddInput2Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1533,7 +1605,8 @@ TEST_F(cube_utils_ut, AddInput2Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput3Strategy) {
+TEST_F(cube_utils_ut, AddInput3Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1550,7 +1623,8 @@ TEST_F(cube_utils_ut, AddInput3Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput4Strategy) {
+TEST_F(cube_utils_ut, AddInput4Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1567,7 +1641,8 @@ TEST_F(cube_utils_ut, AddInput4Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput5Strategy) {
+TEST_F(cube_utils_ut, AddInput5Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1584,7 +1659,8 @@ TEST_F(cube_utils_ut, AddInput5Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput6Strategy) {
+TEST_F(cube_utils_ut, AddInput6Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1601,7 +1677,8 @@ TEST_F(cube_utils_ut, AddInput6Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput7Strategy) {
+TEST_F(cube_utils_ut, AddInput7Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1618,7 +1695,8 @@ TEST_F(cube_utils_ut, AddInput7Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput8Strategy) {
+TEST_F(cube_utils_ut, AddInput8Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1627,7 +1705,8 @@ TEST_F(cube_utils_ut, AddInput8Strategy) {
     (void)post_cube_utils.ReadConfig(context);
 
     ge::GNodePtr post_cube_ptr = std::make_shared<ge::GNode>(*post_cube);
-    auto funtcparam = std::make_shared<PostCubeFunctionParam>("anti_quant_scale", post_cube_ptr, POST_CUBE_INPUT_8_INDEX);
+    auto funtcparam = std::make_shared<PostCubeFunctionParam>("anti_quant_scale", post_cube_ptr,
+                                                              POST_CUBE_INPUT_8_INDEX);
 
     PostCubePassInfo pass_info;
     auto strategy = post_cube_utils.AddInput8Strategy(pass_info, funtcparam);
@@ -1635,7 +1714,8 @@ TEST_F(cube_utils_ut, AddInput8Strategy) {
     SUCCEED();
 }
 
-TEST_F(cube_utils_ut, AddInput9Strategy) {
+TEST_F(cube_utils_ut, AddInput9Strategy)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto post_cube = CreatePostCubeNode(graph, "post_cube1");
@@ -1644,7 +1724,8 @@ TEST_F(cube_utils_ut, AddInput9Strategy) {
     (void)post_cube_utils.ReadConfig(context);
 
     ge::GNodePtr post_cube_ptr = std::make_shared<ge::GNode>(*post_cube);
-    auto funtcparam = std::make_shared<PostCubeFunctionParam>("anti_quant_offset", post_cube_ptr, POST_CUBE_INPUT_9_INDEX);
+    auto funtcparam = std::make_shared<PostCubeFunctionParam>("anti_quant_offset", post_cube_ptr,
+                                                              POST_CUBE_INPUT_9_INDEX);
 
     PostCubePassInfo pass_info;
     auto strategy = post_cube_utils.AddInput9Strategy(pass_info, funtcparam);
@@ -1656,7 +1737,8 @@ TEST_F(cube_utils_ut, AddInput9Strategy) {
 // Test Suite: AddInputs
 // ============================================================================
 
-TEST_F(cube_utils_ut, AddInputs_ValidPass) {
+TEST_F(cube_utils_ut, AddInputs_ValidPass)
+{
     PostCubeUtils post_cube_utils;
     ge::Graph graph("test_graph");
     auto [conv, relu] = BuildConvReluChain(graph, "chain1");
@@ -1677,4 +1759,4 @@ TEST_F(cube_utils_ut, AddInputs_ValidPass) {
         SUCCEED();
     }
 }
-}  // namespace ops
+} // namespace ops

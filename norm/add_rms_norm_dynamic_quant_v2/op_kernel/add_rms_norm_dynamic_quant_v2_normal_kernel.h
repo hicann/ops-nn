@@ -21,15 +21,11 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddRmsNormDynamicQuantV2Normal : public KernelAddRmsNormDynamicQuantV2Base<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddRmsNormDynamicQuantV2Normal(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormDynamicQuantV2Normal(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR y1, GM_ADDR y2, GM_ADDR y3,
-        GM_ADDR y4, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2, GM_ADDR workspace,
-        const AddRmsNormDynamicQuantV2TilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR y1,
+                                GM_ADDR y2, GM_ADDR y3, GM_ADDR y4, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2,
+                                GM_ADDR workspace, const AddRmsNormDynamicQuantV2TilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2);
@@ -200,15 +196,14 @@ private:
         // reduce#1 for mean
         for (int32_t rid = 0; rid < nums; ++rid) {
             auto roundOffset = rid * this->numLastDimAligned;
-            float squareSumTemp =
-                ReduceSumHalfInterval(yLocalFp32[roundOffset], this->numLastDim); // aveLocalTemp <-- E(x**2)
+            float squareSumTemp = ReduceSumHalfInterval(yLocalFp32[roundOffset],
+                                                        this->numLastDim); // aveLocalTemp <-- E(x**2)
             float rstdLocalTemp = 1 / sqrt(squareSumTemp * this->aveNum + this->eps);
             event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
             SetFlag<HardEvent::S_V>(eventSV);
             WaitFlag<HardEvent::S_V>(eventSV);
-            Muls(
-                xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp,
-                this->numLastDim); // xLocalFp32 <- x * rstd
+            Muls(xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp,
+                 this->numLastDim); // xLocalFp32 <- x * rstd
         }
         PipeBarrier<PIPE_V>();
 
@@ -270,12 +265,10 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            elementCount);
-        Cast(
-            xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            elementCount);
+        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
+        Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
         PipeBarrier<PIPE_V>();
         Cast(outQuant01, yLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
         Cast(outQuant02, xLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
@@ -301,9 +294,8 @@ private:
         outRowsQue.FreeTensor(outY12);
     }
 
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
-        int32_t nums)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                       LocalTensor<float>& scaleTensor, int32_t size, int32_t nums)
     {
         float maxTemp;
         float scaleTemp;

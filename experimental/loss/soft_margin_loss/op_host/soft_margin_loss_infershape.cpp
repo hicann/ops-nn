@@ -41,7 +41,7 @@ static ge::graphStatus InferShape4SoftMarginLoss(gert::InferShapeContext* contex
     }
 
     // Get reduction attribute
-    int64_t reduction = 1;  // default: mean
+    int64_t reduction = 1; // default: mean
     auto attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const int64_t* reductionPtr = attrs->GetAttrPointer<int64_t>(0);

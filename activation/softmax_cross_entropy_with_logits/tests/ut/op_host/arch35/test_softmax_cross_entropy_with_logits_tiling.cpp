@@ -30,10 +30,7 @@ using namespace ge;
 
 class SoftmaxCrossEntropyWithLogitsRegBaseSplitRTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SoftmaxCrossEntropyWithLogitsRegBaseSplitRTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SoftmaxCrossEntropyWithLogitsRegBaseSplitRTiling SetUp" << std::endl; }
 
     static void TearDownTestCase()
     {
@@ -53,9 +50,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string hardwareInfo = R"({
         "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64}
@@ -65,10 +61,11 @@ static void InitPlatForm(
     platFormInfo.Init();
 }
 
-static void DoSCEWithLogtisSplitRTilingCase(
-    std::initializer_list<int64_t>& featuresShape, std::initializer_list<int64_t>& labelsShape,
-    std::initializer_list<int64_t>& lossShape, std::initializer_list<int64_t>& backPropShape, ge::DataType inputDtype,
-    std::string& expectStr)
+static void DoSCEWithLogtisSplitRTilingCase(std::initializer_list<int64_t>& featuresShape,
+                                            std::initializer_list<int64_t>& labelsShape,
+                                            std::initializer_list<int64_t>& lossShape,
+                                            std::initializer_list<int64_t>& backPropShape, ge::DataType inputDtype,
+                                            std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -93,19 +90,19 @@ static void DoSCEWithLogtisSplitRTilingCase(
     string compileInfoStr = R"({
     "device_id": null})";
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs(
+                                 {const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
+                             .Outputs({&compileInfo})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 

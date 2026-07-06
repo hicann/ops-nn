@@ -26,7 +26,7 @@ constexpr uint32_t UB_ALIGN = 32;
 constexpr uint32_t REPEAT_ALIGN = 256;
 constexpr uint32_t GM_ALIGN = 512;
 constexpr uint32_t RESERVED_UB_SIZE = 0; // 有些api需要预留ub空间
-constexpr uint32_t MAX_TILEDATA = 4096; 
+constexpr uint32_t MAX_TILEDATA = 4096;
 
 struct MseLossGradCompileInfo {};
 // 获取平台信息如ubSize, coreNum
@@ -43,7 +43,9 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-void CalculateMseLossGradTiling(MseLossGradTilingData* tiling, uint64_t inputNum, uint32_t typeLength, int64_t realCoreNum, gert::TilingContext* context) {
+void CalculateMseLossGradTiling(MseLossGradTilingData* tiling, uint64_t inputNum, uint32_t typeLength,
+                                int64_t realCoreNum, gert::TilingContext* context)
+{
     if (tiling == nullptr) {
         OP_LOGE(context, "tiling is nullptr");
         return;
@@ -98,9 +100,8 @@ static ge::graphStatus MseLossGradTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t realCoreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, realCoreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, realCoreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
     const char* reduction = context->GetAttrs()->GetStr(0);
     const char* model = "mean";
     float reduceElts = 1.0;
@@ -120,31 +121,32 @@ static ge::graphStatus MseLossGradTilingFunc(gert::TilingContext* context)
         tiling->cof = cof;
     } else {
         tiling->cof = 2.0;
-    }    
+    }
     uint64_t inputNum;
     inputNum = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(context->GetInputDesc(1)->GetDataType(), typeLength);
     CalculateMseLossGradTiling(tiling, inputNum, typeLength, realCoreNum, context);
     uint64_t doutNum = context->GetInputShape(2)->GetStorageShape().GetShapeSize();
-    if (doutNum == 1)
-    {
+    if (doutNum == 1) {
         uint64_t tilingKey = GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_1);
-        context->SetTilingKey(tilingKey); 
+        context->SetTilingKey(tilingKey);
     } else {
         uint64_t tilingKey = GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_0);
-        context->SetTilingKey(tilingKey); 
+        context->SetTilingKey(tilingKey);
     }
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = 0;
-    return ge::GRAPH_SUCCESS;       
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingParseForMseLossGrad([[maybe_unused]] gert::TilingParseContext* context)
-{   
+{
     return ge::GRAPH_SUCCESS;
 }
 
 // tiling注册入口.
-IMPL_OP_OPTILING(MseLossGrad).Tiling(MseLossGradTilingFunc).TilingParse<MseLossGradCompileInfo>(TilingParseForMseLossGrad);
+IMPL_OP_OPTILING(MseLossGrad)
+    .Tiling(MseLossGradTilingFunc)
+    .TilingParse<MseLossGradCompileInfo>(TilingParseForMseLossGrad);
 } // namespace optiling

@@ -22,8 +22,8 @@ struct LayerNormV4Params {
     const aclTensor* bias;
 };
 
-const std::array<aclTensor*, LAYER_NORM_V4_OUT_NUM> LayerNormV4(
-    const LayerNormV4Params& params, double eps, aclOpExecutor* executor);
+const std::array<aclTensor*, LAYER_NORM_V4_OUT_NUM> LayerNormV4(const LayerNormV4Params& params, double eps,
+                                                                aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_LAYER_NORM_V4_H_

@@ -17,13 +17,13 @@
 
 #include "adaptive_pool3d_big_kernel.h"
 
-namespace AdaptivePool3d{
+namespace AdaptivePool3d {
 using namespace AscendC;
 constexpr int32_t STORE_ADD_BUFFER = 1024;
 
 template <typename T, typename U>
 __aicore__ inline void StoreOneValue(const __local_mem__ void* dstAddr, MicroAPI::RegTensor<U>& srcReg,
-                                       MicroAPI::MaskReg& maskReg, uint32_t offset)
+                                     MicroAPI::MaskReg& maskReg, uint32_t offset)
 {
     auto addr = (__local_mem__ T*)dstAddr + offset;
     if constexpr (IsSameType<T, half>::value) {
@@ -35,7 +35,8 @@ __aicore__ inline void StoreOneValue(const __local_mem__ void* dstAddr, MicroAPI
         MicroAPI::Cast<bfloat16_t, float, CASTB4TOB2>(regBf16, srcReg, maskReg);
         MicroAPI::DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regBf16, maskReg);
     } else if constexpr (sizeof(T) == DIGHT4) {
-        MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(addr, (MicroAPI::RegTensor<T>&)srcReg, maskReg);
+        MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(addr, (MicroAPI::RegTensor<T>&)srcReg,
+                                                                           maskReg);
     } else {
         MicroAPI::UnalignReg uReg;
         MicroAPI::DataCopyUnAlign(addr, srcReg, uReg, 1);
@@ -45,7 +46,7 @@ __aicore__ inline void StoreOneValue(const __local_mem__ void* dstAddr, MicroAPI
 
 template <typename U>
 __aicore__ inline void LoadOneValue(const __local_mem__ void* srcAddr, MicroAPI::RegTensor<U>& dstReg,
-                                      MicroAPI::MaskReg& preg, uint32_t offset)
+                                    MicroAPI::MaskReg& preg, uint32_t offset)
 {
     auto addr = (__local_mem__ U*)srcAddr + offset;
     if constexpr (sizeof(U) == DIGHT4) {
@@ -59,7 +60,7 @@ __aicore__ inline void LoadOneValue(const __local_mem__ void* srcAddr, MicroAPI:
 
 template <typename T, typename U>
 __aicore__ inline void LoadXLocalToReg(const __local_mem__ void* srcAddr, MicroAPI::RegTensor<U>& dstReg,
-                                     MicroAPI::MaskReg& preg, MicroAPI::AddrReg& offset)
+                                       MicroAPI::MaskReg& preg, MicroAPI::AddrReg& offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> regfp16;
@@ -67,7 +68,8 @@ __aicore__ inline void LoadXLocalToReg(const __local_mem__ void* srcAddr, MicroA
         MicroAPI::Cast<float, half, CASTB2TOB4>(dstReg, regfp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> regBf16;
-        MicroAPI::DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(regBf16, (__local_mem__ bfloat16_t*)srcAddr, offset);
+        MicroAPI::DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(regBf16, (__local_mem__ bfloat16_t*)srcAddr,
+                                                                            offset);
         MicroAPI::Cast<float, bfloat16_t, CASTB2TOB4>(dstReg, regBf16, preg);
     } else {
         MicroAPI::DataCopy(dstReg, (__local_mem__ float*)srcAddr, offset);
@@ -84,17 +86,17 @@ __aicore__ inline void UpdateSum(MicroAPI::RegTensor<U>& res, const __local_mem_
     // get last res from local mem
     LoadOneValue<U>(storeLocalAddr, lastRes, pregOne, offset);
 
-    //calc sum
+    // calc sum
     MicroAPI::Add(res, res, lastRes, pregOne);
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
 }
 
 template <typename T>
-class AdaptiveAvgPool3dBigKernel : public AdaptivePool3dBigKernel<T>
-{
+class AdaptiveAvgPool3dBigKernel : public AdaptivePool3dBigKernel<T> {
 public:
-    __aicore__ inline AdaptiveAvgPool3dBigKernel(const AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData &tilingData, TPipe &pipe) :
-        AdaptivePool3dBigKernel<T>(tilingData, pipe) {};
+    __aicore__ inline AdaptiveAvgPool3dBigKernel(
+        const AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData& tilingData, TPipe& pipe)
+        : AdaptivePool3dBigKernel<T>(tilingData, pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
 
@@ -165,8 +167,8 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitOutputBuffer()
     }
 }
 
-template<typename T>
-template<typename U>
+template <typename T>
+template <typename U>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeAvg(LocalTensor<U> storeAddLocal, int64_t curIdx)
 {
     LocalTensor<T> outputLocal = this->outputUB_.template Get<T>();
@@ -190,15 +192,16 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeAvg(LocalTensor<U> 
 
 template <typename T>
 template <int32_t SPLIT_MODE, typename U>
-__aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(
-    LocalTensor<T> xLocal, int64_t localCurIdx, int64_t dataCount)
+__aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(LocalTensor<T> xLocal, int64_t localCurIdx,
+                                                                 int64_t dataCount)
 {
     LocalTensor<U> storeAddLocal = this->storeAddUB_.template Get<U>();
     __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ U* storeLocalAddr = (__local_mem__ U*)storeAddLocal.GetPhyAddr();
-    
+
     uint32_t repeatCount = platform::GetVRegSize() / sizeof(U); //一个vf需要的次数
-    uint16_t repeatTimes = ops::CeilDiv(static_cast<uint32_t>(dataCount), repeatCount); //上取整，获取repeatCount的整数倍
+    uint16_t repeatTimes = ops::CeilDiv(static_cast<uint32_t>(dataCount),
+                                        repeatCount); //上取整，获取repeatCount的整数倍
     uint32_t dataCount_ = dataCount;
 
     __VEC_SCOPE__
@@ -209,7 +212,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(
         MicroAPI::MaskReg sumMask = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::VL1>();
         MicroAPI::Duplicate(res, static_cast<U>(0));
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(dataCount_); //一次处理数量
+            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(dataCount_);            //一次处理数量
             MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatCount); //搬运偏移
             LoadXLocalToReg<T, U>(xLocalAddr, vd0, p0, offset);
             MicroAPI::ReduceSum(vd1, vd0, p0);

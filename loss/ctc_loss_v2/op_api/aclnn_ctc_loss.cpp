@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -51,8 +51,8 @@ constexpr int64_t CDIM = 2;
 constexpr int64_t SDIM = 2;
 
 // 根据API定义,需要列出log_prob&out参数所能支持的dtype
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LOGPROB_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LOGPROB_LIST = {op::DataType::DT_FLOAT,
+                                                                               op::DataType::DT_DOUBLE};
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_BF16_LOGPROB_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_DOUBLE};
@@ -62,9 +62,9 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_TARGET_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_BOOL, op::DataType::DT_FLOAT,
     op::DataType::DT_FLOAT16};
 
-static bool CheckNotNull(
-    const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* inputLengths,
-    const aclIntArray* targetLengths, const aclTensor* negLogLikelihoodOut, const aclTensor* logAlphaOut)
+static bool CheckNotNull(const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* inputLengths,
+                         const aclIntArray* targetLengths, const aclTensor* negLogLikelihoodOut,
+                         const aclTensor* logAlphaOut)
 {
     OP_CHECK_NULL(logProbs, return false);
     OP_CHECK_NULL(targets, return false);
@@ -76,21 +76,19 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* logProbs, const aclTensor* targets, const aclTensor* negLogLikelihoodOut,
-    const aclTensor* logAlphaOut)
+static bool CheckDtypeValid(const aclTensor* logProbs, const aclTensor* targets, const aclTensor* negLogLikelihoodOut,
+                            const aclTensor* logAlphaOut)
 {
     // 检查logProbs的数据类型是否在算子的支持列表内
-    bool is910bSocVersion =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    bool is910bSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
     bool IsRegbaseSocVersion = Ops::NN::AclnnUtil::IsRegbase();
     int64_t inputN = logProbs->GetViewShape().GetDim(1);
     int64_t inputC = logProbs->GetViewShape().GetDim(CDIM);
     int64_t inputS = (logAlphaOut->GetViewShape().GetDim(SDIM) - 1) / DOUBLE;
     bool shapeCheck = inputC > MAX_SYMBOL_SET_LEN_V3 || inputN > MAX_BATCH || inputS > MAX_LABEL_LEN;
-    bool dtypeCheck =
-        logProbs->GetDataType() == op::DataType::DT_BF16 || logProbs->GetDataType() == op::DataType::DT_FLOAT16;
+    bool dtypeCheck = logProbs->GetDataType() == op::DataType::DT_BF16 ||
+                      logProbs->GetDataType() == op::DataType::DT_FLOAT16;
 
     if (!is910bSocVersion && !IsRegbaseSocVersion) {
         OP_CHECK_DTYPE_NOT_SUPPORT(logProbs, DTYPE_SUPPORT_LOGPROB_LIST, return false);
@@ -131,17 +129,17 @@ static std::tuple<int64_t, int64_t> GetIntArrayMaxValueAndSum(const aclIntArray*
     return std::tie(maxLength, sum);
 }
 
-static bool CheckTargetAndOutShapeParameterValue(
-    const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* targetLengths,
-    const aclTensor* negLogLikelihoodOut, const aclTensor* logAlphaOut, int64_t& maxTargetLengths)
+static bool CheckTargetAndOutShapeParameterValue(const aclTensor* logProbs, const aclTensor* targets,
+                                                 const aclIntArray* targetLengths, const aclTensor* negLogLikelihoodOut,
+                                                 const aclTensor* logAlphaOut, int64_t& maxTargetLengths)
 {
     auto targetLengthMaxAndSum = GetIntArrayMaxValueAndSum(targetLengths);
     maxTargetLengths = std::get<0>(targetLengthMaxAndSum);
 
     // 检查targets的shape，只能是1维或者2维
     if (targets->GetViewShape().GetDimNum() != 1 && targets->GetViewShape().GetDimNum() != TARGET_MAX_DIM_NUM) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "DimNum of targets [%zu] must equal 1 or 2.", targets->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of targets [%zu] must equal 1 or 2.",
+                targets->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -152,18 +150,16 @@ static bool CheckTargetAndOutShapeParameterValue(
             inputN = logProbs->GetViewShape().GetDim(LOG_PROBS_3D_DIM_N);
         }
         if (targets->GetViewShape().GetDim(0) != inputN || targets->GetViewShape().GetDim(1) < maxTargetLengths) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Target's shape expect [%ld, >=%ld], but get current shape %s.", inputN,
-                maxTargetLengths, op::ToString(targets->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Target's shape expect [%ld, >=%ld], but get current shape %s.", inputN,
+                    maxTargetLengths, op::ToString(targets->GetViewShape()).GetString());
             return false;
         }
     } else {
         // 当target的shape为1维,则必须满足shape(sum(targetLengths))
         int64_t targetLengthsSum = std::get<1>(targetLengthMaxAndSum);
         if (targets->GetViewShape().GetDim(0) != targetLengthsSum) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Target's shape expect [%ld], but get current shape %s.", targetLengthsSum,
-                op::ToString(targets->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Target's shape expect [%ld], but get current shape %s.", targetLengthsSum,
+                    op::ToString(targets->GetViewShape()).GetString());
             return false;
         }
     }
@@ -171,28 +167,26 @@ static bool CheckTargetAndOutShapeParameterValue(
     // 检查outNegLogLikelihood大小为N的一维Tensor
     auto outputShapeTuple = l0op::CtcLossNpuOutputShape(logProbs, maxTargetLengths);
     if (negLogLikelihoodOut->GetViewShape() != std::get<0>(outputShapeTuple)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of negLogLikelihoodOut %s must equal %s.",
-            op::ToString(negLogLikelihoodOut->GetViewShape()).GetString(),
-            op::ToString(std::get<0>(outputShapeTuple)).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of negLogLikelihoodOut %s must equal %s.",
+                op::ToString(negLogLikelihoodOut->GetViewShape()).GetString(),
+                op::ToString(std::get<0>(outputShapeTuple)).GetString());
         return false;
     }
 
     // 检查 logAlphaOut 大小为x,y,z的3维Tensor
     if (logAlphaOut->GetViewShape() != std::get<1>(outputShapeTuple)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of logAlphaOut %s must equal %s.",
-            op::ToString(logAlphaOut->GetViewShape()).GetString(),
-            op::ToString(std::get<1>(outputShapeTuple)).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of logAlphaOut %s must equal %s.",
+                op::ToString(logAlphaOut->GetViewShape()).GetString(),
+                op::ToString(std::get<1>(outputShapeTuple)).GetString());
         return false;
     }
     return true;
 }
 
-static bool CheckShapeAndParameterValue(
-    const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* inputLengths,
-    const aclIntArray* targetLengths, int64_t blank, const aclTensor* negLogLikelihoodOut, const aclTensor* logAlphaOut,
-    int64_t& maxTargetLengths)
+static bool CheckShapeAndParameterValue(const aclTensor* logProbs, const aclTensor* targets,
+                                        const aclIntArray* inputLengths, const aclIntArray* targetLengths,
+                                        int64_t blank, const aclTensor* negLogLikelihoodOut,
+                                        const aclTensor* logAlphaOut, int64_t& maxTargetLengths)
 {
     if (logProbs->GetViewShape().GetDim(0) == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "start (0) + length (1) exceeds dimension size (0).");
@@ -201,9 +195,8 @@ static bool CheckShapeAndParameterValue(
 
     // logProbs必须为3维或2维Tensor
     if (logProbs->GetViewShape().GetDimNum() > DIM_NUM_THREE || logProbs->GetViewShape().GetDimNum() < DIM_NUM_TWO) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "DimNum of logProbs [%zu] must equal 2 or 3.",
-            logProbs->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of logProbs [%zu] must equal 2 or 3.",
+                logProbs->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -217,45 +210,40 @@ static bool CheckShapeAndParameterValue(
 
     // 检查blank参数范围和reduction取值范围
     if (blank < 0 || blank >= inputC) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Attr parameter blank %ld must be greater than or equal to 0 and less than %ld.",
-            blank, inputC);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Attr parameter blank %ld must be greater than or equal to 0 and less than %ld.", blank, inputC);
         return false;
     }
 
     // 检查inputLengths数组的长度和数值的合法性
     const int64_t maxInputLengthValue = std::get<0>(GetIntArrayMaxValueAndSum(inputLengths));
     if (static_cast<int64_t>(inputLengths->Size()) != inputN || maxInputLengthValue > inputT) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Inputlengths's size [%ld] must equal to [%ld], and max value [%ld] must be less than or "
-            "equal to [%ld].",
-            static_cast<int64_t>(inputLengths->Size()), inputN, maxInputLengthValue, inputT);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Inputlengths's size [%ld] must equal to [%ld], and max value [%ld] must be less than or "
+                "equal to [%ld].",
+                static_cast<int64_t>(inputLengths->Size()), inputN, maxInputLengthValue, inputT);
         return false;
     }
 
     // 检查targetLengths数组的长度合法性
     if (static_cast<int64_t>(targetLengths->Size()) != inputN) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "targetLengths's size [%ld] must equal to [%ld].",
-            static_cast<int64_t>(targetLengths->Size()), inputN);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "targetLengths's size [%ld] must equal to [%ld].",
+                static_cast<int64_t>(targetLengths->Size()), inputN);
         return false;
     }
 
-    return CheckTargetAndOutShapeParameterValue(
-        logProbs, targets, targetLengths, negLogLikelihoodOut, logAlphaOut, maxTargetLengths);
+    return CheckTargetAndOutShapeParameterValue(logProbs, targets, targetLengths, negLogLikelihoodOut, logAlphaOut,
+                                                maxTargetLengths);
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* inputLengths,
-    const aclIntArray* targetLengths, int64_t blank, const aclTensor* negLogLikelihoodOut, const aclTensor* logAlphaOut,
-    int64_t& maxTargetLengths)
+static aclnnStatus CheckParams(const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* inputLengths,
+                               const aclIntArray* targetLengths, int64_t blank, const aclTensor* negLogLikelihoodOut,
+                               const aclTensor* logAlphaOut, int64_t& maxTargetLengths)
 {
     // 1.检查输入shape是否满足要求
-    CHECK_RET(
-        CheckShapeAndParameterValue(
-            logProbs, targets, inputLengths, targetLengths, blank, negLogLikelihoodOut, logAlphaOut, maxTargetLengths),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeAndParameterValue(logProbs, targets, inputLengths, targetLengths, blank, negLogLikelihoodOut,
+                                          logAlphaOut, maxTargetLengths),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 2.检查输入的数据类型是否在API支持的数据类型范围之内,需要根据api定义校验
     CHECK_RET(CheckDtypeValid(logProbs, targets, negLogLikelihoodOut, logAlphaOut), ACLNN_ERR_PARAM_INVALID);
@@ -289,30 +277,28 @@ static const aclTensor* logProbsReshapeAndContiguous(const aclTensor* logProbs, 
     return logProbsReshape;
 }
 
-aclnnStatus aclnnCtcLossGetWorkspaceSize(
-    const aclTensor* logProbs, const aclTensor* targets, const aclIntArray* inputLengths,
-    const aclIntArray* targetLengths, int64_t blank, bool zeroInfinity, aclTensor* negLogLikelihoodOut,
-    aclTensor* logAlphaOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnCtcLossGetWorkspaceSize(const aclTensor* logProbs, const aclTensor* targets,
+                                         const aclIntArray* inputLengths, const aclIntArray* targetLengths,
+                                         int64_t blank, bool zeroInfinity, aclTensor* negLogLikelihoodOut,
+                                         aclTensor* logAlphaOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnCtcLoss, DFX_IN(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        DFX_OUT(negLogLikelihoodOut, logAlphaOut));
+    L2_DFX_PHASE_1(aclnnCtcLoss, DFX_IN(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                   DFX_OUT(negLogLikelihoodOut, logAlphaOut));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 1、检查三个入参参数是否为空指针
-    CHECK_RET(
-        CheckNotNull(logProbs, targets, inputLengths, targetLengths, negLogLikelihoodOut, logAlphaOut),
-        ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(logProbs, targets, inputLengths, targetLengths, negLogLikelihoodOut, logAlphaOut),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // 2、固定写法，参数检查
     int64_t maxTargetLengths = 0;
-    auto ret = CheckParams(
-        logProbs, targets, inputLengths, targetLengths, blank, negLogLikelihoodOut, logAlphaOut, maxTargetLengths);
+    auto ret = CheckParams(logProbs, targets, inputLengths, targetLengths, blank, negLogLikelihoodOut, logAlphaOut,
+                           maxTargetLengths);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 如果inputN为0，空Tensor，则直接返回空或者nan
@@ -342,15 +328,15 @@ aclnnStatus aclnnCtcLossGetWorkspaceSize(
     }
 
     // 将inputLengths和targetLengths转化成Tensor
-    auto inputLengthsTensor =
-        uniqueExecutor.get()->ConvertToTensor(inputLengths, targetsContiguousCasted->GetDataType());
-    auto targetLengthsTensor =
-        uniqueExecutor.get()->ConvertToTensor(targetLengths, targetsContiguousCasted->GetDataType());
+    auto inputLengthsTensor = uniqueExecutor.get()->ConvertToTensor(inputLengths,
+                                                                    targetsContiguousCasted->GetDataType());
+    auto targetLengthsTensor = uniqueExecutor.get()->ConvertToTensor(targetLengths,
+                                                                     targetsContiguousCasted->GetDataType());
 
     // 调用CTCLossV2算子kernel
-    auto ctcLossV2OpOut = l0op::CtcLossV2(
-        logProbsContiguous, targetsContiguousCasted, inputLengthsTensor, targetLengthsTensor, blank, zeroInfinity,
-        maxTargetLengths, uniqueExecutor.get());
+    auto ctcLossV2OpOut = l0op::CtcLossV2(logProbsContiguous, targetsContiguousCasted, inputLengthsTensor,
+                                          targetLengthsTensor, blank, zeroInfinity, maxTargetLengths,
+                                          uniqueExecutor.get());
     CHECK_RET(CheckTupleNullptr(ctcLossV2OpOut), ACLNN_ERR_INNER_NULLPTR);
     auto negLogLikelihood = std::get<0>(ctcLossV2OpOut);
     auto logAlpha = std::get<1>(ctcLossV2OpOut);

@@ -26,9 +26,8 @@
 #include "arch35/fake_quant_with_min_max_vars_per_channel_tiling_key.h"
 
 template <int D_T_X, int MODE, int HAS_ZP, int ROUND_MODE>
-__global__ __aicore__ void fake_quant_with_min_max_vars_per_channel(
-    GM_ADDR x, GM_ADDR minIn, GM_ADDR maxIn, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void fake_quant_with_min_max_vars_per_channel(GM_ADDR x, GM_ADDR minIn, GM_ADDR maxIn, GM_ADDR y,
+                                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(FakeQuantWithMinMaxVarsPerChannelTilingData);
     GET_TILING_DATA_WITH_STRUCT(FakeQuantWithMinMaxVarsPerChannelTilingData, tilingData, tiling);

@@ -70,8 +70,8 @@ uint64_t AddRmsNormDynamicMxQuantSplitRTiling::GetMaxBaseN(uint64_t initialN)
             Ops::Base::CeilDiv(candidateN, static_cast<uint64_t>(MX_BLOCK_SIZE_32)) * sizeof(uint16_t), ubBlockSize_);
         uint64_t halfScaleBuf = maxExpBuf;
 
-        uint64_t totalNDependent =
-            xInputBuf + gammaBetaBuf + yBuf + xOutBuf + mxScaleBuf + xFp32Buf + yTmpBuf + maxExpBuf + halfScaleBuf;
+        uint64_t totalNDependent = xInputBuf + gammaBetaBuf + yBuf + xOutBuf + mxScaleBuf + xFp32Buf + yTmpBuf +
+                                   maxExpBuf + halfScaleBuf;
 
         if (totalNDependent > maxUbSize_ - RETAINED_SIZE_256 - (rstdBufSize + cacheBufSize + binaryAddBufSize)) {
             break;
@@ -116,11 +116,10 @@ ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::DoOpTiling()
 
     foldTail_ = numCol_ % baseN_;
 
-    OP_LOGI(
-        context_->GetNodeName(),
-        "SplitR: baseN=%lu, baseM=%lu, nUbLoops=%lu, powerSplit=%lu, "
-        "mainFoldCount=%lu, foldTail=%lu, blockFactor=%lu.",
-        baseN_, baseM_, nUbLoops_, powerSplit_, mainFoldCount_, foldTail_, blockFactor_);
+    OP_LOGI(context_->GetNodeName(),
+            "SplitR: baseN=%lu, baseM=%lu, nUbLoops=%lu, powerSplit=%lu, "
+            "mainFoldCount=%lu, foldTail=%lu, blockFactor=%lu.",
+            baseN_, baseM_, nUbLoops_, powerSplit_, mainFoldCount_, foldTail_, blockFactor_);
 
     SetTilingData();
     PrintTilingData();
@@ -157,27 +156,22 @@ void AddRmsNormDynamicMxQuantSplitRTiling::SetTilingData()
 
 void AddRmsNormDynamicMxQuantSplitRTiling::PrintTilingData()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "TilingData numCol: %lu, numColAlign: %lu, "
-        "blockFactor: %lu, mLastCore: %lu, baseN: %lu, baseM: %lu, "
-        "nUbLoops: %lu, binAddQuotient: %lu, powerSplit: %lu, "
-        "mainFoldCount: %lu, foldTail: %lu, epsilon: %f, avgFactor: %f.",
-        tilingData.numCol, tilingData.numColAlign, tilingData.blockFactor, tilingData.mLastCore,
-        tilingData.baseN, tilingData.baseM, tilingData.nUbLoops, tilingData.binAddQuotient, tilingData.powerSplit,
-        tilingData.mainFoldCount, tilingData.foldTail, tilingData.epsilon, tilingData.avgFactor);
-    OP_LOGI(
-        context_->GetNodeName(),
-        "TilingData roundMode: %lu, mxBlockSize: %lu, scaleAlg: %ld, "
-        "mxScaleSize: %lu, betaFlag: %u, rstdFlag: %u.",
-        tilingData.roundMode, tilingData.mxBlockSize, tilingData.scaleAlg,
-        tilingData.mxScaleSize, tilingData.betaFlag, tilingData.rstdFlag);
+    OP_LOGI(context_->GetNodeName(),
+            "TilingData numCol: %lu, numColAlign: %lu, "
+            "blockFactor: %lu, mLastCore: %lu, baseN: %lu, baseM: %lu, "
+            "nUbLoops: %lu, binAddQuotient: %lu, powerSplit: %lu, "
+            "mainFoldCount: %lu, foldTail: %lu, epsilon: %f, avgFactor: %f.",
+            tilingData.numCol, tilingData.numColAlign, tilingData.blockFactor, tilingData.mLastCore, tilingData.baseN,
+            tilingData.baseM, tilingData.nUbLoops, tilingData.binAddQuotient, tilingData.powerSplit,
+            tilingData.mainFoldCount, tilingData.foldTail, tilingData.epsilon, tilingData.avgFactor);
+    OP_LOGI(context_->GetNodeName(),
+            "TilingData roundMode: %lu, mxBlockSize: %lu, scaleAlg: %ld, "
+            "mxScaleSize: %lu, betaFlag: %u, rstdFlag: %u.",
+            tilingData.roundMode, tilingData.mxBlockSize, tilingData.scaleAlg, tilingData.mxScaleSize,
+            tilingData.betaFlag, tilingData.rstdFlag);
 }
 
-ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::PostTiling()
 {
@@ -185,20 +179,17 @@ ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
 
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(tilingData) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(tilingData),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(tilingData) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(tilingData), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(tilingData));
 
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);

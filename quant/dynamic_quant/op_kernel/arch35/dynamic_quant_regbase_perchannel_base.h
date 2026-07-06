@@ -19,26 +19,22 @@ namespace DynamicQuantPerChannel {
 using namespace AscendC;
 
 constexpr static MicroAPI::DivSpecificMode divHighPrecisionMode = {MicroAPI::MaskMergeMode::ZEROING, true};
-inline  constexpr  MicroAPI::CastTrait castTraitB16ToB32 = {MicroAPI::RegLayout::ZERO,
-    MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
-inline  constexpr MicroAPI::CastTrait castTraitF32ToI16 = {MicroAPI::RegLayout::ZERO,
-    MicroAPI::SatMode::NO_SAT,
-    MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
-inline  constexpr MicroAPI::CastTrait castTraitI16ToF16 = {MicroAPI::RegLayout::ZERO,
-    MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_ROUND};
-inline  constexpr MicroAPI::CastTrait castTraitF16ToI8 = {MicroAPI::RegLayout::ZERO,
-    MicroAPI::SatMode::NO_SAT,
-    MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_TRUNC};
-inline  constexpr MicroAPI::CastTrait castTraitF32tofp8 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-inline  constexpr MicroAPI::CastTrait castTraitF32toh8 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+inline constexpr MicroAPI::CastTrait castTraitB16ToB32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                          MicroAPI::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::UNKNOWN};
+inline constexpr MicroAPI::CastTrait castTraitF32ToI16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                          MicroAPI::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_RINT};
+inline constexpr MicroAPI::CastTrait castTraitI16ToF16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                          MicroAPI::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_ROUND};
+inline constexpr MicroAPI::CastTrait castTraitF16ToI8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                         MicroAPI::MaskMergeMode::ZEROING,
+                                                         AscendC::RoundMode::CAST_TRUNC};
+inline constexpr MicroAPI::CastTrait castTraitF32tofp8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
+                                                          MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+inline constexpr MicroAPI::CastTrait castTraitF32toh8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
+                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
 
 constexpr float FP8_E5M2_MAX_VALUE = 57344.0f;
 constexpr float FP8_E4M3FN_MAX_VALUE = 448.0f;
@@ -64,7 +60,8 @@ constexpr float POS_INFINITY = INFINITY;
 constexpr float NEG_INFINITY = -INFINITY;
 // 设定每种数据类型对应的最大值和offset最大值
 template <typename yDtype>
-__aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &offsetDivValue, float dstTypeMax) {
+__aicore__ inline void SetMaxValue(float& maxValue, float& offsetValue, float& offsetDivValue, float dstTypeMax)
+{
     if constexpr (IsSameType<yDtype, int8_t>::value) {
         maxValue = static_cast<float>(1.0) / INT8_MAX_VALUE;
         offsetValue = INT8_MAX_VALUE;
@@ -78,7 +75,7 @@ __aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &o
         offsetValue = FP8_E5M2_MAX_VALUE;
         offsetDivValue = static_cast<float>(1.0) / FP8_E5M2_OFFSET_VALUE;
     } else if constexpr (IsSameType<yDtype, fp8_e4m3fn_t>::value) {
-        maxValue= static_cast<float>(1.0) / FP8_E4M3FN_MAX_VALUE;
+        maxValue = static_cast<float>(1.0) / FP8_E4M3FN_MAX_VALUE;
         offsetValue = FP8_E4M3FN_MAX_VALUE;
         offsetDivValue = static_cast<float>(1.0) / FP8_E4M3FN_OFFSET_VALUE;
     } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
@@ -89,8 +86,8 @@ __aicore__ inline void SetMaxValue(float &maxValue, float &offsetValue, float &o
 }
 
 template <typename yDtype, typename yCopyDtype>
-__aicore__ inline void CastToDstType(
-    MicroAPI::RegTensor<float>& vregIn, MicroAPI::RegTensor<yCopyDtype>& vregOut, MicroAPI::MaskReg& mask)
+__aicore__ inline void CastToDstType(MicroAPI::RegTensor<float>& vregIn, MicroAPI::RegTensor<yCopyDtype>& vregOut,
+                                     MicroAPI::MaskReg& mask)
 {
     MicroAPI::RegTensor<int16_t> vregCastI16;
     MicroAPI::RegTensor<half> vregCastF16;
@@ -107,9 +104,9 @@ __aicore__ inline void CastToDstType(
         MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vregCastI16, vregIn, mask);
         MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vregCastF16, vregCastI16, mask);
         MicroAPI::Pack(vregPacked, (MicroAPI::RegTensor<uint32_t>&)vregCastF16);
-        MicroAPI::Cast<int4x2_t, half, castTraitF16ToI8>(
-            (MicroAPI::RegTensor<int4x2_t>&)vregOut, (MicroAPI::RegTensor<half>&)vregPacked, mask);
+        MicroAPI::Cast<int4x2_t, half, castTraitF16ToI8>((MicroAPI::RegTensor<int4x2_t>&)vregOut,
+                                                         (MicroAPI::RegTensor<half>&)vregPacked, mask);
     }
 }
 } // namespace DynamicQuantPerChannel
-#endif  // DYNAMIC_QUANT_REGBASE_PERCHANNEL_SPLIT_M_H
+#endif // DYNAMIC_QUANT_REGBASE_PERCHANNEL_SPLIT_M_H

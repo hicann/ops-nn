@@ -48,19 +48,18 @@ using namespace matmul;
         using aType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_A, transA>; \
         using bType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_B, transB>; \
                                                                                            \
-        /* 创建模板类实例并初始化 */                                                         \
+        /* 创建模板类实例并初始化 */                                            \
         templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                      \
         op.Init(aGM, bGM, yGM, biasGM, nullptr, user, &tilingData, &pipe);                 \
                                                                                            \
-        /* 执行处理逻辑 */                                                                  \
+        /* 执行处理逻辑 */                                                           \
         op.Process(1);                                                                     \
     } while (0)
 
-template <
-    int8_t API_LEVEL, int8_t A_TRANS, int8_t B_TRANS, int8_t BATCH_MODEL, int8_t MODEL, int8_t FULL_LOAD,
-    int8_t L0C2OUT_MODEL>
-__global__ __aicore__ void gemm_v3(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+template <int8_t API_LEVEL, int8_t A_TRANS, int8_t B_TRANS, int8_t BATCH_MODEL, int8_t MODEL, int8_t FULL_LOAD,
+          int8_t L0C2OUT_MODEL>
+__global__ __aicore__ void gemm_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM,
+                                   GM_ADDR tilingGM)
 {
     __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
     // 累加场景，c和y同维度，不支持bias
@@ -72,11 +71,10 @@ __global__ __aicore__ void gemm_v3(
     GET_TILING_DATA_WITH_STRUCT(MatMulV3TilingData, tilingData, tilingGM);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
     // GemmV3复用matmulV3 kernel和tilingKey，暂只支持aswt模板
-    if constexpr (
-        API_LEVEL == MAT_MUL_HIGH_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
-        MMV3_IMPL_CLASS_TRNAS(
-            aTran, bTran, MatmulV3Advanced::MatmulAswKernel, MatmulV3Advanced::MatmulAswBlock, MM_CFG_NO_PRELOAD);
+    if constexpr (API_LEVEL == MAT_MUL_HIGH_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
+                  L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        MMV3_IMPL_CLASS_TRNAS(aTran, bTran, MatmulV3Advanced::MatmulAswKernel, MatmulV3Advanced::MatmulAswBlock,
+                              MM_CFG_NO_PRELOAD);
     }
 #endif
 }

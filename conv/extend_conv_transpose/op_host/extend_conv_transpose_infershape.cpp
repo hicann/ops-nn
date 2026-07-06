@@ -43,7 +43,7 @@ constexpr size_t kConv3DDilationsIdx = 2;
 constexpr size_t kConv2DStridesIdx = 0;
 constexpr size_t kConv2DDilationsIdx = 2;
 
-}  // namespace
+} // namespace
 
 namespace Ops {
 namespace NN {
@@ -57,15 +57,16 @@ using ge::FORMAT_NDHWC;
 using ge::FORMAT_NHWC;
 using gert::InferShapeContext;
 
-static bool GetConv3DXShape(
-    const InferShapeContext* context, size_t x_idx, Format x_format, bool avg_pool3d, Conv3DInputShapes& shapes)
+static bool GetConv3DXShape(const InferShapeContext* context, size_t x_idx, Format x_format, bool avg_pool3d,
+                            Conv3DInputShapes& shapes)
 {
     const auto x_shape = context->GetInputShape(x_idx);
-    OP_CHECK_IF(x_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get x shape."), return false);
-    OP_CHECK_IF(x_shape->GetDimNum() != kConv3dInputSizeLimit, 
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(x_shape->GetDimNum()).c_str(), 
-            std::to_string(kConv3dInputSizeLimit).c_str()), 
-        return false);
+    OP_CHECK_IF(x_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get x shape."),
+                return false);
+    OP_CHECK_IF(x_shape->GetDimNum() != kConv3dInputSizeLimit,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(x_shape->GetDimNum()).c_str(),
+                                             std::to_string(kConv3dInputSizeLimit).c_str()),
+                return false);
 
     size_t idx = 0;
     if (x_format == FORMAT_NCDHW) {
@@ -87,9 +88,8 @@ static bool GetConv3DXShape(
         shapes.ic = x_shape->GetDim(idx++);
         shapes.in = x_shape->GetDim(idx++);
     } else {
-        OP_LOGE(
-            context->GetNodeName(), "The format of input x not support format %s.",
-            ge::TypeUtils::FormatToAscendString(x_format).GetString());
+        OP_LOGE(context->GetNodeName(), "The format of input x not support format %s.",
+                ge::TypeUtils::FormatToAscendString(x_format).GetString());
         return false;
     }
 
@@ -99,15 +99,18 @@ static bool GetConv3DXShape(
 static bool GetConv3DFilterShape(const InferShapeContext* context, size_t filter_idx, Conv3DInputShapes& shapes)
 {
     const auto filter_desc = context->GetInputDesc(filter_idx);
-    OP_CHECK_IF(filter_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get filter tensor desc."), return false);
+    OP_CHECK_IF(filter_desc == nullptr,
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get filter tensor desc."), return false);
     const auto filter_format = filter_desc->GetOriginFormat();
     const auto filter_shape = context->GetInputShape(filter_idx);
-    OP_CHECK_IF(filter_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get filter shape."), return false);
+    OP_CHECK_IF(filter_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get filter shape."),
+                return false);
     // already checked in shape range infer logic, no need to use error manager here
-    OP_CHECK_IF(filter_shape->GetDimNum() != kConv3dInputSizeLimit, 
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "filter", std::to_string(filter_shape->GetDimNum()).c_str(), 
-            std::to_string(kConv3dInputSizeLimit).c_str()), 
-        return false);
+    OP_CHECK_IF(filter_shape->GetDimNum() != kConv3dInputSizeLimit,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "filter",
+                                             std::to_string(filter_shape->GetDimNum()).c_str(),
+                                             std::to_string(kConv3dInputSizeLimit).c_str()),
+                return false);
 
     size_t idx = 0;
     if (filter_format == FORMAT_NCDHW) {
@@ -129,8 +132,9 @@ static bool GetConv3DFilterShape(const InferShapeContext* context, size_t filter
         shapes.kc = filter_shape->GetDim(idx++);
         shapes.kn = filter_shape->GetDim(idx++);
     } else {
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "input filter", 
-            ge::TypeUtils::FormatToAscendString(filter_format).GetString(), "NCDHW or NDHWC or DHWCN");
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "input filter",
+                                   ge::TypeUtils::FormatToAscendString(filter_format).GetString(),
+                                   "NCDHW or NDHWC or DHWCN");
         return false;
     }
 
@@ -140,21 +144,26 @@ static bool GetConv3DFilterShape(const InferShapeContext* context, size_t filter
 static bool GetConv3DStridesAndDilations(const InferShapeContext* context, Format x_format, Conv3DAttrs& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
-    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."), return false);
+    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."),
+                return false);
     const auto strides_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(kConv3DStridesIdx);
-    OP_CHECK_IF(strides_list == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get strides attrs."), return false);
+    OP_CHECK_IF(strides_list == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get strides attrs."),
+                return false);
     // already checked in first infer shape logic, double check just for security
     OP_CHECK_IF(strides_list->GetSize() != kConv3dInputSizeLimit,
-      OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "strides", std::to_string(strides_list->GetSize()).c_str(), 
-        std::to_string(kConv3dInputSizeLimit).c_str()), 
-      return false);
+                OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "strides",
+                                               std::to_string(strides_list->GetSize()).c_str(),
+                                               std::to_string(kConv3dInputSizeLimit).c_str()),
+                return false);
 
     const auto dilations_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(kConv3DDilationsIdx);
-    OP_CHECK_IF(dilations_list == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get dilations attrs."), return false);
+    OP_CHECK_IF(dilations_list == nullptr,
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get dilations attrs."), return false);
     OP_CHECK_IF(dilations_list->GetSize() != kConv3dInputSizeLimit,
-      OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "dilations", std::to_string(dilations_list->GetSize()).c_str(), 
-        std::to_string(kConv3dInputSizeLimit).c_str()), 
-      return false);
+                OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "dilations",
+                                               std::to_string(dilations_list->GetSize()).c_str(),
+                                               std::to_string(kConv3dInputSizeLimit).c_str()),
+                return false);
 
     const auto strides = static_cast<const int64_t*>(strides_list->GetData());
     const auto dilations = static_cast<const int64_t*>(dilations_list->GetData());
@@ -176,24 +185,28 @@ static bool GetConv3DStridesAndDilations(const InferShapeContext* context, Forma
     }
 
     OP_CHECK_IF(attrs.strd == 0 || attrs.strh == 0 || attrs.strw == 0,
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "stride_d, stride_h and stride_w",
-          (std::to_string(attrs.strd) + ", " + std::to_string(attrs.strh) + " and " + std::to_string(attrs.strw)).c_str(), 
-          "The value of stride_d, stride_h and stride_w cannot be 0"), 
-        return false);
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "stride_d, stride_h and stride_w",
+                                                       (std::to_string(attrs.strd) + ", " + std::to_string(attrs.strh) +
+                                                        " and " + std::to_string(attrs.strw))
+                                                           .c_str(),
+                                                       "The value of stride_d, stride_h and stride_w cannot be 0"),
+                return false);
     return true;
 }
 
-static bool GetConv3DPads(
-    const InferShapeContext* context, size_t pads_idx, Conv3DAttrs& attrs)
+static bool GetConv3DPads(const InferShapeContext* context, size_t pads_idx, Conv3DAttrs& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
-    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."), return false);
+    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."),
+                return false);
     const auto pads_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(pads_idx);
-    OP_CHECK_IF(pads_list == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get pads attrs."), return false);
-    OP_CHECK_IF(pads_list->GetSize() != LEN_6 and pads_list->GetSize() != LEN_3 and pads_list->GetSize() != LEN_1, 
-          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads_list", std::to_string(pads_list->GetSize()).c_str(), 
-            "The value of pads_list must be in {1, 3, 6}"), 
-          return false);
+    OP_CHECK_IF(pads_list == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get pads attrs."),
+                return false);
+    OP_CHECK_IF(pads_list->GetSize() != LEN_6 and pads_list->GetSize() != LEN_3 and pads_list->GetSize() != LEN_1,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads_list",
+                                                      std::to_string(pads_list->GetSize()).c_str(),
+                                                      "The value of pads_list must be in {1, 3, 6}"),
+                return false);
     const auto pads_list_data = static_cast<const int64_t*>(pads_list->GetData());
 
     if (pads_list->GetSize() == LEN_1 || pads_list->GetSize() == LEN_3) {
@@ -212,11 +225,12 @@ static bool GetConv3DPads(
         attrs.padr = pads_list_data[DIM_5];
     }
 
-    bool negative_pad =
-        std::any_of(pads_list_data, pads_list_data + pads_list->GetSize(), [](int64_t val) -> bool { return val < 0; });
-    OP_CHECK_IF(negative_pad, 
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads attribute", "less than 0", 
-            "Each value of pads attribute must be greater than or equal to 0"), 
+    bool negative_pad = std::any_of(pads_list_data, pads_list_data + pads_list->GetSize(),
+                                    [](int64_t val) -> bool { return val < 0; });
+    OP_CHECK_IF(
+        negative_pad,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads attribute", "less than 0",
+                                              "Each value of pads attribute must be greater than or equal to 0"),
         return false);
 
     return true;
@@ -225,9 +239,11 @@ static bool GetConv3DPads(
 static bool GetConvGroups(const gert::InferShapeContext* context, size_t groups_idx, Conv3DAttrs& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
-    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."), return false);
+    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."),
+                return false);
     const auto groups = runtime_attrs->GetAttrPointer<int64_t>(groups_idx);
-    OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get groups attrs."), return false);
+    OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get groups attrs."),
+                return false);
     attrs.groups = *groups;
     return true;
 }
@@ -239,26 +255,30 @@ constexpr size_t kConv3DTransposePadsIdx = 1;
 constexpr size_t kConv3DTransposeGroupsIdx = 3;
 constexpr size_t kConv3DTransposeOutputPaddingIdx = 5;
 
-static bool GetConv3DTransposeOutputPadding(const gert::InferShapeContext* const context,
-                                            ge::Format x_format, int64_t output_padding[3],
-                                            size_t output_padding_length)
-{   
+static bool GetConv3DTransposeOutputPadding(const gert::InferShapeContext* const context, ge::Format x_format,
+                                            int64_t output_padding[3], size_t output_padding_length)
+{
     constexpr size_t output_padding_length_limit = 3;
-    OP_CHECK_IF(output_padding == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "output_padding is nullptr."), return false);
-    OP_CHECK_IF(output_padding_length < output_padding_length_limit, 
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_length", std::to_string(output_padding_length).c_str(), 
-            "The value of output_padding_length cannot be less than 3"), 
-        return false);
+    OP_CHECK_IF(output_padding == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "output_padding is nullptr."),
+                return false);
+    OP_CHECK_IF(output_padding_length < output_padding_length_limit,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_length",
+                                                      std::to_string(output_padding_length).c_str(),
+                                                      "The value of output_padding_length cannot be less than 3"),
+                return false);
     // 3: DHW
     const auto runtime_attrs = context->GetAttrs();
-    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."), return false);
-    const auto output_padding_list =
-        runtime_attrs->GetAttrPointer<gert::ContinuousVector>(kConv3DTransposeOutputPaddingIdx);
-    OP_CHECK_IF(output_padding_list == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get output_padding attrs."), return false);
-    OP_CHECK_IF(output_padding_list->GetSize() != kConv3dDimSizeLimit, 
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "output_padding", std::to_string(output_padding_list->GetSize()).c_str(), 
-            std::to_string(kConv3dDimSizeLimit).c_str()), 
-        return false);
+    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."),
+                return false);
+    const auto output_padding_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(
+        kConv3DTransposeOutputPaddingIdx);
+    OP_CHECK_IF(output_padding_list == nullptr,
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get output_padding attrs."), return false);
+    OP_CHECK_IF(output_padding_list->GetSize() != kConv3dDimSizeLimit,
+                OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "output_padding",
+                                               std::to_string(output_padding_list->GetSize()).c_str(),
+                                               std::to_string(kConv3dDimSizeLimit).c_str()),
+                return false);
 
     const auto output_padding_data = static_cast<const int64_t*>(output_padding_list->GetData());
     size_t idx = 0;
@@ -277,20 +297,22 @@ static bool GetConv3DTransposeOutputPadding(const gert::InferShapeContext* const
 }
 
 static bool SetOutputShape(gert::InferShapeContext* context, const Conv3DInputShapes shapes, const Conv3DAttrs& attrs,
-    const int64_t output_padding[3], size_t output_padding_length)
+                           const int64_t output_padding[3], size_t output_padding_length)
 {
     constexpr size_t output_padding_length_limit = 3;
-    OP_CHECK_IF(output_padding == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "output_padding is nullptr."), return false);
-    OP_CHECK_IF(output_padding_length < output_padding_length_limit, 
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_length", std::to_string(output_padding_length).c_str(), 
-            "The value of output_padding_length cannot be less than 3"), 
-        return false);
-    
+    OP_CHECK_IF(output_padding == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "output_padding is nullptr."),
+                return false);
+    OP_CHECK_IF(output_padding_length < output_padding_length_limit,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_length",
+                                                      std::to_string(output_padding_length).c_str(),
+                                                      "The value of output_padding_length cannot be less than 3"),
+                return false);
+
     const auto x_desc = context->GetInputDesc(0);
     const auto x_format = x_desc->GetOriginFormat();
     auto y_shape = context->GetOutputShape(0);
     int64_t output_d = attrs.strd * (shapes.id - 1) + output_padding[0] + ((shapes.kd - 1) * attrs.dild + 1) -
-                               (attrs.padf + attrs.padb);
+                       (attrs.padf + attrs.padb);
     int64_t output_h = attrs.strh * (shapes.ih - 1) + output_padding[1] + ((shapes.kh - 1) * attrs.dilh + 1) -
                        (attrs.padu + attrs.padd);
     // 2: w dim
@@ -310,22 +332,19 @@ static bool SetOutputShape(gert::InferShapeContext* context, const Conv3DInputSh
         y_shape->AppendDim(output_w);
         y_shape->AppendDim(shapes.kc * attrs.groups);
     } else {
-        OP_LOGE(
-            context->GetNodeName(), "The format of output y not support format %s.",
-            ge::TypeUtils::FormatToAscendString(x_format).GetString());
+        OP_LOGE(context->GetNodeName(), "The format of output y not support format %s.",
+                ge::TypeUtils::FormatToAscendString(x_format).GetString());
         return false;
     }
     return true;
 }
 static ge::graphStatus InferShapeForExtendConvTranspose(gert::InferShapeContext* context)
 {
-    OP_CHECK_IF(
-        context == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null context"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null context"),
+                return ge::GRAPH_FAILED);
     auto const_tensor = context->GetInputTensor(0);
-    OP_CHECK_IF(
-        const_tensor == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null tensor"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null tensor"),
+                return ge::GRAPH_FAILED);
     size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
     auto ret = ge::GRAPH_SUCCESS;
     if (const_tensor_dim_num == kConv2dDimSizeLimit) {
@@ -338,14 +357,13 @@ static ge::graphStatus InferShapeForExtendConvTranspose(gert::InferShapeContext*
     }
 
     auto y_shape = context->GetOutputShape(0);
-    OP_CHECK_IF(
-        y_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y shape is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(y_shape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y shape is null"),
+                return ge::GRAPH_FAILED);
 
     if (CheckOutputAllZero(y_shape)) {
         const auto x_desc = context->GetInputDesc(0);
-        OP_CHECK_IF(
-            x_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "x desc is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(x_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "x desc is null"),
+                    return ge::GRAPH_FAILED);
         const auto x_format = x_desc->GetOriginFormat();
 
         Conv3DInputShapes shapes;
@@ -356,7 +374,8 @@ static ge::graphStatus InferShapeForExtendConvTranspose(gert::InferShapeContext*
             GetConv3DStridesAndDilations(context, x_format, attrs) &&
             GetConvGroups(context, kConv3DTransposeGroupsIdx, attrs) &&
             GetConv3DPads(context, kConv3DTransposePadsIdx, attrs) &&
-            GetConv3DTransposeOutputPadding(context, x_format, output_padding, sizeof(output_padding) / sizeof(int64_t))) {
+            GetConv3DTransposeOutputPadding(context, x_format, output_padding,
+                                            sizeof(output_padding) / sizeof(int64_t))) {
             if (!SetOutputShape(context, shapes, attrs, output_padding, sizeof(output_padding) / sizeof(int64_t))) {
                 return false;
             }
@@ -377,5 +396,5 @@ IMPL_OP_INFERSHAPE(ExtendConvTranspose)
     .InferDataType(Ops::NN::Conv::InferDataTypeForConvTransposeV2)
     .InputsDataDependency({0});
 
-}  // namespace NN
-}  // namespace Ops
+} // namespace NN
+} // namespace Ops

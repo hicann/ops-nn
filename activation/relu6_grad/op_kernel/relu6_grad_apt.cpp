@@ -22,8 +22,8 @@ using namespace AscendC;
 using namespace Ops::Base;
 
 template <uint64_t schMode>
-__global__ __aicore__ void relu6_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops,
-                                       GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void relu6_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                                      GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 

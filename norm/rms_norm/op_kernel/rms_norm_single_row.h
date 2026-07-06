@@ -23,8 +23,7 @@ using namespace RmsNorm;
 template <typename T, typename T_GAMMA>
 class KernelRmsNormSingleRow {
 public:
-    __aicore__ inline KernelRmsNormSingleRow()
-    {}
+    __aicore__ inline KernelRmsNormSingleRow() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
@@ -110,8 +109,8 @@ private:
         inQueueGamma.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void ComputeMixDtype(
-        uint32_t innerProgress, LocalTensor<T_GAMMA> gammaLocal, LocalTensor<float> rstdLocal)
+    __aicore__ inline void ComputeMixDtype(uint32_t innerProgress, LocalTensor<T_GAMMA> gammaLocal,
+                                           LocalTensor<float> rstdLocal)
     {
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));

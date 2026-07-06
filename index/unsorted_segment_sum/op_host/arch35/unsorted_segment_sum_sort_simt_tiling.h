@@ -35,13 +35,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_4100, UnsortedSegmentSumSortSimtTilingData);
 
-class UnsortedSegmentSumSortSimtTiling : public UnsortedSegmentSumBaseTiling
-{
+class UnsortedSegmentSumSortSimtTiling : public UnsortedSegmentSumBaseTiling {
 public:
-    explicit UnsortedSegmentSumSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
-    {}
-    ~UnsortedSegmentSumSortSimtTiling() override
-    {}
+    explicit UnsortedSegmentSumSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context) {}
+    ~UnsortedSegmentSumSortSimtTiling() override {}
+
 private:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -50,6 +48,7 @@ private:
     void DumpTilingInfo() override;
     ge::graphStatus CalcTiling();
     int64_t GetSortBufferSize(ge::DataType dataType, int64_t indexSize);
+
 private:
     UnsortedSegmentSumSortSimtTilingData tilingData_;
 };

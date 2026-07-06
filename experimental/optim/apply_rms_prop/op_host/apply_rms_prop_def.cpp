@@ -86,4 +86,4 @@ public:
 
 OP_ADD(ApplyRmsProp);
 
-}  // namespace ops
+} // namespace ops

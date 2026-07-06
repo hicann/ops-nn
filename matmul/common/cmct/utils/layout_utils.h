@@ -233,13 +233,13 @@ __aicore__ constexpr inline decltype(auto) MakeLayoutByFormat(int row, int col)
             AscendC::MakeStride(AscendC::MakeStride(_1{}, AscendC::CeilAlign(col, C0_NUM_PER_FRACTAL) * c0Size),
                                 AscendC::MakeStride(Int<c0Size>{}, Int<C0_NUM_PER_FRACTAL * c0Size>{})));
     } else { // CubeFormat:ZZ
-        return AscendC::MakeLayout(AscendC::MakeShape(AscendC::MakeShape(_16{}, AscendC::Ceil(row, C0_NUM_PER_FRACTAL)),
-                                                   AscendC::MakeShape(Int<c0Size>{}, AscendC::Ceil(col, c0Size))),
-                                AscendC::MakeStride(AscendC::MakeStride(Int<c0Size>{}, AscendC::CeilAlign(col, c0Size) *
-                                                                                           C0_NUM_PER_FRACTAL),
-                                                    AscendC::MakeStride(_1{}, Int<C0_NUM_PER_FRACTAL * c0Size>{})));
+        return AscendC::MakeLayout(
+            AscendC::MakeShape(AscendC::MakeShape(_16{}, AscendC::Ceil(row, C0_NUM_PER_FRACTAL)),
+                               AscendC::MakeShape(Int<c0Size>{}, AscendC::Ceil(col, c0Size))),
+            AscendC::MakeStride(
+                AscendC::MakeStride(Int<c0Size>{}, AscendC::CeilAlign(col, c0Size) * C0_NUM_PER_FRACTAL),
+                AscendC::MakeStride(_1{}, Int<C0_NUM_PER_FRACTAL * c0Size>{})));
     }
 }
 } // namespace Gemm
 } // namespace Cmct
-

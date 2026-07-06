@@ -30,7 +30,7 @@ __global__ __aicore__ void gather_elements_v3(GM_ADDR x, GM_ADDR index, GM_ADDR 
     REGISTER_TILING_DEFAULT(GatherElementsV3TilingData);
     GET_TILING_DATA_WITH_STRUCT(GatherElementsV3TilingData, tilingData, tiling);
 
-        NsGatherElementsV3::GatherElementsV3<DTYPE_X> op; 
-        op.Init(x, index, y, &tilingData);      
-        op.Process();                       
+    NsGatherElementsV3::GatherElementsV3<DTYPE_X> op;
+    op.Init(x, index, y, &tilingData);
+    op.Process();
 }

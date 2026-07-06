@@ -21,10 +21,9 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LayerNormQuant);
 
-static inline void InferReduceShape(
-    const op::Shape& xShape, op::Shape& reduceShape, int quantMode)
+static inline void InferReduceShape(const op::Shape& xShape, op::Shape& reduceShape, int quantMode)
 {
-    bool isDyn = (quantMode == 1);  // 0 static; 1 dynamic
+    bool isDyn = (quantMode == 1); // 0 static; 1 dynamic
     if (isDyn) {
         size_t reduceShapeDim = xShape.GetDimNum() - 1;
         for (size_t i = 0; i < reduceShapeDim; i++) {
@@ -36,9 +35,10 @@ static inline void InferReduceShape(
     return;
 }
 
-std::array<aclTensor*, LAYER_NORM_QUANT_OUT_NUM> LayerNormQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, double epsilon, aclOpExecutor* executor)
+std::array<aclTensor*, LAYER_NORM_QUANT_OUT_NUM> LayerNormQuant(const aclTensor* x, const aclTensor* gamma,
+                                                                const aclTensor* beta, const aclTensor* scale,
+                                                                const aclTensor* zeroPointsOptional, int quantMode,
+                                                                double epsilon, aclOpExecutor* executor)
 {
     OP_LOGI("LayerNormQuant L0 Start.");
     Shape reduceShape;
@@ -54,15 +54,11 @@ std::array<aclTensor*, LAYER_NORM_QUANT_OUT_NUM> LayerNormQuant(
 
     OP_LOGI("LayerNormQuant alloc out.");
 
-    OP_LOGI(
-        "res=[%s], scaleOut=[%s].",
-        op::ToString(res->GetViewShape()).GetString(), op::ToString(scaleOut->GetViewShape()).GetString());
+    OP_LOGI("res=[%s], scaleOut=[%s].", op::ToString(res->GetViewShape()).GetString(),
+            op::ToString(scaleOut->GetViewShape()).GetString());
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormQuant,
-        OP_INPUT(x, gamma, beta, scale, zeroPointsOptional),
-        OP_OUTPUT(res, scaleOut),
-        OP_ATTR(static_cast<float>(epsilon), quantMode));
+    ADD_TO_LAUNCHER_LIST_AICORE(LayerNormQuant, OP_INPUT(x, gamma, beta, scale, zeroPointsOptional),
+                                OP_OUTPUT(res, scaleOut), OP_ATTR(static_cast<float>(epsilon), quantMode));
 
     OP_LOGI("LayerNormQuant Launch finish.");
 

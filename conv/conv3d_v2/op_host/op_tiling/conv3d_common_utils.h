@@ -48,7 +48,7 @@ constexpr uint64_t MAX_64_BIT_NUM = 0xFFFFFFFFFFFFFFFFU;
 
 // Common utility function for multiplication with overflow check
 template <typename T>
-inline bool MulWithOverflowCheck(T &res, T a, T b)
+inline bool MulWithOverflowCheck(T& res, T a, T b)
 {
     if (a == 0 || b == 0) {
         res = 0;
@@ -64,7 +64,7 @@ inline bool MulWithOverflowCheck(T &res, T a, T b)
 
 // 调用时控制传参个数，避免栈溢出
 template <typename T, typename... Args>
-inline bool MulWithOverflowCheck(T &res, T a, T b, Args... args)
+inline bool MulWithOverflowCheck(T& res, T a, T b, Args... args)
 {
     T tmp;
     return MulWithOverflowCheck(tmp, a, b) || MulWithOverflowCheck(res, tmp, args...);
@@ -91,7 +91,8 @@ inline uint64_t AlignUp(uint64_t value, uint64_t align)
 // Infer input H size (HiL1) from output Ho tile (HoL1) and conv attributes.
 inline uint64_t InferHiL1(uint64_t inputHoL1, uint64_t hi, uint64_t singlekH, uint32_t dilationH, uint32_t strideH)
 {
-    uint64_t khDilated = (singlekH - static_cast<uint64_t>(1)) * static_cast<uint64_t>(dilationH) + static_cast<uint64_t>(1);
+    uint64_t khDilated = (singlekH - static_cast<uint64_t>(1)) * static_cast<uint64_t>(dilationH) +
+                         static_cast<uint64_t>(1);
     uint64_t tmpHiL1 = (inputHoL1 - static_cast<uint64_t>(1)) * static_cast<uint64_t>(strideH) + khDilated;
     if (tmpHiL1 > hi) {
         tmpHiL1 = hi;
@@ -102,7 +103,8 @@ inline uint64_t InferHiL1(uint64_t inputHoL1, uint64_t hi, uint64_t singlekH, ui
 // Infer input W size (WiL1) from output Wo tile (WoL1) and conv attributes.
 inline uint64_t InferWiL1(uint64_t inputWoL1, uint64_t wi, uint64_t singlekW, uint32_t dilationW, uint32_t strideW)
 {
-    uint64_t kwDilated = (singlekW - static_cast<uint64_t>(1)) * static_cast<uint64_t>(dilationW) + static_cast<uint64_t>(1);
+    uint64_t kwDilated = (singlekW - static_cast<uint64_t>(1)) * static_cast<uint64_t>(dilationW) +
+                         static_cast<uint64_t>(1);
     uint64_t tmpWiL1 = (inputWoL1 - static_cast<uint64_t>(1)) * static_cast<uint64_t>(strideW) + kwDilated;
     if (tmpWiL1 > wi) {
         tmpWiL1 = wi;
@@ -112,7 +114,7 @@ inline uint64_t InferWiL1(uint64_t inputWoL1, uint64_t wi, uint64_t singlekW, ui
 
 // Internal helper for divisor enumeration; shared by overloads below.
 template <typename TNum, typename TMax, typename TOut>
-inline void CalcCommFactorImpl(TNum num, TMax numMax, std::vector<TOut> &resList)
+inline void CalcCommFactorImpl(TNum num, TMax numMax, std::vector<TOut>& resList)
 {
     if (num == 0) {
         return;
@@ -135,20 +137,20 @@ inline void CalcCommFactorImpl(TNum num, TMax numMax, std::vector<TOut> &resList
 }
 
 // Enumerate common factors up to numMax; result stored as uint32_t (conv3d_base_tiling).
-inline void CalcCommFactor(uint64_t num, uint32_t numMax, std::vector<uint32_t> &resList)
+inline void CalcCommFactor(uint64_t num, uint32_t numMax, std::vector<uint32_t>& resList)
 {
     CalcCommFactorImpl<uint64_t, uint32_t, uint32_t>(num, numMax, resList);
 }
 
 // Enumerate common factors up to numMax; result stored as uint64_t（conv3d_api_tiling）.
-inline void CalcCommFactor(uint64_t num, uint64_t numMax, std::vector<uint64_t> &resList)
+inline void CalcCommFactor(uint64_t num, uint64_t numMax, std::vector<uint64_t>& resList)
 {
     CalcCommFactorImpl<uint64_t, uint64_t, uint64_t>(num, numMax, resList);
 }
 
 // Generic array equality check with size constraint.
 template <typename T>
-inline bool IsArrayEqual(const std::vector<T> &arr1, const std::vector<T> &arr2, uint32_t size)
+inline bool IsArrayEqual(const std::vector<T>& arr1, const std::vector<T>& arr2, uint32_t size)
 {
     if (arr1.size() < size || arr2.size() < size) {
         return false;

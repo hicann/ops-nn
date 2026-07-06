@@ -53,9 +53,9 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeGluGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, int64_t approximate, aclTensor* out, aclTensor* outGelu,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeGluGetWorkspaceSize(const aclTensor* self, int64_t dim, int64_t approximate,
+                                                 aclTensor* out, aclTensor* outGelu, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor);
 
 /**
  * @param [in] self: 待进行GeGlu计算的入参，npu
@@ -74,9 +74,9 @@ ACLNN_API aclnnStatus aclnnGeGluGetWorkspaceSize(
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeGluV3GetWorkspaceSize(
-    const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft, aclTensor* out, aclTensor* outGelu,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeGluV3GetWorkspaceSize(const aclTensor* self, int64_t dim, int64_t approximate,
+                                                   bool activateLeft, aclTensor* out, aclTensor* outGelu,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnGeGlu的第二段接口，用于执行计算。
@@ -96,8 +96,8 @@ ACLNN_API aclnnStatus aclnnGeGlu(void* workspace, uint64_t workspaceSize, aclOpE
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnGeGluV3(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGeGluV3(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   aclrtStream stream);
 
 #ifdef __cplusplus
 }

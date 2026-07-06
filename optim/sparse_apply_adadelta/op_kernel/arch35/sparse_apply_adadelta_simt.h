@@ -35,13 +35,10 @@ using namespace AscendC;
 static constexpr uint32_t THREAD_NUM = 512;
 
 template <typename T, typename Tindices>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void OpSparseApplyAdadeltaSimtKernel(
-    int64_t kCount, int64_t rowSize, int64_t totalSize,
-    __gm__ T* lrGm, __gm__ T* rhoGm, __gm__ T* epsGm,
-    __gm__ T* varInGm, __gm__ T* accumInGm, __gm__ T* accumUpdateInGm,
-    __gm__ T* varOutGm, __gm__ T* accumOutGm, __gm__ T* accumUpdateOutGm,
-    __gm__ T* gradGm, __gm__ Tindices* indicesGm)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAdadeltaSimtKernel(
+    int64_t kCount, int64_t rowSize, int64_t totalSize, __gm__ T* lrGm, __gm__ T* rhoGm, __gm__ T* epsGm,
+    __gm__ T* varInGm, __gm__ T* accumInGm, __gm__ T* accumUpdateInGm, __gm__ T* varOutGm, __gm__ T* accumOutGm,
+    __gm__ T* accumUpdateOutGm, __gm__ T* gradGm, __gm__ Tindices* indicesGm)
 {
     float lrVal = static_cast<float>(lrGm[0]);
     float rhoVal = static_cast<float>(rhoGm[0]);
@@ -52,10 +49,8 @@ inline void OpSparseApplyAdadeltaSimtKernel(
     // Per-row approach: each thread handles one or more rows via grid-stride.
     // For each row, scan ALL indices serially to match golden's serial accumulation.
     // This correctly handles duplicate indices (multiple k pointing to same row).
-    for (int64_t row = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-         row < totalRows;
-         row += static_cast<int64_t>(blockDim.x) * gridDim.x)
-    {
+    for (int64_t row = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x; row < totalRows;
+         row += static_cast<int64_t>(blockDim.x) * gridDim.x) {
         int64_t rowOffset = row * rowSize;
         bool anyUpdate = false;
 
@@ -109,16 +104,14 @@ inline void OpSparseApplyAdadeltaSimtKernel(
 }
 
 template <typename T, typename Tindices>
-__aicore__ inline void Process(
-    GM_ADDR varIn, GM_ADDR accumIn, GM_ADDR accumUpdateIn,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR varOut, GM_ADDR accumOut, GM_ADDR accumUpdateOut,
-    const SparseApplyAdadeltaTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR varIn, GM_ADDR accumIn, GM_ADDR accumUpdateIn, GM_ADDR lr, GM_ADDR rho,
+                               GM_ADDR epsilon, GM_ADDR grad, GM_ADDR indices, GM_ADDR varOut, GM_ADDR accumOut,
+                               GM_ADDR accumUpdateOut, const SparseApplyAdadeltaTilingData* tilingData)
 {
     int64_t kCount = tilingData->K;
     int64_t totalSize = tilingData->varTotalSize;
-    if (kCount == 0 || totalSize == 0) return;
+    if (kCount == 0 || totalSize == 0)
+        return;
 
     int64_t rowSize = tilingData->rowSize;
 
@@ -134,15 +127,11 @@ __aicore__ inline void Process(
     __gm__ T* gradGm = (__gm__ T*)grad;
     __gm__ Tindices* indicesGm = (__gm__ Tindices*)indices;
 
-    asc_vf_call<OpSparseApplyAdadeltaSimtKernel<T, Tindices>>(
-        dim3(THREAD_NUM),
-        kCount, rowSize, totalSize,
-        lrGm, rhoGm, epsGm,
-        varInGm, accumInGm, accumUpdateInGm,
-        varOutGm, accumOutGm, accumUpdateOutGm,
-        gradGm, indicesGm);
+    asc_vf_call<OpSparseApplyAdadeltaSimtKernel<T, Tindices>>(dim3(THREAD_NUM), kCount, rowSize, totalSize, lrGm, rhoGm,
+                                                              epsGm, varInGm, accumInGm, accumUpdateInGm, varOutGm,
+                                                              accumOutGm, accumUpdateOutGm, gradGm, indicesGm);
 }
 
-}  // namespace NsSparseApplyAdadelta
+} // namespace NsSparseApplyAdadelta
 
-#endif  // SPARSE_APPLY_ADADELTA_SIMT_H_
+#endif // SPARSE_APPLY_ADADELTA_SIMT_H_

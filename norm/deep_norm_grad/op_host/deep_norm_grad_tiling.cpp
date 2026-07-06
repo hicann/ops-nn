@@ -79,7 +79,7 @@ inline void SetBaseConfig(gert::TilingContext* context, DeepNormGradTilingData& 
     uint32_t nDealLastCore = nDimNum - nDealPerCore * (useCoreNum - 1);
     uint32_t fixedOutputFlag = 1;
     OP_LOGI(context->GetNodeName(), "[DeepNormGrad] GetDeterministic state: %u", context->GetDeterministic());
-    
+
     tiling.set_useCoreNum(useCoreNum);
     tiling.set_nDimNum(nDimNum);
     tiling.set_dDimNum(dDimNum);
@@ -89,9 +89,8 @@ inline void SetBaseConfig(gert::TilingContext* context, DeepNormGradTilingData& 
     context->SetBlockDim(useCoreNum);
 }
 
-inline void CalCutStageValue(
-    uint32_t& cutStage, uint32_t& ubElemNum, uint32_t& tensorJustNNum, uint32_t& elemWithoutDInUB,
-    uint32_t tensorWithDNum, uint32_t& blockElem)
+inline void CalCutStageValue(uint32_t& cutStage, uint32_t& ubElemNum, uint32_t& tensorJustNNum,
+                             uint32_t& elemWithoutDInUB, uint32_t tensorWithDNum, uint32_t& blockElem)
 {
     if (tensorWithDNum == 0U) {
         return;
@@ -103,19 +102,17 @@ inline void CalCutStageValue(
     cutStage = cutStage / blockElem * blockElem;
 }
 
-inline void CalMergeCountValue(
-    uint32_t& mergeCount, uint32_t& ubElemNum, uint32_t tensorJustDNum, uint32_t& elemWithDInUB, uint32_t& tensorNDNum,
-    uint32_t& tensorJustNNum, uint32_t& elemWithoutDInUB)
+inline void CalMergeCountValue(uint32_t& mergeCount, uint32_t& ubElemNum, uint32_t tensorJustDNum,
+                               uint32_t& elemWithDInUB, uint32_t& tensorNDNum, uint32_t& tensorJustNNum,
+                               uint32_t& elemWithoutDInUB)
 {
-    mergeCount =
-        ((ubElemNum - tensorJustDNum * elemWithDInUB) /
-         (tensorNDNum * elemWithDInUB + tensorJustNNum * elemWithoutDInUB));
+    mergeCount = ((ubElemNum - tensorJustDNum * elemWithDInUB) /
+                  (tensorNDNum * elemWithDInUB + tensorJustNNum * elemWithoutDInUB));
 }
 
 // SetFp32Config: configure tiling parameters for FP32 data type
-inline void SetFp32Config(
-    DeepNormGradTilingData& tiling, uint32_t& ubElemNum, uint32_t& elemWithDInUB, uint32_t& elemWithoutDInUB,
-    uint32_t& blockElem, uint32_t& dDimNum, uint32_t& cutDKey)
+inline void SetFp32Config(DeepNormGradTilingData& tiling, uint32_t& ubElemNum, uint32_t& elemWithDInUB,
+                          uint32_t& elemWithoutDInUB, uint32_t& blockElem, uint32_t& dDimNum, uint32_t& cutDKey)
 {
     uint32_t mergeCountMergeN;
     uint32_t cutStageMergeN;
@@ -133,17 +130,15 @@ inline void SetFp32Config(
         // tensor(without D): mean\rstd         -                      -
         // (8*mergeNCount+16+3)*elemWithDInUB+(2*mergeNCount)*elemWithoutDInUB(8)=ubElemNum
         // when mergeNCount=1, elemWithDInUB=(ubElemNum-2*elemWithoutDInUB)/27
-        tensorJustNNum = 2;       // mean\rstd
-        tensorNDNum = CONST_11;          // dy\x\gx\dx\dgx\tmp_ND\brcb_tmp_ND1\brcb_tmp_ND2
+        tensorJustNNum = 2;             // mean\rstd
+        tensorNDNum = CONST_11;         // dy\x\gx\dx\dgx\tmp_ND\brcb_tmp_ND1\brcb_tmp_ND2
         tensorJustDNum = CONST_3;       // gamma\dbeta\dgamma
         otherTensorJustDNum = CONST_16; // brcb need ailgn brcb_tmp_ND1\brcb_tmp_ND2
 
-        CalCutStageValue(
-            cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
-            tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
-        CalMergeCountValue(
-            mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB, tensorNDNum,
-            tensorJustNNum, elemWithoutDInUB);
+        CalCutStageValue(cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
+                         tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
+        CalMergeCountValue(mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB,
+                           tensorNDNum, tensorJustNNum, elemWithoutDInUB);
     } else {
         // fp32 merge N
         //                    input\output(merge N)    input\output(other)    temp
@@ -151,17 +146,15 @@ inline void SetFp32Config(
         // tensor(without D): mean\rstd                -                      -
         // (5*mergeNCount+3)*elemWithDInUB+(2*mergeNCount)*elemWithoutDInUB(8)=ubElemNum
         // when mergeNCount=1, elemWithDInUB=(ubElemNum-2*elemWithoutDInUB)/8
-        tensorJustNNum = 2;      // mean\rstd
-        otherTensorJustDNum = 0; // not use brcb
-        tensorNDNum = CONST_5;         // dy\x\gx\dx\dgx
-        tensorJustDNum = CONST_3;      // gamma\dbeta\dgamma
+        tensorJustNNum = 2;       // mean\rstd
+        otherTensorJustDNum = 0;  // not use brcb
+        tensorNDNum = CONST_5;    // dy\x\gx\dx\dgx
+        tensorJustDNum = CONST_3; // gamma\dbeta\dgamma
 
-        CalCutStageValue(
-            cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
-            tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
-        CalMergeCountValue(
-            mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB, tensorNDNum,
-            tensorJustNNum, elemWithoutDInUB);
+        CalCutStageValue(cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
+                         tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
+        CalMergeCountValue(mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB,
+                           tensorNDNum, tensorJustNNum, elemWithoutDInUB);
     }
 
     // == merge N ==
@@ -188,14 +181,13 @@ inline void SetFp32Config(
         // tensor(with D):    dy\x\gx\dx\dgx\gamma\dgamma\dbeta    -
         // tensor(without D): mean\rstd                            tmp_mean_pd_buf\tmp_var_pd_buf
         // 7*elemWithDInUB+4*elemWithoutDInUB(8)=ubElemNum
-        tensorJustNNum = 4;      // mean\rstd\tmp_mean_pd_buf\tmp_var_pd_buf
-        tensorNDNum = CONST_5;         // dy\x\gx\dx\dgx
-        otherTensorJustDNum = 0; // not use brcb
-        tensorJustDNum = CONST_3;      // gamma\dgamma\dbeta
+        tensorJustNNum = 4;       // mean\rstd\tmp_mean_pd_buf\tmp_var_pd_buf
+        tensorNDNum = CONST_5;    // dy\x\gx\dx\dgx
+        otherTensorJustDNum = 0;  // not use brcb
+        tensorJustDNum = CONST_3; // gamma\dgamma\dbeta
 
-        CalCutStageValue(
-            cutStageCutD, ubElemNum, tensorJustNNum, elemWithoutDInUB,
-            tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
+        CalCutStageValue(cutStageCutD, ubElemNum, tensorJustNNum, elemWithoutDInUB,
+                         tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
 
         cutDPerTime = cutStageCutD;
         cutDTime = Ops::Base::CeilDiv(dDimNum, cutStageCutD);
@@ -213,9 +205,8 @@ inline void SetFp32Config(
 }
 
 // SetFp16Bf16Config: configure tiling parameters for FP16/BF16 data types
-inline void SetFp16Bf16Config(
-    DeepNormGradTilingData& tiling, uint32_t& ubElemNum, uint32_t& elemWithDInUB, uint32_t& elemWithoutDInUB,
-    uint32_t& blockElem, uint32_t& dDimNum, uint32_t& cutDKey)
+inline void SetFp16Bf16Config(DeepNormGradTilingData& tiling, uint32_t& ubElemNum, uint32_t& elemWithDInUB,
+                              uint32_t& elemWithoutDInUB, uint32_t& blockElem, uint32_t& dDimNum, uint32_t& cutDKey)
 {
     uint32_t mergeCountMergeN;
     uint32_t cutStageMergeN;
@@ -236,31 +227,27 @@ inline void SetFp16Bf16Config(
         // (21*mergeNCount+32+5)*elemWithDInUB+(4*mergeNCount)*elemWithoutDInUB(16)=ubElemNum
         // when mergeNCount=1, elemWithDInUB=(ubElemNum-4*elemWithoutDInUB)/58
         tensorJustNNum = 4;       // mean(fp32)\rstd(fp32)
-        tensorNDNum = CONST_25;         // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)\dx_t(fp32)\dgx_t(fp32)
+        tensorNDNum = CONST_25;   // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)\dx_t(fp32)\dgx_t(fp32)
                                   // tmp_ND(fp32)\brcb_tmp_ND1(fp32)\brcb_tmp_ND2(fp32)
-        tensorJustDNum = CONST_5;       // gamma\dbeta(fp32)\dgamma(fp32)
+        tensorJustDNum = CONST_5; // gamma\dbeta(fp32)\dgamma(fp32)
         otherTensorJustDNum = 32; // brcb need ailgn brcb_tmp_ND1\brcb_tmp_ND2
 
-        CalCutStageValue(
-            cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
-            tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
-        CalMergeCountValue(
-            mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB, tensorNDNum,
-            tensorJustNNum, elemWithoutDInUB);
+        CalCutStageValue(cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
+                         tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
+        CalMergeCountValue(mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB,
+                           tensorNDNum, tensorJustNNum, elemWithoutDInUB);
     } else {
         // fp32 large D stage
-        tensorJustNNum = CONST_4;      // mean\rstd
-        tensorNDNum = CONST_5;         // dy\x\gx\dx\dgx
-        tensorJustDNum = CONST_17;     // gamma\dbeta(fp32)\dgamma(fp32)\dy_t(fp32)\x_t(fp32)\gx_t(fp32)
-                                 // gamma_t(fp32)\dx_t(fp32)\dgx_t(fp32)
-        otherTensorJustDNum = 0; // not use brcb
+        tensorJustNNum = CONST_4;  // mean\rstd
+        tensorNDNum = CONST_5;     // dy\x\gx\dx\dgx
+        tensorJustDNum = CONST_17; // gamma\dbeta(fp32)\dgamma(fp32)\dy_t(fp32)\x_t(fp32)\gx_t(fp32)
+                                   // gamma_t(fp32)\dx_t(fp32)\dgx_t(fp32)
+        otherTensorJustDNum = 0;   // not use brcb
 
-        CalCutStageValue(
-            cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
-            tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
-        CalMergeCountValue(
-            mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB, tensorNDNum,
-            tensorJustNNum, elemWithoutDInUB);
+        CalCutStageValue(cutStageMergeN, ubElemNum, tensorJustNNum, elemWithoutDInUB,
+                         tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
+        CalMergeCountValue(mergeCountMergeN, ubElemNum, tensorJustDNum + otherTensorJustDNum, elemWithDInUB,
+                           tensorNDNum, tensorJustNNum, elemWithoutDInUB);
     }
 
     // == merge N for fp16/bf16 ==
@@ -289,15 +276,14 @@ inline void SetFp16Bf16Config(
         // tensor(without D): mean(fp32)\rstd(fp32)       tmp_mean_pd_buf(fp32)\tmp_var_pd_buf(fp32)
         // 20*elemWithDInUB+8*elemWithoutDInUB(16)=ubElemNum
         // fp16/bf16 cutD tensor counts
-        tensorJustNNum = 8;      // mean(fp32)\rstd(fp32)\tmp_mean_pd_buf(fp32)\tmp_var_pd_buf(fp32)
-        tensorNDNum = CONST_17;        // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)
-                                 // gamma_t(fp32)\dx_t(fp32)\dgx_t(fp32)
-        tensorJustDNum = CONST_5;      // gamma\dgamma(fp32)\dbeta(fp32)
-        otherTensorJustDNum = 0; // not use brcb
+        tensorJustNNum = 8;       // mean(fp32)\rstd(fp32)\tmp_mean_pd_buf(fp32)\tmp_var_pd_buf(fp32)
+        tensorNDNum = CONST_17;   // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)
+                                  // gamma_t(fp32)\dx_t(fp32)\dgx_t(fp32)
+        tensorJustDNum = CONST_5; // gamma\dgamma(fp32)\dbeta(fp32)
+        otherTensorJustDNum = 0;  // not use brcb
 
-        CalCutStageValue(
-            cutStageCutD, ubElemNum, tensorJustNNum, elemWithoutDInUB,
-            tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
+        CalCutStageValue(cutStageCutD, ubElemNum, tensorJustNNum, elemWithoutDInUB,
+                         tensorNDNum + tensorJustDNum + otherTensorJustDNum, blockElem);
 
         cutDTime = Ops::Base::CeilDiv(dDimNum, cutStageCutD);
         cutDPerTime = cutStageCutD;
@@ -366,33 +352,29 @@ static bool CheckInputOutputShapeDim(const gert::TilingContext* context)
     size_t dgammaDimNum = dgammaShape->GetStorageShape().GetDimNum();
 
     // Check shape dim range
-    OP_TILING_CHECK(
-        (dyDimNum > MAX_DIM_X) || (dyDimNum < MIN_DIM_X),
-        OP_LOGE(
-            context->GetNodeName(), "Input dy shape invaild, dim num should in range[%lu, %lu].", MIN_DIM_X, MAX_DIM_X),
-        return false);
-    OP_TILING_CHECK(
-        (gammaDimNum > MAX_DIM_GAMMA) || (gammaDimNum < MIN_DIM_GAMMA),
-        OP_LOGE(
-            context->GetNodeName(), "Input gamma shape invaild, dim num should in range[%lu, %lu].", MIN_DIM_GAMMA,
-            MAX_DIM_GAMMA),
-        return false);
+    OP_TILING_CHECK((dyDimNum > MAX_DIM_X) || (dyDimNum < MIN_DIM_X),
+                    OP_LOGE(context->GetNodeName(), "Input dy shape invaild, dim num should in range[%lu, %lu].",
+                            MIN_DIM_X, MAX_DIM_X),
+                    return false);
+    OP_TILING_CHECK((gammaDimNum > MAX_DIM_GAMMA) || (gammaDimNum < MIN_DIM_GAMMA),
+                    OP_LOGE(context->GetNodeName(), "Input gamma shape invaild, dim num should in range[%lu, %lu].",
+                            MIN_DIM_GAMMA, MAX_DIM_GAMMA),
+                    return false);
 
     // Check shape dim relationship
     OP_TILING_CHECK(
         (xDimNum != dyDimNum) || (gxDimNum != dyDimNum) || (dxDimNum != dyDimNum) || (dgxDimNum != dyDimNum),
         OP_LOGE(context->GetNodeName(), "Input gx/x/dx/dgx shape invaild, dim num is not equal dy dim."), return false);
-    OP_TILING_CHECK(
-        (rstdDimNum != dyDimNum) || (meanDimNum != dyDimNum),
-        OP_LOGE(context->GetNodeName(), "Input mean/rstd shape invaild, dim num is not equal dy dim num."),
-        return false);
+    OP_TILING_CHECK((rstdDimNum != dyDimNum) || (meanDimNum != dyDimNum),
+                    OP_LOGE(context->GetNodeName(), "Input mean/rstd shape invaild, dim num is not equal dy dim num."),
+                    return false);
     OP_TILING_CHECK(
         (dgammaDimNum != gammaDimNum) || (dbetaDimNum != gammaDimNum),
         OP_LOGE(context->GetNodeName(), "Output dgamma/dbeta shape invaild, dim num is not equal input gamma dim num."),
         return false);
-    OP_TILING_CHECK(
-        dyDimNum <= gammaDimNum,
-        OP_LOGE(context->GetNodeName(), "dy dim num should not be smaller than gamma dim num."), return false);
+    OP_TILING_CHECK(dyDimNum <= gammaDimNum,
+                    OP_LOGE(context->GetNodeName(), "dy dim num should not be smaller than gamma dim num."),
+                    return false);
     return true;
 }
 
@@ -407,18 +389,16 @@ static bool CheckXYShapeValue(const gert::TilingContext* context)
     size_t dyDimNum = dyShape->GetStorageShape().GetDimNum();
 
     for (uint32_t i = 0; i < dyDimNum; i++) {
-        OP_TILING_CHECK(
-            dyShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context->GetNodeName(), "Input dy shape can not be 0."),
-            return false);
-        OP_TILING_CHECK(
-            (xShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)) ||
-                (gxShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)),
-            OP_LOGE(context->GetNodeName(), "Input x/gx shape invaild, shape is not equal dy shape."), return false);
-        OP_TILING_CHECK(
-            (dxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
-                (dgxShape->GetStorageShape().GetDim(i) != gxShape->GetStorageShape().GetDim(i)),
-            OP_LOGE(context->GetNodeName(), "Output dx/dgx shape invaild, shape is not equal x/gx shape."),
-            return false);
+        OP_TILING_CHECK(dyShape->GetStorageShape().GetDim(i) == 0,
+                        OP_LOGE(context->GetNodeName(), "Input dy shape can not be 0."), return false);
+        OP_TILING_CHECK((xShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)) ||
+                            (gxShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)),
+                        OP_LOGE(context->GetNodeName(), "Input x/gx shape invaild, shape is not equal dy shape."),
+                        return false);
+        OP_TILING_CHECK((dxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
+                            (dgxShape->GetStorageShape().GetDim(i) != gxShape->GetStorageShape().GetDim(i)),
+                        OP_LOGE(context->GetNodeName(), "Output dx/dgx shape invaild, shape is not equal x/gx shape."),
+                        return false);
     }
     return true;
 }
@@ -458,10 +438,9 @@ static bool CheckBetaGammaShapeValue(const gert::TilingContext* context)
             (gammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i)),
             OP_LOGE(context->GetNodeName(), "Input gamma shape invaild, gamma shape is not equal dy last few dim."),
             return false);
-        OP_TILING_CHECK(
-            (dgammaShape->GetStorageShape().GetDim(i) != gammaShape->GetStorageShape().GetDim(i)),
-            OP_LOGE(context->GetNodeName(), "Output dgamma shape invaild, shape is not equal gamma shape."),
-            return false);
+        OP_TILING_CHECK((dgammaShape->GetStorageShape().GetDim(i) != gammaShape->GetStorageShape().GetDim(i)),
+                        OP_LOGE(context->GetNodeName(), "Output dgamma shape invaild, shape is not equal gamma shape."),
+                        return false);
         OP_TILING_CHECK(
             (dbetaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i)),
             OP_LOGE(context->GetNodeName(), "Output dbeta shape invaild, dbeta shape is not equal dy last few dim."),
@@ -494,15 +473,12 @@ ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
     OP_LOGD(context->GetNodeName(), "[DeepNormGrad] TilingFunc begin");
     context->SetScheduleMode(BATCH_MODE);
     DeepNormGradTilingData tiling;
-    OP_TILING_CHECK(
-        ge::GRAPH_SUCCESS != CheckInputOutputShapeNull(context),
-        OP_LOGE(context->GetNodeName(), "Input shape dim invalid."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        !CheckInputOutputShapeDim(context), OP_LOGE(context->GetNodeName(), "Input shape dim invalid."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        !CheckInputOutputShapeValue(context), OP_LOGE(context->GetNodeName(), "Input shape value invalid."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ge::GRAPH_SUCCESS != CheckInputOutputShapeNull(context),
+                    OP_LOGE(context->GetNodeName(), "Input shape dim invalid."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckInputOutputShapeDim(context), OP_LOGE(context->GetNodeName(), "Input shape dim invalid."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckInputOutputShapeValue(context), OP_LOGE(context->GetNodeName(), "Input shape value invalid."),
+                    return ge::GRAPH_FAILED);
 
     uint32_t dDimNum;
     SetBaseConfig(context, tiling, dDimNum);
@@ -582,8 +558,7 @@ static ge::graphStatus TilingPrepare4DeepNormGrad(gert::TilingParseContext* cont
     OP_LOGD(context, "Enter TilingPrepare4DeepNormGrad");
     return ge::GRAPH_SUCCESS;
 }
-struct DeepNormGradCompileInfo {
-};
+struct DeepNormGradCompileInfo {};
 IMPL_OP_OPTILING(DeepNormGrad)
     .Tiling(Tiling4DeepNormGradCompileInfo)
     .TilingParse<DeepNormGradCompileInfo>(TilingPrepare4DeepNormGrad);

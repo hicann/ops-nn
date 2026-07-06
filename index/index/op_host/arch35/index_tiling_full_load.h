@@ -25,7 +25,7 @@ using namespace Index;
 
 class IndexFullLoadTiling : public IndexTilingCommon {
 public:
-	explicit IndexFullLoadTiling(gert::TilingContext* context) : IndexTilingCommon(context) {}
+    explicit IndexFullLoadTiling(gert::TilingContext* context) : IndexTilingCommon(context) {}
 
 private:
     bool IsCapable() override;

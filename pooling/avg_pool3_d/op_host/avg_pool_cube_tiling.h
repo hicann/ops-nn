@@ -41,8 +41,7 @@ constexpr uint32_t kVarDedyW = 0x0200;
 const std::map<std::string, uint32_t> kVar2Flag = {
     {"batch_n", kVarBatchN}, {"fmap_h", kVarFmapH}, {"fmap_w", kVarFmapW}, {"fmap_d", kVarFmapD}};
 
-enum class CubeTilingType : uint64_t
-{
+enum class CubeTilingType : uint64_t {
     CUBE_DYNAMIC_SHAPE_TILING,
     CUBE_DEFAULT_TILING,
     CUBE_BINARY_TILING,
@@ -55,11 +54,10 @@ public:
 
     bool AnalyzeCompileInfo(const char* op_name, const char* compile_info_str);
     bool CheckRangeSize(size_t shape_dim_num) const;
-    static void GetChipFeature(
-        fe::PlatFormInfos& platform_info, const string& lable, const string& platform_info_key,
-        const string& true_value, bool& value);
-    static void GetLocalMemSize(
-        fe::PlatFormInfos& platform_info, const string& lable, const string& mem_type, uint64_t& size);
+    static void GetChipFeature(fe::PlatFormInfos& platform_info, const string& lable, const string& platform_info_key,
+                               const string& true_value, bool& value);
+    static void GetLocalMemSize(fe::PlatFormInfos& platform_info, const string& lable, const string& mem_type,
+                                uint64_t& size);
     static void GetAICoreIntrinsicDtype(fe::PlatFormInfos& platform_info, const string& intrinsic_name, bool& value);
     void ParseRuntimePlatformInfo(const char* op_name, fe::PlatFormInfos& platform_info);
     uint64_t CheckTilingInRepo(const char* op_name, const int64_t* shape, size_t dim_num) const;
@@ -145,29 +143,25 @@ ge::graphStatus ParseCubeCompileInfo(gert::TilingParseContext* context)
     auto compile_info = context->GetCompiledInfo<CompileInfo>();
     auto json_str = context->GetCompiledJson();
     fe::PlatFormInfos* platform_info = context->GetPlatformInfo();
-    OP_CHECK_IF(
-        compile_info == nullptr || json_str == nullptr || platform_info == nullptr,
-        OP_LOGE(op_name, "compile_info/json/PlatFormInfos is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compile_info == nullptr || json_str == nullptr || platform_info == nullptr,
+                OP_LOGE(op_name, "compile_info/json/PlatFormInfos is null"), return ge::GRAPH_FAILED);
     compile_info->ParseRuntimePlatformInfo(op_name, *platform_info);
-    OP_CHECK_IF(
-        !compile_info->AnalyzeCompileInfo(op_name, json_str), OP_LOGE(op_name, "failed to analyze compile info"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !compile_info->CheckRangeSize(range_size), OP_LOGE(op_name, "repo_range/repo_seeds/cost_range invalid"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!compile_info->AnalyzeCompileInfo(op_name, json_str),
+                OP_LOGE(op_name, "failed to analyze compile info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!compile_info->CheckRangeSize(range_size), OP_LOGE(op_name, "repo_range/repo_seeds/cost_range invalid"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CubeTiling(
-    const int64_t* input_shape, size_t input_shape_dim_num, const gert::Shape& var_value,
-    const CubeCompileInfo& compile_info, gert::TilingContext* context);
+ge::graphStatus CubeTiling(const int64_t* input_shape, size_t input_shape_dim_num, const gert::Shape& var_value,
+                           const CubeCompileInfo& compile_info, gert::TilingContext* context);
 
 std::string TensorDesc2String(const gert::StorageShape* shape, const gert::CompileTimeTensorDesc* tensor);
 std::string DebugTilingContext(const gert::TilingContext* context);
 
-ge::graphStatus Tiling4AvgPool3DCube(
-    gert::TilingContext* context, const gert::StorageShape* fmap_shape, const gert::StorageShape* out_shape);
+ge::graphStatus Tiling4AvgPool3DCube(gert::TilingContext* context, const gert::StorageShape* fmap_shape,
+                                     const gert::StorageShape* out_shape);
 
 ge::graphStatus TilingForAvgPool3dGrad(gert::TilingContext* context, size_t dedy_idx);
 } // namespace avgPool3DTilingCompileInfo

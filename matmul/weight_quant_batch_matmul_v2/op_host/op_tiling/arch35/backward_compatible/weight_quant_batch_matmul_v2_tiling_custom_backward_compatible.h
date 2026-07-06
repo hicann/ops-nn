@@ -23,8 +23,8 @@ public:
     explicit WeightQuantBatchMatmulV2TilingCustomBackwardCompatible(gert::TilingContext* context)
         : WeightQuantBatchMatmulV2TilingCustom(context)
     {}
-    WeightQuantBatchMatmulV2TilingCustomBackwardCompatible(
-        gert::TilingContext* context, WeightQuantBatchMatmulV2TilingData* out)
+    WeightQuantBatchMatmulV2TilingCustomBackwardCompatible(gert::TilingContext* context,
+                                                           WeightQuantBatchMatmulV2TilingData* out)
         : WeightQuantBatchMatmulV2TilingCustom(context, out)
     {}
 
@@ -36,4 +36,3 @@ protected:
 };
 
 } // namespace optiling
-

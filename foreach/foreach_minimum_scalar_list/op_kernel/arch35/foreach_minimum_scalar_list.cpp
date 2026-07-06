@@ -25,14 +25,14 @@ enum class ForeachMinimumScalarListTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_minimum_scalar_list(
-    GM_ADDR x, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_minimum_scalar_list(GM_ADDR x, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
+                                                       GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachMinimumScalarListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachMinimumScalarListTilingData, tilingData, tiling);
 
-    const __gm__ ForeachMinimumScalarListTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachMinimumScalarListTilingData*>(tiling);
+    const __gm__ ForeachMinimumScalarListTilingData*
+        tilingGm = reinterpret_cast<const __gm__ ForeachMinimumScalarListTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachMinimumScalarListTilingKey::TILING_KEY_FLOAT)) {
         NsForeachMinimumScalarList::Process<float, float>(x, scalars, y, tilingGm);

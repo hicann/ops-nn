@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file avg_pool_3d_simt.h
  * \brief avg_pool_3d implied by simt
@@ -64,24 +64,26 @@ struct AvgPool3DSimtTilingData {
 
 template <typename X_T, typename TYPE_T, int32_t FORMAT_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNcSimtCompute(
-    __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AvgPool3DSimtTilingData* SimtTilingData, __ubuf__ TYPE_T* AvgPool3DSimtParam);
+    __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AvgPool3DSimtTilingData* SimtTilingData,
+    __ubuf__ TYPE_T* AvgPool3DSimtParam);
 
 template <typename X_T, typename TYPE_T, int32_t FORMAT_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompute(
-    __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AvgPool3DSimtTilingData* SimtTilingData, __ubuf__ TYPE_T* AvgPool3DSimtParam);
+    __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AvgPool3DSimtTilingData* SimtTilingData,
+    __ubuf__ TYPE_T* AvgPool3DSimtParam);
 
 template <typename X_T, typename TYPE_T, int32_t FORMAT_TYPE>
 class AvgPool3DSimtImpl {
 public:
-__aicore__ inline AvgPool3DSimtImpl(TPipe *pipe, const Pool3DSimtTilingData* __restrict tilingData)
-    : pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum()) {
-}
+    __aicore__ inline AvgPool3DSimtImpl(TPipe* pipe, const Pool3DSimtTilingData* __restrict tilingData)
+        : pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum())
+    {}
 
-__aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
-__aicore__ inline void Process();
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
+    __aicore__ inline void Process();
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     AscendC::GlobalTensor<X_T> x_;
     AscendC::GlobalTensor<X_T> y_;
     const Pool3DSimtTilingData* tilingData_;
@@ -137,16 +139,18 @@ __aicore__ inline void AvgPool3DSimtImpl<X_T, TYPE_T, FORMAT_TYPE>::Process()
 
     DataSyncBarrier<MemDsbT::UB>();
     if constexpr (FORMAT_TYPE == 0) {
-        asc_vf_call<AvgPool3dNcSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(dim3(THREAD_NUM), 
-            (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), (__ubuf__ AvgPool3DSimtTilingData*)(SimtTilingData.GetPhyAddr()),
+        asc_vf_call<AvgPool3dNcSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(
+            dim3(THREAD_NUM), (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(),
+            (__ubuf__ AvgPool3DSimtTilingData*)(SimtTilingData.GetPhyAddr()),
             (__ubuf__ TYPE_T*)(AvgPool3DSimtParam.GetPhyAddr()));
     } else if constexpr (FORMAT_TYPE == 1) {
-        asc_vf_call<AvgPool3dNdSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(dim3(THREAD_NUM), 
-            (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), (__ubuf__ AvgPool3DSimtTilingData*)(SimtTilingData.GetPhyAddr()),
+        asc_vf_call<AvgPool3dNdSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(
+            dim3(THREAD_NUM), (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(),
+            (__ubuf__ AvgPool3DSimtTilingData*)(SimtTilingData.GetPhyAddr()),
             (__ubuf__ TYPE_T*)(AvgPool3DSimtParam.GetPhyAddr()));
     }
 }
- 
+
 template <typename X_T, typename TYPE_T, int32_t FORMAT_TYPE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNcSimtCompute(
     __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AvgPool3DSimtTilingData* SimtTilingData, __ubuf__ TYPE_T* AvgPool3DSimtParam)
@@ -159,22 +163,25 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNcSimtCompu
     TYPE_T shiftW = AvgPool3DSimtParam[5];
 
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
-    TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim * SimtTilingData->wOutDim;
-    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize;
-        i += gridDim.x * blockDim.x) {
+    TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim *
+                     SimtTilingData->wOutDim;
+    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize; i += gridDim.x * blockDim.x) {
         DIV_T quotientW = Simt::UintDiv<DIV_T>(i, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
         DIV_T quotientD = Simt::UintDiv<DIV_T>(quotientH, magicD, shiftD);
-        TYPE_T pw = i  - quotientW * SimtTilingData->wOutDim;
+        TYPE_T pw = i - quotientW * SimtTilingData->wOutDim;
         TYPE_T ph = quotientW - quotientH * SimtTilingData->hOutDim;
-        TYPE_T pd = quotientH  - quotientD * SimtTilingData->dOutDim;
+        TYPE_T pd = quotientH - quotientD * SimtTilingData->dOutDim;
         TYPE_T pnc = quotientD;
         TYPE_T dStart = pd * SimtTilingData->sD - SimtTilingData->fPad;
         TYPE_T hStart = ph * SimtTilingData->sH - SimtTilingData->tPad;
         TYPE_T wStart = pw * SimtTilingData->sW - SimtTilingData->lPad;
-        TYPE_T dEnd = min(dStart + (TYPE_T)SimtTilingData->kD, (TYPE_T)SimtTilingData->dInDim + (TYPE_T)SimtTilingData->bkPad);
-        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH, (TYPE_T)SimtTilingData->hInDim + (TYPE_T)SimtTilingData->bPad);
-        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW, (TYPE_T)SimtTilingData->wInDim + (TYPE_T)SimtTilingData->rPad);
+        TYPE_T dEnd = min(dStart + (TYPE_T)SimtTilingData->kD,
+                          (TYPE_T)SimtTilingData->dInDim + (TYPE_T)SimtTilingData->bkPad);
+        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH,
+                          (TYPE_T)SimtTilingData->hInDim + (TYPE_T)SimtTilingData->bPad);
+        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW,
+                          (TYPE_T)SimtTilingData->wInDim + (TYPE_T)SimtTilingData->rPad);
         TYPE_T poolSize = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
         dStart = max(dStart, (TYPE_T)0);
         hStart = max(hStart, (TYPE_T)0);
@@ -182,13 +189,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNcSimtCompu
         dEnd = min(dEnd, (TYPE_T)SimtTilingData->dInDim);
         hEnd = min(hEnd, (TYPE_T)SimtTilingData->hInDim);
         wEnd = min(wEnd, (TYPE_T)SimtTilingData->wInDim);
-        if(dStart >= dEnd || hStart >= hEnd || wStart >= wEnd) {
+        if (dStart >= dEnd || hStart >= hEnd || wStart >= wEnd) {
             y[i] = 0;
             continue;
         }
 
         TYPE_T divisorFactor;
-        if (SimtTilingData->divisorOverride)  {
+        if (SimtTilingData->divisorOverride) {
             divisorFactor = SimtTilingData->divisorOverride;
         } else {
             if (SimtTilingData->countIncludePad) {
@@ -202,7 +209,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNcSimtCompu
         for (TYPE_T d = dStart; d < dEnd; d++) {
             for (TYPE_T h = hStart; h < hEnd; h++) {
                 for (TYPE_T w = wStart; w < wEnd; w++) {
-                    TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim  + h * SimtTilingData->wInDim + w;
+                    TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim +
+                                       h * SimtTilingData->wInDim + w;
                     sum += static_cast<float>(xData[idxOffset]);
                 }
             }
@@ -225,14 +233,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
     TYPE_T shiftC = AvgPool3DSimtParam[7];
 
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
-    TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim * SimtTilingData->wOutDim;
-    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize;
-        i += gridDim.x * blockDim.x) {
+    TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim *
+                     SimtTilingData->wOutDim;
+    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize; i += gridDim.x * blockDim.x) {
         DIV_T quotientC = Simt::UintDiv<DIV_T>(i, magicC, shiftC);
         DIV_T quotientW = Simt::UintDiv<DIV_T>(quotientC, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
         DIV_T quotientD = Simt::UintDiv<DIV_T>(quotientH, magicD, shiftD);
-        TYPE_T pc = i  - quotientC * SimtTilingData->cDim;
+        TYPE_T pc = i - quotientC * SimtTilingData->cDim;
         TYPE_T pw = quotientC - quotientW * SimtTilingData->wOutDim;
         TYPE_T ph = quotientW - quotientH * SimtTilingData->hOutDim;
         TYPE_T pd = quotientH - quotientD * SimtTilingData->dOutDim;
@@ -240,9 +248,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
         TYPE_T dStart = pd * SimtTilingData->sD - SimtTilingData->fPad;
         TYPE_T hStart = ph * SimtTilingData->sH - SimtTilingData->tPad;
         TYPE_T wStart = pw * SimtTilingData->sW - SimtTilingData->lPad;
-        TYPE_T dEnd = min(dStart + (TYPE_T)SimtTilingData->kD, (TYPE_T)SimtTilingData->dInDim + (TYPE_T)SimtTilingData->bkPad);
-        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH, (TYPE_T)SimtTilingData->hInDim + (TYPE_T)SimtTilingData->bPad);
-        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW, (TYPE_T)SimtTilingData->wInDim + (TYPE_T)SimtTilingData->rPad);
+        TYPE_T dEnd = min(dStart + (TYPE_T)SimtTilingData->kD,
+                          (TYPE_T)SimtTilingData->dInDim + (TYPE_T)SimtTilingData->bkPad);
+        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH,
+                          (TYPE_T)SimtTilingData->hInDim + (TYPE_T)SimtTilingData->bPad);
+        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW,
+                          (TYPE_T)SimtTilingData->wInDim + (TYPE_T)SimtTilingData->rPad);
         TYPE_T poolSize = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
         dStart = max(dStart, (TYPE_T)0);
         hStart = max(hStart, (TYPE_T)0);
@@ -250,13 +261,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
         dEnd = min(dEnd, (TYPE_T)SimtTilingData->dInDim);
         hEnd = min(hEnd, (TYPE_T)SimtTilingData->hInDim);
         wEnd = min(wEnd, (TYPE_T)SimtTilingData->wInDim);
-        if(dStart >= dEnd || hStart >= hEnd || wStart >= wEnd) {
+        if (dStart >= dEnd || hStart >= hEnd || wStart >= wEnd) {
             y[i] = 0;
             continue;
         }
 
         TYPE_T divisorFactor;
-        if (SimtTilingData->divisorOverride)  {
+        if (SimtTilingData->divisorOverride) {
             divisorFactor = SimtTilingData->divisorOverride;
         } else {
             if (SimtTilingData->countIncludePad) {
@@ -266,11 +277,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
             }
         }
         float sum = 0;
-        auto xData = x + pn * SimtTilingData->dInDim * SimtTilingData->hInDim * SimtTilingData->wInDim * SimtTilingData->cDim;
+        auto xData = x + pn * SimtTilingData->dInDim * SimtTilingData->hInDim * SimtTilingData->wInDim *
+                             SimtTilingData->cDim;
         for (TYPE_T d = dStart; d < dEnd; d++) {
             for (TYPE_T h = hStart; h < hEnd; h++) {
                 for (TYPE_T w = wStart; w < wEnd; w++) {
-                    TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim + h * SimtTilingData->wInDim + w;
+                    TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim +
+                                       h * SimtTilingData->wInDim + w;
                     sum += static_cast<float>(xData[idxOffset * SimtTilingData->cDim + pc]);
                 }
             }
@@ -280,5 +293,4 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
 }
 } // namespace AvgPool3DSimt
 
-#endif  // CANN_AVG_POOL_WITH_ARGAVG_V3_SIMT_H
- 
+#endif // CANN_AVG_POOL_WITH_ARGAVG_V3_SIMT_H

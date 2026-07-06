@@ -91,12 +91,9 @@ bool ShapeIsDynamic(const TensorDesc& Desc)
     return false;
 }
 
-void UpdateTensorDescsSortV2(const IndexPutV2InputInfo &info,
-                       const es::EsTensorHolder &linearIndex,
-                       const es::EsTensorHolder &sortIndex,
-                       const es::EsTensorHolder &posIdx,
-                       const es::EsTensorHolder &posIdxCast,
-                       const es::EsTensorHolder &indexPutWithSort)
+void UpdateTensorDescsSortV2(const IndexPutV2InputInfo& info, const es::EsTensorHolder& linearIndex,
+                             const es::EsTensorHolder& sortIndex, const es::EsTensorHolder& posIdx,
+                             const es::EsTensorHolder& posIdxCast, const es::EsTensorHolder& indexPutWithSort)
 {
     // 计算相关 shape
     std::vector<int32_t> strideVec = CalculateStride(info.xDims);
@@ -113,7 +110,7 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo &info,
     }
     indexShapeSize = unKnowFlag ? -1 : indexShapeSize;
     std::vector<int64_t> linearIndexDims{indexShapeSize};
-    
+
     // LinearIndexV2 输入输出描述
     TensorDesc linearIndexOutputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     linearIndex.GetProducer()->UpdateOutputDesc(0, linearIndexOutputDesc);
@@ -123,7 +120,7 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo &info,
     }
     linearIndex.GetProducer()->UpdateInputDesc(static_cast<uint32_t>(info.indicesNum), strideDesc);
     linearIndex.GetProducer()->UpdateInputDesc(static_cast<uint32_t>(info.indicesNum + 1), xShapeSizeDesc);
-    
+
     // Sort 输入输出描述
     TensorDesc sortInputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     sortIndex.GetProducer()->UpdateInputDesc(0, sortInputDesc);
@@ -131,13 +128,13 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo &info,
     sortIndex.GetProducer()->UpdateOutputDesc(0, sortOutputDesc);
     TensorDesc posIdxOutputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     posIdx.GetProducer()->UpdateOutputDesc(1, posIdxOutputDesc);
-    
+
     // Cast 输入输出描述
     TensorDesc castInputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     posIdxCast.GetProducer()->UpdateInputDesc(0, castInputDesc);
     TensorDesc castOutputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     posIdxCast.GetProducer()->UpdateOutputDesc(0, castOutputDesc);
-    
+
     // IndexPutWithSortV2 输入输出描述
     TensorDesc indexPutInputXDesc(Shape(info.xDims), info.xFmt, info.xDtype);
     indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortSelf, indexPutInputXDesc);
@@ -150,7 +147,7 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo &info,
     TensorDesc indexPutOutputDesc(Shape(info.xDims), info.xFmt, info.xDtype);
     indexPutWithSort.GetProducer()->UpdateOutputDesc(0, indexPutOutputDesc);
 }
-}
+} // namespace
 
 bool IndexPutV2FusionPass::CheckPlatform() const
 {
@@ -172,24 +169,22 @@ bool IndexPutV2FusionPass::CheckDeterministic(ge::CustomPassContext& passContext
 {
     ge::AscendString optionValue;
     ge::AscendString optionKey = ge::configure_option::DETERMINISTIC;
-    
+
     ge::graphStatus status = passContext.GetOptionValue(optionKey, optionValue);
     if (status == ge::GRAPH_SUCCESS) {
         std::string value(optionValue.GetString());
         OP_LOGD(kPassName.c_str(), "Deterministic option found, value: %s", value.c_str());
         bool isEnabled = (value == "1");
-        OP_LOGD(kPassName.c_str(), "Deterministic mode: %s",
-                  isEnabled ? "ENABLED" : "DISABLED");
+        OP_LOGD(kPassName.c_str(), "Deterministic mode: %s", isEnabled ? "ENABLED" : "DISABLED");
         return isEnabled;
     }
-    OP_LOGD(kPassName.c_str(), 
-              "Deterministic option not found (status=%d), default: DISABLED", 
-              static_cast<int>(status));
-    
+    OP_LOGD(kPassName.c_str(), "Deterministic option not found (status=%d), default: DISABLED",
+            static_cast<int>(status));
+
     return false;
 }
 
-bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) const
+bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) const
 {
     std::vector<DataType> dtypes = {DT_BOOL, DT_INT8, DT_UINT8, DT_FLOAT16, DT_BF16, DT_INT32, DT_FLOAT, DT_INT64};
     std::vector<DataType> deterministicDtypes = {DT_FLOAT16, DT_BF16, DT_FLOAT};
@@ -203,7 +198,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) co
         OP_LOGI(kPassName.c_str(), "x dtype not support, actual: %d", static_cast<int>(xDtype));
         return false;
     }
-    
+
     TensorDesc valueDesc;
     if (node.GetInputDesc(kIdxValue, valueDesc) != SUCCESS) {
         OP_LOGI(kPassName.c_str(), "GetInputDesc for value failed");
@@ -214,13 +209,13 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) co
         OP_LOGI(kPassName.c_str(), "value dtype not support, actual: %d", static_cast<int>(valueDtype));
         return false;
     }
-    
+
     if (xDtype != valueDtype) {
-        OP_LOGI(kPassName.c_str(), "x dtype should same with value dtype, x: %d, value: %d",
-                static_cast<int>(xDtype), static_cast<int>(valueDtype));
+        OP_LOGI(kPassName.c_str(), "x dtype should same with value dtype, x: %d, value: %d", static_cast<int>(xDtype),
+                static_cast<int>(valueDtype));
         return false;
     }
-    
+
     TensorDesc yDesc;
     if (node.GetOutputDesc(0, yDesc) != SUCCESS) {
         OP_LOGI(kPassName.c_str(), "GetOutputDesc for y failed");
@@ -231,13 +226,13 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) co
         OP_LOGI(kPassName.c_str(), "y dtype not support, actual: %d", static_cast<int>(yDtype));
         return false;
     }
-    
+
     if (xDtype != yDtype) {
-        OP_LOGI(kPassName.c_str(), "x dtype should same with y dtype, x: %d, y: %d",
-                static_cast<int>(xDtype), static_cast<int>(yDtype));
+        OP_LOGI(kPassName.c_str(), "x dtype should same with y dtype, x: %d, y: %d", static_cast<int>(xDtype),
+                static_cast<int>(yDtype));
         return false;
     }
-    
+
     for (int64_t i = 0; i < indicesNum; ++i) {
         TensorDesc indicesDesc;
         if (node.GetInputDesc(kFixedInputNum + i, indicesDesc) != SUCCESS) {
@@ -246,8 +241,8 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) co
         }
         DataType indicesDtype = indicesDesc.GetDataType();
         if (!CheckDtype(indicesDtype, {DT_INT32, DT_INT64})) {
-            OP_LOGI(kPassName.c_str(), "indices[%ld] dtype only support int32/int64, actual: %d",
-                    i, static_cast<int>(indicesDtype));
+            OP_LOGI(kPassName.c_str(), "indices[%ld] dtype only support int32/int64, actual: %d", i,
+                    static_cast<int>(indicesDtype));
             return false;
         }
     }
@@ -256,7 +251,8 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) co
     node.GetAttr("accumulate", accumulate);
     if (accumulate) {
         if (!CheckDtype(xDtype, deterministicDtypes)) {
-            OP_LOGI(kPassName.c_str(), "accumulate is true, x dtype do not support Deterministic , actual: %d", static_cast<int>(xDtype));
+            OP_LOGI(kPassName.c_str(), "accumulate is true, x dtype do not support Deterministic , actual: %d",
+                    static_cast<int>(xDtype));
             return false;
         }
     }
@@ -264,7 +260,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) co
     return true;
 }
 
-bool IndexPutV2FusionPass::CheckDynamic(const GNode &node, int64_t indicesNum) const
+bool IndexPutV2FusionPass::CheckDynamic(const GNode& node, int64_t indicesNum) const
 {
     TensorDesc xDesc;
     if (node.GetInputDesc(kIdxX, xDesc) != SUCCESS) {
@@ -301,7 +297,7 @@ bool IndexPutV2FusionPass::CheckDynamic(const GNode &node, int64_t indicesNum) c
     return false;
 }
 
-bool IndexPutV2FusionPass::CheckNode(const GNode &node)
+bool IndexPutV2FusionPass::CheckNode(const GNode& node)
 {
     AscendString nodeType;
     if (node.GetType(nodeType) != SUCCESS) {
@@ -321,16 +317,16 @@ bool IndexPutV2FusionPass::CheckNode(const GNode &node)
     return true;
 }
 
-IndexPutV2InputInfo IndexPutV2FusionPass::GetInputInfo(const GNode &node) const
+IndexPutV2InputInfo IndexPutV2FusionPass::GetInputInfo(const GNode& node) const
 {
     IndexPutV2InputInfo info;
-    
+
     TensorDesc xDesc;
     node.GetInputDesc(kIdxX, xDesc);
     info.xDims = xDesc.GetShape().GetDims();
     info.xDtype = xDesc.GetDataType();
     info.xFmt = xDesc.GetFormat();
-    
+
     TensorDesc valueDesc;
     node.GetInputDesc(kIdxValue, valueDesc);
     info.valueDims = valueDesc.GetShape().GetDims();
@@ -358,15 +354,14 @@ IndexPutV2InputInfo IndexPutV2FusionPass::GetInputInfo(const GNode &node) const
         info.indicesFmt = indicesDesc.GetFormat();
         info.indicesShape.push_back(indicesDesc.GetShape());
     }
-    
+
     info.attrAccumulate = false;
     node.GetAttr("accumulate", info.attrAccumulate);
-    
+
     return info;
 }
 
-void UpdateTensorDescsIndexPutV3(const IndexPutV2InputInfo &info,
-                       const es::EsTensorHolder &indexPut)
+void UpdateTensorDescsIndexPutV3(const IndexPutV2InputInfo& info, const es::EsTensorHolder& indexPut)
 {
     TensorDesc indexPutInputXDesc(Shape(info.xDims), info.xFmt, info.xDtype);
     indexPut.GetProducer()->UpdateInputDesc(kPortSelfRef, indexPutInputXDesc);
@@ -382,24 +377,27 @@ void UpdateTensorDescsIndexPutV3(const IndexPutV2InputInfo &info,
     indexPut.GetProducer()->UpdateOutputDesc(0, indexPutOutputDesc);
 }
 
-GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode &node)
+GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode& node)
 {
     IndexPutV2InputInfo info = GetInputInfo(node);
     bool isDynamic = CheckDynamic(node, info.indicesNum);
     auto builder = es::EsGraphBuilder("replacement");
-    
+
     size_t newIdx = 0;
     std::vector<int64_t> indexedSizes(info.indicesNum, 0);
     auto rX = builder.CreateInput(newIdx++, "x", info.xDtype, info.xFmt, info.xDims);
     auto rValue = builder.CreateInput(newIdx++, "value", info.valueDtype, info.valueFmt, info.valueDims);
-    auto rIndexedSizes = builder.CreateInput(newIdx++, "indexed_sizes", info.indexedSizeDtype, info.indexedSizeFmt, info.indexedSizeDims);
-    auto rIndexedStrides = builder.CreateInput(newIdx++, "indexed_strides", info.indexedStridesDtype, info.indexedStridesFmt, info.indexedStridesDims);
-    
+    auto rIndexedSizes = builder.CreateInput(newIdx++, "indexed_sizes", info.indexedSizeDtype, info.indexedSizeFmt,
+                                             info.indexedSizeDims);
+    auto rIndexedStrides = builder.CreateInput(newIdx++, "indexed_strides", info.indexedStridesDtype,
+                                               info.indexedStridesFmt, info.indexedStridesDims);
+
     std::vector<es::EsTensorHolder> rIndices;
     for (int64_t i = 0; i < info.indicesNum; ++i) {
         std::string name = "indices" + std::to_string(i);
-        rIndices.emplace_back(builder.CreateInput(newIdx++, name.c_str(), info.indicesDtypes[i], info.indicesFmt, info.indicesDims[i]));
-        if (info.indicesShape[i].GetShapeSize() != 0) {  //索引不为空，则置1
+        rIndices.emplace_back(
+            builder.CreateInput(newIdx++, name.c_str(), info.indicesDtypes[i], info.indicesFmt, info.indicesDims[i]));
+        if (info.indicesShape[i].GetShapeSize() != 0) { //索引不为空，则置1
             indexedSizes[i] = 1;
         }
     }
@@ -409,13 +407,15 @@ GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode &node)
         std::vector<int32_t> strideVec = CalculateStride(info.xDims);
         auto xStride = builder.CreateConst(strideVec, {static_cast<int64_t>(strideVec.size())}, DT_INT32, FORMAT_ND);
         std::vector<int32_t> xShapeSizeVec = GetXShapeSize(info.xDims);
-        auto xShapeSize = builder.CreateConst(xShapeSizeVec, {static_cast<int64_t>(xShapeSizeVec.size())}, DT_INT32, FORMAT_ND);
-        
+        auto xShapeSize = builder.CreateConst(xShapeSizeVec, {static_cast<int64_t>(xShapeSizeVec.size())}, DT_INT32,
+                                              FORMAT_ND);
+
         auto linearIndex = es::LinearIndexV2(rIndices, xStride, xShapeSize);
         auto [sortIndex, posIdx] = es::Sort(linearIndex, -1, false, true, DT_INT32);
         auto posIdxCast = es::Cast(posIdx, DT_INT32);
-        auto indexPutWithSort = es::IndexPutWithSortV2(rX, sortIndex, posIdxCast, rValue, indexedSizes, info.attrAccumulate);
-        
+        auto indexPutWithSort = es::IndexPutWithSortV2(rX, sortIndex, posIdxCast, rValue, indexedSizes,
+                                                       info.attrAccumulate);
+
         UpdateTensorDescsSortV2(info, linearIndex, sortIndex, posIdx, posIdxCast, indexPutWithSort);
         outputs.emplace_back(indexPutWithSort);
     } else {
@@ -427,7 +427,7 @@ GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode &node)
     return builder.BuildAndReset(outputs);
 }
 
-std::unique_ptr<SubgraphBoundary> IndexPutV2FusionPass::ConstructBoundary(const GNode &node) const
+std::unique_ptr<SubgraphBoundary> IndexPutV2FusionPass::ConstructBoundary(const GNode& node) const
 {
     auto boundary = std::make_unique<SubgraphBoundary>();
 
@@ -439,44 +439,44 @@ std::unique_ptr<SubgraphBoundary> IndexPutV2FusionPass::ConstructBoundary(const 
             return nullptr;
         }
     }
-    
+
     SubgraphOutput output({node, 0});
     if (boundary->AddOutput(0, std::move(output)) != SUCCESS) {
         OP_LOGI(kPassName.c_str(), "AddOutput failed");
         return nullptr;
     }
-    
+
     return boundary;
 }
 
-Status IndexPutV2FusionPass::Run(GraphPtr &graph, CustomPassContext &passContext)
+Status IndexPutV2FusionPass::Run(GraphPtr& graph, CustomPassContext& passContext)
 {
     OP_LOGI(kPassName.c_str(), "Enter IndexPutV2FusionPass");
-    
+
     if (!CheckPlatform()) {
         return GRAPH_NOT_CHANGED;
     }
-    
+
     if (!CheckDeterministic(passContext)) {
         OP_LOGI(kPassName.c_str(), "Deterministic check failed, skip fusion");
         return GRAPH_NOT_CHANGED;
     }
-    
+
     std::vector<GNode> indexPutNodes;
-    for (auto &node : graph->GetDirectNode()) {
+    for (auto& node : graph->GetDirectNode()) {
         if (CheckNode(node)) {
             indexPutNodes.emplace_back(node);
         }
     }
-    
+
     if (indexPutNodes.empty()) {
         OP_LOGI(kPassName.c_str(), "No IndexPutV2 nodes to fuse");
         return GRAPH_NOT_CHANGED;
     }
-    
+
     Graph originGraph = *graph;
-    
-    for (auto &node : indexPutNodes) {
+
+    for (auto& node : indexPutNodes) {
         auto replacement = CreateReplacement(node);
         if (!replacement) {
             AscendString nodeName;
@@ -485,7 +485,7 @@ Status IndexPutV2FusionPass::Run(GraphPtr &graph, CustomPassContext &passContext
             *graph = originGraph;
             return GRAPH_NOT_CHANGED;
         }
-        
+
         auto boundary = ConstructBoundary(node);
         if (!boundary) {
             AscendString nodeName;
@@ -494,18 +494,18 @@ Status IndexPutV2FusionPass::Run(GraphPtr &graph, CustomPassContext &passContext
             *graph = originGraph;
             return GRAPH_NOT_CHANGED;
         }
-        
+
         Status replaceStatus = SubgraphRewriter::Replace(*boundary, *replacement);
         if (replaceStatus != SUCCESS) {
             AscendString nodeName;
             node.GetName(nodeName);
-            OP_LOGI(kPassName.c_str(), "Replace failed for %s, status=%d",
-                    nodeName.GetString(), static_cast<int>(replaceStatus));
+            OP_LOGI(kPassName.c_str(), "Replace failed for %s, status=%d", nodeName.GetString(),
+                    static_cast<int>(replaceStatus));
             *graph = originGraph;
             return GRAPH_NOT_CHANGED;
         }
     }
-    
+
     OP_LOGI(kPassName.c_str(), "Fusion completed, %zu nodes fused", indexPutNodes.size());
     return SUCCESS;
 }

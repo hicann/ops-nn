@@ -34,138 +34,148 @@ extern "C" {
 #endif
 
 static inline const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
-    op::DataType::DT_INT8, op::DataType::DT_BF16};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8,
+    op::DataType::DT_BF16};
 
 static inline const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  // Ascend950 (arch35, IsRegbase) 与 910B 同样支持 bfloat16 / float / float16 / int32 / int8
-  if (Ops::NN::AclnnUtil::IsRegbase() ||
-      (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-       GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
-    return ASCEND910B_DTYPE_SUPPORT_LIST;
-  } else {
-    return ASCEND910_DTYPE_SUPPORT_LIST;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    // Ascend950 (arch35, IsRegbase) 与 910B 同样支持 bfloat16 / float / float16 / int32 / int8
+    if (Ops::NN::AclnnUtil::IsRegbase() || (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                                            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
+        return ASCEND910B_DTYPE_SUPPORT_LIST;
+    } else {
+        return ASCEND910_DTYPE_SUPPORT_LIST;
+    }
 }
 
-static inline bool CheckNotNull(const aclTensor *self, const aclTensor *out) {
-  OP_CHECK_NULL(self, return false);
-  OP_CHECK_NULL(out, return false);
-  return true;
+static inline bool CheckNotNull(const aclTensor* self, const aclTensor* out)
+{
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(out, return false);
+    return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
-  auto supportList = GetDtypeSupportList();
-  OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
-  OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
-  return true;
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+{
+    auto supportList = GetDtypeSupportList();
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
+    return true;
 }
 
-static inline bool CheckShape(const aclTensor *self, const aclTensor *out) {
-  OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
-  return true;
+static inline bool CheckShape(const aclTensor* self, const aclTensor* out)
+{
+    OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
+    return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out) {
-  CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
+static inline aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
+{
+    CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
-  CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
 
-  CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
-static const aclTensor *ReshapeLongTensor(const aclTensor *x, aclOpExecutor *executor, int originalDimSize,
-                                          aclIntArray *valuePerm = nullptr) {
-  int64_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
-    return x;
-  }
+static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor, int originalDimSize,
+                                          aclIntArray* valuePerm = nullptr)
+{
+    int64_t dimSize = x->GetViewShape().GetDimNum();
+    if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
+        return x;
+    }
 
-  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-  return reshapeSelf;
+    auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
+    return reshapeSelf;
 }
 
-static inline aclIntArray *GetTensorShape(const aclTensor *x, aclOpExecutor *executor) {
-  auto shape = x->GetViewShape();
-  int64_t dimSize = x->GetViewShape().GetDimNum();
+static inline aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor)
+{
+    auto shape = x->GetViewShape();
+    int64_t dimSize = x->GetViewShape().GetDimNum();
 
-  std::vector<int64_t> valuePerm(dimSize);
-  for (int i = 0; i < dimSize; i++) {
-    valuePerm[i] = shape[i];
-  }
-  auto perm = executor->AllocIntArray(valuePerm.data(), dimSize);
-  return perm;
+    std::vector<int64_t> valuePerm(dimSize);
+    for (int i = 0; i < dimSize; i++) {
+        valuePerm[i] = shape[i];
+    }
+    auto perm = executor->AllocIntArray(valuePerm.data(), dimSize);
+    return perm;
 }
 
-aclnnStatus ExecSeluGetWorkspaceSize(const aclTensor *self, aclTensor *out, uint64_t *workspaceSize,
-                                     aclOpExecutor **executor) {
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+aclnnStatus ExecSeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                     aclOpExecutor** executor)
+{
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  auto ret = CheckParams(self, out);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    auto ret = CheckParams(self, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  if (out->IsEmpty() || self->IsEmpty()) {
-    *workspaceSize = 0;
+    if (out->IsEmpty() || self->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    size_t dimSize = self->GetViewShape().GetDimNum();
+    auto shapeOriDetail = GetTensorShape(selfContiguous, uniqueExecutor.get());
+    auto reshapeSelf = selfContiguous;
+
+    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
+        auto allDimValue = self->Size();
+        int64_t allDim[1] = {allDimValue};
+        auto shape1d = (uniqueExecutor)->AllocIntArray(allDim, 1);
+        reshapeSelf = ReshapeLongTensor(selfContiguous, uniqueExecutor.get(), dimSize, shape1d);
+    }
+    auto seluOut = l0op::Selu(reshapeSelf, uniqueExecutor.get());
+    CHECK_RET(seluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto reshapeSeluOut = seluOut;
+    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
+        reshapeSeluOut = ReshapeLongTensor(seluOut, uniqueExecutor.get(), dimSize, shapeOriDetail);
+    }
+    auto castSeluOut = l0op::Cast(reshapeSeluOut, out->GetDataType(), uniqueExecutor.get());
+    auto viewCopyOut = l0op::ViewCopy(castSeluOut, out, uniqueExecutor.get());
+    CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
-  }
-
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  size_t dimSize = self->GetViewShape().GetDimNum();
-  auto shapeOriDetail = GetTensorShape(selfContiguous, uniqueExecutor.get());
-  auto reshapeSelf = selfContiguous;
-
-  if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-    auto allDimValue = self->Size();
-    int64_t allDim[1] = {allDimValue};
-    auto shape1d = (uniqueExecutor)->AllocIntArray(allDim, 1);
-    reshapeSelf = ReshapeLongTensor(selfContiguous, uniqueExecutor.get(), dimSize, shape1d);
-  }
-  auto seluOut = l0op::Selu(reshapeSelf, uniqueExecutor.get());
-  CHECK_RET(seluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto reshapeSeluOut = seluOut;
-  if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-    reshapeSeluOut = ReshapeLongTensor(seluOut, uniqueExecutor.get(), dimSize, shapeOriDetail);
-  }
-  auto castSeluOut = l0op::Cast(reshapeSeluOut, out->GetDataType(), uniqueExecutor.get());
-  auto viewCopyOut = l0op::ViewCopy(castSeluOut, out, uniqueExecutor.get());
-  CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSeluGetWorkspaceSize(const aclTensor *self, aclTensor *out, uint64_t *workspaceSize,
-                                      aclOpExecutor **executor) {
-  L2_DFX_PHASE_1(aclnnSelu, DFX_IN(self), DFX_OUT(out));
-  return ExecSeluGetWorkspaceSize(self, out, workspaceSize, executor);
+aclnnStatus aclnnSeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                      aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnSelu, DFX_IN(self), DFX_OUT(out));
+    return ExecSeluGetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceSeluGetWorkspaceSize(aclTensor *selfRef, uint64_t *workspaceSize, aclOpExecutor **executor) {
-  L2_DFX_PHASE_1(aclnnInplaceSelu, DFX_IN(selfRef), DFX_OUT(selfRef));
-  auto out = const_cast<aclTensor *>(selfRef);
-  return ExecSeluGetWorkspaceSize(selfRef, out, workspaceSize, executor);
+aclnnStatus aclnnInplaceSeluGetWorkspaceSize(aclTensor* selfRef, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnInplaceSelu, DFX_IN(selfRef), DFX_OUT(selfRef));
+    auto out = const_cast<aclTensor*>(selfRef);
+    return ExecSeluGetWorkspaceSize(selfRef, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnSelu(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnSelu);
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnSelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnSelu);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceSelu(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-                             aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnInplaceSelu);
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnInplaceSelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnInplaceSelu);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus
