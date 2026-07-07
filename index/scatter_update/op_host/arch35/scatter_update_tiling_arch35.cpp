@@ -554,8 +554,10 @@ uint64_t ScatterUpdateTiling::CalcIndicesUbFactor()
 
 void ScatterUpdateTiling::IsUpdateColMany()
 {
-    uint64_t updateColUbFactorCur = Ops::Base::FloorAlign(ubSize_ - indicesUbFactor_ * indicesDtypeSize_,  UB_AGLIN_VALUE) / varTypeSize_;
-    if (updateColUbFactorCur > 2 * updateColUbFactor_) {
+    uint64_t updateColUbFactorCur = Ops::Base::FloorAlign(ubSize_ - indicesUbFactor_ * indicesDtypeSize_,
+                                                          UB_AGLIN_VALUE) /
+                                    varTypeSize_;
+    if (updateColUbFactorCur > 2 * updateColUbFactor_ && usedCoreNum_ > 1) {
         updateColMany_ = true;
         updateOneColAlign_ = updateColUbFactor_;
         updateColUbFactor_ = Ops::Base::FloorAlign(updateColUbFactorCur, updateOneColAlign_);
