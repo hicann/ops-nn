@@ -117,6 +117,8 @@ inline bool IsMxBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
     return isMxfp8 || isMxfp4;
 }
 
+bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams);
+
 inline bool IsPerblockBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
     return inputParams.isPerBlock && (inputParams.bFormat == ge::FORMAT_ND || inputParams.bFormat == ge::FORMAT_FRACTAL_NZ);
@@ -156,7 +158,11 @@ enum class QMMKernelType : uint32_t {
     NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT = 7,
     NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI = 8,
     NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH = 9,
-    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH = 10
+    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH = 10,
+    NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG = 11,
+    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG = 12,
+    NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG_WITHOUT_BATCH = 13,
+    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG_WITHOUT_BATCH = 14
 };
 
 class QuantBatchMatMulV3TilingUtil {

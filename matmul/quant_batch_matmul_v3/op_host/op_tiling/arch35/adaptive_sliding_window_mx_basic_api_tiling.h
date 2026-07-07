@@ -43,6 +43,7 @@ private:
     bool IsWithoutBatchTilingData() const;
     void SetWithoutBatchTilingData();
     void NormalizeSingleRoundTailSplitBasicBlock();
+    void AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step, uint32_t baseK) const;
 
 protected:
     bool IsCapable() override;

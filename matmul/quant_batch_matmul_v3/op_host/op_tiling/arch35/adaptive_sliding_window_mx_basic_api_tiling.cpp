@@ -13,6 +13,8 @@
  * \brief
  */
 
+#include <algorithm>
+
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "log/log.h"
 #include "error_util.h"
@@ -21,9 +23,13 @@
 #include "base_block_calculator.h"
 #include "l1_tiling_data_calculator.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
+#include "quant_batch_matmul_v3_tiling_util.h"
 
 namespace {
 constexpr uint32_t STEP_K_TWO = 2U;
+// Empirical value for the L0C ping-pong template.
+constexpr uint64_t MX_L0C_PINGPONG_SCALE_KL1_TARGET = 2048UL;
+constexpr uint64_t MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT = 128UL * 1024UL * 1024UL;
 // Keep A full-load if repeated A reads exceed this share of non-full-load GM traffic.
 constexpr double REPEAT_A_LOAD_RATIO_THRESHOLD = 0.20;
 
@@ -76,7 +82,22 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
     return IsTensorapiCapable() && inputParams_.batchC == 1UL;
 }
 
-bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable() { return IsMxBasicApiCapable(inputParams_); }
+void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(
+    uint32_t& scaleFactor, uint32_t step, uint32_t baseK) const
+{
+    uint64_t scaleKUnit = static_cast<uint64_t>(step) * baseK;
+    if (scaleKUnit == 0UL) {
+        return;
+    }
+    uint64_t adjustedScaleFactor = std::max<uint64_t>(
+        qmmv3_tiling_const::SCALER_FACTOR_MIN, MX_L0C_PINGPONG_SCALE_KL1_TARGET / scaleKUnit);
+    scaleFactor = static_cast<uint32_t>(std::min<uint64_t>(scaleFactor, adjustedScaleFactor));
+}
+
+bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable()
+{
+    return IsMxBasicApiCapable(inputParams_);
+}
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchCoreCnt() const { return inputParams_.batchC; }
 
@@ -155,8 +176,19 @@ ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling()
     tilingData_.matmulTiling.isBias = inputParams_.hasBias ? 1UL : 0UL;
     tilingData_.matmulTiling.dbL0C = static_cast<uint8_t>(basicTiling_.dbL0c);
 
-    tilingData_.matmulTiling.scaleKL1 = std::min(basicTiling_.scaleFactorA * basicTiling_.stepKa * basicTiling_.baseK,
-                                                 basicTiling_.scaleFactorB * basicTiling_.stepKb * basicTiling_.baseK);
+    uint64_t scaleKL1 = std::min(
+        static_cast<uint64_t>(basicTiling_.scaleFactorA) * basicTiling_.stepKa * basicTiling_.baseK,
+        static_cast<uint64_t>(basicTiling_.scaleFactorB) * basicTiling_.stepKb * basicTiling_.baseK);
+    uint64_t outputSize = GetSizeWithDataType(inputParams_.mSize * inputParams_.nSize, inputParams_.cDtype);
+    if (IsMxL0CPingpong(inputParams_) && outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT &&
+        scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
+        AdjustScaleFactorForL0CPingpong(basicTiling_.scaleFactorA, basicTiling_.stepKa, basicTiling_.baseK);
+        AdjustScaleFactorForL0CPingpong(basicTiling_.scaleFactorB, basicTiling_.stepKb, basicTiling_.baseK);
+        scaleKL1 = std::min(
+            static_cast<uint64_t>(basicTiling_.scaleFactorA) * basicTiling_.stepKa * basicTiling_.baseK,
+            static_cast<uint64_t>(basicTiling_.scaleFactorB) * basicTiling_.stepKb * basicTiling_.baseK);
+    }
+    tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(scaleKL1);
     CalculateNBufferNum4MX();
     tilingData_.matmulTiling.scaleFactorA = basicTiling_.scaleFactorA;
     tilingData_.matmulTiling.scaleFactorB = basicTiling_.scaleFactorB;

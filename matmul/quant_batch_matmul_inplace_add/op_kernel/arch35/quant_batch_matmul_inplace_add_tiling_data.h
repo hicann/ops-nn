@@ -94,8 +94,6 @@ struct QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData {
     uint16_t baseM = 0;
     uint16_t baseN = 0;
     uint16_t baseK = 0;
-    uint16_t mmadM = 0;
-    uint16_t mmadN = 0;
     uint16_t stepKa = 0;
     uint16_t stepKb = 0;
     uint16_t groupSizeM = 0;
@@ -115,7 +113,6 @@ struct QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData {
     uint8_t dbL0C = 0;
     uint16_t reserved0 = 0;
     uint32_t reserved1 = 0;
-    uint32_t reserved2 = 0;
 };
 #pragma pack(pop)
 } // namespace QMMIA
