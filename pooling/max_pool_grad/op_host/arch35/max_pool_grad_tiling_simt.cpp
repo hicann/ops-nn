@@ -24,6 +24,7 @@ using namespace ge;
 using namespace PoolGradNameSpace;
 namespace optiling {
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
+static constexpr uint32_t BATCH_MODE = 1;
 
 bool MaxPoolGradTiling::IsCapable() { return true; }
 
@@ -73,6 +74,7 @@ ge::graphStatus MaxPoolGradTiling::PostTiling()
     blockNum = std::min(blockNum, static_cast<int64_t>(hardwareData.coreNum));
     context_->SetBlockDim(blockNum);
     context_->SetLocalMemorySize(hardwareData.ubSize - DCACHE_SIZE);
+    context_->SetScheduleMode(BATCH_MODE);
     return ge::GRAPH_SUCCESS;
 }
 

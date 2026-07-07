@@ -36,6 +36,7 @@ const int INPUT_IDX_X = 0;
 static const gert::Shape g_vec_1_shape = {1};
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr int64_t DIGIT_TWO = 2;
+static constexpr uint32_t BATCH_MODE = 1;
 constexpr size_t N_DIM_OFFSET = 0;
 constexpr size_t C_DIM_OFFSET = 4;
 constexpr size_t D_DIM_OFFSET = 1;
@@ -245,6 +246,7 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetWorkspaceSize()
 ge::graphStatus MaxPool3DGradSimtTiling::PostTiling()
 {
     context_->SetLocalMemorySize(ubSize - DCACHE_SIZE);
+    context_->SetScheduleMode(BATCH_MODE);
     return ge::GRAPH_SUCCESS;
 }
 
