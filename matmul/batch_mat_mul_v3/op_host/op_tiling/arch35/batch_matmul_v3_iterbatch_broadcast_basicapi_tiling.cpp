@@ -224,6 +224,7 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL0IterBatch()
 
 bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsCapable()
 {
+    return false;
     if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_LOGD(args_.opName, "[iterbatch_broadcast_basicapi] The NZ format is not supported.");
         return false;

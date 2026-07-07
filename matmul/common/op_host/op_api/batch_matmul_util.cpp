@@ -618,8 +618,7 @@ NonContiguousMode CheckNonContiguousTranspose(const aclTensor* self, const aclTe
         return NonContiguousMode::CONTINUOUS;
     }
     uint64_t kDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
-    bool isBatchEqual = IsBatchEqual(GetBatchDim(self), GetBatchDim(mat2));
-    if (!isBTranspose || kDim <= 1 || !isBatchEqual) {
+    if (!isBTranspose || kDim <= 1) {
         return NonContiguousMode::CONTINUOUS;
     }
     // 不支持NZ
