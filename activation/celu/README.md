@@ -13,18 +13,18 @@
 
 ## 功能说明
 
-- **算子功能**：Celu（Continuously Differentiable Exponential Linear Unit）是一种连续可微的激活函数，对正输入返回固定值，对负输入返回指数衰减曲线。
+- **算子功能**：Celu（Continuously Differentiable Exponential Linear Unit）是一种连续可微的激活函数，对正输入按系数线性缩放，对负输入返回指数衰减曲线，兼容ONNX的Celu算子。
 - **计算公式**：
 
   $$
   y = \begin{cases}
-  \alpha_3 \times 3 & \text{if } x \geq 0 \\
+  \alpha_3 \times x & \text{if } x \geq 0 \\
   \alpha_1 \times \left(\exp\left(\frac{x}{\alpha_2}\right) - 1\right) & \text{if } x < 0
   \end{cases}
   $$
 
   其中：
-  - 当`x >= 0`时，输出为常数`alpha3 * 3`
+  - 当`x >= 0`时，输出为线性缩放`alpha3 * x`（默认`alpha3=1`时即恒等`y=x`，与ONNX Celu一致）
   - 当`x < 0`时，输出为指数衰减形式`alpha1 * (exp(x / alpha2) - 1)`
 - **精度保护**：针对`exp`操作的溢出风险，对负区输入执行Mins截断保护（FP16截断阈值为11.0，FP32截断阈值为87.0），防止指数运算溢出。
 

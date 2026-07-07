@@ -26,7 +26,14 @@ using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr size_t WS_SYS_SIZE = 0U;
-constexpr int64_t BUFFER_NUM = 5;
+// 内核实际 UB 每元素占用（字节）：
+//   - inputQueue + outputQueue：各 1 份，按输入 dtype（typeSize）
+//   - 计算缓冲 xf/negResult/outF/zerosBuf：各 1 份，恒为 fp32（sizeof(float)）
+//   - 比较 mask + calcBuf 的 256B 对齐余量：保守预留 1 份 fp32
+// 计算缓冲恒为 fp32，故不能用 BUFFER_NUM*typeSize 估算（fp16 会低估 1 倍导致 UB 溢出→VEC_ERROR）。
+constexpr int64_t IO_BUFFER_NUM = 2;         // inputQueue + outputQueue（输入 dtype）
+constexpr int64_t CALC_FP32_BUFFER_NUM = 4;  // xf / negResult / outF / zerosBuf（fp32）
+constexpr int64_t CALC_FP32_RESERVE = 1;     // mask + 对齐余量（fp32 单位，保守）
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -151,7 +158,9 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
                 static_cast<long long>(ubBlockSize));
         return ge::GRAPH_FAILED;
     }
-    tiling->ubFactor = FloorAlign(FloorDiv(FloorDiv(static_cast<int64_t>(ubSize), typeSize), BUFFER_NUM), ubBlockSize);
+    int64_t bytesPerElem = IO_BUFFER_NUM * typeSize
+        + (CALC_FP32_BUFFER_NUM + CALC_FP32_RESERVE) * static_cast<int64_t>(sizeof(float));
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem), ubBlockSize);
     if (tiling->ubFactor <= 0) {
         OP_LOGE(context, "Celu: invalid ubFactor=%lld, ubSize=%u, typeSize=%lld, ubBlockSize=%lld",
                 static_cast<long long>(tiling->ubFactor), ubSize, static_cast<long long>(typeSize),

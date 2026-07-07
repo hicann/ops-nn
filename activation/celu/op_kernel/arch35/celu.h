@@ -22,20 +22,8 @@ namespace NsCelu {
 
 using namespace AscendC;
 
-template <typename T>
-__aicore__ inline T GetExpUpperBound();
-
-template <>
-__aicore__ inline half GetExpUpperBound<half>()
-{
-    return static_cast<half>(11.0f);
-}
-
-template <>
-__aicore__ inline float GetExpUpperBound<float>()
-{
-    return 87.0f;
-}
+// 计算恒在 float32 中进行（fp16 输入先升 fp32），故 exp 溢出保护上界统一用 fp32 的 87.0。
+constexpr float EXP_UPPER_BOUND_F = 87.0f;
 
 template <typename T>
 class Celu {
@@ -60,6 +48,9 @@ private:
 
     int64_t blockLength_ = 0;
     int64_t ubLength_ = 0;
+    // Compare/Select 等在 float32 上进行，按 float 元素做 256B 对齐（256/4=64 元素/单元），
+    // UB 的 float 计算缓冲按此对齐分配，防止对齐读写越界。
+    uint32_t alignedCountF_ = 0;
 
     float alpha1_ = 0.0f;
     float alpha2_ = 0.0f;
@@ -91,11 +82,19 @@ __aicore__ inline void Celu<T>::Init(GM_ADDR x, GM_ADDR y, const CeluTilingData*
     inputGM.SetGlobalBuffer((__gm__ T*)x + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
     outputGM.SetGlobalBuffer((__gm__ T*)y + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
+    // 输入/输出队列按输入 dtype T 分配（DataCopyPad 仅搬运 currentNum 个元素）。
     pipe.InitBuffer(inputQueue, 1, ubLength_ * sizeof(T));
     pipe.InitBuffer(outputQueue, 1, ubLength_ * sizeof(T));
-    int64_t maskAlignedSize = ((ubLength_ + 7) / 8 + 31) / 32 * 32;
-    int64_t maskAreaInT = (maskAlignedSize + sizeof(T) - 1) / sizeof(T);
-    pipe.InitBuffer(calcBuf, (2 * ubLength_ + maskAreaInT) * sizeof(T));
+
+    // float 计算缓冲：xf / negResult / outF / zerosBuf 各 alignedCountF_ 个 float + mask。
+    // Compare 要求 count 按 256B 对齐（float 下 64 元素/单元）；xf 兼作比较源需零填充尾区，
+    // 故按 alignedCountF_ 分配并零填充，避免 fp16 小 shape 对齐读越界。
+    uint32_t elemPer256B = 256 / sizeof(float);  // = 64
+    alignedCountF_ = ((static_cast<uint32_t>(ubLength_) * sizeof(float) + 255) / 256) * elemPer256B;
+    int64_t maskAlignedSize = ((alignedCountF_ + 7) / 8 + 31) / 32 * 32;
+    int64_t maskAreaInFloat = (maskAlignedSize + sizeof(float) - 1) / sizeof(float);
+    // calcBuf 布局(单位 float): [0,aC) xf | [aC,2aC) negResult | [2aC,3aC) outF | [3aC,4aC) zeros | mask
+    pipe.InitBuffer(calcBuf, (4 * alignedCountF_ + maskAreaInFloat) * sizeof(float));
 }
 
 template <typename T>
@@ -128,24 +127,55 @@ template <typename T>
 __aicore__ inline void Celu<T>::Compute(int64_t currentNum)
 {
     AscendC::LocalTensor<T> inputLocal = inputQueue.template DeQue<T>();
-    AscendC::LocalTensor<T> fullBuf = calcBuf.Get<T>();
-    AscendC::LocalTensor<T> negResult = fullBuf[0];
-    AscendC::LocalTensor<T> zerosBuf = fullBuf[ubLength_];
-    AscendC::LocalTensor<uint8_t> maskBuf = fullBuf[2 * ubLength_].template ReinterpretCast<uint8_t>();
     AscendC::LocalTensor<T> outputLocal = outputQueue.template AllocTensor<T>();
 
-    AscendC::Divs(negResult, inputLocal, static_cast<T>(alpha2_), currentNum);
-    AscendC::Mins(negResult, negResult, GetExpUpperBound<T>(), currentNum);
-    AscendC::Exp(outputLocal, negResult, currentNum);
-    AscendC::Adds(outputLocal, outputLocal, static_cast<T>(-1), currentNum);
-    AscendC::Muls(negResult, outputLocal, static_cast<T>(alpha1_), currentNum);
-    AscendC::Duplicate(outputLocal, static_cast<T>(alpha3_ * 3.0f), currentNum);
-    // Compare requires 256-byte aligned element count
-    uint32_t alignedCount = ((currentNum * sizeof(T) + 255) / 256) * (256 / sizeof(T));
-    AscendC::Duplicate(zerosBuf, static_cast<T>(0), alignedCount);
-    AscendC::Compare(maskBuf, inputLocal, zerosBuf, AscendC::CMPMODE::GE, alignedCount);
-    AscendC::Select(outputLocal, maskBuf, outputLocal, negResult, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                    static_cast<uint32_t>(currentNum));
+    AscendC::LocalTensor<float> fullBuf = calcBuf.Get<float>();
+    AscendC::LocalTensor<float> xf = fullBuf[0];
+    AscendC::LocalTensor<float> negResult = fullBuf[alignedCountF_];
+    AscendC::LocalTensor<float> outF = fullBuf[2 * alignedCountF_];
+    AscendC::LocalTensor<float> zerosBuf = fullBuf[3 * alignedCountF_];
+    AscendC::LocalTensor<uint8_t> maskBuf = fullBuf[4 * alignedCountF_].template ReinterpretCast<uint8_t>();
+
+    uint32_t alignedCount = ((static_cast<uint32_t>(currentNum) * sizeof(float) + 255) / 256) * (256 / sizeof(float));
+
+    // 1) 载入 x 到 float 缓冲 xf（先整块零填充，保证对齐尾区为 0 可直接作比较源）。
+    //    fp16: Cast 升 fp32；fp32: Adds 0 拷贝。
+    AscendC::Duplicate(xf, 0.0f, alignedCount);
+    if constexpr (!std::is_same_v<T, float>) {
+        AscendC::Cast(xf, inputLocal, RoundMode::CAST_NONE, static_cast<uint32_t>(currentNum));
+    } else {
+        AscendC::Adds(xf, inputLocal, 0.0f, static_cast<uint32_t>(currentNum));
+    }
+    AscendC::PipeBarrier<PIPE_V>();
+
+    // 2) 负区: y = alpha1 * (exp(min(x/alpha2, 87)) - 1)，全程 fp32。
+    AscendC::Divs(negResult, xf, alpha2_, static_cast<uint32_t>(currentNum));
+    AscendC::Mins(negResult, negResult, EXP_UPPER_BOUND_F, static_cast<uint32_t>(currentNum));
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Exp(negResult, negResult, static_cast<uint32_t>(currentNum));
+    AscendC::Adds(negResult, negResult, -1.0f, static_cast<uint32_t>(currentNum));
+    AscendC::Muls(negResult, negResult, alpha1_, static_cast<uint32_t>(currentNum));
+    AscendC::PipeBarrier<PIPE_V>();
+
+    // 3) 正区: y = alpha3 * x（fp32）。
+    AscendC::Muls(outF, xf, alpha3_, static_cast<uint32_t>(currentNum));
+    AscendC::PipeBarrier<PIPE_V>();
+
+    // 4) mask = (x >= 0)，按 fp32 对齐；xf 尾区已零填充可直接作比较源。
+    AscendC::Duplicate(zerosBuf, 0.0f, alignedCount);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Compare(maskBuf, xf, zerosBuf, AscendC::CMPMODE::GE, alignedCount);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(outF, maskBuf, outF, negResult,
+        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, static_cast<uint32_t>(currentNum));
+    AscendC::PipeBarrier<PIPE_V>();
+
+    // 5) 写回：fp16 Cast 降回 half（CAST_ROUND）；fp32 Adds 0 拷贝。
+    if constexpr (!std::is_same_v<T, float>) {
+        AscendC::Cast(outputLocal, outF, RoundMode::CAST_ROUND, static_cast<uint32_t>(currentNum));
+    } else {
+        AscendC::Adds(outputLocal, outF, 0.0f, static_cast<uint32_t>(currentNum));
+    }
 
     inputQueue.FreeTensor(inputLocal);
     outputQueue.EnQue(outputLocal);
