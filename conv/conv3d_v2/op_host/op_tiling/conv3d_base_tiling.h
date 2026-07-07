@@ -18,7 +18,6 @@
 
 #include "op_host/tiling_base.h"
 #include "conv3d_tuning_tiling.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "../../op_kernel/conv3d_v2_tiling_data.h"
 #include "conv3d_api_tiling.h"
 #include "tiling/tiling_api.h"
