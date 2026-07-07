@@ -41,7 +41,6 @@ aclnnStatus aclnnSoftplusBackward(
   aclrtStream    stream)
 ```
 
-
 ## aclnnSoftplusBackwardGetWorkspaceSize
 
 - **参数说明：**
@@ -141,8 +140,6 @@ aclnnStatus aclnnSoftplusBackward(
     </tbody>
   </table>
   
-
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
@@ -174,7 +171,6 @@ aclnnStatus aclnnSoftplusBackward(
       <td>gradOutput、self和gradInput的shape不同。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftplusBackward
 
@@ -214,7 +210,6 @@ aclnnStatus aclnnSoftplusBackward(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
   

@@ -2047,7 +2047,6 @@
     <td>AI Core</td>
     <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</td>
   </tr>
-  </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_update/README.md">scatter_update</a></td>

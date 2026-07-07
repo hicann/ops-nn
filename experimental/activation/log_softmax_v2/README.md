@@ -39,8 +39,7 @@ $$
       <td>指定的归约轴</td>
       <td>ListInt</td>
       <td>/</td>
-    </tr>  
-    <tr>  
+    </tr>    
     <tr>
       <td>input</td>
       <td>输入</td>

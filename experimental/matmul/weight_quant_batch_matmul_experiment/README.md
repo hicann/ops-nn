@@ -59,7 +59,7 @@ $$
 9. 计算$Y_{int}$:
 
 $$
-Y_{int} =
+    Y_{int} =
     \begin{bmatrix}
     Y_{1} \\
     Y_{2} \\

@@ -53,7 +53,6 @@ cannsim record ./test_aclnn_add_example -s Ascend950 --gen-report
 
 仿真工具执行日志文件在examples/add_example/examples/build/bin/cannsim_*目录，执行日志文件为cannsim.log。
 
-
 从仿真工具日志文件可以看到示例中的打印信息：
 
 ```bash
@@ -114,10 +113,10 @@ cannsim record [options] user_app
 
 3. 命令完成后，会在默认路径或指定的“output”目录下生成以“cannsim_{timestamp}_${user_app}”命名的文件夹，结构示例如下：
 
-```bash
-├─cannsim_{timestamp}_${user_app}
-├── cannsim.log
-```
+    ```bash
+    ├─cannsim_{timestamp}_${user_app}
+    ├── cannsim.log
+    ```
 
 4. 用户可以获取算子执行结果，并进行精度的对比，结果展示在cannsim.log，示例如下
 

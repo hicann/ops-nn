@@ -17,6 +17,7 @@ out = {\frac{1} {1+{e}^{-input}}}
 $$
 
 ## 函数原型
+
 - aclnnSigmoid和aclnnInplaceSigmoid实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnSigmoid：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceSigmoid：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
@@ -122,7 +123,6 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
@@ -154,7 +154,6 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>self和out的shape不匹配。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnSigmoid
 
@@ -194,7 +193,6 @@ aclnnStatus aclnnInplaceSigmoid(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -259,7 +257,6 @@ aclnnStatus aclnnInplaceSigmoid(
     </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
@@ -288,7 +285,6 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>selfRef的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnInplaceSigmoid
 
@@ -329,7 +325,6 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
@@ -339,7 +334,9 @@ aclnnStatus aclnnInplaceSigmoid(
 无。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

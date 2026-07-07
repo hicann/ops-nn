@@ -2,7 +2,6 @@
 
 ## 产品支持情况
 
-
 | 产品                                                               | 是否支持 |
 | ------------------------------------------------------------------ | :------: |
 | Atlas A2 训练系列产品/Atlas 800I A2 推理产品 |    √    |
@@ -14,10 +13,10 @@
 
 $$
  y = 
- 	 \begin{cases} 
- 	 input\_ gradient, & input\_ feature > threshold \\
- 	 0, & input\_ feature <= threshold
- 	 \end{cases}
+  \begin{cases} 
+  input\_ gradient, & input\_ feature > threshold \\
+  0, & input\_ feature <= threshold
+  \end{cases}
 $$
 
 ## 参数说明
@@ -68,21 +67,17 @@ $$
     </tr>
   </tbody></table>
 
-
-
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | Aclnn模式 | [test_aclnn_threshold_backward.cpp](./examples/test_aclnn_threshold_backward.cpp)  | 通过Aclnn接口调用ThresholdGradV2D算子。         |
 
-
 ## 约束说明
 
 无
 
 ## 贡献说明
-
 
 | 贡献者      | 贡献方     | 贡献算子  | 贡献时间   | 贡献内容                |
 | ----------- | ---------- | --------- | ---------- | ----------------------- |

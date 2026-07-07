@@ -20,7 +20,7 @@ $$
 
 ## 目录结构
 
-```
+```text
 hard_shrink/
 ├── op_host/                        # Host 侧代码
 │   ├── CMakeLists.txt              # Host 侧构建配置
@@ -44,7 +44,6 @@ hard_shrink/
 ├── CMakeLists.txt                  # 构建配置
 └── README.md                       # 说明文档
 ```
-
 
 ## 参数说明
 

@@ -98,7 +98,6 @@ aclnnStatus aclnnThresholdBackward(
       <td>√</td>
     </tr>
     <tr>
-    <tr>
       <td>out</td>
       <td>输出</td>
       <td>公式中的out。</td>

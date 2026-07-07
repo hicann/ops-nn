@@ -1,13 +1,12 @@
+# aclnnLogSoftmaxV2
 
-### aclnnLogSoftmaxV2
-
-#### 产品支持情况
+## 产品支持情况
 
 | 产品                                                               | 是否支持 |
 | :----------------------------------------------------------------- | :------- |
 | Atlas A2 训练系列产品/Atlas 800I A2                                | √       |
 
-#### 功能说明
+## 功能说明
 
 **算子功能**: 对输入Tensor沿着指定维度（dim）进行LogSoftmax运算。
 
@@ -15,7 +14,7 @@
 算子的核心功能是沿着指定轴进行归约（Reduce）计算。为保证数值计算稳定性，实际计算采用减去最大值的优化方法，其实现步骤涉及Reduce和Broadcast操作，最终等效于以下公式：
 `logsoftmax(x_i) = x_i - log(Σe^(x_j))`
 
-#### 函数原型
+## 函数原型
 
 `aclnnLogSoftmaxV2` 实现对张量的LogSoftmax计算。
 
@@ -40,7 +39,7 @@ aclnnStatus aclnnLogSoftmaxV2(
 
 ---
 
-#### aclnnLogSoftmaxV2GetWorkspaceSize
+## aclnnLogSoftmaxV2GetWorkspaceSize
 
 **参数说明**：
 
@@ -68,7 +67,7 @@ aclnnStatus aclnnLogSoftmaxV2(
 
 ---
 
-#### aclnnLogSoftmaxV2
+## aclnnLogSoftmaxV2
 
 **参数说明**：
 
@@ -85,7 +84,7 @@ aclnnStatus aclnnLogSoftmaxV2(
 
 ---
 
-#### 使用示例
+## 使用示例
 
 ```cpp
 #include <iostream>

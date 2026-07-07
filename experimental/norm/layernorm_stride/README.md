@@ -40,42 +40,42 @@
       <td>int64_t</td>
       <td>-</td>
     </tr>
-	<tr>
+  <tr>
       <td>gbW</td>
       <td>输入</td>
       <td>MLA中的kv_lora_rank</td>
       <td>int64_t</td>
       <td>-</td>
     </tr>
-	<tr>
+  <tr>
       <td>epsilon</td>
       <td>输入</td>
       <td>layernorm计算的eps</td>
       <td>float</td>
       <td>-</td>
     </tr>
-	<tr>
+  <tr>
       <td>in</td>
       <td>输入</td>
       <td>带跨步layernorm计算的输入，shape为 (Batch, Seqlen, Stride)，Stride大小为kv_lora_rank + qk_rope_head_dim</td>
       <td>BFLOAT16/HALF</td>
       <td>ND</td>
     </tr>
-	<tr>
+  <tr>
       <td>gamma</td>
       <td>输入</td>
       <td>layernorm中的weight</td>
       <td>BFLOAT16/HALF</td>
       <td>ND</td>
     </tr>
-	<tr>
+  <tr>
       <td>beta</td>
       <td>输入</td>
       <td>layernorm中的bias</td>
       <td>BFLOAT16/HALF</td>
       <td>ND</td>
     </tr>
-	<tr>
+  <tr>
       <td>out</td>
       <td>输出</td>
       <td>等同输入</td>
@@ -89,6 +89,7 @@
 - 输入输出仅支持BFLOAT16/HAFL类型。
 
 ## 调用说明
-```
+
+```text
 torch.ops.ascend_ops.layernorm_stride(blockDim, gbW, epsilon, in, gamma, beta, out)
 ```

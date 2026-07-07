@@ -131,4 +131,4 @@ logits的输入shape需要保证(V + max(T, U)) * 3大小的数据不会超过UB
 
 | 贡献者 | 贡献方 | 贡献算子 | 贡献时间 | 贡献内容 |
 | ---- | ---- | ---- | ---- | ---- |
-| HustAga | 个人开发者 | OptimizedTransducer | 2025/12/30 | OptimizedTransducer算子适配开源仓 |'
+| HustAga | 个人开发者 | OptimizedTransducer | 2025/12/30 | OptimizedTransducer算子适配开源仓 |

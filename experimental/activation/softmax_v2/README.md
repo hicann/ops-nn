@@ -10,6 +10,7 @@
 
 - 算子功能：对输入张量 x 在指定维度 dim 上执行 Softmax 运算，将该维度上的数值归一化为概率分布。
 - 计算公式：
+
 $$
 y_i = \frac{\exp(x_i - m)}{\sum_{j}\exp(x_j - m)}, \quad
 m = \max_{j}(x_j)
