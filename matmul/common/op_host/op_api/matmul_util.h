@@ -101,9 +101,6 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor);
 
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& mmOpInfo, int8_t cubeMathType);
 
-bool Check16In32OutWithBiasValid(op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype,
-                                 const aclTensor* bias);
-
 bool NeedEnableFp32Output(op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
                           const aclTensor* bias = nullptr, bool isFusion = false);
 
