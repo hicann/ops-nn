@@ -40,6 +40,7 @@ static constexpr int64_t Duplicate_NUM2 = 70;
 static constexpr int64_t NEED_NUM1 = 3;
 static constexpr int64_t NEED_NUM2 = 2;
 static constexpr int64_t NUM_TWO = 2;
+static constexpr int64_t TOLERANCE_THRESHOLD = 20;
 
 bool SparseSegmentMeanFullLoadTiling::IsCapable()
 {
@@ -50,8 +51,10 @@ bool SparseSegmentMeanFullLoadTiling::IsCapable()
     fullLoadData.xBufferSize = Ops::Base::CeilAlign(inputData.gatherSize * inputData.innerSize * inputData.inputBytes,
                                                     AGLIN_VALUE);
     fullLoadData.indicesBufferSize = Ops::Base::CeilAlign(inputData.outterSize * inputData.indicesBytes, AGLIN_VALUE);
-    // 单核分配的indices个数需要大于等于x的索引个数;
-    if (inputData.gatherSize > inputData.outterSize / fullLoadData.usedCoreNum) {
+    // 计算索引重复度允许偏离5%
+    int64_t tolerance = inputData.outterSize / TOLERANCE_THRESHOLD;
+    // 单核分配的indices个数需要大于等于x的索引轴
+    if (inputData.gatherSize > (inputData.outterSize + tolerance) / fullLoadData.usedCoreNum) {
         return false;
     }
     // innerSize和outterSize的值需要满足准入条件;
