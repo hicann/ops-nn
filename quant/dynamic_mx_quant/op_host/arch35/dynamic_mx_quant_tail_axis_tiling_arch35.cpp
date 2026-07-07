@@ -38,35 +38,25 @@ constexpr int64_t RESERVED_UB_SIZE = 2 * 1024; // 预留空间
 
 ge::graphStatus DynamicMxQuantTailAxisTiling::SetTilingDataForTailAxis()
 {
-    tilingData_.tilingKey = tilingParam_.tilingKey;
-    tilingData_.ubSize = tilingParam_.ubSize;
-    tilingData_.roundMode = tilingParam_.roundMode;
-    tilingData_.blockSize = tilingParam_.blockSize;
-    tilingData_.totalCoreNum = tilingParam_.totalCoreNum;
-    tilingData_.usedCoreNum = tilingParam_.usedCoreNum;
-    tilingData_.rowTileNum = tilingParam_.rowTileNum;
-    tilingData_.colTileNum = tilingParam_.colTileNum;
-    tilingData_.rowNum = tilingParam_.rowNum;
-    tilingData_.colNum = tilingParam_.colNum;
-    tilingData_.colNormalBlockNum = tilingParam_.colNormalBlockNum;
-    tilingData_.colTailLen = tilingParam_.colTailLen;
-    tilingData_.rowNormalBlockNum = tilingParam_.rowNormalBlockNum;
-    tilingData_.rowTailLen = tilingParam_.rowTailLen;
-    tilingData_.maxUbBlockNum = tilingParam_.maxUbBlockNum;
-    tilingData_.dstTypeMax = tilingParam_.dstTypeMax;
-    tilingData_.invDstTypeMax = tilingParam_.invDstTypeMax;
-    tilingData_.maxLowBound = tilingParam_.maxLowBound;
+    tilingData_->tilingKey = tilingParam_.tilingKey;
+    tilingData_->ubSize = tilingParam_.ubSize;
+    tilingData_->roundMode = tilingParam_.roundMode;
+    tilingData_->blockSize = tilingParam_.blockSize;
+    tilingData_->totalCoreNum = tilingParam_.totalCoreNum;
+    tilingData_->usedCoreNum = tilingParam_.usedCoreNum;
+    tilingData_->rowTileNum = tilingParam_.rowTileNum;
+    tilingData_->colTileNum = tilingParam_.colTileNum;
+    tilingData_->rowNum = tilingParam_.rowNum;
+    tilingData_->colNum = tilingParam_.colNum;
+    tilingData_->colNormalBlockNum = tilingParam_.colNormalBlockNum;
+    tilingData_->colTailLen = tilingParam_.colTailLen;
+    tilingData_->rowNormalBlockNum = tilingParam_.rowNormalBlockNum;
+    tilingData_->rowTailLen = tilingParam_.rowTailLen;
+    tilingData_->maxUbBlockNum = tilingParam_.maxUbBlockNum;
+    tilingData_->dstTypeMax = tilingParam_.dstTypeMax;
+    tilingData_->invDstTypeMax = tilingParam_.invDstTypeMax;
+    tilingData_->maxLowBound = tilingParam_.maxLowBound;
 
-    uint64_t tilingDataSize = sizeof(tilingData_);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    auto rawTilingData = context_->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(),
-                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret = %d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -76,11 +66,11 @@ void DynamicMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
         totalCoreNum:%ld, usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, \
         rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, \
         rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld, dstTypeMax:%f, invDstTypeMax:%f, maxLowBound:%f.",
-            tilingData_.tilingKey, tilingData_.ubSize, tilingData_.roundMode, tilingData_.blockSize,
-            tilingData_.totalCoreNum, tilingData_.usedCoreNum, tilingData_.rowTileNum, tilingData_.colTileNum,
-            tilingData_.rowNum, tilingData_.colNum, tilingData_.colNormalBlockNum, tilingData_.colTailLen,
-            tilingData_.rowNormalBlockNum, tilingData_.rowTailLen, tilingData_.maxUbBlockNum, tilingData_.dstTypeMax,
-            tilingData_.invDstTypeMax, tilingData_.maxLowBound);
+            tilingData_->tilingKey, tilingData_->ubSize, tilingData_->roundMode, tilingData_->blockSize,
+            tilingData_->totalCoreNum, tilingData_->usedCoreNum, tilingData_->rowTileNum, tilingData_->colTileNum,
+            tilingData_->rowNum, tilingData_->colNum, tilingData_->colNormalBlockNum, tilingData_->colTailLen,
+            tilingData_->rowNormalBlockNum, tilingData_->rowTailLen, tilingData_->maxUbBlockNum, tilingData_->dstTypeMax,
+            tilingData_->invDstTypeMax, tilingData_->maxLowBound);
 }
 
 std::set<int64_t> DynamicMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum) const
@@ -223,12 +213,14 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::DoTiling()
     tilingParam_.maxUbBlockNum *= DIGIT_EIGHT; // 转换成UB可以放下的block（1×32）数量
 
     CalcTilingKeyForTail();
+    tilingData_ = context_->GetTilingData<DynamicMxQuantTailAxisTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
     OP_CHECK_IF(SetTilingDataForTailAxis() != ge::GRAPH_SUCCESS,
                 OP_LOGE(context_, "DynamicMxQuantTailAxisSetTilingData set tiling data failed."),
                 return ge::GRAPH_FAILED);
 
-    context_->SetBlockDim(tilingData_.usedCoreNum);
-    context_->SetTilingKey(tilingData_.tilingKey);
+    context_->SetBlockDim(tilingParam_.usedCoreNum);
+    context_->SetTilingKey(tilingParam_.tilingKey);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = tilingParam_.workspaceSize;

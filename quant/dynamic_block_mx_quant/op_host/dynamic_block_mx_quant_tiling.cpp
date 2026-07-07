@@ -67,7 +67,7 @@ constexpr int64_t TAIL_TILING_KEY_DIGIT = 4;
 constexpr int64_t SINGLE_LOOP_MIN_COLS = 128;
 constexpr int64_t RESERVED_UB_SIZE = 1024; // 预留空间
 
-RoundModeList DynamicBlockMxQuantTiling::GetRoundMode(const std::string& roundMode)
+RoundModeList DynamicBlockMxQuantTiling::GetRoundMode(const std::string& roundMode) const
 {
     if (roundMode == "rint") {
         return RoundModeList::MODE_RINT;
@@ -445,22 +445,14 @@ ge::graphStatus DynamicBlockMxQuantTiling::DoTiling()
                 return ge::GRAPH_FAILED);
 
     SetTilingKey();
+    tilingData_ = context_->GetTilingData<DynamicBlockMxQuantTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
     SetTilingData();
     PrintTilingData();
 
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
-
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    auto rawTilingData = context_->GetRawTilingData();
-    uint64_t tilingDataSize = sizeof(tilingData);
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context_->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
-        return ge::GRAPH_FAILED;
-    }
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
+    context_->SetTilingKey(tilingParams.tilingKey);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
@@ -524,47 +516,46 @@ void DynamicBlockMxQuantTiling::SetTilingKey()
     }
 
     scaleAlg_ = tilingParams.scaleAlg;
-    int64_t tilingKey = GET_TPL_TILING_KEY(roundMode_, scaleAlg_);
+    tilingParams.tilingKey = GET_TPL_TILING_KEY(roundMode_, scaleAlg_);
     OP_LOGD(context_->GetNodeName(), "roundMode is %ld, scaleAlg is %ld", roundMode_, scaleAlg_);
-    context_->SetTilingKey(tilingKey);
 }
 
 void DynamicBlockMxQuantTiling::SetTilingData()
 {
-    tilingData.tilingKey = tilingParams.tilingKey;
-    tilingData.totalCoreNum = tilingParams.totalCoreNum;
-    tilingData.usedCoreNum = tilingParams.usedCoreNum;
-    tilingData.ubSize = tilingParams.ubSize;
-    tilingData.roundMode = tilingParams.roundMode;
-    tilingData.dstType = tilingParams.dstType;
-    tilingData.scaleAlg = tilingParams.scaleAlg;
-    tilingData.dstTypeMax = tilingParams.dstTypeMax;
-    tilingData.blockSizeRow = tilingParams.blockSizeRow;
-    tilingData.blockSizeCol = tilingParams.blockSizeCol;
-    tilingData.batchNum = tilingParams.batchNum;
-    tilingData.rowNum = tilingParams.rowNum;
-    tilingData.colNum = tilingParams.colNum;
-    tilingData.singleBatchRowBlockLoopNum = tilingParams.singleBatchRowBlockLoopNum;
-    tilingData.rowBlockLoopNum = tilingParams.rowBlockLoopNum;
-    tilingData.colBlockLoopNum = tilingParams.colBlockLoopNum;
-    tilingData.rowUbBlockLoopNum = tilingParams.rowUbBlockLoopNum;
-    tilingData.colUbBlockLoopNum = tilingParams.colUbBlockLoopNum;
-    tilingData.rowUbFactor = tilingParams.rowUbFactor;
-    tilingData.colUbFactor = tilingParams.colUbFactor;
-    tilingData.rowTileNum = tilingParams.rowTileNum;
-    tilingData.colTileNum = tilingParams.colTileNum;
-    tilingData.normalCoreRowTileNum = tilingParams.normalCoreRowTileNum;
-    tilingData.normalCoreColTileNum = tilingParams.normalCoreColTileNum;
-    tilingData.tailCoreRowTileNum = tilingParams.tailCoreRowTileNum;
-    tilingData.tailCoreColTileNum = tilingParams.tailCoreColTileNum;
-    tilingData.rowNormalCoreNum = tilingParams.rowNormalCoreNum;
-    tilingData.colNormalCoreNum = tilingParams.colNormalCoreNum;
-    tilingData.rowTailCoreNum = tilingParams.rowTailCoreNum;
-    tilingData.colTailCoreNum = tilingParams.colTailCoreNum;
-    tilingData.blockH = tilingParams.blockH;
-    tilingData.blockW = tilingParams.blockW;
-    tilingData.rowScaleNum = tilingParams.rowScaleNum;
-    tilingData.colScaleNum = tilingParams.colScaleNum;
+    tilingData_->tilingKey = tilingParams.tilingKey;
+    tilingData_->totalCoreNum = tilingParams.totalCoreNum;
+    tilingData_->usedCoreNum = tilingParams.usedCoreNum;
+    tilingData_->ubSize = tilingParams.ubSize;
+    tilingData_->roundMode = tilingParams.roundMode;
+    tilingData_->dstType = tilingParams.dstType;
+    tilingData_->scaleAlg = tilingParams.scaleAlg;
+    tilingData_->dstTypeMax = tilingParams.dstTypeMax;
+    tilingData_->blockSizeRow = tilingParams.blockSizeRow;
+    tilingData_->blockSizeCol = tilingParams.blockSizeCol;
+    tilingData_->batchNum = tilingParams.batchNum;
+    tilingData_->rowNum = tilingParams.rowNum;
+    tilingData_->colNum = tilingParams.colNum;
+    tilingData_->singleBatchRowBlockLoopNum = tilingParams.singleBatchRowBlockLoopNum;
+    tilingData_->rowBlockLoopNum = tilingParams.rowBlockLoopNum;
+    tilingData_->colBlockLoopNum = tilingParams.colBlockLoopNum;
+    tilingData_->rowUbBlockLoopNum = tilingParams.rowUbBlockLoopNum;
+    tilingData_->colUbBlockLoopNum = tilingParams.colUbBlockLoopNum;
+    tilingData_->rowUbFactor = tilingParams.rowUbFactor;
+    tilingData_->colUbFactor = tilingParams.colUbFactor;
+    tilingData_->rowTileNum = tilingParams.rowTileNum;
+    tilingData_->colTileNum = tilingParams.colTileNum;
+    tilingData_->normalCoreRowTileNum = tilingParams.normalCoreRowTileNum;
+    tilingData_->normalCoreColTileNum = tilingParams.normalCoreColTileNum;
+    tilingData_->tailCoreRowTileNum = tilingParams.tailCoreRowTileNum;
+    tilingData_->tailCoreColTileNum = tilingParams.tailCoreColTileNum;
+    tilingData_->rowNormalCoreNum = tilingParams.rowNormalCoreNum;
+    tilingData_->colNormalCoreNum = tilingParams.colNormalCoreNum;
+    tilingData_->rowTailCoreNum = tilingParams.rowTailCoreNum;
+    tilingData_->colTailCoreNum = tilingParams.colTailCoreNum;
+    tilingData_->blockH = tilingParams.blockH;
+    tilingData_->blockW = tilingParams.blockW;
+    tilingData_->rowScaleNum = tilingParams.rowScaleNum;
+    tilingData_->colScaleNum = tilingParams.colScaleNum;
 }
 
 void DynamicBlockMxQuantTiling::PrintTilingData()
@@ -578,14 +569,14 @@ void DynamicBlockMxQuantTiling::PrintTilingData()
         "tailCoreRowTileNum: %ld, tailCoreColTileNum: %ld, rowNormalCoreNum: %ld, colNormalCoreNum: %ld, "
         "rowTailCoreNum: %ld, colTailCoreNum: %ld, blockH: %ld, blockW: %ld, rowScaleNum: %ld, colScaleNum: %ld, "
         "dstTypeMax: %f ",
-        tilingData.tilingKey, tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.ubSize, tilingData.roundMode,
-        tilingData.dstType, tilingData.scaleAlg, tilingData.batchNum, tilingData.rowNum, tilingData.colNum,
-        tilingData.singleBatchRowBlockLoopNum, tilingData.rowBlockLoopNum, tilingData.colBlockLoopNum,
-        tilingData.rowUbBlockLoopNum, tilingData.colUbBlockLoopNum, tilingData.rowUbFactor, tilingData.colUbFactor,
-        tilingData.rowTileNum, tilingData.colTileNum, tilingData.normalCoreRowTileNum, tilingData.normalCoreColTileNum,
-        tilingData.tailCoreRowTileNum, tilingData.tailCoreColTileNum, tilingData.rowNormalCoreNum,
-        tilingData.colNormalCoreNum, tilingData.rowTailCoreNum, tilingData.colTailCoreNum, tilingData.blockH,
-        tilingData.blockW, tilingData.rowScaleNum, tilingData.colScaleNum, tilingData.dstTypeMax);
+        tilingData_->tilingKey, tilingData_->totalCoreNum, tilingData_->usedCoreNum, tilingData_->ubSize, tilingData_->roundMode,
+        tilingData_->dstType, tilingData_->scaleAlg, tilingData_->batchNum, tilingData_->rowNum, tilingData_->colNum,
+        tilingData_->singleBatchRowBlockLoopNum, tilingData_->rowBlockLoopNum, tilingData_->colBlockLoopNum,
+        tilingData_->rowUbBlockLoopNum, tilingData_->colUbBlockLoopNum, tilingData_->rowUbFactor, tilingData_->colUbFactor,
+        tilingData_->rowTileNum, tilingData_->colTileNum, tilingData_->normalCoreRowTileNum, tilingData_->normalCoreColTileNum,
+        tilingData_->tailCoreRowTileNum, tilingData_->tailCoreColTileNum, tilingData_->rowNormalCoreNum,
+        tilingData_->colNormalCoreNum, tilingData_->rowTailCoreNum, tilingData_->colTailCoreNum, tilingData_->blockH,
+        tilingData_->blockW, tilingData_->rowScaleNum, tilingData_->colScaleNum, tilingData_->dstTypeMax);
 }
 
 static ge::graphStatus TilingForDynamicBlockMxQuant(gert::TilingContext* context)

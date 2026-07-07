@@ -54,19 +54,24 @@ const std::set<ge::DataType> GROUPIDX_SUPPORT_DTYPE_SET = {ge::DT_INT32};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> OUTPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 
-inline static ge::graphStatus GroupedDynamicMxQuantSetTilingData(gert::TilingContext* context,
-                                                                 GroupedDynamicMxQuantTilingData& tilingData)
+inline static ge::graphStatus GroupedDynamicMxQuantSetTilingData(GroupedDynamicMxQuantTilingData* tilingData,
+                                                                 GroupedDynamicMxQuantTilingParam& tilingParam)
 {
-    uint64_t tilingDataSize = sizeof(tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
-    auto rawTilingData = context->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context->GetRawTilingData()->SetDataSize(tilingDataSize);
+    tilingData->totalCoreNum = tilingParam.totalCoreNum;
+    tilingData->usedCoreNum = tilingParam.usedCoreNum;
+    tilingData->blockFactor = tilingParam.blockFactor;
+    tilingData->tailBlockFactor = tilingParam.tailBlockFactor;
+    tilingData->uo = tilingParam.uo;
+    tilingData->maxUbCol = tilingParam.maxUbCol;
+    tilingData->ubFactor = tilingParam.ubFactor;
+    tilingData->tailUbFactor = tilingParam.tailUbFactor;
+    tilingData->blockSize = tilingParam.blockSize;
+    tilingData->scaleAlg = tilingParam.scaleAlg;
+    tilingData->preAxisSize = tilingParam.preAxisSize;
+    tilingData->postAxisSize = tilingParam.postAxisSize;
+    tilingData->groupSize = tilingParam.groupSize;
+    tilingData->dstTypeMax = tilingParam.dstTypeMax;
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -281,9 +286,7 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, GroupedDynam
     return ge::GRAPH_SUCCESS;
 }
 
-inline static ge::graphStatus SetTilingKeyParam(gert::TilingContext* context,
-                                                const GroupedDynamicMxQuantTilingParam& tilingParam,
-                                                GroupedDynamicMxQuantTilingData& tilingData)
+inline static ge::graphStatus SetTilingKeyParam(gert::TilingContext* context)
 {
     uint64_t mode = 0;
     int64_t tilingKey = GET_TPL_TILING_KEY(mode);
@@ -293,36 +296,14 @@ inline static ge::graphStatus SetTilingKeyParam(gert::TilingContext* context,
     return ge::GRAPH_SUCCESS;
 }
 
-inline static ge::graphStatus SetTilingData(gert::TilingContext* context,
-                                            const GroupedDynamicMxQuantTilingParam& tilingParam,
-                                            GroupedDynamicMxQuantTilingData& tilingData)
-{
-    tilingData.totalCoreNum = tilingParam.totalCoreNum;
-    tilingData.usedCoreNum = tilingParam.usedCoreNum;
-    tilingData.blockFactor = tilingParam.blockFactor;
-    tilingData.tailBlockFactor = tilingParam.tailBlockFactor;
-    tilingData.uo = tilingParam.uo;
-    tilingData.maxUbCol = tilingParam.maxUbCol;
-    tilingData.ubFactor = tilingParam.ubFactor;
-    tilingData.tailUbFactor = tilingParam.tailUbFactor;
-    tilingData.blockSize = tilingParam.blockSize;
-    tilingData.scaleAlg = tilingParam.scaleAlg;
-    tilingData.preAxisSize = tilingParam.preAxisSize;
-    tilingData.postAxisSize = tilingParam.postAxisSize;
-    tilingData.dstTypeMax = tilingParam.dstTypeMax;
-    tilingData.groupSize = tilingParam.groupSize;
-
-    return ge::GRAPH_SUCCESS;
-}
-
-inline static void PrintTilingData(const gert::TilingContext* context, GroupedDynamicMxQuantTilingData& tilingData)
+inline static void PrintTilingData(const gert::TilingContext* context, const GroupedDynamicMxQuantTilingData* tilingData)
 {
     OP_LOGI(context, "tilingData is totalCoreNum:%ld, usedCoreNum:%ld, blockFactor:%ld, tailUbFactor:%ld, uo:%ld, \
         maxUbCol:%ld, ubFactor:%ld, tailBlockFactor:%ld, blockSize:%ld, scaleAlg:%ld, preAxisSize:%ld, postAxisSize:%ld, \
         dstTypeMax:%f",
-            tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.blockFactor, tilingData.tailUbFactor,
-            tilingData.uo, tilingData.maxUbCol, tilingData.ubFactor, tilingData.tailBlockFactor, tilingData.blockSize,
-            tilingData.scaleAlg, tilingData.preAxisSize, tilingData.postAxisSize, tilingData.dstTypeMax);
+            tilingData->totalCoreNum, tilingData->usedCoreNum, tilingData->blockFactor, tilingData->tailUbFactor,
+            tilingData->uo, tilingData->maxUbCol, tilingData->ubFactor, tilingData->tailBlockFactor, tilingData->blockSize,
+            tilingData->scaleAlg, tilingData->preAxisSize, tilingData->postAxisSize, tilingData->dstTypeMax);
 }
 
 ge::graphStatus Tiling4GroupedDynamicMxQuant(gert::TilingContext* context)
@@ -343,16 +324,19 @@ ge::graphStatus Tiling4GroupedDynamicMxQuant(gert::TilingContext* context)
     OP_CHECK_IF(GetPlatInfo(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatInfo failed."),
                 return ge::GRAPH_FAILED);
 
-    GroupedDynamicMxQuantTilingData tilingData = {};
     OP_CHECK_IF(DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "DoTiling failed."),
                 return ge::GRAPH_FAILED);
 
-    SetTilingKeyParam(context, tilingParam, tilingData);
-    SetTilingData(context, tilingParam, tilingData);
-    OP_CHECK_IF(GroupedDynamicMxQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GroupedDynamicMxQuantSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+    SetTilingKeyParam(context);
 
-    context->SetBlockDim(tilingData.usedCoreNum);
+    auto* tilingData = context->GetTilingData<GroupedDynamicMxQuantTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+
+    OP_CHECK_IF(GroupedDynamicMxQuantSetTilingData(tilingData, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GroupedDynamicMxQuantSetTilingData set tiling data fail."),
+                return ge::GRAPH_FAILED);
+
+    context->SetBlockDim(tilingParam.usedCoreNum);
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = WORKSPACE_SIZE;

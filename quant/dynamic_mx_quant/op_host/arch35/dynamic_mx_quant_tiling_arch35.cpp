@@ -111,34 +111,51 @@ std::string Shape2String(const T& shape)
     return oss.str();
 }
 
-inline static ge::graphStatus DynamicMxQuantSetTilingData(gert::TilingContext* context,
-                                                          DynamicMxQuantTilingData& tilingData)
+inline static ge::graphStatus DynamicMxQuantSetTilingData(DynamicMxQuantTilingData* tilingData,
+                                                          const DynamicMxQuantTilingParam& tilingParam)
 {
-    uint64_t tilingDataSize = sizeof(tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
-    auto rawTilingData = context->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context->GetRawTilingData()->SetDataSize(tilingDataSize);
+    tilingData->totalCoreNum = tilingParam.totalCoreNum;
+    tilingData->usedCoreNum = tilingParam.usedCoreNum;
+    tilingData->uo = tilingParam.uo;
+    tilingData->ubDim = tilingParam.ubDim;
+    tilingData->ubFactor = tilingParam.ubFactor;
+    tilingData->tailUbFactor = tilingParam.tailUbFactor;
+    tilingData->blockFactor = tilingParam.blockFactor;
+    tilingData->tailBlockFactor = tilingParam.tailBlockFactor;
+    tilingData->tilingKey = tilingParam.tilingKey;
+    tilingData->roundMode = tilingParam.roundMode;
+    tilingData->dstType = tilingParam.dstType;
+    tilingData->blockSize = tilingParam.blockSize;
+    tilingData->scaleAlg = tilingParam.scaleAlg;
+    tilingData->tailBlockSize = tilingParam.tailBlockSize;
+    tilingData->blockSizeNumInAxis = tilingParam.blockSizeNumInAxis;
+    tilingData->isPad = tilingParam.isPad ? 1 : 0;
+    tilingData->preAxisSize = tilingParam.preAxisSize / tilingParam.blockSizeNumInAxis;
+    tilingData->postAxisSize = tilingParam.postAxisSize;
+    tilingData->mxScaleSize = tilingParam.mxScaleSize;
+    tilingData->isTailAxis = static_cast<int64_t>(tilingParam.isTailAxis);
+    tilingData->calcMode = tilingParam.calcMode;
+    tilingData->subNumForScale = tilingParam.subNumForScale;
+    tilingData->subNumForFP16Scale = tilingParam.subNumForFP16Scale;
+    tilingData->dstTypeMax = tilingParam.dstTypeMax;
+    tilingData->invDstTypeMax = tilingParam.invDstTypeMax;
+    tilingData->maxLowBound = tilingParam.maxLowBound;
+
     return ge::GRAPH_SUCCESS;
 }
 
-inline static void PrintTilingData(const gert::TilingContext* context, DynamicMxQuantTilingData& tilingData)
+inline static void PrintTilingData(const gert::TilingContext* context, const DynamicMxQuantTilingData* tilingData)
 {
     OP_LOGI(context->GetNodeName(), "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
         tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
         blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, calcMode: %ld, \
         subNumForScale: %d, subNumForFP16Scale: %d,dstTypeMax:%f, invDstTypeMax:%f, maxLowBound:%f.",
-            tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.ubFactor, tilingData.tailUbFactor,
-            tilingData.blockFactor, tilingData.tailBlockFactor, tilingData.uo, tilingData.ubDim, tilingData.dstType,
-            tilingData.blockSize, tilingData.scaleAlg, tilingData.blockSizeNumInAxis, tilingData.tailBlockSize,
-            tilingData.isPad, tilingData.postAxisSize, tilingData.tilingKey, tilingData.calcMode,
-            tilingData.subNumForScale, tilingData.subNumForFP16Scale, tilingData.dstTypeMax, tilingData.invDstTypeMax,
-            tilingData.maxLowBound);
+            tilingData->totalCoreNum, tilingData->usedCoreNum, tilingData->ubFactor, tilingData->tailUbFactor,
+            tilingData->blockFactor, tilingData->tailBlockFactor, tilingData->uo, tilingData->ubDim, tilingData->dstType,
+            tilingData->blockSize, tilingData->scaleAlg, tilingData->blockSizeNumInAxis, tilingData->tailBlockSize,
+            tilingData->isPad, tilingData->postAxisSize, tilingData->tilingKey, tilingData->calcMode,
+            tilingData->subNumForScale, tilingData->subNumForFP16Scale, tilingData->dstTypeMax, tilingData->invDstTypeMax,
+            tilingData->maxLowBound);
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -656,38 +673,6 @@ static bool IsTailAxisAndBlockSize32(DynamicMxQuantTilingParam& tilingParam)
     return false;
 }
 
-inline static void SetTilingData(DynamicMxQuantTilingData& tilingData, const DynamicMxQuantTilingParam& tilingParam)
-{
-    tilingData.totalCoreNum = tilingParam.totalCoreNum;
-    tilingData.usedCoreNum = tilingParam.usedCoreNum;
-    tilingData.uo = tilingParam.uo;
-    tilingData.ubDim = tilingParam.ubDim;
-    tilingData.ubFactor = tilingParam.ubFactor;
-    tilingData.tailUbFactor = tilingParam.tailUbFactor;
-    tilingData.blockFactor = tilingParam.blockFactor;
-    tilingData.tailBlockFactor = tilingParam.tailBlockFactor;
-    tilingData.tilingKey = tilingParam.tilingKey;
-    tilingData.roundMode = tilingParam.roundMode;
-    tilingData.dstType = tilingParam.dstType;
-    tilingData.blockSize = tilingParam.blockSize;
-    tilingData.scaleAlg = tilingParam.scaleAlg;
-    tilingData.tailBlockSize = tilingParam.tailBlockSize;
-    tilingData.blockSizeNumInAxis = tilingParam.blockSizeNumInAxis;
-    int64_t isPad = tilingParam.isPad ? 1 : 0;
-    tilingData.isPad = isPad;
-    int64_t preAxisSize = tilingParam.preAxisSize / tilingParam.blockSizeNumInAxis;
-    tilingData.preAxisSize = preAxisSize;
-    tilingData.postAxisSize = tilingParam.postAxisSize;
-    tilingData.mxScaleSize = tilingParam.mxScaleSize;
-    tilingData.isTailAxis = static_cast<int64_t>(tilingParam.isTailAxis);
-    tilingData.calcMode = tilingParam.calcMode;
-    tilingData.subNumForScale = tilingParam.subNumForScale;
-    tilingData.subNumForFP16Scale = tilingParam.subNumForFP16Scale;
-    tilingData.dstTypeMax = tilingParam.dstTypeMax;
-    tilingData.invDstTypeMax = tilingParam.invDstTypeMax;
-    tilingData.maxLowBound = tilingParam.maxLowBound;
-}
-
 ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling4DynamicMxQuant running begin.");
@@ -736,8 +721,8 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
         return tailAxisTiling.DoTiling();
     }
 
-    bool isOptimizable = IsOptForNotLastQuantAxis(context, tilingParam);
     // 进入性能优化模板判断
+    bool isOptimizable = IsOptForNotLastQuantAxis(context, tilingParam);
     if (isOptimizable) {
         int64_t x = GetNotAxisGroupPerUb(tilingParam);
         tilingParam.groupPerUb = x;
@@ -748,10 +733,10 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     OP_CHECK_IF(DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "Dotiling failed."), return ge::GRAPH_FAILED);
 
-    DynamicMxQuantTilingData tilingData;
-    SetTilingData(tilingData, tilingParam);
+    auto* tilingData = context->GetTilingData<DynamicMxQuantTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
 
-    OP_CHECK_IF(DynamicMxQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
+    OP_CHECK_IF(DynamicMxQuantSetTilingData(tilingData, tilingParam) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "DynamicMxQuantSetTilingData set tiling data fail."),
                 return ge::GRAPH_FAILED);
 
@@ -759,8 +744,8 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
         context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
     }
 
-    context->SetBlockDim(tilingData.usedCoreNum);
-    context->SetTilingKey(tilingData.tilingKey);
+    context->SetBlockDim(tilingParam.usedCoreNum);
+    context->SetTilingKey(tilingParam.tilingKey);
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = tilingParam.workspaceSize + Ops::Base::CeilAlign(tilingParam.mxScaleSize, WORKSPACE_ALIGN_SIZE);

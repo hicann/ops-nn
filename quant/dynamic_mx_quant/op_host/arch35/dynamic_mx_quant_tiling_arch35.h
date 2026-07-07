@@ -124,7 +124,7 @@ enum class RoundModeList {
 class DynamicMxQuantOptimzieTiling {
 public:
     explicit DynamicMxQuantOptimzieTiling(gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
-        : context_(context), tilingParam_(tilingParam), tilingData{}
+        : context_(context), tilingParam_(tilingParam)
     {}
     ~DynamicMxQuantOptimzieTiling() {}
     ge::graphStatus DoTiling();
@@ -140,13 +140,13 @@ private:
 private:
     gert::TilingContext* context_ = nullptr;
     DynamicMxQuantTilingParam tilingParam_;
-    DynamicMxQuant4OptimizeTilingData tilingData{};
+    DynamicMxQuant4OptimizeTilingData* tilingData_ = nullptr;
 };
 
 class DynamicMxQuantTailAxisTiling {
 public:
     explicit DynamicMxQuantTailAxisTiling(gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
-        : context_(context), tilingParam_(tilingParam), tilingData_{}
+        : context_(context), tilingParam_(tilingParam)
     {}
     ~DynamicMxQuantTailAxisTiling() {}
     ge::graphStatus DoTiling();
@@ -163,7 +163,7 @@ private:
 private:
     gert::TilingContext* context_ = nullptr;
     DynamicMxQuantTilingParam tilingParam_;
-    DynamicMxQuantTailAxisTilingData tilingData_{};
+    DynamicMxQuantTailAxisTilingData* tilingData_ = nullptr;
 };
 
 } // namespace optiling

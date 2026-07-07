@@ -49,6 +49,8 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::DoTiling()
     OP_CHECK_IF(SetCalcMode() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Set calculation mode Failed"),
                 return ge::GRAPH_FAILED);
     SetTilingKey();
+    tilingData_ = context_->GetTilingData<DynamicMxQuant4OptimizeTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
     SetTilingData();
     PrintTilingData();
 
@@ -180,47 +182,36 @@ void DynamicMxQuantOptimzieTiling::SetTilingKey()
 
 ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingData()
 {
-    tilingData.totalCoreNum = tilingParam_.totalCoreNum;
-    tilingData.usedCoreNum = tilingParam_.usedCoreNum;
-    tilingData.blockSize = tilingParam_.blockSize;
-    tilingData.isPad = tilingParam_.isPad ? 1 : 0;
-    tilingData.tailBlockSize = tilingParam_.tailBlockSize;
-    tilingData.tilingKey = tilingParam_.tilingKey;
-    tilingData.quantAxisSize = tilingParam_.quantAxisSize;
-    tilingData.postAxisSize = tilingParam_.postAxisSize;
-    tilingData.nAlignSize = tilingParam_.nAlignSize;
-    tilingData.mAlignBlockCount = tilingParam_.mAlignBlockCount;
-    tilingData.nAlignBlockCount = tilingParam_.nAlignBlockCount;
-    tilingData.mAlignGroupCount = tilingParam_.mAlignGroupCount;
-    tilingData.quantAxisIsOdd = tilingParam_.quantAxisIsOdd;
-    tilingData.totalGroupNum = tilingParam_.totalGroupNum;
-    tilingData.groupPerUb = tilingParam_.groupPerUb;
-    tilingData.totalBlockNum = tilingParam_.totalBlockNum;
-    tilingData.blockNumPerTask = tilingParam_.blockNumPerTask;
-    tilingData.totalTaskNum = tilingParam_.totalTaskNum;
-    tilingData.loopNumPerHeadCore = tilingParam_.loopNumPerHeadCore;
-    tilingData.loopNumPerTailCore = tilingParam_.loopNumPerTailCore;
-    tilingData.ubRowLen = tilingParam_.ubRowLen;
-    tilingData.ubRowLenTail = tilingParam_.ubRowLenTail;
-    tilingData.ubRowCount = tilingParam_.ubRowCount;
-    tilingData.ubRowCountTail = tilingParam_.ubRowCountTail;
-    tilingData.subNumForScale = tilingParam_.subNumForScale;
-    tilingData.blockCountPerBatch = tilingParam_.blockCountPerBatch;
-    tilingData.scaleRowCountPerBatch = tilingParam_.scaleRowCountPerBatch;
-    tilingData.needPadPostAxis = tilingParam_.needPadPostAxis ? 1 : 0;
-    tilingData.invDstTypeMax = tilingParam_.invDstTypeMax;
-    tilingData.maxLowBound = tilingParam_.maxLowBound;
-
-    uint64_t tilingDataSize = sizeof(tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    auto rawTilingData = context_->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
+    tilingData_->totalCoreNum = tilingParam_.totalCoreNum;
+    tilingData_->usedCoreNum = tilingParam_.usedCoreNum;
+    tilingData_->blockSize = tilingParam_.blockSize;
+    tilingData_->isPad = tilingParam_.isPad ? 1 : 0;
+    tilingData_->tailBlockSize = tilingParam_.tailBlockSize;
+    tilingData_->tilingKey = tilingParam_.tilingKey;
+    tilingData_->quantAxisSize = tilingParam_.quantAxisSize;
+    tilingData_->postAxisSize = tilingParam_.postAxisSize;
+    tilingData_->nAlignSize = tilingParam_.nAlignSize;
+    tilingData_->mAlignBlockCount = tilingParam_.mAlignBlockCount;
+    tilingData_->nAlignBlockCount = tilingParam_.nAlignBlockCount;
+    tilingData_->mAlignGroupCount = tilingParam_.mAlignGroupCount;
+    tilingData_->quantAxisIsOdd = tilingParam_.quantAxisIsOdd;
+    tilingData_->totalGroupNum = tilingParam_.totalGroupNum;
+    tilingData_->groupPerUb = tilingParam_.groupPerUb;
+    tilingData_->totalBlockNum = tilingParam_.totalBlockNum;
+    tilingData_->blockNumPerTask = tilingParam_.blockNumPerTask;
+    tilingData_->totalTaskNum = tilingParam_.totalTaskNum;
+    tilingData_->loopNumPerHeadCore = tilingParam_.loopNumPerHeadCore;
+    tilingData_->loopNumPerTailCore = tilingParam_.loopNumPerTailCore;
+    tilingData_->ubRowLen = tilingParam_.ubRowLen;
+    tilingData_->ubRowLenTail = tilingParam_.ubRowLenTail;
+    tilingData_->ubRowCount = tilingParam_.ubRowCount;
+    tilingData_->ubRowCountTail = tilingParam_.ubRowCountTail;
+    tilingData_->subNumForScale = tilingParam_.subNumForScale;
+    tilingData_->blockCountPerBatch = tilingParam_.blockCountPerBatch;
+    tilingData_->scaleRowCountPerBatch = tilingParam_.scaleRowCountPerBatch;
+    tilingData_->needPadPostAxis = tilingParam_.needPadPostAxis ? 1 : 0;
+    tilingData_->invDstTypeMax = tilingParam_.invDstTypeMax;
+    tilingData_->maxLowBound = tilingParam_.maxLowBound;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -236,15 +227,15 @@ void DynamicMxQuantOptimzieTiling::PrintTilingData()
             "loopNumPerTailCore: %ld, ubRowLen: %ld, ubRowLenTail: %ld, ubRowCount: %ld, "
             "ubRowCountTail: %ld, subNumForScale: %ld, blockCountPerBatch: %ld,scaleRowCountPerBatch: %ld, "
             "needPadPostAxis: %ld, invDstTypeMax:%f, maxLowBound:%f.",
-            tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.blockSize, tilingData.isPad,
-            tilingData.tailBlockSize, tilingData.tilingKey, tilingData.quantAxisSize, tilingData.postAxisSize,
-            tilingData.nAlignSize, tilingData.mAlignBlockCount, tilingData.nAlignBlockCount,
-            tilingData.mAlignGroupCount, tilingData.quantAxisIsOdd, tilingData.totalGroupNum, tilingData.groupPerUb,
-            tilingData.totalBlockNum, tilingData.blockNumPerTask, tilingData.totalTaskNum,
-            tilingData.loopNumPerHeadCore, tilingData.loopNumPerTailCore, tilingData.ubRowLen, tilingData.ubRowLenTail,
-            tilingData.ubRowCount, tilingData.ubRowCountTail, tilingData.subNumForScale, tilingData.blockCountPerBatch,
-            tilingData.scaleRowCountPerBatch, tilingData.needPadPostAxis, tilingData.invDstTypeMax,
-            tilingData.maxLowBound);
+            tilingData_->totalCoreNum, tilingData_->usedCoreNum, tilingData_->blockSize, tilingData_->isPad,
+            tilingData_->tailBlockSize, tilingData_->tilingKey, tilingData_->quantAxisSize, tilingData_->postAxisSize,
+            tilingData_->nAlignSize, tilingData_->mAlignBlockCount, tilingData_->nAlignBlockCount,
+            tilingData_->mAlignGroupCount, tilingData_->quantAxisIsOdd, tilingData_->totalGroupNum, tilingData_->groupPerUb,
+            tilingData_->totalBlockNum, tilingData_->blockNumPerTask, tilingData_->totalTaskNum,
+            tilingData_->loopNumPerHeadCore, tilingData_->loopNumPerTailCore, tilingData_->ubRowLen, tilingData_->ubRowLenTail,
+            tilingData_->ubRowCount, tilingData_->ubRowCountTail, tilingData_->subNumForScale, tilingData_->blockCountPerBatch,
+            tilingData_->scaleRowCountPerBatch, tilingData_->needPadPostAxis, tilingData_->invDstTypeMax,
+            tilingData_->maxLowBound);
 }
 
 } // namespace optiling

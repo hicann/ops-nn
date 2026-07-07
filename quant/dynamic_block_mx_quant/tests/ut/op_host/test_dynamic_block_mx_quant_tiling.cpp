@@ -249,7 +249,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_roundMode_round)
     int64_t dstDtype = 41;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "0 64 2 253952 0 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
+    string expectTilingData = "1 64 2 253952 0 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
                     dstDtype, scaleAlg, dstTypeMax, expectTilingData);
@@ -264,7 +264,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_roundMode_floor)
     int64_t dstDtype = 41;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "0 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
+    string expectTilingData = "2 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
                     dstDtype, scaleAlg, dstTypeMax, expectTilingData);
@@ -279,7 +279,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_To_Fp4)
     int64_t dstDtype = 41;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "0 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
+    string expectTilingData = "2 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
                     dstDtype, scaleAlg, dstTypeMax, expectTilingData);
@@ -309,7 +309,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_From_fp16)
     int64_t dstDtype = 41;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "0 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
+    string expectTilingData = "2 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
                     dstDtype, scaleAlg, dstTypeMax, expectTilingData);
@@ -324,7 +324,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_From_Bf16)
     int64_t dstDtype = 41;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "0 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
+    string expectTilingData = "2 64 2 253952 1 41 0 32 32 1 128 256 2 2 1 1 1 64 256 2 1 1 1 1 1 2 1 0 0 64 256 4 8 0 ";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
                     dstDtype, scaleAlg, dstTypeMax, expectTilingData);
@@ -340,7 +340,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_scaleAlg2_fp4_e2m1)
     int64_t scaleAlg = 2;
     float dstTypeMax = 0.0;
     string
-        expectTilingData = "0 64 8 253952 4 40 2 32 32 1 256 512 4 4 2 1 1 64 256 4 2 1 1 1 1 4 2 0 0 64 256 8 16 0 ";
+        expectTilingData = "8 64 8 253952 4 40 2 32 32 1 256 512 4 4 2 1 1 64 256 4 2 1 1 1 1 4 2 0 0 64 256 8 16 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
                     dstDtype, scaleAlg, dstTypeMax, expectTilingData);
@@ -355,7 +355,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_scaleAlg2_fp4_e2m1_dstType
     int64_t dstDtype = 40;
     int64_t scaleAlg = 2;
     float dstTypeMax = 6.0;
-    string expectTilingData = "0 64 8 253952 4 40 2 32 32 1 256 512 4 4 2 1 1 64 256 4 2 1 1 1 1 4 2 0 0 64 256 8 16 "
+    string expectTilingData = "8 64 8 253952 4 40 2 32 32 1 256 512 4 4 2 1 1 64 256 4 2 1 1 1 1 4 2 0 0 64 256 8 16 "
                               "1086324736 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
@@ -371,7 +371,7 @@ TEST_F(DynamicBlockMxQuantTiling, DynamicBlockMxQuant_scaleAlg2_fp4_e2m1_dstType
     int64_t dstDtype = 40;
     int64_t scaleAlg = 2;
     float dstTypeMax = 7.0;
-    string expectTilingData = "0 64 8 253952 4 40 2 32 32 1 256 512 4 4 2 1 1 64 256 4 2 1 1 1 1 4 2 0 0 64 256 8 16 "
+    string expectTilingData = "8 64 8 253952 4 40 2 32 32 1 256 512 4 4 2 1 1 64 256 4 2 1 1 1 1 4 2 0 0 64 256 8 16 "
                               "1088421888 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,

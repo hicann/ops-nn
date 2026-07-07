@@ -98,13 +98,13 @@ private:
     void PrintTilingData();
     void SplitCore();
 
-    RoundModeList GetRoundMode(const std::string& roundMode);
+    RoundModeList GetRoundMode(const std::string& roundMode) const;
 
 private:
     uint64_t roundMode_ = 0;
     uint64_t scaleAlg_ = 0;
     gert::TilingContext* context_ = nullptr;
-    DynamicBlockMxQuantTilingData tilingData = {};
+    DynamicBlockMxQuantTilingData* tilingData_ = nullptr;
     DynamicBlockMxQuantTilingParam tilingParams;
 };
 
