@@ -618,7 +618,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/common/op_host/op_tiling/conv_tiling_templates_registry.h
         - ops/ops-nn/conv/common/op_kernel/arch35
         - ops/ops-nn/conv/common/op_graph
-        - ops/ops-nn/conv/common/op_graph/fusion_pass
+        - ops/ops-nn/conv/common/op_graph/fusion_pass/
         - ops/ops-nn/conv/common/tests/ut/op_graph/test_conv_fusion_pass_framework.h
         - ops/ops-nn/conv/conv2d_v2/op_graph
         - ops/ops-nn/conv/conv2d_v2/op_host/config/ascend950
@@ -673,6 +673,7 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2_arch35_tiling_key.h
         - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/arch35/conv3d_transpose_v2_arch35.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch35/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/config/ascend950/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_func.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_impl_base.h
@@ -952,6 +953,7 @@ foreach-c@ops-nn:
         - ops/ops-nn/foreach/foreach_addcdiv_scalar_list/op_graph/
         - ops/ops-nn/foreach/foreach_addcdiv_scalar/op_host/foreach_addcdiv_scalar_def.cpp
         - ops/ops-nn/foreach/foreach_addcdiv_scalar/op_kernel/foreach_addcdiv_scalar.cpp
+        - ops/ops-nn/foreach/foreach_addcdiv_scalar/op_kernel/arch35/
         - ops/ops-nn/foreach/foreach_addcmul_list/
         - ops/ops-nn/foreach/foreach_addcmul_scalar/op_graph/
         - ops/ops-nn/foreach/foreach_addcmul_scalar/op_host/
