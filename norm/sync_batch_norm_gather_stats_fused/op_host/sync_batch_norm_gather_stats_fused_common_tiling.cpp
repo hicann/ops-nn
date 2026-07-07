@@ -122,6 +122,7 @@ ge::graphStatus SyncBatchNormGatherStatsFusedCommonTiling::DoOpTiling()
 ge::graphStatus SyncBatchNormGatherStatsFusedCommonTiling::PostTiling()
 {
     context_->SetBlockDim(commonParams.coreNum);
+    context_->SetScheduleMode(1);  // kernel 使用 SyncAll 全核同步，需设置为 BatchMode
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 
