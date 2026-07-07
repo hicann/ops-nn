@@ -345,6 +345,7 @@ ge::graphStatus QuantMaxRegbase::WriteTilingData()
     OP_LOGD(context_->GetNodeName(), "coreNum:%ld, tilingKey:%lu", coreNum_, tilingKey_);
     context_->SetBlockDim(coreNum_);
     context_->SetTilingKey(tilingKey_);
+    context_->SetScheduleMode(1);
 
     QuantMaxTilingData* tilingData_ = context_->GetTilingData<QuantMaxTilingData>();
     tilingData_->roundMode = static_cast<int64_t>(roundMode_);

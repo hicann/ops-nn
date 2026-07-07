@@ -378,6 +378,7 @@ ge::graphStatus GroupedQuantMaxRegbase::WriteTilingData()
 {
     OP_LOGD(context_->GetNodeName(), "coreNum:%ld, tilingKey:%lu", coreNum_, tilingKey_);
     context_->SetBlockDim(coreNum_);
+    context_->SetScheduleMode(1);
 
     GroupedQuantMaxTilingData* tilingData_ = context_->GetTilingData<GroupedQuantMaxTilingData>();
     tilingData_->roundMode = static_cast<int64_t>(roundMode_);
