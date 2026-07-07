@@ -234,6 +234,33 @@ uninstall_es_whl() {
     whl_uninstall_package "${python_es_whl_name}" "${whl_install_dir_path}"
 }
 
+uninstall_cann_ops_nn_whl() {
+    local python_dir="${TARGET_VERSION_DIR}/python/site-packages"
+
+    if [ -d "${python_dir}/cann_ops_nn" ]; then
+        logandprint "[INFO]: Removing cann_ops_nn whl package from ${python_dir}"
+
+        if command -v pip3 &>/dev/null; then
+            pip3 uninstall -y cann_ops_nn --target="${python_dir}" 2>/dev/null
+        fi
+
+        rm -rf "${python_dir}/cann_ops_nn" 2>/dev/null
+        rm -f ${python_dir}/cann_ops_nn-*.whl 2>/dev/null
+        rm -rf ${python_dir}/cann_ops_nn-*.egg-info 2>/dev/null
+        rm -rf ${python_dir}/cann_ops_nn-*.dist-info 2>/dev/null
+
+        if [ -d "${python_dir}" ] && [ -z "$(ls -A ${python_dir} 2>/dev/null)" ]; then
+            rm -rf "${python_dir}"
+            local python_parent="${TARGET_VERSION_DIR}/python"
+            if [ -d "${python_parent}" ] && [ -z "$(ls -A ${python_parent} 2>/dev/null)" ]; then
+                rm -rf "${python_parent}"
+            fi
+        fi
+
+        logandprint "[INFO]: cann_ops_nn whl package removed"
+    fi
+}
+
 logandprint "[INFO]: Begin uninstall the opp module."
 
 main() {
@@ -250,6 +277,8 @@ main() {
   unsetenv
 
   uninstall_es_whl
+
+  uninstall_cann_ops_nn_whl
 
   remove_ops_nn
 

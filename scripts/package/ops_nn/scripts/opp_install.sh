@@ -354,6 +354,42 @@ install_es_whl()
  	fi
 }
 
+install_cann_ops_nn_whl() {
+  local whl_dir="${CURR_PATH}/../../../../python/site-packages"
+  local target_python_dir="${TARGET_VERSION_DIR}/python/site-packages"
+
+  local whl_file=$(find "${whl_dir}" -name "cann_ops_nn-*.whl" 2>/dev/null | head -1)
+
+  if [ -n "${whl_file}" ] && [ -f "${whl_file}" ]; then
+    logandprint "[INFO]: Found whl package: ${whl_file}"
+    logandprint "[INFO]: Installing cann_ops_nn whl package to ${target_python_dir}"
+
+    comm_create_dir "${target_python_dir}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+
+    local pip_installed=false
+    if command -v pip3 &>/dev/null; then
+      if pip3 install --target="${target_python_dir}" "${whl_file}" --no-deps --force-reinstall 1>/dev/null 2>&1; then
+        pip_installed=true
+      fi
+    fi
+
+    if [ "${pip_installed}" = "false" ] && command -v pip &>/dev/null; then
+      if pip install --target="${target_python_dir}" "${whl_file}" --no-deps --force-reinstall 1>/dev/null 2>&1; then
+        pip_installed=true
+      fi
+    fi
+
+    if [ "${pip_installed}" = "false" ]; then
+      logandprint "[WARNING]: pip not available, copying whl file directly..."
+      cp "${whl_file}" "${target_python_dir}/"
+    fi
+
+    logandprint "[INFO]: cann_ops_nn whl package installed successfully"
+  else
+    logandprint "[INFO]: No cann_ops_nn whl package found, skipping"
+  fi
+}
+
 add_init_py() {
   local opp_builtin_mod=""
   local built_in_impl_path=${TARGET_OPP_BUILT_IN}/op_impl/ai_core/tbe/impl/ops_nn
@@ -394,6 +430,8 @@ install_opp() {
   add_init_py
 
   install_es_whl
+
+  install_cann_ops_nn_whl
 
   logandprint "[INFO]: upgradePercentage:50%"
 }

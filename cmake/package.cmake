@@ -127,6 +127,19 @@ function(pack_built_in)
   set(script_with_soc_prefix ${CMAKE_CURRENT_SOURCE_DIR}/scripts/package/ops_nn/scripts)
   INSTALL_SCRIPTS(${script_with_soc_prefix})
 
+  # 打包 cann_ops_nn whl 文件
+  set(WHL_SOURCE_DIR "${CMAKE_SOURCE_DIR}/torch_extension/dist")
+  file(GLOB WHL_FILES "${WHL_SOURCE_DIR}/cann_ops_nn-*.whl")
+
+  if(WHL_FILES)
+      install(FILES ${WHL_FILES}
+          DESTINATION python/site-packages
+      )
+      message(STATUS "Including whl package: ${WHL_FILES}")
+  else()
+      message(WARNING "Whl package not found in ${WHL_SOURCE_DIR}")
+  endif()
+
   include(${CMAKE_SOURCE_DIR}/cmake/runtimeKB.cmake)
   set_cann_cpack_config(ops-nn ENABLE_DEVICE ${ENABLE_DEVICE} COMPUTE_UNIT ${ASCEND_COMPUTE_UNIT} SHARE_INFO_NAME ops_nn)
 endfunction()

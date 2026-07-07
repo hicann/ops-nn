@@ -1602,6 +1602,29 @@ package_static() {
     fi
 }
 
+build_torch_extension_whl() {
+    local torch_ext_dir="${BASE_PATH}/torch_extension"
+    local original_dir=$(pwd)
+    if [ -d "${torch_ext_dir}" ]; then
+        echo "[INFO] Building torch_extension whl package..."
+        cd "${torch_ext_dir}"
+
+        if ! python3 -c "import build" 2>/dev/null; then
+            echo "[WARNING] Python build module not found, skipping whl build"
+            cd "${original_dir}"
+            return 0
+        fi
+
+        python3 -m build --wheel -n 2>&1 || {
+            echo "[ERROR] Failed to build torch_extension whl package"
+            cd "${original_dir}"
+            return 1
+        }
+        cd "${original_dir}"
+        echo "[INFO] torch_extension whl package built successfully"
+    fi
+}
+
 build_pytorch_extension() {
   PE_OPS=""
   for category_dir in "${BASE_PATH}/experimental"/*/; do
@@ -1684,6 +1707,7 @@ main() {
     build_static_lib
   fi
   if [[ "$ENABLE_PACKAGE" == "TRUE" || "$ENABLE_JIT" == "TRUE" ]]; then
+    build_torch_extension_whl || exit 1
     build_pkg
     if [[ "$ENABLE_STATIC" == "TRUE" ]]; then
       package_static
