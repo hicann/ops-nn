@@ -785,7 +785,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     65553UL,
+     65554UL,
      "32 11 2687 29 16 128 32 256 128 32 29 1 1 1 1 0 0 16909313 0 256 1 0 230 0 "},
     // singleCoreM 256->64
     // 拆分tiling后修复bmm b全载tilingKey和adjustTiling不匹配问题, apiLevel_未赋值导致ubDb未正确计算
@@ -1048,7 +1048,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65UL,
-     "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 0 21 0 "}
+     "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 0 21 0 "},
     // {
     //   "BatchMatMulV3_950_test_basiciterbatch_02", "BatchMatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
@@ -1094,6 +1094,34 @@ static TilingTestParam ascend950_cases_params[] = {
     //   true, {512, 150, 150}, {512, 150, 37}, {512, 150, 37}, false, 0, 0, 32, 513UL, "150 37 150 512 1 1 1 48 48 160
     //   "
     // },
+  {
+    "BatchMatMulV3_950_test_bmm_iterbatch_broadcast",
+    "BatchMatMulV3",
+    R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":1},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+    ge::FORMAT_ND,
+    ge::FORMAT_ND,
+    ge::FORMAT_ND,
+    ge::FORMAT_ND,
+    ge::FORMAT_ND,
+    ge::FORMAT_ND,
+    false,
+    true,
+    0,
+    false,
+    {5, 256, 8, 1, 64},
+    {5, 1, 8, 200, 64},
+    {5, 256, 8, 1, 64},
+    false,
+    0,
+    0,
+    32,
+    1858UL,
+    "32 1 200 64 64 1 1 1 16 208 64 1 1 1 1 0 0 0 0 58176 13312 0 1 1 1 1 1 1 0 0 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 10240 40 10240 1 1 1 1 5 5 5 256 1 256 8 8 8 0 1 1 16 208 64 16843264 16 1 0 4 1 4 2 "
+  }
 };
 
 INSTANTIATE_TEST_CASE_P(BatchMatMulV3910B, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend910B_cases_params));

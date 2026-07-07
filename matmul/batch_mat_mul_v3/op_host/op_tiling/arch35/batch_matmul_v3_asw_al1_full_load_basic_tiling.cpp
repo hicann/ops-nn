@@ -90,6 +90,12 @@ ge::graphStatus BatchMatMulV3AswAL1FullLoadBasicTiling::DoOpTiling()
     } else {
         runInfo_.l1BufferNum = NUM_TWO;
     }
+
+    // DAV_RESV及CV自动融合当前只支持基础API
+    bool isBatchMatmul = strcmp(context_->GetNodeType(), "BatchMatMulV3") == 0;
+    apiLevel_ = (args_.isAvoidTensorApi || compileInfo_.npuArch == NpuArch::DAV_RESV || !isBatchMatmul) ?
+                    MatMulV3ApiLevel::BASIC_LEVEL : MatMulV3ApiLevel::TENSOR_LEVEL;
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -99,7 +105,7 @@ uint64_t BatchMatMulV3AswAL1FullLoadBasicTiling::GetTilingKey() const
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(MatMulV3Model::BASIC)
         .SetFullLoad(MatMulV3FullLoad::A_FULL_LOAD)
-        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL) // 赋值apiLevel为basic
+        .SetApiLevel(apiLevel_) // 赋值apiLevel
         .GetTilingKey();
 }
 

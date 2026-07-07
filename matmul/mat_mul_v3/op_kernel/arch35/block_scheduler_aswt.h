@@ -25,9 +25,9 @@ namespace Gemm {
 namespace Block {
 constexpr uint16_t A_FULL_LOAD_MODE = 1;
 constexpr uint16_t B_FULL_LOAD_MODE = 2;
-constexpr int64_t FP32_K_SWITCH_THRESHOLD = 268435456; // 1024 * 32 * 8192
-constexpr int64_t FP32_SPLIT_K_THRESHOLD1 = 1024;
-constexpr int64_t FP32_SPLIT_K_THRESHOLD2 = 8192;
+constexpr int64_t FP32_K_SWITCH_BASE = 268435456; // 1024 * 32 * 8192
+constexpr int64_t FP32_SPLIT_K_BASE1 = 1024;
+constexpr int64_t FP32_SPLIT_K_BASE2 = 8192;
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, int64_t FullLoadMode_ = 0>
 class BlockSchedulerAswtBuiltIn {
@@ -137,7 +137,7 @@ public:
         srcNdStride_ = params.tilingData->srcNdStride;
         isSlice_ = srcNdStride_ != 1 && sliceM_ != 0;
         blkK_ = k_;
-        int64_t fp32SplitKThreshold = k_ > FP32_K_SWITCH_THRESHOLD ? FP32_SPLIT_K_THRESHOLD2 : FP32_SPLIT_K_THRESHOLD1;
+        int64_t fp32SplitKThreshold = k_ > FP32_K_SWITCH_BASE ? FP32_SPLIT_K_BASE2 : FP32_SPLIT_K_BASE1;
         // 连续且非全载场景切K
         if (!isSlice_ && isFp32_ && !isHf32_ && isNdFormat_ && k_ > fp32SplitKThreshold && FullLoadMode_ == 0) {
             isSplitSingleK_ = true;

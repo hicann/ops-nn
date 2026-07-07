@@ -23,7 +23,8 @@ class MatMulV3BasicAswtTiling : public MatMulV3AswTiling {
 public:
     MatMulV3BasicAswtTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3AswTiling(context, cfg){};
     ~MatMulV3BasicAswtTiling() override = default;
-    void CheckTensorApiSupport();
+    void CheckFp32SplitK();
+    void CheckApiLevelAndModel();
 
 protected:
     bool IsCapable() override;
@@ -36,6 +37,7 @@ protected:
     MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
     MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::BASIC_LEVEL};
     MatMulV3Model model_{MatMulV3Model::BASIC};
+    bool isSlice_{false};
 
 private:
     void ResetFullLoadLoadBalance();

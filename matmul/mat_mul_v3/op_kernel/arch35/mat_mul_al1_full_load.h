@@ -9,25 +9,25 @@
  */
 
 /* !
- * \file mat_mul_pingpong_basic.h
+ * \file mat_mul_al1_full_load.h
  * \brief
  */
-#ifndef MAT_MUL_PINGPONG_BASIC_H
-#define MAT_MUL_PINGPONG_BASIC_H
+#ifndef MAT_MUL_FULL_LOAD_TENSORAPI_H
+#define MAT_MUL_FULL_LOAD_TENSORAPI_H
 
-#include "blaze/gemm/kernel/kernel_matmul_basic.h"
+#include "blaze/gemm/kernel/kernel_matmul_al1_full_load.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_matmul_basic.h"
+#include "blaze/gemm/block/block_mmad_matmul_al1_full_load.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
-#include "blaze/gemm/utils/layout_utils.h"
 
 namespace MatmulV3Advanced {
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-          uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0, uint64_t NON_CONTIGIOUS_TYPE = 0>
-__aicore__ inline void MatMulBasicKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-                                         const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+          uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
+__aicore__ inline void MatMulAL1FullLoadKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                               GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
+                                               int64_t batch = 0)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -43,14 +43,15 @@ __aicore__ inline void MatMulBasicKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasG
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
 
-    static constexpr bool isFp32 = (AscendC::Std::is_same_v<BType, float>);
-    static constexpr bool isNDFormat = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);
+    static constexpr bool IS_FP32 = (AscendC::Std::is_same_v<BType, float>);
+    static constexpr bool IS_ND_FORMAT = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);
     // 定义scheduler类型
-    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32, isNDFormat>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, IS_FP32,
+                                                                         IS_ND_FORMAT>;
 
     // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<
-        FULL_LOAD_MODE, FUSED_OP_TYPE, Blaze::Gemm::KernelMmadMultiBlockBasic, NON_CONTIGIOUS_TYPE>;
+    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockAFullLoad<FULL_LOAD_MODE, FUSED_OP_TYPE,
+                                                                  Blaze::Gemm::KernelMmadMultiBlockAFullLoad>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 
@@ -61,8 +62,8 @@ __aicore__ inline void MatMulBasicKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasG
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
     Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-                     {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.mL1, tilingData.nL1, tilingData.kL1,
-                      tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB},
+                     {aGM, bGM, cGM, biasGM, tilingData.k, tilingData.mL1, tilingData.kL1, tilingData.baseM,
+                      tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB},
                      {}, // epilogue args
                      {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN,
                       tilingData.baseK, tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt,

@@ -105,7 +105,9 @@ protected:
 
     bool CheckMatMulStreamK(uint64_t tilingkey) const
     {
-        return (MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::STREAM_K);
+        return (
+            MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::STREAM_K ||
+            MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::SK_SPLIT_K);
     }
 
     // 针对非全载右矩阵是否进入L2条件
@@ -370,6 +372,11 @@ protected:
             tilingData.srcNdStride = 1;
         }
         tilingData.innerBatch = runInfo_.innerBatch;
+        tilingData.iterBatchL1 = static_cast<uint32_t>(runInfo_.iterBatchL1);
+        tilingData.iterBatchL0 = static_cast<uint32_t>(runInfo_.iterBatchL0);
+        tilingData.broadcastAxisA = runInfo_.bmmRunInfo.broadcastAxisA;
+        tilingData.broadcastAxisB = runInfo_.bmmRunInfo.broadcastAxisB;
+        tilingData.isHf32 = static_cast<uint8_t>(args_.isHf32);
         return GetTilingDataProcess(tilingData.matMulTilingData);
     };
 

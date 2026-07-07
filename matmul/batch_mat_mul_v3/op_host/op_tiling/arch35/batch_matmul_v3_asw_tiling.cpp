@@ -51,8 +51,7 @@ void BatchMatMulV3AswTiling::CheckTensorApiSupport()
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
-    uint64_t fp32SplitKThreshold = args_.kValue > FP32_K_SWITCH_THRESHOLD ? FP32_SPLIT_K_THRESHOLD2 :
-                                                                            FP32_SPLIT_K_THRESHOLD1;
+    uint64_t fp32SplitKThreshold = args_.kValue > FP32_K_SWITCH_BASE ? FP32_SPLIT_K_BASE2 : FP32_SPLIT_K_BASE1;
     bool isSplitK = false;
     // 连续且非全载场景才支持切K
     if (!isNonContiguous && isFp32 && !args_.isHf32 && isNdFormat && args_.kValue > fp32SplitKThreshold &&

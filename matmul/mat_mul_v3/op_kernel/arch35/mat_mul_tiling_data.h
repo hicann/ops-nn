@@ -86,11 +86,17 @@ struct BatchMatMulV3TilingData {
     uint32_t mL1 = 0;
     uint32_t nL1 = 0;
     uint32_t kL1 = 0;
+    uint8_t isHf32 = 0;
     uint8_t l1BufferNum = 0;
-    uint8_t ubDB = 1;         // ub默认不开db为1
-    uint32_t sliceM = 1;      // 非连续场景m轴
-    uint32_t srcNdStride = 1; // 非连续场景m轴stride
-    uint32_t innerBatch = 1;  // 非连续transpose场景内轴batch值
+    uint8_t ubDB = 1;          // ub默认不开db为1
+    uint8_t l0cDB = 1;         // ub默认不开db为1
+    uint32_t sliceM = 1;       // 非连续场景m轴
+    uint32_t srcNdStride = 1;  // 非连续场景m轴stride
+    uint32_t innerBatch = 1;   // 非连续transpose场景内轴batch值
+    uint32_t iterBatchL1 = 1;
+    uint32_t iterBatchL0 = 1;
+    uint32_t broadcastAxisA = 4;
+    uint32_t broadcastAxisB = 4;
 };
 #pragma pack(pop)
 
@@ -144,9 +150,9 @@ struct BatchMatMulV3IterBatchBasicTilingData {
     uint32_t baseM = 16;
     uint32_t baseN = 16;
     uint32_t baseK = 16;
-    uint32_t innerBatch = 0; // 非连续场景B2内轴
+    uint32_t innerBatch = 0;
     uint32_t batchX3 = 1;
-    uint32_t needNdDma = 0; // x3是否需要broadCast
+    uint32_t needNdDma = 0;
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
 };
 #pragma pack(pop)

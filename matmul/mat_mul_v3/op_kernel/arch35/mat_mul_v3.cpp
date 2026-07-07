@@ -35,7 +35,10 @@
 #include "mat_mul_fixpipe_opti_basic_cmct.h"
 #if IS_BLAZE
 #include "mat_mul_pingpong_basic.h"
+#include "mat_mul_basic_split_k.h"
 #include "mat_mul_streamk.h"
+#include "mat_mul_streamk_split_k.h"
+#include "mat_mul_al1_full_load.h"
 #endif
 #endif
 
@@ -156,6 +159,16 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #endif
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC_SPLIT_K && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // 非全载基础模板切K
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        MatmulV3Advanced::MatMulBasicSplitKKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC>(
+            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+#else
+        MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
+            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+#endif
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                          MODEL == MAT_MUL_STREAM_K && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
@@ -176,6 +189,40 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
 #else
         MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
                                MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#endif
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_A_FULL_LOAD &&
+                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // A全载基础API
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        MatmulV3Advanced::MatMulAL1FullLoadKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC,
+                                                  FULL_LOAD>(aGM, bGM, biasGM, cGM, nullptr, tilingData);
+#else
+        MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                                          A_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM, nullptr, tilingData);
+#endif
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_SK_SPLIT_K && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        MatmulV3Advanced::MatMulStreamKSplitKKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, Blaze::Gemm::MatMulL0C2Out::ON_THE_FLY>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#else
+        MatMulStreamKActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ON_THE_FLY>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#endif
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_SK_SPLIT_K && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        MatmulV3Advanced::MatMulStreamKSplitKKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, Blaze::Gemm::MatMulL0C2Out::ND_FIXPIPE_1_2>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#else
+        MatMulStreamKActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
 #endif
     } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                          MODEL == MAT_MUL_STREAM_K && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {

@@ -281,36 +281,36 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
     return;
 }
 
-void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
+void MatMulV3BasicAswtTiling::CheckFp32SplitK()
 {
     auto selfShape = context_->GetInputShape(0)->GetOriginShape();
     auto mat2Shape = context_->GetInputShape(1)->GetOriginShape();
     auto selfStorageShape = context_->GetInputShape(0)->GetStorageShape();
     size_t selfDimNum = selfShape.GetDimNum();
     size_t mat2DimNum = mat2Shape.GetDimNum();
-    bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
     // Slice非连续校验，根据storageshape 1d和左矩阵3d 右矩阵维度2d判断
-    bool isSlice = context_->InputIsView(0) && (selfStorageShape.GetDimNum() == 1) && (selfDimNum == 3) &&
-                   mat2DimNum == 2;
+    isSlice_ = context_->InputIsView(0) && (selfStorageShape.GetDimNum() == 1) && (selfDimNum == 3) && mat2DimNum == 2;
 
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
-    uint64_t fp32SplitKThreshold = args_.kValue > FP32_K_SWITCH_THRESHOLD ? FP32_SPLIT_K_THRESHOLD2 :
-                                                                            FP32_SPLIT_K_THRESHOLD1;
-    bool isSplitK = false;
     // 连续且非全载场景才支持切K
-    if (!isSlice && isFp32 && !args_.isHf32 && isNdFormat && args_.kValue > fp32SplitKThreshold &&
+    if (!isSlice_ && isFp32 && !args_.isHf32 && isNdFormat && (args_.kValue >= FP32_SPLIT_K_THRESHOLD) &&
         fullLoad_ == MatMulV3FullLoad::NONE_FULL_LOAD) {
-        isSplitK = true;
+        model_ = MatMulV3Model::BASIC_SPLIT_K;
+    }
+}
+
+void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
+{
+    bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
+    apiLevel_ = (isMatmul && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+    // 非连续slice单独设置model=slice
+    if (isSlice_) {
+        model_ = MatMulV3Model::SLICE;
     }
 
-    // Matmul非切K场景下才允许切换tensor api实现
-    apiLevel_ = (isMatmul && !isSplitK && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL :
-                                                                     MatMulV3ApiLevel::BASIC_LEVEL;
-    // 非连续slice单独设置model=slice
-    model_ = isSlice ? MatMulV3Model::SLICE : MatMulV3Model::BASIC;
-    // 1952当前只支持基础API
+    // DAV_RESV当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
         model_ = MatMulV3Model::BASIC;
@@ -323,11 +323,15 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
     l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
     if (CheckAL1FullLoad()) {
         DoAL1FullLoad();
+        CheckFp32SplitK();
+        CheckApiLevelAndModel();
     } else if (CheckBL1FullLoad()) {
         DoBL1FullLoad();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
-        // 非全载 非fixpipe 负载均衡实现, 确认是否切换tensor api
-        CheckTensorApiSupport();
+        // 确认是否满足aswt单核切K
+        CheckFp32SplitK();
+        // 非全载 非fixpipe 负载均衡实现
+        CheckApiLevelAndModel();
     }
     return ge::GRAPH_SUCCESS;
 }

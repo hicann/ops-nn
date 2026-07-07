@@ -55,14 +55,16 @@ constexpr uint64_t KB_SIZE = 1024UL;
 constexpr uint64_t MIN_TATL_BLOCK_SIZE = 4096UL;
 constexpr double CUBE_BOUND_RATIO = 0.85;
 constexpr double EPSILON = 1e-9;
-constexpr uint64_t SK_SPLITK_THRESHOLD = 1024UL;
-constexpr int64_t FP32_K_SWITCH_THRESHOLD = 268435456; // 1024 * 32 * 8192
-constexpr uint64_t FP32_SPLIT_K_THRESHOLD1 = 1024UL;
-constexpr uint64_t FP32_SPLIT_K_THRESHOLD2 = 8192UL;
+constexpr int64_t FP32_SPLIT_K_THRESHOLD = 2048UL;
+constexpr int64_t FP32_K_SWITCH_BASE = 268435456; // 1024 * 32 * 8192
+constexpr uint64_t FP32_SPLIT_K_BASE1 = 1024UL;
+constexpr uint64_t FP32_SPLIT_K_BASE2 = 8192UL;
 
 struct BatchMatMulV3RunInfo {
     uint64_t iterBatch = 0UL;
     uint64_t batchOutNum = 1UL;
+    uint32_t broadcastAxisA = 4UL;
+    uint32_t broadcastAxisB = 4UL;
 };
 
 struct MatMulV3BatchInfo {
