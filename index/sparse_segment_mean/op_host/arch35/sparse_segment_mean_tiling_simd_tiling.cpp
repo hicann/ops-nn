@@ -23,6 +23,17 @@ static constexpr int64_t SINGLE_CORE_THRESHOLD = 4 * 1024;
 static constexpr int64_t MIN_BATCH_BINAEY_ACC = 64;
 static constexpr int64_t BASE_BLOCK_ALIGN = 512;
 static constexpr int64_t WORKSPACE_BUFFER_NUM = 2;
+static constexpr int64_t SIZE_4K = 4096;
+static constexpr int64_t SIZE_8K = 8192;
+static constexpr int64_t SIZE_9K = 9216;
+static constexpr int64_t SIZE_10K = 10240;
+static constexpr int64_t MIN_INDICES_NUM = 5;
+static constexpr int64_t TWO = 2;
+static constexpr int64_t NUM_EIGHT = 8;
+static constexpr int64_t THRESHOLD_4K = 100;
+static constexpr int64_t THRESHOLD_8K = 64;
+static constexpr int64_t THRESHOLD_9K = 54;
+static constexpr int64_t THRESHOLD_10K = 26;
 
 std::set<int64_t> ComputeFactors(int64_t usedCoreNum)
 {
@@ -37,7 +48,7 @@ std::set<int64_t> ComputeFactors(int64_t usedCoreNum)
     return result;
 }
 
-void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum)
+void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum, int64_t inputBytes, int64_t segmentNum)
 {
     int64_t tmpEleNum = BASE_BLOCK_ALIGN / sizeof(float);
     int64_t colBlockTotalNum = (colTotalNum + tmpEleNum - 1) / tmpEleNum;
@@ -72,10 +83,41 @@ void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCore
     }
 
     std::sort(allTiling.begin(), allTiling.end(), [](const std::vector<int64_t>& a, const std::vector<int64_t>& b) {
-        constexpr int NIndex = 1;
+        constexpr int MIndex = 0;
         constexpr int DeltaIndex = 3;
-        return std::make_pair(a[DeltaIndex], a[NIndex]) < std::make_pair(b[DeltaIndex], b[NIndex]);
+        return std::make_pair(a[MIndex], a[DeltaIndex]) < std::make_pair(b[MIndex], b[DeltaIndex]);
     });
+
+    // 按segmentId平均重复设置不同行和列阈值
+    if (rowTotalNum / segmentNum >= NUM_EIGHT) {
+        // 如果segmentId平均重复度大于等于8,确保每个核处理的列不低于4k
+        int64_t minColNum = SIZE_4K / inputBytes;
+
+        while (allTiling.size() > 1 && colTotalNum / allTiling[0][1] < std::min(minColNum, colTotalNum) && Ops::Base::CeilDiv(rowTotalNum, allTiling[0][0]) > THRESHOLD_4K) {
+            allTiling.erase(allTiling.begin());
+        }
+    } else if (rowTotalNum / segmentNum >= TWO) {
+        // 如果segmentId平均重复度大于等于2,确保每个核处理的列不低于8k
+        int64_t minColNum = SIZE_8K / inputBytes;
+
+        while (allTiling.size() > 1 && colTotalNum / allTiling[0][1] < std::min(minColNum, colTotalNum) && Ops::Base::CeilDiv(rowTotalNum, allTiling[0][0]) > THRESHOLD_8K) {
+            allTiling.erase(allTiling.begin());
+        }
+    } else if (rowTotalNum / segmentNum >= 1) {
+        // 如果segmentId平均重复度大于等于1,确保每个核处理的列不低于9k
+        int64_t minColNum = SIZE_9K / inputBytes;
+
+        while (allTiling.size() > 1 && colTotalNum / allTiling[0][1] < std::min(minColNum, colTotalNum) && Ops::Base::CeilDiv(rowTotalNum, allTiling[0][0]) > THRESHOLD_9K) {
+            allTiling.erase(allTiling.begin());
+        }
+    } else {
+        // 其他情况，确保每个核处理的列不低于10k
+        int64_t minColNum = SIZE_10K / inputBytes;
+
+        while (allTiling.size() > 1 && colTotalNum / allTiling[0][1] < std::min(minColNum, colTotalNum) && Ops::Base::CeilDiv(rowTotalNum, allTiling[0][0]) > THRESHOLD_10K) {
+            allTiling.erase(allTiling.begin());
+        }
+    }
 
     rowTileNum = static_cast<uint16_t>(allTiling[0][0]);
     colTileNum = static_cast<uint16_t>(allTiling[0][1]);
@@ -122,7 +164,13 @@ void SparseSegmentMeanSimdTiling::DoBlockTiling()
     int64_t rowTotalNum = inputData.outterSize;
     int64_t colTotalNum = inputData.innerSize;
 
-    AutoTilingRowCol(rowTileNum, colTileNum, usedCoreNum, rowTotalNum, colTotalNum);
+    AutoTilingRowCol(rowTileNum, colTileNum, usedCoreNum, rowTotalNum, colTotalNum, inputData.inputBytes, inputData.segmentNum);
+
+    // 如果自动分核完后，平均一个核处理的索引个数小于5，则可用核数减半
+    if (Ops::Base::CeilDiv(inputData.outterSize, rowTileNum) < std::min(MIN_INDICES_NUM, inputData.outterSize)) {
+        usedCoreNum /= TWO;
+        AutoTilingRowCol(rowTileNum, colTileNum, usedCoreNum, rowTotalNum, colTotalNum, inputData.inputBytes, inputData.segmentNum);
+    }
 
     splitData.normalCoreIndicesNum = Ops::Base::CeilDiv(rowTotalNum, rowTileNum);
     splitData.indicesOuter = Ops::Base::CeilDiv(rowTotalNum, splitData.normalCoreIndicesNum);
