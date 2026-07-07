@@ -523,9 +523,10 @@ public:
         bool enable16In32Out = NeedEnableFp32Output(
             matA->GetDataType(), matB->GetDataType(), output->GetDataType(), cubeMathType);
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
+        bool useGemm16In32Out = enable16In32Out && !needBroadcast && bias->GetDataType() == matA->GetDataType();
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
-        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
-            (enable16In32Out && !needBroadcast)) && isSupportNpuArch) {
+        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || useGemm16In32Out) &&
+            isSupportNpuArch) {
             auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor, enable16In32Out);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
@@ -740,7 +741,6 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
     AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
     auto ret = CheckInputParams(addmmTensor, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    CHECK_RET(Check16In32OutWithBiasValid(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), self), ACLNN_ERR_PARAM_INVALID);
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -815,11 +815,14 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
     bool enable16In32Out = NeedEnableFp32Output(
         mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), cubeMathType);
     bool addmmNeedBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
+    bool isSupportNpuArch = op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201;
+    bool useGemm16In32Out = enable16In32Out && !addmmNeedBroadcast &&
+                            self->GetDataType() == mat1->GetDataType() && isSupportNpuArch;
 
     const aclTensor* castOut = nullptr;
     if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()) {
         castOut = MatmulMulProcess(addmmTensor, cubeMathType, uniqueExecutor.get());
-    } else if (enable16In32Out && !addmmNeedBroadcast) {
+    } else if (useGemm16In32Out) {
         OP_LOGD("aclnnAddmmWeightNz run in ExecGemmV3WithAlphaBetaOp branch");
         // 16in32out场景优先走gemmV3通路
         castOut = ExecGemmV3WithAlphaBetaOp(self, mat1, mat2, alpha, beta, uniqueExecutor.get(), enable16In32Out);

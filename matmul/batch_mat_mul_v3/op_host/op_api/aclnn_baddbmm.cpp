@@ -281,11 +281,12 @@ public:
         bool enable16In32Out = NeedEnableFp32Output(
             matA->GetDataType(), matB->GetDataType(), output->GetDataType(), cubeMathType);
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
+        bool useGemm16In32Out = enable16In32Out && !needBroadcast && bias->GetDataType() == matA->GetDataType() &&
+                                (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
-        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
-            (enable16In32Out && !needBroadcast && (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201))) {
-            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB,
-                                                                alpha, beta, executor, enable16In32Out);
+        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || useGemm16In32Out) {
+            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor,
+                                                                enable16In32Out);
             CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = bmmOut;
             return ACLNN_SUCCESS;
@@ -376,7 +377,6 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     // 参数检查
     auto ret = CheckInputParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    CHECK_RET(Check16In32OutWithBiasValid(batch1->GetDataType(), batch2->GetDataType(), out->GetDataType(), self), ACLNN_ERR_PARAM_INVALID);
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();

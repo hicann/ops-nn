@@ -789,27 +789,8 @@ static aclnnStatus SetMatmulOpSupportFormat(const aclTensor* self, const aclTens
 
 namespace Ops {
 namespace NN {
-bool Check16In32OutWithBiasValid(
-    op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, const aclTensor* bias)
-{
-    bool isFp32Output = outputDtype == DataType::DT_FLOAT;
-    if (!isFp32Output) {
-        return true;
-    }
-    bool isLowPrecisionInput =
-        (selfDtype == DataType::DT_FLOAT16 && mat2Dtype == DataType::DT_FLOAT16) ||
-        (selfDtype == DataType::DT_BF16 && mat2Dtype == DataType::DT_BF16);
-    if (isLowPrecisionInput && bias != nullptr) {
-        // bias Dtype should match mat Dtype, or be DT_FLOAT
-        op::DataType biasDataType = bias->GetDataType();
-        return biasDataType == selfDtype || biasDataType == DataType::DT_FLOAT;
-    }
-    return true;
-}
-
-bool NeedEnableFp32Output(
-    op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
-    const aclTensor* bias, bool isFusion)
+bool NeedEnableFp32Output(op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
+                          const aclTensor* bias, bool isFusion)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch != NpuArch::DAV_2201 && !IsNpuArch3510Series()) {
