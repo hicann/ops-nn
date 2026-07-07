@@ -18,7 +18,7 @@
 - 计算公式：
 
   $$
-  gradInput = ({gradOut} - {meanDy}) - ((input - mean) * (invstd^{2} *   {meanDyXmu})) * invstd * weight
+  gradInput = ((gradOut - meanDy) - (input - mean) * (invstd^2 * meanDyXmu)) * invstd * weight
   $$
 
 ## 参数说明
@@ -103,7 +103,23 @@
 
 ## 约束说明
 
-无
+参数grad_output、save_input、mean、invstd、weight、mean_dy、mean_dy_xmu、grad_input支持的组合如下所示：
+
+- <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+
+  | grad_output | save_input | mean | invstd | weight | mean_dy | mean_dy_xmu | grad_input |
+  | --------| --------| --------| --------| --------| --------|  --------|:------ |
+  | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 |
+  | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |
+  | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 |
+  | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT16 |
+
+- <term>Atlas 训练系列产品</term>：
+
+  | grad_output | save_input | mean | invstd | weight | mean_dy | mean_dy_xmu | grad_input |
+  | --------| --------| --------| --------| --------| --------|  --------|:------ |
+  | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 |
+  | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 |
 
 ## 调用说明
 

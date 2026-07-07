@@ -110,14 +110,14 @@
     </tr>
     <tr>
       <td>momentum</td>
-      <td>输入</td>
-      <td>runningVar的指数平滑参数，默认值0.1。</td>
+      <td>可选属性</td>
+      <td>runningVar的指数平滑参数，默认值0.01。</td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>eps</td>
-      <td>输入</td>
+      <td>属性</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`eps`</td>
       <td>FLOAT32</td>
       <td>-</td>

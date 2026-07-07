@@ -17,31 +17,31 @@
 
 - 计算公式：支持1/2范数、无穷范数以及其他`p`为float类型的范数计算。
   - 1-范数：
-  
+
     $$
-    \Vert x \Vert = \sum_{i=1}^{N}{\vert x_i \vert}
+    \Vert x \Vert = max(\sum_{i=1}^{N}{\vert x_i \vert}, epsilon)
     $$
 
   - 2-范数（默认值）：
 
     $$
-    \Vert x \Vert_2 = (\sum_{i=1}^{N}{\vert x_i \vert^2})^{\frac{1}{2}}
+    \Vert x \Vert_2 = max((\sum_{i=1}^{N}{\vert x_i \vert^2})^{\frac{1}{2}}, epsilon)
     $$
 
   - 无穷范数：
-  
+
     $$
-    \Vert x \Vert_\infty = \max\limits_{i}{\vert x_i \vert}
+    \Vert x \Vert_\infty = max(\max\limits_{i}{\vert x_i \vert}, epsilon)
     $$
-  
+
     $$
-    \Vert x \Vert_{-\infty} = \min\limits_{i}{\vert x_i \vert}
+    \Vert x \Vert_{-\infty} = max(\min\limits_{i}{\vert x_i \vert}, epsilon)
     $$
 
   - p范数：
-  
+
     $$
-    \Vert x \Vert_p = (\sum_{i=1}^{N}{\vert x_i \vert^p})^{\frac{1}{p}}
+    \Vert x \Vert_p = max((\sum_{i=1}^{N}{\vert x_i \vert^p})^{\frac{1}{p}}, epsilon)
     $$
 
 ## 参数说明
@@ -63,44 +63,44 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>x</td>
       <td>输入</td>
       <td>公式中的x。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>pScalar</td>
-      <td>输入</td>
+      <td>p</td>
+      <td>可选属性</td>
       <td>表示范数的类型，公式中的p。</td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>dim</td>
-      <td>输入</td>
+      <td>axes</td>
+      <td>可选属性</td>
       <td>计算self范数的维度。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>keepdim</td>
-      <td>输入</td>
+      <td>可选属性</td>
       <td>决定输出张量是否保留dim参数指定的轴。</td>
       <td>BOOL </td>
       <td>-</td>
     </tr>
     <tr>
-      <td>relType</td>
-      <td>输入</td>
-      <td>预留参数，暂不支持使用。</td>
+      <td>epsilon</td>
+      <td>可选属性</td>
+      <td>防止范数结果为0，以确保数值稳定。默认值为：1e-12f。</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>y</td>
       <td>输出</td>
-      <td>公式中的out。</td>
+      <td>公式中的输出。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

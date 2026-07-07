@@ -17,7 +17,7 @@
 
 - 接口功能：[aclnnGroupNorm](../../group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
-  
+
   $$
   gradBetaOut = \sum_{i=1}^n gradOut
   $$
@@ -25,7 +25,7 @@
   $$
   gradGammaOut = \sum_{i=1}^n (gradOut \cdot \hat{x})
   $$
-  
+
   $$
   gradInput = mean \cdot rstd \cdot gamma \begin{bmatrix}
   gradOut - \frac{1}{N}  (gradBetaOut + \hat{x} \cdot gradGammaOut)
@@ -153,7 +153,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>C（int64_t）</td>
       <td>输入</td>
       <td>表示输入`gradOut`在C维度上的空间大小。</td>
-      <td>-</td>
+      <td><ul><li>C的取值小于等于240000。</li><li>C必须可以被group整除，且C/group≤8000。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -173,7 +173,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>group（int64_t）</td>
       <td>输入</td>
       <td>表示将输入`gradOut`的C维度分为group组。</td>
-      <td><ul><li>group需大于0，且C必须可以被group整除。</li></ul></td>
+      <td><ul><li>group的取值大于0。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -243,7 +243,7 @@ aclnnStatus aclnnGroupNormBackward(
   </table>
 
   - <term>Atlas 训练系列产品</term>：
-  
+
     - 参数`gradOut`、`input`、`mean`、`rstd`、`gamma`、`gradInput`、`gradGammaOut`、`gradBetaOut`的数据类型不支持BFLOAT16。
     - 参数`mean`和`gradOut`的数据类型相同。
 
@@ -254,7 +254,7 @@ aclnnStatus aclnnGroupNormBackward(
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     参数`mean`与`gradOut`支持的数据类型对应关系如下：
-    
+
     |输入参数 | gradOut | mean |
     |--|--|--|
     |数据类型 | FLOAT32 | FLOAT32 |
@@ -266,7 +266,7 @@ aclnnStatus aclnnGroupNormBackward(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -317,10 +317,10 @@ aclnnStatus aclnnGroupNormBackward(
       <td>当outputMask[2]为true，gradBetaOut的shape与gamma的shape不相同。</td>
     </tr>
     <tr>
-      <td>group不大于0。</td>
+      <td>group不大于0，或者C大于240000。</td>
     </tr>
     <tr>
-      <td>C不能被group整除。</td>
+      <td>C不能被group整除，或者C/group＞8000。</td>
     </tr>
     <tr>
       <td>input的元素个数不等于N*C*HxW。</td>
