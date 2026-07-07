@@ -19,6 +19,7 @@
 #include "mat_mul_deterministic_splitk_kernel.h"
 #include "mat_mul_sc_splitk_kernel.h"
 #include "mat_mul_sc_splitk_kernel_gm_to_l1.h"
+#include "mat_mul_sc_splitk_al1_fullload_kernel.h"
 #include "mat_mul_unaligned_base_kernel.h"
 #include "mat_mul_cvp_base_kernel.h"
 #include "mat_mul_unaligned_deterministic_splitk_kernel.h"
@@ -236,6 +237,13 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
         MMV3_IMPL_CLASS(MatMulSingleCoreSplitKKernelGmToL1, format_x1, MatmulSingleCoreSplitKBaseBlock,
                         MM_CFG_PRELOAD_MK);
+    } else if constexpr (
+        // AL1 full load and singlecore splitk
+        LOADMODE == MAT_MUL_V3_AL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K &&
+        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
+        MMV3_IMPL_CLASS(
+            MatMulSingleCoreSplitKAL1FullLoadKernel, format_x1, MatmulSingleCoreSplitKAL1FullLoadBlock, MM_CFG_NO_PRELOAD
+        );
     } else if constexpr (
 #endif
 #endif

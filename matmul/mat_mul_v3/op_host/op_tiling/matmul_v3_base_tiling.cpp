@@ -15,6 +15,7 @@
 
 #include <cinttypes>
 #include "matmul_v3_base_tiling.h"
+#include "matmul_v3_sc_splitk_al1_fullload_tiling.h"
 #include "../../op_kernel/mat_mul_v3_tiling_key.h"
 
 #include "matmul_v3_l2_cache.h"
@@ -1397,6 +1398,7 @@ void MatmulV3BaseTiling::DoSelectTiling()
         case TilingCalcSelect::ALL:
             DO_CACL_TILING_ENABLE(DoBL1FullloadWithFixpipeTiling())
             DO_CACL_TILING_ENABLE(DoAL1FullLoadTiling())
+            DO_CACL_TILING_ENABLE(DoSingleCoreSplitKAL1FullLoadTiling())
             DO_CACL_TILING_ENABLE(DoBL1FullLoadTiling())
             DO_CACL_TILING_ENABLE(DoL2CacheTiling())
             DO_CACL_TILING_ENABLE(DoSingleCoreSplitKTiling())
@@ -2760,7 +2762,10 @@ ge::graphStatus MatmulV3BaseTiling::DoLibApiTiling()
         tilingData_.matmulTiling.stepKa = static_cast<uint32_t>(runInfo_.stepKa);
         tilingData_.matmulTiling.stepKb = static_cast<uint32_t>(runInfo_.stepKb);
         tilingData_.matmulTiling.iterateOrder = static_cast<uint32_t>(runInfo_.iterateOrder);
-        tilingData_.matmulTiling.dbL0C = static_cast<uint32_t>(runInfo_.dbL0c);
+        if (tilingEnable_.tilingEnableFullLoad != TilingEnableFullLoad::AL1_FULL_LOAD ||
+            tilingEnable_.tilingEnableSplitCore != TilingEnableSplitCore::SINGLE_CORE_SPLIT_K) {
+            tilingData_.matmulTiling.dbL0C = static_cast<uint32_t>(runInfo_.dbL0c);
+        }
         if (!compileInfo_.supportL0c2out) {
             tilingData_.matmulTiling.transLength = static_cast<uint32_t>(L0C_SIZE_256_KB / NUM_HALF);
             tilingData_.matmulTiling.shareUbSize = 0;
@@ -2931,6 +2936,88 @@ ge::graphStatus MatmulV3BaseTiling::PostTiling()
     workspaces[0] = workspaceSize_;
 
     return ge::GRAPH_SUCCESS;
+}
+
+bool MatmulV3BaseTiling::IsSupportSingleCoreSplitKAL1FullLoad() const
+{
+    if (!compileInfo_.supportL0c2out) {
+        OP_LOGI(args_.opName, "Not support L0c2out, skip ScSplitK+AL1FullLoad template");
+        return false;
+    }
+
+    if (args_.isATrans) {
+        OP_LOGI(args_.opName, "A transposed not supported yet, skip ScSplitK+AL1FullLoad template");
+        return false;
+    }
+
+    if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGI(args_.opName, "NZ input not supported yet, skip ScSplitK+AL1FullLoad template");
+        return false;
+    }
+    
+    if (args_.aType != ge::DT_FLOAT16 && args_.aType != ge::DT_BF16) {
+        OP_LOGI(args_.opName, "Input only supports fp16/bf16, skip ScSplitK+AL1FullLoad template");
+        return false;
+    }
+
+    bool isNKAligned = (args_.kValue % BLOCK == 0 && args_.nValue % BLOCK == 0);
+    if (!isNKAligned) {
+        OP_LOGI(args_.opName, "Input only supports n/k 256Byte aligned, skip ScSplitK+AL1FullLoad template");
+        return false;
+    }
+
+    constexpr uint64_t SC_SPLITK_AL1_FULLLOAD_M_MAX = 256;
+    constexpr uint64_t SC_SPLITK_AL1_FULLLOAD_NK_MIN = 6144;
+    constexpr uint64_t SC_SPLITK_AL1_FULLLOAD_AXIS_MAX = 65536;
+    bool isKMiddleShape = 
+        args_.kValue >= 9216 && args_.kValue <= 20480 &&    // [9216, 20480] for k is a validated gain region.
+        args_.nValue >= SC_SPLITK_AL1_FULLLOAD_NK_MIN && args_.nValue < SC_SPLITK_AL1_FULLLOAD_AXIS_MAX;
+    bool isNMiddleShape = 
+        args_.kValue >= SC_SPLITK_AL1_FULLLOAD_NK_MIN && args_.kValue < SC_SPLITK_AL1_FULLLOAD_AXIS_MAX &&
+        args_.nValue >= SC_SPLITK_AL1_FULLLOAD_NK_MIN && args_.nValue < 16384;  // [6144, 16384) for n is a validated gain region.
+    if (args_.mValue > SC_SPLITK_AL1_FULLLOAD_M_MAX) {
+        OP_LOGI(args_.opName, "M=%lu > %lu, skip ScSplitK+AL1FullLoad template",
+            args_.mValue, SC_SPLITK_AL1_FULLLOAD_M_MAX);
+        return false;
+    }
+    if (!isKMiddleShape && !isNMiddleShape) {
+        return false;
+    }
+    OP_LOGI(args_.opName, "Hit ScSplitK+AL1FullLoad template");
+    return true;
+}
+
+bool MatmulV3BaseTiling::DoSingleCoreSplitKAL1FullLoadTiling()
+{
+    OP_LOGI(args_.opName, "Start DoSingleCoreSplitKAL1FullLoadTiling");
+
+    if (!IsSupportSingleCoreSplitKAL1FullLoad()) {
+        return false;
+    }
+
+    MatmulV3RunInfo tmpRunInfo = runInfo_;
+
+    if (!matmul_v3::MatmulV3ScSplitKAl1FullLoadTiling::DoTiling(args_.opName, args_, compileInfo_,
+            aDtypeSize_, bDtypeSize_, tmpRunInfo)) {
+        return false;
+    }
+
+    if (!CheckSingleCoreSplitKAL1FullLoadTilingOk(tmpRunInfo)) {
+        OP_LOGI(args_.opName, "CheckSingleCoreSplitKAL1FullLoadTilingOk failed");
+        return false;
+    }
+
+    runInfo_ = tmpRunInfo;
+    runInfo_.needUpdate = true;
+    tilingEnable_.tilingEnableFullLoad = TilingEnableFullLoad::AL1_FULL_LOAD;
+    tilingEnable_.tilingEnableSplitCore = TilingEnableSplitCore::SINGLE_CORE_SPLIT_K;
+    return true;
+}
+
+bool MatmulV3BaseTiling::CheckSingleCoreSplitKAL1FullLoadTilingOk(const MatmulV3RunInfo &tmpRunInfo)
+{
+    return matmul_v3::MatmulV3ScSplitKAl1FullLoadTiling::CheckTilingOk(args_.opName, tmpRunInfo, compileInfo_,
+        aDtypeSize_, bDtypeSize_);
 }
 } // namespace matmul_v3
 } // namespace optiling

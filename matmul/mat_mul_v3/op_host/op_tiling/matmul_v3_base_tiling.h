@@ -105,7 +105,10 @@ protected:
     void DoSelectTiling();
     bool IsSupportSingleCoreSplitSmallK(uint64_t xDim, uint64_t yDim) const;
     bool IsSupportSingleCoreSplitK() const;
+    bool IsSupportSingleCoreSplitKAL1FullLoad() const;
     bool DoSingleCoreSplitKTiling();
+    bool DoSingleCoreSplitKAL1FullLoadTiling();
+    bool CheckSingleCoreSplitKAL1FullLoadTilingOk(const MatmulV3RunInfo &tmpRunInfo);
     bool DoAL1FullLoadTiling();
     bool ShouldUseDeterministicMultiCoreSplitKwithSmallMN() const;
     bool DoBL1FullLoadTiling();
