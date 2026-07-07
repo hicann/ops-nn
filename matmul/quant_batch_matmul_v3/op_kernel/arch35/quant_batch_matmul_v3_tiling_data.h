@@ -142,6 +142,29 @@ struct QuantBatchMatmulV3BasicAPITilingData {
     BasicAPICubeTiling matmulTiling;
     SlidingWindowParams adaptiveSlidingWin;
 };
+static_assert(sizeof(QuantBatchMatmulV3BasicAPITilingData) % 8U == 0U,
+              "QuantBatchMatmulV3BasicAPITilingData must be 8-byte aligned.");
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct StreamKBasicAPIParams {
+    uint32_t singleCoreK = 0;
+    uint32_t kL1 = 0;
+    uint32_t reserved0 = 0;
+    uint32_t reserved1 = 0;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct QuantBatchMatmulV3StreamKBasicAPITilingData {
+    QuantBatchMatmulV3BasicAPIDataParams params;
+    BasicAPICubeTiling matmulTiling;
+    StreamKBasicAPIParams streamKTiling;
+    // Reserved for BasicAPI tiling layout compatibility. StreamK kernel does not consume ASW tail/window fields.
+    SlidingWindowParams adaptiveSlidingWin;
+};
+static_assert(sizeof(QuantBatchMatmulV3StreamKBasicAPITilingData) % 8U == 0U,
+              "QuantBatchMatmulV3StreamKBasicAPITilingData must be 8-byte aligned.");
 #pragma pack(pop)
 
 #pragma pack(push, 8)

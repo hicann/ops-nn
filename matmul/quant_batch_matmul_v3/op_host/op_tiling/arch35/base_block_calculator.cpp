@@ -30,6 +30,7 @@ constexpr uint64_t BASEK_LIMIT = 4095UL;
 constexpr uint32_t DOUBLE_CORE_NUM = 2U;
 // Epsilon for comparing score ratios during base-block search.
 constexpr double SCORE_COMPARE_EPS = 1e-12;
+constexpr uint32_t SMALL_MN_EXPAND_RATIO = 3U;
 
 uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
 {
@@ -85,16 +86,25 @@ bool BaseBlockCalculator::Compute(BaseBlockMode mode)
         case BaseBlockMode::MMAD_S8S4:
             ComputeBaseBlockMmadS8S4();
             break;
+        case BaseBlockMode::STREAMK:
+            if (!ComputeBaseBlockStreamK()) {
+                return false;
+            }
+            break;
         case BaseBlockMode::DEFAULT:
         default:
             ComputeBaseBlockDefault();
             break;
     }
-    if (!OptimizeBaseBlockForCoreUtilization(mode)) {
-        OP_LOGE(inputParams_.opName, "Failed to adjust base block.");
-        return false;
+    // StreamK base block is bound to split-K scheduling. ASWT base optimization can change baseM/baseN without
+    // recomputing streamKCnt and singleCoreK, so skip those adjustments and use the common validation below.
+    if (mode != BaseBlockMode::STREAMK) {
+        if (!OptimizeBaseBlockForCoreUtilization(mode)) {
+            OP_LOGE(inputParams_.opName, "Failed to adjust base block.");
+            return false;
+        }
+        OptimizeBaseBlockForLoadBalance();
     }
-    OptimizeBaseBlockForLoadBalance();
     return ValidateBaseBlock();
 }
 
@@ -188,6 +198,98 @@ void BaseBlockCalculator::ComputeBaseBlockMmadS8S4()
     uint64_t maxAlignSize = std::max(GetBaseKAlignSize(),
                                      GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.bDtype));
     baseBlockRes_.baseK = ops::CeilAlign(minBaseK, maxAlignSize);
+}
+
+bool BaseBlockCalculator::InitStreamKBaseBlock()
+{
+    baseBlockRes_.baseM = ops::CeilAlign(std::min(inputParams_.mSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256),
+                                         GetBaseMAlignSize());
+    baseBlockRes_.baseN = ops::CeilAlign(std::min(inputParams_.nSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256),
+                                         GetBaseNAlignSize());
+    OP_TILING_CHECK(baseBlockRes_.baseM == 0UL || baseBlockRes_.baseN == 0UL,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid StreamK base divisor: baseM(%lu), baseN(%lu).",
+                                          baseBlockRes_.baseM, baseBlockRes_.baseN),
+                    return false);
+
+    baseBlockRes_.mCnt = MathUtil::CeilDivision(inputParams_.mSize, baseBlockRes_.baseM);
+    baseBlockRes_.nCnt = MathUtil::CeilDivision(inputParams_.nSize, baseBlockRes_.baseN);
+    baseBlockRes_.preSplitKBlockCnt = batchCoreCnt_ * baseBlockRes_.mCnt * baseBlockRes_.nCnt;
+    return true;
+}
+
+bool BaseBlockCalculator::UpdateSmallMnStreamKBase()
+{
+    if (baseBlockRes_.mCnt > compileInfo_.aicNum / SMALL_MN_EXPAND_RATIO &&
+        baseBlockRes_.mCnt < compileInfo_.aicNum / qmmv3_tiling_const::NUM_HALF) {
+        baseBlockRes_.mCnt = compileInfo_.aicNum / qmmv3_tiling_const::NUM_HALF;
+    }
+    if (baseBlockRes_.nCnt > compileInfo_.aicNum / SMALL_MN_EXPAND_RATIO &&
+        baseBlockRes_.nCnt < compileInfo_.aicNum / qmmv3_tiling_const::NUM_HALF) {
+        baseBlockRes_.nCnt = compileInfo_.aicNum / qmmv3_tiling_const::NUM_HALF;
+    }
+    baseBlockRes_.baseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, baseBlockRes_.mCnt),
+                                         GetBaseMAlignSize());
+    baseBlockRes_.baseN = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, baseBlockRes_.nCnt),
+                                         GetBaseNAlignSize());
+    baseBlockRes_.preSplitKBlockCnt = batchCoreCnt_ * baseBlockRes_.mCnt * baseBlockRes_.nCnt;
+    OP_TILING_CHECK(baseBlockRes_.preSplitKBlockCnt == 0UL,
+                    CUBE_INNER_ERR_REPORT(
+                        inputParams_.opName, "Invalid StreamK preSplitKBlockCnt should be greater than 0."),
+                    return false);
+    baseBlockRes_.streamKCnt = std::max(compileInfo_.aicNum / baseBlockRes_.preSplitKBlockCnt, 1UL);
+    baseBlockRes_.singleCoreK = MathUtil::CeilDivision(inputParams_.kSize, baseBlockRes_.streamKCnt);
+    return true;
+}
+
+void BaseBlockCalculator::UpdateTailStreamKBase()
+{
+    uint64_t tailMnCnt = baseBlockRes_.preSplitKBlockCnt % compileInfo_.aicNum;
+    if (tailMnCnt == 0UL) {
+        baseBlockRes_.streamKCnt = 1UL;
+        baseBlockRes_.singleCoreK = inputParams_.kSize;
+        return;
+    }
+    baseBlockRes_.streamKCnt = std::max(compileInfo_.aicNum / tailMnCnt, 1UL);
+    uint64_t skSingleCoreK = MathUtil::CeilDivision(inputParams_.kSize, baseBlockRes_.streamKCnt);
+    baseBlockRes_.streamKCnt = MathUtil::CeilDivision(inputParams_.kSize, skSingleCoreK);
+    baseBlockRes_.singleCoreK = skSingleCoreK;
+}
+
+bool BaseBlockCalculator::FinalizeStreamKBaseK()
+{
+    uint64_t baseKAlignValue = GetBaseKAlignSize();
+    baseBlockRes_.singleCoreK = ops::CeilAlign(baseBlockRes_.singleCoreK, baseKAlignValue);
+    OP_TILING_CHECK(baseBlockRes_.singleCoreK == 0UL,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid StreamK singleCoreK should be greater than 0."),
+                    return false);
+    baseBlockRes_.streamKCnt = MathUtil::CeilDivision(inputParams_.kSize, baseBlockRes_.singleCoreK);
+
+    uint64_t kValueMax = GetShapeWithDataType(compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM,
+                                              inputParams_.aDtype) /
+                         std::max(baseBlockRes_.baseM, baseBlockRes_.baseN);
+    kValueMax = ops::FloorAlign(kValueMax, baseKAlignValue);
+    OP_TILING_CHECK(
+        kValueMax == 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Invalid StreamK L0A capacity: l0aSize(%lu), baseM(%lu), baseN(%lu), baseKAlign(%lu).",
+                              compileInfo_.l0aSize, baseBlockRes_.baseM, baseBlockRes_.baseN, baseKAlignValue),
+        return false);
+    uint64_t kValueAlign = ops::CeilAlign(inputParams_.kSize, baseKAlignValue);
+    baseBlockRes_.baseK = std::min(std::min(baseBlockRes_.singleCoreK, kValueMax), kValueAlign);
+    baseBlockRes_.useTailWinLogic = false;
+    return true;
+}
+
+bool BaseBlockCalculator::ComputeBaseBlockStreamK()
+{
+    if (!InitStreamKBaseBlock()) {
+        return false;
+    }
+    if (baseBlockRes_.preSplitKBlockCnt <= compileInfo_.aicNum / qmmv3_tiling_const::NUM_HALF) {
+        return UpdateSmallMnStreamKBase() && FinalizeStreamKBaseK();
+    }
+    UpdateTailStreamKBase();
+    return FinalizeStreamKBaseK();
 }
 
 uint64_t BaseBlockCalculator::GetBaseMAlignSize() const

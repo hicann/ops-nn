@@ -24,10 +24,15 @@ struct BaseBlockRes {
     uint64_t baseM = 0UL;
     uint64_t baseN = 0UL;
     uint64_t baseK = 0UL;
+    uint64_t mCnt = 1UL;
+    uint64_t nCnt = 1UL;
+    uint64_t preSplitKBlockCnt = 1UL;
+    uint64_t streamKCnt = 1UL;
+    uint64_t singleCoreK = 0UL;
     bool useTailWinLogic = true;
 };
 
-enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4 };
+enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK };
 
 class BaseBlockCalculator {
 public:
@@ -44,6 +49,11 @@ private:
     void ComputeBaseBlockDefault();
     void ComputeBaseBlockPerblock();
     void ComputeBaseBlockMmadS8S4();
+    bool ComputeBaseBlockStreamK();
+    bool InitStreamKBaseBlock();
+    bool UpdateSmallMnStreamKBase();
+    void UpdateTailStreamKBase();
+    bool FinalizeStreamKBaseK();
     uint64_t GetBaseMAlignSize() const;
     uint64_t GetBaseNAlignSize() const;
     uint64_t GetBaseKAlignSize() const;

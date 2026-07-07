@@ -694,6 +694,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         ASSERT_EQ(tilingContext->GetBlockDim(), numBlocks)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
 
+        if (tilingData.empty() || tilingData == "0") {
+            return;
+        }
+
         std::vector<std::string> tilingDataStrs;
         SplitStr2Vec(tilingData, " ", tilingDataStrs);
         std::vector<int32_t> tilingDataInt;
@@ -706,7 +710,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) && (batchC == 0 || batchC == 1) &&
                                           actualTilingDataSize ==
                                               sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
-        bool isUseBasicApiTilingData = actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+        bool useBasicApiTilingData = actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+        bool useStreamKBasicApiTilingData = actualTilingDataSize ==
+                                            sizeof(DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData);
         if (isMxWithoutBatchTilingData) {
             DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData&
                 actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(
@@ -721,7 +727,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
                 << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
-        } else if (isUseBasicApiTilingData) {
+        } else if (useBasicApiTilingData) {
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData&
                 actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(
                     tilingContext->GetRawTilingData()->GetData());
@@ -730,6 +736,22 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
                 SetExpectedTilingFieldIfPresent(
                     tilingDataInt,
                     offsetof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, params) +
+                        offsetof(DequantBmm::QuantBatchMatmulV3BasicAPIDataParams, biasDtype),
+                    actualTilingData.params.biasDtype);
+            }
+            string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
+                                                        tilingContext->GetRawTilingData()->GetDataSize());
+            string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+            ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
+                << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
+        } else if (useStreamKBasicApiTilingData) {
+            auto& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData*>(
+                tilingContext->GetRawTilingData()->GetData());
+            // biasDtype is unused by kernel when bias is disabled.
+            if (biasFlag == false) {
+                SetExpectedTilingFieldIfPresent(
+                    tilingDataInt,
+                    offsetof(DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData, params) +
                         offsetof(DequantBmm::QuantBatchMatmulV3BasicAPIDataParams, biasDtype),
                     actualTilingData.params.biasDtype);
             }
