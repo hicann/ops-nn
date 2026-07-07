@@ -299,7 +299,8 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor *self, const int64_t d
   const aclTensor* alphaTensor = nullptr;
   bool is91095 = Ops::NN::AclnnUtil::IsRegbase();
   bool useNewOp = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-    GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) && dim == 0 &&
+    GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
+    GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) && dim == 0 &&
     self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM &&
     (self->GetDataType() == op::DataType::DT_BF16 || self->GetDataType() == op::DataType::DT_FLOAT16) &&
     (!(self->GetViewShape().GetDimNum() == 0 && index->GetViewShape().GetShapeSize() == 1));

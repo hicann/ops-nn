@@ -7,12 +7,15 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
 
-file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
-if(NOT ENABLE_TEST AND NOT BENCHMARK)
-    list(REMOVE_ITEM CURRENT_DIRS tests)
-endif()
-foreach(SUB_DIR ${CURRENT_DIRS})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR}/CMakeLists.txt")
-        add_subdirectory(${SUB_DIR})
-    endif()
-endforeach()
+add_kernel_sources(
+    COMPUTE_UNITS ascend910b ascend910_93 kirinx90 kirin9030
+    SIMPLIFIED_KEY None
+    AUTO_SYNC false
+)
+
+add_kernel_sources(
+    KERNEL_SRC arch35/inplace_index_add_with_sorted.cpp
+    COMPUTE_UNITS ascend950
+    SIMPLIFIED_KEY None
+    AUTO_SYNC false
+)
