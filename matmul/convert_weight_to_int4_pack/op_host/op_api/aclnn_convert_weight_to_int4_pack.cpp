@@ -17,6 +17,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_convert_weight_to_int4_pack.h"
+#include "acl/acl_rt.h"
 
 using namespace op;
 
@@ -378,9 +379,9 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor* weight
 
     // 从device拷贝数据到host
     std::vector<int32_t> weightData(shapeSize, 0);
-    auto ret = rtMemcpy(weightData.data(), weightData.size() * sizeof(weightData[0]), weight->GetTensor()->GetAddr(),
-                        weightData.size() * sizeof(weightData[0]), RT_MEMCPY_DEVICE_TO_HOST);
-    OP_CHECK(ret == RT_ERROR_NONE, OP_LOGE(ret, "copy result from device to host failed."),
+    auto ret = aclrtMemcpy(weightData.data(), weightData.size() * sizeof(weightData[0]), weight->GetTensor()->GetAddr(),
+                           weightData.size() * sizeof(weightData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ret, "copy result from device to host failed."),
              return ACLNN_ERR_RUNTIME_ERROR);
     // 从原先的1个int32的数承载1个int4的数改变成用1个int8的数承载2个int4的数，size缩减为原来的一半
     std::vector<int8_t> weightInt4PackData(shapeSize / 2, 0);
@@ -394,10 +395,10 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor* weight
     }
 
     // 从host拷贝数据到device
-    ret = rtMemcpy(weightInt4Pack->GetTensor()->GetAddr(), weightInt4PackData.size() * sizeof(weightInt4PackData[0]),
-                   weightInt4PackData.data(), weightInt4PackData.size() * sizeof(weightInt4PackData[0]),
-                   RT_MEMCPY_HOST_TO_DEVICE);
-    OP_CHECK(ret == RT_ERROR_NONE, OP_LOGE(ret, "copy result from host to device failed."),
+    ret = aclrtMemcpy(weightInt4Pack->GetTensor()->GetAddr(), weightInt4PackData.size() * sizeof(weightInt4PackData[0]),
+                      weightInt4PackData.data(), weightInt4PackData.size() * sizeof(weightInt4PackData[0]),
+                      ACL_MEMCPY_HOST_TO_DEVICE);
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ret, "copy result from host to device failed."),
              return ACLNN_ERR_RUNTIME_ERROR);
     return ACLNN_SUCCESS;
 }
