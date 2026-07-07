@@ -614,7 +614,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/common/op_host/op_tiling/conv_tiling_templates_registry.h
         - ops/ops-nn/conv/common/op_kernel/arch35
         - ops/ops-nn/conv/common/op_graph
-        - ops/ops-nn/conv/common/op_graph/fusion_pass
+        - ops/ops-nn/conv/common/op_graph/fusion_pass/
         - ops/ops-nn/conv/common/tests/ut/op_graph/test_conv_fusion_pass_framework.h
         - ops/ops-nn/conv/conv2d_v2/op_graph
         - ops/ops-nn/conv/conv2d_v2/op_host/config/ascend950
@@ -654,9 +654,8 @@ convolution_backprop@ops-nn:
   src:
     release:
       style:
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_graph
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2_arch35.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_bp_common_func.h
@@ -666,26 +665,22 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_util.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_func.h
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_graph
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/arch35
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/arch35/
         - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2_arch35_tiling_key.h
         - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/arch35/conv3d_transpose_v2_arch35.h
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_graph
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch35
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch35/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/config/ascend950/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_func.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/conv_bp_impl_base.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/impl/dav_v310/conv_bp_sub_func_deterministic_calculate.h
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2.h
-        - ops/ops-nn/conv/convolution_backward/op_api
+        - ops/ops-nn/conv/convolution_backward/op_api/
         - ops/ops-nn/conv/common/op_host/conv_backprop_infershape.cpp
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code:
-        - ops/ops-nn/conv/conv3d_transpose_v2/tests
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/tests
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/tests
+      test_code: null
       non_delivery:
         - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_base_tiling_arch35.cpp
       open_source: null
@@ -954,6 +949,7 @@ foreach-c@ops-nn:
         - ops/ops-nn/foreach/foreach_addcdiv_scalar_list/op_graph/
         - ops/ops-nn/foreach/foreach_addcdiv_scalar/op_host/foreach_addcdiv_scalar_def.cpp
         - ops/ops-nn/foreach/foreach_addcdiv_scalar/op_kernel/foreach_addcdiv_scalar.cpp
+        - ops/ops-nn/foreach/foreach_addcdiv_scalar/op_kernel/arch35/
         - ops/ops-nn/foreach/foreach_addcmul_list/
         - ops/ops-nn/foreach/foreach_addcmul_scalar/op_graph/
         - ops/ops-nn/foreach/foreach_addcmul_scalar/op_host/
