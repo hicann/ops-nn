@@ -159,10 +159,11 @@ inline float CostFunc(const HardwareType &hwInfor, OpShapeType &shape, const Mat
     uint64_t mOnce = blockDim < nLoop ? shape.m0 : blockDim / nLoop * shape.m0;
     uint64_t nOnce = blockDim < nLoop ? hwInfor.coreNum * shape.n0 : shape.n;
     (void)mmInfo;
-    if (mOnce * shape.k * 2 > hwInfor.l2Size) {
+    constexpr uint64_t kDataElementCount = 2;
+    if (mOnce * shape.k * kDataElementCount > hwInfor.l2Size) {
         aCoef = bwCoef;
     }
-    if (nOnce * shape.k * 2 > hwInfor.l2Size) {
+    if (nOnce * shape.k * kDataElementCount > hwInfor.l2Size) {
         bCoef = bwCoef;
     }
     return 1 / (aCoef * static_cast<float>(shape.n0)) + 1 / (bCoef * static_cast<float>(shape.m0));

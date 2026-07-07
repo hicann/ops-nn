@@ -170,13 +170,13 @@ private:
         uint64_t batchSize;
         uint64_t bRowsPerBatch;
     };
-    bool CalcVectorShapeInfo(VectorShapeInfo &shapeInfo);
+    bool CalcVectorShapeInfo(VectorShapeInfo &shapeInfo) const;
     struct VectorCoreParams {
         uint64_t coreData;
         uint64_t rowsPerCore;
         uint64_t alignedDimSizeLast;
     };
-    bool CalcVectorCoreParams(const VectorShapeInfo &shapeInfo, VectorCoreParams &coreParams);
+    bool CalcVectorCoreParams(const VectorShapeInfo &shapeInfo, VectorCoreParams &coreParams) const;
     void SetVectorTilingParams(const VectorShapeInfo &shapeInfo, const VectorCoreParams &coreParams);
 
 protected:

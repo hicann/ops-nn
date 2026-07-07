@@ -18,8 +18,6 @@
 #include "kernels/utils/kernel/utils.h"
 #include "kernels/utils/kernel/simd.h"
 
-#define __force_inline__ inline __attribute__((always_inline))
-
 constexpr uint32_t BLOCK_SIZE_32 = 32;
 constexpr uint32_t CUBE_BLOCK_SIZE_INT8 = 512;
 constexpr uint32_t BLOCK_SIZE_16 = 16;
@@ -27,8 +25,11 @@ constexpr uint32_t BLOCK_SIZE_K = 32;
 constexpr uint32_t M_TILE_LIMIT = 64;
 constexpr uint32_t K_TILE_LIMIT = 256;
 constexpr uint32_t L0AB_PINGPONG_BUFFER_LEN = 32 * 1024;
+constexpr uint32_t kSparseCtrlBitPos = 62;
+constexpr uint32_t kByteSizeBits = 8;
+constexpr uint32_t kHalfBlkSize = 4;
 
-__aicore__ __force_inline__ uint32_t CeilDivKernel(const uint32_t dividend, const uint32_t divisor)
+__aicore__ FORCE_INLINE uint32_t CeilDivKernel(const uint32_t dividend, const uint32_t divisor)
 {
     if (divisor == 0) {
         return UINT32_MAX;
@@ -36,7 +37,7 @@ __aicore__ __force_inline__ uint32_t CeilDivKernel(const uint32_t dividend, cons
     return (dividend + divisor - 1) / divisor;
 }
 
-__aicore__ __force_inline__ uint32_t RoundUpKernel(const uint32_t val, const uint32_t align)
+__aicore__ FORCE_INLINE uint32_t RoundUpKernel(const uint32_t val, const uint32_t align)
 {
     if (align == 0) {
         return 0;
@@ -44,7 +45,7 @@ __aicore__ __force_inline__ uint32_t RoundUpKernel(const uint32_t val, const uin
     return (val + align - 1) / align * align;
 }
 
-__aicore__ __force_inline__ uint32_t MinKernel(const uint32_t a, const uint32_t b)
+__aicore__ FORCE_INLINE uint32_t MinKernel(const uint32_t a, const uint32_t b)
 {
     return a < b ? a : b;
 }
@@ -59,11 +60,11 @@ public:
     {
         SetPadding<uint64_t>((uint64_t)0x0);
         SetAtomicnone();
-        set_ctrl(sbitset1(get_ctrl(), 62));
+        set_ctrl(sbitset1(get_ctrl(), kSparseCtrlBitPos));
         SetMasknorm();
     }
 
-    __aicore__ __force_inline__ void Init(
+    __aicore__ FORCE_INLINE void Init(
         __gm__ uint8_t *__restrict__ A, __gm__ uint8_t *__restrict__ B,
         __gm__ uint8_t *__restrict__ bias, __gm__ uint8_t *__restrict__ scale,
         __gm__ uint8_t *__restrict__ compress_index, __gm__ uint8_t *__restrict__ C,
@@ -113,7 +114,7 @@ public:
         ub_scale = buf.template GetBuffer<BufferType::ASCEND_UB, DESCALE_TYPE>(0);
     }
 
-    __aicore__ __force_inline__ void GetIdx(uint32_t loop_idx, uint32_t &m_idx, uint32_t &n_idx)
+    __aicore__ FORCE_INLINE void GetIdx(uint32_t loop_idx, uint32_t &m_idx, uint32_t &n_idx)
     {
         uint32_t in_batch_idx = loop_idx % (m_loop_ * n_loop_);
         if constexpr (SWIZZL_DIR == 0) {
@@ -147,7 +148,7 @@ public:
         }
     }
 
-    __aicore__ __force_inline__ void Process()
+    __aicore__ FORCE_INLINE void Process()
     {
         SET_FLAG(MTE1, MTE2, EVENT_ID0);
         SET_FLAG(MTE1, MTE2, EVENT_ID1);
@@ -187,12 +188,12 @@ public:
             uint32_t index_k_all = CeilDivKernel(k_, copress_tiling_k_ * BLOCK_SIZE_32);
             src_offset_index = (b_idx * n_compress_num * k_compress_num +
                                 n_idx * CeilDivKernel(n0_, copress_tiling_n_ * BLOCK_SIZE_16) * k_compress_num) *
-                               8;
+                               kByteSizeBits;
             load_unzip_index_from_gm(((__gm__ IN_DTYPE *)(gm_compress_index.GetPhyAddr() + src_offset_index)),
                                      (uint64_t)index_k_all);
             for (uint32_t k_idx = 0; k_idx < k_loop_; ++k_idx) {
                 uint32_t k_actual = k_idx == k_loop_ - 1 ? k_ - k_idx * k0_ : k0_;
-                uint32_t k_round = RoundUpKernel(k_actual, 32);
+                uint32_t k_round = RoundUpKernel(k_actual, BLOCK_SIZE_K);
 
                 AscendC::LocalTensor<int8_t> l1_a = l1_ping_pong ? l1_a_ping : l1_a_pong;
                 AscendC::LocalTensor<int8_t> l1_b = l1_ping_pong ? l1_b_ping : l1_b_pong;
@@ -245,8 +246,8 @@ public:
                     }
                     WAIT_FLAG(M, MTE1, l0_event);
                     l1_to_l0_a<ArchType::ASCEND_V200, IN_DTYPE, false, DataFormat::ZN, DataFormat::ZZ>(
-                        l0_a, l1_a[k_part_idx * k_part_len * m_round], m_round, k0_round, 1, m_round / 16,
-                        k0_round / 32, 1);
+                        l0_a, l1_a[k_part_idx * k_part_len * m_round], m_round, k0_round, 1, m_round / BLOCK_SIZE_16,
+                        k0_round / BLOCK_SIZE_32, 1);
                     if (k_part_idx == k_part_loop - 1) {
                         SET_FLAG(MTE1, MTE2, l1_a_event);
                     }
@@ -255,13 +256,13 @@ public:
                     }
 
                     if (n_idx == (n_loop_ - 1) && (compress_overlap_n_ > 0)) {
-                        for (uint32_t i = 0; i < k0_round / 32; i++) {
-                            dst_offset = n_round * i * 32;
-                            src_offset = k_part_idx * k_part_len * n0_ + i * n0_ * 32 + compress_overlap_n_ * 512;
+                        for (uint32_t i = 0; i < k0_round / BLOCK_SIZE_32; i++) {
+                            dst_offset = n_round * i * BLOCK_SIZE_32;
+                            src_offset = k_part_idx * k_part_len * n0_ + i * n0_ * BLOCK_SIZE_32 + compress_overlap_n_ * CUBE_BLOCK_SIZE_INT8;
                             l1_to_l0_b<ArchType::ASCEND_V200, IN_DTYPE, true, DataFormat::ZN, DataFormat::NZ>(
                                 l0_b[dst_offset],
                                 l1_b[src_offset],
-                                n_round, BLOCK_SIZE_32, 1, n0_ / 16, 1, n_round / 16);
+                                n_round, BLOCK_SIZE_32, 1, n0_ / 16, 1, n_round / BLOCK_SIZE_16);
                         }
                     } else {
                         src_offset = k_part_idx * k_part_len * n_round;
@@ -285,7 +286,7 @@ public:
                         gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(ub_bias, gm_bias[n_idx * n0_],
                                                                    0,
                                                                    1,
-                                                                   n_round / 8,
+                                                                   n_round / kByteSizeBits,
                                                                    0,
                                                                    0);
                         SET_FLAG(MTE2, V, EVENT_ID0);
@@ -318,7 +319,7 @@ public:
             gm_to_ub<ArchType::ASCEND_V200, DESCALE_TYPE>(ub_scale, gm_scale[n_idx * n0_],
                                                           0,
                                                           1,
-                                                          n_round / 4,
+                                                          n_round / kHalfBlkSize,
                                                           0,
                                                           0);
             SET_FLAG(M, V, EVENT_ID0);
@@ -335,7 +336,7 @@ public:
             if (m_actual == 1) {
                 SetVectorMask<int8_t>((uint64_t)0x0, (uint64_t)0xffff);
                 half zero = 0;
-                for (uint32_t i = 0; i < n_round / 16; i++) {
+                for (uint32_t i = 0; i < n_round / BLOCK_SIZE_16; i++) {
                     uint64_t curr_offset_c = i * m_round * BLOCK_SIZE_16 + m_actual * BLOCK_SIZE_16;
                     muls_v<ArchType::ASCEND_V200, half>(ub_c[curr_offset_c], ub_c[curr_offset_c],
                                                         zero,
@@ -349,7 +350,7 @@ public:
             SET_FLAG(V, M, EVENT_ID0);
             SET_FLAG(V, MTE3, EVENT_ID0);
             WAIT_FLAG(V, MTE3, EVENT_ID0);
-            dst_offset = b_idx * m_org_up * n_org_up + n_idx * n0_ * m_org_up + m_idx * m0_ * 16;
+            dst_offset = b_idx * m_org_up * n_org_up + n_idx * n0_ * m_org_up + m_idx * m0_ * BLOCK_SIZE_16;
             ub_to_gm<ArchType::ASCEND_V200, half, DataFormat::NZ, DataFormat::NZ>(
                 gm_c[dst_offset], ub_c, m_round, m_round, m_org_up, n_round, n_round, n_org_up);
             SET_FLAG(MTE3, V, EVENT_ID0);

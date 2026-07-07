@@ -412,8 +412,10 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, acl
     int64_t dimNum = mxScaleTensor->GetViewShape().GetDimNum();
     int64_t lastDim = mxScaleTensor->GetViewShape().GetDim(dimNum - 1);
     int64_t lastSecondDim = mxScaleTensor->GetViewShape().GetDim(dimNum - PENULTIMATE_DIM);
-    int64_t lastThirdDim = mxScaleTensor->GetViewShape().GetDim(dimNum - 3);    // 3: 倒数第3维
-    if (mxScaleTensor->GetViewStrides()[dimNum - 3] == lastDim &&   // 3: 倒数第3维
+    constexpr int64_t kThirdLastDim = 3;   // 3: 倒数第3维
+    int64_t thirdLastIdx = dimNum - kThirdLastDim;
+    int64_t lastThirdDim = mxScaleTensor->GetViewShape().GetDim(thirdLastIdx);
+    if (mxScaleTensor->GetViewStrides()[static_cast<size_t>(thirdLastIdx)] == lastDim &&
         mxScaleTensor->GetViewStrides()[dimNum - PENULTIMATE_DIM] == lastDim * lastThirdDim) {
         int64_t tmpNxD = lastDim * lastSecondDim * lastThirdDim;
         transposeFlag = true;
@@ -432,7 +434,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, acl
     if (transposeFlag) {
         op::Shape swapedShape = mxScaleTensor->GetViewShape();
         swapedShape.SetDim(dimNum - PENULTIMATE_DIM, lastThirdDim);
-        swapedShape.SetDim(dimNum - 3, lastSecondDim);  // 3: 倒数第3维
+        swapedShape.SetDim(dimNum - kThirdLastDim, lastSecondDim);  // kThirdLastDim: 倒数第3维
         mxScaleTensor = executor->CreateView(mxScaleTensor, swapedShape, mxScaleTensor->GetViewOffset());
     } else {
         mxScaleTensor = l0op::Contiguous(mxScaleTensor, executor);

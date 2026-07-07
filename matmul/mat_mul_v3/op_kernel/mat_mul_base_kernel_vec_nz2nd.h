@@ -12,8 +12,8 @@
  * \file mat_mul_base_vector_nz2nd_kernel.h
  * \brief Matmul kernel with AIV-based NZ2ND conversion for half/bfloat16 output
  */
- #ifndef __OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H__
- #define __OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H__
+ #ifndef OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H
+ #define OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H
  
  #include "mat_mul_base_fixpipe_kernel.h"
  
@@ -169,5 +169,5 @@
      this->template RunFixpipeTileLoop<
          MatmulBaseVectorNz2NdKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>>(index, enAtomic);
  }
- #endif // __OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H__
+ #endif // OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H
  

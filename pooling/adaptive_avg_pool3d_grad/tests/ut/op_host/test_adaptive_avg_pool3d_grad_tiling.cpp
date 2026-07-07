@@ -17,11 +17,11 @@
 #include <vector>
 #include <gtest/gtest.h>
 
+#include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"

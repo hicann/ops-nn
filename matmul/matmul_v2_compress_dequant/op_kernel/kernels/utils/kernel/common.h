@@ -16,8 +16,8 @@
 #define WAIT_FLAG(trigger, waiter, e) AscendC::WaitFlag<AscendC::HardEvent::trigger##_##waiter>((e))
 #define PIPE_BARRIER(pipe) AscendC::PipeBarrier<PIPE_##pipe>()
 
-#ifndef __force_inline__
-#define __force_inline__ inline __attribute__((always_inline))
+#ifndef FORCE_INLINE
+#define FORCE_INLINE inline __attribute__((always_inline))
 #endif
 
 #endif

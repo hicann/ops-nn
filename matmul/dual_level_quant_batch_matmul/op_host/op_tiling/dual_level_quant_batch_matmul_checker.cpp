@@ -57,7 +57,7 @@ ge::graphStatus CheckContext(gert::TilingContext* context, uint64_t tilingDataSi
 }
 
 bool CheckAttrs(
-    [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+    [[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
     const DualLevelQuantBatchMatmulInfo& inputParams)
 {
     OP_TILING_CHECK(
@@ -84,7 +84,7 @@ bool CheckAttrs(
 }
 
 bool CheckDtypes(
-    [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+    [[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
     const DualLevelQuantBatchMatmulInfo& inputParams)
 {
     OP_TILING_CHECK(
@@ -145,7 +145,7 @@ std::string ToShapeString(std::initializer_list<uint64_t> shape)
 }
 
 bool CheckInputShape(
-    gert::TilingContext* context, const char* variableName, const gert::Shape& shape,
+    const gert::TilingContext* context, const char* variableName, const gert::Shape& shape,
     std::initializer_list<uint64_t> expectedShape)
 {
     auto shapeLen = shape.GetDimNum();
@@ -168,7 +168,7 @@ bool CheckInputShape(
     return true;
 }
 
-bool IsInputsValid(gert::TilingContext* context, const DualLevelQuantBatchMatmulInfo& inputParams)
+bool IsInputsValid(const gert::TilingContext* context, const DualLevelQuantBatchMatmulInfo& inputParams)
 {
     OP_TILING_CHECK(
         inputParams.mSize == 0 || inputParams.nSize == 0 || inputParams.kSize == 0,

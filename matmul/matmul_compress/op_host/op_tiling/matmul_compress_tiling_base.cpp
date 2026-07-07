@@ -110,7 +110,6 @@ bool MatmulCompressTilingBase::GetTilingKey() {
 }
 
 ge::graphStatus MatmulCompressTilingBase::DoTiling() {
-
     OP_TILING_CHECK(context_->GetInputDesc(0) == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), 
                     "Desc of input matmul A should not be nullptr!"), return ge::GRAPH_FAILED);
     auto inputDType = context_->GetInputDesc(0)->GetDataType();
@@ -178,7 +177,7 @@ ge::graphStatus MatmulCompressTilingBase::PostTiling() {
     size_t tilingDataSize = sizeof(MatmulCompressTilingDataArch20);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&matmulCompressTilingDataArch20_), tilingDataSize);
+        static_cast<void*>(&matmulCompressTilingDataArch20_), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

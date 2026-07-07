@@ -122,10 +122,13 @@ ge::graphStatus ExtractMatmulDims(const gert::TilingContext *context, uint32_t &
         if (outShapePtr != nullptr) {
             const auto &outShape = outShapePtr->GetStorageShape();
             size_t outNdim = outShape.GetDimNum();
-            if (outNdim >= 4) {
-                n = static_cast<uint32_t>(outShape.GetDim(outNdim - 4) *
+            constexpr size_t kMin4D = 4;
+            constexpr size_t kMin2D = 2;
+            constexpr size_t kDimOffsetToN4D = 4;
+            if (outNdim >= kMin4D) {
+                n = static_cast<uint32_t>(outShape.GetDim(outNdim - kDimOffsetToN4D) *
                                           outShape.GetDim(outNdim - 1));
-            } else if (outNdim >= 2) {
+            } else if (outNdim >= kMin2D) {
                 n = static_cast<uint32_t>(outShape.GetDim(outNdim - 1));
             }
         }
@@ -149,7 +152,7 @@ static ge::graphStatus TbmmEinsumTilingFunc (gert::TilingContext* context,
         OP_LOGE("MatMulV2CompressDequant", "context is null.");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = reinterpret_cast<const MatmulV2CompressDequantCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const MatmulV2CompressDequantCompileInfo *>(context->GetCompileInfo());
     uint32_t coreNum = static_cast<uint32_t>(compileInfo->aivNum);
 
     size_t sysWorkspaceSize = static_cast<size_t>(24 * 1024 * 1024);  // 24M same as ppmatmul tiling
@@ -175,7 +178,7 @@ static ge::graphStatus TbmmEinsumTilingFunc (gert::TilingContext* context,
     (void)ComputeK0(tbmmEinsumTiling.ppMatmulDefaultTilingData_.opShape.n0,
                     tbmmEinsumTiling.ppMatmulDefaultTilingData_.opShape.n, true, tilingN, compressOverlapN);
     // PostTiling
-    uint32_t blockDim = std::min(tbmmEinsumTiling.ppMatmulDefaultTilingData_.coreLoop, (uint64_t)coreNum);
+    uint32_t blockDim = std::min(tbmmEinsumTiling.ppMatmulDefaultTilingData_.coreLoop, static_cast<uint64_t>(coreNum));
     context->SetBlockDim(blockDim);
     MatmulV2CompressDequantTilingData tiling;
     tiling.set_batchSize(batchSize);
@@ -219,20 +222,21 @@ ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext *context)
     auto *attrs = context->GetAttrs();
     const auto *compressInfoVec = attrs->GetAttrPointer<gert::ContinuousVector>(COMPRESS_INFO_ATTR_IDX);
     compressInfoCount = compressInfoVec->GetSize();
-    compressInfoData = reinterpret_cast<const int64_t *>(compressInfoVec->GetData());
+    compressInfoData = static_cast<const int64_t *>(compressInfoVec->GetData());
 
     (void)ExtractMatmulDims(context, batchSize, m, k, n,
                             compressInfoData, compressInfoCount);
 
     uint32_t tilingKVal = 0;
     uint32_t tilingNVal = 0;
-    if (compressInfoData != nullptr && compressInfoCount >= 2) {
+    constexpr size_t kMinCompressInfoCount = 2;
+    if (compressInfoData != nullptr && compressInfoCount >= kMinCompressInfoCount) {
         tilingKVal = static_cast<uint32_t>(compressInfoData[CI_IDX_TILING_K]);
         tilingNVal = static_cast<uint32_t>(compressInfoData[CI_IDX_TILING_N]);
     }
     TbmmEinsumTilingFunc(context, batchSize, m, k, n, tilingKVal, tilingNVal);
 
-    auto compileInfo = reinterpret_cast<const MatmulV2CompressDequantCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const MatmulV2CompressDequantCompileInfo *>(context->GetCompileInfo());
 
     // ---- Workspace ----
     size_t *currentWorkspace = context->GetWorkspaceSizes(1);

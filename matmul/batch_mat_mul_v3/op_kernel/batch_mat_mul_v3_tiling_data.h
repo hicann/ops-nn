@@ -54,7 +54,8 @@ struct alignas(8) MultiBatchInfo{
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct alignas(8) VectorTilingInfo {
+constexpr uint32_t kVECTOR_TILING_ALIGN = 8;
+struct alignas(kVECTOR_TILING_ALIGN) VectorTilingInfo {
   uint64_t coreNumber;
   uint64_t coreData;
   uint64_t copyLoop;

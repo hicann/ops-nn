@@ -1025,7 +1025,7 @@ void BatchMatmulV3BaseTiling::DoL1FullLoadTiling()
     }
 }
 
-bool BatchMatmulV3BaseTiling::CalcVectorShapeInfo(VectorShapeInfo &shapeInfo)
+bool BatchMatmulV3BaseTiling::CalcVectorShapeInfo(VectorShapeInfo &shapeInfo) const
 {
     auto platformInfoptr = context_->GetPlatformInfo();
     if (platformInfoptr == nullptr) { return false; }
@@ -1041,7 +1041,8 @@ bool BatchMatmulV3BaseTiling::CalcVectorShapeInfo(VectorShapeInfo &shapeInfo)
     for (size_t i = 0; i < aStorageShape.GetDimNum(); i++) {
         shapeInfo.aTotalSize *= aStorageShape.GetDim(i);
     }
-    shapeInfo.dimSizeSecondLast = aStorageShape.GetDim(dimNum - 2);
+    constexpr size_t kSecondLastDimOffset = 2;
+    shapeInfo.dimSizeSecondLast = aStorageShape.GetDim(dimNum - kSecondLastDimOffset);
     shapeInfo.dimSizeLast = aStorageShape.GetDim(dimNum - 1);
 
     shapeInfo.bTotalSize = 1;
@@ -1056,7 +1057,7 @@ bool BatchMatmulV3BaseTiling::CalcVectorShapeInfo(VectorShapeInfo &shapeInfo)
     return true;
 }
 
-bool BatchMatmulV3BaseTiling::CalcVectorCoreParams(const VectorShapeInfo &shapeInfo, VectorCoreParams &coreParams)
+bool BatchMatmulV3BaseTiling::CalcVectorCoreParams(const VectorShapeInfo &shapeInfo, VectorCoreParams &coreParams) const
 {
     auto platformInfoptr = context_->GetPlatformInfo();
     auto ascendplatformInfo = platform_ascendc::PlatformAscendC(platformInfoptr);
@@ -1066,7 +1067,8 @@ bool BatchMatmulV3BaseTiling::CalcVectorCoreParams(const VectorShapeInfo &shapeI
 
     uint64_t totalUbBytes;
     ascendplatformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, totalUbBytes);
-    coreParams.alignedDimSizeLast = ops::CeilAlign(shapeInfo.dimSizeLast * aDtypeSize_, (uint64_t)32) / aDtypeSize_;
+    constexpr uint64_t kAlignmentSize = 32;
+    coreParams.alignedDimSizeLast = ops::CeilAlign(shapeInfo.dimSizeLast * aDtypeSize_, kAlignmentSize) / aDtypeSize_;
     const uint64_t perRowUbCost = 4 * coreParams.alignedDimSizeLast * aDtypeSize_ + aDtypeSize_;
     coreParams.rowsPerCore = totalUbBytes / perRowUbCost;
     coreParams.rowsPerCore = ops::FloorAlign(coreParams.rowsPerCore, VECTOR_ALIGN_NUM);
@@ -1142,7 +1144,8 @@ bool BatchMatmulV3BaseTiling::CheckVectorShapeDims()
     }
 
     // 检查B的最后一维是否为1（内轴，因为当n=1时B默认转置）
-    if (bShape.GetDim(bDims - 2) != 1) {
+    constexpr size_t kSecondLastDimIdx = 2;
+    if (bShape.GetDim(bDims - kSecondLastDimIdx) != 1) {
         OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: shape does not meet requirements. "
             "Bmm vector opt version not supported.");
         return false;
@@ -1150,7 +1153,8 @@ bool BatchMatmulV3BaseTiling::CheckVectorShapeDims()
 
     // 检查m和k是否至多为8
     int64_t MAX_MK_DIM = 8;
-    if (aShape.GetDim(aDims - 1) > MAX_MK_DIM || aShape.GetDim(aDims - 2) > MAX_MK_DIM) {
+    constexpr size_t kSecondLastDimOffset = 2;
+    if (aShape.GetDim(aDims - 1) > MAX_MK_DIM || aShape.GetDim(aDims - kSecondLastDimOffset) > MAX_MK_DIM) {
         OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have at most 8 on M and K axis. "
              "Bmm vector opt version not supported.");
         return false;
@@ -1197,7 +1201,8 @@ bool BatchMatmulV3BaseTiling::CheckVectorBatchBroadcast()
     auto aShape = context_->GetInputShape(0)->GetOriginShape();
     auto bShape = context_->GetInputShape(1)->GetOriginShape();
     size_t aDims = aShape.GetDimNum();
-    for (size_t i = 0; i < aDims - 2; i++) {
+    constexpr size_t kLastTwoDims = 2;
+    for (size_t i = 0; i < aDims - kLastTwoDims; i++) {
         if (aShape.GetDim(i) != bShape.GetDim(i)) {
             OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have the same batch size. "
                  "Bmm vector opt version not supported.");

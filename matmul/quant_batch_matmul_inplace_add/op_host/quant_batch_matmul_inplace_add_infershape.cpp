@@ -29,7 +29,7 @@ constexpr uint32_t X2_SCALE_INDEX = 4;
 constexpr size_t QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE = 2;
 constexpr const char *OP_NAME = "QuantBatchMatmulInplaceAdd";
 
-const char *GetValidOpName(gert::InferShapeContext *context)
+const char *GetValidOpName(const gert::InferShapeContext *context)
 {
     if (context == nullptr) {
         return OP_NAME;
