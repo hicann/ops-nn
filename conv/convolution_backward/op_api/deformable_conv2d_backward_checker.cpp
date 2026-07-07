@@ -157,7 +157,7 @@ bool DeformableConv2dBackwardChecker::CheckAttrs()
     OP_CHECK((*params_.stride)[INDEX_ZERO] == 1 && (*params_.stride)[INDEX_ONE] == 1 && CheckParamsValue(params_.stride, false),
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(ACLNN_DEFORMABLE_NAME,
         "stride[0],stride[1],stride[2],stride[3]", AclarrayToString(params_.stride).c_str(),
-        "stride[0]、stride[1] must be 1, stride[2]、stride[3] must be greater than or equal to 1"
+        "stride[0],stride[1] must be 1, stride[2],stride[3] must be greater than or equal to 1"
         ), return false);
     // padding >= 0
     OP_CHECK(CheckParamsValue(params_.padding, true),
@@ -167,7 +167,7 @@ bool DeformableConv2dBackwardChecker::CheckAttrs()
     OP_CHECK((*params_.dilation)[INDEX_ZERO] == 1 && (*params_.dilation)[INDEX_ONE] == 1 && CheckParamsValue(params_.dilation, false),
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(ACLNN_DEFORMABLE_NAME,
                 "dilation", AclarrayToString(params_.dilation).c_str(),
-                "dilation[0]、dilation[1] must be 1, dilation[2]、dilation[3] must be greater than or equal to 1"
+                "dilation[0],dilation[1] must be 1, dilation[2],dilation[3] must be greater than or equal to 1"
             ), return false);
     OP_CHECK(params_.groups > 0,
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_DEFORMABLE_NAME, "groups", 
@@ -211,12 +211,13 @@ bool DeformableConv2dBackwardChecker::CheckShape()
     int64_t inSize = inH * inW;
     int64_t outC = inputTensor_.weight->GetViewShape()[INDEX_ZERO];
     OP_CHECK(inC % params_.deformableGroups == 0,
-             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_DEFORMABLE_NAME, "inC", std::to_string(inC).c_str(), 
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_DEFORMABLE_NAME, "inC,deformableGroups", 
+             (std::to_string(inC) + "," + std::to_string(params_.deformableGroups)).c_str(),
              "inC must be exactly divisible by deformableGroups"), return false);
     OP_CHECK(inC % params_.groups == 0 && outC % params_.groups == 0,
-             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ACLNN_DEFORMABLE_NAME, "inC,outC", 
-             (std::to_string(inC) + "," + std::to_string(outC)).c_str(), 
-             "all axis of [inC, outC] must be divisible by groups"), return false);
+             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ACLNN_DEFORMABLE_NAME, "inC,outC,groups", 
+             (std::to_string(inC) + "," + std::to_string(outC) + "," + std::to_string(params_.groups)).c_str(),
+             "All axis of [inC, outC] must be divisible by groups"), return false);
     OP_CHECK(inSize <= INT_MAX_VALUE, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ACLNN_DEFORMABLE_NAME, "inH,inW", 
              (std::to_string(inC) + "," + std::to_string(outC)).c_str(), 
              "inH * inW must be not greater than 2147483647"), return false);

@@ -401,7 +401,7 @@ bool ConvolutionBackwardChecker::CheckDtypeValidForBpFilter8bit(const DataType& 
         inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
         outputTensor_.gradWeight->GetDataType(), outputTensor_.gradBias->GetDataType()
         ), FormatString("the dtypes of [gradOutput, input, weight, gradWeight, gradBias] must be the %s,"
-        "when outputMask[1] = true, any input or gradBias data types is is %s",
+        "when outputMask[1] = true, any input or gradBias data types is %s",
          op::ToString(dType).GetString(), op::ToString(dType).GetString())), return false);
   } else {
     OP_CHECK(!is8bitFlag || all8bitFlag, 
@@ -643,7 +643,7 @@ bool ConvolutionBackwardChecker::CheckConvChannelAndGroup() {
     OP_CHECK(groupCheck, OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME,
         FormatString("inputShape[%ld], weight[%ld]", inputChannelIdx, weightCinIdx),
         FormatString("%ld,%ld", inputShape.GetDim(inputChannelIdx), weightShape.GetDim(weightCinIdx)),
-        FormatString("the shape dim of inputShape[%ld] must equal to (the shape dim of weight[%ld] times the value of groups).",
+        FormatString("The shape dim of inputShape[%ld] must be equal to (the shape dim of weight[%ld] times the value of groups)",
         inputChannelIdx, weightCinIdx)), return false);
 
     if (inputShape.GetDim(inputChannelIdx) == params_.groups && (!Ops::NN::AclnnUtil::IsRegbase())) {
