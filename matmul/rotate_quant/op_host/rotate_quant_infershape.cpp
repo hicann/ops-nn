@@ -249,7 +249,7 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
     ge::DataType yDtype = ge::DT_INT8;
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
-        const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_DST_TYPE);
+        const int64_t* pDstDtype = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
         if (pDstDtype != nullptr) {
             yDtype = static_cast<ge::DataType>(*pDstDtype);
         }
@@ -285,7 +285,7 @@ static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* cont
     ge::DataType yDtype = ge::DT_INT8;
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
-        const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_DST_TYPE);
+        const int64_t* pDstDtype = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
         if (pDstDtype != nullptr) {
             yDtype = static_cast<ge::DataType>(*pDstDtype);
         }
