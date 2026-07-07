@@ -16,7 +16,12 @@
 #include "../../../scatter_reduce_common/op_host/arch35/scatter_reduce_common_tiling.h"
 
 namespace optiling {
-static ge::graphStatus Tiling4ScatterDiv(gert::TilingContext* context) { return ScatterReduceCommonTiling(context); }
+static ge::graphStatus Tiling4ScatterDiv(gert::TilingContext* context)
+{
+    // kernel 经 scatter_reduce_common 的 sort 归约路径使用 SyncAll 全核同步，需设置 BatchMode 保证所有核同批启动
+    context->SetScheduleMode(1);
+    return ScatterReduceCommonTiling(context);
+}
 
 IMPL_OP_OPTILING(ScatterDiv)
     .Tiling(Tiling4ScatterDiv)

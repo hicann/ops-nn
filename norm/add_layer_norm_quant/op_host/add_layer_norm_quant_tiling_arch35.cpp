@@ -160,6 +160,12 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
 
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(this->usedCoreNum_);
+    // 仅 dynamic-quant full-load 且 rowsPerCore==1、多核场景，kernel 会走 useWs 分支使用 SyncAll，
+    // 此时需设置为 batch mode，保证所有核同时启动
+    if (this->ubTilingPolicy_ == UB_TILING_POLICY::FULL_LOAD && this->isDynamicQuant_ &&
+        this->rowsPerCore_ == 1 && this->usedCoreNum_ > 1) {
+        context_->SetScheduleMode(1);
+    }
     tiling->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tiling->GetDataSize());
 

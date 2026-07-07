@@ -216,6 +216,7 @@ ge::graphStatus NLLLossGradSimtTiling::PostTiling()
     tilingData_.set_blockTailCore(this->blockTailCore_);
 
     context_->SetBlockDim(std::max(this->notVeryImportantProcessCoreNums_, veryImportantProcessCoreNums));
+    context_->SetScheduleMode(1); // kernel 使用 SyncAll，需设置为 batch mode，所有核同时启动
 
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());

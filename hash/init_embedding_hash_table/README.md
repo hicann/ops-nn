@@ -34,7 +34,7 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>table_handles</td>
+      <td>table_handle</td>
       <td>输入</td>
       <td>输入hash表handle句柄，里面包含了hash表的表头地址等。</td>
       <td>INT64</td>
@@ -51,14 +51,14 @@
       <td>bucket_size</td>
       <td>输入属性</td>
       <td>hash表桶数量。</td>
-      <td>INT32</td>
+      <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>embedding_dim</td>
       <td>输入属性</td>
       <td>hash表桶深度。</td>
-      <td>INT32</td>
+      <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>

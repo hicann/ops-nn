@@ -461,6 +461,7 @@ void DeformableOffsetsGradAscendCTilingImpl::FillTilingData()
 {
     context_->SetTilingKey(dataTypeKey_);
     context_->SetBlockDim(realUseCoreNum_);
+    context_->SetScheduleMode(1); // kernel 使用 SyncAll，需设置为 batch mode，所有核同时启动
     tilingData_.set_tilingKey(dataTypeKey_);
     tilingData_.set_realCoreNum(realCoreNum_);
     tilingData_.set_clearGradXCoreNum(clearGradXCoreNum_);

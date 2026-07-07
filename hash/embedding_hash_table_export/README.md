@@ -89,6 +89,20 @@
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
+    <tr>
+      <td>export_mode</td>
+      <td>输入属性</td>
+      <td>导出模式，默认all（全量导出）。</td>
+      <td>STRING</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>filtered_export_flag</td>
+      <td>输入属性</td>
+      <td>是否按准入标志过滤导出，默认false。</td>
+      <td>BOOL</td>
+      <td>-</td>
+    </tr>
   </tbody></table>
 
 ## 约束说明

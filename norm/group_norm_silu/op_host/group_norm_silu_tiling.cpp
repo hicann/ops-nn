@@ -324,6 +324,12 @@ static void SetUbTiling(GroupNormSiluTilingData& tilingData)
                                  tilingData.get_processSize() * (tilingData.get_innerLoopNum() - 1));
 }
 
+// mixed-dtype(gamma 为 float32)时选 mixKey，否则选 b16Key。抽出以消除 SetTiling 中重复的 gamma dtype 分支。
+static int64_t SelectMixOrB16Key(uint64_t gammaDtypeSize, GroupNormSiluTilingKey mixKey, GroupNormSiluTilingKey b16Key)
+{
+    return static_cast<int64_t>(gammaDtypeSize == FLOAT32_BYTES ? mixKey : b16Key);
+}
+
 static void SetTiling(const gert::TilingContext* context, GroupNormSiluTilingData& tilingData)
 {
     auto xDtype = context->GetInputDesc(INPUT_IDX_X)->GetDataType();
@@ -346,26 +352,17 @@ static void SetTiling(const gert::TilingContext* context, GroupNormSiluTilingDat
     } else if (xDtypeSize == FLOAT16_BYTES && tilingData.get_hwNum() % FLOAT_DOUBLE_EIGHT == 0 &&
                tilingData.get_hwNum() <= HW_CAP &&
                tilingData.get_shapeC() + tilingData.get_numPerCore() <= UPPER_LIMIT_ONE) {
-        if (gammaDtypeSize == FLOAT32_BYTES) {
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_SMALL_SHAPE_MIXTYPE));
-        } else {
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_SMALL_SHAPE_B16));
-        }
+        tilingData.set_tilingKey(SelectMixOrB16Key(gammaDtypeSize,
+            GroupNormSiluTilingKey::TILINGKEY_SMALL_SHAPE_MIXTYPE, GroupNormSiluTilingKey::TILINGKEY_SMALL_SHAPE_B16));
     } else if (xDtypeSize == FLOAT16_BYTES &&
                tilingData.get_shapeC() + tilingData.get_numPerCore() <= UPPER_LIMIT_ONE) {
-        if (gammaDtypeSize == FLOAT32_BYTES) {
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_HIGH_PERF_MIXTYPE));
-        } else {
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_HIGH_PERF_B16));
-        }
+        tilingData.set_tilingKey(SelectMixOrB16Key(gammaDtypeSize,
+            GroupNormSiluTilingKey::TILINGKEY_HIGH_PERF_MIXTYPE, GroupNormSiluTilingKey::TILINGKEY_HIGH_PERF_B16));
     } else if (xDtypeSize == FLOAT32_BYTES) {
         tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_BASIC_TEM_B32));
     } else {
-        if (gammaDtypeSize == FLOAT32_BYTES) {
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_BASIC_TEM_MIXTYPE));
-        } else {
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluTilingKey::TILINGKEY_BASIC_TEM_B16));
-        }
+        tilingData.set_tilingKey(SelectMixOrB16Key(gammaDtypeSize,
+            GroupNormSiluTilingKey::TILINGKEY_BASIC_TEM_MIXTYPE, GroupNormSiluTilingKey::TILINGKEY_BASIC_TEM_B16));
     }
 }
 

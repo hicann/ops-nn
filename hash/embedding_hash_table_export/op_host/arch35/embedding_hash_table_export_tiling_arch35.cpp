@@ -90,6 +90,7 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext* context)
 
     context->SetTilingKey(tiling.get_bitWidth());
     context->SetBlockDim(maxCoreNum);
+    context->SetScheduleMode(1); // kernel 使用 SyncAll，需设置为 batch mode，所有核同时启动
     context->SetLocalMemorySize(sizeof(int64_t) * maxThreadNum * BUFFER_NUM);
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());

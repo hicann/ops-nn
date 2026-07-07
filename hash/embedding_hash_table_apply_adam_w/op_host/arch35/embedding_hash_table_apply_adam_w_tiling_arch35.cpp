@@ -129,6 +129,7 @@ ge::graphStatus EmbeddingHashTableApplyAdamWTiling::PostTiling()
     workspaces[0] = workspaceSize_;
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(std::min(static_cast<uint32_t>(blockNum_), coreNum_));
+    context_->SetScheduleMode(1);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
