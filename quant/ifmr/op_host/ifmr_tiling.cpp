@@ -279,6 +279,7 @@ static ge::graphStatus TilingForIfmr(gert::TilingContext* context)
 {
     OP_TILING_CHECK(context == nullptr, VECTOR_INNER_ERR_REPORT_TILIING("IFMR", "context should not be nullptr."),
                     return ge::GRAPH_FAILED);
+    context->SetScheduleMode(1);  // kernel 使用 SyncAll 全核同步，需设置为 BatchMode
     IfmrTiling tiling(context);
     return tiling.IfmrTilingFunc();
 }
