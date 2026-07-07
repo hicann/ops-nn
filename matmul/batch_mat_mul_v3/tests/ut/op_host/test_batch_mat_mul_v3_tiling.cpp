@@ -731,7 +731,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2UL,
-     "32 320 32 32 160 32 32 160 32 32 32 1 1 1 1 0 0 33686528 0 160 1 0 100 0 "},
+     "32 320 32 32 160 32 32 160 32 32 32 1 1 1 1 0 0 33686528 0 160 1 0 100 1 "},
     // singleCoreM 256->16
     {"BatchMatMulV3_950_test_asw_1",
      "BatchMatMulV3",
@@ -758,7 +758,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2UL,
-     "1 1 1 1 16 16 16 16 16 16 1 1 1 1 1 0 0 33686529 0 16 1 0 1 0"},
+     "1 1 1 1 16 16 16 16 16 16 1 1 1 1 1 0 0 33686529 0 16 1 0 1 1"},
     // singeCoreK / baseK < 8  -> 之前stepK= 1 全载场景去掉上述判断代码以后, stepK = 2
     // bmm aFullLoad basic
     {"BatchMatMulV3_950_test_al1fullload_2",
@@ -786,7 +786,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65554UL,
-     "32 11 2687 29 16 128 32 256 128 32 29 1 1 1 1 0 0 16909313 0 256 1 0 230 0 "},
+     "32 11 2687 29 16 128 32 256 128 32 29 1 1 1 1 0 0 16909313 0 256 1 0 230 1 "},
     // singleCoreM 256->64
     // 拆分tiling后修复bmm b全载tilingKey和adjustTiling不匹配问题, apiLevel_未赋值导致ubDb未正确计算
     {"BatchMatMulV3_950_test_bl1fullload_1",
@@ -814,7 +814,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      131089UL,
-     "32 64 16 3680 64 16 96 128 256 32 3680 1 1 1 1 0 0 33686529 0 128 1 0 47 0 "},
+     "32 64 16 3680 64 16 96 128 256 32 3680 1 1 1 1 0 0 33686529 0 128 1 0 47 1 "},
     {"BatchMatMulV3_950_test_iterbatch_basicapi_fp32_01",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":false,"adj_x2":false, "offset_x":0, "enable_hf32":true},
@@ -970,7 +970,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      833UL,
-     "1 4 976 2400 8 8 8 256 64 1 0 "},
+     "1 4 976 2400 8 8 8 256 64 1 0 1 "},
     {"BatchMatMulV3_950_test_streamk_basicapi_01",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":true,"adj_x2":true, "offset_x":0, "enable_hf32":true},
@@ -996,7 +996,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2101329UL,
-     "32 133 204 217211 144 208 128 144 208 32 13576 1 1 1 1 0 0 16843265 0 144 1 0 2 0 "},
+     "32 133 204 217211 144 208 128 144 208 32 13576 1 1 1 1 0 0 16843265 0 144 1 0 2 1 "},
     {"BatchMatMulV3_950_test_swat_1",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":false, "offset_x":0, "enable_hf32":1},
@@ -1022,7 +1022,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      17UL,
-     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 0 1804 0 "},
+     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 0 1804 1 "},
     {"BatchMatMulV3_950_test_swat_2",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":1},
@@ -1048,7 +1048,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65UL,
-     "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 0 21 0 "},
+     "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 0 21 1 "},
     // {
     //   "BatchMatMulV3_950_test_basiciterbatch_02", "BatchMatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
@@ -2001,7 +2001,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     string case_name = "BatchMatMulV3TilingRuntime_950_transpose_non_contiguous_cases1";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData(
-        "32 196 196 128 208 128 128 208 128 64 128 1 1 1 1 0 0 33686528 0 208 1 0 16 0 ", case_name, tiling_key);
+        "32 196 196 128 208 128 128 208 128 64 128 1 1 1 1 0 0 33686528 0 208 1 0 16 1 ", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, 2UL);
     ASSERT_EQ(block_dim, 32);

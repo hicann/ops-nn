@@ -27,8 +27,14 @@ template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class A
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_>>> {
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
+                                   DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;

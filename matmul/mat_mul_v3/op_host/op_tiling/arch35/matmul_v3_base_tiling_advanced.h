@@ -384,6 +384,7 @@ protected:
     {
         // A全载和B全载基础API当前只支持单边batch, 后续放开后不能再用batchC
         tilingData.batchDimAll = batchInfo_->batchC;
+        tilingData.batchX3 = args_.batchX3;
         return GetTilingDataProcess(tilingData.matMulTilingData);
     };
 
@@ -470,8 +471,9 @@ protected:
         mergebatchTilingBasicData.baseK = runInfo_.baseK;
         mergebatchTilingBasicData.kL1 = runInfo_.stepKa * runInfo_.baseK;
         mergebatchTilingBasicData.isHf32 = args_.isHf32;
-        mergebatchTilingBasicData.l2CacheDisable = SetDisableL2cache(args_.mValue, mergebatchTilingBasicData.kL1,
-                                                                     mergebatchTilingBasicData.kL1, args_.nValue);
+        mergebatchTilingBasicData.batchX3 = args_.batchX3;
+        mergebatchTilingBasicData.l2CacheDisable =
+            SetDisableL2cache(args_.mValue, mergebatchTilingBasicData.kL1, mergebatchTilingBasicData.kL1, args_.nValue);
         return ge::GRAPH_SUCCESS;
     };
 

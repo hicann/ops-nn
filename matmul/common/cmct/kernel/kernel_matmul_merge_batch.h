@@ -15,7 +15,6 @@
 
 #pragma once
 
-#define ASCENDC_CUBE_ONLY
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -51,6 +50,11 @@ public:
 
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
+    const static int16_t AIV_SYNC_AIC_FLAG = 5;
+    const static int16_t AIC_SYNC_AIV_FLAG = 8;
+    const static int16_t FLAG_ID_MAX = 16;
+    const static int16_t COUNT_ID_MAX = 15;
+    const static int16_t COUNT_FLAG = 3;
     // schedulerOp
     using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
         ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
@@ -173,25 +177,109 @@ public:
         return params;
     }
 
-    __aicore__ inline void operator()(Params const& params)
+    __aicore__ inline void ApplyCacheHint(BlockSchedulerOp& bs)
     {
-        // Instantiate mmadOp
-        BlockMmadOp blockMmadOp;
-        // BlockEpilogue epilogueOp;
-        // Get blockIdx 这里是硬件获得的blockidx
-        int64_t curBlockIdx = AscendC::GetBlockIdx();
-        // Get BlockNum 这里是rts获得的核数
-        int64_t blockNum = AscendC::GetBlockNum();
-        // Init
-        Init(params);
-        BlockSchedulerOp bs(params.problemShape, blockNum, params.schParams);
         if (bs.GetBL2CacheDisable()) {
             bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
         }
         if (bs.GetAL2CacheDisable()) {
             aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
         }
-        // batch轴分成多少份
+    }
+
+    __aicore__ inline void WaitAivDone(int64_t count, bool enableCVSync)
+    {
+        if (enableCVSync) {
+            int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
+            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
+            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
+        }
+    }
+
+    __aicore__ inline void SetHf32Mode(BlockSchedulerOp& bs, bool enable)
+    {
+        if ASCEND_IS_AIC {
+            if (bs.GetHf32Flag()) {
+                AscendC::SetHF32Mode(enable ? 1 : 0);
+                if (enable) {
+                    AscendC::SetHF32TransMode(1);
+                }
+            }
+        }
+    }
+
+    template <class BlockMmadOp_, class BlockEpilogueOp_>
+    __aicore__ inline void RunTiles(BlockMmadOp_& blockMmadOp, BlockEpilogueOp_& epilogueOp, BlockSchedulerOp& bs,
+        int64_t curBlockIdx, int64_t blockNum, int64_t tileNum)
+    {
+        constexpr bool enableFusion = BlockMmadOp::DispatchPolicy::enableAdd || BlockMmadOp::DispatchPolicy::enableMul;
+        int64_t count = 0;
+        bool enableCVSync = false;
+        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
+            auto blockShape = bs.GetBlockShape(tileIdx);
+            auto blockCoord = bs.GetBlockCoord(tileIdx);
+            auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_);
+            int64_t offsetA = Get<0>(blockOffset);
+            int64_t offsetB = Get<1>(blockOffset);
+            int64_t offsetC = Get<2>(blockOffset);
+            if ASCEND_IS_AIC {
+                if constexpr (enableFusion) {
+                    if (enableCVSync) {
+                        int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
+                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
+                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
+                    }
+                }
+                blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], Get<3>(blockShape));
+                if constexpr (enableFusion) {
+                    enableCVSync = true;
+                    count++;
+                    int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
+                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId);
+                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId + FLAG_ID_MAX);
+                }
+            }
+            if constexpr (enableFusion) {
+                if ASCEND_IS_AIV {
+                    count++;
+                    int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
+                    auto prefetchState = epilogueOp.PrefetchX3(offsetC, Get<3>(blockShape));
+                    AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE2>(AIC_SYNC_AIV_FLAG + countId);
+                    epilogueOp.Run(offsetC, Get<3>(blockShape), prefetchState);
+                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG + countId);
+                }
+            }
+        }
+        if ASCEND_IS_AIC {
+            if constexpr (enableFusion) {
+                WaitAivDone(count, enableCVSync);
+            }
+        }
+    }
+
+    __aicore__ inline void operator()(Params const& params)
+    {
+        // Instantiate mmadOp
+        BlockMmadOp blockMmadOp;
+        BlockEpilogue epilogueOp;
+        // Get hardware block index.
+        int64_t curBlockIdx = AscendC::GetBlockIdx();
+        // Get runtime block count.
+        int64_t blockNum = AscendC::GetBlockNum();
+        // Init
+        Init(params);
+        constexpr bool enableFusion = BlockMmadOp::DispatchPolicy::enableAdd || BlockMmadOp::DispatchPolicy::enableMul;
+        if constexpr (!enableFusion) {
+            if ASCEND_IS_AIV {
+                return;
+            }
+        }
+        if ASCEND_IS_AIV {
+            curBlockIdx /= AscendC::GetTaskRation();
+        }
+        BlockSchedulerOp bs(params.problemShape, blockNum, params.schParams);
+        ApplyCacheHint(bs);
+        // Split batch axis.
         int64_t tileNum = bs.GetTileNum();
         TupleShape tileL1 = bs.GetTileL1Shape();
         TupleShape tileL0 = bs.GetTileL0Shape();
@@ -201,27 +289,14 @@ public:
             return;
         }
         blockMmadOp.Init(problemShape_, iterBatchTuple, tileL1, tileL0);
-        if (bs.GetHf32Flag()) {
-            AscendC::SetHF32Mode(1);
-            AscendC::SetHF32TransMode(1);
+        if constexpr (enableFusion) {
+            if ASCEND_IS_AIV {
+                epilogueOp.Init(params.epilogueParams, problemShape_);
+            }
         }
-        // Process tiles in ping-pong mode
-        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
-            // b m n k的大小和坐标
-            // m和n不切分，k有可能切分
-            auto blockShape = bs.GetBlockShape(tileIdx);
-            auto blockCoord = bs.GetBlockCoord(tileIdx);
-            auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_);
-            // calculate block-level offset
-            int64_t offsetA = Get<0>(blockOffset); // index 0 of blockOffset
-            int64_t offsetB = Get<1>(blockOffset); // index 1 of blockOffset
-            int64_t offsetC = Get<2>(blockOffset); // index 2 of blockOffset
-            // index 3 of blockShape is batchL0
-            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], Get<3>(blockShape));
-        }
-        if (bs.GetHf32Flag()) {
-            AscendC::SetHF32Mode(0);
-        }
+        SetHf32Mode(bs, true);
+        RunTiles(blockMmadOp, epilogueOp, bs, curBlockIdx, blockNum, tileNum);
+        SetHf32Mode(bs, false);
     }
 };
 

@@ -134,7 +134,7 @@ struct MatMulV3BasicTilingData {
 struct BatchMatMulV3BasicTilingData {
     MatMulV3BasicTilingData matMulTilingData;
     uint32_t batchDimAll = 1;
-    uint32_t reserved = 0;
+    uint32_t batchX3 = 1;
 };
 #pragma pack(pop)
 
@@ -185,6 +185,7 @@ struct BatchMatMulV3MergeBatchBasicTilingData {
     uint32_t baseK = 16;
     uint32_t isHf32 = 0;
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
+    uint32_t batchX3 = 1;
 };
 #pragma pack(pop)
 

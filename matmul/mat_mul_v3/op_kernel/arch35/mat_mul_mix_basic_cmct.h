@@ -41,16 +41,14 @@ struct FusionOpSelector<0, OutType> {
     using type = Block::DefaultFusion<OutType, OutType>;
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-          uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
-__aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR x3GM,
-                                                    const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT,
+          class B_LAYOUT, class C_LAYOUT, uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
+__aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
+    GM_ADDR yGM, GM_ADDR x3GM, const MatMulV3BasicTilingData& tilingData, int64_t batch = 0, int64_t batchX3 = 1)
 {
-    // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
     using L0TileShape = AscendC::Shape<_0, _0, _0>;
 
-    // 定义矩阵的类型和布局
     using AType = A_TYPE;
     using BType = B_TYPE;
     using BiasType = BIAS_TYPE;
@@ -60,30 +58,27 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
     using LayoutB = B_LAYOUT;
     using LayoutC = C_LAYOUT;
 
-    // 定义scheduler类型 来自block_scheduler_policy.h
     using BlockScheduler = BuiltInAswtScheduler<FULL_LOAD_MODE>;
-
-    // 定义MMAD类型
     using DispatchPolicy = MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE, FUSED_OP_TYPE>;
     using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
                                               L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
-
-    // 定义Fusion类型
     using FusionOp = typename FusionOpSelector<FUSED_OP_TYPE, OutType>::type;
-
-    // 定义BlockEpilogue类型
     using BlockEpilogue = Block::BlockEpilogueElementwise<L0TileShape, OutType, OutType, FusionOp>;
-
-    // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
-
-    // 定义Kernel类型
     using MatmulKernel = Kernel::KernelMatmulMixWithoutQue<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-                     {aGM, bGM, yGM, biasGM},                           // gm addr
-                     {yGM, {x3GM}},                                     // epilogue and fusion args
-                     {&tilingData}};
+    using EpilogueParams = typename BlockEpilogue::Params;
+
+    EpilogueParams epilogueParams;
+    epilogueParams.outGmAddr = yGM;
+    epilogueParams.fusionParams.inputGmAddr = x3GM;
+    epilogueParams.fusionParams.x3BatchBroadcast = (x3GM != nullptr && batch > 1 && batchX3 == 1);
+    epilogueParams.fusionParams.x3M = tilingData.m;
+    Params params = {
+        {tilingData.m, tilingData.n, tilingData.k, batch},
+        {aGM, bGM, yGM, biasGM},
+        epilogueParams,
+        {&tilingData}};
 
     MatmulKernel mm;
     mm(params);
