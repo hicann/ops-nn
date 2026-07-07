@@ -69,8 +69,12 @@ bool ConvBackpropFusionBasePass::GetNodeAttrs(const GNode& node)
         node.GetAttr("data_format", format) != GRAPH_SUCCESS,
         OP_LOGE(GetNodeType().GetString(), "Get attrs from %s failed", name.GetString()), return false);
     
-    if(node.GetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum) != GRAPH_SUCCESS){
+    if (node.GetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum) != GRAPH_SUCCESS) {
         OP_LOGD(GetNodeType().GetString(), "Get _op_impl_mode_enum attrs from %s failed, set default value", name.GetString());
+    }
+
+    if (node.GetAttr("from_depthwise", convBpAttr.from_depthwise) != GRAPH_SUCCESS) {
+        OP_LOGD(GetNodeType().GetString(), "Get from_depthwise attrs from %s failed, set default value", name.GetString());
     }
 
     convBpAttr.dataFormat = std::string(format.GetString());
