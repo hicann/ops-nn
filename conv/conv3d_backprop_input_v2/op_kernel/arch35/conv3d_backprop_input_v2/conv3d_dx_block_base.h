@@ -33,12 +33,6 @@
 #endif
 
 namespace AscendC {
-constexpr uint8_t LOOP_DNM = 1;
-constexpr uint8_t LOOP_DMN = 2;
-constexpr uint8_t LOOP_MDN = 3;
-static constexpr uint8_t SYNC_MODE2 = 2;
-static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
-
 using Conv3dConfig = typename Convolution3DBackprop::Conv3dConfig;
 
 __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetFormat(int format)
@@ -73,24 +67,6 @@ template <typename filterType, int filterFormat, typename dedyType, int dedyForm
           int scaleFormat = FORMAT_MAX>
 class Conv3dDxBase {
 protected:
-    uint8_t loopDirect_ = LOOP_DMN;
-    uint64_t mCnt_ = 0;
-    uint64_t mCoreTail_ = 0;
-    uint64_t nCnt_ = 0;
-    uint64_t nTailCnt_ = 0;
-    uint64_t nCoreTail_ = 0;
-    uint64_t nGroupCoreTail_ = 0;
-    uint64_t dinCnt_ = 0;
-    uint64_t dinCoreTail_ = 0;
-    uint64_t coutGroupTail_ = 0;
-    uint64_t totalCnt_ = 0;
-    uint64_t tailCnt_ = 0;
-    uint64_t calRound_ = 0;
-    uint64_t usedCoreNum_ = 0;
-    uint64_t preOffsetB_ = 0;
-    uint8_t preEnableFullLoad = 0;
-    uint8_t useUbAccumForSplitK_ = 0;
-
     static constexpr Convolution3DBackprop::CubeFormat filterCubeFormat = GetFormat(filterFormat);
     static constexpr Convolution3DBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr Convolution3DBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
@@ -279,7 +255,7 @@ protected:
 
     __aicore__ inline void CalcBiasFullLoadFlag()
     {
-        if (hasBias_ && (offsetBias_ != preOffsetBias_)) {
+        if (unlikely(hasBias_ && (offsetBias_ != preOffsetBias_))) {
             // bias按照group全载
             fullLoadBiasFlag_ = true;
         }

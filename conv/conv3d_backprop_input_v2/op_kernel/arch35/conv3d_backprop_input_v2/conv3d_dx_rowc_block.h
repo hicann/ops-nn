@@ -18,6 +18,12 @@
 #include "conv3d_dx_block_base.h"
 
 namespace AscendC {
+constexpr uint8_t LOOP_DNM = 1;
+constexpr uint8_t LOOP_DMN = 2;
+constexpr uint8_t LOOP_MDN = 3;
+static constexpr uint8_t SYNC_MODE2 = 2;
+static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
+
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
           typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
           uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
@@ -92,6 +98,24 @@ public:
     }
 
 protected:
+    uint8_t loopDirect_ = LOOP_DMN;
+    uint64_t mCnt_ = 0;
+    uint64_t mCoreTail_ = 0;
+    uint64_t nCnt_ = 0;
+    uint64_t nTailCnt_ = 0;
+    uint64_t nCoreTail_ = 0;
+    uint64_t nGroupCoreTail_ = 0;
+    uint64_t dinCnt_ = 0;
+    uint64_t dinCoreTail_ = 0;
+    uint64_t coutGroupTail_ = 0;
+    uint64_t totalCnt_ = 0;
+    uint64_t tailCnt_ = 0;
+    uint64_t calRound_ = 0;
+    uint64_t usedCoreNum_ = 0;
+    uint64_t preOffsetB_ = 0;
+    uint8_t preEnableFullLoad = 0;
+    uint8_t useUbAccumForSplitK_ = 0;
+
     __aicore__ inline void CrossCoreWaitVecTrans()
     {
         if (this->enableVecTrans_) {
