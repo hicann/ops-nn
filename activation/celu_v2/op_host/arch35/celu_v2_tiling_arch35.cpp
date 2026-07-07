@@ -30,6 +30,15 @@ constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr uint32_t WS_SYS_SIZE = 512U;
 
+// UB tile budgeting for the numerically-stable expm1 kernel (v2). The kernel keeps
+// 5 fp32 scratch buffers live at once (u, e, ln(e), Kahan, naive-expm1), so an fp32
+// input needs 5 logical buffers per tile. A 2-byte input (fp16/bf16) needs 2 more
+// for the half-width in/out queues, i.e. 7. Inputs of at most HALF_PRECISION_MAX_BYTES
+// take the half path.
+constexpr uint64_t HALF_PRECISION_MAX_BYTES = 2ULL;
+constexpr uint32_t UB_LOGICAL_BUFFER_NUM_HALF = 7U;
+constexpr uint32_t UB_LOGICAL_BUFFER_NUM_FP32 = 5U;
+
 struct CeluV2CompileInfo {};
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
@@ -121,7 +130,10 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
     uint64_t inputBytes = static_cast<uint64_t>(typeLength);
     uint64_t inputLengthBytes = static_cast<uint64_t>(totalIdx) * inputBytes;
 
-    uint32_t ubDataNumber = (inputBytes <= 2ULL) ? 4U : 3U;
+    // Logical UB buffers per tile: half-width types need the 2 extra in/out queues
+    // (see HALF_PRECISION_MAX_BYTES / UB_LOGICAL_BUFFER_NUM_* above for the rationale).
+    uint32_t ubDataNumber =
+        (inputBytes <= HALF_PRECISION_MAX_BYTES) ? UB_LOGICAL_BUFFER_NUM_HALF : UB_LOGICAL_BUFFER_NUM_FP32;
     uint64_t tmp = (ubSize / BLOCK_SIZE / BUFFER_NUM);
     uint32_t tileBlockNum = 1U;
     if (tmp > 0) {

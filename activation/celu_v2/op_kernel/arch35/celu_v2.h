@@ -40,12 +40,19 @@ private:
     __aicore__ inline void CopyIn(int32_t progress);
     __aicore__ inline void CopyOut(int32_t progress);
     __aicore__ inline void Compute(int32_t progress);
+    // Compute() is split into these sequential stages purely for readability; the
+    // emitted instruction stream (and every PipeBarrier) is identical to the inline form.
+    __aicore__ inline void CastToFloat(LocalTensor<T> xLocal, LocalTensor<float> tmpTensor2);
+    __aicore__ inline void ComputeExpm1NegBranch(LocalTensor<float> tmpTensor1, LocalTensor<float> tmpTensor2,
+        LocalTensor<float> tmpTensor3, LocalTensor<float> tmpTensor4, LocalTensor<float> tmpTensor5);
+    __aicore__ inline void CombineBranches(LocalTensor<float> tmpTensor1, LocalTensor<float> tmpTensor2);
+    __aicore__ inline void CastToOutput(LocalTensor<float> tmpTensor1, LocalTensor<T> yLocal);
 
 private:
     AscendC::TPipe pipe;
     AscendC::TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueX;
     AscendC::TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueueY;
-    AscendC::TBuf<QuePosition::VECCALC> tmpBuffer1, tmpBuffer2;
+    AscendC::TBuf<QuePosition::VECCALC> tmpBuffer1, tmpBuffer2, tmpBuffer3, tmpBuffer4, tmpBuffer5;
     AscendC::GlobalTensor<T> inputGMX;
     AscendC::GlobalTensor<T> outputGMY;
 
@@ -84,6 +91,13 @@ __aicore__ inline void CeluV2<T>::Init(GM_ADDR x, GM_ADDR y, const CeluV2TilingD
     pipe.InitBuffer(outputQueueY, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(tmpBuffer1, this->tileDataNum * sizeof(float));
     pipe.InitBuffer(tmpBuffer2, this->tileDataNum * sizeof(float));
+    // Extra scratch buffers for the numerically-stable expm1 computation on the
+    // negative branch. v2 keeps both the Kahan result and the naive (e-1) result
+    // live at once so it can fall back to naive where Kahan is non-finite, so it
+    // needs 5 fp32 scratch buffers (u, e, ln(e), kahan, naive-expm1).
+    pipe.InitBuffer(tmpBuffer3, this->tileDataNum * sizeof(float));
+    pipe.InitBuffer(tmpBuffer4, this->tileDataNum * sizeof(float));
+    pipe.InitBuffer(tmpBuffer5, this->tileDataNum * sizeof(float));
 }
 
 template <typename T>
@@ -102,13 +116,10 @@ __aicore__ inline void CeluV2<T>::CopyOut(int32_t progress)
     outputQueueY.FreeTensor(yLocal);
 }
 
+// x (T) -> fp32 working copy in tmpTensor2.
 template <typename T>
-__aicore__ inline void CeluV2<T>::Compute(int32_t progress)
+__aicore__ inline void CeluV2<T>::CastToFloat(LocalTensor<T> xLocal, LocalTensor<float> tmpTensor2)
 {
-    AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
-    AscendC::LocalTensor<T> yLocal = outputQueueY.AllocTensor<T>();
-    LocalTensor<float> tmpTensor1 = tmpBuffer1.Get<float>();
-    LocalTensor<float> tmpTensor2 = tmpBuffer2.Get<float>();
     if constexpr (!std::is_same_v<T, float>) {
         AscendC::Cast(tmpTensor2, xLocal, RoundMode::CAST_NONE, this->tileDataNum);
         AscendC::PipeBarrier<PIPE_V>();
@@ -116,23 +127,100 @@ __aicore__ inline void CeluV2<T>::Compute(int32_t progress)
         AscendC::Adds(tmpTensor2, xLocal, 0.0f, this->tileDataNum);
         AscendC::PipeBarrier<PIPE_V>();
     }
-    AscendC::Muls(tmpTensor1, tmpTensor2, invAlpha, this->tileDataNum);
+}
+
+// Negative branch: tmpTensor1 = alpha * expm1(u), u = x/alpha (from tmpTensor2).
+// tmpTensor3/4/5 are scratch. See guard rationale below.
+template <typename T>
+__aicore__ inline void CeluV2<T>::ComputeExpm1NegBranch(LocalTensor<float> tmpTensor1, LocalTensor<float> tmpTensor2,
+    LocalTensor<float> tmpTensor3, LocalTensor<float> tmpTensor4, LocalTensor<float> tmpTensor5)
+{
+    // ---- numerically-stable negative branch: alpha * expm1(u), u = x/alpha ----
+    // Two regimes must both be stable:
+    //   * |u| small (large alpha): naive exp(u)-1 suffers catastrophic
+    //     cancellation. Kahan's identity  expm1(u) = u*(e-1)/ln(e), e=exp(u),
+    //     is accurate because the rounding errors of (e-1) and ln(e) cancel.
+    //   * |u| large (small alpha): e over/under-flows, so the Kahan expression
+    //     degenerates: e=inf -> inf/inf = NaN (v1 bug: leaked through Mins and
+    //     poisoned the positive branch); e=0 -> -0, silently wrong (true -> -1).
+    //     The naive result e-1 is exactly correct in both tails (-> +inf or -1).
+    // Kahan is only *needed* where |u| is small; there e in (0.6,1.65) is always
+    // finite, so a single guard on |u| picks the right, always-finite branch:
+    //     |u| <  U_KAHAN  -> Kahan (kills cancellation)
+    //     |u| >= U_KAHAN  -> naive e-1 (no cancellation; correct under over/underflow)
+    // An additional inner guard handles the tiniest |u| (u below fp32 eps): there
+    // e rounds to exactly 1 so Kahan is 0/0 = NaN; expm1(u) ~= u is used instead.
+    constexpr float U_KAHAN = 0.5f;
+    AscendC::Muls(tmpTensor1, tmpTensor2, invAlpha, this->tileDataNum);  // t1 = u = x/alpha
     AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Exp(tmpTensor1, tmpTensor1, this->tileDataNum);
+    AscendC::Exp(tmpTensor3, tmpTensor1, this->tileDataNum);             // t3 = e = exp(u)
     AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Adds(tmpTensor1, tmpTensor1, -1.0f, this->tileDataNum);
-    AscendC::Muls(tmpTensor1, tmpTensor1, alpha, this->tileDataNum);
+    AscendC::Adds(tmpTensor5, tmpTensor3, -1.0f, this->tileDataNum);     // t5 = e - 1  (naive expm1, always finite-correct)
+    AscendC::Adds(tmpTensor4, tmpTensor3, -1.0f, this->tileDataNum);     // t4 = e - 1  (working copy for Kahan)
+    AscendC::Ln(tmpTensor3, tmpTensor3, this->tileDataNum);              // t3 = ln(e)
     AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Mins(tmpTensor1, tmpTensor1, 0.0f, this->tileDataNum);
-    AscendC::Maxs(tmpTensor2, tmpTensor2, 0.0f, this->tileDataNum);
+    AscendC::Mul(tmpTensor4, tmpTensor1, tmpTensor4, this->tileDataNum); // t4 = u*(e-1)
     AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Add(tmpTensor1, tmpTensor2, tmpTensor1, this->tileDataNum);
+    AscendC::Div(tmpTensor4, tmpTensor4, tmpTensor3, this->tileDataNum); // t4 = u*(e-1)/ln(e) ~= expm1(u)  (Kahan; may be nan/-0 in tails)
+    AscendC::PipeBarrier<PIPE_V>();
+    // Inner guard (tiny |u|): when e rounds to exactly 1, e-1==0 and ln(e)==0, so
+    // the Kahan Div is 0/0 = NaN. There expm1(u) ~= u, so replace those lanes with
+    // u. t3 still holds ln(e) here; build mask (ln(e)==0) and pick u vs Kahan.
+    AscendC::CompareScalar(tmpTensor3.ReinterpretCast<uint8_t>(), tmpTensor3, 0.0f,
+                           AscendC::CMPMODE::EQ, this->tileDataNum);     // mask = (ln(e) == 0)
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(tmpTensor4, tmpTensor3.ReinterpretCast<uint8_t>(), tmpTensor1, tmpTensor4,
+                    AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, this->tileDataNum); // t4 = (ln(e)==0) ? u : Kahan
+    AscendC::PipeBarrier<PIPE_V>();
+    // Outer guard: mask = (|u| < U_KAHAN). Reuse t3 for |u|; store bit-mask in t3.
+    AscendC::Abs(tmpTensor3, tmpTensor1, this->tileDataNum);             // t3 = |u|
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::CompareScalar(tmpTensor3.ReinterpretCast<uint8_t>(), tmpTensor3, U_KAHAN,
+                           AscendC::CMPMODE::LT, this->tileDataNum);     // mask = (|u| < U_KAHAN)
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(tmpTensor1, tmpTensor3.ReinterpretCast<uint8_t>(), tmpTensor4, tmpTensor5,
+                    AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, this->tileDataNum); // t1 = |u|<thr ? Kahan(guarded) : naive
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Muls(tmpTensor1, tmpTensor1, alpha, this->tileDataNum);     // t1 = alpha*expm1(u)
+}
+
+// celu = max(0, x) + min(0, alpha*expm1(u)); result stays in tmpTensor1.
+template <typename T>
+__aicore__ inline void CeluV2<T>::CombineBranches(LocalTensor<float> tmpTensor1, LocalTensor<float> tmpTensor2)
+{
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Mins(tmpTensor1, tmpTensor1, 0.0f, this->tileDataNum);      // negative branch = min(0, alpha*expm1(u))
+    AscendC::Maxs(tmpTensor2, tmpTensor2, 0.0f, this->tileDataNum);      // positive branch = max(0, x)
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Add(tmpTensor1, tmpTensor2, tmpTensor1, this->tileDataNum); // celu = max(0,x) + min(0, alpha*expm1(u))
+}
+
+// fp32 result (tmpTensor1) -> yLocal (T).
+template <typename T>
+__aicore__ inline void CeluV2<T>::CastToOutput(LocalTensor<float> tmpTensor1, LocalTensor<T> yLocal)
+{
     if constexpr (!std::is_same_v<T, float>) {
         AscendC::PipeBarrier<PIPE_V>();
         AscendC::Cast(yLocal, tmpTensor1, RoundMode::CAST_ROUND, this->tileDataNum);
     } else {
         AscendC::Adds(yLocal, tmpTensor1, 0.0f, this->tileDataNum);
     }
+}
+
+template <typename T>
+__aicore__ inline void CeluV2<T>::Compute(int32_t progress)
+{
+    AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
+    AscendC::LocalTensor<T> yLocal = outputQueueY.AllocTensor<T>();
+    LocalTensor<float> tmpTensor1 = tmpBuffer1.Get<float>();
+    LocalTensor<float> tmpTensor2 = tmpBuffer2.Get<float>();
+    LocalTensor<float> tmpTensor3 = tmpBuffer3.Get<float>();
+    LocalTensor<float> tmpTensor4 = tmpBuffer4.Get<float>();
+    LocalTensor<float> tmpTensor5 = tmpBuffer5.Get<float>();
+    CastToFloat(xLocal, tmpTensor2);
+    ComputeExpm1NegBranch(tmpTensor1, tmpTensor2, tmpTensor3, tmpTensor4, tmpTensor5);
+    CombineBranches(tmpTensor1, tmpTensor2);
+    CastToOutput(tmpTensor1, yLocal);
     outputQueueY.EnQue<T>(yLocal);
     inputQueueX.FreeTensor(xLocal);
 }
