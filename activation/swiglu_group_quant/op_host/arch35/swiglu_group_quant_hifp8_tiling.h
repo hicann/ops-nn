@@ -43,6 +43,7 @@ private:
     ge::graphStatus CheckOutputDtype();
     ge::graphStatus CheckWeightInfo();
     ge::graphStatus CheckGroupIndexInfo();
+    ge::graphStatus CheckScaleInfo();
     ge::graphStatus CheckOutputInfo();
     ge::graphStatus CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape);
     ge::graphStatus CheckYScaleShape();
@@ -70,6 +71,7 @@ private:
     int64_t tokensPerCore_ = 0;
     int64_t tileTokens_ = 0;
     int64_t tileLength_ = 0;
+    int64_t quantMode_ = 3;
 };
 
 }  // namespace optiling

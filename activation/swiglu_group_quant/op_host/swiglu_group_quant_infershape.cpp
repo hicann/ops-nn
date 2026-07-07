@@ -35,7 +35,8 @@ constexpr int64_t PER_BLOCK_FP16 = 128;
 constexpr int64_t PER_MX_FP16 = 32;
 constexpr int64_t BLOCK_QUANT_MODE = 0;
 constexpr int64_t MX_QUANT_MODE = 1;
-constexpr int64_t HIFP8_QUANT_MODE = 3;
+constexpr int64_t STATIC_HIFP8_QUANT_MODE = 2;
+constexpr int64_t DYNAMIC_HIFP8_QUANT_MODE = 3;
 constexpr int64_t MX_SCALE_ALIGN_FACTOR = 2;
 
 static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
@@ -89,10 +90,11 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
 
     const int64_t* quantModeAttr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     bool isMxQuant = quantModeAttr != nullptr && *quantModeAttr == MX_QUANT_MODE;
-    bool isHif8Quant = quantModeAttr != nullptr && *quantModeAttr == HIFP8_QUANT_MODE;
+    bool isDynamicHif8Quant = quantModeAttr != nullptr && *quantModeAttr == DYNAMIC_HIFP8_QUANT_MODE;
+    bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
     const int64_t* dstTypePtr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
-    ge::DataType dstType = isHif8Quant ? ge::DT_HIFLOAT8 :
+    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ? ge::DT_HIFLOAT8 :
         (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
     bool isMxFp4Quant = dstType == ge::DT_FLOAT4_E1M2 || dstType == ge::DT_FLOAT4_E2M1;
 
@@ -108,7 +110,9 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     yOriginShape->SetDim(splitDim, swigluLastDim);
 
     yScaleShape->SetDimNum(0);
-    if (isHif8Quant) {
+    if (isStaticHif8Quant) {
+        yScaleShape->AppendDim(0);
+    } else if (isDynamicHif8Quant) {
         const gert::Shape* groupIndexShape = context->GetOptionalInputShape(INPUT_IDX_GROUP_INDEX);
         yScaleShape->AppendDim(groupIndexShape == nullptr ? 1 : groupIndexShape->GetDim(0));
     } else {
@@ -121,7 +125,7 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
         tailDim = (tailDim + MX_SCALE_ALIGN_FACTOR - 1) / MX_SCALE_ALIGN_FACTOR;
         yScaleShape->AppendDim(tailDim);
         yScaleShape->AppendDim(MX_SCALE_ALIGN_FACTOR);
-    } else if (!isHif8Quant) {
+    } else if (!isDynamicHif8Quant && !isStaticHif8Quant) {
         int64_t tailDim = (swigluLastDim + PER_BLOCK_FP16 - 1) / PER_BLOCK_FP16;
         yScaleShape->AppendDim(tailDim);
     }
@@ -138,10 +142,11 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
 
     const int64_t* quantModeAttr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     bool isMxQuant = quantModeAttr != nullptr && *quantModeAttr == MX_QUANT_MODE;
-    bool isHif8Quant = quantModeAttr != nullptr && *quantModeAttr == HIFP8_QUANT_MODE;
+    bool isDynamicHif8Quant = quantModeAttr != nullptr && *quantModeAttr == DYNAMIC_HIFP8_QUANT_MODE;
+    bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
     const int64_t* dstTypePtr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
-    ge::DataType dstType = isHif8Quant ? ge::DT_HIFLOAT8 :
+    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ? ge::DT_HIFLOAT8 :
         (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
     OP_CHECK_IF(std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), dstType) ==
                     Y_SUPPORT_DTYPE_SET.end(),
@@ -152,7 +157,7 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(OUTPUT_IDX_Y, dstType);
 
-    context->SetOutputDataType(OUTPUT_IDX_Y_SCALE, isMxQuant && !isHif8Quant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT);
+    context->SetOutputDataType(OUTPUT_IDX_Y_SCALE, isMxQuant && !isDynamicHif8Quant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT);
 
     auto xDtype = context->GetInputDataType(INPUT_IDX_X);
     context->SetOutputDataType(OUTPUT_IDX_Y_ORIGIN, xDtype);

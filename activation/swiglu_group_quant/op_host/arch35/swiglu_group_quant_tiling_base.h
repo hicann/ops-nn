@@ -96,6 +96,8 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(SwigluGroupQuant_4000, SwigluGroupQuantHifp8TilingData)
 
+REGISTER_TILING_DATA_CLASS(SwigluGroupQuant_4100, SwigluGroupQuantHifp8TilingData)
+
 }  // namespace optiling
 
 #endif  // SWIGLU_GROUP_QUANT_TILING_BASE_H

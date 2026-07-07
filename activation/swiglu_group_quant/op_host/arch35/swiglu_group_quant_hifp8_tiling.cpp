@@ -27,12 +27,14 @@ constexpr int64_t UB_RESERVE = 1024;
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t SWI_FACTOR = 2;
 constexpr int64_t SIZE_OF_FLOAT = 4;
-constexpr int64_t UB_FACTOR = 7;
+constexpr int64_t UB_FACTOR_DYNAMIC = 7;
+constexpr int64_t UB_FACTOR_STATIC = 6;
 
 constexpr float CLAMP_LIMIT_DEFAULT = -1.0f;
 constexpr float DST_TYPE_MAX_FINITE_DEFAULT = 15.0f;
 
 constexpr int64_t QUANT_MODE_DYNAMIC = 3;
+constexpr int64_t QUANT_MODE_STATIC = 2;
 
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
 constexpr size_t ATTR_INDEX_CLAMP_LIMIT = 4;
@@ -42,11 +44,13 @@ constexpr size_t ATTR_INDEX_OUTPUT_ORIGIN = 6;
 constexpr size_t INPUT_INDEX_X = 0;
 constexpr size_t INPUT_INDEX_WEIGHT = 1;
 constexpr size_t INPUT_INDEX_GROUP_INDEX = 2;
+constexpr size_t INPUT_INDEX_SCALE = 3;
 constexpr size_t OUTPUT_INDEX_Y = 0;
 constexpr size_t OUTPUT_INDEX_Y_SCALE = 1;
 constexpr size_t OUTPUT_INDEX_Y_ORIGIN = 2;
 
-constexpr int64_t HIFP8_TILING_KEY = 4000;
+constexpr int64_t DYNAMIC_HIFP8_TILING_KEY = 4000;
+constexpr int64_t STATIC_HIFP8_TILING_KEY = 4100;
 
 int64_t CeilDiv(int64_t x, int64_t y)
 {
@@ -88,6 +92,18 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckInputDtype()
             return ge::GRAPH_FAILED);
     }
 
+    if (quantMode_ == QUANT_MODE_STATIC) {
+        auto scaleDesc = context_->GetOptionalInputDesc(INPUT_INDEX_SCALE);
+        OP_CHECK_IF((scaleDesc == nullptr),
+            OP_LOGE(context_->GetNodeName(), "scale input is required for static quant mode 2."),
+            return ge::GRAPH_FAILED);
+        auto scaleDtype = scaleDesc->GetDataType();
+        OP_CHECK_IF((scaleDtype != ge::DT_FLOAT),
+            OP_LOGE(context_->GetNodeName(), "scale dtype only support fp32, got %d.",
+                      static_cast<int>(scaleDtype)),
+            return ge::GRAPH_FAILED);
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -99,11 +115,13 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputDtype()
                   static_cast<int>(yDtype)),
         return ge::GRAPH_FAILED);
 
-    auto yScaleDtype = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE)->GetDataType();
-    OP_CHECK_IF((yScaleDtype != ge::DT_FLOAT),
-        OP_LOGE(context_->GetNodeName(), "y_scale dtype must be fp32, got %d.",
-                  static_cast<int>(yScaleDtype)),
-        return ge::GRAPH_FAILED);
+    if (quantMode_ == QUANT_MODE_DYNAMIC) {
+        auto yScaleDtype = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE)->GetDataType();
+        OP_CHECK_IF((yScaleDtype != ge::DT_FLOAT),
+            OP_LOGE(context_->GetNodeName(), "y_scale dtype must be fp32, got %d.",
+                      static_cast<int>(yScaleDtype)),
+            return ge::GRAPH_FAILED);
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -115,10 +133,10 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetAttr()
 
     auto quantModePtr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     if (quantModePtr != nullptr) {
-        int64_t quantMode = *quantModePtr;
-        OP_CHECK_IF((quantMode != QUANT_MODE_DYNAMIC),
-            OP_LOGE(context_->GetNodeName(), "quant_mode must be %ld (Dynamic Quant), got %ld.",
-                      QUANT_MODE_DYNAMIC, quantMode),
+        quantMode_ = *quantModePtr;
+        OP_CHECK_IF((quantMode_ != QUANT_MODE_DYNAMIC && quantMode_ != QUANT_MODE_STATIC),
+            OP_LOGE(context_->GetNodeName(), "quant_mode must be %ld (Dynamic) or %ld (Static), got %ld.",
+                      QUANT_MODE_DYNAMIC, QUANT_MODE_STATIC, quantMode_),
             return ge::GRAPH_FAILED);
     }
 
@@ -172,6 +190,34 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckGroupIndexInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo()
+{
+    if (quantMode_ != QUANT_MODE_STATIC) {
+        return ge::GRAPH_SUCCESS;
+    }
+    auto scaleShape = context_->GetOptionalInputShape(INPUT_INDEX_SCALE);
+    OP_CHECK_IF((scaleShape == nullptr),
+        OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2."),
+        return ge::GRAPH_FAILED);
+    auto scaleStorageShape = scaleShape->GetStorageShape();
+    size_t scaleDimNum = scaleStorageShape.GetDimNum();
+    OP_CHECK_IF((scaleDimNum != 1),
+        OP_LOGE(context_->GetNodeName(), "scale must be 1D, got %zu dims.", scaleDimNum),
+        return ge::GRAPH_FAILED);
+    int64_t scaleSize = scaleStorageShape.GetDim(0);
+    if (isGroup_) {
+        OP_CHECK_IF((scaleSize != groupNum_),
+            OP_LOGE(context_->GetNodeName(), "scale size [%ld] must equal group_index size [%ld] when group_index is present.",
+                      scaleSize, groupNum_),
+            return ge::GRAPH_FAILED);
+    } else {
+        OP_CHECK_IF((scaleSize != 1),
+            OP_LOGE(context_->GetNodeName(), "scale size [%ld] must be 1 when group_index is not present.", scaleSize),
+            return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape)
 {
     auto yShape = context_->GetOutputShape(OUTPUT_INDEX_Y);
@@ -198,6 +244,9 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYShape(size_t xDimNum, const g
 
 ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYScaleShape()
 {
+    if (quantMode_ == QUANT_MODE_STATIC) {
+        return ge::GRAPH_SUCCESS;
+    }
     auto yScaleShape = context_->GetOutputShape(OUTPUT_INDEX_Y_SCALE);
     OP_CHECK_IF((yScaleShape == nullptr),
         OP_LOGE(context_->GetNodeName(), "y_scale shape is null."),
@@ -301,7 +350,8 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetShapeAttrsInfoInner()
 void SwigluGroupQuantHifp8Tiling::CalcTileTokens()
 {
     int64_t ubAvailable = static_cast<int64_t>(ubSize_) - UB_RESERVE;
-    int64_t ubPerToken = UB_FACTOR * dimH_ * SIZE_OF_FLOAT;
+    int64_t ubFactor = (quantMode_ == QUANT_MODE_STATIC) ? UB_FACTOR_STATIC : UB_FACTOR_DYNAMIC;
+    int64_t ubPerToken = ubFactor * dimH_ * SIZE_OF_FLOAT;
     if (hasWeight_) {
         ubPerToken += DB_BUFFER * SIZE_OF_FLOAT;
     }
@@ -354,7 +404,7 @@ void SwigluGroupQuantHifp8Tiling::SetTilingData()
 
 void SwigluGroupQuantHifp8Tiling::SetTilingKey()
 {
-    tilingKey_ = HIFP8_TILING_KEY;
+    tilingKey_ = (quantMode_ == QUANT_MODE_STATIC) ? STATIC_HIFP8_TILING_KEY : DYNAMIC_HIFP8_TILING_KEY;
     context_->SetTilingKey(tilingKey_);
 }
 
@@ -363,7 +413,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetWorkspaceSize()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
         workspaceSize_ = 0;
-        if (!isGroup_) {
+        if (!isGroup_ && quantMode_ != QUANT_MODE_STATIC) {
             workspaceSize_ += (usedCoreNum_ + 1) * SIZE_OF_FLOAT + BLOCK_SIZE;
         }
         return ge::GRAPH_SUCCESS;
@@ -371,7 +421,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetWorkspaceSize()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     workspaceSize_ = sysWorkspaceSize;
-    if (!isGroup_) {
+    if (!isGroup_ && quantMode_ != QUANT_MODE_STATIC) {
         workspaceSize_ += (usedCoreNum_ + 1) * SIZE_OF_FLOAT + BLOCK_SIZE;
     }
     return ge::GRAPH_SUCCESS;
@@ -406,6 +456,9 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckAllInputs()
         return ge::GRAPH_FAILED;
     }
     if (CheckGroupIndexInfo() == ge::GRAPH_FAILED) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckScaleInfo() == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
     if (CheckOutputInfo() == ge::GRAPH_FAILED) {
