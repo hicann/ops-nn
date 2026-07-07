@@ -429,7 +429,8 @@ __aicore__ inline int64_t UniqueGetElm(const LocalTensor<IDX_T>& sortedIndice, L
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(IDX_T);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
     UniqueGetElmVf<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-    int64_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
+    int64_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
+    uniqueIdNum = uniqueIdNum > 0 ? uniqueIdNum - 1 : 0;
     return uniqueIdNum;
 }
 
