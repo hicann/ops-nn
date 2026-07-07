@@ -4381,6 +4381,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_ftrl_v2/README.md">apply_ftrl_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现ftrl v2优化器功能（含l2_shrinkage正则化）。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_keras_momentum/README.md">apply_keras_momentum</a></td>
     <td>✓</td>
     <td>✓</td>
