@@ -13,15 +13,15 @@
 
 ## 功能说明
 
-- 算子功能：返回一个张量，其中输入张量self沿维度dim的每个子张量都经过归一化，使得子张量的p范数低于maxNorm值。
+- 算子功能：返回一个张量，其中输入张量self沿维度dim的每个子张量都经过归一化，使得子张量的p范数低于maxnorm值。
 
 - 计算公式：
 
   $$
   output_i=\left\{
   \begin{aligned}
-  input_i,\quad ||input_i||_p ≤ maxNorm \\
-  \frac {input_i} {max(||input_i||_p, eps)} \cdot maxNorm,\quad ||input_i||_p > maxNorm
+  input_i,\quad ||input_i||_p ≤ maxnorm \\
+  \frac {input_i} {max(||input_i||_p, eps)} \cdot maxnorm,\quad ||input_i||_p > maxnorm
   \end{aligned}
   \right.
   $$
@@ -47,7 +47,7 @@
     $$
 
     其中，当$input_i ≠ 0$时，${\mathbb{I}} = 1$；当$input_i = 0$时，${\mathbb{I}} = 0$。
-  
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -88,9 +88,9 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>maxNorm</td>
+      <td>maxnorm</td>
       <td>属性</td>
-      <td>表示最大允许的归一化值。对应公式中的`maxNorm`。取值大于等于0。如果运算时对应维度的`p`范数（由`p`值确定）大于`maxNorm`，则将该维度的值关于`p`范数归一化并乘上`maxNorm`。如果运算时对应维度的`p`范数（由`p`值确定）小于`maxNorm`，则该维度张量保持不变输出。</td>
+      <td>表示最大允许的归一化值。对应公式中的`maxnorm`。取值大于等于0。如果运算时对应维度的`p`范数（由`p`值确定）大于`maxnorm`，则将该维度的值关于`p`范数归一化并乘上`maxnorm`。如果运算时对应维度的`p`范数（由`p`值确定）小于`maxnorm`，则该维度张量保持不变输出。</td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
