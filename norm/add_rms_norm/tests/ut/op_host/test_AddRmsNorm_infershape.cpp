@@ -72,6 +72,24 @@ TEST_F(AddRmsNorm, AddRmsNorm_infershape_case_1)
     EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
 }
 
+TEST_F(AddRmsNorm, AddRmsNorm_infershape_timer_s1_bf16_case)
+{
+    ge::op::AddRmsNorm op;
+    op.UpdateInputDesc("x1", create_desc({360, 1024}, ge::DT_BF16));
+    op.UpdateInputDesc("x2", create_desc({360, 1024}, ge::DT_BF16));
+    op.UpdateInputDesc("gamma", create_desc({1024}, ge::DT_BF16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    std::vector<int64_t> expected_y_shape = {360, 1024};
+    std::vector<int64_t> expected_rstd_shape = {360, 1};
+    std::vector<int64_t> expected_x_shape = {360, 1024};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
+}
 TEST_F(AddRmsNorm, AddRmsNorm_InferDtype_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNorm"), nullptr);

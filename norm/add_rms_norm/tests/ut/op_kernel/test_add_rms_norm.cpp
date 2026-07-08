@@ -887,6 +887,64 @@ TEST_F(add_rms_norm_test, test_case_32)
     free(path_);
 }
 
+TEST_F(add_rms_norm_test, test_case_32_bf16_merge_n_tail_rows)
+{
+    size_t inputByteSize = 12 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 12 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 12 * sizeof(float);
+    size_t tiling_data_size = sizeof(AddRMSNormTilingData);
+
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    AddRMSNormTilingData* tilingDatafromBin = reinterpret_cast<AddRMSNormTilingData*>(tiling);
+
+    tilingDatafromBin->num_row = 12;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 6;
+    tilingDatafromBin->row_factor = 10;
+    tilingDatafromBin->ub_factor = 2560;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.00390625;
+    tilingDatafromBin->num_col_align = 256;
+    tilingDatafromBin->last_block_factor = 6;
+    tilingDatafromBin->row_loop = 1;
+    tilingDatafromBin->last_block_row_loop = 1;
+    tilingDatafromBin->row_tail = 6;
+    tilingDatafromBin->last_block_row_tail = 6;
+    tilingDatafromBin->mul_loop_fp32 = 4;
+    tilingDatafromBin->mul_tail_fp32 = 0;
+    tilingDatafromBin->dst_rep_stride_fp32 = 32;
+    tilingDatafromBin->mul_loop_fp16 = 2;
+    tilingDatafromBin->mul_tail_fp16 = 0;
+    tilingDatafromBin->dst_rep_stride_fp16 = 16;
+    tilingDatafromBin->is_performance = 1;
+
+    ICPU_SET_TILING_KEY(32);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(add_rms_norm, blockDim, x1, x2, gamma, y, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(x);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
 TEST_F(add_rms_norm_test, pre_test_case_0)
 {
     size_t inputByteSize = 2 * 256 * sizeof(int16_t);

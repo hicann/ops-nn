@@ -48,6 +48,15 @@ TEST_F(l2_add_rms_norm_test, ascend910B2_success)
     CommonTest({4, 0, 128}, {128}, {4, 0, 1}, ACL_FLOAT, ACLNN_SUCCESS);
 }
 
+TEST_F(l2_add_rms_norm_test, timer_s1_bf16_success)
+{
+    CommonTest({360, 1024}, {1024}, {360, 1}, ACL_BF16, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_test, timer_s1_dtype_invalid)
+{
+    CommonTest({360, 1024}, {1024}, {360, 1}, ACL_DOUBLE, ACLNN_ERR_PARAM_INVALID);
+}
 TEST_F(l2_add_rms_norm_test, ascend910B2_param_invalid)
 {
     // invalid dtype
