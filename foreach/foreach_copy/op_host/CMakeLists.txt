@@ -11,5 +11,5 @@
 message(STATUS "=== Debug: start ops.foreach.foreach_copy.op_host.CMakeLists.txt ")
 
 set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "kirinx90" "kirin9030")
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch22" "arch22")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch22")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_copy ACLNNTYPE aclnn COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES foreach_utils)
