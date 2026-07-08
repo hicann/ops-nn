@@ -3510,6 +3510,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_centered_rms_prop/README.md">apply_centered_rms_prop</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行Centered RMSProp优化器的单步参数更新，在标准RMSProp基础上额外维护一阶梯度移动平均mg，以ms - mg²作为方差估计，根据当前梯度更新mg、ms和动量累积mom，原地更新权重参数var以及mg、ms、mom。对标TensorFlow的tf.raw_ops.ApplyCenteredRMSProp接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
     <td>✓</td>
     <td>✓</td>
