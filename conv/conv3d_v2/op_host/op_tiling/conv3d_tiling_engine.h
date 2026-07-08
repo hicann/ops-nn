@@ -19,7 +19,6 @@
 #include <vector>
 #include <string>
 #include <cstdint>
-#include "tiling/platform/platform_ascendc.h"
 #include "conv3d_api_tiling.h"
 #include "conv3d_tiling_utils.h"
 #include "conv3d_common_utils.h"
@@ -129,7 +128,7 @@ public:
     void GetNumBlocksInit();
     void NumBlocksDecision();
     void CoreNumBlocksDecision();
-    void InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes);
+    void InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes) const;
     void NumBlocksDecisionBackTrack(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksResTmp,
                                    const std::vector<std::vector<uint32_t>> &inputRanges,
                                    uint32_t rangeIdx,

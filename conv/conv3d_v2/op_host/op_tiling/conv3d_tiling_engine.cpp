@@ -1446,7 +1446,7 @@ void Conv3dTilingEngine::CoreNumBlocksDecision()
     }
 }
 
-void Conv3dTilingEngine::InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes)
+void Conv3dTilingEngine::InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes) const
 {
     numBlocksRes.batchDim = 1;
     numBlocksRes.mDim = 1;

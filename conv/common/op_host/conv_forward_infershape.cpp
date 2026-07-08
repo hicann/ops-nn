@@ -851,7 +851,7 @@ static bool CheckConvInputWithPad(const InferShapeContext* context, const ConvOp
     return true;
 }
 
-static bool CheckOutputNegative(const InferShapeContext* context, ConvOpInfo& opInfo)
+static bool CheckOutputNegative(const InferShapeContext* context, const ConvOpInfo& opInfo)
 {
     bool conv2dNegFlag = opInfo.on < 0 || opInfo.oc < 0 || opInfo.oh < 0 || opInfo.ow < 0;
     std::string reason = "All dimensions of this shape cannot be a negative value";
