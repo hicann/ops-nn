@@ -4220,6 +4220,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/unsorted_segment_min/README.md">unsorted_segment_min</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>unsorted_segment_min主要功能是对一个张量分段求最小值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/unsorted_segment_sum/README.md">unsorted_segment_sum</a></td>
     <td>✓</td>
     <td>✓</td>

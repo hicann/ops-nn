@@ -84,7 +84,7 @@ ge::graphStatus UnsortedSegmentBaseTiling::GetPlatformInfo()
     maxThread_ = compileInfo->maxThread;
     OP_CHECK_IF(totalCoreNum_ <= 0, OP_LOGE(context_, "GetPlatformInfo get corenum <= 0"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(ubSize_ <= 0, OP_LOGE(context_, "GetPlatformInfo get ub size <= 0"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(maxThread_ <= 0, OP_LOGE(context_, "GetPlatformInfo get ub size <= 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maxThread_ <= 0, OP_LOGE(context_, "GetPlatformInfo get thread num <= 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -27,7 +27,7 @@ namespace ge {
 * @par Inputs:
 * Three inputs, including:
 * @li x: A Tensor of type double, float32, float16, bfloat16, int8, int16, int32, int64, uint8, uint16, uint32, uint64,
-format is ND. bank of shape must greater zero.
+format is ND.
 * @li segment_ids: A Tensor of type int32, int64, whose shape is a prefix of "x", format is ND.
 * @li num_segments: A 1D Tensor contains a single element of type int32, int64, format is ND.
 * Indicates the output segment.
