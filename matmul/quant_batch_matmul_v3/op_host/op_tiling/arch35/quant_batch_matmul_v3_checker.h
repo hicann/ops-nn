@@ -48,10 +48,14 @@ protected:
                                      size_t scaleShapeLen) const;
     bool CheckBatchValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
                                        const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
-                                         const std::vector<int64_t>& dimValueOfMKN) const;
-    bool CheckShapeValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
-                                       const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
+    bool CheckBatchValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
+                                         const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
+    bool CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,
+                                         const gert::Shape& x1Shape, const gert::Shape& x2Shape,
+                                         const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckShapeValidInPerblockMode(const gert::Shape& scaleShape,
+                                       const gert::Shape& pertoken, const gert::Shape& x1Shape,
+                                       const gert::Shape& x2Shape) const;
     bool CheckGroupValidInPerblockMode() const;
     bool PerTokenDimValueCheck(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape) const;
     bool CheckShapeInRangeForOptionalInputs(const gert::Shape& scaleShape, const gert::StorageShape* biasShape,

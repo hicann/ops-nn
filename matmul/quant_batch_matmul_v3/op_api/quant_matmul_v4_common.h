@@ -76,6 +76,7 @@ static constexpr uint64_t GROUP_N_OFFSET = 16;
 static constexpr uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
 static constexpr size_t MX_SCALE_MAX_DIM = 3;
 static constexpr size_t MX_SCALE_DIM_NUM = 3;
+static constexpr size_t MX_SCALE_MAX_DIM_NUM = 7;
 static constexpr int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
 static constexpr int64_t PPMATMUL_PRIORITY_M = 1024;
 static constexpr int64_t NO_BATCH_DIM_SUM = 2;

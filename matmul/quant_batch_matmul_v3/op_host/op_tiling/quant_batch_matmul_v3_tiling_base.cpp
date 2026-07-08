@@ -304,10 +304,6 @@ int8_t QuantBatchMatmulV3TilingBase::CheckFusionBatchA(const gert::Shape& x1Shap
         if (inputParams_.groupSizeM > 1 && x1Shape.GetDim(x1ShapeLen - MIN_DIM_NUM_ND) % inputParams_.groupSizeM != 0) {
             return 0;
         }
-        // mx量化模式不能batch合轴
-        if (IsMicroScaling()) {
-            return 0;
-        }
         OP_LOGD(inputParams_.opName, "CheckFusionBatchA success, start fusion batch A to m dimension.");
         return OUTPUT_INFER_SUCCESS;
     }
@@ -689,6 +685,37 @@ by the %s dimension of %s [%lu], the real group_size in %s dimension can not be 
     return true;
 }
 
+bool QuantBatchMatmulV3TilingBase::AnalyzeMxGroupInfo(const gert::Shape& scaleShape, const gert::Shape& pertoken,
+                                                     size_t pertokenShapeLen, size_t scaleShapeLen)
+{
+    const size_t mxScaleNonBatchDimNum = 3;
+    const uint64_t microScalingAlign = 2;
+    if (pertokenShapeLen < mxScaleNonBatchDimNum || scaleShapeLen < mxScaleNonBatchDimNum) {
+        return true;
+    }
+    size_t pertokenBatchDimNum = pertokenShapeLen - mxScaleNonBatchDimNum;
+    size_t scaleBatchDimNum = scaleShapeLen - mxScaleNonBatchDimNum;
+    uint64_t mxPertokenMSize =
+        static_cast<uint64_t>(pertoken.GetDim(pertokenBatchDimNum + (inputParams_.transA ? 1 : 0)));
+    if (!ReCalcGroupSize(inputParams_.groupSizeM, inputParams_.mSize, mxPertokenMSize, "m")) {
+        return false;
+    }
+    uint64_t mxPertokenKSize =
+        static_cast<uint64_t>(pertoken.GetDim(pertokenBatchDimNum + (inputParams_.transA ? 0 : 1))) *
+        microScalingAlign;
+    if (!ReCalcGroupSize(inputParams_.groupSizeK, inputParams_.kSize, mxPertokenKSize, "k")) {
+        return false;
+    }
+    uint64_t mxScaleNSize =
+        static_cast<uint64_t>(scaleShape.GetDim(scaleBatchDimNum + (inputParams_.transB ? 0 : 1)));
+    if (!ReCalcGroupSize(inputParams_.groupSizeN, inputParams_.nSize, mxScaleNSize, "n")) {
+        return false;
+    }
+    OP_LOGD(inputParams_.opName, "Infer mx groupSize success. groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.",
+            inputParams_.groupSizeM, inputParams_.groupSizeN, inputParams_.groupSizeK);
+    return true;
+}
+
 bool QuantBatchMatmulV3TilingBase::AnalyzeGroupInfo(const gert::Shape& scaleShape,
                                                     const gert::StorageShape* pertokenShape)
 {
@@ -701,6 +728,9 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeGroupInfo(const gert::Shape& scaleShap
     if (pertokenShapeLen < 2 ||
         scaleShapeLen < 2) { // scaleLen < 2 means invalid input, leave it to the checher behind.
         return true;
+    }
+    if (IsMicroScaling()) {
+        return AnalyzeMxGroupInfo(scaleShape, pertoken, pertokenShapeLen, scaleShapeLen);
     }
     auto pertokenInner = pertoken.GetDim(1);
     auto pertokenOuter = pertoken.GetDim(0);

@@ -415,8 +415,12 @@ static inline bool CheckDimRange(const aclTensor* x1, const aclTensor* x2, const
     OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
-    size_t expectScaleDim = isMx(scale) ? MX_SCALE_DIM_NUM : 1;
-    OP_CHECK_WRONG_DIMENSION(scale, expectScaleDim, return false);
+    if (isMx(scale)) {
+        OP_CHECK_MIN_DIM(scale, MX_SCALE_DIM_NUM, return false);
+        OP_CHECK_MAX_DIM(scale, MX_SCALE_MAX_DIM_NUM, return false);
+    } else {
+        OP_CHECK_WRONG_DIMENSION(scale, 1, return false);
+    }
     OP_LOGD("QuantMatmul check dim-num range success");
     return true;
 }

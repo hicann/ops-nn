@@ -365,8 +365,8 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
         scaleShape.MutableStorageShape() = gert::Shape({n});
     } else if (quantMode == 2) {
         int64_t scaleK = (k + 63) / 64 * 2;
-        scaleShape.MutableStorageShape() = gert::Shape({n, scaleK});
-        pertokenShape.MutableStorageShape() = gert::Shape({m, scaleK});
+        scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, n, scaleK}) : gert::Shape({n, scaleK});
+        pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, m, scaleK}) : gert::Shape({m, scaleK});
     } else if (quantMode == 3 || quantMode == 4) {
         int64_t scaleM = (m + 127) / 128;
         if (quantMode == 4) {
@@ -556,14 +556,14 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else if (quantMode == 2) {
         int64_t scaleK = (k + 63) / 64;
         if (transA) {
-            pertokenShape.MutableStorageShape() = gert::Shape({scaleK, m, 2});
+            pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, scaleK, m, 2}) : gert::Shape({scaleK, m, 2});
         } else {
-            pertokenShape.MutableStorageShape() = gert::Shape({m, scaleK, 2});
+            pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, m, scaleK, 2}) : gert::Shape({m, scaleK, 2});
         }
         if (transB) {
-            scaleShape.MutableStorageShape() = gert::Shape({n, scaleK, 2});
-        } else {
-            scaleShape.MutableStorageShape() = gert::Shape({scaleK, n, 2});
+            scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, n, scaleK, 2}) : gert::Shape({n, scaleK, 2});
+        } else{
+            scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, scaleK, n, 2}) : gert::Shape({scaleK, n, 2});
         }
     } else if (quantMode == 3 || quantMode == 4) {
         int64_t scaleM = (m + 127) / 128;
@@ -707,7 +707,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
 
         size_t actualTilingDataSize = tilingContext->GetRawTilingData()->GetDataSize();
-        bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) && (batchC == 0 || batchC == 1) &&
+        bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) &&
                                           actualTilingDataSize ==
                                               sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
         bool useBasicApiTilingData = actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);

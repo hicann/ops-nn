@@ -298,6 +298,14 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOf
     if (isBiasThreeDim_) {
         Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
     }
+    // x1Scale/x2Scale batch offset. e8m0 is 1 byte and never packed, so no sizeShift here.
+    // Per-batch element count = M(or N) * ceil(K/64) * 2, matching the MX scale stride in GetQuantOffset.
+    Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_) +=
+        batchAOffset_ * params.problemShape.m *
+        Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) * MXFP_MULTI_BASE_SIZE;
+    Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_) +=
+        batchBOffset_ * params.problemShape.n *
+        Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) * MXFP_MULTI_BASE_SIZE;
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS

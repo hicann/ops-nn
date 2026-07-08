@@ -181,6 +181,8 @@ protected:
     bool CheckOutputShapeAvailable() const;
     bool ReCalcGroupSize(uint64_t& groupSize, uint64_t inputSize, uint64_t scaleSize, const char* dimensionName);
     bool AnalyzeGroupInfo(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape);
+    bool AnalyzeMxGroupInfo(const gert::Shape& scaleShape, const gert::Shape& pertoken, size_t pertokenShapeLen,
+                            size_t scaleShapeLen);
     void AnalyzeBatchInfo(const gert::Shape& oriShapeA, const gert::Shape& oriShapeB);
     void DoBatchFusion(uint64_t fusedDimValue);
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
