@@ -337,18 +337,18 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
 
     int32_t y1Dtype = static_cast<int32_t>(context->GetOutputDesc(Y1_INDEX)->GetDataType());
 
-    OP_CHECK_IF(context->GetOptionalInputShape(SCALES2_INDEX) != nullptr,
+    OP_CHECK_IF(context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr,
                 OP_LOGW(context, "Optional input scale2 exist"),
                 scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
     OP_CHECK_IF(
-        context->GetOptionalInputShape(ZERO_POINTS1_INDEX) != nullptr,
+        context->GetOptionalInputDesc(ZERO_POINTS1_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints1 exist"),
         zeroPoints1Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS1_INDEX)->GetDataType()));
     OP_CHECK_IF(
-        context->GetOptionalInputShape(ZERO_POINTS2_INDEX) != nullptr,
+        context->GetOptionalInputDesc(ZERO_POINTS2_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints2 exist"),
         zeroPoints2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS2_INDEX)->GetDataType()));
-    OP_CHECK_IF(context->GetOptionalInputShape(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
+    OP_CHECK_IF(context->GetOptionalInputDesc(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
                 betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
 
     std::string simpleKeyTemp = "";
