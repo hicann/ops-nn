@@ -379,3 +379,88 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error08)
                              shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
                              output_dim, ge::GRAPH_FAILED);
 }
+
+TEST_F(SparseToDenseTiling, test_tiling_ascendc_error09)
+{
+    gert::StorageShape shape1 = {{3}, {3}};
+    gert::StorageShape shape2 = {{1}, {1}};
+    gert::StorageShape shape3 = {{3}, {3}};
+    gert::StorageShape shape4 = {{1}, {1}};
+    gert::StorageShape outputshape = {{12}, {12}};
+    int64_t output_dim = 1;
+    int32_t output_shape_value[output_dim] = {12};
+    string expectTilingData = "";
+    uint64_t tilingKeyValue = 1000000;
+
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_DOUBLE, ge::DT_DOUBLE, ge::DT_DOUBLE, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseToDenseTiling, test_tiling_ascendc_error10)
+{
+    gert::StorageShape shape1 = {{3}, {3}};
+    gert::StorageShape shape2 = {{1}, {1}};
+    gert::StorageShape shape3 = {{3}, {3}};
+    gert::StorageShape shape4 = {{1}, {1}};
+    gert::StorageShape outputshape = {{12}, {12}};
+    int64_t output_dim = 1;
+    int32_t output_shape_value[output_dim] = {12};
+    string expectTilingData = "";
+    uint64_t tilingKeyValue = 1000000;
+
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT32, ge::DT_INT16, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseToDenseTiling, test_tiling_ascendc_error11)
+{
+    gert::StorageShape shape1 = {{3}, {3}};
+    gert::StorageShape shape2 = {{1}, {1}};
+    gert::StorageShape shape3 = {{3}, {3}};
+    gert::StorageShape shape4 = {{1}, {1}};
+    gert::StorageShape outputshape = {{12}, {12}};
+    int64_t output_dim = 1;
+    int32_t output_shape_value[output_dim] = {12};
+    string expectTilingData = "";
+    uint64_t tilingKeyValue = 1000000;
+
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT32, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseToDenseTiling, test_tiling_ascendc_error12)
+{
+    gert::StorageShape shape1 = {{10000, 4}, {10000, 4}};
+    gert::StorageShape shape2 = {{3}, {3}};
+    gert::StorageShape shape3 = {{10000}, {10000}};
+    gert::StorageShape shape4 = {{1}, {1}};
+    gert::StorageShape outputshape = {{12, 200, 11}, {12, 200, 11}};
+    int64_t output_dim = 3;
+    int32_t output_shape_value[output_dim] = {12, 200, 11};
+    string expectTilingData = "";
+    uint64_t tilingKeyValue = 1000000;
+
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal_scalar)
+{
+    gert::StorageShape shape1 = {{3}, {3}};
+    gert::StorageShape shape2 = {{1}, {1}};
+    gert::StorageShape shape3 = {{}, {}};
+    gert::StorageShape shape4 = {{1}, {1}};
+    gert::StorageShape outputshape = {{12}, {12}};
+    int64_t output_dim = 1;
+    int32_t output_shape_value[output_dim] = {12};
+    string expectTilingData = "1 12 16 12 12 1 1 3 3 1 1 0 ";
+    uint64_t tilingKeyValue = 1000001;
+
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2,
+                             shape3, shape4, outputshape, false, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_SUCCESS);
+}

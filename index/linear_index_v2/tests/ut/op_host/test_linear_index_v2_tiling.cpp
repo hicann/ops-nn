@@ -22,6 +22,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
 #include "register/op_impl_registry.h"
+#include "register/tilingdata_base.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
@@ -559,3 +560,21 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_zero_indices)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
+
+TEST_F(LinearIndexV2Tiling, test_linear_index_null_context)
+{
+    std::string op_type("LinearIndexV2");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    EXPECT_EQ(tiling_func(nullptr), ge::GRAPH_FAILED);
+}
+
+TEST_F(LinearIndexV2Tiling, test_linear_index_tiling_data_instance)
+{
+    auto &factory = optiling::CTilingDataClassFactory::GetInstance();
+    auto tilingParam = factory.CreateTilingDataInstance("LinearIndexV2TilingParamOp");
+    EXPECT_NE(tilingParam, nullptr);
+    auto tilingData = factory.CreateTilingDataInstance("LinearIndexV2");
+    EXPECT_NE(tilingData, nullptr);
+}
+
