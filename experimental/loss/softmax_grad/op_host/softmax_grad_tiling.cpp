@@ -79,7 +79,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t& N, uint64_t& C, ge::DataType& dataType)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t& N, uint64_t& C, ge::DataType& dataType)
 {
     auto inputY = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputY);
@@ -114,7 +114,7 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t& N, uin
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
