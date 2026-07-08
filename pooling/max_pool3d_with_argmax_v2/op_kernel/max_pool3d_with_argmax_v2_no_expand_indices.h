@@ -1098,6 +1098,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Poo
         indicesDOffset += curHyFactor * curWyFactorAlign * VEC_INST_CAL_DATA_NUM;
         maxDOffset += curHyFactor * curWyFactorAlign * curNcFactorAlign;
     }
+    PipeBarrier<PIPE_V>();
 }
 #if ORIG_DTYPE_X == DT_BF16
 template <typename T1, typename T2, const uint32_t IS_PAD>
