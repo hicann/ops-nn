@@ -421,12 +421,7 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
     rowLoopDataLen = indexFactor_;
     rowLoopNum = ops::CeilDiv(curCoreProcessRowCount_, rowLoopDataLen);
     rowTailDataLen = curCoreProcessRowCount_ - rowLoopDataLen * (rowLoopNum - 1);
-    if (colUseCoreNum_ == 1) {
-        curCoreProcessColCount = tilingData_->colBlockFactor;
-    } else {
-        curCoreProcessColCount = (blockCol_ == colUseCoreNum_ - 1) ? tilingData_->colTailBlockFactor :
-                                                                     tilingData_->colBlockFactor;
-    }
+    curCoreProcessColCount = (blockCol_ == colUseCoreNum_ - 1) ? tilingData_->colTailBlockFactor : tilingData_->colBlockFactor;
     colFactor_ = curCoreProcessColCount >= tilingData_->ubFactor ? tilingData_->ubFactor : curCoreProcessColCount;
     colLoopDataLen = colFactor_;
     colLoopNum = ops::CeilDiv(curCoreProcessColCount, colLoopDataLen);

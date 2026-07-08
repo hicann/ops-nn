@@ -51,6 +51,11 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
 {
     constexpr int64_t MAX_SAFE_MULTIPLY = std::numeric_limits<int64_t>::max();
     int64_t dtypeSize = ge::GetSizeByDataType(xDataType_);
+
+    if(indexedDimSize_ == 1) {
+        return false;
+    }
+
     bool requiresNonIndexed = false;
     if (nonIndexedDimSize_ > 0 && dtypeSize > 0 && nonIndexedDimSize_ <= MAX_SAFE_MULTIPLY / dtypeSize) {
         requiresNonIndexed = nonIndexedDimSize_ * dtypeSize > SPLIT_LIMIT;

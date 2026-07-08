@@ -87,41 +87,69 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
             }
         }
         using AccumT = AccumType<TX>;
-        AccumT res = 0;
         if constexpr (ALL_INDEXED) {
+            AccumT accumValue;
+            if constexpr (ACCUMULATE && std::is_same_v<TX, bool>) {
+                accumValue = static_cast<AccumT>(output[idxedSelfIdx]);
+            } else {
+                accumValue = 0;
+            }
             do {
                 uint64_t idxedValueIdx = posIdx[curIdxedIdx] * idxedValueStride;
-                res += static_cast<AccumT>(values[idxedValueIdx]);
-            } while (ACCUMULATE && ++curIdxedIdx < indexedDimSize && sortIndices[curIdxedIdx] == idxedSelfIdx);
-            WriteBack<TX, AccumT, ACCUMULATE>(output, idxedSelfIdx, res);
-        } else {
-            do {
-                uint64_t idxedValueIdx = posIdx[curIdxedIdx] * idxedValueStride;
-                uint64_t innerStart, innerStep;
-                if constexpr (INDEXED_BLOCK_MODE) {
-                    innerStart = threadIdx.y;
-                    innerStep = blockDim.y;
+                if constexpr (std::is_same_v<TX, bool>) {
+                    accumValue |= static_cast<AccumT>(values[idxedValueIdx]);
                 } else {
-                    innerStart = blockIdx.x * blockDim.y + threadIdx.y;
-                    innerStep = gridDim.x * blockDim.y;
-                }
-                for (uint64_t k = innerStart; k < nonIndexedDimSize; k += innerStep) {
-                    uint64_t nonIdxedSelfIdx = 0;
-                    uint64_t nonIdxedValueIdx = 0;
-                    uint64_t remaining = k;
-
-                    // 将一维索引k分解为多维索引
-                    for (uint64_t i = 0; i < nonIndexedDimNum; i++) {
-                        const uint64_t idxI = AscendC::Simt::UintDiv(remaining, calcParamsPtr->m_[i],
-                                                                     calcParamsPtr->shift_[i]);
-                        remaining = remaining - idxI * nonIdxedStride[i]; // 剩余索引
-                        nonIdxedSelfIdx += idxI * nonIdxedSelfStride[i];  // 累加内存偏移
-                        nonIdxedValueIdx += idxI * nonIdxedValueStride[i];
-                    }
-                    res = static_cast<AccumT>(values[idxedValueIdx + nonIdxedValueIdx]);
-                    WriteBack<TX, AccumT, ACCUMULATE>(output, idxedSelfIdx + nonIdxedSelfIdx, res);
+                    accumValue += static_cast<AccumT>(values[idxedValueIdx]);
                 }
             } while (ACCUMULATE && ++curIdxedIdx < indexedDimSize && sortIndices[curIdxedIdx] == idxedSelfIdx);
+            if constexpr (ACCUMULATE && std::is_same_v<TX, bool>) {
+                output[idxedSelfIdx] = static_cast<TX>(accumValue);
+            } else {
+                WriteBack<TX, AccumT, ACCUMULATE>(output, idxedSelfIdx, accumValue);
+            }
+        } else {
+            uint64_t innerStart, innerStep;
+            if constexpr (INDEXED_BLOCK_MODE) {
+                innerStart = threadIdx.y;
+                innerStep = blockDim.y;
+            } else {
+                innerStart = blockIdx.x * blockDim.y + threadIdx.y;
+                innerStep = gridDim.x * blockDim.y;
+            }
+            for (uint64_t k = innerStart; k < nonIndexedDimSize; k += innerStep) {
+                uint64_t nonIdxedSelfIdx = 0;
+                uint64_t nonIdxedValueIdx = 0;
+                uint64_t remaining = k;
+
+                // 将一维索引k分解为多维索引
+                for (uint64_t i = 0; i < nonIndexedDimNum; i++) {
+                    const uint64_t idxI = AscendC::Simt::UintDiv(remaining, calcParamsPtr->m_[i], calcParamsPtr->shift_[i]);
+                    remaining = remaining - idxI * nonIdxedStride[i]; // 剩余索引
+                    nonIdxedSelfIdx += idxI * nonIdxedSelfStride[i]; // 累加内存偏移
+                    nonIdxedValueIdx += idxI * nonIdxedValueStride[i];
+                }
+                AccumT accumValue;
+                uint64_t idxedIdxInRun = curIdxedIdx;
+                uint64_t selfOfst = idxedSelfIdx + nonIdxedSelfIdx;
+                if constexpr (ACCUMULATE && std::is_same_v<TX, bool>) {
+                    accumValue = static_cast<AccumT>(output[selfOfst]);
+                } else {
+                    accumValue = 0;
+                }
+                do {
+                    uint64_t idxedValueIdx = posIdx[idxedIdxInRun] * idxedValueStride;
+                    if constexpr (std::is_same_v<TX, bool>) {
+                        accumValue |= static_cast<AccumT>(values[idxedValueIdx + nonIdxedValueIdx]);
+                    } else {
+                        accumValue += static_cast<AccumT>(values[idxedValueIdx + nonIdxedValueIdx]);
+                    }
+                } while (ACCUMULATE && ++idxedIdxInRun < indexedDimSize && sortIndices[idxedIdxInRun] == idxedSelfIdx);
+                if constexpr (ACCUMULATE && std::is_same_v<TX, bool>) {
+                    output[selfOfst] = static_cast<TX>(accumValue);
+                } else {
+                    WriteBack<TX, AccumT, ACCUMULATE>(output, selfOfst, accumValue);
+                }
+            }
         }
     }
 }
