@@ -249,6 +249,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/glu_grad/README.md">glu_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成Glu的反向。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/hard_shrink/README.md">hard_shrink</a></td>
     <td>✓</td>
     <td>✓</td>
