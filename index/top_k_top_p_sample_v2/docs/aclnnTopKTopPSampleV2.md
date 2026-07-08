@@ -103,9 +103,9 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   * 根据入参约束属性inputIsLogits，如果该属性为True，则对排序后结果进行归一化：
     $$
-    \text{logit\_sortProb} = 
+    \text{logit\_sortProb} =
     \begin{cases}
-    \text{softmax}(\text{logits\_sort}), & \text{inputIsLogits} = \text{True} \\
+    \text{safe\_softmax}(\text{logits\_sort}), & \text{inputIsLogits} = \text{True} \\
     \text{logits\_sort}, & \text{inputIsLogits} = \text{False}
     \end{cases}
     $$
@@ -128,8 +128,8 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
     topPMask[b] =
     \begin{cases}
-    topKMask[b][0:GuessK], & \sum_{\text{GuessK}}^{} probValue[b][*] \ge p[b] \\
-    probSum[b][v] \le 1 - p[b], & \text{others}
+    topKMask[b][0:GuessK], & if \space \sum_{\text{GuessK}}^{} probValue[b][*] \ge p[b] \\
+    probSum[b][v] \le 1 - p[b], & if \space \text{others}
     \end{cases}
     $$
   * 将需要过滤的位置设置为默认无效值defLogit，得到logits_sort，记为sortedValue[b][v]:
@@ -162,23 +162,31 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
     \text{minPThd} = \text{logitsMax}[b] * \text{minPs}[b]
     $$
+
     $$
     \text{minPMask}[b] = 
     \begin{cases} 
-    0, & \text{logitsSortMasked}[b] < \text{minPThd} \\
-    1, & \text{logitsSortMasked}[b] \geq \text{minPThd}
+    0, & \text{logitsSortMasked}[b][:] < \text{minPThd} \\
+    1, & \text{logitsSortMasked}[b][:] \geq \text{minPThd}
     \end{cases}
     $$
+
+    通过gather运算，使minP采样结果和索引密集排列：
+
     $$
-    \text{logitsSortMasked}[b,:] = 
-    \begin{cases} 
-    \text{defLogit}, & \text{minPMask}[b] = 0 \\
-    \text{logitsSortMasked}[b,:], & \text{minPMask}[b] = 1
-    \end{cases}
+    minPCnt = Sum(minPMask[b]) \\
+    minPFiltIdx = Index(minPMask[b]=1)
     $$
+
+    填充剩余元素：
+    $$
+    \text{logitsMinpFiltered}[b,:minPCnt] = logitsSortMasked[b][minPFiltIdx] \\
+    \text{logitsMinpFiltered}[b,minPCnt:] = defLogit
+    $$
+
   * 其他情况：
     $$
-    \text{logitsSortMasked}[b, :] = 
+    \text{logitsMinpFiltered}[b, :] =
     \begin{cases}
         \text{logitsSortMasked}[b, :], & \text{if } minPs[b] \leq 0 \\
         \max(\text{logitsSortMasked}[b, :]), & \text{if } minPs[b] \geq 1
@@ -190,7 +198,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   * 如果​入参属性IsNeedLogits=True，则使用topK-topP-minP联合采样后的logitsIndexMasked，进行`logits_top_kp_select`输出。
     $$
-    \text{logitsIndex}[b][v] = \text{Index}(\text{logitsSortMasked}[b][v] \in \text{Logits})
+    \text{logitsIndex}[b][v] = \text{Index}(\text{logitsMinpFiltered}[b][v] \in \text{Logits})
     $$
     $$
     \text{logitsIndexMasked}[b,:] = \text{logitsIndex}[b,:] * \text{topKMask}[b] * \text{topPMask}[b] * \text{minPMask}[b]
@@ -207,19 +215,32 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   后继处理
   
-  * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
-  * 此处输入需要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性inputIsLogits，即：
+  * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。<br>如果上述前序采样环节都未使能，则直接使用输入logits的归一化结果：
+
     $$
-    \text{inputIsLogits} = 
+    logitsMinpFiltered =
+    \begin{cases}
+    logits, & if \space inputIsLogits=False \\
+    safe\_softmax(logits), & if \space inputIsLogits=True
+    \end{cases}
+    $$
+
+  * 此处输入需要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性inputIsLogits，即：
+
+    $$
+    \text{inputIsLogits} =
     \begin{cases}
     True, & \text{Logits} \notin [0,1] \\
     False, & \text{Logits} \in [0,1]
     \end{cases}
     $$
+
     使得
+
     $$
-    \text{probs}[b] = \text{logitsSortMasked}[b, :]
+    \text{probs}[b] = \text{logitsMinpFiltered}[b, :]
     $$
+
     接下来有三种模式：None，QSample，输出中间结果，通过入参约束属性isNeedSampleResult和是否输入q加以控制。
   * None:
   * isNeedSampleResult为false，且不输入q时为该模式。该模式下直接对每个batch通过Argmax取最大元素和索引，并通过gatherOut输出。
@@ -242,15 +263,15 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   * isNeedSampleResult为true时，为该模式。此时会输出经过采样后的logitsSortMasked及其在输入中的原始索引logitsIdx：
 
     $$
-    \text{logitsSortMasked}[b, v] = 
+    \text{logitsMinpFiltered}[b, v] =
     \begin{cases}
-        \text{logitsSortMasked}[b, v], & \text{if } \text{minPMask}[b, v] = 1 \\
+        \text{logitsMinpFiltered}[b, v], & \text{if } \text{minPMask}[b, v] = 1 \\
         0, & \text{if } \text{minPMask}[b, v] = 0
     \end{cases}
     $$
 
     $$
-    logitsIdx[b][v] = Index(logitsSortMasked[b][v])
+    logitsIdx[b][v] = Index(logitsMinpFiltered[b][v])
     $$
 
 ## 函数原型
@@ -577,18 +598,27 @@ aclnnStatus aclnnTopKTopPSampleV2(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnTopKTopPSampleV2默认确定性实现。
-- 对于所有采样参数，它们的尺寸必须满足，batch>0，0<vocSize<=2^20。
-- topK只接受非负值作为合法输入；传入0和负数会跳过相应batch的采样。
-- logits、q、logitsTopKPselect、logitsIdx、logitsSortMasked的尺寸和维度必须完全一致。
-- logits、topK、topP、minPs、logitsSelectIdx、logitsIdx、logitsSortMasked除最后一维以外的所有维度必须顺序和大小完全一致。目前logits只能是2维，topK、topP、logitsSelectIdx必须是1维非空Tensor。logits、topK、topP不允许空Tensor作为输入，如需跳过相应模块，需按相应规则设置输入。
-- 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
-- 如果min(ksMaxAligned, 1024)<topK[batch]<vocSize[batch]，则视为选择当前batch的全部有效元素并跳过topK采样。其中ksMaxAligned为ksMax向上对齐到8的整数倍，ksMax的值域为[1, 1024]。
-- 如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。
-- 如果需要单独跳过minP模块，请传入`minPs=nullptr`或者传入[batch, 1]大小的Tensor，并使每个元素均≤0。
-- 如果需要单独跳过sample模块，传入`q=nullptr`即可；如需使用sample模块，则必须传入尺寸为[batch, vocSize]的Tensor。
-- 如果需要输出中间结果，isNeedSampleResult设为true，并且传入`q=nullptr`，此时logitsSelectIdx不输出。
+  - 确定性计算：
+    - aclnnTopKTopPSampleV2默认确定性实现。
+  - 输入值域限制：
+    - 对于所有采样参数，它们的尺寸必须满足，batch>0，0<vocSize<=2^20。
+    - 对于logits，它的元素应确保通过$exp(*)$运算后，对应结果不小于FLOAT32的最小有效值，否则对应的Safe_softmax结果将为0，可能继而导致算子的非预期输出。
+    - topK只接受非负值作为合法输入；传入0和负数会跳过相应batch的采样。
+  - 输入shape限制：
+    - logits、q、logitsTopKPselect、logitsIdx、logitsSortMasked的尺寸和维度必须完全一致。
+    - logits、topK、topP、minPs、logitsSelectIdx、logitsIdx、logitsSortMasked除最后一维以外的所有维度必须顺序和大小完全一致。目前logits只能是2维，topK、topP、logitsSelectIdx必须是1维非空Tensor。logits、topK、topP不允许空Tensor作为输入，如需跳过相应模块，需按相应规则设置输入。
+
+  - Q-Sample约束：
+      - 输入张量q的索引，总是按元素逐一对齐到相应batch进行后继处理时输入的$\text{probs}[b]$。
+      - $\text{probs}[b]$输入必定紧凑排布，即有效元素集中在当前batch前段。
+      - 如果当前batch的前序topK或topP采样至少使能其一，则$\text{probs}[b]$的元素还将满足降序排列。
+  - 其他限制：
+    - 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
+    - 如果min(ksMaxAligned, 1024)<topK[batch]<vocSize[batch]，则视为选择当前batch的全部有效元素并跳过topK采样。其中ksMaxAligned为ksMax向上对齐到8的整数倍，ksMax的值域为[1, 1024]。
+    - 如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。
+    - 如果需要单独跳过minP模块，请传入`minPs=nullptr`或者传入[batch, 1]大小的Tensor，并使每个元素均≤0。
+    - 如果需要单独跳过sample模块，传入`q=nullptr`即可；如需使用sample模块，则必须传入尺寸为[batch, vocSize]的Tensor。
+    - 如果需要输出中间结果，isNeedSampleResult设为true，并且传入`q=nullptr`，此时logitsSelectIdx不输出。
 
 ## 调用示例
 

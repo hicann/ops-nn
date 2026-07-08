@@ -78,10 +78,10 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   \end{cases}
   $$
 
-  * 通过softmax将经过topK过滤后的logits按最后一轴转换为概率分布
+  * 通过safe\_softmax将经过topK过滤后的logits按最后一轴转换为概率分布
 
   $$
-  probsValue[b]=sortedValue[b].softmax (dim=-1)
+  probsValue[b]=sortedValue[b].safe\_softmax (dim=-1)
   $$
 
   * 按最后一轴计算累积概率（从最小的概率开始累加）
@@ -101,7 +101,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   * 如果topK采样被跳过，则先对输入logits[b]进行softmax处理：
 
   $$
-  logitsValue[b] = logits[b].softmax(dim=-1)
+  logitsValue[b] = logits[b].safe\_softmax(dim=-1)
   $$
 
   * 尝试使用topKGuess，对logits进行滚动排序，获取计算topP的mask：
@@ -148,7 +148,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   * 对`logitsSort`进行指数分布采样：
 
     $$
-    probs = softmax(logitsSort)
+    probs = safe\_softmax(logitsSort)
     $$
 
     $$
@@ -417,6 +417,7 @@ aclnnStatus aclnnTopKTopPSample(
 
 - 确定性计算：
   - aclnnTopKTopPSample默认确定性实现。
+- 对于logits，它的元素应确保通过$exp(*)$运算后，对应结果不小于FLOAT32的最小有效值，否则对应的Safe_softmax结果将为0，可能继而导致算子的非预期输出。
 - 对于所有采样参数，它们的尺寸必须满足，batch>0，0<vocSize<=2^20。
 - topK和topP只接受非负值作为合法输入；传入0和负数不会跳过相应batch的采样，反而会引起预期之外的错误。
 - logits、q、logitsTopKPselect的尺寸和维度必须完全一致。
