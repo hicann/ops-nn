@@ -13,6 +13,8 @@
  * \brief
  */
 
+#include <cerrno>
+#include <cstdlib>
 #include <cmath>
 #include "matmul_v3_tiling_helper.h"
 #include "matmul/common/op_host/math_util.h"
@@ -23,6 +25,21 @@ namespace {
 using namespace optiling;
 using namespace optiling::matmul_v3_advanced;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
+
+int64_t StrToIntWithDefault(const std::string& str, int64_t defaultValue)
+{
+    if (str.empty()) {
+        return defaultValue;
+    }
+    const char* s = str.c_str();
+    char* endPtr = nullptr;
+    errno = 0;
+    long long parsed = std::strtoll(s, &endPtr, 10);
+    if (errno != 0 || endPtr == s || *endPtr != '\0' || parsed < 0) {
+        return defaultValue;
+    }
+    return static_cast<int64_t>(parsed);
+}
 
 // ------------------------------ CalL1Tiling -------------------------------------------//
 void CalL1TilingDefault(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
@@ -469,7 +486,8 @@ double MatMulV3TilingHelper::GetHbmBW(fe::PlatFormInfos* platformInfo)
     std::string ddrRateStr = "31";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
-    return GetCoreFreq(platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(ddrRateStr.c_str()) / KB_SIZE;
+    // 32:default coreCntStr; 31:default ddrRateStr; 
+    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(ddrRateStr, 31) / KB_SIZE; 
 }
 
 double MatMulV3TilingHelper::GetL2BW(fe::PlatFormInfos* platformInfo)
@@ -478,14 +496,16 @@ double MatMulV3TilingHelper::GetL2BW(fe::PlatFormInfos* platformInfo)
     std::string l2RateStr = "100";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
-    return GetCoreFreq(platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(l2RateStr.c_str()) / KB_SIZE;
+    // 32:default coreCntStr; 100:default coreCntStr; 
+    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(l2RateStr, 100) / KB_SIZE;
 }
 
 double MatMulV3TilingHelper::GetCoreFreq(fe::PlatFormInfos* platformInfo)
 {
     std::string freqStr = "1650";
     platformInfo->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);
-    return std::atoi(freqStr.c_str()) / static_cast<double>(THOUSAND_NUM);
+    // 1650:default freqStr;
+    return StrToIntWithDefault(freqStr, 1650) / static_cast<double>(THOUSAND_NUM);
 }
 } // namespace matmul_v3_advanced
 } // namespace optiling
