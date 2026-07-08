@@ -51,6 +51,8 @@
 #if IS_BLAZE
 #include "tensor_api/tensor.h"
 #include "qbmm_cube_tensor_api_blaze.h"
+#include "qbmm_mix_tensor_api_blaze.h"
+#include "qbmm_mix_without_batch_tensor_api_blaze.h"
 #if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #include "qbmm_mx_tensor_api_blaze.h"
 #include "qbmm_mx_without_batch_tensor_api_blaze.h"
@@ -225,6 +227,20 @@ constexpr CubeFormat format_y = CubeFormat::ND;
                                     fullLoadMode>(x1, x2, scale, bias, pertokenScale, y, &tilingData);               \
         }                                                                                                            \
     } while (0)
+#define QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                          \
+    do {                                                                                                        \
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);      \
+        QbmmMixTensorApiKernel<                                                                                 \
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>(     \
+            x1, x2, scale, bias, pertokenScale, y, &tilingData);                                                \
+    } while (0)
+#define QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                          \
+    do {                                                                                                        \
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, tilingData, tiling);      \
+        QbmmMixWithoutBatchTensorApiKernel<                                                                     \
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>(     \
+            x1, x2, scale, bias, pertokenScale, y, &tilingData);                                                \
+    } while (0)
 #endif
 
 // ASCEND_IS_NOT_AIV 等价于 (分离架构ASCEND_IS_AIC OR 耦合架构)
@@ -281,7 +297,58 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #endif
 
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
-    if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
+#if SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY
+    // Bias Mode = 0;
+    if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_APILEVEL == TPL_API_LEVEL_BLAZE && TPL_ATRANS == 0) {
+        if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 2;
+            if constexpr (TPL_BTRANS == 0) {
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(
+                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+            } else if constexpr (TPL_BTRANS == 1) {
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(
+                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+            }
+        }
+        if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH) { // Kernel Type = 11;
+            if constexpr (TPL_BTRANS == 0) {
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
+                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+            } else if constexpr (TPL_BTRANS == 1) {
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
+                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+            }
+        }
+        if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH) { // Kernel Type = 12;
+            if constexpr (TPL_BTRANS == 0) {
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
+                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                    Blaze::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_BTRANS == 1) {
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
+                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                    Blaze::Gemm::A_FULL_LOAD_MODE);
+            }
+        }
+    } else {
+        if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_APILEVEL == TPL_API_LEVEL_HIGH) {// Bias Mode = 0;
+            if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 2;
+                GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+                QUANT_BMMV3_IMPL_CLASS(
+                    format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS),
+                    QuantBatchMatmulV3::QuantBmmPertokenRegbaseKernel, QuantBatchMatmulV3::QuantBmmAswBlock,
+                    MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
+            }
+            if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 3;
+                GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+                QUANT_BMMV3_IMPL_CLASS(
+                    format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS),
+                    QuantBatchMatmulV3::QuantBmmPertokenAL1FullLoad, QuantBatchMatmulV3::QuantBmmAswBlock,
+                    MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
+            }
+        }
+    }
+#else
+    if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_APILEVEL == TPL_API_LEVEL_HIGH) {   // Bias Mode = 0;
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 2;
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QUANT_BMMV3_IMPL_CLASS(format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS),
@@ -295,6 +362,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
                                    QuantBatchMatmulV3::QuantBmmAswBlock, MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
         }
     }
+#endif
 #endif
 
     if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {

@@ -25,15 +25,17 @@ constexpr int32_t MX_BASIC_API_ASW = 1L;
 constexpr int32_t CUBE_BASIC_API_ASW = 2L;
 constexpr int32_t ITER_BATCH = 3L;
 constexpr int32_t CUBE_ASW = 4L;
-constexpr int32_t MIX_ASW = 5L;
-constexpr int32_t PERBLOCK_BASIC_API_ASW = 6L;
-constexpr int32_t MX_STREAMK = 7L;
+constexpr int32_t MIX_BASIC_API_ASW = 5L;
+constexpr int32_t MIX_ASW = 6L;
+constexpr int32_t PERBLOCK_BASIC_API_ASW = 7L;
+constexpr int32_t MX_STREAMK = 8L;
 
 inline const std::vector<int32_t>& GetQuantBatchMatmulV3Priorities(NpuArch npuArch)
 {
     static const std::vector<int32_t> dav3510Priorities = {
         strategy::MX_STREAMK, strategy::MX_BASIC_API_ASW, strategy::CUBE_BASIC_API_ASW,
-        strategy::CUBE_ASW,   strategy::MIX_ASW,          strategy::PERBLOCK_BASIC_API_ASW};
+        strategy::CUBE_ASW, strategy::MIX_BASIC_API_ASW,   strategy::MIX_ASW,
+        strategy::PERBLOCK_BASIC_API_ASW};
     static const std::vector<int32_t> davResvPriorities = {strategy::ITER_BATCH, strategy::CUBE_BASIC_API_ASW,
                                                            strategy::CUBE_ASW};
     static const std::vector<int32_t> emptyPriorities = {};

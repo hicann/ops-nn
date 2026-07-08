@@ -14,9 +14,11 @@
 
 #include <cstddef>
 #include <cstring>
+#include <exception>
 #include <mutex>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -86,6 +88,11 @@ public:
     uint64_t tilingKey;
     std::string tilingData;
     bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
+};
+
+struct QuantBatchMatmulV3TilingCsvLoadResult {
+    std::vector<QuantBatchMatmulV3TilingTestParam> params;
+    std::vector<std::string> errors;
 };
 
 static string TilingData2Str(const void* tilingData, size_t tilingSize)
@@ -224,75 +231,130 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 }
 
-static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string& socVersion)
+static QuantBatchMatmulV3TilingCsvLoadResult LoadParams(const std::string& socVersion)
 {
-    std::vector<QuantBatchMatmulV3TilingTestParam> params;
+    QuantBatchMatmulV3TilingCsvLoadResult result;
     std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
     std::string casePath(rootPath + "matmul/quant_batch_matmul_v3/tests/ut/op_host/test_quant_batch_matmul_v3.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
-        return params;
+        result.errors.push_back("cannot open case file: " + casePath);
+        return result;
     }
 
     std::string line;
+    bool skipHeader = true;
+    constexpr size_t kExpectedCols = 34UL;
+    size_t lineNo = 0UL;
     while (std::getline(csvData, line)) {
+        ++lineNo;
+        const std::string trimLine = Trim(line);
+        if (trimLine.empty() || trimLine[0] == '#') {
+            continue;
+        }
+        if (skipHeader) {
+            skipHeader = false;
+            continue;
+        }
+
         std::vector<std::string> testParam;
         SplitStr2Vec(line, ",", testParam);
+        if (testParam.size() < kExpectedCols) {
+            result.errors.push_back("skip invalid csv line " + std::to_string(lineNo) + " in " + casePath +
+                                    ": expected at least " + std::to_string(kExpectedCols) + " columns, got " +
+                                    std::to_string(testParam.size()));
+            continue;
+        }
 
         QuantBatchMatmulV3TilingTestParam param;
         size_t idx = 0UL;
-        param.socVersion = testParam[idx++];
+        param.socVersion = Trim(testParam[idx++]);
         if (param.socVersion != socVersion) {
             continue;
         }
 
-        param.caseName = testParam[idx++];
-        param.kernelUtDir = testParam[idx++];
-        param.prefix = testParam[idx++];
-        auto aicNum = testParam[idx++];
-        if (aicNum.empty()) {
-            param.aicNum = -1;
-        } else {
-            param.aicNum = stol(aicNum);
+        try {
+            param.caseName = Trim(testParam[idx++]);
+            param.kernelUtDir = Trim(testParam[idx++]);
+            param.prefix = Trim(testParam[idx++]);
+            auto aicNum = Trim(testParam[idx++]);
+            if (aicNum.empty()) {
+                param.aicNum = -1;
+            } else {
+                param.aicNum = stol(aicNum);
+            }
+            auto aivNum = Trim(testParam[idx++]);
+            if (aivNum.empty()) {
+                param.aivNum = -1;
+            } else {
+                param.aivNum = stol(aivNum);
+            }
+            param.x1Dim = stol(testParam[idx++]);
+            param.x2Dim = stol(testParam[idx++]);
+            param.yDim = stol(testParam[idx++]);
+            param.batchA = stol(testParam[idx++]);
+            param.batchB = stol(testParam[idx++]);
+            param.batchC = stol(testParam[idx++]);
+            param.m = stol(testParam[idx++]);
+            param.k = stol(testParam[idx++]);
+            param.n = stol(testParam[idx++]);
+            param.offsetFlag = stol(testParam[idx++]);
+            param.pertokenFlag = stol(testParam[idx++]);
+            param.biasFlag = stol(testParam[idx++]);
+            param.transA = stol(testParam[idx++]);
+            param.transB = stol(testParam[idx++]);
+            param.quantMode = stol(testParam[idx++]);
+            param.x1Dtype = ParseDtype(Trim(testParam[idx++]));
+            param.x2Dtype = ParseDtype(Trim(testParam[idx++]));
+            param.scaleDtype = ParseDtype(Trim(testParam[idx++]));
+            param.perTokenScaleDtype = ParseDtype(Trim(testParam[idx++]));
+            param.biasDtype = ParseDtype(Trim(testParam[idx++]));
+            param.yDtype = ParseDtype(Trim(testParam[idx++]));
+            param.fmapNz = Trim(testParam[idx++]) == "NZ";
+            param.weightNz = Trim(testParam[idx++]) == "NZ";
+            param.result = (strcasecmp(Trim(testParam[idx++]).c_str(), "true") == 0);
+            param.numBlocks = stol(testParam[idx++]);
+            param.tilingKey = stol(testParam[idx++]);
+            param.tilingData = Trim(testParam[idx++]);
+            param.tilingStub = (strcasecmp(Trim(testParam[idx++]).c_str(), "true") == 0);
+            result.params.push_back(param);
+        } catch (const std::exception& e) {
+            result.errors.push_back("skip invalid csv line " + std::to_string(lineNo) + " in " + casePath + ": " +
+                                    e.what());
         }
-        auto aivNum = testParam[idx++];
-        if (aivNum.empty()) {
-            param.aivNum = -1;
-        } else {
-            param.aivNum = stol(aivNum);
-        }
-        param.x1Dim = stol(testParam[idx++]);
-        param.x2Dim = stol(testParam[idx++]);
-        param.yDim = stol(testParam[idx++]);
-        param.batchA = stol(testParam[idx++]);
-        param.batchB = stol(testParam[idx++]);
-        param.batchC = stol(testParam[idx++]);
-        param.m = stol(testParam[idx++]);
-        param.k = stol(testParam[idx++]);
-        param.n = stol(testParam[idx++]);
-        param.offsetFlag = stol(testParam[idx++]);
-        param.pertokenFlag = stol(testParam[idx++]);
-        param.biasFlag = stol(testParam[idx++]);
-        param.transA = stol(testParam[idx++]);
-        param.transB = stol(testParam[idx++]);
-        param.quantMode = stol(testParam[idx++]);
-        param.x1Dtype = ParseDtype(testParam[idx++]);
-        param.x2Dtype = ParseDtype(testParam[idx++]);
-        param.scaleDtype = ParseDtype(testParam[idx++]);
-        param.perTokenScaleDtype = ParseDtype(testParam[idx++]);
-        param.biasDtype = ParseDtype(testParam[idx++]);
-        param.yDtype = ParseDtype(testParam[idx++]);
-        param.fmapNz = testParam[idx++] == "NZ";
-        param.weightNz = testParam[idx++] == "NZ";
-        param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
-        param.numBlocks = stol(testParam[idx++]);
-        param.tilingKey = stol(testParam[idx++]);
-        param.tilingData = testParam[idx++];
-        param.tilingStub = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
-        params.push_back(param);
     }
 
-    return params;
+    if (result.params.empty()) {
+        result.errors.push_back("no valid tiling cases loaded for " + socVersion + " from: " + casePath);
+    }
+    return result;
+}
+
+static const QuantBatchMatmulV3TilingCsvLoadResult& GetParamsLoadResult(const std::string& socVersion)
+{
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams910B2 = LoadParams("Ascend910B2");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams910B4 = LoadParams("Ascend910B4");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams310P3 = LoadParams("Ascend310P3");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams950 = LoadParams("Ascend950");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsMC62CM12AA = LoadParams("MC62CM12AA");
+    if (socVersion == "Ascend910B2") {
+        return kCasesParams910B2;
+    }
+    if (socVersion == "Ascend910B4") {
+        return kCasesParams910B4;
+    }
+    if (socVersion == "Ascend310P3") {
+        return kCasesParams310P3;
+    }
+    if (socVersion == "Ascend950") {
+        return kCasesParams950;
+    }
+    return kCasesParamsMC62CM12AA;
+}
+
+static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string& socVersion)
+{
+    return GetParamsLoadResult(socVersion).params;
 }
 
 void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& compileInfo) const
@@ -763,13 +825,16 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         } else {
             QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(
                 tilingContext->GetRawTilingData()->GetData());
-            QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(
-                tilingDataInt.data());
-            // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
-            expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
-            // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
-            if (biasFlag == false) {
-                expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+            const size_t expectTilingDataSize = tilingDataInt.size() * sizeof(int32_t);
+            if (expectTilingDataSize >= sizeof(QuantBatchMatmulV3TilingData)) {
+                QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(
+                    tilingDataInt.data());
+                // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
+                expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
+                // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
+                if (biasFlag == false) {
+                    expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+                }
             }
             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
                                                         tilingContext->GetRawTilingData()->GetDataSize());
@@ -788,6 +853,17 @@ void QuantBatchMatmulV3TilingTestParam::Test() const
     QuantBatchMatmulV3CompileInfo compileInfo;
     Prepare(compileInfo);
     InvokeTilingFunc(compileInfo);
+}
+
+TEST(QuantBatchMatmulV3TilingCsv, ShouldLoadValidCases)
+{
+    for (const auto& socVersion : {"Ascend910B2", "Ascend910B4", "Ascend310P3", "Ascend950", "MC62CM12AA"}) {
+        const auto& loadResult = GetParamsLoadResult(socVersion);
+        for (const auto& error : loadResult.errors) {
+            ADD_FAILURE() << error;
+        }
+        EXPECT_FALSE(loadResult.params.empty()) << "socVersion is: " << socVersion;
+    }
 }
 
 TEST_P(TestQuantBatchMatmulV3Tiling, generalTest) { GetParam().Test(); }

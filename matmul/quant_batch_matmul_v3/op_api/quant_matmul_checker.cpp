@@ -1230,14 +1230,17 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
                            (x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
                             x2Scale_->GetDataType() == op::DataType::DT_INT64);
     bool isPerblockFloatScale = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
-    if (!IsMicroScaling(x1Scale_, x2Scale_) && !isStaticX2Scale && !isPerblockFloatScale) {
+    bool isFloatScale = x1Scale_ != nullptr && x2Scale_ != nullptr &&
+                       x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
+                       x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
+    if (!IsMicroScaling(x1Scale_, x2Scale_) && !isFloatScale && !isStaticX2Scale && !isPerblockFloatScale) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
             FormatString("%s, %s", x1Scale_ == nullptr ? "null" : op::ToString(x1Scale_->GetDataType()).GetString(),
                          op::ToString(x2Scale_->GetDataType()).GetString())
                 .c_str(),
             "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, x1Scale and x2Scale must be "
-            "FLOAT8_E8M0 for mx quantization, or both be FLOAT for G-B/B-B quantization, or x1Scale must be null "
+            "FLOAT8_E8M0 for mx quantization, or both be FLOAT for G-B/B-B/K-C/K-T quantization, or x1Scale must be null "
             "and x2Scale must exist and its dtype must be UINT64/INT64");
         return false;
     }
@@ -1265,14 +1268,17 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
                            (x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
                             x2Scale_->GetDataType() == op::DataType::DT_INT64);
     bool isPerblockFloatScale = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
-    if (isPerblockFloatScale) {
+    bool isFloatScale = x1Scale_ != nullptr && x2Scale_ != nullptr &&
+                       x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
+                       x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
+    if (isPerblockFloatScale || isFloatScale) {
         return true;
     }
     if (x1Scale_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             apiName_, GetX1ScaleName().c_str(), "not null",
             "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x1Scale must be null "
-            "for static quantization, or x1Scale and x2Scale must both be FLOAT for G-B/B-B quantization");
+            "for static quantization, or x1Scale and x2Scale must both be FLOAT for G-B/B-B/K-C/K-T quantization");
         return false;
     }
     if (!isStaticX2Scale) {

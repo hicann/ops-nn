@@ -403,12 +403,12 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Hifloat8() const
     bool is64BitScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
     // 静态 x2 scale 路径：pertokenScale 为 null 且 scale 为 UINT64/INT64
     bool isStaticX2Scale = !hasPerTokenScale && is64BitScale;
-    // FP8-Pertile WeightNz(HIFLOAT8)：scale 与 pertokenScale 均为 FLOAT
-    bool isPertileFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
+    // FP8-Pertile/MIX WeightNz(HIFLOAT8)：scale 与 pertokenScale 均为 FLOAT
+    bool isFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
                                inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
 
     OP_TILING_CHECK(
-        !(isStaticX2Scale || isPertileFloatScale),
+        !(isStaticX2Scale || isFloatScale),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             inputParams_.opName, "pertokenScale, scale",
             FormatString(
@@ -454,12 +454,12 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Fp8E4M3() const
     bool is64BitScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
     bool isStaticX2Scale = !hasPerTokenScale && is64BitScale;
     bool isMxScale = hasPerTokenScale && isE8M0ScalePair;
-    // FP8-Pretile WeightNz(only for FLOAT8_E4M3FN): scale and pertokenScale are all FLOAT
-    bool isPertileFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
-                               inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
+    // FP8-Pretile/MIX WeightNz(only for FLOAT8_E4M3FN): scale and pertokenScale are all FLOAT
+    bool isFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                        inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
 
     OP_TILING_CHECK(
-        !(isMxScale || isStaticX2Scale || isPertileFloatScale),
+        !(isMxScale || isStaticX2Scale || isFloatScale),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             inputParams_.opName, "pertokenScale, scale",
             FormatString("%s, %s",

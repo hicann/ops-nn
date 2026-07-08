@@ -548,13 +548,16 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - 输入和输出支持以下数据类型组合：
   <a id="输入和输出支持以下数据类型组合KC/KT"></a>
 
-      | x1                   | x2                   | x1Scale | x2Scale         | x2Offset | yScale |   bias                      | out             |
-      | -------------------- | -------------------- | ------- | --------------- | -------- | -------|   ------------------------- | --------------- |
-      | INT8                 | INT8                 | FLOAT32 | FLOAT32/BFLOAT16| null     | null   | null/INT32/FLOAT32/BFLOAT16 | BFLOAT16        |
-      | INT8                 | INT8                 | FLOAT32 | FLOAT32         | null     | null   | null/INT32/FLOAT32/FLOAT16  | FLOAT16         |
+      | x1                   | x2                   | x1Scale | x2Scale         | x2Offset | yScale |   bias                      | out                       |
+      | -------------------- | -------------------- | ------- | --------------- | -------- | -------|   ------------------------- | ------------------------- |
+      | INT8                 | INT8                 | FLOAT32 | FLOAT32/BFLOAT16| null     | null   | null/INT32/FLOAT32/BFLOAT16 | BFLOAT16                  |
+      | INT8                 | INT8                 | FLOAT32 | FLOAT32         | null     | null   | null/INT32/FLOAT32/FLOAT16  | FLOAT16                   |
+      | FLOAT8_E4M3FN        | FLOAT8_E4M3FN        | FLOAT32 | FLOAT32         | null     | null   | null/FLOAT32                | FLOAT16/BFLOAT16/FLOAT32  |
+      | HIFLOAT8             | HIFLOAT8             | FLOAT32 | FLOAT32         | null     | null   | null/FLOAT32                | FLOAT16/BFLOAT16/FLOAT32  |
 
     - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致;
     - K-T量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(1,)，其中m与x1的m一致。
+    - 当x1与x2数据类型为FLOAT8_E4M3FN和HIFLOAT8时，仅支持transA为false。
   
   - **MX量化场景约束：**
   <a id="MX量化"></a>
