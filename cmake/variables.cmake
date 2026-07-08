@@ -63,7 +63,6 @@ get_filename_component(OPS_KERNEL_BINARY_SCRIPT   "${OPS_NN_DIR}/scripts/kernel/
 get_filename_component(OPS_KERNEL_BINARY_CONFIG   "${OPS_NN_DIR}/scripts/kernel/binary_config"    REALPATH)
 get_filename_component(OPS_CMCT                   "${OPS_NN_DIR}/matmul/common/cmct"              REALPATH)
 get_filename_component(BLAZE                      "${OPTENSOR_SOURCE_PATH}/include/blaze"         REALPATH)
-get_filename_component(TENSOR_API                 "${OPTENSOR_SOURCE_PATH}/include/tensor_api"    REALPATH)
 
 # python
 if(NOT DEFINED ASCEND_PYTHON_EXECUTABLE)

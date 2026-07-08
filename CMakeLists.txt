@@ -110,11 +110,11 @@ set(CMAKE_CXX_STANDARD
     17
     CACHE STRING "c++17 is needed for this project")
 include(cmake/third_party/opbase.cmake) # 放在dependencies.cmake前面
-include(cmake/third_party/ops-tensor.cmake)
 if(DOWNLOAD_OPS_TEST_KIT)
   include(cmake/third_party/ops_test_kit.cmake)
 endif()
 include(cmake/dependencies.cmake)
+include(cmake/third_party/ops-tensor.cmake)
 add_cann_third_party(json)
 add_cann_third_party(abseil-cpp)
 add_cann_third_party(protobuf)

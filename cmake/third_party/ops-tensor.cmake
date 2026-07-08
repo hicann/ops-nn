@@ -13,6 +13,8 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/../ops-tensor")
   get_filename_component(OPTENSOR_SOURCE_PATH
                          ${PROJECT_SOURCE_DIR}/../ops-tensor REALPATH)
   message(STATUS "Find ops-tensor source dir: ${OPTENSOR_SOURCE_PATH}")
+  get_filename_component(TENSOR_API
+ 	                       ${ASCEND_DIR}/${SYSTEM_PREFIX}/asc  REALPATH)
 elseif(EXISTS "${CANN_3RD_LIB_PATH}/ops-tensor")
   get_filename_component(OPTENSOR_SOURCE_PATH
                          ${CANN_3RD_LIB_PATH}/ops-tensor REALPATH)
@@ -45,6 +47,8 @@ elseif(EXISTS "${CANN_3RD_LIB_PATH}/ops-tensor")
   if(NOT CHECKOUT_RESULT EQUAL 0)
     message(FATAL_ERROR "Git checkout failed: ${CHECKOUT_ERROR}")
   endif()
+  get_filename_component(TENSOR_API  
+                         ${OPTENSOR_SOURCE_PATH}/include/tensor_api  REALPATH)
 else()
   execute_process(
     COMMAND git remote get-url origin
@@ -72,5 +76,6 @@ else()
   FetchContent_Populate(ops-tensor)
 
   set(OPTENSOR_SOURCE_PATH ${CANN_3RD_LIB_PATH}/ops-tensor)
-
+  get_filename_component(TENSOR_API  
+                         ${OPTENSOR_SOURCE_PATH}/include/tensor_api  REALPATH)
 endif()
