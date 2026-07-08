@@ -62,13 +62,17 @@
   $$  
     \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])  
   $$  
-  其中：如果提供了weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}} \cdot \mathbf{weight}$；如果未提供weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}}$
+  其中：如果提供了weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{y} \cdot \mathbf{weight}$；如果未提供weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{y}$
 
 - Weight梯度计算公式（可选）：  
-  $$  
-    \mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{\text{output}}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]  
-  $$  
-  其中：$\mathbf{y}_{\text{origin}}$ 为SwiGLU前向传播的原始激活值输出，沿最后一维（H维度）求和。
+   $$  
+     \mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{y}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]  
+   $$  
+   其中：$\mathbf{y}_{\text{origin}}$ 为SwiGLU前向传播的原始激活值输出，沿最后一维（H维度）求和。
+
+   $$  
+     \mathbf{grad}_{\text{weight}}[t] = \mathbf{grad}_{\text{weight}}[t] \cdot \mathbb{I}(t < \text{trunc})  
+   $$
 
 - Clamp反向传播掩码公式（当clamp_limit > 0时）：  
   $$  
@@ -148,7 +152,7 @@
     <tr>
       <td>clampLimit</td>
       <td>属性</td>
-      <td><ul><li>Clamp阈值。</li><li>取值范围≥0.0。</li><li>clampLimit=0表示不启用Clamp反向传播掩码。</li></ul></td>
+      <td>Clamp阈值。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -170,9 +174,7 @@
 
 ## 约束说明
 
-- 确定性计算：
-  - 当提供 `groupIndex` 参数时：前 trunc 行保证计算结果确定性，后 T-trunc 行保证确定性（填充0）
-  - 当未提供 `groupIndex` 参数时：所有行数据保证计算结果确定性
+- 确定性计算：默认确定性实现。
 
 - 输入shape约束：
   - x最后一维必须为偶数（$2H$）
@@ -181,7 +183,7 @@
 
 - 可选参数约束：
   - weight提供时，必须同时提供yOrigin才能计算gradWeight
-  - weight的shape需与gradY的第一维一致
+  - weight的shape需与gradY的前n-1维一致
   - yOrigin的shape需与gradY一致
 
 - 数据类型约束：
@@ -190,8 +192,16 @@
   - groupIndex必须为INT64类型
 
 - Clamp约束：
-  - clampLimit必须 ≥ 0.0
-  - clampLimit=0表示不启用Clamp反向传播掩码
+  - clampLimit取值范围为-1.0或>0.0
+  - clampLimit=-1.0表示不启用Clamp反向传播掩码，启用时clampLimit必须>0.0
+
+- 规格约束：
+
+  | 规格项 | 规格 | 规格说明 |
+  |--------|------|----------|
+  | B | 1~31 | - |
+  | S | 0~128K | - |
+  | H | 512, 768, 1024, 1536, 1792, 2048, 2560, 4096 | - |
 
 ## 调用说明
 
