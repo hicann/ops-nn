@@ -471,8 +471,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <details>
 <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
 
-  - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
-  - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
+  - x1的最后一维大小不能超过65535，但当x1和x2的dtype为INT8，x2Scale的dtype为FLOAT32或BFLOAT16且x2Scale和x1Scale维度都为1时，支持大于65535。x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
+  - x2的最后一维大小不能超过65535，但当x1和x2的dtype为INT8，x2Scale的dtype为FLOAT32或BFLOAT16且x2Scale和x1Scale维度都为1时，支持大于65535。x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
 
   - 当原始ND的后两维中存在某一维度为1时，无法使用weightNz特性，本接口不支持此种场景。
