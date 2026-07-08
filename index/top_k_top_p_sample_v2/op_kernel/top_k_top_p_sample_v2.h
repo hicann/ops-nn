@@ -18,6 +18,9 @@
 
 #include "top_k_top_p_sample_v2_comm.h"
 #include "top_k_top_p_sample_v2_sort_cumsum.h"
+#if __NPU_ARCH__ == 3510
+#include "c_api/asc_simd.h"
+#endif
 
 namespace TopKTopPSampleV2 {
 
@@ -106,7 +109,10 @@ public:
             const bool doGuessTopK = !doTopKSample && doTopPSample;
             bool isInLocalTensor = false;
             hasCopyOutLogits = false;
-
+            #if __NPU_ARCH__ == 3510
+                        asc_dcci_entire_out();
+            #endif
+            
             if (doTopKSample || fp32P <= 0) {
                 kCount = this->k;
                 if (fp32P <= 0) {
