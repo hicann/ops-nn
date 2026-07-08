@@ -110,12 +110,30 @@ __aicore__ inline bool CopyFusionX3Aligned(
     return true;
 }
 
+template <typename DataTypeIn, typename LocalTensor>
+__aicore__ inline bool CopyFusionX3Contiguous(
+    LocalTensor inputLocal, AscendC::GlobalTensor<DataTypeIn>& inputGlobal, int64_t offset, int64_t stageSize)
+{
+    if (stageSize <= 0) {
+        return false;
+    }
+    AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(stageSize * sizeof(DataTypeIn)), 0, 0, 0};
+    AscendC::DataCopyPadExtParams<DataTypeIn> padParams{false, 0, 0, 0};
+    AscendC::DataCopyPad(inputLocal, inputGlobal[offset], copyParams, padParams);
+    return true;
+}
+
 template <typename DataTypeIn, typename DataTypeOut, typename LocalTensor>
 __aicore__ inline bool CopyFusionX3(
     LocalTensor inputLocal, AscendC::GlobalTensor<DataTypeIn>& inputGlobal, int64_t offset, int64_t curAivM,
     int64_t curAivN, int64_t strideN, int64_t stageSize, bool needNdDma, bool fixp1v2, bool x3BatchBroadcast,
-    int64_t x3M, bool enablePad)
+    int64_t x3M, bool enablePad, bool contiguous = false)
 {
+    if (contiguous) {
+        return CopyFusionX3Contiguous(inputLocal, inputGlobal, offset, stageSize);
+    }
     int64_t curAivNAlign = fixp1v2 ? CeilAlign(curAivN, AscendC::BLOCK_CUBE) : AlignBlock<DataTypeIn>(curAivN);
     uint32_t dstStride =
         fixp1v2 ? static_cast<uint32_t>((curAivNAlign - curAivN) * sizeof(DataTypeOut) / UB_ALIGN_SIZE) : 0;

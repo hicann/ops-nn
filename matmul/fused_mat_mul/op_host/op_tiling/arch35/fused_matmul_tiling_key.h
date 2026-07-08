@@ -32,8 +32,15 @@ public:
         return *this;
     }
 
+    FusedMatmulTilingKey& SetInnerPrecise(FusedInnerPrecise innerPrecise)
+    {
+        innerPrecise_ = innerPrecise;
+        return *this;
+    }
+
 protected:
     FusedOpType fusedOpType_ = FusedOpType::NONE;
+    FusedInnerPrecise innerPrecise_ = FusedInnerPrecise::HIGH_PERFORMANCE;
 };
 } // namespace fused_matmul
 } // namespace optiling

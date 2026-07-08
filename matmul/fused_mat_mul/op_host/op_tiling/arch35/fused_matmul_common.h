@@ -68,6 +68,11 @@ enum class FusedOpType : std::uint8_t {
     CAST32 = F_OPTYPE_16CAST32,
 };
 
+enum class FusedInnerPrecise : std::uint8_t {
+    HIGH_PRECISION = F_INNER_PRECISE_HIGH_PRECISION,
+    HIGH_PERFORMANCE = F_INNER_PRECISE_HIGH_PERFORMANCE,
+};
+
 const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {{"", FusedOpType::NONE},
                                                               {"add", FusedOpType::ADD},
                                                               {"mul", FusedOpType::MUL},

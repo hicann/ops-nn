@@ -69,17 +69,19 @@ bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*
     return false;
 }
 
-// inner_precise默认为0；仅当cubeMathType不是USE_FP32_ADD，且fusedOpType为add/mul，
-// x/x2/x3均为同一种fp16或bf16类型时，inner_precise取1。
+// inner_precise默认为1；仅普通2D matmul在cubeMathType是USE_FP32_ADD，且fusedOpType为add/mul，
+// x/x2/x3均为同一种fp16或bf16类型时，inner_precise取0。
 static int64_t GetInnerPrecise(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
                                int8_t cubeMathType)
 {
-    if (cubeMathType != USE_FP32_ADD && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
+    bool isPlainMatmul = x->GetViewShape().GetDimNum() == DIM_LEN_MIN &&
+                         x2->GetViewShape().GetDimNum() == DIM_LEN_MIN;
+    if (isPlainMatmul && cubeMathType == USE_FP32_ADD && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
         (x->GetDataType() == DataType::DT_FLOAT16 || x->GetDataType() == DataType::DT_BF16) &&
         x->GetDataType() == x2->GetDataType() && x3 != nullptr && x3->GetDataType() == x->GetDataType()) {
-        return INNER_PRECISE_HIGH_PERFORMANCE;
+        return INNER_PRECISE_HIGH_PRECISION;
     }
-    return INNER_PRECISE_HIGH_PRECISION;
+    return INNER_PRECISE_HIGH_PERFORMANCE;
 }
 
 // 校验fusedOpType是否合法
@@ -516,8 +518,10 @@ static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTenso
     if (IsInSupportedOpTypes(fusedOpType, kSupportedIn16CastOut32OpTypes)) {
         mmOpInfo.ori_info.output_dtype = DataType::DT_FLOAT;
     }
+    int64_t innerPrecise = GetInnerPrecise(x, x2, x3, fusedOpType, cubeMathType);
     // Split small cases through common MatMul/BMM graph builders.
-    if (IsNpuArch3510Series() && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes)) {
+    if (IsNpuArch3510Series() && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
+        innerPrecise == INNER_PRECISE_HIGH_PERFORMANCE) {
         int64_t selfDimNum = x->GetViewShape().GetDimNum();
         int64_t mat2DimNum = x2->GetViewShape().GetDimNum();
         const auto& selfShape = x->GetViewShape();

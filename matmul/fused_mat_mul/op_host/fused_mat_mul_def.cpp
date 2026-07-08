@@ -63,7 +63,7 @@ public:
         this->Attr("transpose_x2").AttrType(OPTIONAL).Bool(false);
         this->Attr("enable_hf32").AttrType(OPTIONAL).Bool(false);
         this->Attr("fused_op_type").AttrType(OPTIONAL).String("");
-        this->Attr("inner_precise").AttrType(OPTIONAL).Int(0);
+        this->Attr("inner_precise").AttrType(OPTIONAL).Int(1);
 
         OpAICoreConfig aicConfig;
         aicConfig.DynamicCompileStaticFlag(true)

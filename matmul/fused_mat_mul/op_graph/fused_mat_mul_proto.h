@@ -54,7 +54,7 @@ REG_OP(FusedMatMul)
     .ATTR(transpose_x2, Bool, false)
     .ATTR(enable_hf32, Bool, false)
     .ATTR(fused_op_type, String, "")
-    .ATTR(inner_precise, Int, 0)
+    .ATTR(inner_precise, Int, 1)
     .OP_END_FACTORY_REG(FusedMatMul)
 } // namespace ge
 

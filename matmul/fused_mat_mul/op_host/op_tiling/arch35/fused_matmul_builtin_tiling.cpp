@@ -440,6 +440,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     fusedMatmulTilingKey.SetFusedOpType(FUSED_OP_TYPE_MAP.at(opType));
+    auto innerPrecise = attrs->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, innerPrecise);
+    fusedMatmulTilingKey.SetInnerPrecise(static_cast<FusedInnerPrecise>(*innerPrecise));
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), reinterpret_cast<void*>(&args_),
                               &fusedMatmulTilingKey);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);

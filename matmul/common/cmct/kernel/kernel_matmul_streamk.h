@@ -138,7 +138,55 @@ class KernelMatmulStreamK<
         AscendC::Std::is_base_of_v<
             BlockEpilogue_,
             Block::BlockEpilogueStreamKFusion<
-                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>>>> {
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, 1>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>, 1>>>> {
 public:
     __aicore__ inline KernelMatmulStreamK() {}
     __aicore__ inline ~KernelMatmulStreamK() {}

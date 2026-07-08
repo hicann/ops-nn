@@ -442,10 +442,12 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
 
     bool isATrans = *(context_->GetAttrs()->GetAttrPointer<bool>(0));
     bool isBTrans = *(context_->GetAttrs()->GetAttrPointer<bool>(1));
+    int64_t innerPrecise = *(context_->GetAttrs()->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX));
 
-    // high level, trans, mm basic, no fullload, on the fly, fuse_op_type
+    // high level, trans, mm basic, no fullload, on the fly, fuse_op_type, inner_precise
     uint64_t tilingKey = GET_TPL_TILING_KEY(0, static_cast<uint64_t>(GetTrans(isATrans, isBTrans)), 0, 0, 0, 0,
-                                            static_cast<uint64_t>(FUSED_OP_TYPE_MAP.at(opType_)));
+                                            static_cast<uint64_t>(FUSED_OP_TYPE_MAP.at(opType_)),
+                                            static_cast<uint64_t>(innerPrecise));
 
     int64_t m = 0L;
     int64_t n = 0L;

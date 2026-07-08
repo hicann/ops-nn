@@ -55,6 +55,7 @@ public:
     const static int16_t FLAG_ID_MAX = 16;
     const static int16_t COUNT_ID_MAX = 15;
     const static int16_t COUNT_FLAG = 3;
+    static constexpr int64_t WORKSPACE_N_REM_THRESHOLD = 8;
     __aicore__ inline KernelMatmulMixWithoutQue() {}
     __aicore__ inline ~KernelMatmulMixWithoutQue() {}
 
@@ -90,8 +91,10 @@ public:
     AscendC::GlobalTensor<AType> aGlobal_;
     AscendC::GlobalTensor<BType> bGlobal_;
     AscendC::GlobalTensor<CType> cGlobal_;
-    AscendC::GlobalTensor<CType> workspaceGlobal_;
     AscendC::GlobalTensor<BiasType> biasGlobal_;
+    using MmOutType = typename BlockEpilogue::DataTypeIn;
+    static constexpr bool useWorkspaceForC = BlockEpilogue::useWorkspaceForC;
+    AscendC::GlobalTensor<MmOutType> workspaceGlobal_;
     // shape
     TupleShape problemShape_{};
     bool isBias_ = false;
@@ -119,23 +122,28 @@ public:
     }
 
     __aicore__ inline void RunEpilogue(BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape, int64_t offsetC,
-                                       int64_t flagId, bool useWorkspace)
+                                       int64_t flagId)
     {
         BlockShape epilogueShape = {Get<MNK_M0>(blockShape), Get<MNK_N0>(blockShape), 1, 1};
-        // With GM workspace, epilogue reloads the MMAD result from the same C offset.
-        epilogueOp(epilogueShape, offsetC, workspaceGlobal_, offsetC, useWorkspace, flagId);
+        epilogueOp(epilogueShape, offsetC, flagId);
     }
 
     __aicore__ inline void RunMmad(BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp,
                                    const TupleL1L0Shape& blockShape, int64_t offsetA, int64_t offsetB, int64_t offsetC,
-                                   int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, bool useWorkspace)
+                                   int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, uint64_t workspaceSlotM,
+                                   uint64_t workspaceSlotN)
     {
-        if (useWorkspace) {
-            // Store MMAD output in GM when the paired AIV epilogue cannot hold the aligned tile in UB.
-            blockMmadOp.template operator()<AscendC::GlobalTensor<CType>, BlockMmadBuilder::formatB>(
-                workspaceGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape,
-                mOffset, nOffset, false, true);
-            return;
+        if constexpr (useWorkspaceForC) {
+            int64_t curN0 = Get<MNK_N0>(blockShape);
+            if (((curN0 & 0xF) > 0) && ((curN0 & 0xF) <= WORKSPACE_N_REM_THRESHOLD)) {
+                int64_t wsOffset = AscendC::GetBlockIdx() * workspaceSlotM * workspaceSlotN;
+                blockMmadOp.template operator()<AscendC::GlobalTensor<MmOutType>, BlockMmadBuilder::formatB>(
+                    workspaceGlobal_[wsOffset], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
+                    blockShape, mOffset, nOffset, false, false, 0, false, false, true, workspaceSlotN);
+                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(0);
+                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(FLAG_ID_MAX);
+                return;
+            }
         }
         auto cLocal = epilogueOp.GetTensor();
         blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
@@ -151,8 +159,8 @@ public:
         aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType*>(blockMmadParams_.aGmAddr));
         bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType*>(blockMmadParams_.bGmAddr));
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
-        if (params.workspaceGmAddr != nullptr) {
-            workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(params.workspaceGmAddr));
+        if constexpr (useWorkspaceForC) {
+            workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ MmOutType*>(blockMmadParams_.workspaceGmAddr));
         }
         // Support bias
         if (blockMmadParams_.biasGmAddr != nullptr) {
@@ -198,7 +206,7 @@ public:
         uint64_t curML1 = Get<MNK_M>(tileL1);
         uint64_t curNL1 = Get<MNK_N>(tileL1);
         epilogueOp.Init(params.epilogueParams, Cmct::Gemm::CeilDiv(Get<0>(tileL0), AscendC::GetTaskRation()),
-                        Get<1>(tileL0), problemShape_);
+                        Get<1>(tileL0), problemShape_, Get<0>(tileL0), Get<1>(tileL0));
         if ASCEND_IS_AIC {
             blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
                                                                       bs.GetL1BuferNum_(), bs.GetL0cDB(),
@@ -214,7 +222,6 @@ public:
 
         bool enableCVSync = false;
         int64_t n = Get<MNK_N>(problemShape_);
-        bool useWorkspace = params.useGmWorkspace;
         int64_t count = 0;
         int64_t countId = 0;
         // Process tiles in ping-pong mode
@@ -254,7 +261,7 @@ public:
                                                                                       FLAG_ID_MAX);
                         }
                         RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset,
-                                nOffset, useWorkspace);
+                                nOffset, Get<0>(tileL0), Get<1>(tileL0));
 
                         enableCVSync = true;
                         count++;
@@ -272,7 +279,7 @@ public:
                         // Synchronize with aic
                         AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + countId);
                         // Calulate epilogue
-                        RunEpilogue(epilogueOp, blockShape, offsetC, AIV_SYNC_AIC_FLAG + countId, useWorkspace);
+                        RunEpilogue(epilogueOp, blockShape, offsetC, AIV_SYNC_AIC_FLAG + countId);
                     }
                 }
             }

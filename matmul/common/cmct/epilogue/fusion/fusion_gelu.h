@@ -55,6 +55,7 @@ public:
     int64_t ubCalcN_{0};
     int64_t strideN_{0};
     AscendC::LocalTensor<DataTypeIn> inputLocal_;
+    static constexpr bool kSupportsWorkspaceCopy = false;
 
     template <class LocalTensor>
     __aicore__ inline void Init(Params const& params, LocalTensor ubTensor, int64_t ubCalcM, int64_t ubCalcN,
@@ -74,7 +75,7 @@ public:
 
     __aicore__ inline void operator()(const AscendC::LocalTensor<DataTypeIn>& srcLocal,
                                       AscendC::LocalTensor<DataTypeIn>& outputLocal, int64_t offset, int64_t curAivM,
-                                      int64_t curAivN, int64_t strideN, int64_t stageSize)
+                                      int64_t curAivN, int64_t strideN, int64_t stageSize, bool contiguous = false)
     {
         AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(ZERO_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(ZERO_FLAG);

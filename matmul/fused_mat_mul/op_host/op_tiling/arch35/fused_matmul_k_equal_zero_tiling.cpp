@@ -51,7 +51,8 @@ uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
                                           static_cast<uint64_t>(MAT_MUL_FOR_BATCH),
                                           static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
                                           static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD),
-                                          static_cast<uint64_t>(MAT_MUL_ON_THE_FLY), static_cast<uint64_t>(it->second));
+                                          static_cast<uint64_t>(MAT_MUL_ON_THE_FLY), static_cast<uint64_t>(it->second),
+                                          static_cast<uint64_t>(F_INNER_PRECISE_HIGH_PERFORMANCE));
             }
         }
     }

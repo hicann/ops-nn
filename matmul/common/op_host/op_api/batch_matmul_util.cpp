@@ -57,7 +57,7 @@ static const uint64_t UB_SIZE = 248UL * 1024UL;
 static const uint64_t MIN_BATCH_NUM = 128UL;
 static const uint64_t MIN_BATCH_L0 = 4;
 static const uint32_t SOC_SPEC_INFO_LEN = 32;
-static constexpr int64_t FUSED_MATMUL_INNER_PRECISE_HIGH_PRECISION = 0L;
+static constexpr int64_t FUSED_MATMUL_INNER_PRECISE_HIGH_PERFORMANCE = 1L;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
@@ -1346,7 +1346,7 @@ const aclTensor* ExecFusedmmOp(const aclTensor* bias, const aclTensor* self, con
     const char* fusedOpType = "add";
     const aclTensor* bmmOpOut = l0op::FusedMatMulNd(contiguousSelf, mat2Cast, nullptr, contiguousBias, transposeSelf,
                                                     transposeMat2, cubeMathType, fusedOpType,
-                                                    FUSED_MATMUL_INNER_PRECISE_HIGH_PRECISION, executor);
+                                                    FUSED_MATMUL_INNER_PRECISE_HIGH_PERFORMANCE, executor);
     return bmmOpOut;
 }
 } // namespace NN

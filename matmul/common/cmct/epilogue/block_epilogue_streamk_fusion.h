@@ -30,7 +30,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <class WorkspaceType_, class OutType_, class DispatchPolicy_>
+template <class WorkspaceType_, class OutType_, class DispatchPolicy_, int8_t INNER_PRECISE = 0>
 class BlockEpilogueStreamKFusion {
 public:
     using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
@@ -167,21 +167,80 @@ public:
             Add(ubAddTensor, ubAddTensor, ubAddTensor[i * tilePaddedSize], tilePaddedSize);
         }
 
-        uint64_t castBufOffset = copyGm2UbParams_.kCnt * tilePaddedSize;
-        if constexpr (sizeof(OutType) == sizeof(half)) {
-            AscendC::LocalTensor<OutType> ubCastDst = ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
-            Cast(ubCastDst, ubAddTensor, RoundMode::CAST_RINT, tilePaddedSize);
-            AscendC::PipeBarrier<PIPE_V>();
-            AscendC::LocalTensor<OutType> ubX3 = ubCastDst[tilePaddedSize];
-            LoadX3Padded(ubX3, paddedN);
-            FuseFlat(ubCastDst, ubX3, tilePaddedSize);
-            WriteResultToGm(ubCastDst, paddedN);
+        if constexpr (sizeof(OutType) == sizeof(float)) {
+            RunFusionFloat(ubAddTensor, paddedN, tilePaddedSize);
+        } else if constexpr (INNER_PRECISE == 1) {
+            RunFusionNormalPrecision(ubAddTensor, paddedN, tilePaddedSize);
         } else {
-            AscendC::LocalTensor<OutType> ubX3 = ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
-            LoadX3Padded(ubX3, paddedN);
-            FuseFlat(ubAddTensor, ubX3, tilePaddedSize);
-            WriteResultToGm(ubAddTensor, paddedN);
+            RunFusionHighPrecision(ubAddTensor, paddedN, tilePaddedSize);
         }
+    }
+
+    __aicore__ inline void RunFusionHighPrecision(LocalTensor<float>& ubAddTensor, uint64_t paddedN,
+                                                  uint64_t tilePaddedSize)
+    {
+        uint64_t castBufOffset = copyGm2UbParams_.kCnt * tilePaddedSize;
+        AscendC::LocalTensor<OutType> ubX3Half =
+            ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
+        LoadX3Padded(ubX3Half, paddedN);
+
+        AscendC::LocalTensor<float> ubX3Float = ubAddTensor[tilePaddedSize];
+        AscendC::PipeBarrier<PIPE_V>();
+        Cast(ubX3Float, ubX3Half, AscendC::RoundMode::CAST_NONE, tilePaddedSize);
+        AscendC::PipeBarrier<PIPE_V>();
+
+        if constexpr (DispatchPolicy::enableAdd) {
+            AscendC::Add(ubAddTensor, ubAddTensor, ubX3Float, tilePaddedSize);
+        } else if constexpr (DispatchPolicy::enableMul) {
+            AscendC::Mul(ubAddTensor, ubAddTensor, ubX3Float, tilePaddedSize);
+        }
+        AscendC::PipeBarrier<PIPE_V>();
+
+        AscendC::LocalTensor<OutType> ubResult =
+            ubAddTensor[tilePaddedSize].template ReinterpretCast<OutType>();
+        Cast(ubResult, ubAddTensor, AscendC::RoundMode::CAST_RINT, tilePaddedSize);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(FLAG_0);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(FLAG_0);
+        WriteResultToGm(ubResult, paddedN);
+    }
+
+    __aicore__ inline void RunFusionNormalPrecision(LocalTensor<float>& ubAddTensor, uint64_t paddedN,
+                                                    uint64_t tilePaddedSize)
+    {
+        uint64_t castBufOffset = copyGm2UbParams_.kCnt * tilePaddedSize;
+        AscendC::LocalTensor<OutType> ubX3Half =
+            ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
+        LoadX3Padded(ubX3Half, paddedN);
+
+        AscendC::LocalTensor<OutType> ubResultHalf =
+            ubAddTensor[castBufOffset + tilePaddedSize].template ReinterpretCast<OutType>();
+        AscendC::PipeBarrier<PIPE_V>();
+        Cast(ubResultHalf, ubAddTensor, AscendC::RoundMode::CAST_RINT, tilePaddedSize);
+        AscendC::PipeBarrier<PIPE_V>();
+
+        if constexpr (DispatchPolicy::enableAdd) {
+            AscendC::Add(ubResultHalf, ubResultHalf, ubX3Half, tilePaddedSize);
+        } else if constexpr (DispatchPolicy::enableMul) {
+            AscendC::Mul(ubResultHalf, ubResultHalf, ubX3Half, tilePaddedSize);
+        }
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(FLAG_0);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(FLAG_0);
+        WriteResultToGm(ubResultHalf, paddedN);
+    }
+
+    __aicore__ inline void RunFusionFloat(LocalTensor<float>& ubAddTensor, uint64_t paddedN, uint64_t tilePaddedSize)
+    {
+        uint64_t castBufOffset = copyGm2UbParams_.kCnt * tilePaddedSize;
+        AscendC::LocalTensor<OutType> ubX3 = ubAddTensor[castBufOffset].template ReinterpretCast<OutType>();
+        LoadX3Padded(ubX3, paddedN);
+        if constexpr (DispatchPolicy::enableAdd) {
+            AscendC::Add(ubAddTensor, ubAddTensor, ubX3, tilePaddedSize);
+        } else if constexpr (DispatchPolicy::enableMul) {
+            AscendC::Mul(ubAddTensor, ubAddTensor, ubX3, tilePaddedSize);
+        }
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(FLAG_0);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(FLAG_0);
+        WriteResultToGm(ubAddTensor, paddedN);
     }
 
     __aicore__ inline void LoadX3Padded(AscendC::LocalTensor<OutType>& ubX3, uint64_t paddedN)

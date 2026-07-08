@@ -46,23 +46,23 @@ struct FusionOpSelector<OP_TYPE_ADD, OutType> {
 };
 
 // BlockEpilogueSelector: ADD/MUL use BlockEpilogueStreamKFusion, others use BlockEpilogueStreamK
-template <uint64_t OpType, class OutType, class DispatchPolicy>
+template <uint64_t OpType, class OutType, class DispatchPolicy, int8_t INNER_PRECISE>
 struct BlockEpilogueSelector {
     using type = Block::BlockEpilogueStreamK<float, OutType, DispatchPolicy>;
 };
 
-template <class OutType, class DispatchPolicy>
-struct BlockEpilogueSelector<OP_TYPE_ADD, OutType, DispatchPolicy> {
-    using type = Block::BlockEpilogueStreamKFusion<float, OutType, DispatchPolicy>;
+template <class OutType, class DispatchPolicy, int8_t INNER_PRECISE>
+struct BlockEpilogueSelector<OP_TYPE_ADD, OutType, DispatchPolicy, INNER_PRECISE> {
+    using type = Block::BlockEpilogueStreamKFusion<float, OutType, DispatchPolicy, INNER_PRECISE>;
 };
 
-template <class OutType, class DispatchPolicy>
-struct BlockEpilogueSelector<OP_TYPE_MUL, OutType, DispatchPolicy> {
-    using type = Block::BlockEpilogueStreamKFusion<float, OutType, DispatchPolicy>;
+template <class OutType, class DispatchPolicy, int8_t INNER_PRECISE>
+struct BlockEpilogueSelector<OP_TYPE_MUL, OutType, DispatchPolicy, INNER_PRECISE> {
+    using type = Block::BlockEpilogueStreamKFusion<float, OutType, DispatchPolicy, INNER_PRECISE>;
 };
 } // namespace StreamKInternal
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-          MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0>
+          MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0, int8_t INNER_PRECISE = 0>
 __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
     GM_ADDR cGM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
     int64_t batch = 1, GM_ADDR x3GM = nullptr, int64_t batchX3 = 1)
@@ -94,7 +94,8 @@ __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
 
     // 定义BlockEpilogue类型: ADD/MUL用BlockEpilogueStreamKFusion, 其他用BlockEpilogueStreamK
     using DispatchPolicy = MatmulMultiBlockWithStreamK<MATMUL_L0C2OUT, FUSED_OP_TYPE>;
-    using BlockEpilogue = typename StreamKInternal::BlockEpilogueSelector<FUSED_OP_TYPE, OutType, DispatchPolicy>::type;
+    using BlockEpilogue = typename StreamKInternal::BlockEpilogueSelector<
+        FUSED_OP_TYPE, OutType, DispatchPolicy, INNER_PRECISE>::type;
 
     // FusedEpilogue不再使用(融合已在BlockEpilogueStreamKFusion中完成)，保持Empty以兼容模板
     using FusedEpilogue = Block::BlockEpilogueEmpty;

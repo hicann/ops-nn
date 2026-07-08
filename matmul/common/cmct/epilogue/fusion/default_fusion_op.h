@@ -32,6 +32,8 @@ public:
     using DataTypeIn = DataTypeIn_;
     __aicore__ inline DefaultFusion(){};
 
+    static constexpr bool kSupportsWorkspaceCopy = false;
+
     struct Arguments {};
 
     struct Params {};

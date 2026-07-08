@@ -26,11 +26,12 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <typename DataTypeOut_, typename DataTypeIn_>
+template <typename DataTypeOut_, typename MmDataTypeIn_, typename X3Type_ = MmDataTypeIn_>
 class FusionAdd {
 public:
     using DataTypeOut = DataTypeOut_;
-    using DataTypeIn = DataTypeIn_;
+    using MmDataTypeIn = MmDataTypeIn_;
+    using X3Type = X3Type_;
     __aicore__ inline FusionAdd(){};
 
     struct Arguments {
@@ -44,8 +45,11 @@ public:
     };
 
     static constexpr uint16_t ZERO_FLAG = 0;
-    AscendC::LocalTensor<DataTypeIn> inputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
-    AscendC::GlobalTensor<DataTypeIn> inputGlobal_; // add的输入x3Gm
+    static constexpr bool kSupportsWorkspaceCopy = true;
+    static constexpr bool highPrecision = !AscendC::IsSameType<MmDataTypeIn, X3Type>::value;
+    AscendC::LocalTensor<X3Type> inputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
+    AscendC::LocalTensor<MmDataTypeIn> castedInputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
+    AscendC::GlobalTensor<X3Type> inputGlobal_; // add input x3 GM
     int64_t stageSize_ = 0;
 
     int64_t ubCalcM_{0};
@@ -60,11 +64,11 @@ public:
     __aicore__ inline void Init(Params const& params, LocalTensor ubTensor, int64_t ubCalcM, int64_t ubCalcN,
                                 int64_t& ubOffset, int64_t& stageSize, uint64_t m = 0, bool needNdDma = false)
     {
-        static constexpr int64_t stageNum = 2;
-        inputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeIn*>(params.inputGmAddr)); // get x3 from gm
-        int64_t lastUBSize = AscendC::TOTAL_UB_SIZE - ubOffset * sizeof(DataTypeIn);
+        static constexpr int64_t stageNum = highPrecision ? 3 : 2;
+        inputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ X3Type*>(params.inputGmAddr));
+        int64_t lastUBSize = AscendC::TOTAL_UB_SIZE - ubOffset * sizeof(MmDataTypeIn);
         stageSize_ = AscendC::Std::min(
-            static_cast<int64_t>(lastUBSize / stageNum / sizeof(DataTypeIn_) / ubCalcN * ubCalcN), ubCalcM * ubCalcN);
+            static_cast<int64_t>(lastUBSize / stageNum / sizeof(MmDataTypeIn) / ubCalcN * ubCalcN), ubCalcM * ubCalcN);
         needNdDma_ = needNdDma;
         x3BatchBroadcast_ = params.x3BatchBroadcast;
         x3M_ = params.x3M;
@@ -72,7 +76,7 @@ public:
             int64_t batchSize = m * ubCalcN;
             if (batchSize <= 0) {
                 stageSize_ = 0;
-                inputLocal_ = ubTensor[ubOffset];
+                inputLocal_ = ubTensor[ubOffset].template ReinterpretCast<X3Type>();
                 stageSize = stageSize_;
                 return;
             }
@@ -81,26 +85,35 @@ public:
         if (m > 0) {
             fixp1v2_ = true;
         }
-        inputLocal_ = ubTensor[ubOffset]; // get y from ub
+        inputLocal_ = ubTensor[ubOffset].template ReinterpretCast<X3Type>();
         ubOffset += stageSize_;
+        if constexpr (highPrecision) {
+            castedInputLocal_ = ubTensor[ubOffset].template ReinterpretCast<MmDataTypeIn>();
+            ubOffset += stageSize_;
+        }
         stageSize = stageSize_;
     }
 
-    __aicore__ inline void operator()(const AscendC::LocalTensor<DataTypeIn>& srcLocal,
+    __aicore__ inline void operator()(const AscendC::LocalTensor<MmDataTypeIn>& srcLocal,
                                       AscendC::LocalTensor<DataTypeOut>& outputLocal, int64_t offset, int64_t curAivM,
-                                      int64_t curAivN, int64_t strideN, int64_t stageSize)
+                                      int64_t curAivN, int64_t strideN, int64_t stageSize, bool contiguous = false)
     {
-        bool copyOk = Detail::CopyFusionX3<DataTypeIn, DataTypeOut>(
+        bool copyOk = Detail::CopyFusionX3<X3Type, X3Type>(
             inputLocal_, inputGlobal_, offset, curAivM, curAivN, strideN, stageSize, needNdDma_, fixp1v2_,
-            x3BatchBroadcast_, x3M_, false);
+            x3BatchBroadcast_, x3M_, false, contiguous);
         if (!copyOk) {
             return;
         }
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
 
-        // yLocal + x3Local -> outputLocal
-        AscendC::Add(outputLocal, inputLocal_, srcLocal, stageSize);
+        if constexpr (highPrecision) {
+            AscendC::Cast(castedInputLocal_, inputLocal_, AscendC::RoundMode::CAST_NONE, stageSize);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Add(outputLocal, castedInputLocal_, srcLocal, stageSize);
+        } else {
+            AscendC::Add(outputLocal, inputLocal_, srcLocal, stageSize);
+        }
         AscendC::PipeBarrier<PIPE_V>();
     }
 
@@ -109,6 +122,7 @@ public:
         return {args.inputGmAddr, false, 0};
     }
 };
+
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
