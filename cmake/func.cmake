@@ -328,6 +328,7 @@ function(add_graph_plugin_modules)
     else()
       add_library(${GRAPH_PLUGIN_NAME}_obj OBJECT)
     endif()
+    add_dependencies(${GRAPH_PLUGIN_NAME}_obj json)
     target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE 
       ${OP_PROTO_INCLUDE}
       ${JSON_INCLUDE}

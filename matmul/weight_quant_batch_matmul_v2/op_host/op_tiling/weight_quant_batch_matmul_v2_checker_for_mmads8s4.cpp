@@ -28,6 +28,7 @@ constexpr uint32_t BIAS_INDEX = 6;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr size_t LAST_BATCH_DIM_INDEX = 3;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
+constexpr const char* DEFAULT_OP_NAME = "WeightQuantBatchMatmulV2";
 } // namespace
 
 namespace optiling {
@@ -42,7 +43,8 @@ ge::graphStatus WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(idx++));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(idx++));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
-    inputParams_.opName = context_->GetNodeName();
+    const char* nodeName = context_->GetNodeName();
+    inputParams_.opName = nodeName != nullptr && nodeName[0] != '\0' ? nodeName : DEFAULT_OP_NAME;
     // OP_LOG_FULL
     OPS_LOG_I(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
     return ge::GRAPH_SUCCESS;
@@ -228,28 +230,28 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::Stora
 
     OP_TILING_CHECK(
         xOriDimNum < MIN_SHAPE_LEN_ND || xOriDimNum > MAX_SHAPE_LEN_ND,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "OriginalShape of x can not be greater than %zu and \
-                                        less than %zu, but is [%zu]",
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,"OriginalShape of x can not be greater than %zu and "
+                                        "less than %zu, but is [%zu]",
                                         MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xOriDimNum),
         return false);
 
     OP_TILING_CHECK(
         weightOriDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "OriginalShape of weight can not be greater than %zu and \
-                                        less than %zu, but is [%zu]",
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "OriginalShape of weight can not be greater than %zu and "
+                                        "less than %zu, but is [%zu]",
                                         MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightOriDimNum),
         return false);
 
     OP_TILING_CHECK(
         xDimNum < MIN_SHAPE_LEN_ND || xDimNum > MAX_SHAPE_LEN_ND,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of x can not be greater than %zu and \
-                                        less than %zu, but is [%zu]",
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of x can not be greater than %zu and "
+                                        "less than %zu, but is [%zu]",
                                         MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xDimNum),
         return false);
 
     OP_TILING_CHECK(weightDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of weight can not be greater \
-                                                    than %zu and less than %zu, but is [%zu]",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of weight can not be greater "
+                                                    "than %zu and less than %zu, but is [%zu]",
                                                     MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightDimNum),
                     return false);
 

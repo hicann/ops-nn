@@ -45,6 +45,7 @@ constexpr int32_t IDX_K_HIGH = 3;
 constexpr int32_t IDX_N_LOW = 4;
 constexpr int32_t IDX_N_HIGH = 5;
 constexpr int32_t IDX_B_LOW = 6;
+constexpr const char* DEFAULT_OP_NAME = "WeightQuantBatchMatmulV2";
 static const std::initializer_list<ge::DataType> WEIGHT_DTYPE_LIST = {
     ge::DT_INT32, ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8, ge::DT_INT4, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT};
 static const std::initializer_list<ge::DataType> BIT8_WEIGHT_DTYPE_LIST = {ge::DT_INT8, ge::DT_FLOAT8_E4M3FN,
@@ -290,6 +291,9 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
     GetInputs(*matmulInfoPtr_, context_);
     GetBatchInfo(*matmulInfoPtr_, context_);
     opName_ = context_->GetNodeName();
+    if (opName_ == nullptr || opName_[0] == '\0') {
+        opName_ = DEFAULT_OP_NAME;
+    }
     ConfigureReuseScenarios();
     OP_LOGD(opName_,
             "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s], "
