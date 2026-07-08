@@ -43,7 +43,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
 ## aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize
 
 - **参数说明**：
-  <table style="undefined;table-layout: fixed; width: 1567px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 100%"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 300px">
@@ -181,7 +181,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
+  <table style="undefined;table-layout: fixed"><colgroup>
   <col style="width: 250px">
   <col style="width: 130px">
   <col style="width: 650px">
