@@ -576,12 +576,7 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeInputs()
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
     auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
-    // int4pack输入场景修正为dtype为int4
-    if (compileInfo_.supportMmadS8S4 && inputParams_.bDtype == ge::DT_INT32) {
-        x2Inner *= 8; // int4类型不支持时，在图模式中用1个int32代表8个int4
-        inputParams_.bDtype = ge::DT_INT4;
-        OP_LOGD(inputParams_.opName, "The conversion of weight from int32 to int4 is completed.");
-    }
+    
     const std::vector<int64_t> dimValueOfMKN = {x1Inner, x1Outer, x2Inner, x2Outer};
     inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);

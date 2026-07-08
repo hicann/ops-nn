@@ -33,7 +33,6 @@ constexpr size_t MAX_DIM_NUM_ND = 6;
 namespace optiling {
 
 const std::unordered_map<std::string, FQMMFusedOpType> FUSED_OP_TYPE_STR_TO_ENUM_MAP = {
-    {"", FQMMFusedOpType::NONE},
     {"relu", FQMMFusedOpType::RELU},
     {"swiglu", FQMMFusedOpType::SWIGLU},
 };
@@ -59,7 +58,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeAttrs()
     inputParams_.transB = transposeX2Ptr ? *transposeX2Ptr : false;
     inputParams_.groupSize = groupSizePtr ? static_cast<uint64_t>(*groupSizePtr) : 0ULL;
     OP_TILING_CHECK(inputParams_.groupSize != 0ULL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "FusedQuantMatMul only suppot groupSize equal 0."),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "FusedQuantMatMul only support groupSize equal 0."),
                     return false);
 
     // attr fused_op_type
@@ -68,6 +67,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeAttrs()
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "fused_op_type should not be null"), return false);
     std::string fusedOpTypeStr(fusedOpType);
     auto it = FUSED_OP_TYPE_STR_TO_ENUM_MAP.find(fusedOpTypeStr);
+    // fused_op_type必须为"relu"或"swiglu",不支持空""
     OP_TILING_CHECK(
         it == FUSED_OP_TYPE_STR_TO_ENUM_MAP.end(),
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "current fused_op_type:[%s] is not supported", fusedOpType),
@@ -76,7 +76,7 @@ bool FusedQuantMatMulASWTiling::AnalyzeAttrs()
 
     OP_LOGI(inputParams_.opName, "Init attr param, transA: %s, transB: %s, outDtype: %ld, fused op type: %s",
             inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false", inputParams_.outDtype,
-            strcmp(fusedOpType, "") != 0 ? fusedOpType : "none");
+            fusedOpType);
 
     return true;
 }
@@ -127,6 +127,9 @@ ge::graphStatus FusedQuantMatMulASWTiling::CheckContext()
     auto outputShape = context_->GetOutputShape(0);
     auto outputDesc = context_->GetOutputDesc(0);
     auto attrs = context_->GetAttrs();
+    OP_TILING_CHECK(attrs == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
+                    return ge::GRAPH_FAILED);
     auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
 
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
@@ -136,7 +139,6 @@ ge::graphStatus FusedQuantMatMulASWTiling::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, dtypeAttr);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
     OP_TILING_CHECK(
@@ -149,43 +151,40 @@ ge::graphStatus FusedQuantMatMulASWTiling::CheckContext()
 
 bool FusedQuantMatMulASWTiling::AnalyzeDtype()
 {
+    // relu和swiglu场景都不支持的输入
+    // x1Scale yScale x1Offset x2Offset yOffset x2Table
+    OP_TILING_CHECK(
+        !CheckCommonUnsupportedOptionInputs(),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The optional input of FusedQuantMatMul is not supported."),
+        return false);
+
+    // relu场景不支持x3输入
+    auto x3Shape = context_->GetOptionalInputShape(GetX3Idx());
+    OP_TILING_CHECK(x3Shape, CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support X3."),
+                    return false);
+
     inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
     inputParams_.bDtype = x2Desc->GetDataType();
     OP_TILING_CHECK(
-        !(inputParams_.aDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_INT8),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1 and x2 of FusedQuantMatmul dtype onply support INT8!"),
+        !(inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1 and x2 of FusedQuantMatmul dtype only support INT8!"),
         return false);
 
     auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
     inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
 
-    auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
-    inputParams_.perTokenScaleDtype = pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() :
-                                                                     inputParams_.perTokenScaleDtype;
-
     auto x2ScaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
     inputParams_.scaleDtype = x2ScaleDesc != nullptr ? x2ScaleDesc->GetDataType() : inputParams_.scaleDtype;
 
-    // isLut and x2TableDesc only support soc version with MmadS8S4
-    auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
-    inputParams_.x2TableDtype = x2TableDesc != nullptr ? x2TableDesc->GetDataType() : inputParams_.x2TableDtype;
-    inputParams_.isLut = x2TableDesc != nullptr && compileInfo_.supportMmadS8S4;
-
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
-    OP_TILING_CHECK(
-        !(inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT16),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "y of FusedQuantMatmul dtype onply support INT8 or Float16!"),
-        return false);
-
-    isUbQuant_ = inputParams_.cDtype == ge::DT_BF16 || pertokenScaleDesc != nullptr;
     SetFormat();
 
     OP_TILING_CHECK(!CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype failed!"), return false);
     return true;
 }
 
-bool FusedQuantMatMulASWTiling::CheckUnsupportedOptionInputs()
+bool FusedQuantMatMulASWTiling::CheckCommonUnsupportedOptionInputs()
 {
     // 当前算子不支持x1Scale
     auto pertokenShape = GetPertokenShape(GetPertokenIdx());
@@ -202,6 +201,11 @@ bool FusedQuantMatMulASWTiling::CheckUnsupportedOptionInputs()
     OP_TILING_CHECK(x1OffsetShape,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support x1Offset."),
                     return false);
+    // 当前算子不支持x2Offset
+    auto x2OffsetShape = context_->GetOptionalInputShape(GetX2OffsetIdx());
+    OP_TILING_CHECK(x2OffsetShape,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support x2Offset."),
+                    return false);
     // 当前算子不支持yOffset
     auto OffYsetShape = context_->GetOptionalInputShape(GetYOffsetIdx());
     OP_TILING_CHECK(OffYsetShape,
@@ -212,11 +216,6 @@ bool FusedQuantMatMulASWTiling::CheckUnsupportedOptionInputs()
     OP_TILING_CHECK(x2TableShape,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support X2Table."),
                     return false);
-    // 当前算子不支持x3输入
-    auto x3Shape = context_->GetOptionalInputShape(GetX3Idx());
-    OP_TILING_CHECK(x3Shape, CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support X3."),
-                    return false);
-
     return true;
 }
 
@@ -237,13 +236,6 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs()
     auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
 
-    // int4pack输入场景修正为dtype为int4
-    if (inputParams_.bDtype == ge::DT_INT32) {
-        x2Inner *= 8; // int4类型不支持时，在图模式中用1个int32代表8个int4
-        inputParams_.bDtype = ge::DT_INT4;
-        OP_LOGD(inputParams_.opName, "The conversion of weight from int32 to int4 is completed.");
-    }
-
     inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
@@ -252,11 +244,6 @@ bool FusedQuantMatMulASWTiling::AnalyzeInputs()
     const std::vector<gert::Shape*> mandtoryShape = {&x1Shape, &x2Shape};
 
     // 可选输入
-    OP_TILING_CHECK(
-        !CheckUnsupportedOptionInputs(),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The optional input of FusedQuantMatMul is not supported."),
-        return false);
-
     auto biasShape = GetBiasShape(GetBiasIdx());
     inputParams_.hasBias = biasShape != nullptr;
     inputParams_.batchBias = inputParams_.hasBias ? GetBatchSize(biasShape->GetStorageShape()) : 1;

@@ -28,6 +28,9 @@ constexpr uint64_t WHITE_SHAPE_M = 0;
 constexpr uint64_t WHITE_SHAPE_K = 1;
 constexpr uint64_t WHITE_SHAPE_N = 2;
 
+constexpr uint64_t SWIGLU_X2_SCALE_DIM_NUM = 2;
+constexpr uint64_t SWIGLU_X2_SCALE_FIRST_DIM = 2;
+
 constexpr uint64_t shapeInputWhiteList[][3] = {
     /* m, k, n */
     {1, 4096, 5504},  {3072, 4096, 5504}, {1, 4096, 11008}, {3072, 4096, 11008},
@@ -80,12 +83,12 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::GetShapeAttrsInfo()
     OP_TILING_CHECK(!IsFusedSwigluType(), OP_LOGI(inputParams_.opName, "is not swiglu fused"),
                     return ge::GRAPH_PARAM_INVALID);
 
-    OP_TILING_CHECK(!AnalyzeDtype() || !AnalyzeInputs(),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fail to analyze context dtype/inputs info"),
-                    return ge::GRAPH_FAILED);
-
     OP_TILING_CHECK(inputParams_.transA == true || inputParams_.transB == true,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "transA and transB should be false"),
+                    return ge::GRAPH_FAILED);
+
+    OP_TILING_CHECK(!AnalyzeDtype() || !AnalyzeInputs(),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fail to analyze context dtype/inputs info"),
                     return ge::GRAPH_FAILED);
 
     OP_LOGD(inputParams_.opName, "input params: MKN[%ld, %ld, %ld], transA[%s], transB[%s], bias[%s]",
@@ -106,44 +109,53 @@ bool FusedQuantMatMulSwigluTiling::IsCapable()
     return true;
 }
 
-void FusedQuantMatMulSwigluTiling::SetFormat() const
-{
-    inputParams_.aFormat = ge::FORMAT_ND;
-    inputParams_.bFormat = ge::FORMAT_ND;
-    inputParams_.cFormat = ge::FORMAT_ND;
-    auto x2Desc = context_->GetInputDesc(GetX2Idx());
-    if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat())) == ge::FORMAT_FRACTAL_NZ) {
-        inputParams_.bFormat = ge::FORMAT_FRACTAL_NZ;
-    }
-}
-
 bool FusedQuantMatMulSwigluTiling::AnalyzeDtype()
 {
-    auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
-    auto quantDesc = context_->GetOptionalInputDesc(GetX3Idx());
-    auto quantDtype = quantDesc != nullptr ? quantDesc->GetDataType() : ge::DT_FLOAT;
-    auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
-    auto outDtype = context_->GetOutputDesc(0)->GetDataType();
+    // relu和swiglu场景都不支持的输入
+    // x1Scale yScale x1Offset x2Offset yOffset x2Table
+    OP_TILING_CHECK(
+        !CheckCommonUnsupportedOptionInputs(),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The optional input of FusedQuantMatMul is not supported."),
+        return false);
+
+    // swiglu场景不支持bias输入
+    auto biasShape = context_->GetOptionalInputShape(GetBiasIdx());
+    OP_TILING_CHECK(biasShape, CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support bias."),
+                    return false);
 
     inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
     inputParams_.bDtype = context_->GetInputDesc(GetX2Idx())->GetDataType();
-    inputParams_.scaleDtype = scaleDesc != nullptr ? scaleDesc->GetDataType() : inputParams_.scaleDtype;
-    inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : inputParams_.biasDtype;
-    inputParams_.cDtype = ge::DT_FLOAT16;
-
-    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 && inputParams_.bDtype != ge::DT_INT4,
+    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT4,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "a dtype should be int8 and b dtype should be int4, actual is %s and %s",
+                                          "X1 dtype should be INT8 and X2 dtype should be INT4, actual is %s and %s",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
                     return false);
+
+    auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
+    inputParams_.scaleDtype = scaleDesc != nullptr ? scaleDesc->GetDataType() : inputParams_.scaleDtype;
+    OP_TILING_CHECK(!(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Scale dtype should be UINT64/INT64, actual is %s",
+                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+                    return false);
+
+    auto quantDesc = context_->GetOptionalInputDesc(GetX3Idx());
+    auto quantDtype = quantDesc != nullptr ? quantDesc->GetDataType() : ge::DT_FLOAT;
+    auto outDtype = context_->GetOutputDesc(0)->GetDataType();
+    inputParams_.cDtype = ge::DT_FLOAT16;
     OP_TILING_CHECK(quantDesc != nullptr && quantDtype != ge::DT_FLOAT,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "quant dtype should be float, actual is %s",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X3 dtype should be FLOAT, actual is %s",
                                           ge::TypeUtils::DataTypeToSerialString(quantDtype).c_str()),
                     return false);
+    
+    OP_TILING_CHECK(!(outDtype == ge::DT_INT8 || outDtype == ge::DT_FLOAT16),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Output dtype should be INT8/FLOAT16, actual is %s",
+                                          ge::TypeUtils::DataTypeToSerialString(outDtype).c_str()),
+                    return false);
+
     OP_TILING_CHECK(
         quantDesc != nullptr && outDtype != ge::DT_INT8,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "out dtype should be int8 when dtype is float, actual is %s",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Out dtype should be INT8 when X3 is not null, actual is %s",
                               ge::TypeUtils::DataTypeToSerialString(outDtype).c_str()),
         return false);
 
@@ -155,7 +167,7 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
 {
     auto x1Shape = GetX1Shape(GetX1Idx());
     auto x2Shape = GetX2Shape(GetX2Idx());
-    auto biasShape = context_->GetOptionalInputShape(GetBiasIdx());
+
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
     if (!CheckShapeInRangeForMandtoryInputs(x1ShapeLen, x2ShapeLen)) {
@@ -164,22 +176,21 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
 
     OP_TILING_CHECK(
         x2ShapeLen != 3 || x2Shape.GetDim(0) != 2,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu x2 ori shape should be like (2, k, n) or (2, n, k)"),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu x2 ori shape should be like (2, k, n) "),
         return false);
-
-    OP_TILING_CHECK(biasShape != nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu bias should not be set"), return false);
-
-    inputParams_.hasBias = biasShape != nullptr;
 
     auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
     auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
-    const std::vector<int64_t> dimValueOfMKN = {x1Inner, x1Outer, x2Inner, x2Outer};
-    inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
-    inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
-    inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
+    inputParams_.mSize = static_cast<uint64_t>(x1Outer);
+    inputParams_.kSize = static_cast<uint64_t>(x1Inner);
+    inputParams_.nSize = static_cast<uint64_t>(x2Inner);
+    OP_TILING_CHECK(inputParams_.kSize != static_cast<uint64_t>(x2Outer),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "The K dimension of x1[%lu] is not equal to the K dimension of x2[%lu].",
+                                          inputParams_.kSize, static_cast<uint64_t>(x2Outer)),
+                    return false);
 
     for (size_t dim_idx = 0; dim_idx < x1ShapeLen - LAST_SECOND_DIM_INDEX; dim_idx++) {
         inputParams_.mSize *= x1Shape.GetDim(dim_idx);
@@ -198,6 +209,39 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
     OP_TILING_CHECK(isInWhiteList != true,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "shape m:%lu k:%lu n:%lu is not in white list",
                                           inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
+                    return false);
+    
+    auto scaleShape = context_->GetOptionalInputShape(GetScaleIdx());
+    OP_TILING_CHECK(!scaleShape,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2 scale of FusedQuantMatMul can not be null."),
+                    return false);
+
+    // scaleShape必须是2D
+    OP_TILING_CHECK(
+        scaleShape->GetStorageShape().GetDimNum() != SWIGLU_X2_SCALE_DIM_NUM,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2Scale dimension value must be 2, but it is %zu.",
+                            scaleShape->GetStorageShape().GetDimNum()),
+        return false);
+
+    // scaleShape必须是(2,n)
+    OP_TILING_CHECK(
+        (static_cast<uint64_t>(scaleShape->GetStorageShape().GetDim(0)) != SWIGLU_X2_SCALE_FIRST_DIM ||
+         static_cast<uint64_t>(scaleShape->GetStorageShape().GetDim(1)) != inputParams_.nSize),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2Scale shape must be (2, n[%lu]), but it is(%ld, %ld).",
+                              inputParams_.nSize, scaleShape->GetStorageShape().GetDim(0),
+                              scaleShape->GetStorageShape().GetDim(1)),
+        return false);
+
+    // x1 must use ND format.
+    OP_TILING_CHECK(inputParams_.aFormat != ge::FORMAT_ND,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input x1 format should be ND, actual is %s.",
+                                          ge::TypeUtils::FormatToSerialString(inputParams_.aFormat).c_str()),
+                    return false);
+
+    // x2 must use NZ format.
+    OP_TILING_CHECK(inputParams_.bFormat != ge::FORMAT_FRACTAL_NZ,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input x2 format should be NZ, actual is %s.",
+                                          ge::TypeUtils::FormatToSerialString(inputParams_.bFormat).c_str()),
                     return false);
 
     return true;

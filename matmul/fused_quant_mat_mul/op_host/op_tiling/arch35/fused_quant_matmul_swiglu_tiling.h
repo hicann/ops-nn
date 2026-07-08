@@ -55,7 +55,6 @@ protected:
 
     bool IsFusedSwigluType() const;
 
-    void SetFormat() const;
     void PrintMatmulTilingData();
     void PrintBaseParamsTilingData();
     ge::graphStatus InitTilingData();

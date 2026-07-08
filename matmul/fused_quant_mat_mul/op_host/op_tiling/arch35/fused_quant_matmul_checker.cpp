@@ -62,7 +62,10 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape* scaleShape
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "kA[%lu] is not equal to kB[%lu]", inputParams_.kSize, kBSize),
         return false);
 
-    // scaleShapescale shape必须是1或nSize
+    // scale必须存在
+    OP_TILING_CHECK(scaleShape == nullptr, OP_LOGE(inputParams_.opName, "X2Scale does not exist"), return false);
+
+    // scaleShape必须是1或nSize
     if (scaleShape != nullptr) {
         OP_TILING_CHECK(
             !(scaleShape->GetStorageShape().GetDim(0) == 1 ||

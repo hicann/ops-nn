@@ -31,7 +31,7 @@ using Ops::NN::FormatString;
 bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtypesInRange() const
 {
     static const std::vector<ge::DataType> legalInputX1Dtypes = {ge::DT_INT8, ge::DT_INT4};
-    static const std::vector<ge::DataType> legalInputX2Dtypes = {ge::DT_INT8, ge::DT_INT4, ge::DT_INT32};
+    static const std::vector<ge::DataType> legalInputX2Dtypes = {ge::DT_INT8, ge::DT_INT4};
     static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8, ge::DT_FLOAT16};
     // x1 supports INT8 and INT4.
     OP_TILING_CHECK(std::find(legalInputX1Dtypes.begin(), legalInputX1Dtypes.end(), inputParams_.aDtype) ==
@@ -40,12 +40,12 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtypesInRange() const
                         inputParams_.opName, "x1", ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
                         "the dtype of x1 must be INT8/INT4"),
                     return false);
-    // x2 supports INT8, INT4, and INT32.
+    // x2 supports INT8, INT4.
     OP_TILING_CHECK(std::find(legalInputX2Dtypes.begin(), legalInputX2Dtypes.end(), inputParams_.bDtype) ==
                         legalInputX2Dtypes.end(),
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         inputParams_.opName, "x2", ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                        "the dtype of x2 must be INT8/INT4/INT32"),
+                        "the dtype of x2 must be INT8/INT4"),
                     return false);
     // Output supports INT8 and FLOAT16.
     OP_TILING_CHECK(
@@ -90,21 +90,19 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtypesInRange() const
 
 bool QuantBatchMatmulV3Checker4MmadS8S4::CheckABDtypes() const
 {
-    // INT8 x1 accepts INT8, INT4, or INT32 x2.
+    // INT8 x1 accepts INT8 or INT4 x2.
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 &&
-                        !(inputParams_.bDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_INT4 ||
-                          inputParams_.bDtype == ge::DT_INT32),
+                        !(inputParams_.bDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_INT4),
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         inputParams_.opName, "x2", ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                        "when the dtype of x1 is INT8, the dtype of x2 must be INT8/INT4/INT32"),
+                        "when the dtype of x1 is INT8, the dtype of x2 must be INT8/INT4"),
                     return false);
 
-    // INT4 x1 accepts INT4 or INT32 x2.
-    OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 &&
-                        !(inputParams_.bDtype == ge::DT_INT4 || inputParams_.bDtype == ge::DT_INT32),
+    // INT4 x1 accepts INT4 x2.
+    OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype != ge::DT_INT4,
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         inputParams_.opName, "x2", ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                        "when the dtype of x1 is INT4, the dtype of x2 must be INT4/INT32"),
+                        "when the dtype of x1 is INT4, the dtype of x2 must be INT4"),
                     return false);
     return true;
 }

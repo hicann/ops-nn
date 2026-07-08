@@ -40,6 +40,7 @@ protected:
     uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX_FQMM; }
     uint32_t GetYScaleIdx() const { return Y_SCALE_INDEX_FQMM; }
     uint32_t GetX1OffsetIdx() const { return X1_OFFSET_INDEX_FQMM; }
+    uint32_t GetX2OffsetIdx() const { return X2_OFFSET_INDEX_FQMM; }
     uint32_t GetOffsetIdx() const override { return X2_OFFSET_INDEX_FQMM; }
     uint32_t GetYOffsetIdx() const { return Y_OFFSET_INDEX_FQMM; }
     uint32_t GetX2TableIdx() const { return X2_TABLE_INDEX_FQMM; }
@@ -50,7 +51,7 @@ protected:
                     const std::vector<const gert::StorageShape*>& optionalInputShape,
                     const std::vector<int64_t>& dimValueOfMKN) const;
     bool AnalyzeX2TableAttr(const gert::StorageShape* x2TableShape) const;
-    bool CheckUnsupportedOptionInputs();
+    bool CheckCommonUnsupportedOptionInputs();
     ge::graphStatus CheckContext() override;
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;

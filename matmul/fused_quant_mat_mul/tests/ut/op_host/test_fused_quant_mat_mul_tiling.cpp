@@ -290,9 +290,15 @@ static void TestOneParamCase(const FusedQuantMatMulTilingTestParam& param)
 
     if (param.quantMode == 0) {
         x2ScaleShape.MutableStorageShape() = gert::Shape({1});
+        if (param.fusedTypeOp == "swiglu") {
+            x2ScaleShape.MutableStorageShape() = gert::Shape({2, 1});
+        }
         x3Shape.MutableStorageShape() = gert::Shape({1});
     } else if (param.quantMode == 1) {
         x2ScaleShape.MutableStorageShape() = gert::Shape({n});
+        if (param.fusedTypeOp == "swiglu") {
+            x2ScaleShape.MutableStorageShape() = gert::Shape({2, n});
+        }
         x3Shape.MutableStorageShape() = gert::Shape({n});
     }
 
