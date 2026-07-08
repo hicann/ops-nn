@@ -6,7 +6,7 @@
 
 1. **[前提条件](../README.md)**：参考项目README完成环境准备和源码下载，此处不再赘述。快速入门场景**推荐CANNLab或Docker部署**，操作简单。
 
-   > **说明**：CANNLab或Docker环境默认提供最新商发版CANN包；如需体验master分支最新能力，可手动搭建环境。
+   > **说明**：CANNLab或Docker环境默认提供最新版本CANN包；如需体验master分支最新能力，可手动搭建环境。
 
 2. **[编译运行](#一编译运行)**：编译自定义算子包并安装，实现快速调用算子。
 
@@ -24,7 +24,7 @@
     
 - CANNLab云开发环境：
    
-   默认提供最新商发版CANN包配套的项目源码，进入源码目录，\$\{gitCode\_id\}替换为开发者个人gitCode账号。
+   默认提供最新版本CANN包配套的项目源码，进入源码目录，\$\{gitCode\_id\}替换为开发者个人gitCode账号。
    
    ```bash
    cd /mnt/workspace/gitCode/${gitCode_id}/ops-nn
@@ -231,7 +231,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
     msprof --application="./test_aclnn_add_example"
     ```
 
-采集结果在项目`ops-nn/build/`目录，msprof命令执行完后会自动解析并导出性能数据结果文件，详细内容请参见[msprof](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/T&ITools/Profiling/atlasprofiling_16_0110.html#ZH-CN_TOPIC_0000002504160251)。
+采集结果在项目`ops-nn/build/`目录，msprof命令执行完后会自动解析并导出性能数据结果文件，详细内容请参见[msProf性能数据文件参考](https://gitcode.com/Ascend/msprof/blob/master/docs/zh/user_guide/profile_data_file_references.md)。
 
 ## 四、算子验证
 

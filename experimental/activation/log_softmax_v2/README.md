@@ -40,7 +40,6 @@ $$
       <td>ListInt</td>
       <td>/</td>
     </tr>  
-    <tr>  
     <tr>
       <td>input</td>
       <td>输入</td>

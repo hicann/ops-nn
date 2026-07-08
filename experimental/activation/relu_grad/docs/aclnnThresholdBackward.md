@@ -10,9 +10,11 @@
 
 - 算子功能：完成Relu的反向。
 - 计算公式：
+
 $$
 y=\begin{cases} 1, & x\ge 0,\\0, & x < 0\end{cases}
 $$
+
 - 调用说明: 调用relugrad算子时，threshold参数始终传0。
 
 ## 函数原型

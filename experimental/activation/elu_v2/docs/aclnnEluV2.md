@@ -73,5 +73,3 @@ aclnnStatus aclnnEluV2(
 ## 调用示例
 
 示例代码参考[examples/test_aclnn_elu_v2.cpp](../examples/test_aclnn_elu_v2.cpp)，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
-
- 

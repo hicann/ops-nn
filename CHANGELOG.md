@@ -12,7 +12,7 @@
 
 [CANN 9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/)
 
-```
+```text
 版本目录说明如下：
 ├── aarch64                 # CPU为ARM类型
 │   ├── ops                  # ops算子包目录，用于归档算子子包
@@ -21,7 +21,6 @@
 │   ├── ops                  # ops算子包目录，用于归档算子子包
 │   ├── ...
 ```
-
 
 ### 📌 版本配套
 

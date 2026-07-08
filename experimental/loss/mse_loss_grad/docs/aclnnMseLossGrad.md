@@ -118,7 +118,7 @@ aclnnStatus aclnnMseLossGrad(
       <td class="tg-0pky">out(aclTensor*)</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出的损失，公式中的输出`MselossBackward(grad, x, y)`。</td>
-      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型时self可推导的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型时self可推导的数据类型（参见<a href="../../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -242,7 +242,7 @@ aclnnStatus aclnnMseLossGrad(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

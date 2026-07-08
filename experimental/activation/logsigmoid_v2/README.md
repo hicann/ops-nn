@@ -11,9 +11,11 @@
 - 算子功能：计算输入张量的 LogSigmoid 值，即对每个元素计算 \( \log(\frac{1}{1 + e^{-x}}) \)。
 
 - 计算公式：
+
 $$
 {out}_i = \log\left(\frac{1}{1 + e^{-x_i}}\right)
 $$
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>

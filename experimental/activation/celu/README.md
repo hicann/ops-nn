@@ -43,7 +43,7 @@
 
 ## 目录结构
 
-```
+```text
 celu/
 ├── op_host/                    # Host 侧代码
 │   ├── celu_def.cpp            # 算子定义（输入输出规格、属性定义）

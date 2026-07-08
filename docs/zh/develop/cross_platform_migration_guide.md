@@ -369,7 +369,7 @@ __aicore__ inline void CrossCoreWaitFlag(uint16_t flagId)
 - `CrossCoreSetFlag`：当前核（或线程）在完成某个阶段的数据处理后，主动设置指定的flag信号，告知依赖方（一般是其它核或下游流水线阶段）本阶段已完成，可以继续执行后续流程。
 - `CrossCoreWaitFlag`：当前核（或线程）需等待某个flag信号被设置（即依赖的数据或事件完成），检测flag后才会继续向下执行。
 
-这套信号量的本质是保证多线程/多流水阶段间一致的同步序列，防止因资源未就绪或依赖没完成而发生数据竞争或死锁等硬件异常。详细的接口说明可参考官方文档：[CrossCoreSetFlag与CrossCoreWaitFlag核间同步接口详解](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900beta1/API/ascendcopapi/atlasascendc_api_07_0273.html)。
+这套信号量的本质是保证多线程/多流水阶段间一致的同步序列，防止因资源未就绪或依赖没完成而发生数据竞争或死锁等硬件异常。CrossCoreSetFlag与CrossCoreWaitFlag接口详细介绍参见[Ascend C API](https://www.hiascend.com/document/redirect/CannCommunityAscendCApi)。
 
 在Ascend 950上`CrossCoreWaitFlag`和`CrossCoreSetFlag`数量必须严格匹配，且建议在同一同步语义域内按“先生产后消费”的顺序成对设计。Atlas A2上算子与算子间若存在多余`CrossCoreSetFlag`信号量，HWTS会进行特殊处理清零计数器，Ascend 950系列为减少硬件开销，不再依赖该类兜底机制，要求单算子内核间同步信号量一一匹配，否则会出现必现卡死。
 
