@@ -583,14 +583,20 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
 {
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
+    // [transpose_x2 fix] x2Scale 的最后两维应等于 x2 最后两维各自 ceildiv(128)。transpose_x2=True 时
+    // x2Scale 的排布可能相对 x2 互换(取决于上游是否转置 scale)，故这里接受"原始"与"互换"两种匹配。
+    auto scaleShapeLen = scaleShape.GetDimNum();
+    uint64_t cdN = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)), qmmv3_tiling_const::PER_BLOCK_SIZE);
+    uint64_t cdK = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), qmmv3_tiling_const::PER_BLOCK_SIZE);
+    uint64_t scOuter = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 2));
+    uint64_t scInner = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1));
+    bool matchNoTrans = (cdN == scOuter && cdK == scInner);
+    bool matchTrans = (cdN == scInner && cdK == scOuter);
     OP_TILING_CHECK(
-        (ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)), qmmv3_tiling_const::PER_BLOCK_SIZE) !=
-             static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 2)) ||
-         ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), qmmv3_tiling_const::PER_BLOCK_SIZE) !=
-             static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 1))),
+        !(matchNoTrans || matchTrans),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             inputParams_.opName, "scale, x2",
-            FormatString("[%ld, %ld], [%ld, %ld]", scaleShape.GetDim(x2ShapeLen - 2), scaleShape.GetDim(x2ShapeLen - 1),
+            FormatString("[%ld, %ld], [%ld, %ld]", scaleShape.GetDim(scaleShapeLen - 2), scaleShape.GetDim(scaleShapeLen - 1),
                          x2Shape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 1))
                 .c_str(),
             "when the quantization mode is G-B or B-B, the last two dimensions of scale must be equal to the last two "

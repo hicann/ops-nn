@@ -278,7 +278,7 @@ static inline bool IsFp8Input(const aclTensor* x1, const aclTensor* x2)
 static inline bool IsPerblock(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
                               const aclTensor* x2Scale)
 {
-    if (x1Scale == nullptr) {
+    if (x1Scale == nullptr || x2Scale == nullptr) {
         return false;
     }
     return ((IsInt8Input(x1, x2) || IsFp8Input(x1, x2) || IsHif8Input(x1, x2)) &&
@@ -1261,17 +1261,25 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
 
 bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
 {
+    bool isStaticX2Scale = x1Scale_ == nullptr && x2Scale_ != nullptr &&
+                           (x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
+                            x2Scale_->GetDataType() == op::DataType::DT_INT64);
+    bool isPerblockFloatScale = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
+    if (isPerblockFloatScale) {
+        return true;
+    }
     if (x1Scale_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             apiName_, GetX1ScaleName().c_str(), "not null",
-            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x1Scale must be null");
+            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x1Scale must be null "
+            "for static quantization, or x1Scale and x2Scale must both be FLOAT for G-B/B-B quantization");
         return false;
     }
-    if (!(x2Scale_->GetDataType() == op::DataType::DT_UINT64 || x2Scale_->GetDataType() == op::DataType::DT_INT64)) {
+    if (!isStaticX2Scale) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             apiName_, GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetDataType()).GetString(),
             "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, the dtype of x2Scale must be "
-            "UINT64 or INT64");
+            "UINT64 or INT64 for static quantization, or FLOAT for G-B/B-B quantization");
         return false;
     }
     return true;

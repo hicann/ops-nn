@@ -419,7 +419,11 @@ static inline bool CheckDimRange(const aclTensor* x1, const aclTensor* x2, const
         OP_CHECK_MIN_DIM(scale, MX_SCALE_DIM_NUM, return false);
         OP_CHECK_MAX_DIM(scale, MX_SCALE_MAX_DIM_NUM, return false);
     } else {
-        OP_CHECK_WRONG_DIMENSION(scale, 1, return false);
+        size_t expectScaleDim = 1;
+        if (scale != nullptr && scale->GetViewShape().GetDimNum() == x2->GetViewShape().GetDimNum()) {
+            expectScaleDim = scale->GetViewShape().GetDimNum();
+        }
+        OP_CHECK_WRONG_DIMENSION(scale, expectScaleDim, return false);
     }
     OP_LOGD("QuantMatmul check dim-num range success");
     return true;
@@ -1972,13 +1976,31 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
         return false;
     }
 
+    auto isFloatScale2D = [](const aclTensor* s) {
+        return s != nullptr && s->GetDataType() == op::DataType::DT_FLOAT &&
+               s->GetViewShape().GetDimNum() > 1;
+    };
+    auto isPerblockQuantInput = [](const aclTensor* a, const aclTensor* b) {
+        auto isQuant = [](const aclTensor* t) {
+            if (t == nullptr) {
+                return false;
+            }
+            auto dt = t->GetDataType();
+            return dt == op::DataType::DT_INT8 || dt == op::DataType::DT_FLOAT8_E4M3FN ||
+                   dt == op::DataType::DT_FLOAT8_E5M2 || dt == op::DataType::DT_HIFLOAT8;
+        };
+        return isQuant(a) && isQuant(b);
+    };
+    bool isPerblockGroup =
+        isPerblockQuantInput(x1, x2) && isFloatScale2D(pertokenScale) && isFloatScale2D(scale);
+
     if (!(isA8W4Float(x1, x2) || isMx(scale))) {
         if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yScale.");
             return false;
         }
 
-        if (groupSize != 0) {
+        if (groupSize != 0 && !isPerblockGroup) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support groupSize.");
             return false;
         }
