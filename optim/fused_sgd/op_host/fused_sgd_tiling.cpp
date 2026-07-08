@@ -39,6 +39,8 @@ constexpr uint32_t TBUFFER_NUM = 3;
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr uint32_t FP16_BF16_DTYPE_SIZE = 2;
 constexpr uint32_t FP32_DTYPE_SIZE = 4;
+constexpr uint32_t NUM_TWO = 2;
+constexpr uint32_t NUM_THREE = 3;
 
 std::string FusedSgdTiling::TilingDataToString() const
 {
@@ -257,9 +259,9 @@ ge::graphStatus FusedSgdTiling::CalculateOutputInfo()
     // 计算处理一个元素所需的ub大小
     uint64_t coreOnesize;
     if (dtypeSize_ == FP32_DTYPE_SIZE) {
-        coreOnesize = FP32_DTYPE_SIZE * 3 * 2 * BUFFER_NUM;
+        coreOnesize = FP32_DTYPE_SIZE * NUM_THREE * NUM_TWO * BUFFER_NUM;
     } else {
-        coreOnesize = ((dtypeSize_ + FP32_DTYPE_SIZE) * 3 + FP32_DTYPE_SIZE * 3) * BUFFER_NUM;
+        coreOnesize = ((dtypeSize_ + FP32_DTYPE_SIZE) * NUM_THREE + FP32_DTYPE_SIZE * NUM_THREE) * BUFFER_NUM;
     }
     uint64_t alignSize = dtypeSize_ == FP32_DTYPE_SIZE ? ONE_BLK_NUM_FP32 : ONE_BLK_NUM;
     OP_LOGI(context_, "bufferSize = %lu", bufferSize);
