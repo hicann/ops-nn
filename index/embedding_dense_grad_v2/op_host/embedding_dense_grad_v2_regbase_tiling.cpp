@@ -16,7 +16,6 @@
 #include "util/math_util.h"
 #include "platform/platform_infos_def.h"
 #include "log/log.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "embedding_dense_grad_v2_tiling.h"
 #include "embedding_dense_grad_v2_regbase_tiling.h"

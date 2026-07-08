@@ -52,6 +52,7 @@ static constexpr int64_t KERNEL_ELEMENTS_LIMIT = 25;
 static constexpr int64_t BIG_KERNEL_DEGENERATE_THRESHOLD = 256;
 static constexpr int64_t OVERLAP_SPARSE_LIMIT = 64;
 static constexpr uint64_t NUM_TEN = 10;
+static constexpr uint64_t IDX_INT64 = 2;
 
 static constexpr int64_t NCDHW_DIMS = 5;
 static constexpr int64_t INPUT_IDX_X = 0;
@@ -336,11 +337,11 @@ void MaxPool3DWithArgmaxV2GatherTiling::InitializationVars()
     if (calIndexType_ == 1 && gmPlaneSize > INT16_INDEX_MAX && gmPlaneSize <= INT32_INDEX_MAX) {
         calIndexType_ = 0;
     } else if (calIndexType_ == 1 && gmPlaneSize > INT32_INDEX_MAX) {
-        calIndexType_ = 2;
+        calIndexType_ = IDX_INT64;
     }
 
     if (calIndexType_ == 0 && gmPlaneSize > INT32_INDEX_MAX) {
-        calIndexType_ = 2;
+        calIndexType_ = IDX_INT64;
     }
 }
 
