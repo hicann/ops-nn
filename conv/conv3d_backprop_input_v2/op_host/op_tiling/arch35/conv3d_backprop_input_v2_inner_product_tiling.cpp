@@ -941,7 +941,6 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     tilingData_.conv3DDxTiling.kValueSegment = tunerTiling->kValueSegment;
     tilingData_.conv3DDxTiling.enableSplitK = tunerTiling->enableSplitK;
     tilingData_.conv3DDxTiling.useUbAccumForSplitK = tunerTiling->useUbAccumForSplitK;
-    tilingData_.conv3DDxTiling.enRelu = tunerTiling->enRelu;
     tilingData_.conv3DDxTiling.coreNum = tunerTiling->coreNum;
     tilingData_.conv3DDxKSTiling.kSCoutFullLoad = tunerTiling->kSCoutFullLoad;
     tilingData_.conv3DDxKSTiling.kSUseWorkSpace = tunerTiling->kSUseWorkSpace;
