@@ -19,11 +19,13 @@
 #include "op_kernel/platform_util.h"
 #include "kernel_operator.h"
 #include "op_kernel/math_util.h"
+#include "repeat_interleave_gather.h"
 
 namespace RepeatInterleave {
 using namespace AscendC;
 
 constexpr uint64_t MIN_CP_SIZE_THRESHOLD = 128;
+constexpr uint64_t GATHER_CP_THRESHOLD = 32; // cp * sizeof(T) < 32 bytes → use Gather path
 
 template <typename T>
 __simd_vf__ inline void CopyOneCpToRepeatOutLargeScalarVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr,
@@ -86,12 +88,15 @@ public:
     __aicore__ inline void CopyInX(int64_t repeatDimIdx, int64_t loopIdx, int64_t dataCount);
     __aicore__ inline void CopyXToOut(int64_t dataCount);
     __aicore__ inline void CopyOneCpToRepeatOut(const LocalTensor<T> xInLocal, int64_t loopIdx, int64_t cpNum);
+    __aicore__ inline void CopyOneCpToRepeatOutGather(const LocalTensor<T> xInLocal, int64_t loopIdx, int64_t cpNum);
     __aicore__ inline void CopyOneCpToRepeatOutLarge(const LocalTensor<T> xInLocal, int64_t cpIdx,
                                                      uint16_t repeatTimes);
     __aicore__ inline void CopyXToMatchOut(int64_t startCpIdx, int64_t cpNum);
+    __aicore__ inline void CopyXToMatchOutGather(int64_t startCpIdx, int64_t cpNum);
     __aicore__ inline void CopyOutY(int64_t repeatDimIdx, int64_t loopIdx, int64_t dataCount);
     __aicore__ inline void CopyMatchOutToY(int64_t cpOfset, int64_t cpNum);
     __aicore__ inline void ProcessCpMatchToUb(int64_t startCpIdx, int64_t handleCpCount);
+    __aicore__ inline void ProcessCpMatchToUbGather(int64_t startCpIdx, int64_t handleCpCount);
     __aicore__ inline void ProcessWholeCp();
     __aicore__ inline void ProcessSplitCp();
     __aicore__ inline void Process();
@@ -194,6 +199,24 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOut(co
 
     uint32_t dataCount = tilingData_.mergedDims[2];
     CopyOneCpToRepeatOutScalarVf<T>(xInLocalPtr, xOutLocalPtr, dataCount, cpNum, repeatsScalarValue_);
+
+    xOutQueue_.EnQue(xOutLocal);
+    return;
+}
+
+template <typename T, typename U>
+__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOutGather(
+    const LocalTensor<T> xInLocal, int64_t loopIdx, int64_t cpNum)
+{
+    int64_t offset = loopIdx * repeatValueCntInUbFactor_ * tilingData_.mergedDims[2];
+    LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
+    __ubuf__ T* xInLocalPtr = (__ubuf__ T*)xInLocal.GetPhyAddr() + offset;
+    __ubuf__ T* xOutLocalPtr = (__ubuf__ T*)xOutLocal.GetPhyAddr();
+
+    uint32_t cpSize = static_cast<uint32_t>(tilingData_.mergedDims[2]);
+    CopyCpToRepeatOutGatherAicore<T>(xInLocalPtr, xOutLocalPtr, cpSize,
+                                  static_cast<uint16_t>(cpNum),
+                                  static_cast<uint16_t>(repeatsScalarValue_));
 
     xOutQueue_.EnQue(xOutLocal);
     return;
@@ -311,6 +334,58 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOutY(int64_t repeat
 }
 
 template <typename T, typename U>
+__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyXToMatchOutGather(int64_t startCpIdx, int64_t cpNum)
+{
+    LocalTensor<T> xInLocal = xInQueue_.DeQue<T>();
+    LocalTensor<T> xOutLocal = xOutQueue_.AllocTensor<T>();
+    xOutQueue_.EnQue(xOutLocal);
+
+    int64_t loopSize = Ops::Base::CeilDiv(cpNum, repeatValueCntInUbFactor_);
+    int64_t tailCpNum = cpNum - (loopSize - 1) * repeatValueCntInUbFactor_;
+    for (int64_t loopIdx = 0; loopIdx < loopSize - 1; loopIdx++) {
+        event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+        CopyOneCpToRepeatOutGather(xInLocal, loopIdx, repeatValueCntInUbFactor_);
+        CopyMatchOutToY(
+            loopIdx * repeatValueCntInUbFactor_ * repeatsScalarValue_,
+            repeatValueCntInUbFactor_ * repeatsScalarValue_);
+    }
+    event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+    WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+    CopyOneCpToRepeatOutGather(xInLocal, loopSize - 1, tailCpNum);
+    CopyMatchOutToY(
+        (loopSize - 1) * repeatValueCntInUbFactor_ * repeatsScalarValue_, tailCpNum * repeatsScalarValue_);
+
+    xInQueue_.FreeTensor(xInLocal);
+    xOutQueue_.FreeTensor(xOutLocal);
+}
+
+template <typename T, typename U>
+__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::ProcessCpMatchToUbGather(
+    int64_t startCpIdx, int64_t handleCpCount)
+{
+    int64_t loopSize = (handleCpCount + cpCountInUbFactor_ - 1) / cpCountInUbFactor_;
+    int64_t mainCpNum = cpCountInUbFactor_;
+    int64_t tailCpNum = handleCpCount - cpCountInUbFactor_ * (loopSize - 1);
+
+    int64_t mainCpCnt = mainCpNum * tilingData_.mergedDims[2];
+    int64_t tailCpCnt = tailCpNum * tilingData_.mergedDims[2];
+
+    int64_t handleStartCpIdx = startCpIdx;
+    int64_t stepOfset = mainCpCnt * repeatsScalarValue_;
+    for (int64_t loopIdx = 0; loopIdx < (loopSize - 1); loopIdx++) {
+        CopyInX(handleStartCpIdx, 0, mainCpCnt);
+        CopyXToMatchOutGather(handleStartCpIdx, mainCpNum);
+        handleStartCpIdx += mainCpNum;
+        outStartOffset_ += stepOfset;
+    }
+    CopyInX(handleStartCpIdx, 0, tailCpCnt);
+    CopyXToMatchOutGather(handleStartCpIdx, tailCpNum);
+}
+
+template <typename T, typename U>
 __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::ProcessCpMatchToUb(int64_t startCpIdx, int64_t handleCpCount)
 {
     int64_t loopSize = (handleCpCount + cpCountInUbFactor_ - 1) / cpCountInUbFactor_;
@@ -341,6 +416,12 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::ProcessWholeCp()
     }
     curCoreCpCount *= tilingData_.mergedDims[1];
     int64_t startCpIdx = GetBlockIdx() * tilingData_.eachCoreBatchCount * tilingData_.mergedDims[1];
+    constexpr uint64_t VREG_SIZE = 256;
+    if (tilingData_.mergedDims[2] * sizeof(T) < GATHER_CP_THRESHOLD &&
+        tilingData_.mergedDims[2] * tilingData_.repeatsCount * sizeof(T) <= VREG_SIZE) {
+        ProcessCpMatchToUbGather(startCpIdx, curCoreCpCount);
+        return;
+    }
     if (tilingData_.mergedDims[2] * sizeof(T) < MIN_CP_SIZE_THRESHOLD) {
         /* 从每个核要复制的起始轴开始依次处理,不需要对cp轴分loop */
         ProcessCpMatchToUb(startCpIdx, curCoreCpCount);
