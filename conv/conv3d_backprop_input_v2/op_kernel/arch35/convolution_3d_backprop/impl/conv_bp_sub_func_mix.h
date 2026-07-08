@@ -22,7 +22,7 @@
 using AscendC::DivCeil;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
-using AscendC::MultiCopyConfig;
+using AscendC::NdDmaConfig;
 
 namespace Convolution3DBackpropFunc {
 const static uint64_t DQ_SCALAR_ONE = 0x3F800000;    // float 1.0
@@ -44,7 +44,7 @@ constexpr uint8_t ONE_BLK_SHIFT_SIZE = 5;
 constexpr uint8_t C04_COUT_SIZE = 4;
 constexpr uint8_t C04_SHIFT_SIZE = 2;
 constexpr uint8_t MASK_REG_WIDTH = AscendC::VECTOR_REG_WIDTH >> 3; // 右移3bit: MaskReg的宽度是RegTensor的1/8
-constexpr MultiCopyConfig nddmaConfig = {false};
+constexpr NdDmaConfig nddmaConfig = {false};
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true};
 #if (__NPU_ARCH__ == 5102) // mdc场景使用定点化计算，enableFixVal = true
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, true, true};

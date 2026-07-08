@@ -156,7 +156,7 @@ public:
         DEFINE_STUCT_FIELD(uint8_t, enableL0PingPong_);
         DEFINE_STUCT_FIELD(MmadParams, mmad_);
         DEFINE_STUCT_FIELD(LoadData2DParams, load2d_);
-        using NDDMACopyParams = MultiCopyParams<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM>;
+        using NDDMACopyParams = NdDmaParams<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM>;
         DEFINE_STUCT_FIELD(NDDMACopyParams, groupCopyParams_);
 
         using LoadData3DParamsV2SrcT = LoadData3DParamsV2<typename Intf::SrcAT>;
