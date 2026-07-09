@@ -141,7 +141,7 @@ enum class ForeachReturnType : uint8_t {
 };
 class ForeachCommonTiling {
 public:
-    explicit ForeachCommonTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit ForeachCommonTiling(gert::TilingContext* context) : tilingContext(context) {};
     /**
      ** function: Init
      */
@@ -248,6 +248,8 @@ public:
             ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
             needCoreNum = GetNeedCoreNum(ascendcPlatform.GetCoreNumAiv());
         } else {
+            OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The compileInfoPtr is null."),
+                        return ge::GRAPH_FAILED);
             ubSizePlatForm = compileInfoPtr->ubSize;
             needCoreNum = GetNeedCoreNum(compileInfoPtr->aivCoreNum);
         }
