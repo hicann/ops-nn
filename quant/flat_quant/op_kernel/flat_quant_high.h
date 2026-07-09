@@ -171,6 +171,7 @@ public:
         matmulR.SetTensorA(xGM[k * shape.M * shape.N], false);
         matmulR.SetTensorB(p2GM, false);
         matmulR.IterateAll(x1GM[offset1], false);
+        PipeBarrier<PIPE_ALL>();
 
         matmulL.SetTensorA(p1GM, false);
         for (int64_t i = 0; i < batch; i++) {

@@ -17,6 +17,7 @@
 
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
+#include "tiling/platform/platform_ascendc.h"
 
 namespace optiling {
 
@@ -25,6 +26,7 @@ struct FlatQuantCompileInfo {
     int64_t aivNum;
     platform_ascendc::SocVersion socVersion;
     std::string socVersionStr = "";
+    NpuArch npuArch = NpuArch::DAV_2201;
 };
 
 BEGIN_TILING_DATA_DEF(FlatQuantTilingData)

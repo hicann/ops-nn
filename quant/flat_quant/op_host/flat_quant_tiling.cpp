@@ -240,6 +240,11 @@ uint8_t FlatQuantTiling::DetermineMmMode(ge::DataType outDtype) const
         return MM_HIGH_MODE;
     }
 
+    auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
+    if (compileInfo != nullptr && compileInfo->npuArch == NpuArch::DAV_3510) {
+        return MM_HIGH_MODE;
+    }
+
     if (M == 1 && N % NUM_EIGHT == 0) {
         return MM_ONE_MODE;
     }
@@ -441,14 +446,13 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAic();
     compileInfo->aivNum = ascendcPlatform.GetCoreNumAiv();
     compileInfo->socVersion = ascendcPlatform.GetSocVersion();
-    NpuArch npuArch = ascendcPlatform.GetCurNpuArch();
-    bool IsArch3510 = npuArch == NpuArch::DAV_3510;
+    compileInfo->npuArch = ascendcPlatform.GetCurNpuArch();
 
     OP_LOGI("FlatQuant", "parse compile info success soc:%d, aicNum:%ld, aivNum:%ld",
             static_cast<int>(compileInfo->socVersion), compileInfo->coreNum, compileInfo->aivNum);
     OP_CHECK_IF(compileInfo->coreNum <= 0,
                 OP_LOGE(context->GetNodeName(), "FlatQuant is not supported for aicNum <=0 "), return ge::GRAPH_FAILED);
-    if (IsArch3510) {
+    if (compileInfo->npuArch == NpuArch::DAV_3510) {
         OP_CHECK_IF(compileInfo->aivNum != (compileInfo->coreNum * 2), // aivNum must == aicNum*2
                     OP_LOGE(context->GetNodeName(), "FlatQuantTiling is only supported for aivNum == aicNum*2 "),
                     return ge::GRAPH_FAILED);
