@@ -156,6 +156,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
     }
 
     ProcessWithBatch(params, bs);
+    if constexpr (isAtomicAdd) {
+        AscendC::SetAtomicNone();
+    }
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
