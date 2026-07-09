@@ -26,8 +26,10 @@ static constexpr event_t EVT_FMAP_BUF0 = static_cast<event_t>(1);
 static constexpr event_t EVT_FMAP_BUF1 = static_cast<event_t>(2);
 } // namespace
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type = half>
-class Conv2dSmallKernelParallelism : public Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type> {
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type = half,
+          bool isNHWCin = false, bool isNHWCout = false>
+class Conv2dSmallKernelParallelism
+    : public Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout> {
 public:
     __aicore__ inline void Init(const Conv2DTilingData& tiling);
     __aicore__ inline void Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
@@ -54,9 +56,10 @@ private:
     GlobalTensor<weightType> filterGm_;
 };
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::Init(
-    const Conv2DTilingData& tiling)
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout>::Init(const Conv2DTilingData& tiling)
 {
     this->InitCommon(tiling);
     if (!this->coreActive_)
@@ -114,10 +117,12 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                                afterReluWeight0;
     this->reluWeight1L1OffBytes_ = AlignB(afterScale1, ADDR_ALIGN_SIZE);
 }
-
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::CalcChunkFmap(
-    uint32_t mOff, uint32_t curM, uint32_t& curHi, uint32_t& padTop, uint32_t& padBottom, uint32_t& hiLoadOff)
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout>::CalcChunkFmap(uint32_t mOff, uint32_t curM,
+                                                                              uint32_t& curHi, uint32_t& padTop,
+                                                                              uint32_t& padBottom, uint32_t& hiLoadOff)
 {
     uint32_t hoStart = (this->mIdxStart_ + mOff) / this->tiling_->wout;
     uint32_t hoEnd = (this->mIdxStart_ + mOff + curM - 1) / this->tiling_->wout;
@@ -142,12 +147,13 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     padBottom = 0;
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type,
-                                                    out1Type>::LoadFmapL1Chunk(uint32_t bufIdx, uint32_t curHi,
-                                                                               uint32_t hiLoadOff, uint32_t padTop,
-                                                                               uint32_t padBottom, uint32_t cinOff,
-                                                                               uint32_t curCin)
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout>::LoadFmapL1Chunk(uint32_t bufIdx, uint32_t curHi,
+                                                                                uint32_t hiLoadOff, uint32_t padTop,
+                                                                                uint32_t padBottom, uint32_t cinOff,
+                                                                                uint32_t curCin)
 {
     uint32_t loadRows = curHi - padBottom;
     uint32_t elemCount = curHi * this->orgWin_ * curCin;
@@ -158,26 +164,39 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     uint32_t bufByteOff = bufIdx * al1BufBytes_;
     LocalTensor<FmapType> al1(TPosition::A1, bufByteOff, elemCount);
 
-    Dn2NzParams p;
-    p.dnNum = 1;
-    p.nValue = curHi * this->orgWin_;
-    p.dValue = curCin;
-    p.srcDnMatrixStride = 0;
-    p.srcDValue = static_cast<uint32_t>(this->tiling_->hin * this->tiling_->win);
-    p.dstNzC0Stride = curHi * this->orgWin_;
-    p.dstNzNStride = 1;
-    p.dstNzMatrixStride = 0;
+    if constexpr (isNHWCin) {
+        Nd2NzParams p;
+        p.ndNum = 1;
+        p.nValue = curHi * this->orgWin_;
+        p.dValue = curCin;
+        p.srcDValue = static_cast<uint32_t>(this->tiling_->cin);
+        p.dstNzNStride = 1;
+        p.dstNzC0Stride = curHi * this->orgWin_;
 
-    uint64_t gmOff = static_cast<uint64_t>(cinOff) * static_cast<uint64_t>(this->tiling_->hin) *
-                         static_cast<uint64_t>(this->tiling_->win) +
-                     static_cast<uint64_t>(hiLoadOff) * this->orgWin_;
-    DataCopy(al1, fmapGm_[gmOff], p);
+        uint64_t gmOff = static_cast<uint64_t>(hiLoadOff) * this->orgWin_ * this->tiling_->cin + cinOff;
+        DataCopy(al1, fmapGm_[gmOff], p);
+    } else {
+        Dn2NzParams p;
+        p.dnNum = 1;
+        p.nValue = curHi * this->orgWin_;
+        p.dValue = curCin;
+        p.srcDnMatrixStride = 0;
+        p.srcDValue = static_cast<uint32_t>(this->tiling_->hin * this->tiling_->win);
+        p.dstNzC0Stride = curHi * this->orgWin_;
+        p.dstNzNStride = 1;
+        p.dstNzMatrixStride = 0;
+
+        uint64_t gmOff = static_cast<uint64_t>(cinOff) * static_cast<uint64_t>(this->tiling_->hin) *
+                             static_cast<uint64_t>(this->tiling_->win) +
+                         static_cast<uint64_t>(hiLoadOff) * this->orgWin_;
+        DataCopy(al1, fmapGm_[gmOff], p);
+    }
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void
-Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::LoadWeightL1Block(uint32_t kOff,
-                                                                                                    uint32_t curK)
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout>::LoadWeightL1Block(uint32_t kOff, uint32_t curK)
 {
     uint32_t k1Block = CeilDiv(curK, this->GK0);
     uint32_t k1Start = kOff / this->GK0;
@@ -200,11 +219,12 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>
     }
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type,
-                                                    out1Type>::SetupLoad3DForChunk(uint32_t curHi, uint32_t mOff,
-                                                                                   uint32_t curM, uint32_t padTop,
-                                                                                   uint32_t padBottom)
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout>::SetupLoad3DForChunk(uint32_t curHi, uint32_t mOff,
+                                                                                    uint32_t curM, uint32_t padTop,
+                                                                                    uint32_t padBottom)
 {
     uint8_t padList[PAD_LIST_NUM] = {static_cast<uint8_t>(this->tiling_->padLeft),
                                      static_cast<uint8_t>(this->tiling_->padRight), static_cast<uint8_t>(padTop),
@@ -237,8 +257,10 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 #endif
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline uint32_t Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::CalcKL0()
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline uint32_t
+Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout>::CalcKL0()
 {
     // kL0 is the largest factor of kL1OverK0 other than itself.
     uint32_t kL1OverK0 = cinL1_ * this->tiling_->kernelHxkernelW / this->GK0;
@@ -254,12 +276,15 @@ __aicore__ inline uint32_t Conv2dSmallKernelParallelism<FmapType, weightType, bi
     return this->GK0;
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::Process(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout>::Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                                                        GM_ADDR y, const ExtendParams* extendParams)
 {
-    if (!this->coreActive_ || this->actualCo_ == 0)
+    if (!this->coreActive_ || this->actualCo_ == 0) {
         return;
+    }
 
     this->LoadBiasScaleL1(bias, extendParams);
     SetFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
@@ -275,8 +300,9 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 
     LocalTensor<weightType> bl1Full(TPosition::B1, this->bl1OffBytes_, this->bl1ElemCount_);
 
-    uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->cin * this->tiling_->hin *
-                            this->tiling_->win;
+    uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->hin * this->tiling_->win *
+                            this->tiling_->cin;
+
     fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff,
                             this->tiling_->cin * this->tiling_->hin * this->tiling_->win);
     filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ weightType*>(filter),
@@ -390,9 +416,20 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
         WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
 
-        this->DoCopyOut0(y, cl0, mOff, curM, curMAlign, this->actualCo_);
-        if (this->tiling_->dualOutput) {
-            this->DoCopyOut1(extendParams->y1, cl0, mOff, curM, curMAlign, this->actualCo_);
+        if constexpr (isNHWCout) {
+            this->template DoCopyOut<out0Type, 0, CFG_ROW_MAJOR, CFG_ROW_MAJOR_FIXED_POINT>(y, cl0, mOff, curM,
+                                                                                            curMAlign, this->actualCo_);
+            if (this->tiling_->dualOutput) {
+                this->template DoCopyOut<out1Type, 1, CFG_ROW_MAJOR, CFG_ROW_MAJOR_FIXED_POINT>(
+                    extendParams->y1, cl0, mOff, curM, curMAlign, this->actualCo_);
+            }
+        } else {
+            this->template DoCopyOut<out0Type, 0, CFG_COLUMN_MAJOR, CFG_COLUMN_MAJOR_FIXED_POINT>(
+                y, cl0, mOff, curM, curMAlign, this->actualCo_);
+            if (this->tiling_->dualOutput) {
+                this->template DoCopyOut<out1Type, 1, CFG_COLUMN_MAJOR, CFG_COLUMN_MAJOR_FIXED_POINT>(
+                    extendParams->y1, cl0, mOff, curM, curMAlign, this->actualCo_);
+            }
         }
     }
 }

@@ -115,14 +115,16 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
 #if defined(DTYPE_Y1)
     using output1Type = DTYPE_Y1;
 #else
-    using output1Type = half;                                   // only for compile
+    using output1Type = half; // only for compile
 #endif
 
     ExtendParams extendParams(scale0, relu_weight0, clip_value0, scale1, relu_weight1, clip_value1, y1);
     if constexpr (SmallKernel == 1 && weightFormat == ConvFormat::FRACTAL_Z &&
-                  OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) && fmapFormat == ConvFormat::NCHW &&
-                  outputFormat == ConvFormat::NCHW &&
+                  OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
                   (AscendC::IsSameType<DTYPE_X, half>::value || AscendC::IsSameType<DTYPE_X, int8_t>::value)) {
+        constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC); // Default format is NCHW
+        constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
+
         const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
         uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
         bool isParallelism = false;
@@ -133,11 +135,12 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
         }
 
         if (isParallelism) {
-            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type> op;
+            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout>
+                op;
             op.Init(tilingData);
             op.Process(x, filter, bias, y0, &extendParams);
         } else {
-            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type> op;
+            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout> op;
             op.Init(tilingData);
             op.Process(x, filter, bias, y0, &extendParams);
         }
