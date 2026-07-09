@@ -621,8 +621,8 @@ bool BatchMatmulV3BaseTiling::DoMultiBatchOutTiling()
 void BatchMatmulV3BaseTiling::DoMultiBatchTiling()
 {
     bool isEqualBatch = batchInfo_.batchA0 == batchInfo_.batchB0 && batchInfo_.batchA1 == batchInfo_.batchB1 &&
-                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3; //广播
-    if (!isEqualBatch || (args_.hasBias && !batchInfo_.biasWithBatch)) { //不支持broadcast\非多batch bias
+                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3; // 广播
+    if (!isEqualBatch || (args_.hasBias && !batchInfo_.biasWithBatch)) { // 不支持broadcast\非多batch bias
         return;
     }
     uint64_t shapeM = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.M), BLOCK_CUBE);
@@ -735,7 +735,7 @@ void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTilingImpl()
 void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTiling()
 {
     bool isEqualBatch = batchInfo_.batchA0 == batchInfo_.batchB0 && batchInfo_.batchA1 == batchInfo_.batchB1 &&
-                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3; //广播
+                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3; // 广播
     if (!isEqualBatch || args_.hasBias) { // 暂时不支持bias
         return;
     }
@@ -1159,6 +1159,16 @@ bool BatchMatmulV3BaseTiling::CheckVectorNpuArch()
     return true;
 }
 
+bool BatchMatmulV3BaseTiling::CheckVectorTranspose()
+{
+    if (args_.isATrans || !args_.isBTrans) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: transA should be false, transB should be true. "
+                              "Bmm vector opt version not supported.");
+        return false;
+    }
+    return true;
+}
+
 bool BatchMatmulV3BaseTiling::CheckVectorShapeDims()
 {
     auto aShape = context_->GetInputShape(0)->GetOriginShape();
@@ -1249,6 +1259,9 @@ bool BatchMatmulV3BaseTiling::CheckVectorBatchBroadcast()
 bool BatchMatmulV3BaseTiling::CheckVectorComputationCondition()
 {
     if (!CheckVectorNpuArch()) {
+        return false;
+    }
+    if (!CheckVectorTranspose()) {
         return false;
     }
     if (!CheckVectorShapeDims()) {
