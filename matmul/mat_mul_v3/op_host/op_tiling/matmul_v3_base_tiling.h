@@ -88,7 +88,7 @@ protected:
     void OptimizeLoadBalanceBasicKernel();
     bool DoL2CacheTiling();
     bool DoL2CacheTiling310P();
-    virtual void UpdateNd2nzFlag(){};
+    virtual void UpdateNd2nzFlag() {};
     void DoNd2NzVectorTiling();
     bool DoBL1FullloadWithFixpipeTiling();
     void CalcNd2NzTiling(uint64_t dtypeSize, uint64_t nValue, uint64_t dValue, uint64_t& baseN, uint64_t& baseD);
@@ -143,8 +143,6 @@ protected:
                     const std::vector<uint64_t> supportNd2nzList) const;
     bool NeedNd2NzVnchw(uint64_t outerSize, uint64_t innerSize, bool supportNd2NzOnTheWay, uint64_t dtypeSize,
                         ge::Format matFormat) const;
-    bool CheckNzNzNdSupport();
-    void DoNzNzNdVectorTiling();
 
 private:
     MatmulTilingData tilingDataSelf_{};
