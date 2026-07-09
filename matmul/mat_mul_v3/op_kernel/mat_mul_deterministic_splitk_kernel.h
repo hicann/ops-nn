@@ -47,9 +47,27 @@ __aicore__ inline uint64_t GetNzSequentialTileSize(uint64_t tileM, uint64_t tile
            MMV3CeilAlign(tileN, static_cast<uint64_t>(ALIGNED_H));
 }
 
+__aicore__ inline uint64_t GetNzSequentialMatrixSize(uint64_t actualM, uint64_t actualN, uint64_t baseM, uint64_t baseN)
+{
+    if (baseM == 0 || baseN == 0) {
+        return 0;
+    }
+    uint64_t size = 0;
+    uint64_t mTileCnt = MMV3DivCeil(actualM, baseM);
+    uint64_t nTileCnt = MMV3DivCeil(actualN, baseN);
+    for (uint64_t mIdx = 0; mIdx < mTileCnt; ++mIdx) {
+        uint64_t currM = GetTailSize(mIdx, actualM, baseM);
+        for (uint64_t nIdx = 0; nIdx < nTileCnt; ++nIdx) {
+            size += GetNzSequentialTileSize(currM, GetTailSize(nIdx, actualN, baseN));
+        }
+    }
+    return size;
+}
+
 __aicore__ inline uint64_t GetNzSequentialIterOffset(uint64_t iterIdx, uint64_t actualM, uint64_t actualN,
                                                      uint64_t baseM, uint64_t baseN, bool mOuter)
 {
+    // mOuter marks compact NZ tile order: true for M-outer, false for N-outer.
     if (baseM == 0 || baseN == 0) {
         return 0;
     }
@@ -266,6 +284,30 @@ __aicore__ inline void SplitKVectorNZProcess(GlobalTensor<float> gmSrc, GlobalTe
     }
 }
 
+__aicore__ inline void DataCopyNzCompactRows(LocalTensor<float> ubDst, GlobalTensor<float> gmSrc, uint64_t processIdx,
+                                             uint64_t rowOffset, uint64_t copyRows, uint64_t actualM, uint64_t actualN,
+                                             uint64_t baseM, uint64_t baseN, bool mOuter)
+{
+    if (baseM == 0 || baseN < ALIGNED_H) {
+        return;
+    }
+    uint64_t copiedRows = 0;
+    while (copiedRows < copyRows) {
+        uint64_t currRow = rowOffset + copiedRows;
+        uint64_t mTileIdx = currRow / baseM;
+        uint64_t localRow = currRow - mTileIdx * baseM;
+        uint64_t tileM = GetTailSize(mTileIdx, actualM, baseM);
+        uint64_t rowsToCopy = min(copyRows - copiedRows, tileM - localRow);
+        if (rowsToCopy == 0) {
+            return;
+        }
+        uint64_t srcOffset = GetNzSequentialBlockOffset(processIdx, mTileIdx, actualM, actualN, baseM, baseN, mOuter) +
+                             localRow * ALIGNED_H;
+        DataCopy(ubDst[copiedRows * ALIGNED_H], gmSrc[srcOffset], rowsToCopy * ALIGNED_H);
+        copiedRows += rowsToCopy;
+    }
+}
+
 template <class T>
 __aicore__ inline void SplitKVectorNZProcessCompact(GlobalTensor<float> gmSrc, GlobalTensor<T> gmDst,
                                                     uint64_t processIdx, uint64_t actualM, uint64_t actualN,
@@ -274,33 +316,35 @@ __aicore__ inline void SplitKVectorNZProcessCompact(GlobalTensor<float> gmSrc, G
                                                     LocalTensor<float> ubSrc1, LocalTensor<float> ubSrc2,
                                                     LocalTensor<T> ubDst)
 {
-    uint64_t mTileCnt = MMV3DivCeil(actualM, baseM);
-    uint64_t copySize = actualM * ALIGNED_H;
-    uint64_t dstOffset = 0;
-    for (uint64_t mTileIdx = 0; mTileIdx < mTileCnt; ++mTileIdx) {
-        uint64_t tileM = GetTailSize(mTileIdx, actualM, baseM);
-        uint64_t tileCopySize = tileM * ALIGNED_H;
-        uint64_t srcOffset = GetNzSequentialBlockOffset(processIdx, mTileIdx, actualM, actualN, baseM, baseN, mOuter);
-        DataCopy(ubSrc1[dstOffset], gmSrc[srcOffset], tileCopySize);
-        dstOffset += tileCopySize;
+    // The mOuter argument follows compact NZ tile order and may differ from tiling iterateOrder.
+    uint64_t copyElemNum = actualM * ALIGNED_H;
+    uint64_t copySize = copyElemNum;
+    uint64_t repeatNums = MMV3DivCeil(copySize, MAX_NUM);
+    if (copySize > MAX_NUM) {
+        copySize = MAX_NUM;
     }
-    TPipeSetWaitFlag<HardEvent::MTE2_V>();
-    for (uint64_t j = 1; j < singleCoreNum; ++j) {
-        uint64_t splitOffset = j * (singleSize << 1);
-        dstOffset = 0;
-        for (uint64_t mTileIdx = 0; mTileIdx < mTileCnt; ++mTileIdx) {
-            uint64_t tileM = GetTailSize(mTileIdx, actualM, baseM);
-            uint64_t tileCopySize = tileM * ALIGNED_H;
-            uint64_t srcOffset = splitOffset + GetNzSequentialBlockOffset(processIdx, mTileIdx, actualM, actualN, baseM,
-                                                                          baseN, mOuter);
-            DataCopy(ubSrc2[dstOffset], gmSrc[srcOffset], tileCopySize);
-            dstOffset += tileCopySize;
+    uint64_t offsetCopySize = 0;
+    for (uint64_t repeat = 0; repeat < repeatNums; repeat++) {
+        uint64_t tmpOffset = 0;
+        if (repeat == repeatNums - 1) {
+            copySize = copyElemNum - MAX_NUM * (repeatNums - 1);
         }
+        uint64_t rowOffset = offsetCopySize / ALIGNED_H;
+        uint64_t copyRows = copySize / ALIGNED_H;
+        DataCopyNzCompactRows(ubSrc1, gmSrc, processIdx, rowOffset, copyRows, actualM, actualN, baseM, baseN, mOuter);
         TPipeSetWaitFlag<HardEvent::MTE2_V>();
-        Add(ubSrc1, ubSrc1, ubSrc2, copySize);
-        TPipeSetWaitFlag<HardEvent::V_MTE2>();
+
+        for (uint64_t j = 1; j < singleCoreNum; ++j) {
+            tmpOffset += (singleSize << 1);
+            DataCopyNzCompactRows(ubSrc2, gmSrc[tmpOffset], processIdx, rowOffset, copyRows, actualM, actualN, baseM,
+                                  baseN, mOuter);
+            TPipeSetWaitFlag<HardEvent::MTE2_V>();
+            Add(ubSrc1, ubSrc1, ubSrc2, copySize);
+            TPipeSetWaitFlag<HardEvent::V_MTE2>();
+        }
+        SplitKVectorNZCopyOut(gmDst[rowOffset * oriN], copySize, currSplitN, oriN, ubSrc1, ubDst);
+        offsetCopySize += copySize;
     }
-    SplitKVectorNZCopyOut(gmDst, copySize, currSplitN, oriN, ubSrc1, ubDst);
 }
 
 template <class C_TYPE>
@@ -960,10 +1004,10 @@ __aicore__ inline void ReduceKInUbNzL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t 
 
     uint64_t coreOutSize = tiling.singleCoreM * tiling.singleCoreN;
     for (uint64_t outIndex = 0; outIndex < outCnt; ++outIndex) {
-        //被尾列改过的参数都要恢复
+        // 被尾列改过的参数都要恢复
         coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) *
                    tiling.singleCoreN;
-        dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); //恢复原始大小
+        dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); // 恢复原始大小
         dataSize1 = TOTAL_UB_SIZE / NUM_FOUR / sizeof(T);
         dataSize = dataSize / singleCoreN * singleCoreN;
         dataSize1 = dataSize1 / singleCoreN * singleCoreN;
@@ -981,7 +1025,7 @@ __aicore__ inline void ReduceKInUbNzL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t 
                 coreOutSize = mCoreUse * nCoreUse;
                 coreSize = MMV3DivCeil(mCoreUse, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) *
                            nCoreUse;
-                dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); //恢复原始大小
+                dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); // 恢复原始大小
                 dataSize1 = TOTAL_UB_SIZE / NUM_FOUR / sizeof(T);
                 dataSize = dataSize / nCoreUse * nCoreUse;
                 dataSize1 = dataSize1 / nCoreUse * nCoreUse;
@@ -1044,7 +1088,7 @@ __aicore__ inline void ReduceKInUbNzL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t 
                 // L2cache split does not select the mmmk_33 path, so the workspace is always compact NZ layout.
                 SplitKVectorNZProcessCompact(gmSrc, gmDst[currOutCOffset + nOffset], processIdx, actualM, actualN,
                                              currSplitN, singleCoreNum, singleSize, oriN, tiling.baseM, tiling.baseN,
-                                             orderNMFlag, ubSrc1, ubSrc2, ubDst);
+                                             !orderNMFlag, ubSrc1, ubSrc2, ubDst);
                 SetFlag<HardEvent::MTE3_MTE2>(pingpongEventId);
             }
             WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3toMTE2Zero);
@@ -1105,10 +1149,10 @@ __aicore__ inline void ReduceKInUbL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t co
     uint64_t inCnt = orderNMFlag ? mCnt : nCnt;
     uint64_t coreOutSize = tiling.singleCoreM * tiling.singleCoreN;
     for (uint64_t outIndex = 0; outIndex < outCnt; ++outIndex) {
-        //被尾列改过的参数都要恢复
+        // 被尾列改过的参数都要恢复
         coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) *
                    tiling.singleCoreN;
-        dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); //恢复原始大小
+        dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); // 恢复原始大小
         dataSize1 = TOTAL_UB_SIZE / NUM_FOUR / sizeof(T);
         dataSize = dataSize / singleCoreN * singleCoreN;
         dataSize1 = dataSize1 / singleCoreN * singleCoreN;
@@ -1125,7 +1169,7 @@ __aicore__ inline void ReduceKInUbL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t co
                 coreOutSize = mCoreUse * nCoreUse;
                 coreSize = MMV3DivCeil(mCoreUse, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) *
                            nCoreUse;
-                dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); //恢复原始大小
+                dataSize = TOTAL_UB_SIZE / NUM_FOUR / sizeof(float); // 恢复原始大小
                 dataSize1 = TOTAL_UB_SIZE / NUM_FOUR / sizeof(T);
                 dataSize = dataSize / nCoreUse * nCoreUse;
                 dataSize1 = dataSize1 / nCoreUse * nCoreUse;
@@ -1430,7 +1474,7 @@ __aicore__ inline void MatMulMultiCoreSplitKDivideL2cache(GM_ADDR aGM, GM_ADDR b
                         uint64_t iterIdx = 0;
                         while (mmNM.Iterate()) {
                             uint64_t seqOffsetC = GetNzSequentialIterOffset(iterIdx, mCoreUse, nCoreUse, tiling.baseM,
-                                                                            tiling.baseN, orderNMFlag);
+                                                                            tiling.baseN, !orderNMFlag);
                             mmNM.GetTensorC(cGlobal[seqOffsetC], kIndex != index, true);
                             ++iterIdx;
                         }
@@ -1448,7 +1492,7 @@ __aicore__ inline void MatMulMultiCoreSplitKDivideL2cache(GM_ADDR aGM, GM_ADDR b
                         uint64_t iterIdx = 0;
                         while (mmMN.Iterate()) {
                             uint64_t seqOffsetC = GetNzSequentialIterOffset(iterIdx, mCoreUse, nCoreUse, tiling.baseM,
-                                                                            tiling.baseN, orderNMFlag);
+                                                                            tiling.baseN, !orderNMFlag);
                             mmMN.GetTensorC(cGlobal[seqOffsetC], kIndex != index, true);
                             ++iterIdx;
                         }
@@ -1498,14 +1542,12 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
                                                                       static_cast<uint64_t>(tiling.singleCoreN);
 
     uint64_t vIndex = GetBlockIdx();
-    uint64_t alignedSingleCoreNForNz = MMV3CeilAlign(static_cast<uint64_t>(tiling.singleCoreN), ALIGNED_H);
-    uint64_t alignedNForNz = MMV3CeilAlign(static_cast<uint64_t>(tiling.N), ALIGNED_H);
     singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.singleCoreN);
     if (isL2cacheSplit) {
         if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
             singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.singleCoreN);
         } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreNForNz;
+            singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.singleCoreN, tiling.baseM, tiling.baseN);
         }
         coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) *
                    tiling.singleCoreN; // 无论MK还是NK都按照M方向进行分AIV核
@@ -1514,7 +1556,7 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreN) * static_cast<uint64_t>(tiling.M);
             } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-                singleSize = static_cast<uint64_t>(tiling.M) * alignedSingleCoreNForNz;
+                singleSize = GetNzSequentialMatrixSize(tiling.M, tiling.singleCoreN, tiling.baseM, tiling.baseN);
             }
             coreSize = MMV3DivCeil(tiling.M, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) *
                        tiling.singleCoreN;
@@ -1523,7 +1565,7 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.N);
             } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-                singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedNForNz;
+                singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.N, tiling.baseM, tiling.baseN);
             }
             coreSize = MMV3DivCeil(singleSize, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO);
             cnt = mCnt;

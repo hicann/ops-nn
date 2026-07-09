@@ -112,6 +112,33 @@ inline uint64_t CalBaseSize(uint64_t cnt, uint64_t totalCoreNum, uint64_t size, 
     base = std::min(base, maxBase);
     return base;
 }
+
+uint64_t GetMatmulV3TailSize(uint64_t idx, uint64_t total, uint64_t base)
+{
+    uint64_t offset = idx * base;
+    if (offset >= total) {
+        return 0;
+    }
+    return std::min(base, total - offset);
+}
+
+uint64_t GetNzSequentialMatrixSize(uint64_t actualM, uint64_t actualN, uint64_t baseM, uint64_t baseN)
+{
+    if (baseM == 0 || baseN == 0) {
+        return 0;
+    }
+    uint64_t size = 0;
+    uint64_t mTileCnt = ops::CeilDiv(actualM, baseM);
+    uint64_t nTileCnt = ops::CeilDiv(actualN, baseN);
+    for (uint64_t mIdx = 0; mIdx < mTileCnt; ++mIdx) {
+        uint64_t currM = GetMatmulV3TailSize(mIdx, actualM, baseM);
+        for (uint64_t nIdx = 0; nIdx < nTileCnt; ++nIdx) {
+            uint64_t currN = GetMatmulV3TailSize(nIdx, actualN, baseN);
+            size += ops::CeilAlign(currM, BASIC_ALIGN_16) * ops::CeilAlign(currN, BASIC_ALIGN_16);
+        }
+    }
+    return size;
+}
 } // namespace
 
 namespace optiling {
@@ -2784,14 +2811,12 @@ uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t /*alig
     if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT) {
         const bool orderFlag = !static_cast<bool>(tiling.iterateOrder);
         const bool isL2cacheSplit = orderFlag ? (tiling.M != tiling.singleCoreM) : (tiling.N != tiling.singleCoreN);
-        uint64_t alignedSingleCoreN = ops::CeilAlign(static_cast<uint64_t>(tiling.singleCoreN), BASIC_ALIGN_16);
-        uint64_t alignedOutN = ops::CeilAlign(static_cast<uint64_t>(tiling.N), BASIC_ALIGN_16);
         if (isL2cacheSplit) {
-            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreN;
+            singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.singleCoreN, tiling.baseM, tiling.baseN);
         } else if (orderFlag) {
-            singleSize = static_cast<uint64_t>(tiling.M) * alignedSingleCoreN;
+            singleSize = GetNzSequentialMatrixSize(tiling.M, tiling.singleCoreN, tiling.baseM, tiling.baseN);
         } else {
-            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedOutN;
+            singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.N, tiling.baseM, tiling.baseN);
         }
     }
 
