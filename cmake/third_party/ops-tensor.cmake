@@ -7,7 +7,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-set(OPTENSOR_TAG_ID 5c1ff8574da5d06c2a7a1f6d2e18d8470b55dc01)
+set(OPTENSOR_TAG_ID 87f2c2d61a661aa48c363a54f17ca16468619897)
 
 if(EXISTS "${PROJECT_SOURCE_DIR}/../ops-tensor")
   get_filename_component(OPTENSOR_SOURCE_PATH

@@ -25,6 +25,7 @@ public:
     ~MatMulV3BasicAswtTiling() override = default;
     void CheckFp32SplitK();
     void CheckApiLevelAndModel();
+    void CheckIsSplitN();
 
 protected:
     bool IsCapable() override;

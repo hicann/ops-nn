@@ -37,6 +37,8 @@
 #include "../../mat_mul_v3/arch35/mat_mul_pingpong_basic.h"
 #include "batch_mat_mul_v3_iterbatch_broadcast.h"
 #include "../../mat_mul_v3/arch35/mat_mul_al1_full_load.h"
+#include "../../mat_mul_v3/arch35/mat_mul_bl1_full_load.h"
+#include "../../mat_mul_v3/arch35/mat_mul_fixpipe.h"
 #endif
 #endif
 
@@ -219,9 +221,28 @@ __global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bi
         MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
                                           B_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM, workspaceGM,
                                                             tilingData.matMulTilingData, tilingData.batchDimAll);
-    } else if constexpr (BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC &&
-                         BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD && BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY &&
-                         BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
+    } else if constexpr (
+        BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
+        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
+        MatmulV3Advanced::MatMulActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, B_FULL_LOAD_MODE>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData.matMulTilingData, tilingData.batchDimAll);
+    } else if constexpr (
+        BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
+        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && IS_BLAZE
+        MatmulV3Advanced::MatMulBFullLoadTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC, BATCH_FULL_LOAD>(
+            aGM, bGM, biasGM, cGM, nullptr, tilingData.matMulTilingData, tilingData.batchDimAll);
+#else
+        MatmulV3Advanced::MatMulActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, B_FULL_LOAD_MODE>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData.matMulTilingData, tilingData.batchDimAll);
+#endif
+    } else if constexpr (
+        BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
         BatchMatMulActIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);

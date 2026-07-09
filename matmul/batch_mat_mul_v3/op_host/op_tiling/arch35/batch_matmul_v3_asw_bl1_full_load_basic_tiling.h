@@ -27,6 +27,7 @@ public:
         : MatMulV3BasicAswtTiling(context, cfg){};
 
     ~BatchMatMulV3AswBL1FullLoadBasicTiling() override{};
+    void CheckTensorApiSupport();
 
 protected:
     bool IsCapable() override;
@@ -36,6 +37,7 @@ protected:
     uint64_t GetTilingKey() const override;
 
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+    MatMulV3ApiLevel apiLevel_ {MatMulV3ApiLevel::BASIC_LEVEL};
 };
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling
