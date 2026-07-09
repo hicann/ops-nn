@@ -16,6 +16,8 @@
 #ifndef _FUSED_SGD_TILING_DATA_H_
 #define _FUSED_SGD_TILING_DATA_H_
 
+#include <cstdint>
+
 struct FusedSgdTilingData {
     float weightDecay;
     float momentum;
