@@ -909,7 +909,7 @@
           {
             "name": "bias",
             "index": 2,
-            "dtype": "float32",
+            "dtype": "bfloat16",
             "format": "ND",
             "paramType": "optional",
             "shape": [
