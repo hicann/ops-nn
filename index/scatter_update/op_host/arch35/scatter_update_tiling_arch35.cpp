@@ -77,6 +77,8 @@ constexpr int32_t CORE_NEED_SPLIT_COL = 1;
 constexpr int32_t MORE_THAN_NORM_PROCESS = 1;
 constexpr int32_t SIMD_SORT_PROCESS_START = 1;
 constexpr int32_t SIMD_ALIGN = 1;
+constexpr int32_t MIN_UB_PROCESS_COL_NUM = 2;
+constexpr int32_t SPLIT_COL_MIN_CORE_NUM = 1;
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE{{ge::DataType::DT_INT32, 1},
                                                                          {ge::DataType::DT_INT64, 2}};
@@ -569,7 +571,7 @@ void ScatterUpdateTiling::IsUpdateColMany()
     uint64_t updateColUbFactorCur = Ops::Base::FloorAlign(ubSize_ - indicesUbFactor_ * indicesDtypeSize_,
                                                           UB_AGLIN_VALUE) /
                                     varTypeSize_;
-    if (updateColUbFactorCur > 2 * updateColUbFactor_ && usedCoreNum_ > 1) {
+    if (updateColUbFactorCur > MIN_UB_PROCESS_COL_NUM * updateColUbFactor_ && usedCoreNum_ > SPLIT_COL_MIN_CORE_NUM) {
         updateColMany_ = true;
         updateOneColAlign_ = updateColUbFactor_;
         updateColUbFactor_ = Ops::Base::FloorAlign(updateColUbFactorCur, updateOneColAlign_);
