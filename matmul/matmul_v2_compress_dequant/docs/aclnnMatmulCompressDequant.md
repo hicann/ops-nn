@@ -81,7 +81,7 @@ aclnnStatus aclnnMatmulCompressDequant(
       <td>x1</td>
       <td>输入</td>
       <td>表示矩阵乘的左输入。</td>
-      <td>-</td>
+      <td>m需小于等于256，k为64的整数倍且大于256。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnMatmulCompressDequant(
       <td>bias</td>
       <td>输入</td>
       <td>参与矩阵乘计算的偏置项。</td>
-      <td>支持空指针传入。</td>
+      <td>n为64的整数倍且大于等于128。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2维，shape仅支持(1, n)或者(n)，其中n为输出shape(m, n)的n</td>
@@ -150,7 +150,7 @@ aclnnStatus aclnnMatmulCompressDequant(
     <tr>
       <td>compressInfo</td>
       <td>输入</td>
-      <td>整型数据列表，数据类型为INT64。其中包括压缩块信息tilingN、tilingK（通过msModelSlim工具中weight_compression模块压缩后获取，分别表示压缩前shape(n, k)在n方向和k方向上一个基本压缩块的大小），压缩前x2矩阵原始shape（shape为2维，用(n, k)表示），以及压缩块遍历方向的标识。</td>
+      <td>整型数据列表，数据类型为INT64。其中包括压缩块信息tilingN、tilingK（通过msModelSlim工具中weight_compression模块压缩后获取，分别表示压缩前shape(n, k)在n方向和k方向上一个基本压缩块的大小），压缩前x2矩阵原始shape（shape为2维，用(n, k)表示），以及压缩块遍历方向的标识。其中tilingN和tilingK仅支持取值为8。</td>
       <td>-</td>
       <td>INT64</td>
       <td>-</td>
