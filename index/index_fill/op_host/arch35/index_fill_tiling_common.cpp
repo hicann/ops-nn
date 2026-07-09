@@ -59,11 +59,11 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
 
     auto xShapePtr = context->GetInputShape(INDEX_INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
-    auto xShape = xShapePtr->GetStorageShape();
+    auto xShape = Ops::Base::EnsureNotScalar(xShapePtr->GetStorageShape());
 
     auto yShapePtr = context->GetOutputShape(INDEX_OUTPUT_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
-    auto yShape = yShapePtr->GetStorageShape();
+    auto yShape = Ops::Base::EnsureNotScalar(yShapePtr->GetStorageShape());
     if (xShape != yShape) {
         auto shapeStr = [](const gert::Shape& s) {
             std::string r;

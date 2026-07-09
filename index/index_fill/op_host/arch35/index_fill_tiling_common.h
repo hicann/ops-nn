@@ -17,6 +17,7 @@
 #define INDEX_FILL_TILING_COMMON_H_
 
 #include "op_host/tiling_base.h"
+#include "op_host/tiling_base_util.h"
 #include "index/index_fill/op_kernel/arch35/index_fill_struct.h"
 #include "index/index_fill/op_kernel/arch35/index_fill_tiling_key.h"
 
