@@ -143,8 +143,6 @@ protected:
                     const std::vector<uint64_t> supportNd2nzList) const;
     bool NeedNd2NzVnchw(uint64_t outerSize, uint64_t innerSize, bool supportNd2NzOnTheWay,
                         uint64_t dtypeSize, ge::Format matFormat) const;
-    bool CheckNzNzNdSupport();
-    void DoNzNzNdVectorTiling();
 private:
     MatmulTilingData tilingDataSelf_{};
 protected:
