@@ -127,13 +127,25 @@ extern "C" __global__ __aicore__ void embedding_bag(
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_PROMOTE_INT32)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t, uint32_t> op(tilingData, pipe);
-        op.Init(gmParam);
-        op.Process();
+        if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint32_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        } else {
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint32_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_PROMOTE_INT64)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t, uint64_t> op(tilingData, pipe);
-        op.Init(gmParam);
-        op.Process();
+        if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint64_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        } else {
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint64_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_SAME_INT32)) {
         EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
         op.Init(gmParam);
@@ -143,13 +155,25 @@ extern "C" __global__ __aicore__ void embedding_bag(
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_PROMOTE_INT32)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t, uint32_t> op(tilingData, pipe);
-        op.Init(gmParam);
-        op.Process();
+        if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint32_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        } else {
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint32_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_PROMOTE_INT64)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t, uint64_t> op(tilingData, pipe);
-        op.Init(gmParam);
-        op.Process();
+        if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint64_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        } else {
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint64_t> op(tilingData, pipe);
+            op.Init(gmParam);
+            op.Process();
+        }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_EMPTY_SAME_INT32)) {
         EmbeddingBag::EmbeddingBagRegBaseSimtEmpty<DTYPE_INDICES, uint32_t> op(tilingData, pipe);
         op.Init(gmParam);
