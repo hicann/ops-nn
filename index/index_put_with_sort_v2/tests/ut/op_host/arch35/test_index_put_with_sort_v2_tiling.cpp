@@ -76,7 +76,7 @@ void SetConstInput(size_t const_index, ge::DataType dtype, T *const_data, int64_
 struct IndexPutWithSortV2CompileInfo {};
 
 TEST_F(IndexPutWithSortV2ImportTiling, index_put_with_sort_v2_tiling_001) {
-  dlog_setlevel(0,0,0);
+  // dlog_setlevel(0,0,0);
   gert::StorageShape input_shape = {{32904, 2048}, {32904, 2048}};
   gert::StorageShape input1_shape = {{3965}, {3965}};
   gert::StorageShape input2_shape = {{3965},{3965}};
@@ -160,5 +160,5 @@ TEST_F(IndexPutWithSortV2ImportTiling, index_put_with_sort_v2_tiling_001) {
   // workspaces nullptr return failed
   EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
   // todo check tiling result
-  dlog_setlevel(0,3,0);
+  // dlog_setlevel(0,3,0);
 }
