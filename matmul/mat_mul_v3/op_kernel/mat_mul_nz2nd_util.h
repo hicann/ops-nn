@@ -84,36 +84,28 @@ __aicore__ inline void Nz2NdMulsAndGatherMask(LocalTensor<C_T> tensorND, LocalTe
             Muls(tensorND[inLoop * BLOCK_SIZE + c0Size], tensorNZ[inLoop * ubProcessM * BLOCK_SIZE + c0Size],
                 static_cast<C_T>(1.0), mask, repeatTimes, mulsRepeatParams);
         }
-    } else if constexpr (std::is_same_v<C_T, half>) {
-        mulsRepeatParams.srcBlkStride = 1;
-        mulsRepeatParams.dstBlkStride = alignedN / c0Size;
-        mulsRepeatParams.dstRepStride = alignedN / NUM_TWO;
-        mulsRepeatParams.srcRepStride = 8;
-        for (size_t inLoop = 0; inLoop < NfractalNum; inLoop++) {
-            Muls(tensorND[inLoop * BLOCK_SIZE], tensorNZ[inLoop * ubProcessM * BLOCK_SIZE], static_cast<half>(1.0), mask,
-                repeatTimes, mulsRepeatParams);
-        }
-    } else if constexpr (std::is_same_v<C_T, bfloat16_t>) {
-        mulsRepeatParams.srcBlkStride = 1;
-        mulsRepeatParams.dstBlkStride = alignedN / c0Size;
-        mulsRepeatParams.dstRepStride = alignedN / NUM_TWO;
-        mulsRepeatParams.srcRepStride = 8;
-        LocalTensor<int16_t> tensorNDInterpretCast = tensorND.template ReinterpretCast<int16_t>();
-        LocalTensor<int16_t> tensorNZInterpretCast = tensorNZ.template ReinterpretCast<int16_t>();
-        for (size_t inLoop = 0; inLoop < NfractalNum; inLoop++) {
-            Muls(tensorNDInterpretCast[inLoop * BLOCK_SIZE], tensorNZInterpretCast[inLoop * ubProcessM * BLOCK_SIZE],
-                static_cast<int16_t>(1), mask, repeatTimes, mulsRepeatParams);
+    } else {
+        CopyRepeatParams copyParams;
+ 	    copyParams.srcStride = 1;
+ 	    copyParams.dstStride = alignedN / c0Size;
+ 	    copyParams.dstRepeatSize = alignedN / NUM_TWO;
+ 	    copyParams.srcRepeatSize = 8;
+ 	    for (size_t inLoop = 0; inLoop < NfractalNum; inLoop++) {
+ 	        Copy(tensorND[inLoop * BLOCK_SIZE], tensorNZ[inLoop * ubProcessM * BLOCK_SIZE], mask, repeatTimes, copyParams);
         }
     }
 
     PipeBarrier<PIPE_V>();
 
-    uint64_t rsvdCnt = 0;
-    params.src0BlockStride = 1;
-    params.src0RepeatStride = alignedN / c0Size;
-    params.src1RepeatStride = 0;
-    params.repeatTimes = ubProcessM;
-    GatherMask(tensorND, tensorND, 7, true, nBlocks, params, rsvdCnt);
+    if (alignedN != nBlocks) {
+        uint64_t rsvdCnt = 0;
+        params.src0BlockStride = 1;
+        params.src0RepeatStride = alignedN / c0Size;
+        params.src1RepeatStride = 0;
+        params.repeatTimes = ubProcessM;
+        GatherMask(tensorND, tensorND, 7, true, nBlocks, params, rsvdCnt);
+    }
+
 
     SetFlag<HardEvent::V_MTE3>(static_cast<event_t>(pingPongId));
     WaitFlag<HardEvent::V_MTE3>(static_cast<event_t>(pingPongId));
