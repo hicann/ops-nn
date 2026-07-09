@@ -2577,13 +2577,24 @@ static bool CheckBiasParams(gert::TilingContext* context, const OtherParams& oth
                 return false);
 
     ge::DataType biasDtype = biasDesc->GetDataType();
-    OP_CHECK_IF(
-        biasDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype", ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
-                                  FormatString("bias dtype has incorrect value %s, should be FP32",
-                                               ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str())
-                                      .c_str()),
-        return false);
+    // Bias的输入类型，在非量化和量化场景有差异，分别进行判断
+    if (otherParams.a_dtype == ge::DT_INT8) {
+        OP_CHECK_IF(
+            biasDtype != ge::DT_INT32,
+            OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype", ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
+                                      FormatString("bias dtype has incorrect value %s, should be INT32 in quant mode",
+                                                   ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str())
+                                          .c_str()),
+            return false);
+    } else {
+        OP_CHECK_IF(
+            biasDtype != ge::DT_FLOAT,
+            OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype", ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
+                                      FormatString("bias dtype has incorrect value %s, should be FP32",
+                                                   ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str())
+                                          .c_str()),
+            return false);
+    }
 
     return true;
 }
