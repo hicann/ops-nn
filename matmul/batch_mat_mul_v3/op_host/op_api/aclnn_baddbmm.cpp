@@ -291,15 +291,9 @@ public:
             convOut = bmmOut;
             return ACLNN_SUCCESS;
         }
+
         // self(bias) * beta
-        const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
-        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const aclTensor* selfContiguousCast = selfContiguous;
-        if (enable16In32Out) {
-            selfContiguousCast = l0op::Cast(selfContiguous, output->GetDataType(), executor);
-            CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-        const aclTensor* mulOut = l0op::Muls(selfContiguousCast, beta->ToFloat(), executor);
+        const aclTensor* mulOut = BuildSelfMulBeta(enable16In32Out);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // bmmOut = batch1(matA) @ batch2(matB)
@@ -307,31 +301,7 @@ public:
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
-        auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), bmmOut->GetDataType());
-        // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        const aclTensor* mulOutCasted = l0op::Cast(mulOut, promoteTypeAdd, executor);
-        CHECK_RET(mulOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        // 将bmmOut的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        const aclTensor* bmmOutCasted = l0op::Cast(bmmOut, promoteTypeAdd, executor);
-        CHECK_RET(bmmOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 进行Add或Axpy计算
-        const aclTensor* addOut = nullptr;
-        bool isInplace = bias->GetData() == output->GetData();
-        if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
-            // alpha == 1
-            // addOut = mulOutCasted + bmmOutCasted
-            addOut = reinterpret_cast<void*>(l0op::AddInplace) != nullptr && !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape() ?
-                l0op::AddInplace(mulOutCasted, bmmOutCasted, executor) :
-                l0op::Add(mulOutCasted, bmmOutCasted, executor);
-        } else {
-            // alpha != 1
-            // addOut = mulOutCasted + bmmOutCasted * alpha
-            addOut = reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape() ?
-                l0op::AxpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
-                l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
-        }
+        const aclTensor* addOut = BuildAddOut(mulOut, bmmOut);
         CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = addOut;
         return ACLNN_SUCCESS;
@@ -348,6 +318,47 @@ public:
     };
 
     ~BaddbmmMatmulGraph() override = default;
+
+private:
+    const aclTensor* BuildSelfMulBeta(bool enable16In32Out)
+    {
+        const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
+        CHECK_RET(selfContiguous != nullptr, nullptr);
+        const aclTensor* selfContiguousCast = selfContiguous;
+        if (enable16In32Out) {
+            selfContiguousCast = l0op::Cast(selfContiguous, output->GetDataType(), executor);
+            CHECK_RET(selfContiguousCast != nullptr, nullptr);
+        }
+        const aclTensor* mulOut = l0op::Muls(selfContiguousCast, beta->ToFloat(), executor);
+        CHECK_RET(mulOut != nullptr, nullptr);
+        return mulOut;
+    }
+
+    const aclTensor* BuildAddOut(const aclTensor* mulOut, const aclTensor* bmmOut)
+    {
+        // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
+        auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), bmmOut->GetDataType());
+        // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        const aclTensor* mulOutCasted = l0op::Cast(mulOut, promoteTypeAdd, executor);
+        CHECK_RET(mulOutCasted != nullptr, nullptr);
+        // 将bmmOut的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        const aclTensor* bmmOutCasted = l0op::Cast(bmmOut, promoteTypeAdd, executor);
+        CHECK_RET(bmmOutCasted != nullptr, nullptr);
+
+        // 进行Add或Axpy计算
+        bool isInplace = bias->GetData() == output->GetData();
+        bool canUseInplace = !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape();
+        if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
+            // alpha == 1, addOut = mulOutCasted + bmmOutCasted
+            return reinterpret_cast<void*>(l0op::AddInplace) != nullptr && canUseInplace ?
+                       l0op::AddInplace(mulOutCasted, bmmOutCasted, executor) :
+                       l0op::Add(mulOutCasted, bmmOutCasted, executor);
+        }
+        // alpha != 1, addOut = mulOutCasted + bmmOutCasted * alpha
+        return reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && canUseInplace ?
+                   l0op::AxpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
+                   l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
+    }
 };
 
 // 创建计算图
