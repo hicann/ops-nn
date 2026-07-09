@@ -249,7 +249,8 @@ static bool CheckAscendCScenario(
     int64_t mDim = x1->GetViewShape().GetDim(x1DimNum - 2);
     int64_t kDim = x1->GetViewShape().GetDim(x1DimNum - 1);
     int64_t MAX_MK_DIM = 8;
-    if (npuArch == NpuArch::DAV_2201 && adjX2 == 1 && nDim == 1 && mDim <= MAX_MK_DIM && kDim <= MAX_MK_DIM) {
+    if (npuArch == NpuArch::DAV_2201 && adjX1 == 0 && adjX2 == 1 && nDim == 1
+ 	    && mDim <= MAX_MK_DIM && kDim <= MAX_MK_DIM) {
         OP_LOGI("Hit batch_mat_mul_v3 vector kernel scenario: effective N dimension is 1.");
         return true;
     }

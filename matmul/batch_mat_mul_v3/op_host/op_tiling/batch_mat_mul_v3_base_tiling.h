@@ -157,6 +157,7 @@ protected:
 private:
     // CheckVectorComputationCondition的子检查函数
     bool CheckVectorNpuArch();
+    bool CheckVectorTranspose();
     bool CheckVectorShapeDims();
     bool CheckVectorDtypeAndKAxis();
     bool CheckVectorBatchBroadcast();

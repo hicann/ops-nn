@@ -1127,6 +1127,16 @@ bool BatchMatmulV3BaseTiling::CheckVectorNpuArch()
     return true;
 }
 
+ bool BatchMatmulV3BaseTiling::CheckVectorTranspose()
+{
+    if (args_.isATrans || !args_.isBTrans) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: transA should be false, transB should be true. "
+                            "Bmm vector opt version not supported.");
+        return false;
+    }
+    return true;
+}
+
 bool BatchMatmulV3BaseTiling::CheckVectorShapeDims()
 {
     auto aShape = context_->GetInputShape(0)->GetOriginShape();
@@ -1215,6 +1225,7 @@ bool BatchMatmulV3BaseTiling::CheckVectorBatchBroadcast()
 bool BatchMatmulV3BaseTiling::CheckVectorComputationCondition()
 {
     if (!CheckVectorNpuArch()) { return false; }
+    if (!CheckVectorTranspose()) { return false; }
     if (!CheckVectorShapeDims()) { return false; }
     if (!CheckVectorDtypeAndKAxis()) { return false; }
     if (!CheckVectorBatchBroadcast()) { return false; }
