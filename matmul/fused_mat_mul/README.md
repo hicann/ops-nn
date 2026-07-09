@@ -32,7 +32,7 @@
     <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
-    <thread>
+    <thead>
       <tr>
         <th>参数名</th>
         <th>输入/输出</th>
@@ -40,7 +40,7 @@
         <th>使用说明</th>
         <th>数据类型</th>
         <th>数据格式</th>
-      </tr></thread>
+      </tr></thead>
     <tbody>
       <tr>
         <td>x1</td>
@@ -70,7 +70,7 @@
         <td>x3</td>
         <td>输入</td>
         <td>公式中的输入x3。</td>
-        <td>-</td>
+        <td><ul><li>仅当fusedOpType为"add"、"mul"时生效，其他情况传入空指针即可。</li></ul></td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
       </tr>
@@ -94,7 +94,7 @@
 
 ## 约束说明
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(仅支持开启HFLOAT32场景)、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16。
 
 ## 调用说明
 
@@ -103,12 +103,12 @@
     <col style="width: 300px">
     <col style="width: 430px">
     </colgroup>
-    <thread>
+    <thead>
       <tr>
         <th>调用方式</th>
         <th>样例代码</th>
         <th>说明</th>
-      </tr></thread>
+      </tr></thead>
     <tbody>
       <tr>
         <td>aclnn接口</td>

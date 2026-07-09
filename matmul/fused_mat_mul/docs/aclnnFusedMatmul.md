@@ -37,13 +37,13 @@
   gelu_tanh运算:
 
   $$
-  y = gelu\_tanh(x1 @ x2 + bias)
+  y = gelu\_tanh(x1 @ x2)
   $$
 
   gelu_erf运算:
 
   $$
-  y = gelu\_erf(x1 @ x2 + bias)
+  y = gelu\_erf(x1 @ x2)
   $$
 
   relu运算:
@@ -90,7 +90,7 @@ aclnnStatus aclnnFusedMatmul(
     <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
-    <thread>
+    <thead>
       <tr>
         <th>参数名</th>
         <th>输入/输出</th>
@@ -100,7 +100,7 @@ aclnnStatus aclnnFusedMatmul(
         <th>数据格式</th>
         <th>维度</th>
         <th>非连续</th>
-      </tr></thread>
+      </tr></thead>
     <tbody>
       <tr>
         <td>x1</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnFusedMatmul(
         <td><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
-        <td>2-6（fusedOpType为""、"relu"时）；2（其他取值）</td>
+        <td>2-6（fusedOpType为""、"relu"时）；2-3（fusedOpType为"add"、"mul"时）；2（其他取值）</td>
         <td>√</td>
       </tr>
       <tr>
@@ -119,7 +119,7 @@ aclnnStatus aclnnFusedMatmul(
         <td><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
-        <td>2-6（fusedOpType为""、"relu"时）；2（其他取值）</td>
+        <td>2-6（fusedOpType为""、"relu"时）；2-3（fusedOpType为"add"、"mul"时）；2（其他取值）</td>
         <td>√</td>
       </tr>
       <tr>
@@ -136,10 +136,10 @@ aclnnStatus aclnnFusedMatmul(
         <td>x3</td>
         <td>输入</td>
         <td>表示融合操作的第二个矩阵，对应公式中的x3。</td>
-        <td>-</td>
+        <td>仅当fusedOpType为"add"、"mul"时生效，其他情况传入空指针即可。</td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
-        <td>2</td>
+        <td>2-3</td>
         <td>√</td>
       </tr>
       <tr>
@@ -149,7 +149,7 @@ aclnnStatus aclnnFusedMatmul(
         <td><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
-        <td>2-6（fusedOpType为""、"relu"时）；2（其他取值）</td>
+        <td>2-6（fusedOpType为""、"relu"时）；2-3（fusedOpType为"add"、"mul"时）；2（其他取值）</td>
         <td>√</td>
       </tr>
     <tr>
@@ -219,17 +219,17 @@ aclnnStatus aclnnFusedMatmul(
     <col style="width: 130px">
     <col style="width: 650px">
     </colgroup>
-    <thread>
+    <thead>
       <tr>
         <th>返回值</th>
         <th>错误码</th>
         <th>描述</th>
-      </tr></thread>
+      </tr></thead>
     <tbody>
       <tr>
         <td rowspan="3">ACLNN_ERR_PARAM_NULLPTR</td>
         <td rowspan="3">161001</td>
-        <td>传入的x1、x2、和y是空指针。</td>
+        <td>传入的x1、x2和y是空指针。</td>
       </tr>
       <tr>
         <td>fusedOpType为add、mul时，传入的x3为空指针。</td>
@@ -246,10 +246,10 @@ aclnnStatus aclnnFusedMatmul(
         <td>x1、x2或y的数据格式不在支持的范围内。</td>
       </tr>
       <tr>
-        <td>x1、x2或y的维度不满足要求：fusedOpType为""、"relu"时支持2-6维，其他取值支持二维。</td>
+        <td>x1、x2或y的维度不满足要求：fusedOpType为""、"relu"时支持2-6维；fusedOpType为"add"、"mul"时支持2-3维；其他取值支持二维。</td>
       </tr>
       <tr>
-        <td>fusedOpType为add、mul时，x3的shape不跟输出shape保持一致。</td>
+        <td>fusedOpType为"add"、"mul"时，x3的shape不满足要求：x3为二维时，Shape[-2]、Shape[-1]需要与y的Shape[-2]、Shape[-1]保持一致；x3为三维时，Shape[-2]、Shape[-1]需要与y的Shape[-2]、Shape[-1]保持一致，且batch轴需要与y一致或为1。</td>
       </tr>
       <tr>
         <td>传入的fusedOpType不属于""、"16cast32"、"add"、"mul"、"gelu_tanh"、"gelu_erf"以及"relu"中的一种。</td>
@@ -270,12 +270,12 @@ aclnnStatus aclnnFusedMatmul(
     <col style="width: 130px">
     <col style="width: 650px">
     </colgroup>
-    <thread>
+    <thead>
       <tr>
         <th>参数名</th>
         <th>输入/输出</th>
         <th>描述</th>
-      </tr></thread>
+      </tr></thead>
     <tbody>
       <tr>
         <td>workspace</td>
@@ -308,8 +308,9 @@ aclnnStatus aclnnFusedMatmul(
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(cubeMathType只支持3)、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
 - 当fusedOpType取值为""、"relu"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
+- 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 
 ## 调用示例
