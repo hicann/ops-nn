@@ -137,6 +137,7 @@ protected:
     void DivisibleCoreLayout(uint64_t mCnt, uint64_t nCnt, uint64_t& calcOrder, uint64_t round) const;
     void DetermineCalcOrder();
     void SetCalcOrderinMNClashCase(uint64_t mTotalCnt, uint64_t nTotalCnt);
+    bool CapBaseNForATransWeightNz();
 
 private:
     gert::TilingContext* context;

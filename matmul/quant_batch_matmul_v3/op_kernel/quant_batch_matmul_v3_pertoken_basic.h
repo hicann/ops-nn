@@ -50,8 +50,10 @@ public:
             return;
         }
         pipe_ = tPipe;
+        mm_.SetSubBlockIdx(0);
         mm_.Init(&(tilingData->matmulTiling), pipe_);
         InitTilingData(tilingData);
+        SetMatmulOrgShape();
 
         InitGlobalBuffers(x1, x2, scale, bias, pertokenScale, y, workSpace);
         InitLocalBuffers();
@@ -136,6 +138,28 @@ private:
         ubCalcM_ = tilingData->params.ubCalcM;
         ubCalcN_ = tilingData->params.ubCalcN;
         ubTmpBuffer_ = tilingData->params.needUbBuffer;
+    }
+
+    __aicore__ inline void SetMatmulOrgShape()
+    {
+        if constexpr (DequantBmm::GetFormat(x1Format) == CubeFormat::NZ &&
+                      DequantBmm::GetFormat(x2Format) == CubeFormat::NZ) {
+            mm_.SetOrgShape(DequantBmm::Align(m_, BMM_BLOCK_NUM), DequantBmm::Align(n_, BMM_BLOCK_NUM),
+                            DequantBmm::Align(ka_, K0_INT8), DequantBmm::Align(ka_, K0_INT8), n_);
+        } else if constexpr (DequantBmm::GetFormat(x1Format) == CubeFormat::NZ) {
+            mm_.SetOrgShape(DequantBmm::Align(m_, K0_INT8), n_, DequantBmm::Align(ka_, BMM_BLOCK_NUM), ka_, n_);
+        } else if constexpr (DequantBmm::GetFormat(x2Format) == CubeFormat::NZ) {
+            if constexpr (bTrans) {
+                // k1,n1,n0,k0 layout: orgN aligned, last param is full N (see mat_mul_v3 / weight_quant NZ)
+                mm_.SetOrgShape(m_, DequantBmm::Align(n_, BMM_BLOCK_NUM), ka_, DequantBmm::Align(ka_, K0_INT8), n_);
+            } else {
+                // n1,k1,k0,n0 layout (k0=16): orgK aligned to k fractal
+                mm_.SetOrgShape(m_, DequantBmm::Align(n_, BMM_BLOCK_NUM), ka_, DequantBmm::Align(ka_, BMM_BLOCK_NUM),
+                                n_);
+            }
+        } else {
+            mm_.SetOrgShape(m_, n_, ka_);
+        }
     }
 
     __aicore__ inline void InitGlobalBuffers(GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR bias, GM_ADDR pertokenScale,
@@ -238,7 +262,11 @@ private:
 
     __aicore__ inline void BasicMMCompute(uint32_t baseM, uint32_t baseN)
     {
+        if constexpr (DequantBmm::GetFormat(x2Format) == CubeFormat::NZ && !bTrans) {
+            mm_.SetOrgShape(m_, baseN, ka_, DequantBmm::Align(ka_, BMM_BLOCK_NUM), n_);
+        }
         mm_.SetSingleShape(baseM, baseN, ka_);
+        mm_.SetTail(baseM, baseN, ka_);
         mm_.SetTensorA(xGm_[offset_.offsetA], aTrans);
         mm_.SetTensorB(weightGm_[offset_.offsetB], bTrans);
 
