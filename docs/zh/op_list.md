@@ -159,6 +159,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/fused_bias_leaky_relu_grad/README.md">fused_bias_leaky_relu_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BiasAdd + LeakyReLU + Scale 三合一反向梯度算子，对应MMCV FusedBiasLeakyReLU反向。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/ge_glu_grad_v2/README.md">ge_glu_grad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
