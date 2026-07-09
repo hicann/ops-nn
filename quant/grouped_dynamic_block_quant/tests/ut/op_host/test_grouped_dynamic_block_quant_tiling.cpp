@@ -165,7 +165,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -185,7 +185,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1111 64 253952 256 2 2 0 0 1 36 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1111 64 253952 256 2 2 0 0 1 36 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -205,7 +205,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1134 64 253952 256 2 2 0 0 4 34 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1134 64 253952 256 2 2 0 0 4 34 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -225,7 +225,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1137 64 253952 256 2 2 0 0 7 34 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1137 64 253952 256 2 2 0 0 7 34 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -245,7 +245,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1221 64 253952 256 2 2 0 0 1 35 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1221 64 253952 256 2 2 0 0 1 35 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -265,7 +265,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1211 64 253952 256 2 2 0 0 1 36 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1211 64 253952 256 2 2 0 0 1 36 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -285,7 +285,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1234 64 253952 256 2 2 0 0 4 34 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1234 64 253952 256 2 2 0 0 4 34 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -305,7 +305,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1237 64 253952 256 2 2 0 0 7 34 128 128 0 1 128 256 2 2 2 1 128 128 1 0 256 ";
+    string expectTilingData = "1237 64 253952 256 2 2 0 0 7 34 128 128 1 128 256 2 2 2 1 128 128 1 0 256 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -326,7 +326,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2121 64 253952 256 8 8 0 0 1 35 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2121 64 253952 256 8 8 0 0 1 35 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -346,7 +346,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2111 64 253952 256 8 8 0 0 1 36 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2111 64 253952 256 8 8 0 0 1 36 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -366,7 +366,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2134 64 253952 256 8 8 0 0 4 34 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2134 64 253952 256 8 8 0 0 4 34 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -386,7 +386,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2137 64 253952 256 8 8 0 0 7 34 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2137 64 253952 256 8 8 0 0 7 34 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -406,7 +406,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2221 64 253952 256 8 8 0 0 1 35 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2221 64 253952 256 8 8 0 0 1 35 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -426,7 +426,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2211 64 253952 256 8 8 0 0 1 36 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2211 64 253952 256 8 8 0 0 1 36 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -446,7 +446,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2234 64 253952 256 8 8 0 0 4 34 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2234 64 253952 256 8 8 0 0 4 34 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -466,7 +466,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     int64_t rowBlockSize = 256;
     int64_t colBlockSize = 256;
     int64_t group_list_type = 0;
-    string expectTilingData = "2237 64 253952 256 8 8 0 0 7 34 256 256 0 1 8192 256 40 1 1 8 0 256 1 0 165 ";
+    string expectTilingData = "2237 64 253952 256 8 8 0 0 7 34 256 256 1 8192 256 40 1 1 8 0 256 1 0 165 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -487,7 +487,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 0 1 128 256 2 2 2 1 128 128 1 0 128 ";
+    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 1 128 256 2 2 2 1 128 128 1 0 128 ";
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
@@ -507,7 +507,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 32;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 0 1 128 256 2 2 2 1 128 128 1 0 128 ";
+    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 1 128 256 2 2 2 1 128 128 1 0 128 ";
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
@@ -527,7 +527,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 32;
     int64_t group_list_type = 0;
-    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 0 1 128 256 2 2 2 1 128 128 1 0 128 ";
+    string expectTilingData = "1121 64 253952 256 2 2 0 0 1 35 128 128 1 128 256 2 2 2 1 128 128 1 0 128 ";
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
@@ -547,7 +547,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     int64_t rowBlockSize = 128;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1124 64 253952 256 2 2 0 0 4 35 128 128 0 1 128 256 2 2 2 1 128 128 1 0 128 ";
+    string expectTilingData = "1124 64 253952 256 2 2 0 0 4 35 128 128 1 128 256 2 2 2 1 128 128 1 0 128 ";
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 

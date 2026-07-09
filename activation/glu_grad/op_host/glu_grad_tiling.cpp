@@ -25,6 +25,8 @@ constexpr int64_t RESERVED_SIZE_8K = 8 * 1024;
 
 static ge::graphStatus TilingPrepare4GluGrad(gert::TilingParseContext* context)
 {
+    OP_CHECK_IF(context == nullptr, OP_LOGE("GluGrad", "Tiling context is null"), return ge::GRAPH_FAILED);
+
     OP_LOGD(context, "TilingPrepare4GluGrad enter.");
 
     auto compileInfo = context->GetCompiledInfo<GluGradCompileInfo>();
@@ -53,6 +55,8 @@ static ge::graphStatus TilingPrepare4GluGrad(gert::TilingParseContext* context)
 
 static ge::graphStatus Tiling4GluGrad(gert::TilingContext* context)
 {
+    OP_CHECK_IF(context == nullptr, OP_LOGE("GluGrad", "Tiling context is null"), return ge::GRAPH_FAILED);
+
     OP_LOGD(context, "Tiling4GluGrad enter.");
 
     auto compileInfo = context->GetCompileInfo<GluGradCompileInfo>();

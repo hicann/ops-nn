@@ -29,11 +29,11 @@ TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);           // 实际使用的核数
 TILING_DATA_FIELD_DEF(int64_t, headCoreNum);           // 头核数
 TILING_DATA_FIELD_DEF(int64_t, tailCoreNum);           // 尾核数
 TILING_DATA_FIELD_DEF(float, minScale);                // 最小缩放比例
+TILING_DATA_FIELD_DEF(float, dstTypeMax);              // 目标数据类型的最大值
 TILING_DATA_FIELD_DEF(int64_t, roundMode);             // 数据类型转换的模式
 TILING_DATA_FIELD_DEF(int64_t, dstType);               // 输出数据类型
 TILING_DATA_FIELD_DEF(int64_t, rowBlockSize);          // 行方向的块大小
 TILING_DATA_FIELD_DEF(int64_t, colBlockSize);          // 列方向的块大小
-TILING_DATA_FIELD_DEF(float, dstTypeMax);              // 目标数据类型的最大值
 TILING_DATA_FIELD_DEF(int64_t, batchNum);              // batch数
 TILING_DATA_FIELD_DEF(int64_t, rowNum);                // x行数
 TILING_DATA_FIELD_DEF(int64_t, colNum);                // x列数
@@ -64,11 +64,11 @@ struct GroupedDynamicBlockQuantTilingParam {
     int64_t headCoreNum = 0;
     int64_t tailCoreNum = 0;
     float minScale = 0.0;
+    float dstTypeMax = 0.0;
     int64_t roundMode = 0;
     int64_t dstType = 0;
     int64_t rowBlockSize = 0;
     int64_t colBlockSize = 0;
-    float dstTypeMax = 0.0;
     int64_t batchNum = 1;
     int64_t rowNum = 0;
     int64_t colNum = 0;
