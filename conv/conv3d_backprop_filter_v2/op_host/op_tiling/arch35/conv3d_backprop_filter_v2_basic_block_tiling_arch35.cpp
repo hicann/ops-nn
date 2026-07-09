@@ -56,7 +56,7 @@ void Conv3DDWV2BasicBlockTilingArch35::Reset()
     OP_TILING_CHECK(
         EOK != memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 0,
                         context_->GetRawTilingData()->GetCapacity()),
-        CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return );
+        CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
     libApiWorkSpaceSize_ = 0U;
     opName_ = nullptr;
 }
@@ -140,6 +140,13 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+int32_t Conv3DDWV2BasicBlockTilingArch35::CalcRealGroupMagFactor(int32_t groups)
+{
+    int64_t mag_factor0 = MathUtil::Lcm(runInfo_.ci / groups, BLOCK_CUBE) / (runInfo_.ci / groups);
+    int64_t mag_factor1 = MathUtil::Lcm(runInfo_.co / groups, BLOCK_CUBE) / (runInfo_.co / groups);
+    return static_cast<int32_t>(std::min(MathUtil::Lcm(mag_factor0, mag_factor1), static_cast<int64_t>(groups)));
+}
+
 void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
 {
     int32_t groups = static_cast<int32_t>(tilingData_.dwTiling.group);
@@ -148,10 +155,13 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
         return;
     }
 
-    int64_t mag_factor0 = MathUtil::Lcm(runInfo_.ci / groups, BLOCK_CUBE) / (runInfo_.ci / groups);
-    int64_t mag_factor1 = MathUtil::Lcm(runInfo_.co / groups, BLOCK_CUBE) / (runInfo_.co / groups);
-    runInfo_.mag_factor = static_cast<int32_t>(
-        std::min(MathUtil::Lcm(mag_factor0, mag_factor1), static_cast<int64_t>(groups)));
+    runInfo_.mag_factor = CalcRealGroupMagFactor(groups);
+    // 判断扩维因子
+    if (runInfo_.mag_factor <= 1) {
+        disableGroupEnlarge();
+        return;
+    }
+
     int64_t ciPerGroup = runInfo_.mag_factor * runInfo_.ci / groups;
     int64_t coPerGroup = runInfo_.mag_factor * runInfo_.co / groups;
     ciPerGroup = Ops::Base::CeilAlign(ciPerGroup, static_cast<int64_t>(BLOCK_CUBE));
@@ -244,7 +254,7 @@ void Conv3DDWV2BasicBlockTilingArch35::UpdateSingleCoreInfo()
 
     uint64_t l1Cin1 = std::max(blockTiling_.blockBaseN / (runInfo_.kh * runInfo_.kw * BLOCK_CUBE), 1U);
     if (blockTiling_.isSplitKernelHW) {
-        l1Cin1 = 1ULL; //切kernel需要保证ll1只包含一个hwk16
+        l1Cin1 = 1ULL; // 切kernel需要保证ll1只包含一个hwk16
     }
     blockTiling_.singleCoreN = l1Cin1 * runInfo_.kh * runInfo_.kw * BLOCK_CUBE;
     blockTiling_.singleCoreK = mmInfo_.kValue;
@@ -342,7 +352,7 @@ void Conv3DDWV2BasicBlockTilingArch35::UpdateStepMNK()
     }
 }
 
-//按照2的幂进行衰减，从shrinkSplitWoStart开始，shrinkSplitWoStart从128开始
+// 按照2的幂进行衰减，从shrinkSplitWoStart开始，shrinkSplitWoStart从128开始
 bool Conv3DDWV2BasicBlockTilingArch35::ShrinkSplitWOIAndTryTiling(int32_t shrinkSplitWoStart)
 {
     int32_t k0Nums = shrinkSplitWoStart / static_cast<int32_t>(tilingData_.dwTiling.k0);
@@ -361,7 +371,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::ShrinkSplitWOIAndTryTiling(int32_t shrink
 
 bool Conv3DDWV2BasicBlockTilingArch35::trySplitKernelHW()
 {
-    blockTiling_.isSplitKernelHW = true; //更新isSplitKernelHW必须要更新blockTiling_.splitWi参数
+    blockTiling_.isSplitKernelHW = true; // 更新isSplitKernelHW必须要更新blockTiling_.splitWi参数
     blockTiling_.splitWi = GetWiCal(blockTiling_.splitWo, blockTiling_.isSplitKernelHW);
     blockTiling_.tailWi = GetWiCal(blockTiling_.tailWo, blockTiling_.isSplitKernelHW);
 
@@ -383,10 +393,10 @@ bool Conv3DDWV2BasicBlockTilingArch35::trySplitWo()
 
 bool Conv3DDWV2BasicBlockTilingArch35::trySplitKernelAndWo()
 {
-    //直接将wo切块成k0，splitkernel标志置true
+    // 直接将wo切块成k0，splitkernel标志置true
     blockTiling_.isSplitKernelHW = true;
     if (enableSplitW) {
-        //切Wi/Wo的NDHWC格式没有支持，通过enableSplitW进行拦截
+        // 切Wi/Wo的NDHWC格式没有支持，通过enableSplitW进行拦截
         blockTiling_.splitWo = static_cast<int32_t>(tilingData_.dwTiling.k0);
         blockTiling_.tailWo = runInfo_.wo % blockTiling_.splitWo;
         blockTiling_.splitWi = GetWiCal(blockTiling_.splitWo, blockTiling_.isSplitKernelHW);
@@ -421,13 +431,13 @@ bool Conv3DDWV2BasicBlockTilingArch35::checkLargeSpecs()
     int32_t load3dK = runInfo_.kh * runInfo_.kw * runInfo_.k0;
     if (load3dK > LOAD3D_KSTART_MAX + 1) {
         // load3d使用kStartPt标识k方向load3d指定提取的偏移量,kExtension标识提取的长度
-        //当使用load3d沿着k方向滑动到最右侧时,kStartPt+kExtension达到最大,等于k轴大小
-        //即kStartPt+kExtension=k0*hk*wk
-        //假设kExtension为最小值1
-        //那么一旦k轴长度(即 k0*hk*wk)> 65536
+        // 当使用load3d沿着k方向滑动到最右侧时,kStartPt+kExtension达到最大,等于k轴大小
+        // 即kStartPt+kExtension=k0*hk*wk
+        // 假设kExtension为最小值1
+        // 那么一旦k轴长度(即 k0*hk*wk)> 65536
         // kStartPt就有可能大于65535
-        //超出kStartPt的上限导致翻转
-        //因此k轴大小超过65536时也按超大kernel做切分处理
+        // 超出kStartPt的上限导致翻转
+        // 因此k轴大小超过65536时也按超大kernel做切分处理
         OP_LOGD(opName_, "the kernel is too large, may exceed load3d kStartPt limit");
         return true;
     }
@@ -466,12 +476,12 @@ bool Conv3DDWV2BasicBlockTilingArch35::MultiCoreSplitMN()
         return true;
     }
 
-    //无法满足L1容量要求，先检查规格，如果规格未超LOAD3D指令限制，则尝试切W
+    // 无法满足L1容量要求，先检查规格，如果规格未超LOAD3D指令限制，则尝试切W
     if (!checkLargeSpecs() && !trySplitWo()) {
         return true;
     }
 
-    //无法满足L1容量，尝试同时进行切kernel和切W
+    // 无法满足L1容量，尝试同时进行切kernel和切W
     return !trySplitKernelAndWo();
 }
 
@@ -690,7 +700,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::IsCurBlockL1Invalid(const BasicBlockT
 uint64_t Conv3DDWV2BasicBlockTilingArch35::CalAL1Bound(const BasicBlockTilingParamsArch35& blockTiling)
 {
     if (blockTiling.splitWo == runInfo_.wo) {
-        //不切与原生逻辑保持一致
+        // 不切与原生逻辑保持一致
         return static_cast<uint64_t>(blockTiling.stepKa) * blockTiling.blockBaseK * blockTiling.blockBaseM;
     }
 
@@ -1196,7 +1206,7 @@ void Conv3DDWV2BasicBlockTilingArch35::InitTilingValue(TilingValueDwArch35& tili
 
     // 由于format差异和随路转换1982和1971对于tilingParams中参数不同处理函数
     const auto fmapDesc = context_->GetInputDesc(0);
-    OP_TILING_CHECK(fmapDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "fmap_desc is null"), return );
+    OP_TILING_CHECK(fmapDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "fmap_desc is null"), return);
 
     // cin1G,cout1G在group和非group场景都需要赋值
     int64_t ciPerRealGroup = static_cast<int64_t>(runInfo_.ci);

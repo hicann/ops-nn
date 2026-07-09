@@ -220,10 +220,10 @@ protected:
                         this->dw_.ctx.l0cPingPongFlag_ = !this->dw_.ctx.l0cPingPongFlag_;
                     }
                     if (!isCompute && ((++barrierTriggerCnt) % barrierThreshold == 0)) {
-                        //如果全是跳过,那么cube核没有实际逻辑,导致cube核CrossCoreSetFlag过快,
-                        // vector核来不及消费Flag，使得CrossCoreSetFlag内部的计数器溢出导致异常
-                        //根据文档,CrossCoreSetFlag的计数器最多设置15次,所以每隔14次触发一次Barrier
-                        //强制cube等待vector的notify,让两边同步
+                        // 如果全是跳过,那么cube核没有实际逻辑,导致cube核CrossCoreSetFlag过快,
+                        //  vector核来不及消费Flag，使得CrossCoreSetFlag内部的计数器溢出导致异常
+                        // 根据文档,CrossCoreSetFlag的计数器最多设置15次,所以每隔14次触发一次Barrier
+                        // 强制cube等待vector的notify,让两边同步
                         PipeBarrier<PIPE_ALL>();
                         barrierTriggerCnt = 0;
                     }
@@ -356,7 +356,7 @@ protected:
 
                 // AIV无需后续的计算，只需同步基本块basicBlockIdx
                 if ASCEND_IS_AIV {
-                    if (this->tiling_->group == this->tiling_->realGroup) {
+                    if constexpr (!groupEnlarge) {
                         continue;
                     }
                     if (GetSubBlockIdx() > 0) {

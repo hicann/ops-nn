@@ -158,6 +158,8 @@ protected:
     void SetTilingValue(conv_bp_v2_kernel::TConv3DDwTiling& dwt, const TilingValueDwArch35& tilingParams);
 
     // Basic Block methods
+    int32_t CalcRealGroupMagFactor(int32_t groups);
+
     void CalcRealGroup();
 
     void disableGroupEnlarge();
