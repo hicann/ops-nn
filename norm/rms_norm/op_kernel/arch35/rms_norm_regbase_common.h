@@ -146,207 +146,6 @@ __aicore__ inline void CopyOutY(GlobalTensor<T_Y>& yGm, TQue<QuePosition::VECOUT
 }
 
 /*!
- * x = x * x + scalar
- * @param dstLocal dst Tensor
- * @param srcLocal src Tensor
- * @param scalar scalar
- * @param count vector size
- * @return
- */
-__aicore__ inline void ComputeFormer(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, float scalar,
-                                     uint32_t count)
-{
-    __local_mem__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
-
-    uint32_t calCount = count;
-    uint32_t sreg = (uint32_t)calCount;
-    uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
-    __VEC_SCOPE__
-    {
-        RegTensor<float> vReg, vRegTmp;
-        MaskReg maskReg;
-        for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-            maskReg = UpdateMask<float>(sreg);
-            DataCopy(vReg, srcAddr + i * V_LENGTH);
-            Mul(vRegTmp, vReg, vReg, maskReg);
-            Muls(vReg, vRegTmp, scalar, maskReg);
-            DataCopy(dstAddr + i * V_LENGTH, vReg, maskReg);
-        }
-    }
-}
-
-/*!
- * x = x * x * scalar
- * @param dstLocal dst Tensor
- * @param xFp32 src.as(float32) Tensor
- * @param srcLocal src Tensor
- * @param scalar scalar
- * @param count vector size
- * @return
- */
-template <typename T>
-__aicore__ inline void ComputeFormer(LocalTensor<float>& dstLocal, LocalTensor<float>& xFp32, LocalTensor<T>& srcLocal,
-                                     float scalar, uint32_t count)
-{
-    uint32_t calCount = count / 2;
-    uint32_t sreg = (uint32_t)calCount;
-    uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
-
-    __local_mem__ T* xAddr1 = (__ubuf__ T*)srcLocal.GetPhyAddr();
-    __local_mem__ T* xAddr2 = (__ubuf__ T*)srcLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* dstAddr1 = (__ubuf__ float*)dstLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr2 = (__ubuf__ float*)dstLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* xFp32Addr1 = (__ubuf__ float*)xFp32.GetPhyAddr();
-    __local_mem__ float* xFp32Addr2 = (__ubuf__ float*)xFp32.GetPhyAddr() + calCount;
-
-    if constexpr (IsSameType<T, half>::value) {
-        __VEC_SCOPE__
-        {
-            RegTensor<half> xFp16Reg1, xFp16Reg2;
-            RegTensor<float> xFp32Reg1, vReg1, vRegTmp1, xFp32Reg2, vReg2, vRegTmp2;
-            MaskReg maskReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Reg1, xAddr1 + i * V_LENGTH);
-                DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Reg2, xAddr2 + i * V_LENGTH);
-                Cast<float, half, castTraitB162B32>(xFp32Reg1, xFp16Reg1, maskReg);
-                Cast<float, half, castTraitB162B32>(xFp32Reg2, xFp16Reg2, maskReg);
-                Mul(vRegTmp1, xFp32Reg1, xFp32Reg1, maskReg);
-                Mul(vRegTmp2, xFp32Reg2, xFp32Reg2, maskReg);
-                Muls(vReg1, vRegTmp1, scalar, maskReg);
-                Muls(vReg2, vRegTmp2, scalar, maskReg);
-                DataCopy(dstAddr1 + i * V_LENGTH, vReg1, maskReg);
-                DataCopy(dstAddr2 + i * V_LENGTH, vReg2, maskReg);
-                DataCopy(xFp32Addr1 + i * V_LENGTH, xFp32Reg1, maskReg);
-                DataCopy(xFp32Addr2 + i * V_LENGTH, xFp32Reg2, maskReg);
-            }
-        }
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        __VEC_SCOPE__
-        {
-            RegTensor<bfloat16_t> xBFp16Reg1, xBFp16Reg2;
-            RegTensor<float> xFp32Reg1, vReg1, vRegTmp1, xFp32Reg2, vReg2, vRegTmp2;
-            MaskReg maskReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16Reg1, xAddr1 + i * V_LENGTH);
-                DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16Reg2, xAddr2 + i * V_LENGTH);
-                Cast<float, bfloat16_t, castTraitB162B32>(xFp32Reg1, xBFp16Reg1, maskReg);
-                Cast<float, bfloat16_t, castTraitB162B32>(xFp32Reg2, xBFp16Reg2, maskReg);
-                Mul(vRegTmp1, xFp32Reg1, xFp32Reg1, maskReg);
-                Mul(vRegTmp2, xFp32Reg2, xFp32Reg2, maskReg);
-                Muls(vReg1, vRegTmp1, scalar, maskReg);
-                Muls(vReg2, vRegTmp2, scalar, maskReg);
-                DataCopy(dstAddr1 + i * V_LENGTH, vReg1, maskReg);
-                DataCopy(dstAddr2 + i * V_LENGTH, vReg2, maskReg);
-                DataCopy(xFp32Addr1 + i * V_LENGTH, xFp32Reg1, maskReg);
-                DataCopy(xFp32Addr2 + i * V_LENGTH, xFp32Reg2, maskReg);
-            }
-        }
-    } else {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> vReg1, vRegTmp1, vReg2, vRegTmp2;
-            MaskReg maskReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy(vReg1, xAddr1 + i * V_LENGTH);
-                DataCopy(vReg2, xAddr2 + i * V_LENGTH);
-                Mul(vRegTmp1, vReg1, vReg1, maskReg);
-                Mul(vRegTmp2, vReg2, vReg2, maskReg);
-                Muls(vReg1, vRegTmp1, scalar, maskReg);
-                Muls(vReg2, vRegTmp2, scalar, maskReg);
-                DataCopy(dstAddr1 + i * V_LENGTH, vReg1, maskReg);
-                DataCopy(dstAddr2 + i * V_LENGTH, vReg2, maskReg);
-            }
-        }
-    }
-}
-
-/*!
- * dst = srcLocal * srcLocal + scalar
- *
- * @tparam T src dtype
- * @param dstLocal output Local Tensor
- * @param srcLocal input Local Tensor
- * @param scalar average num
- * @param count vector compute length
- * @return void
- */
-template <typename T>
-__aicore__ inline void ComputeInit(LocalTensor<float>& dstLocal, LocalTensor<T>& srcLocal, float scalar, uint32_t count)
-{
-    uint32_t calCount = count / 2;
-    uint32_t sreg = (uint32_t)calCount;
-    uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
-
-    __local_mem__ T* xAddr1 = (__ubuf__ T*)srcLocal.GetPhyAddr();
-    __local_mem__ T* xAddr2 = (__ubuf__ T*)srcLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* dstAddr1 = (__ubuf__ float*)dstLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr2 = (__ubuf__ float*)dstLocal.GetPhyAddr() + calCount;
-
-    if constexpr (IsSameType<T, half>::value) {
-        __VEC_SCOPE__
-        {
-            RegTensor<half> xFp16Reg1, xFp16Reg2;
-            RegTensor<float> xFp32Reg1, vReg1, vRegTmp1, xFp32Reg2, vReg2, vRegTmp2;
-            MaskReg maskReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Reg1, xAddr1 + i * V_LENGTH);
-                DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Reg2, xAddr2 + i * V_LENGTH);
-                Cast<float, half, castTraitB162B32>(xFp32Reg1, xFp16Reg1, maskReg);
-                Cast<float, half, castTraitB162B32>(xFp32Reg2, xFp16Reg2, maskReg);
-                Mul(vRegTmp1, xFp32Reg1, xFp32Reg1, maskReg);
-                Mul(vRegTmp2, xFp32Reg2, xFp32Reg2, maskReg);
-                Muls(vReg1, vRegTmp1, scalar, maskReg);
-                Muls(vReg2, vRegTmp2, scalar, maskReg);
-                DataCopy(dstAddr1 + i * V_LENGTH, vReg1, maskReg);
-                DataCopy(dstAddr2 + i * V_LENGTH, vReg2, maskReg);
-            }
-        }
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        __VEC_SCOPE__
-        {
-            RegTensor<bfloat16_t> xBFp16Reg1, xBFp16Reg2;
-            RegTensor<float> xFp32Reg1, vReg1, vRegTmp1, xFp32Reg2, vReg2, vRegTmp2;
-            MaskReg maskReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16Reg1, xAddr1 + i * V_LENGTH);
-                DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16Reg2, xAddr2 + i * V_LENGTH);
-                Cast<float, bfloat16_t, castTraitB162B32>(xFp32Reg1, xBFp16Reg1, maskReg);
-                Cast<float, bfloat16_t, castTraitB162B32>(xFp32Reg2, xBFp16Reg2, maskReg);
-                Mul(vRegTmp1, xFp32Reg1, xFp32Reg1, maskReg);
-                Mul(vRegTmp2, xFp32Reg2, xFp32Reg2, maskReg);
-                Muls(vReg1, vRegTmp1, scalar, maskReg);
-                Muls(vReg2, vRegTmp2, scalar, maskReg);
-                DataCopy(dstAddr1 + i * V_LENGTH, vReg1, maskReg);
-                DataCopy(dstAddr2 + i * V_LENGTH, vReg2, maskReg);
-            }
-        }
-    } else {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> vReg1, vRegTmp1, vReg2, vRegTmp2;
-            MaskReg maskReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy(vReg1, xAddr1 + i * V_LENGTH);
-                DataCopy(vReg2, xAddr2 + i * V_LENGTH);
-                Mul(vRegTmp1, vReg1, vReg1, maskReg);
-                Mul(vRegTmp2, vReg2, vReg2, maskReg);
-                Muls(vReg1, vRegTmp1, scalar, maskReg);
-                Muls(vReg2, vRegTmp2, scalar, maskReg);
-                DataCopy(dstAddr1 + i * V_LENGTH, vReg1, maskReg);
-                DataCopy(dstAddr2 + i * V_LENGTH, vReg2, maskReg);
-            }
-        }
-    }
-}
-
-/*!
  * rstd = 1 / sqrt(mean / n + epsilon)
  * @param rstdLocal store mean value Tensor
  * @param epsilon RmsNorm's attr
@@ -373,111 +172,6 @@ __aicore__ inline void ComputeRstd(LocalTensor<float>& rstdLocal, float epsilon,
             Duplicate(srcReg, float(1.0), maskReg);
             Div(dstReg, srcReg, vReg, maskReg);
             DataCopy(rstdLocalAddr + i * V_LENGTH, dstReg, maskReg);
-        }
-    }
-}
-
-/*!
- * compute yLocal = xLocal * rstd * gammaLocal
- *
- * @param xLocal input xLocal
- * @param gammaLocal input gammaLocal
- * @param yLocal output yLocal
- * @param rstd input rstd
- * @param count vector commpute length
- * @return void
- */
-template <typename DX, typename DG>
-__aicore__ inline void ComputeY(LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal,
-                                LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count)
-{
-    uint32_t calCount = count / 2;
-    uint32_t sreg = (uint32_t)calCount;
-    uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
-
-    __local_mem__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
-    __local_mem__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
-    __local_mem__ DG* gammaAddr1 = (__ubuf__ DG*)gammaLocal.GetPhyAddr();
-    __local_mem__ DG* gammaAddr2 = (__ubuf__ DG*)gammaLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ DX* yAddr1 = (__ubuf__ DX*)yLocal.GetPhyAddr();
-    __local_mem__ DX* yAddr2 = (__ubuf__ DX*)yLocal.GetPhyAddr() + calCount;
-
-    if constexpr (!IsSameType<DX, float>::value && !IsSameType<DG, float>::value) {
-        __VEC_SCOPE__
-        {
-            RegTensor<DX> yB16Reg1, yB16Reg2;
-            RegTensor<DG> gammaReg1, gammaReg2;
-            RegTensor<float> rstdReg;
-            RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
-            RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
-            MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, maskReg);
-                Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, maskReg);
-                Mul(dst1Reg, xReg1, rstdReg, maskReg);
-                Mul(dst2Reg, xReg2, rstdReg, maskReg);
-                Mul(yReg1, dst1Reg, gammaFp32Reg1, maskReg);
-                Mul(yReg2, dst2Reg, gammaFp32Reg2, maskReg);
-                Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
-                Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
-            }
-        }
-    } else if constexpr (!IsSameType<DX, float>::value and IsSameType<DG, float>::value) {
-        __VEC_SCOPE__
-        {
-            RegTensor<DX> yB16Reg1, yB16Reg2;
-            RegTensor<DG> gammaReg1, gammaReg2;
-            RegTensor<float> rstdReg;
-            RegTensor<float> xReg1, dst1Reg, yReg1;
-            RegTensor<float> xReg2, dst2Reg, yReg2;
-            MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                Mul(dst1Reg, xReg1, rstdReg, maskReg);
-                Mul(dst2Reg, xReg2, rstdReg, maskReg);
-                Mul(yReg1, dst1Reg, gammaReg1, maskReg);
-                Mul(yReg2, dst2Reg, gammaReg2, maskReg);
-                Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
-                Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
-            }
-        }
-    } else {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> rstdReg;
-            RegTensor<float> xReg1, gammaReg1, yReg1, vRegTmp1;
-            RegTensor<float> xReg2, gammaReg2, yReg2, vRegTmp2;
-            MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                Mul(vRegTmp1, xReg1, rstdReg, maskReg);
-                Mul(vRegTmp2, xReg2, rstdReg, maskReg);
-                Mul(yReg1, vRegTmp1, gammaReg1, maskReg);
-                Mul(yReg2, vRegTmp2, gammaReg2, maskReg);
-                DataCopy(yAddr1 + i * V_LENGTH, yReg1, maskReg);
-                DataCopy(yAddr2 + i * V_LENGTH, yReg2, maskReg);
-            }
         }
     }
 }
@@ -823,92 +517,11 @@ __aicore__ inline void ComputeSum(LocalTensor<float>& dstLocal, LocalTensor<floa
     }
 }
 
-/*!
- * ReduceSum impl by half add.
- * @param dstLocal dst Tensor
- * @param srcLocal src Tensor
- * @param workLocal  temp Tensor
- * @param offset dst offset
- * @param count count aligned compute elements.
- * @param powerSplit 2 ** k = powerSplit
- * @return void
- */
-__aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal,
-                                     LocalTensor<float>& workLocal, uint32_t offset, uint32_t count,
-                                     uint32_t powerSplit)
-{
-    uint32_t remainTile = count - powerSplit;
-    uint32_t remainSreg = remainTile;
-    uint32_t remainRepeats = remainTile / (2 * V_LENGTH);
-
-    uint32_t masterTile = powerSplit - remainTile;
-    uint32_t masterSreg = masterTile;
-    uint16_t masterRepeats = masterTile / (2 * V_LENGTH);
-
-    uint32_t mergeTile = powerSplit / (2 * V_LENGTH);
-    uint32_t mergeSreg = mergeTile;
-    uint32_t mergeRepeats = mergeTile / (2 * V_LENGTH);
-
-    uint32_t meanTile = mergeRepeats == 0 ? mergeTile : mergeRepeats;
-    uint32_t meanSreg = meanTile;
-
-    __local_mem__ float* mainAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
-    __local_mem__ float* tailAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + int64_t(powerSplit);
-    __local_mem__ float* masterAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + int64_t(remainTile);
-    __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
-
-    __VEC_SCOPE__
-    {
-        RegTensor<float> mainA, mainB, tailA, tailB, vMean;
-        MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-        MaskReg pregLoop;
-
-        for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
-            pregLoop = UpdateMask<float>(remainSreg);
-            DataCopy(mainA, mainAddr + (i * 2 + 0) * V_LENGTH);
-            DataCopy(mainB, mainAddr + (i * 2 + 1) * V_LENGTH);
-            DataCopy(tailA, tailAddr + (i * 2 + 0) * V_LENGTH);
-            DataCopy(tailB, tailAddr + (i * 2 + 1) * V_LENGTH);
-
-            Add(mainA, mainA, tailA, pregLoop);
-            Add(mainB, mainB, tailB, pregLoop);
-            Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
-        }
-        for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
-            pregLoop = UpdateMask<float>(masterSreg);
-            DataCopy(mainA, masterAddr + (i * 2 + 0) * V_LENGTH);
-            DataCopy(mainB, masterAddr + (i * 2 + 1) * V_LENGTH);
-            Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
-        }
-        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
-            pregLoop = UpdateMask<float>(mergeSreg);
-            DataCopy(mainA, workAddr + (i * 2 + 0) * V_LENGTH);
-            DataCopy(mainB, workAddr + (i * 2 + 1) * V_LENGTH);
-            Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
-        }
-        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        {
-            pregLoop = UpdateMask<float>(meanSreg);
-            DataCopy(mainA, workAddr + 0);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
-        }
-    }
-}
-
-template <typename T>
-__aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1,
-                                             uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
-                                             RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
-                                             __local_mem__ float* xFp32MainAddr, __local_mem__ float* xFp32TailAddr)
+template <typename T, bool SAVE_FP32>
+__aicore__ inline void LoadSquareRemainTile(
+    __local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA,
+    RegTensor<float>& mainB, RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
+    __local_mem__ float* xFp32MainAddr = nullptr, __local_mem__ float* xFp32TailAddr = nullptr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
@@ -920,14 +533,12 @@ __aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_
         Cast<float, half, castTraitB162B32>(mainB, xFp16MainB, pregLoop);
         Cast<float, half, castTraitB162B32>(tailA, xFp16TailA, pregLoop);
         Cast<float, half, castTraitB162B32>(tailB, xFp16TailB, pregLoop);
-        DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-        DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-        DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
+        if constexpr (SAVE_FP32) {
+            DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
+            DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
+            DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
+            DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
+        }
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB, xBFp16TailA, xBFp16TailB;
         DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, mainAddr + offset1);
@@ -938,30 +549,28 @@ __aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_
         Cast<float, bfloat16_t, castTraitB162B32>(mainB, xBFp16MainB, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(tailA, xBFp16TailA, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(tailB, xBFp16TailB, pregLoop);
-        DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-        DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-        DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
+        if constexpr (SAVE_FP32) {
+            DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
+            DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
+            DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
+            DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
+        }
     } else {
         DataCopy(mainA, mainAddr + offset1);
         DataCopy(mainB, mainAddr + offset2);
         DataCopy(tailA, tailAddr + offset1);
         DataCopy(tailB, tailAddr + offset2);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
     }
+    Mul(mainA, mainA, mainA, pregLoop);
+    Mul(mainB, mainB, mainB, pregLoop);
+    Mul(tailA, tailA, tailA, pregLoop);
+    Mul(tailB, tailB, tailB, pregLoop);
 }
 
-template <typename T>
-__aicore__ inline void LoadForHandleMasterV1(__local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2,
-                                             RegTensor<float>& mainA, RegTensor<float>& mainB, MaskReg& pregLoop,
-                                             __local_mem__ float* xFp32MasterAddr)
+template <typename T, bool SAVE_FP32>
+__aicore__ inline void LoadSquareMasterTile(
+    __local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
+    MaskReg& pregLoop, __local_mem__ float* xFp32MasterAddr = nullptr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB;
@@ -969,8 +578,10 @@ __aicore__ inline void LoadForHandleMasterV1(__local_mem__ T* masterAddr, uint16
         DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, masterAddr + offset2);
         Cast<float, half, castTraitB162B32>(mainA, xFp16MainA, pregLoop);
         Cast<float, half, castTraitB162B32>(mainB, xFp16MainB, pregLoop);
-        DataCopy(xFp32MasterAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MasterAddr + offset2, mainB, pregLoop);
+        if constexpr (SAVE_FP32) {
+            DataCopy(xFp32MasterAddr + offset1, mainA, pregLoop);
+            DataCopy(xFp32MasterAddr + offset2, mainB, pregLoop);
+        }
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
@@ -979,8 +590,10 @@ __aicore__ inline void LoadForHandleMasterV1(__local_mem__ T* masterAddr, uint16
         DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, masterAddr + offset2);
         Cast<float, bfloat16_t, castTraitB162B32>(mainA, xBFp16MainA, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(mainB, xBFp16MainB, pregLoop);
-        DataCopy(xFp32MasterAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MasterAddr + offset2, mainB, pregLoop);
+        if constexpr (SAVE_FP32) {
+            DataCopy(xFp32MasterAddr + offset1, mainA, pregLoop);
+            DataCopy(xFp32MasterAddr + offset2, mainB, pregLoop);
+        }
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
     } else {
@@ -992,91 +605,9 @@ __aicore__ inline void LoadForHandleMasterV1(__local_mem__ T* masterAddr, uint16
 }
 
 template <typename T>
-__aicore__ inline void ComputeFormerImplV1(LocalTensor<T>& xLocal, LocalTensor<float>& xFp32,
-                                           LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
-                                           float avgFactor, float epsilon, uint32_t offset, uint32_t count,
-                                           uint32_t powerSplit)
-{
-    uint32_t remainTile = count - powerSplit;
-    uint32_t remainSreg = remainTile;
-    uint16_t remainRepeats = remainTile / (2 * V_LENGTH);
-
-    uint32_t masterTile = powerSplit - remainTile;
-    uint32_t masterSreg = masterTile;
-    uint16_t masterRepeats = masterTile / (2 * V_LENGTH);
-
-    uint32_t mergeTile = powerSplit / (2 * V_LENGTH);
-    uint32_t mergeSreg = mergeTile;
-    uint16_t mergeRepeats = mergeTile / (2 * V_LENGTH);
-
-    uint32_t meanTile = mergeRepeats == 0 ? mergeTile : mergeRepeats;
-    uint32_t meanSreg = meanTile;
-
-    __local_mem__ T* mainAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* tailAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit);
-    __local_mem__ T* masterAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile);
-    __local_mem__ float *xFp32MainAddr, *xFp32TailAddr, *xFp32MasterAddr;
-    if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
-        xFp32MainAddr = (__ubuf__ float*)xFp32.GetPhyAddr();
-        xFp32TailAddr = (__ubuf__ float*)xFp32.GetPhyAddr() + int64_t(powerSplit);
-        xFp32MasterAddr = (__ubuf__ float*)xFp32.GetPhyAddr() + int64_t(remainTile);
-    }
-    __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-
-    __VEC_SCOPE__
-    {
-        RegTensor<float> mainA, mainB, tailA, tailB, vMean, vDupReg, rstdReg;
-        MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-        MaskReg pregLoop;
-
-        for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
-            pregLoop = UpdateMask<float>(remainSreg);
-            LoadForHandleRemainV1(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
-                                  tailA, tailB, pregLoop, xFp32MainAddr, xFp32TailAddr);
-            Add(mainA, mainA, tailA, pregLoop);
-            Add(mainB, mainB, tailB, pregLoop);
-            Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
-        }
-        for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
-            pregLoop = UpdateMask<float>(masterSreg);
-            LoadForHandleMasterV1(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop,
-                                  xFp32MasterAddr);
-            Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
-        }
-        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
-            pregLoop = UpdateMask<float>(mergeSreg);
-            DataCopy(mainA, workAddr + (i * 2 + 0) * V_LENGTH);
-            DataCopy(mainB, workAddr + (i * 2 + 1) * V_LENGTH);
-            Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
-        }
-        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        {
-            pregLoop = UpdateMask<float>(meanSreg);
-            DataCopy(mainA, workAddr + 0);
-            ReduceSum(vMean, mainA, pregLoop);
-            Muls(vMean, vMean, avgFactor, pregMerge);
-            Adds(vMean, vMean, epsilon, pregMerge);
-            Sqrt(vMean, vMean, pregMerge);
-            Duplicate(vDupReg, float(1.0), pregMerge);
-            Div(rstdReg, vDupReg, vMean, pregMerge);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstdReg, pregMerge);
-        }
-    }
-}
-
-template <typename T>
-__aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTensor<float>& xFp32,
-                                                 LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
-                                                 float avgFactor, float epsilon, uint32_t offset, uint32_t count,
-                                                 uint32_t powerSplit, uint32_t curRows)
+__aicore__ inline void ComputeFormerImplV1MultiN(
+    LocalTensor<T>& xLocal, LocalTensor<float>& xFp32, LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
+    float avgFactor, float epsilon, uint32_t offset, uint32_t count, uint32_t powerSplit, uint32_t curRows)
 {
     uint32_t remainTile = count - powerSplit;
     uint16_t remainRepeats = remainTile / (2 * V_LENGTH);
@@ -1141,8 +672,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop = UpdateMask<float>(remainSreg);
-                LoadForHandleRemainV1(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
-                                      tailA, tailB, pregLoop, xFp32MainAddr, xFp32TailAddr);
+                LoadSquareRemainTile<T, true>(
+                    mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
+                    pregLoop, xFp32MainAddr, xFp32TailAddr);
                 Add(mainA, mainA, tailA, pregLoop);
                 Add(mainB, mainB, tailB, pregLoop);
                 Add(mainA, mainA, mainB, pregLoop);
@@ -1151,8 +683,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop = UpdateMask<float>(masterSreg);
-                LoadForHandleMasterV1(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
-                                      pregLoop, xFp32MasterAddr);
+                LoadSquareMasterTile<T, true>(
+                    masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop,
+                    xFp32MasterAddr);
                 Add(mainA, mainA, mainB, pregLoop);
                 ReduceSum(vMean, mainA, pregLoop);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
@@ -1160,8 +693,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
             // unroll part
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(remainSreg1);
-                LoadForHandleRemainV1(mainAddr1, tailAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
-                                      mainB1, tailA1, tailB1, pregLoop1, xFp32MainAddr1, xFp32TailAddr1);
+                LoadSquareRemainTile<T, true>(
+                    mainAddr1, tailAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, tailA1,
+                    tailB1, pregLoop1, xFp32MainAddr1, xFp32TailAddr1);
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
@@ -1170,8 +704,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
-                LoadForHandleMasterV1(masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1,
-                                      pregLoop1, xFp32MasterAddr1);
+                LoadSquareMasterTile<T, true>(
+                    masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, pregLoop1,
+                    xFp32MasterAddr1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
                 ReduceSum(vMean1, mainA1, pregLoop1);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
@@ -1258,8 +793,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(remainSreg1);
-                LoadForHandleRemainV1(mainAddr2, tailAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
-                                      mainB1, tailA1, tailB1, pregLoop1, xFp32MainAddr2, xFp32TailAddr2);
+                LoadSquareRemainTile<T, true>(
+                    mainAddr2, tailAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, tailA1,
+                    tailB1, pregLoop1, xFp32MainAddr2, xFp32TailAddr2);
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
@@ -1268,8 +804,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
-                LoadForHandleMasterV1(masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1,
-                                      pregLoop1, xFp32MasterAddr2);
+                LoadSquareMasterTile<T, true>(
+                    masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, pregLoop1,
+                    xFp32MasterAddr2);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
                 ReduceSum(vMean1, mainA1, pregLoop1);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
@@ -1300,82 +837,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
 }
 
 template <typename T>
-__aicore__ inline void LoadForHandleRemainV2(__local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1,
-                                             uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
-                                             RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop)
-{
-    if constexpr (IsSameType<T, half>::value) {
-        RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainA, mainAddr + offset1);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, mainAddr + offset2);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16TailA, tailAddr + offset1);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16TailB, tailAddr + offset2);
-        Cast<float, half, castTraitB162B32>(mainA, xFp16MainA, pregLoop);
-        Cast<float, half, castTraitB162B32>(mainB, xFp16MainB, pregLoop);
-        Cast<float, half, castTraitB162B32>(tailA, xFp16TailA, pregLoop);
-        Cast<float, half, castTraitB162B32>(tailB, xFp16TailB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB, xBFp16TailA, xBFp16TailB;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, mainAddr + offset1);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, mainAddr + offset2);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailA, tailAddr + offset1);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailB, tailAddr + offset2);
-        Cast<float, bfloat16_t, castTraitB162B32>(mainA, xBFp16MainA, pregLoop);
-        Cast<float, bfloat16_t, castTraitB162B32>(mainB, xBFp16MainB, pregLoop);
-        Cast<float, bfloat16_t, castTraitB162B32>(tailA, xBFp16TailA, pregLoop);
-        Cast<float, bfloat16_t, castTraitB162B32>(tailB, xBFp16TailB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
-    } else {
-        DataCopy(mainA, mainAddr + offset1);
-        DataCopy(mainB, mainAddr + offset2);
-        DataCopy(tailA, tailAddr + offset1);
-        DataCopy(tailB, tailAddr + offset2);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
-    }
-}
-
-template <typename T>
-__aicore__ inline void LoadForHandleMasterV2(__local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2,
-                                             RegTensor<float>& mainA, RegTensor<float>& mainB, MaskReg& pregLoop)
-{
-    if constexpr (IsSameType<T, half>::value) {
-        RegTensor<half> xFp16MainA, xFp16MainB;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainA, masterAddr + offset1);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, masterAddr + offset2);
-        Cast<float, half, castTraitB162B32>(mainA, xFp16MainA, pregLoop);
-        Cast<float, half, castTraitB162B32>(mainB, xFp16MainB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, masterAddr + offset1);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, masterAddr + offset2);
-        Cast<float, bfloat16_t, castTraitB162B32>(mainA, xBFp16MainA, pregLoop);
-        Cast<float, bfloat16_t, castTraitB162B32>(mainB, xBFp16MainB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-    } else {
-        DataCopy(mainA, masterAddr + offset1);
-        DataCopy(mainB, masterAddr + offset2);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-    }
-}
-
-template <typename T>
-__aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTensor<T>& xLocal,
-                                           LocalTensor<float>& workLocal, uint32_t offset, uint32_t count,
-                                           uint32_t powerSplit)
+__aicore__ inline void ComputeFormerImplV2(
+    LocalTensor<float>& dstLocal, LocalTensor<T>& xLocal, LocalTensor<float>& workLocal, uint32_t offset,
+    uint32_t count, uint32_t powerSplit)
 {
     uint32_t remainTile = count - powerSplit;
     uint32_t remainSreg = remainTile;
@@ -1407,8 +871,9 @@ __aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTe
 
         for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
             pregLoop = UpdateMask<float>(remainSreg);
-            LoadForHandleRemainV2(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
-                                  tailA, tailB, pregLoop);
+            LoadSquareRemainTile<T, false>(
+                mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
+                pregLoop);
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
@@ -1417,7 +882,8 @@ __aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTe
         }
         for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
             pregLoop = UpdateMask<float>(masterSreg);
-            LoadForHandleMasterV2(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop);
+            LoadSquareMasterTile<T, false>(
+                masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
             ReduceSum(vMean, mainA, pregLoop);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);

@@ -90,7 +90,9 @@ public:
             return;
         }
 
-        CopyInBetaGammaMeanVar(0, tilingData_->tileBlockALen);
+        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(
+            0, tilingData_->tileBlockALen, betaQueue_, gammaQueue_, meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_,
+            varGm_);
         PrepareParamCache();
 
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {
@@ -122,36 +124,6 @@ private:
 
         DataCopyPad(xLocal, xGm_[xGmOffset], extParam, padExtParam);
         xQueue_.EnQue(xLocal);
-    }
-
-    __aicore__ inline void CopyInBetaGammaMeanVar(int64_t offset, int64_t curTileALen)
-    {
-        LocalTensor<T_GAMMA> betaLocal = betaQueue_.AllocTensor<T_GAMMA>();
-        LocalTensor<T_GAMMA> gammaLocal = gammaQueue_.AllocTensor<T_GAMMA>();
-        LocalTensor<T_RUNNING_MEAN> meanLocal = meanQueue_.AllocTensor<T_RUNNING_MEAN>();
-        LocalTensor<T_RUNNING_MEAN> varLocal = varQueue_.AllocTensor<T_RUNNING_MEAN>();
-
-        DataCopyExtParams extParam;
-        extParam.blockCount = 1;
-        extParam.srcStride = 0;
-        extParam.dstStride = 0;
-
-        extParam.blockLen = curTileALen * sizeof(T_GAMMA);
-        DataCopyPadExtParams<T_GAMMA> padExtParam;
-        padExtParam.isPad = false;
-        DataCopyPad(betaLocal, betaGm_[offset], extParam, padExtParam);
-        DataCopyPad(gammaLocal, gammaGm_[offset], extParam, padExtParam);
-
-        extParam.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
-        DataCopyPadExtParams<T_RUNNING_MEAN> padExtParams1;
-        padExtParams1.isPad = false;
-        DataCopyPad(meanLocal, meanGm_[offset], extParam, padExtParams1);
-        DataCopyPad(varLocal, varGm_[offset], extParam, padExtParams1);
-
-        betaQueue_.EnQue(betaLocal);
-        gammaQueue_.EnQue(gammaLocal);
-        meanQueue_.EnQue(meanLocal);
-        varQueue_.EnQue(varLocal);
     }
 
     __aicore__ inline void PrepareParamCache()

@@ -262,36 +262,16 @@ private:
             RegTensor<float> tmpCount;
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregLoop;
-            uint32_t sreg1 = baseNum;
-            Duplicate(tmpCount, baseAddCount, pregMain);
-            for (uint16_t i = 0; i < baseLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-                DataCopy(((__local_mem__ float*)tmpCountLocal1 + i * VL_F32), tmpCount, pregLoop);
-            }
-            uint32_t sreg2 = tailNum;
-            Duplicate(tmpCount, tailAddCount, pregMain);
-            for (uint16_t i = 0; i < tailLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg2);
-                DataCopy(((__local_mem__ float*)tmpCountLocal1 + i * VL_F32), tmpCount, pregLoop);
-            }
-            uint32_t sreg3 = firstNum;
-            Duplicate(tmpCount, lastCoreAddCount, pregMain);
-            for (uint16_t i = 0; i < firstLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg3);
-                DataCopy(((__local_mem__ float*)tmpCountLocal2 + i * VL_F32), tmpCount, pregLoop);
-            }
-            uint32_t sreg4 = secondNum;
-            Duplicate(tmpCount, tailCoreAddCount, pregMain);
-            for (uint16_t i = 0; i < secondLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg4);
-                DataCopy(((__local_mem__ float*)tmpCountLocal2 + i * VL_F32), tmpCount, pregLoop);
-            }
-            uint32_t sreg5 = thirdNum;
-            Duplicate(tmpCount, formerCoreAddCount, pregMain);
-            for (uint16_t i = 0; i < thirdLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg5);
-                DataCopy(((__local_mem__ float*)tmpCountLocal2 + i * VL_F32), tmpCount, pregLoop);
-            }
+            FillCountBlock(tmpCountLocal1, tmpCount, pregMain, pregLoop, baseAddCount,
+                baseNum, baseLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal1, tmpCount, pregMain, pregLoop, tailAddCount,
+                tailNum, tailLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, lastCoreAddCount,
+                firstNum, firstLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, tailCoreAddCount,
+                secondNum, secondLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, formerCoreAddCount,
+                thirdNum, thirdLoopCount, VL_F32);
         }
     }
 

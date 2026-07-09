@@ -33,22 +33,21 @@ public:
 
 private:
     __aicore__ inline void InitBuffer(const GroupNormGradRegBaseTilingData* tilingData);
-    __aicore__ inline void Compute(int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-                                   const LocalTensor<T>& dxTensor, const float mean, const float rstd);
-    __aicore__ inline void VFMode0DbetaDsOneHw(const LocalTensor<T>& x, const LocalTensor<T>& dy,
-                                               const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma);
-    __aicore__ inline void VFMode0DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
-                                          const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma);
-    __aicore__ inline void ComputeMode0Dx(int32_t taskIdx, const LocalTensor<T>& xTensor,
-                                          const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
-                                          LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor,
-                                          const float mean, const float rstd);
-    __aicore__ inline void VFComputeMode0DxOneHw(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
-                                                 const LocalTensor<T>& dyTensor, const LocalTensor<float>& gammaTensor,
-                                                 const float C2, const float C3, const float rstd);
-    __aicore__ inline void VFComputeMode0Dx(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
-                                            const LocalTensor<T>& dyTensor, const LocalTensor<float>& gammaTensor,
-                                            const float C2, const float C3, const float rstd);
+    __aicore__ inline void Compute(
+        int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
+        const float mean, const float rstd);
+    __aicore__ inline void VFMode0DbetaDsOneHw(
+        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
+        const LocalTensor<float>& dgamma);
+    __aicore__ inline void ComputeMode0Dx(
+        int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
+        LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor, const float mean, const float rstd);
+    __aicore__ inline void VFComputeMode0DxOneHw(
+        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
+        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const float rstd);
+    __aicore__ inline void VFComputeMode0Dx(
+        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
+        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const float rstd);
     __aicore__ inline void Stage1Process();
 };
 
@@ -166,7 +165,8 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::Compute(int32_t taskIdx, co
     if (this->eleNumPerC_ == 1) {
         VFMode0DbetaDsOneHw(xTensor, dyTensor, dbetaTensor, dsTensor);
     } else if (this->eleNumPerC_ <= this->VecLen_) {
-        VFMode0DbetaDs(xTensor, dyTensor, dbetaTensor, dsTensor);
+        VFComputeDbetaDs<T>(xTensor, dyTensor, dbetaTensor, dsTensor, this->eleNumPerC_, this->VecLen_, 0,
+            static_cast<uint16_t>(this->C_G_));
     } else {
         this->VFDbetaDgammaBinaryFoldCommon(xTensor, dyTensor, dbetaTensor, dsTensor, 0, this->C_G_);
     }
@@ -233,65 +233,6 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDsOneHw(const L
         }
         DataCopyUnAlignPost(ubDbeta, uDbeta, 0);
         DataCopyUnAlignPost(ubDgamma, uDgamma, 0);
-    }
-}
-
-/*
-  this->C_G_ < 65535, limited in tiling
-  dbeta = reducesum(dy)
-  dgamma = reducesum(x * dy)
-*/
-template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
-                                                                    const LocalTensor<float>& dbeta,
-                                                                    const LocalTensor<float>& dgamma)
-{
-    __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
-    __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
-    __ubuf__ float* ubDbeta = (__ubuf__ float*)dbeta.GetPhyAddr();
-    __ubuf__ float* ubDgamma = (__ubuf__ float*)dgamma.GetPhyAddr();
-    uint32_t eleNumPerC = this->eleNumPerC_;
-    uint16_t repeatTimes = CeilDiv(static_cast<uint32_t>(this->eleNumPerC_), this->VecLen_);
-    uint16_t outerLoopTimes = static_cast<uint16_t>(this->C_G_);
-    __ubuf__ T* curUbX;
-    __ubuf__ T* curUbDy;
-
-    __VEC_SCOPE__
-    {
-        UnalignReg uSrcX;
-        UnalignReg uSrcDy;
-        RegTensor<float> vregDbeta;
-        RegTensor<float> vregDgamma;
-        RegTensor<float> tempDbeta;
-        RegTensor<float> vregX;
-        RegTensor<float> vregDy;
-        for (uint16_t cgIdx = 0; cgIdx < outerLoopTimes; cgIdx++) {
-            MaskReg preg;
-            uint32_t sreg = (uint32_t)eleNumPerC;
-            uint32_t sregvl = (uint32_t)this->VecLen_;
-            uint32_t ubOffSet = cgIdx * eleNumPerC;
-            MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
-            curUbX = ubX + ubOffSet;
-            curUbDy = ubDy + ubOffSet;
-            Duplicate(vregDbeta, 0, pregAll);
-            Duplicate(vregDgamma, 0, pregAll);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-                preg = UpdateMask<float>(sreg);
-                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
-                MulDstAdd(vregX, vregDy, vregDgamma, preg);
-                Add(tempDbeta, vregDbeta, vregDy, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
-            }
-            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            ReduceSum(vregDbeta, vregDbeta, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + cgIdx, vregDbeta, pregMerge);
-            ReduceSum(vregDgamma, vregDgamma, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + cgIdx, vregDgamma, pregMerge);
-        }
     }
 }
 

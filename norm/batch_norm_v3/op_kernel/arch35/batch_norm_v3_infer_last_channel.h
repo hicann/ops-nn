@@ -101,7 +101,9 @@ public:
             int64_t xOffset = curRowIdx * tilingData_->totalALen * tilingData_->tileBlockBLen + betaOffset;
 
             CopyInX(xOffset, curTileBLen, curTileALen, ubStrideT);
-            CopyInBetaGammaMeanVar(needCopy, betaOffset, curTileALen);
+            CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(
+                needCopy, betaOffset, curTileALen, betaQueue_, gammaQueue_, meanQueue_, varQueue_, betaGm_, gammaGm_,
+                meanGm_, varGm_);
             Compute(curTileBLen, curTileALen);
             CopyOutY(xOffset, curTileBLen, curTileALen, ubStrideT);
         }
@@ -123,42 +125,6 @@ private:
 
         DataCopyPad(xLocal, xGm_[xGmOffset], extParam, padExtParam);
         xQueue_.EnQue(xLocal);
-    }
-
-    __aicore__ inline void CopyInBetaGammaMeanVar(bool needCopy, int64_t offset, int64_t curTileALen)
-    {
-        LocalTensor<T_GAMMA> betaLocal = betaQueue_.AllocTensor<T_GAMMA>();
-        LocalTensor<T_GAMMA> gammaLocal = gammaQueue_.AllocTensor<T_GAMMA>();
-        LocalTensor<T_RUNNING_MEAN> meanLocal = meanQueue_.AllocTensor<T_RUNNING_MEAN>();
-        LocalTensor<T_RUNNING_MEAN> varLocal = varQueue_.AllocTensor<T_RUNNING_MEAN>();
-
-        if (needCopy) {
-            DataCopyExtParams extParam;
-            extParam.blockCount = 1;
-
-            // beta、gamma
-            extParam.blockLen = curTileALen * sizeof(T_GAMMA);
-
-            DataCopyPadExtParams<T_GAMMA> padExtParam;
-            padExtParam.isPad = false;
-
-            DataCopyPad(betaLocal, betaGm_[offset], extParam, padExtParam);
-            DataCopyPad(gammaLocal, gammaGm_[offset], extParam, padExtParam);
-
-            // mean、var
-            extParam.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
-
-            DataCopyPadExtParams<T_RUNNING_MEAN> padExtParams1;
-            padExtParams1.isPad = false;
-
-            DataCopyPad(meanLocal, meanGm_[offset], extParam, padExtParams1);
-            DataCopyPad(varLocal, varGm_[offset], extParam, padExtParams1);
-        }
-
-        betaQueue_.EnQue(betaLocal);
-        gammaQueue_.EnQue(gammaLocal);
-        meanQueue_.EnQue(meanLocal);
-        varQueue_.EnQue(varLocal);
     }
 
     __aicore__ inline void Compute(int64_t curTileBLen, int64_t curTileALen)

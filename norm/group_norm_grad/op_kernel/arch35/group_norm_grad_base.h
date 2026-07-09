@@ -49,42 +49,42 @@ protected:
     __aicore__ inline void UpdateCache(const int64_t basicBlockIdx, const LocalTensor<float>& cacheDbeta,
                                        const LocalTensor<float>& cacheDgamma);
     __aicore__ inline void LoadMeanRstd(int32_t taskIdx);
-    __aicore__ inline void LoadDataToUb(TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf,
-                                        const GlobalTensor<U>& gm, const int64_t offset, const uint32_t count);
-    __aicore__ inline void CopyInDyAndX(const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor,
-                                        const int64_t offset, const uint32_t burstLen);
-    __aicore__ inline void StoreDxToGm(TQue<TPosition::VECOUT, 1>& outQue, const int64_t gmOffset,
-                                       const uint32_t count);
-    __aicore__ inline void Fp32StoreDgamma(int64_t channelIdx, const GlobalTensor<float>& dgammaOut,
-                                           const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
-                                           const float mean, const float rstd);
-    __aicore__ inline void NonFp32StoreDgamma(int64_t channelIdx, const GlobalTensor<U>& dgammaOut,
-                                              const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
-                                              const float mean, const float rstd);
-    __aicore__ inline void Fp32DgammaDbeta2GM(int64_t channelIdx, GlobalTensor<float>& dgammaOut,
-                                              const LocalTensor<float>& dsTensor, GlobalTensor<float>& dbetaOut,
-                                              const LocalTensor<float>& dbetaTensor, const float mean,
-                                              const float rstd);
-    __aicore__ inline void NonFp32DgammaDbeta2GM(int64_t channelIdx, const LocalTensor<float>& dsTensor,
-                                                 const LocalTensor<float>& dbetaTensor, const float mean,
-                                                 const float rstd);
-    __aicore__ inline void StoreDgammaDbeta(const int32_t taskIdx, const LocalTensor<float>& dsTensor,
-                                            const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
-    __aicore__ inline void ComputeSum1Sum2(const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
-                                           const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
-    __aicore__ inline void VFComputeSum1Sum2(const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
-                                             const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
-    __aicore__ inline void VFComputeBinaryFoldSum1Sum2(const LocalTensor<float>& dbetaTensor,
-                                                       const LocalTensor<float>& dsTensor,
-                                                       const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
-    __aicore__ inline void VFDbetaDgammaBinaryFoldCommon(const LocalTensor<T>& x, const LocalTensor<T>& dy,
-                                                         const LocalTensor<float>& dbeta,
-                                                         const LocalTensor<float>& dgamma, const uint32_t outputOffset,
-                                                         const uint32_t curCNum);
-    __aicore__ inline void VFComputeMode1DxCommon(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
-                                                  const LocalTensor<T>& dyTensor, const LocalTensor<float>& gammaTensor,
-                                                  const float C2, const float C3, const uint32_t gammaOffset,
-                                                  const uint32_t curCNum);
+    __aicore__ inline void LoadDataToUb(
+        TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
+        const int64_t offset, const uint32_t count);
+    __aicore__ inline void CopyInDyAndX(
+        const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor, const int64_t offset, const uint32_t burstLen);
+    __aicore__ inline void StoreDxToGm(
+        TQue<TPosition::VECOUT, 1>& outQue, const int64_t gmOffset, const uint32_t count);
+    template <typename OUT>
+    __aicore__ inline void StoreDgamma(
+        int64_t channelIdx, const GlobalTensor<OUT>& dgammaOut, const LocalTensor<float>& dsTensor,
+        const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
+    __aicore__ inline void Fp32DgammaDbeta2GM(
+        int64_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
+        GlobalTensor<float>& dbetaOut, const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
+    __aicore__ inline void NonFp32DgammaDbeta2GM(
+        int64_t channelIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
+        const float mean, const float rstd);
+    __aicore__ inline void StoreDgammaDbeta(
+        const int32_t taskIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
+        const float mean, const float rstd);
+    __aicore__ inline void ComputeSum1Sum2(
+        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
+        const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFComputeSum1Sum2(
+        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
+        const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFComputeBinaryFoldSum1Sum2(
+        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
+        const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFDbetaDgammaBinaryFoldCommon(
+        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
+        const LocalTensor<float>& dgamma, const uint32_t outputOffset, const uint32_t curCNum);
+    __aicore__ inline void VFComputeMode1DxCommon(
+        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
+        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const uint32_t gammaOffset,
+        const uint32_t curCNum);
     __aicore__ inline void InitStage2Mode2Buffer();
     __aicore__ inline void InitStage2Mode1Buffer();
     __aicore__ inline void stage2Mode1Process(int64_t cOffset, uint32_t currentCNum);
@@ -560,63 +560,21 @@ __aicore__ inline void GroupNormGradBase<T, U>::StoreDxToGm(TQue<TPosition::VECO
     outQue.FreeTensor(out);
 }
 
-template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::Fp32StoreDgamma(int64_t channelIdx,
-                                                                const GlobalTensor<float>& dgammaOut,
-                                                                const LocalTensor<float>& dsTensor,
-                                                                const LocalTensor<float>& dbetaTensor, const float mean,
-                                                                const float rstd)
-{
-    auto rstdScalar = rstd;
-    auto negMeanScalar = -mean;
-    LocalTensor<float> dgammaTensor = outQueDgamma_.AllocTensor<float>();
-    __ubuf__ float* ubDbeta = (__ubuf__ float*)dbetaTensor.GetPhyAddr();
-    __ubuf__ float* ubDs = (__ubuf__ float*)dsTensor.GetPhyAddr();
-    __ubuf__ float* ubDgamma = (__ubuf__ float*)dgammaTensor.GetPhyAddr();
-    uint32_t calCount = this->C_G_;
-    uint16_t repeatTimes = CeilDiv(calCount, this->VecLen_);
-
-    __VEC_SCOPE__
-    {
-        RegTensor<float> vregDbeta;
-        RegTensor<float> vregDs;
-        MaskReg preg;
-        uint32_t sreg = (uint32_t)calCount;
-        uint32_t sregvl = (uint32_t)this->VecLen_;
-        for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-            preg = UpdateMask<float>(sreg);
-            DataCopy(vregDs, ubDs + i * sregvl);
-            DataCopy(vregDbeta, ubDbeta + i * sregvl);
-            Axpy(vregDs, vregDbeta, negMeanScalar, preg);
-            Muls(vregDs, vregDs, rstdScalar, preg);
-            DataCopy(ubDgamma + i * sregvl, vregDs, preg);
-        }
-    }
-    TEventID eventIDVToMTE3 = GetTPipePtr()->FetchEventID(HardEvent::V_MTE3);
-    SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-    WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-    DataCopyExtParams copyParams{1, static_cast<uint32_t>(this->C_G_ * sizeof(float)), 0, 0, 0};
-    SetAtomicAdd<float>();
-    DataCopyPad(dgammaOut[channelIdx], dgammaTensor, copyParams);
-    SetAtomicNone();
-    outQueDgamma_.FreeTensor(dgammaTensor);
-}
-
 /*
-    Reduce((ds[N] - db[N] * mean) * rstd)
+    dgamma = Reduce((ds[N] - db[N] * mean) * rstd)
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::NonFp32StoreDgamma(int64_t channelIdx, const GlobalTensor<U>& dgammaOut,
-                                                                   const LocalTensor<float>& dsTensor,
-                                                                   const LocalTensor<float>& dbetaTensor,
-                                                                   const float mean, const float rstd)
+template <typename OUT>
+__aicore__ inline void GroupNormGradBase<T, U>::StoreDgamma(
+    int64_t channelIdx, const GlobalTensor<OUT>& dgammaOut, const LocalTensor<float>& dsTensor,
+    const LocalTensor<float>& dbetaTensor, const float mean, const float rstd)
 {
     auto rstdScalar = rstd;
     auto negMeanScalar = -mean;
-    LocalTensor<U> dgammaTensor = outQueDgamma_.AllocTensor<U>();
+    LocalTensor<OUT> dgammaTensor = outQueDgamma_.AllocTensor<OUT>();
     __ubuf__ float* ubDbeta = (__ubuf__ float*)dbetaTensor.GetPhyAddr();
     __ubuf__ float* ubDs = (__ubuf__ float*)dsTensor.GetPhyAddr();
-    __ubuf__ U* ubDgamma = (__ubuf__ U*)dgammaTensor.GetPhyAddr();
+    __ubuf__ OUT* ubDgamma = (__ubuf__ OUT*)dgammaTensor.GetPhyAddr();
     uint32_t calCount = this->C_G_;
     uint16_t repeatTimes = CeilDiv(calCount, this->VecLen_);
 
@@ -633,14 +591,14 @@ __aicore__ inline void GroupNormGradBase<T, U>::NonFp32StoreDgamma(int64_t chann
             DataCopy(vregDbeta, ubDbeta + i * sregvl);
             Axpy(vregDs, vregDbeta, negMeanScalar, preg);
             Muls(vregDs, vregDs, rstdScalar, preg);
-            StoreOneTensorForDtypeT<U>(ubDgamma, vregDs, preg, i * sregvl);
+            StoreOneTensorForDtypeT<OUT>(ubDgamma, vregDs, preg, i * sregvl);
         }
     }
     TEventID eventIDVToMTE3 = GetTPipePtr()->FetchEventID(HardEvent::V_MTE3);
     SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-    DataCopyExtParams copyParams{1, static_cast<uint32_t>(this->C_G_ * sizeof(U)), 0, 0, 0};
-    SetAtomicAdd<U>();
+    DataCopyExtParams copyParams{1, static_cast<uint32_t>(this->C_G_ * sizeof(OUT)), 0, 0, 0};
+    SetAtomicAdd<OUT>();
     DataCopyPad(dgammaOut[channelIdx], dgammaTensor, copyParams);
     SetAtomicNone();
     outQueDgamma_.FreeTensor(dgammaTensor);
@@ -660,7 +618,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::Fp32DgammaDbeta2GM(int64_t chann
         SetAtomicNone();
     }
     if (dgammaIsRequire_) {
-        Fp32StoreDgamma(channelIdx, dgammaOut, dsTensor, dbetaTensor, mean, rstd);
+        StoreDgamma(channelIdx, dgammaOut, dsTensor, dbetaTensor, mean, rstd);
         TEventID eventIDMTE3ToV = GetTPipePtr()->FetchEventID(HardEvent::MTE3_V);
         SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
         WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
@@ -689,7 +647,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::NonFp32DgammaDbeta2GM(int64_t ch
         WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
     }
     if (dgammaIsRequire_) {
-        NonFp32StoreDgamma(channelIdx, dgammaGm_, dsTensor, dbetaTensor, mean, rstd);
+        StoreDgamma(channelIdx, dgammaGm_, dsTensor, dbetaTensor, mean, rstd);
         TEventID eventIDMTE3ToV = GetTPipePtr()->FetchEventID(HardEvent::MTE3_V);
         SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
         WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);

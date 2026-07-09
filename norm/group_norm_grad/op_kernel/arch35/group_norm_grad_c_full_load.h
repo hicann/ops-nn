@@ -35,11 +35,8 @@ public:
 protected:
     __aicore__ inline void InitBuffer(const GroupNormGradRegBaseTilingData* tilingData);
     __aicore__ inline void Compute(int32_t taskIdx);
-    __aicore__ inline void VFMode1DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
-                                          const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma,
-                                          const uint32_t loopIdx, const uint32_t curCNum);
-    __aicore__ inline void ComputeMode1Dx(int32_t taskIdx, LocalTensor<float>& dbetaTensor,
-                                          LocalTensor<float>& dsTensor);
+    __aicore__ inline void ComputeMode1Dx(
+        int32_t taskIdx, LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor);
 };
 
 template <typename T, typename U>
@@ -121,7 +118,8 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::Compute(int32_t taskIdx)
         dyTensor = this->inQueDy_.template DeQue<T>();
         xTensor = this->inQueX_.template DeQue<T>();
         if (this->eleNumPerC_ <= this->VecLen_) {
-            VFMode1DbetaDs(xTensor, dyTensor, dbetaTensor, dsTensor, loopIdx, curCNum);
+            VFComputeDbetaDs<T>(xTensor, dyTensor, dbetaTensor, dsTensor, this->eleNumPerC_, this->VecLen_,
+                loopIdx * this->mode1UbCapCNum_, static_cast<uint16_t>(curCNum));
         } else {
             this->VFDbetaDgammaBinaryFoldCommon(xTensor, dyTensor, dbetaTensor, dsTensor,
                                                 loopIdx * this->mode1UbCapCNum_, curCNum);
@@ -139,66 +137,6 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::Compute(int32_t taskIdx)
     } else {
         this->outQueDbeta_.FreeTensor(dbetaTensor);
         this->outQueDs_.FreeTensor(dsTensor);
-    }
-}
-
-/*
-  dbeta = reduceSum(dy)
-  xHat = x * rstd - mean * rstd
-  dgamma = reduceSum(dy * xHat)
-*/
-template <typename T, typename U>
-__aicore__ inline void GroupNormGradCFullLoad<T, U>::VFMode1DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
-                                                                    const LocalTensor<float>& dbeta,
-                                                                    const LocalTensor<float>& dgamma,
-                                                                    const uint32_t loopIdx, const uint32_t curCNum)
-{
-    __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
-    __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
-    __ubuf__ float* ubDbeta = (__ubuf__ float*)dbeta.GetPhyAddr();
-    __ubuf__ float* ubDgamma = (__ubuf__ float*)dgamma.GetPhyAddr();
-    uint32_t eleNumPerC = this->eleNumPerC_;
-    uint16_t repeatTimes = CeilDiv(eleNumPerC, this->VecLen_);
-    uint32_t cgIdxOffSet = loopIdx * this->mode1UbCapCNum_;
-    __ubuf__ T* curUbX;
-    __ubuf__ T* curUbDy;
-
-    __VEC_SCOPE__
-    {
-        UnalignReg uSrcX;
-        UnalignReg uSrcDy;
-        RegTensor<float> vregDbeta;
-        RegTensor<float> vregDgamma;
-        RegTensor<float> tempDbeta;
-        RegTensor<float> vregX;
-        RegTensor<float> vregDy;
-        for (uint16_t idx = 0; idx < static_cast<uint16_t>(curCNum); idx++) {
-            MaskReg preg;
-            uint32_t sreg = (uint32_t)eleNumPerC;
-            uint32_t sregvl = (uint32_t)this->VecLen_;
-            uint32_t ubOffSet = idx * eleNumPerC;
-            MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
-            curUbX = ubX + ubOffSet;
-            curUbDy = ubDy + ubOffSet;
-            Duplicate(vregDbeta, 0, pregAll);
-            Duplicate(vregDgamma, 0, pregAll);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-                preg = UpdateMask<float>(sreg);
-                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
-                MulDstAdd(vregX, vregDy, vregDgamma, preg);
-                Add(tempDbeta, vregDbeta, vregDy, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
-            }
-            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            ReduceSum(vregDbeta, vregDbeta, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + cgIdxOffSet + idx, vregDbeta, pregMerge);
-            ReduceSum(vregDgamma, vregDgamma, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + cgIdxOffSet + idx, vregDgamma, pregMerge);
-        }
     }
 }
 

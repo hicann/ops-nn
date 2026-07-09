@@ -229,7 +229,64 @@ __aicore__ inline void VFCastT2Float(const __ubuf__ float* ubAddrOut, const __ub
     }
 }
 
-template <typename U>
+/*
+  dbeta = reduceSum(dy)
+  dgamma = reduceSum(dy * x)
+*/
+template <typename T>
+__aicore__ inline void VFComputeDbetaDs(
+    const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
+    const LocalTensor<float>& dgamma, uint32_t eleNumPerC, uint32_t vecLen, uint32_t storeBaseOffset,
+    uint16_t loopCount)
+{
+    __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
+    __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
+    __ubuf__ float* ubDbeta = (__ubuf__ float*)dbeta.GetPhyAddr();
+    __ubuf__ float* ubDgamma = (__ubuf__ float*)dgamma.GetPhyAddr();
+    uint16_t repeatTimes = CeilDiv(eleNumPerC, vecLen);
+    __ubuf__ T* curUbX;
+    __ubuf__ T* curUbDy;
+
+    __VEC_SCOPE__
+    {
+        UnalignReg uSrcX;
+        UnalignReg uSrcDy;
+        RegTensor<float> vregDbeta;
+        RegTensor<float> vregDgamma;
+        RegTensor<float> tempDbeta;
+        RegTensor<float> vregX;
+        RegTensor<float> vregDy;
+        for (uint16_t idx = 0; idx < loopCount; idx++) {
+            MaskReg preg;
+            uint32_t sreg = (uint32_t)eleNumPerC;
+            uint32_t sregvl = (uint32_t)vecLen;
+            uint32_t ubOffSet = idx * eleNumPerC;
+            MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
+            curUbX = ubX + ubOffSet;
+            curUbDy = ubDy + ubOffSet;
+            Duplicate(vregDbeta, 0, pregAll);
+            Duplicate(vregDgamma, 0, pregAll);
+            DataCopyUnAlignPre(uSrcX, curUbX);
+            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
+                preg = UpdateMask<float>(sreg);
+                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
+                MulDstAdd(vregX, vregDy, vregDgamma, preg);
+                Add(tempDbeta, vregDbeta, vregDy, preg);
+                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
+                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
+            }
+            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
+            ReduceSum(vregDbeta, vregDbeta, pregAll);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + storeBaseOffset + idx, vregDbeta, pregMerge);
+            ReduceSum(vregDgamma, vregDgamma, pregAll);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + storeBaseOffset + idx, vregDgamma, pregMerge);
+        }
+    }
+}
+
+template<typename U>
 __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, const LocalTensor<U>& srcTensor,
                                               const int64_t cacheId, const int64_t stride, const int64_t count)
 {
