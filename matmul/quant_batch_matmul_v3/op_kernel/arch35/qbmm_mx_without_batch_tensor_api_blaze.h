@@ -19,7 +19,6 @@
 #include "blaze/gemm/block/block_mmad_qbmm_mx.h"
 #include "blaze/gemm/kernel/kernel_qbmm_mx_without_batch.h"
 
-using namespace Blaze::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout,
           uint64_t FULL_LOAD_MODE = 0>
 __aicore__ inline void QbmmMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias,
@@ -30,14 +29,15 @@ __aicore__ inline void QbmmMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR bG
     using BiasType = float;
     using OutType = C_TYPE;
 
-    using BlockEpilogue = Block::BlockEpilogueEmpty;
+    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
-    using BlockScheduler = Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout, bLayout,
-                                                                   AType>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,
+                                                                                bLayout, AType>;
 
-    using DispatchPolicy = MatmulWithScaleMx<FULL_LOAD_MODE, false, KernelMmadWithScaleMxWithoutBatch>;
-    using BlockMmad = Block::BlockMmad<DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType,
-                                       cLayout>;
+    using DispatchPolicy = Blaze::Gemm::MatmulWithScaleMx<FULL_LOAD_MODE, false,
+                                                          Blaze::Gemm::KernelMmadWithScaleMxWithoutBatch>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout,
+                                                    BiasType, cLayout>;
 
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;

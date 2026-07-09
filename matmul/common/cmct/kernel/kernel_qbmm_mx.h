@@ -32,15 +32,15 @@
 namespace Cmct {
 namespace Gemm {
 namespace Kernel {
-#define QBMM_MX_KERNEL_CLASS_TEM_PARAMS \
+#define CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS \
     template <class ProblemShape, class BlockMmad, class BlockEpilogue, class BlockScheduler, bool isAtomicAdd>
-#define QBMM_MX_KERNEL_FUN_TEM_PARAMS ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, isAtomicAdd
+#define CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, isAtomicAdd
 
 using namespace Cmct;
 using namespace Cmct::Gemm;
 using namespace AscendC;
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
 class QuantMmBatchMX {
 public:
     __aicore__ inline QuantMmBatchMX() {}
@@ -133,8 +133,8 @@ private:
     bool needUpdateTail_{false};
 };
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const Params& params)
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const Params& params)
 {
     if constexpr (isAtomicAdd) {
         AscendC::SetAtomicAdd<float>();
@@ -161,9 +161,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
     }
 }
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::SetL2Cache(const ProblemShape& problemShape,
-                                                                                 uint64_t curBaseM, uint64_t baseN)
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::SetL2Cache(const ProblemShape& problemShape,
+                                                                                      uint64_t curBaseM, uint64_t baseN)
 {
     if constexpr (FormatB != CubeFormat::ND) {
         if (curBaseM >= problemShape.m) {
@@ -194,8 +194,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::SetL2Cache
     }
 }
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const Params& params)
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const Params& params)
 {
     if ASCEND_IS_AIV {
         return;
@@ -217,9 +217,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const
     }
 }
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(const Params& params,
-                                                                                       BlockSchedulerOp& bs)
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(const Params& params,
+                                                                                            BlockSchedulerOp& bs)
 {
     uint64_t batchC3C4 = static_cast<uint64_t>(params.qbmmParams.batchC3) * params.qbmmParams.batchC4;
     uint64_t batchC2C3C4 = params.qbmmParams.batchC2 * batchC3C4;
@@ -276,8 +276,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
     }
 }
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOffset(const Params& params)
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOffset(const Params& params)
 {
     Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
     if constexpr (FormatB == CubeFormat::NZ) {
@@ -303,19 +303,21 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOf
     }
     // x1Scale/x2Scale batch offset. e8m0 is 1 byte and never packed, so no sizeShift here.
     // Per-batch element count = M(or N) * ceil(K/64) * 2, matching the MX scale stride in GetQuantOffset.
-    Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_) +=
-        batchAOffset_ * params.problemShape.m *
-        Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) * MXFP_MULTI_BASE_SIZE;
-    Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_) +=
-        batchBOffset_ * params.problemShape.n *
-        Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) * MXFP_MULTI_BASE_SIZE;
+    Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(
+        blockOffset_) += batchAOffset_ * params.problemShape.m *
+                         Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) *
+                         MXFP_MULTI_BASE_SIZE;
+    Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(
+        blockOffset_) += batchBOffset_ * params.problemShape.n *
+                         Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) *
+                         MXFP_MULTI_BASE_SIZE;
 }
 
-QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(const Params& params,
-                                                                                         BlockSchedulerOp& bs,
-                                                                                         uint64_t restBatch,
-                                                                                         bool isTailRound)
+CMCT_QBMM_MX_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(const Params& params,
+                                                                                              BlockSchedulerOp& bs,
+                                                                                              uint64_t restBatch,
+                                                                                              bool isTailRound)
 {
     CoordClass coord(params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
                      params.qbmmParams.baseN, params.qbmmParams.baseK);

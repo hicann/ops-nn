@@ -18,7 +18,6 @@
 #include "blaze/gemm/block/block_mmad_qbmm_mx.h"
 #include "blaze/gemm/kernel/kernel_qbmm_mx.h"
 
-using namespace Blaze::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout,
           uint64_t FULL_LOAD_MODE = 0>
 __aicore__ inline void QbmmMxTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias,
@@ -31,19 +30,19 @@ __aicore__ inline void QbmmMxTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR s
     using OutType = C_TYPE;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Block::BlockEpilogueEmpty;
+    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
 
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
 
     // 定义scheduler类型 来自block_scheduler_policy.h
-    using BlockScheduler = Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout, bLayout,
-                                                                   AType>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,
+                                                                                bLayout, AType>;
 
     // 定义MMAD类型
-    using DispatchPolicy = MatmulWithScaleMx<FULL_LOAD_MODE, false>;
-    using BlockMmad = Block::BlockMmad<DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType,
-                                       cLayout>;
+    using DispatchPolicy = Blaze::Gemm::MatmulWithScaleMx<FULL_LOAD_MODE, false>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout,
+                                                    BiasType, cLayout>;
 
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
