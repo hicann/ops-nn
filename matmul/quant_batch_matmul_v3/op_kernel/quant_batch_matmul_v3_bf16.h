@@ -277,11 +277,9 @@ protected:
                            batchBOffset * DequantBmm::Align(n_, BMM_BLOCK_NUM) *
                                DequantBmm::Align(k_, K0_INT8);
             } else {
-                // n1, k1, k0, n0
-                offsetB_ =
-                    DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
-                    batchBOffset * DequantBmm::Align(n_, K0_INT8) *
-                        DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                // n1, k1, k0, n0 — column stride is Align(k, 16) for nd_to_nz layout (k0=16)
+                offsetB_ = nOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
+                           batchBOffset * DequantBmm::Align(n_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 
@@ -321,8 +319,7 @@ protected:
                 if constexpr (bTrans) {
                     offsetB_ -= DequantBmm::Align(nOffset, BMM_BLOCK_NUM) * K0_INT8;
                 } else {
-                    offsetB_ -=
-                        DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                    offsetB_ -= nOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM);
                 }
             }
             offsetBias_ -= nOffset;
@@ -341,8 +338,7 @@ protected:
             if constexpr (bTrans) {
                 offsetB_ += DequantBmm::Align(singleTimeN_, BMM_BLOCK_NUM) * K0_INT8;
             } else {
-                offsetB_ +=
-                    DequantBmm::Align(singleTimeN_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                offsetB_ += singleTimeN_ * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 

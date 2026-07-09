@@ -121,7 +121,7 @@ public:
         uint32_t gmUseN = n_ - nCoreIndx * singleCoreN_;
         uint32_t singleCoreNUpdate = gmUseN < singleCoreN_ ? gmUseN : singleCoreN_;
 
-        mm.SetOrgShape(m_, n_, k_);
+        SetMatmulOrgShape();
         uint32_t mLoops = DequantBmm::CeilDiv(singleCoreMUpdate, singleTimeM_);
         uint32_t nLoops = DequantBmm::CeilDiv(singleCoreNUpdate, singleTimeN_);
         for (uint32_t i = 0; i < singleCoreBatchUpdate; ++i) {
@@ -248,6 +248,25 @@ protected:
         ubTmpBuffer_ = tilingData->params.needUbBuffer;
     }
 
+    __aicore__ inline void SetMatmulOrgShape()
+    {
+        if constexpr (DequantBmm::GetFormat(fFormat) == CubeFormat::NZ &&
+                      DequantBmm::GetFormat(wFormat) == CubeFormat::NZ) {
+            mm.SetOrgShape(DequantBmm::Align(m_, BMM_BLOCK_NUM), DequantBmm::Align(n_, BMM_BLOCK_NUM),
+                           DequantBmm::Align(k_, K0_INT8), DequantBmm::Align(k_, K0_INT8), n_);
+        } else if constexpr (DequantBmm::GetFormat(fFormat) == CubeFormat::NZ) {
+            mm.SetOrgShape(DequantBmm::Align(m_, K0_INT8), n_, DequantBmm::Align(k_, BMM_BLOCK_NUM), k_, n_);
+        } else if constexpr (DequantBmm::GetFormat(wFormat) == CubeFormat::NZ) {
+            if constexpr (bTrans) {
+                mm.SetOrgShape(m_, DequantBmm::Align(n_, BMM_BLOCK_NUM), k_, DequantBmm::Align(k_, K0_INT8), n_);
+            } else {
+                mm.SetOrgShape(m_, DequantBmm::Align(n_, BMM_BLOCK_NUM), k_, DequantBmm::Align(k_, BMM_BLOCK_NUM), n_);
+            }
+        } else {
+            mm.SetOrgShape(m_, n_, k_);
+        }
+    }
+
     __aicore__ inline void CalcOffset(uint32_t &batchIndex, uint32_t &batchCoreIndx, uint32_t &mCoreIndx,
                                       uint32_t &nCoreIndx)
     {
@@ -284,11 +303,9 @@ protected:
                            batchBOffset * DequantBmm::Align(n_, BMM_BLOCK_NUM) *
                                DequantBmm::Align(k_, K0_INT8);
             } else {
-                // n1, k1, k0, n0
-                offsetB_ =
-                    DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
-                    batchBOffset * DequantBmm::Align(n_, K0_INT8) *
-                        DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                // n1, k1, k0, n0 — column stride is Align(k, 16) for nd_to_nz layout (k0=16)
+                offsetB_ = nOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
+                           batchBOffset * DequantBmm::Align(n_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 
@@ -330,8 +347,7 @@ protected:
                 if constexpr (bTrans) {
                     offsetB_ -= DequantBmm::Align(nOffset, BMM_BLOCK_NUM) * K0_INT8;
                 } else {
-                    offsetB_ -=
-                        DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                    offsetB_ -= nOffset * DequantBmm::Align(k_, BMM_BLOCK_NUM);
                 }
             }
             offsetBias_ -= nOffset;
@@ -350,8 +366,7 @@ protected:
             if constexpr (bTrans) {
                 offsetB_ += DequantBmm::Align(singleTimeN_, BMM_BLOCK_NUM) * K0_INT8;
             } else {
-                offsetB_ +=
-                    DequantBmm::Align(singleTimeN_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                offsetB_ += singleTimeN_ * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 

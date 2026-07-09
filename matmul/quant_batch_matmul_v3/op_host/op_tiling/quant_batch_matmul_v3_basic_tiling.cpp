@@ -833,6 +833,20 @@ bool QuantBatchMatmulV3BasicTiling::SetBase(const std::vector<uint64_t> &mBases,
     }
     OP_TILING_CHECK(!GetBaseK(basicTiling_.baseM, basicTiling_.baseN),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetBaseK failed"), return false);
+    return CapBaseNForATransWeightNz();
+}
+
+bool QuantBatchMatmulV3BasicTiling::CapBaseNForATransWeightNz()
+{
+    // Weight NZ n1,k1,k0,n0: cube fetches N in n0=32 steps; baseN must not exceed 32 for transA.
+    if (inputParams_.transA && !inputParams_.transB && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
+        basicTiling_.baseN > ONE_BLK_SIZE) {
+        basicTiling_.baseN = ONE_BLK_SIZE;
+        uint64_t totalCnt = GetTotalCnt(basicTiling_.baseM, basicTiling_.baseN);
+        basicTiling_.usedCoreNum = std::min(totalCnt, aicoreParams_.aicNum);
+        OP_TILING_CHECK(!GetBaseK(basicTiling_.baseM, basicTiling_.baseN),
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetBaseK failed after cap baseN"), return false);
+    }
     return true;
 }
 

@@ -60,7 +60,9 @@ __aicore__ inline void QuantBatchMatmulV3Update::Init(const TCubeTiling *mmTilin
     }
     if constexpr (bTrans) {  // (n, k)
         info_.alignedKbSize = DequantBmm::Align(mmTiling_->Kb, DequantBmm::GetC0Size<x2Type>());
-    } else {  // (k, n)
+    } else if constexpr (DequantBmm::GetFormat(x2Format) == CubeFormat::NZ) {  // (n1,k1,k0,n0), k0=16
+        info_.alignedKbSize = DequantBmm::Align(mmTiling_->Kb, BMM_BLOCK_NUM);
+    } else {  // (k, n) ND
         info_.alignedKbSize = DequantBmm::Align(mmTiling_->Kb, BMM_BLOCK_NUM);
     }
 }
