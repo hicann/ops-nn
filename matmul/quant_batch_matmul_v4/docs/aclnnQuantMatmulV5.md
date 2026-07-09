@@ -321,7 +321,7 @@ aclnnStatus aclnnQuantMatmulV5(
           </td>
         <td>FLOAT32、FLOAT8_E8M0<sup>2</sup></td>
         <td>ND</td>
-        <td>1-6</td>
+        <td>1-7</td>
         <td>✓</td>
       </tr>
       <tr>
@@ -335,7 +335,7 @@ aclnnStatus aclnnQuantMatmulV5(
         </td>
         <td>UINT64、INT64、FLOAT32、BFLOAT16、FLOAT8_E8M0<sup>2</sup>、FLOAT16<sup>2</sup></td>
         <td>ND</td>
-        <td>1-6</td>
+        <td>1-7</td>
         <td>✓</td>
       </tr>
       <tr>
@@ -895,13 +895,14 @@ aclnnStatus aclnnQuantMatmulV5(
   
     |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-    |MX全量化|FLOAT8_E4M3FN/FLOAT8_E5M2|FLOAT8_E4M3FN/FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
-    |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+    |MX全量化|FLOAT8_E4M3FN/FLOAT8_E5M2|FLOAT8_E4M3FN/FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, m, ceil(k / 64), 2)</li><li>转置：(batch, ceil(k / 64), m, 2)</li>|<li>非转置：(batch, ceil(k / 64), n, 2)</li><li>转置：(batch, n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+    |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, m, ceil(k / 64), 2)</li><li>转置：(batch, ceil(k / 64), m, 2)</li>|<li>非转置：(batch, ceil(k / 64), n, 2)</li><li>转置：(batch, n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
     |MX伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
   - MX全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
   - MX全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
+  - MX全量化场景下，x1Scale、x2Scale 仅最后三轴支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>。
   - MX伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是8的倍数。
   - MX伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
 
