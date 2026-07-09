@@ -43,7 +43,6 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
     uint64_t nCnt = 0;
     uint64_t cnt = 0;
 
-    uint64_t alignedSingleCoreM = MMV3CeilAlign(tiling.singleCoreM, 16); // 384
     uint64_t alignedM = MMV3CeilAlign(tiling.M, 16);
     uint64_t alignedN = MMV3CeilAlign(tiling.N, 16);
     alignedM = alignedM > static_cast<uint64_t>(tiling.singleCoreM)? alignedM : static_cast<uint64_t>(tiling.singleCoreM);
@@ -58,7 +57,7 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
         if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
             singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.singleCoreN);
         } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreNForNz;
+            singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.singleCoreN, tiling.baseM, tiling.baseN);
         }
         coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_TWO) * tiling.singleCoreN; // 无论MK还是NK都按照M方向进行分AIV核
     } else { // 不切L2cache
@@ -66,7 +65,7 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreN) * static_cast<uint64_t>(tiling.M);
             } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-                singleSize = static_cast<uint64_t>(tiling.M) * alignedSingleCoreNForNz;
+                singleSize = GetNzSequentialMatrixSize(tiling.M, tiling.singleCoreN, tiling.baseM, tiling.baseN);
             }
             coreSize = MMV3DivCeil(tiling.M, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_TWO) * tiling.singleCoreN;
             cnt = nCnt;
@@ -74,7 +73,7 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.N);
             } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-                singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedNForNz;
+                singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.N, tiling.baseM, tiling.baseN);
             }
             coreSize = MMV3DivCeil(singleSize, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_TWO);
             cnt = mCnt;

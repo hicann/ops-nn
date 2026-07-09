@@ -109,7 +109,34 @@ inline uint64_t CalBaseSize(uint64_t cnt, uint64_t totalCoreNum, uint64_t size, 
     base = std::min(base, maxBase);
     return base;
 }
+
+uint64_t GetMatmulV3TailSize(uint64_t idx, uint64_t total, uint64_t base)
+{
+    uint64_t offset = idx * base;
+    if (offset >= total) {
+        return 0;
+    }
+    return std::min(base, total - offset);
 }
+
+uint64_t GetNzSequentialMatrixSize(uint64_t actualM, uint64_t actualN, uint64_t baseM, uint64_t baseN)
+{
+    if (baseM == 0 || baseN == 0) {
+        return 0;
+    }
+    uint64_t size = 0;
+    uint64_t mTileCnt = ops::CeilDiv(actualM, baseM);
+    uint64_t nTileCnt = ops::CeilDiv(actualN, baseN);
+    for (uint64_t mIdx = 0; mIdx < mTileCnt; ++mIdx) {
+        uint64_t currM = GetMatmulV3TailSize(mIdx, actualM, baseM);
+        for (uint64_t nIdx = 0; nIdx < nTileCnt; ++nIdx) {
+            uint64_t currN = GetMatmulV3TailSize(nIdx, actualN, baseN);
+            size += ops::CeilAlign(currM, BASIC_ALIGN_16) * ops::CeilAlign(currN, BASIC_ALIGN_16);
+        }
+    }
+    return size;
+}
+} // namespace
 
 namespace optiling {
 namespace matmul_v3 {
@@ -733,12 +760,12 @@ bool MatmulV3BaseTiling::IsPowerOfTwo(uint64_t x) const
 void MatmulV3BaseTiling::OptimizeLoadBalanceBasicKernel()
 {
     OP_LOGI(args_.opName, "Optimize LoadBalance for BasicKernel");
-    //判决门限
-    //1. 需要tiling_key==10000000000000000001UL或10000000000000000000UL，表示时BasicKernel场景
-    //2. baseM==128或256，baseN==256或128, baseK==128/dtypesize，刚好将L0 cache的利用最大化
-    //3. 要求m,n方向分合小于4轮或调小m可以不增加轮次
-    //4. 暂时适用于24核情况，aicNum == 24，其他核数目未验证
-    //5. 暂适用m为外轴
+    // 判决门限
+    //  1. 需要tiling_key==10000000000000000001UL或10000000000000000000UL，表示时BasicKernel场景
+    //  2. baseM==128或256，baseN==256或128, baseK==128/dtypesize，刚好将L0 cache的利用最大化
+    //  3. 要求m,n方向分合小于4轮或调小m可以不增加轮次
+    //  4. 暂时适用于24核情况，aicNum == 24，其他核数目未验证
+    //  5. 暂适用m为外轴
     constexpr uint64_t baseMNCheck = 32768; // 128 * 256;
     uint64_t baseKCheck = BASIC_BLOCK_SIZE_128 / aDtypeSize_;
     constexpr uint64_t aicNumCheck = 24;
@@ -774,16 +801,16 @@ void MatmulV3BaseTiling::OptimizeLoadBalanceBasicKernel()
 
 void MatmulV3BaseTiling::OptimizeBasicKernelStepK()
 {
-    //判决门限
-    //1. 需要tiling_key==10000000000000000001UL，表示时BasicKernel场景
-    //2. baseM==128或256，baseN==256或128,baseK==64，刚好将L0 cache的利用最大化
-    //3. 要求m,n是256的倍数且大于等于768, k是256的倍数但不能是2的幂次方 或者m=[10368, 18000] && n,k=[1280, 5120]
-    //   或者k=[13788, 19304] && m,n=[1280, 5120]
-    //   或者m=[320000, 380000] && n=[960, 3500] && k=[1280, 3328]
-    //4. M*N大于128*256*aicNum
-    //5. 暂时适用于24核情况，aicNum == 24，其他核数目未验证
-    //6. M,N,K不能为mata值16384或32768
-    //7. 要求输入输出数据类型为Float16或BF16
+    // 判决门限
+    //  1. 需要tiling_key==10000000000000000001UL，表示时BasicKernel场景
+    //  2. baseM==128或256，baseN==256或128,baseK==64，刚好将L0 cache的利用最大化
+    //  3. 要求m,n是256的倍数且大于等于768, k是256的倍数但不能是2的幂次方 或者m=[10368, 18000] && n,k=[1280, 5120]
+    //    或者k=[13788, 19304] && m,n=[1280, 5120]
+    //    或者m=[320000, 380000] && n=[960, 3500] && k=[1280, 3328]
+    //  4. M*N大于128*256*aicNum
+    //  5. 暂时适用于24核情况，aicNum == 24，其他核数目未验证
+    //  6. M,N,K不能为mata值16384或32768
+    //  7. 要求输入输出数据类型为Float16或BF16
     constexpr uint64_t baseMNCheck = 32768; // 128 * 256;
     constexpr uint64_t baseKCheck = 64;
     constexpr uint64_t alignCheck = 256;
@@ -2641,7 +2668,7 @@ bool MatmulV3BaseTiling::DoDeterministicMultiCoreSplitKTiling()
              runInfo_.singleCoreK * std::min(runInfo_.singleCoreN, args_.nValue) * bDtypeSize_) /
             (runInfo_.singleCoreK * aDtypeSize_ + std::min(runInfo_.singleCoreN, args_.nValue) * DATA_SIZE_FP32);
         if (args_.mValue > mL2Split) {
-            //需要切分L2
+            // 需要切分L2
             mL2Split = ops::CeilAlign(mL2Split, BLOCK);
             uint64_t mCount = ops::CeilDiv(args_.mValue, mL2Split);
             runInfo_.singleCoreM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCount), BLOCK);
@@ -2658,7 +2685,7 @@ bool MatmulV3BaseTiling::DoDeterministicMultiCoreSplitKTiling()
              runInfo_.singleCoreK * std::min(runInfo_.singleCoreM, args_.mValue) * aDtypeSize_) /
             (runInfo_.singleCoreK * bDtypeSize_ + std::min(runInfo_.singleCoreM, args_.mValue) * DATA_SIZE_FP32);
         if (args_.nValue > nL2Split) {
-            //需要切分L2
+            // 需要切分L2
             nL2Split = ops::CeilAlign(nL2Split, BLOCK);
             uint64_t nCount = ops::CeilDiv(args_.nValue, nL2Split);
             runInfo_.singleCoreN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCount), BLOCK);
@@ -2761,14 +2788,12 @@ uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t /*alig
     if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT) {
         const bool orderFlag = !static_cast<bool>(tiling.iterateOrder);
         const bool isL2cacheSplit = orderFlag ? (tiling.M != tiling.singleCoreM) : (tiling.N != tiling.singleCoreN);
-        uint64_t alignedSingleCoreN = ops::CeilAlign(static_cast<uint64_t>(tiling.singleCoreN), BASIC_ALIGN_16);
-        uint64_t alignedOutN = ops::CeilAlign(static_cast<uint64_t>(tiling.N), BASIC_ALIGN_16);
         if (isL2cacheSplit) {
-            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreN;
+            singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.singleCoreN, tiling.baseM, tiling.baseN);
         } else if (orderFlag) {
-            singleSize = static_cast<uint64_t>(tiling.M) * alignedSingleCoreN;
+            singleSize = GetNzSequentialMatrixSize(tiling.M, tiling.singleCoreN, tiling.baseM, tiling.baseN);
         } else {
-            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedOutN;
+            singleSize = GetNzSequentialMatrixSize(tiling.singleCoreM, tiling.N, tiling.baseM, tiling.baseN);
         }
     }
 
