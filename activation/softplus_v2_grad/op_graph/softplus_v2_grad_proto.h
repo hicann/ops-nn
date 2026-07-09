@@ -15,8 +15,8 @@
  * \brief SoftplusV2Grad 算子图模式 proto 定义
  */
 
-#ifndef SOFTPLUS_V2_GRAD_PROTO_H_
-#define SOFTPLUS_V2_GRAD_PROTO_H_
+#ifndef OPS_PROTO_DEF_SOFTPLUSV2GRAD
+#define OPS_PROTO_DEF_SOFTPLUSV2GRAD
 
 #include "graph/operator_reg.h"
 
@@ -54,4 +54,4 @@ REG_OP(SoftplusV2Grad)
     .OP_END_FACTORY_REG(SoftplusV2Grad)
 
 } // namespace ge
-#endif // SOFTPLUS_V2_GRAD_PROTO_H_
+#endif // OPS_PROTO_DEF_SOFTPLUSV2GRAD
