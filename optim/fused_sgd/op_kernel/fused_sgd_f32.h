@@ -192,7 +192,7 @@ __aicore__ inline void FusedSgdF32<T>::Process()
 {
     for (uint64_t idx = tensorStart_; idx < tensorEnd_; idx++) {
         uint64_t buf[10];
-        desc_.SetShapeAddr(buf);
+        desc_.SetShapeAddr(&buf[0]);
         paramsList_.GetDesc(desc_, static_cast<uint32_t>(idx));
         
         uint64_t tensorDataNum = 1;
