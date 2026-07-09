@@ -1457,7 +1457,8 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor* selfRef, const aclTenso
                                                 uniqueExecutor.get());
         CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* arch3510Result = indexPutOpOut;
-        if (!useSortedV2Opt && deterministicValue != 1 &&
+        if (!useSortedV2Opt &&
+            indexPutOpOut->GetDataType() != selfRef->GetDataType() &&
             (!usePutV2SpeOpt || (usePutV2SpeOpt && selfRef->GetDataType() != op::DataType::DT_INT8))) {
             arch3510Result = l0op::Cast(indexPutOpOut, selfRef->GetDataType(), uniqueExecutor.get());
             CHECK_RET(arch3510Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
