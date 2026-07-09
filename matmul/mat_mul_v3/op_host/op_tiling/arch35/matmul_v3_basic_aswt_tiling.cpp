@@ -284,8 +284,11 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
 void MatMulV3BasicAswtTiling::CheckIsSplitN()
 {
     if (l0C2Out_ != MatMulV3L0C2Out::ON_THE_FLY) {
-        apiLevel_ = runInfo_.baseM * runInfo_.baseN * runInfo_.stepN * args_.aDtypeSize * runInfo_.mixInfo.ubDB
-                > compileInfo_.ubSize ? MatMulV3ApiLevel::BASIC_LEVEL : MatMulV3ApiLevel::TENSOR_LEVEL;
+        apiLevel_ = runInfo_.baseM * ops::CeilAlign(runInfo_.baseN, BLOCK_BYTE_SIZE) * runInfo_.stepN *
+                                ge::GetSizeByDataType(args_.cType) * runInfo_.mixInfo.ubDB >
+                            compileInfo_.ubSize ?
+                        MatMulV3ApiLevel::BASIC_LEVEL :
+                        MatMulV3ApiLevel::TENSOR_LEVEL;
     }
 
     return;
@@ -339,7 +342,7 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         DoBL1FullLoad();
         CheckApiLevelAndModel();
         CheckIsSplitN();
-    } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY){
+    } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
         // 非fixpipe优化场景
         CheckFp32SplitK();
         CheckApiLevelAndModel();
