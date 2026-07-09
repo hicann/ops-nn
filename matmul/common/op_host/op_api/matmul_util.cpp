@@ -459,6 +459,47 @@ static bool CheckSupportInfoFormatNdNzNd(const MmOpInfo& mmOpInfo)
            mmOpInfo.support_info.output_format == ge::FORMAT_ND;
 }
 
+static const aclTensor* GetMatMulV2Op(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                      const MmOpInfo& mmOpInfo, const bool transposeX1, const bool transposeX2,
+                                      const bool offsetX, const bool enable16In32Out, const int64_t opImplModeEnum,
+                                      aclOpExecutor* executor)
+{
+    bool isFp32Out = mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT;
+    bool bothMatFp16Bf16 = (mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
+                            mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
+                           (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
+                            mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16);
+    if ((enable16In32Out || (isFp32Out && bothMatFp16Bf16)) && bias == nullptr) {
+        // This is Split K Mode; Check if MatMul using Nd in Nd Out
+        OP_LOGI("hit matmulv2 fp16/bp16 in fp32 out case.");
+        const aclTensor* mmOut = (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
+                                  mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
+                                     l0op::MatMulNdFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
+                                                             offsetX, opImplModeEnum, executor) :
+                                     l0op::MatMulNzFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
+                                                             offsetX, opImplModeEnum, executor);
+        return mmOut;
+    }
+    if (mmOpInfo.support_info.self_format == ge::FORMAT_ND) {
+        const aclTensor* mmOut = (mmOpInfo.support_info.mat2_format == ge::FORMAT_ND) ?
+                                     l0op::MatMulNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                    opImplModeEnum, executor) :
+                                     l0op::MatMulNdNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                      opImplModeEnum, executor);
+        return mmOut;
+    }
+    OP_LOGD("self format is not ND.");
+    if (mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
+        OP_LOGD("Output format is ND, call MatMulNzNzNd.");
+        const aclTensor* mmOut = l0op::MatMulNzNzNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                    opImplModeEnum, executor);
+        return mmOut;
+    }
+    const aclTensor* mmOut = l0op::MatMulNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum,
+                                            executor);
+    return mmOut;
+}
+
 static const aclTensor* GetMatMulOp(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo,
                                     const bool transposeX1, const bool transposeX2, const bool offsetX,
                                     const int64_t opImplModeEnum, aclOpExecutor* executor)
@@ -466,17 +507,10 @@ static const aclTensor* GetMatMulOp(const aclTensor* x1, const aclTensor* x2, co
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     bool enable16In32Out = NeedEnableFp32Output(mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype,
                                                 mmOpInfo.support_info.output_dtype, KEEP_DTYPE, bias);
-    bool isFp32Out = mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT;
-    bool bothMatFp16Bf16 = (mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
-                            mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
-                           (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
-                            mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16);
-    bool supportNdNz = mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
-                       mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ;
     bool isA2A3 = npuArch == NpuArch::DAV_2201;
-    bool addmmWeightNz16In32OutForA2 = enable16In32Out && supportNdNz && isA2A3;
+    bool matmul16In32OutForA2 = enable16In32Out && isA2A3;
     if (CheckMatmulV3Support(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, opImplModeEnum) ||
-        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo)) || addmmWeightNz16In32OutForA2) {
+        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo)) || matmul16In32OutForA2) {
         OP_LOGI("Hit matmul_v3 scenario.");
 
         if ((enable16In32Out && IsNpuArch3510Series())) {
@@ -516,37 +550,9 @@ static const aclTensor* GetMatMulOp(const aclTensor* x1, const aclTensor* x2, co
         const aclTensor* mmOut = l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum,
                                                   executor);
         return mmOut;
-    } else if ((enable16In32Out || (isFp32Out && bothMatFp16Bf16)) && bias == nullptr) {
-        // This is Split K Mode; Check if MatMul using Nd in Nd Out
-        OP_LOGI("hit matmulv2 fp16/bp16 in fp32 out case.");
-        const aclTensor* mmOut = (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
-                                  mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
-                                     l0op::MatMulNdFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
-                                                             offsetX, opImplModeEnum, executor) :
-                                     l0op::MatMulNzFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
-                                                             offsetX, opImplModeEnum, executor);
-        return mmOut;
-    } else {
-        if (mmOpInfo.support_info.self_format == ge::FORMAT_ND) {
-            const aclTensor* mmOut = (mmOpInfo.support_info.mat2_format == ge::FORMAT_ND) ?
-                                         l0op::MatMulNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
-                                                        opImplModeEnum, executor) :
-                                         l0op::MatMulNdNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
-                                                          opImplModeEnum, executor);
-            return mmOut;
-        } else {
-            OP_LOGD("self format is not ND.");
-            if (mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
-                OP_LOGD("Output format is ND, call MatMulNzNzNd.");
-                const aclTensor* mmOut = l0op::MatMulNzNzNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
-                                                            opImplModeEnum, executor);
-                return mmOut;
-            }
-            const aclTensor* mmOut = l0op::MatMulNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
-                                                    opImplModeEnum, executor);
-            return mmOut;
-        }
     }
+    return GetMatMulV2Op(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, offsetX, enable16In32Out, opImplModeEnum,
+                         executor);
 }
 
 static inline int64_t ComputePadNum(int64_t kDim, int64_t dataSize)
@@ -2045,7 +2051,10 @@ aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType)
 
 aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo)
 {
-    if (IsFormatSupportNd(self, mat2)) {
+    bool isDav2201 = (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    bool enable16In32Out = NeedEnableFp32Output(mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype,
+                                                mmOpInfo.support_info.output_dtype, KEEP_DTYPE, nullptr);
+    if (IsFormatSupportNd(self, mat2) || (enable16In32Out && isDav2201)) {
         OP_LOGD("Matmul support NDNDND");
         mmOpInfo.support_info.output_format = Format::FORMAT_ND;
         mmOpInfo.support_info.self_format = Format::FORMAT_ND;
