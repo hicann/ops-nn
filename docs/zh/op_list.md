@@ -626,6 +626,15 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>激活函数，用于将任意实数映射到正数区间。</td>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/softplus_grad/README.md">softplus_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>Softplus激活函数的反向传播算子，公式：backprops = gradients × sigmoid(features)。</td>
   </tr>
   <tr>
     <td>activation</td>
