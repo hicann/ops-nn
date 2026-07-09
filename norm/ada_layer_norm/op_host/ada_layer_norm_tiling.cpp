@@ -46,7 +46,7 @@ constexpr uint8_t TILING_KEY_FACTOR = 10;
 
 class AdaLayerNormTiling {
 public:
-    explicit AdaLayerNormTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit AdaLayerNormTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init(uint8_t theCode);
     ge::graphStatus RunBigKernelTiling();
 
@@ -127,6 +127,7 @@ ge::graphStatus AdaLayerNormTiling::RunBigKernelTiling()
     epsilon = *tilingContext->GetAttrs()->GetAttrPointer<float>(0);
 
     auto compileInfo = reinterpret_cast<const AdaLayerNormCompileInfo*>(tilingContext->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     int32_t coreNumPlatform = compileInfo->coreNum;
     int32_t needCoreNum = SplitCore(coreNumPlatform, compileInfo->isRegBase);
     if (compileInfo->isRegBase) {

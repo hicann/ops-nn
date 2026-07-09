@@ -527,11 +527,11 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::GetShapeAttrsInfo()
 ge::graphStatus AddRmsNormQuantRegbaseTiling::GetPlatformInfo()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormQuantRegbaseTiling GetPlatformInfo.");
-    if (context_->GetCompileInfo() == nullptr) {
+    auto compileInfo = reinterpret_cast<const AddRmsNormQuantCompileInfo*>(context_->GetCompileInfo());
+    if (compileInfo == nullptr) {
         OP_LOGD(nodeName.c_str(), "GetPlatformInfo return nullptr, need re get later.");
         tilingParams.needGetCompileInfo = true;
     } else {
-        auto compileInfo = reinterpret_cast<const AddRmsNormQuantCompileInfo*>(context_->GetCompileInfo());
         tilingParams.totalCoreNum = compileInfo->totalCoreNum;
         tilingParams.maxUbSize = compileInfo->maxUbSize;
         tilingParams.needGetCompileInfo = false;
@@ -598,7 +598,7 @@ int64_t AddRmsNormQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, int64_t& 
     uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
     uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
     tmpPower = std::floor(std::log(baseNDtypeAlign - 1) / std::log(LOG_2));
-    tmpPower = std::pow(LOG_2, tmpPower); //二分折叠点
+    tmpPower = std::pow(LOG_2, tmpPower); // 二分折叠点
     int64_t firstVcaddLength = Ops::Base::CeilDiv(
                                    Ops::Base::CeilDiv(tmpPower, static_cast<int64_t>(tilingParams.vecLength)),
                                    static_cast<int64_t>(BLOCK_SIZE)) *

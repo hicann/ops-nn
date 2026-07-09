@@ -210,11 +210,11 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::GetShapeAttrsInfo()
 ge::graphStatus AddRmsNormCastRegbaseTiling::GetPlatformInfo()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormCastRegbaseTiling GetPlatformInfo.");
-    if (context_->GetCompileInfo() == nullptr) {
+    auto compileInfo = reinterpret_cast<const AddRmsNormCastCompileInfo*>(context_->GetCompileInfo());
+    if (compileInfo == nullptr) {
         OP_LOGD(nodeName.c_str(), "GetPlatformInfo return nullptr, need re get later.");
         tilingParams.needGetCompileInfo = true;
     } else {
-        auto compileInfo = reinterpret_cast<const AddRmsNormCastCompileInfo*>(context_->GetCompileInfo());
         tilingParams.totalCoreNum = compileInfo->totalCoreNum;
         tilingParams.maxUbSize = compileInfo->totalUbSize;
         tilingParams.needGetCompileInfo = false;
