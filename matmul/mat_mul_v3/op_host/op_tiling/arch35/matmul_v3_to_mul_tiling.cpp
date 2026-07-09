@@ -30,6 +30,9 @@ bool MatMulV3ToMulTiling::IsCapable()
     if (!args_.isForceGrpAccForFp32) {
         return false;
     }
+    if (MatMulV3TilingHelper::IsSelfNonContiguous(context_)) {
+        return false;
+    }
     // m=1 || n=1
     if (args_.mValue != 1UL && args_.nValue != 1UL) {
         return false;
