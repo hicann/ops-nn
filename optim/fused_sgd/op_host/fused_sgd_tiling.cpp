@@ -128,7 +128,7 @@ void FusedSgdTiling::CheckOptionalInputs()
     } else {
         useGradScale_ = 0;
     }
-    
+
     // 判断tensorlist为空
     auto momentumBufferListInput = context_->GetDynamicInputShape(INPUT_MOMENTUM_BUFFER_IDX, 0);
     if (momentumBufferListInput != nullptr) {
@@ -170,7 +170,7 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context, uint32_t us
     bool isDiffDtype =
         (paramsDtype != gradsDtype);
     ge::DataType momentumDtype;
-    if(useMomentum_) {
+    if(useMomentum_ != 0) {
         dtypeInput = context->GetDynamicInputDesc(INPUT_MOMENTUM_BUFFER_IDX, 0);
         OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInput);
         momentumDtype = dtypeInput->GetDataType();
@@ -180,7 +180,7 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context, uint32_t us
     if (isDiffDtype) {
         std::string dtypeMsg = Ops::Base::ToString(paramsDtype) + ", " +
                                Ops::Base::ToString(gradsDtype);
-        if(!useMomentum_) {
+        if(useMomentum_ == 0) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context->GetNodeName(), "params, grads", dtypeMsg.c_str(),
                 "params, grads should have the same dtype");
@@ -228,9 +228,9 @@ ge::graphStatus FusedSgdTiling::GetInputTensorInfo()
         gert::Shape paramsShape = paramsShapePtr->GetStorageShape();
         gert::Shape gradsShape = gradsShapePtr->GetStorageShape();
         bool isDiffSize = paramsShape != gradsShape;
-        
+
         gert::Shape momentumShape;
-        if(useMomentum_) {
+        if(useMomentum_ != 0) {
             auto momentumShapePtr = context_->GetDynamicInputShape(INPUT_MOMENTUM_BUFFER_IDX, i);
             OP_CHECK_NULL_WITH_CONTEXT(context_, momentumShapePtr);
             momentumShape = momentumShapePtr->GetStorageShape();
@@ -239,7 +239,7 @@ ge::graphStatus FusedSgdTiling::GetInputTensorInfo()
         if (isDiffSize) {
             std::string shapesMsg = Ops::Base::ToString(paramsShape) + ", " +
                                     Ops::Base::ToString(gradsShape);
-            if(!useMomentum_) {
+            if(useMomentum_ == 0) {
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                     context_->GetNodeName(), "params, grads", shapesMsg.c_str(),
                     "params, grads should have the same shape");
@@ -319,7 +319,7 @@ ge::graphStatus Tiling4FusedSgd(gert::TilingContext* context)
     OP_CHECK_IF(
         tiling.CalculateOutputInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateOutputInfo error"),
         return ge::GRAPH_FAILED);
-    
+
     FusedSgdTilingData* tilingData = context->GetTilingData<FusedSgdTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
     OP_CHECK_IF(
