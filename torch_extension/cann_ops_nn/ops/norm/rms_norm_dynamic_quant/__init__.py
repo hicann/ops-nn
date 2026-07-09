@@ -8,6 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = ["norm"]
+__all__ = ["rms_norm_dynamic_quant", "convert_rms_norm_dynamic_quant"]
 
-from . import norm
+from .rms_norm_dynamic_quant import rms_norm_dynamic_quant
+from .graph_convert_rms_norm_dynamic_quant import convert_rms_norm_dynamic_quant
