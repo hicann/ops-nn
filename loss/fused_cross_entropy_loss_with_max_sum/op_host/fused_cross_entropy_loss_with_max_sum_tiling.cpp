@@ -88,6 +88,7 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumTiling::Init()
 {
     auto compileInfo =
         reinterpret_cast<const FusedCrossEntropyLossWithMaxSumCompileInfo*>(tilingContext_->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo);
     coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
     ubSizePlatForm = static_cast<uint32_t>(compileInfo->ubSizePlatForm);
     sysWorkspaceSize = compileInfo->sysWorkspaceSize;
