@@ -193,8 +193,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Init(
     pipe_.InitBuffer(inQueue_, DB_BUFFER, maxUbBlockNum_ * blockSize_ * sizeof(T));
     pipe_.InitBuffer(outQueue_, DB_BUFFER, maxUbBlockNum_ * blockSize_ * sizeof(uint8_t) / DIGIT_TWO);
     pipe_.InitBuffer(mxScaleQueue_, DB_BUFFER, maxUbBlockNum_ * sizeof(uint8_t));
-    pipe_.InitBuffer(maxExpBuffer_, maxUbBlockNum_ * sizeof(T));
-    pipe_.InitBuffer(recipScaleBuffer_, maxUbBlockNum_ * sizeof(uint16_t));
+    pipe_.InitBuffer(maxExpBuffer_, maxUbBlockNum_ * sizeof(T) * 2);
+    pipe_.InitBuffer(recipScaleBuffer_, maxUbBlockNum_ * sizeof(uint16_t) * 2);
 
     xGm_.SetGlobalBuffer((__gm__ T*)x + xGmOffset_);
     yGm_.SetGlobalBuffer((__gm__ uint8_t*)y + xGmOffset_ / DIGIT_TWO);
