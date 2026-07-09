@@ -32,17 +32,13 @@ constexpr float kDefaultNegativeSlope = 0.2f;
 constexpr float kDefaultScale = 1.414213562373f;
 
 // ===========================================================================
-// PadAndSqueeze: pad shapes to max rank, squeeze all-1 dims
+// PadShapesToMaxRank: left-pad every input/output shape with 1s to the max rank
 // ===========================================================================
-static bool PadAndSqueeze(
-    const std::vector<std::vector<int64_t>>& input_shapes,
-    const std::vector<std::vector<int64_t>>& output_shapes,
-    std::vector<int64_t>& maximum_bro_shape,
-    std::vector<std::vector<int64_t>>& normal_input_shapes,
-    std::vector<std::vector<int64_t>>& normal_output_shapes)
+static void PadShapesToMaxRank(const std::vector<std::vector<int64_t>>& input_shapes,
+                               const std::vector<std::vector<int64_t>>& output_shapes,
+                               std::vector<std::vector<int64_t>>& padded_in,
+                               std::vector<std::vector<int64_t>>& padded_out)
 {
-    int64_t num_inputs  = static_cast<int64_t>(input_shapes.size());
-    int64_t num_outputs = static_cast<int64_t>(output_shapes.size());
     int64_t max_rank = 0;
     for (auto& s : input_shapes)
         max_rank = std::max(max_rank, static_cast<int64_t>(s.size()));
@@ -56,9 +52,27 @@ static bool PadAndSqueeze(
         return p;
     };
 
-    std::vector<std::vector<int64_t>> padded_in(num_inputs), padded_out(num_outputs);
-    for (int64_t i = 0; i < num_inputs; i++) padded_in[i] = pad(input_shapes[i]);
-    for (int64_t i = 0; i < num_outputs; i++) padded_out[i] = pad(output_shapes[i]);
+    padded_in.assign(input_shapes.size(), std::vector<int64_t>());
+    padded_out.assign(output_shapes.size(), std::vector<int64_t>());
+    for (size_t i = 0; i < input_shapes.size(); i++)
+        padded_in[i] = pad(input_shapes[i]);
+    for (size_t i = 0; i < output_shapes.size(); i++)
+        padded_out[i] = pad(output_shapes[i]);
+}
+
+// ===========================================================================
+// SqueezeAllOneDims: drop axes that are 1 across all tensors; keep broadcast max
+// ===========================================================================
+static void SqueezeAllOneDims(const std::vector<std::vector<int64_t>>& padded_in,
+                              const std::vector<std::vector<int64_t>>& padded_out,
+                              std::vector<int64_t>& maximum_bro_shape,
+                              std::vector<std::vector<int64_t>>& normal_input_shapes,
+                              std::vector<std::vector<int64_t>>& normal_output_shapes)
+{
+    int64_t num_inputs = static_cast<int64_t>(padded_in.size());
+    int64_t num_outputs = static_cast<int64_t>(padded_out.size());
+    int64_t max_rank = num_inputs > 0 ? static_cast<int64_t>(padded_in[0].size()) :
+                                        (num_outputs > 0 ? static_cast<int64_t>(padded_out[0].size()) : 0);
 
     maximum_bro_shape.clear();
     normal_input_shapes.assign(num_inputs, std::vector<int64_t>());
@@ -68,34 +82,55 @@ static bool PadAndSqueeze(
         bool all_one = true;
         int64_t max_dim = 0;
         for (int64_t i = 0; i < num_inputs; i++) {
-            if (padded_in[i][d] != 1) all_one = false;
+            if (padded_in[i][d] != 1)
+                all_one = false;
             max_dim = std::max(max_dim, padded_in[i][d]);
         }
         for (int64_t i = 0; i < num_outputs; i++) {
-            if (padded_out[i][d] != 1) all_one = false;
+            if (padded_out[i][d] != 1)
+                all_one = false;
             max_dim = std::max(max_dim, padded_out[i][d]);
         }
         if (!all_one) {
             maximum_bro_shape.push_back(max_dim);
-            for (int64_t i = 0; i < num_inputs; i++) normal_input_shapes[i].push_back(padded_in[i][d]);
-            for (int64_t i = 0; i < num_outputs; i++) normal_output_shapes[i].push_back(padded_out[i][d]);
+            for (int64_t i = 0; i < num_inputs; i++)
+                normal_input_shapes[i].push_back(padded_in[i][d]);
+            for (int64_t i = 0; i < num_outputs; i++)
+                normal_output_shapes[i].push_back(padded_out[i][d]);
         }
     }
     if (maximum_bro_shape.empty()) {
         maximum_bro_shape.push_back(1);
-        for (int64_t i = 0; i < num_inputs; i++) normal_input_shapes[i].push_back(1);
-        for (int64_t i = 0; i < num_outputs; i++) normal_output_shapes[i].push_back(1);
+        for (int64_t i = 0; i < num_inputs; i++)
+            normal_input_shapes[i].push_back(1);
+        for (int64_t i = 0; i < num_outputs; i++)
+            normal_output_shapes[i].push_back(1);
     }
+}
+
+// ===========================================================================
+// PadAndSqueeze: pad shapes to max rank, squeeze all-1 dims
+// ===========================================================================
+static bool PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
+                          const std::vector<std::vector<int64_t>>& output_shapes,
+                          std::vector<int64_t>& maximum_bro_shape,
+                          std::vector<std::vector<int64_t>>& normal_input_shapes,
+                          std::vector<std::vector<int64_t>>& normal_output_shapes)
+{
+    std::vector<std::vector<int64_t>> padded_in, padded_out;
+    PadShapesToMaxRank(input_shapes, output_shapes, padded_in, padded_out);
+    SqueezeAllOneDims(padded_in, padded_out, maximum_bro_shape, normal_input_shapes, normal_output_shapes);
     return true;
 }
 
 // ===========================================================================
 // FindSplitAxis: determine UB split axis and tile sizes
 // ===========================================================================
-static bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape,
-    int64_t ub_per_core, int64_t phys_nodes, SplitResult& out)
+static bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape, int64_t ub_per_core, int64_t phys_nodes,
+                          SplitResult& out)
 {
-    if (phys_nodes == 0) return false;
+    if (phys_nodes == 0)
+        return false;
     int64_t per_buf_bytes = (ub_per_core / phys_nodes) & ~(kAlignBytes - 1);
     int64_t per_buf_elems = per_buf_bytes / static_cast<int64_t>(sizeof(float));
     int64_t rank = static_cast<int64_t>(max_bro_shape.size());
@@ -129,12 +164,12 @@ static void MultiCoreSplit(int64_t total_tiles, int64_t num_cores, MultiCoreResu
     out.total_tiles = total_tiles;
     if (total_tiles == 0 || num_cores <= 0) {
         // 空任务防御：避免 0/0 除零 (SEC-2.3)，单核不参与计算
-        out.num_cores  = 1;
+        out.num_cores = 1;
         out.tiles_main = 0;
         out.cores_tail = 0;
         return;
     }
-    out.num_cores  = (total_tiles < num_cores) ? total_tiles : num_cores;
+    out.num_cores = (total_tiles < num_cores) ? total_tiles : num_cores;
     out.tiles_main = total_tiles / out.num_cores;
     out.cores_tail = total_tiles % out.num_cores;
 }
@@ -142,13 +177,13 @@ static void MultiCoreSplit(int64_t total_tiles, int64_t num_cores, MultiCoreResu
 // ===========================================================================
 // ComputeStrides: compute GM strides for a shape (broadcast axes get stride 0)
 // ===========================================================================
-static void ComputeStrides(const std::vector<int64_t>& shape,
-    const std::vector<int64_t>& max_bro_shape, int64_t rank, int64_t* strides)
+static void ComputeStrides(const std::vector<int64_t>& shape, const std::vector<int64_t>& max_bro_shape, int64_t rank,
+                           int64_t* strides)
 {
     int64_t stride = 1;
     for (int64_t d = rank - 1; d >= 0; d--) {
         if (shape[d] == 1 && max_bro_shape[d] > 1) {
-            strides[d] = 0;  // broadcast axis
+            strides[d] = 0; // broadcast axis
         } else {
             strides[d] = stride;
         }
@@ -160,11 +195,9 @@ static void ComputeStrides(const std::vector<int64_t>& shape,
 // FillIOStrides: fill input/output shapes and strides into TilingData
 // ===========================================================================
 template <int64_t kRank>
-static void FillIOStrides(FusedBiasLeakyReluGradTilingData<kRank>* td,
-    const std::vector<int64_t>& maximum_bro_shape,
-    const std::vector<std::vector<int64_t>>& normal_input_shapes,
-    const std::vector<std::vector<int64_t>>& normal_output_shapes,
-    int64_t rank)
+static void FillIOStrides(FusedBiasLeakyReluGradTilingData<kRank>* td, const std::vector<int64_t>& maximum_bro_shape,
+                          const std::vector<std::vector<int64_t>>& normal_input_shapes,
+                          const std::vector<std::vector<int64_t>>& normal_output_shapes, int64_t rank)
 {
     for (int64_t inp = 0; inp < kMaxInputSlots; inp++) {
         int64_t inp_strides[kRank] = {};
@@ -199,12 +232,10 @@ static void FillIOStrides(FusedBiasLeakyReluGradTilingData<kRank>* td,
 // Tiling main function
 // ===========================================================================
 template <int64_t kRank>
-static ge::graphStatus DoTiling(gert::TilingContext* context,
-    const std::vector<int64_t>& maximum_bro_shape,
-    const std::vector<std::vector<int64_t>>& normal_input_shapes,
-    const std::vector<std::vector<int64_t>>& normal_output_shapes,
-    int64_t rank, uint64_t ubSize, int64_t coreNum,
-    float negativeSlope, float scale)
+static ge::graphStatus DoTiling(gert::TilingContext* context, const std::vector<int64_t>& maximum_bro_shape,
+                                const std::vector<std::vector<int64_t>>& normal_input_shapes,
+                                const std::vector<std::vector<int64_t>>& normal_output_shapes, int64_t rank,
+                                uint64_t ubSize, int64_t coreNum, float negativeSlope, float scale)
 {
     SplitResult split;
     FindSplitAxis(maximum_bro_shape, static_cast<int64_t>(ubSize), kPhysNodes, split);
@@ -244,8 +275,7 @@ static ge::graphStatus DoTiling(gert::TilingContext* context,
         td->max_bro_shape[d] = (d < rank) ? maximum_bro_shape[d] : 1;
     }
 
-    FillIOStrides<kRank>(td, maximum_bro_shape, normal_input_shapes,
-                         normal_output_shapes, rank);
+    FillIOStrides<kRank>(td, maximum_bro_shape, normal_input_shapes, normal_output_shapes, rank);
 
     context->SetBlockDim(static_cast<uint32_t>(multicore.num_cores));
     size_t* ws = context->GetWorkspaceSizes(1);
@@ -259,10 +289,8 @@ static ge::graphStatus DoTiling(gert::TilingContext* context,
 // ===========================================================================
 // ReadContextShapes: extract and convert shapes from TilingContext
 // ===========================================================================
-static ge::graphStatus ReadContextShapes(gert::TilingContext* context,
-    std::vector<std::vector<int64_t>>& input_shapes,
-    std::vector<std::vector<int64_t>>& output_shapes,
-    ge::DataType& dtype)
+static ge::graphStatus ReadContextShapes(gert::TilingContext* context, std::vector<std::vector<int64_t>>& input_shapes,
+                                         std::vector<std::vector<int64_t>>& output_shapes, ge::DataType& dtype)
 {
     auto inShape0 = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inShape0);
@@ -285,13 +313,14 @@ static ge::graphStatus ReadContextShapes(gert::TilingContext* context,
         if (n == 0) {
             v.push_back(1);
         } else {
-            for (size_t i = 0; i < n; i++) v.push_back(shape.GetDim(i));
+            for (size_t i = 0; i < n; i++)
+                v.push_back(shape.GetDim(i));
         }
         return v;
     };
 
-    input_shapes = { toVec(inShape0->GetStorageShape()), toVec(inShape1->GetStorageShape()) };
-    output_shapes = { toVec(outShape0->GetStorageShape()) };
+    input_shapes = {toVec(inShape0->GetStorageShape()), toVec(inShape1->GetStorageShape())};
+    output_shapes = {toVec(outShape0->GetStorageShape())};
     return ge::GRAPH_SUCCESS;
 }
 
@@ -304,8 +333,8 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context)
     ASCENDC_TPL_SEL_PARAM(context, static_cast<uint64_t>(FUSED_BIAS_LEAKY_RELU_GRAD_RANK_4));
     auto* td = context->GetTilingData<FusedBiasLeakyReluGradTilingData<4>>();
     if (td != nullptr) {
-        if (memset_s(td, sizeof(FusedBiasLeakyReluGradTilingData<4>), 0,
-                     sizeof(FusedBiasLeakyReluGradTilingData<4>)) != EOK) {
+        if (memset_s(td, sizeof(FusedBiasLeakyReluGradTilingData<4>), 0, sizeof(FusedBiasLeakyReluGradTilingData<4>)) !=
+            EOK) {
             OP_LOGE(context, "memset tiling data failed for empty tensor");
             return ge::GRAPH_FAILED;
         }
@@ -334,7 +363,8 @@ static ge::graphStatus TilingFuncFusedBiasLeakyReluGrad(gert::TilingContext* con
     std::vector<std::vector<int64_t>> input_shapes, output_shapes;
     ge::DataType dtype;
     ge::graphStatus ret = ReadContextShapes(context, input_shapes, output_shapes, dtype);
-    if (ret != ge::GRAPH_SUCCESS) return ret;
+    if (ret != ge::GRAPH_SUCCESS)
+        return ret;
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -345,14 +375,25 @@ static ge::graphStatus TilingFuncFusedBiasLeakyReluGrad(gert::TilingContext* con
 
     std::vector<int64_t> maximum_bro_shape;
     std::vector<std::vector<int64_t>> normal_input_shapes, normal_output_shapes;
-    PadAndSqueeze(input_shapes, output_shapes, maximum_bro_shape,
-                  normal_input_shapes, normal_output_shapes);
+    PadAndSqueeze(input_shapes, output_shapes, maximum_bro_shape, normal_input_shapes, normal_output_shapes);
 
     int64_t rank = static_cast<int64_t>(maximum_bro_shape.size());
 
+    // Squeezed rank must not exceed the maximum template rank (kRank=8); the
+    // rank>4 dispatch below uses DoTiling<8>, whose TilingData arrays and the
+    // stack buffers in FillIOStrides/ComputeStrides are sized kRank. A rank>8
+    // shape would overflow those fixed-size arrays.
+    OP_CHECK_IF(rank > FUSED_BIAS_LEAKY_RELU_GRAD_RANK_8,
+                OP_LOGE(context, "Squeezed rank %ld exceeds maximum supported rank %d", rank,
+                        FUSED_BIAS_LEAKY_RELU_GRAD_RANK_8),
+                return ge::GRAPH_FAILED);
+
     bool isEmpty = false;
     for (auto d : maximum_bro_shape) {
-        if (d == 0) { isEmpty = true; break; }
+        if (d == 0) {
+            isEmpty = true;
+            break;
+        }
     }
     if (isEmpty) {
         return HandleEmptyTensor(context);
@@ -360,17 +401,16 @@ static ge::graphStatus TilingFuncFusedBiasLeakyReluGrad(gert::TilingContext* con
 
     if (rank <= 4) {
         ASCENDC_TPL_SEL_PARAM(context, static_cast<uint64_t>(FUSED_BIAS_LEAKY_RELU_GRAD_RANK_4));
-        return DoTiling<4>(context, maximum_bro_shape, normal_input_shapes,
-                          normal_output_shapes, rank, ubSize, coreNum, negativeSlope, scale);
+        return DoTiling<4>(context, maximum_bro_shape, normal_input_shapes, normal_output_shapes, rank, ubSize, coreNum,
+                           negativeSlope, scale);
     } else {
         ASCENDC_TPL_SEL_PARAM(context, static_cast<uint64_t>(FUSED_BIAS_LEAKY_RELU_GRAD_RANK_8));
-        return DoTiling<8>(context, maximum_bro_shape, normal_input_shapes,
-                          normal_output_shapes, rank, ubSize, coreNum, negativeSlope, scale);
+        return DoTiling<8>(context, maximum_bro_shape, normal_input_shapes, normal_output_shapes, rank, ubSize, coreNum,
+                           negativeSlope, scale);
     }
 }
 
-static ge::graphStatus TilingPrepareForFusedBiasLeakyReluGrad(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingPrepareForFusedBiasLeakyReluGrad([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
@@ -381,4 +421,4 @@ IMPL_OP_OPTILING(FusedBiasLeakyReluGrad)
     .Tiling(TilingFuncFusedBiasLeakyReluGrad)
     .TilingParse<FusedBiasLeakyReluGradCompileInfo>(TilingPrepareForFusedBiasLeakyReluGrad);
 
-}  // namespace optiling
+} // namespace optiling
