@@ -72,6 +72,7 @@ ge::graphStatus ChamferDistanceGradTiling::Init()
     OP_LOGD(TilingContext, "Tiling initing.");
     auto xyz_shape = TilingContext->GetInputShape(0)->GetStorageShape();
     auto compileInfo = reinterpret_cast<const ChamferDistanceGradCompileInfo*>(TilingContext->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(TilingContext, compileInfo);
     uint64_t total_ub_size = compileInfo->ubSizePlatForm;
     ub_size = total_ub_size - RESERVE_SAPCE;
     uint64_t core_num = static_cast<uint64_t>(compileInfo->totalCoreNum);
