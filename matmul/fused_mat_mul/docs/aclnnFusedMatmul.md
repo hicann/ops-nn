@@ -52,6 +52,12 @@
   y = relu(x1 @ x2 + bias)
   $$
 
+  16cast32运算:
+
+  $$
+  y = cast\_float32(x1 @ x2 + bias)
+  $$
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFusedMatmulGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedMatmul”接口执行计算。
@@ -126,7 +132,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>bias</td>
         <td>输入</td>
         <td>表示偏置项，对应公式中的bias。</td>
-        <td><li>仅当fusedOpType为""、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></td>
+        <td><li>仅当fusedOpType为""、"16cast32"、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>1-2</td>
@@ -172,7 +178,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>fusedOpType</td>
         <td>输入</td>
         <td>表示指定Matmul算子支持的融合模式，对应公式中的OP。</td>
-        <td><li>融合模式取值必须是""（表示不做融合）、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></td>
+        <td><li>融合模式取值必须是""（表示不做融合）、"16cast32"、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></td>
         <td>STRING</td>
         <td>-</td>
         <td>-</td>
@@ -308,7 +314,7 @@ aclnnStatus aclnnFusedMatmul(
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
 - 当fusedOpType取值为""、"relu"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
 - 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
