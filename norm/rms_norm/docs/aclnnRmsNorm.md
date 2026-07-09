@@ -85,7 +85,7 @@ aclnnStatus aclnnRmsNorm(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的缩放因子（权重），对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要满足gamma_shape = x_shape[n:], n < x_shape.dims()。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要满足gamma_shape = x_shape[n:], n < x_shape.dims()。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnRmsNorm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -233,7 +233,7 @@ aclnnStatus aclnnRmsNorm(
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：当输入是Inf时，输出为Inf。当输入是NaN时，输出为NaN。
 - 各平台支持数据类型说明：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
-    
+
     | `x`数据类型 | `gamma`数据类型 | `yOut`数据类型 | `rstdOut`数据类型 |
     | -------- | -------- | -------- | -------- |
     | FLOAT16 | FLOAT32  | FLOAT16 | FLOAT32 |
@@ -243,7 +243,7 @@ aclnnStatus aclnnRmsNorm(
     | FLOAT32 | FLOAT32  | FLOAT32 | FLOAT32  |
 
   - <term>Atlas 推理系列产品</term>：
-    
+
     | `x`数据类型 | `gamma`数据类型 | `yOut`数据类型 | `rstdOut`数据类型 |
     | -------- | -------- | -------- | -------- |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 |
