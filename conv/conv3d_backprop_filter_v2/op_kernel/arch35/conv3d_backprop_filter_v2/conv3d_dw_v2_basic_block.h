@@ -31,13 +31,15 @@ constexpr uint64_t HUGE_PADDING_HO_THRESHOLD = 256;
 namespace AscendC {
 using Conv3ddwConfig = typename ConvolutionBackprop::Conv3ddwConfig;
 
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW, bool groupEnlarge>
-class Conv3dDwBasicBlockMNStreamK : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge> {
+template <
+    typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW,
+    bool groupEnlarge>
+class Conv3dDwBasicBlockMNStreamK
+    : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockMNStreamK()
-    {
-    };
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+    __aicore__ inline Conv3dDwBasicBlockMNStreamK(){};
+    __aicore__ inline void Init(
+        GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
         const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
         InitCommonTilingData(tilingData);
@@ -105,7 +107,8 @@ protected:
 
     __aicore__ void InitCommonTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
-        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge>::InitTilingData(tilingData);
+        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge>::InitTilingData(
+            tilingData);
         usedCoreNum_ = tilingData->dwTiling.usedCoreNum;
         streamkType_ = tilingData->dwTiling.streamkType;
         singleCoreBatch_ = tilingData->dwTiling.singleCoreBatchDout;
@@ -125,9 +128,12 @@ protected:
 
     __aicore__ inline void CalcStreamK(uint64_t basicBlockIdx)
     {
-        if (tailCnt_ == 0) { return; }
+        if (tailCnt_ == 0) {
+            return;
+        }
         // 获取基本块的位置
-        uint64_t batchDoutCnt = Ceil(static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->dout, singleCoreBatch_);
+        uint64_t batchDoutCnt =
+            Ceil(static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->dout, singleCoreBatch_);
         uint64_t batchDoutIdx = 0;
         uint64_t batchIdx = 0;
         uint64_t doutIdx = 0;
@@ -141,15 +147,18 @@ protected:
             batchIdx = batchDoutIdx / this->tiling_->dout;
             doutIdx = batchDoutIdx - batchIdx * this->tiling_->dout;
         }
-        uint64_t tailBlockIdx = basicBlockIdx / usedCoreNum_ * usedCoreNum_ + basicBlockIdx % usedCoreNum_ / deterAddCoreNum_;
+        uint64_t tailBlockIdx =
+            basicBlockIdx / usedCoreNum_ * usedCoreNum_ + basicBlockIdx % usedCoreNum_ / deterAddCoreNum_;
         uint32_t groupIdx = tailBlockIdx % this->tiling_->realGroup;
         uint32_t dkIdx = (tailBlockIdx / this->tiling_->realGroup) % this->tiling_->dk;
         this->nCoreIndx_ = (tailBlockIdx / this->tiling_->realGroup / this->tiling_->dk) % nCnt_;
         this->mCoreIndx_ = (tailBlockIdx) / batchDoutNcnt_;
         this->cinCoreIndx_ = this->nCoreIndx_;
         // singleShapeBatch用于表示基本块的batch
-        uint64_t batchDoutTail = static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->dout - (batchDoutCnt - 1) * singleCoreBatch_;
-        uint64_t batchdoutCurrentCore = ((batchDoutIdx / singleCoreBatch_) == (batchDoutCnt - 1)) ? batchDoutTail : singleCoreBatch_;
+        uint64_t batchDoutTail =
+            static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->dout - (batchDoutCnt - 1) * singleCoreBatch_;
+        uint64_t batchdoutCurrentCore =
+            ((batchDoutIdx / singleCoreBatch_) == (batchDoutCnt - 1)) ? batchDoutTail : singleCoreBatch_;
 
         this->singleShapeBatch_ = batchdoutCurrentCore;
 
@@ -188,16 +197,17 @@ protected:
         this->dw_.SetSingleShape(mCoreUse, nCoreUse, kCoreUse, ciCoreUse, this->singleShapeBatch_);
     }
 
-    __aicore__ inline void CalcIterate(uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx,
-        uint32_t dkIdx, bool isCompute, bool isNoDeter, uint64_t kCnt)
+    __aicore__ inline void CalcIterate(
+        uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx, uint32_t dkIdx, bool isCompute,
+        bool isNoDeter, uint64_t kCnt)
     {
         // 做STREAM K，有确定性计算
         SetDeterAddCore4StreamK(batchDoutIdx, isNoDeter);
         this->dw_.ctx.l0cPingPongFlag_ = 1;
         // 对于singleShape大于基本块场景，会有多轮计算
-        uint64_t nCoreTailAlign = Ceil(ciCoreTail_, this->tiling_->n0) * this->tiling_->n0 * this->tiling_->hk * this->tiling_->wk;
-        uint64_t maxMIter = Ceil(
-            mCnt_ > 1 ? this->singleShapeM_ : mCoreTail_, this->tiling_->baseM);
+        uint64_t nCoreTailAlign =
+            Ceil(ciCoreTail_, this->tiling_->n0) * this->tiling_->n0 * this->tiling_->hk * this->tiling_->wk;
+        uint64_t maxMIter = Ceil(mCnt_ > 1 ? this->singleShapeM_ : mCoreTail_, this->tiling_->baseM);
         uint64_t maxNIter = Ceil(nCnt_ > 1 ? this->singleShapeN_ : nCoreTailAlign, this->tiling_->baseN);
 
         uint8_t barrierTriggerCnt = 0;
@@ -213,10 +223,10 @@ protected:
                         this->dw_.ctx.l0cPingPongFlag_ = !this->dw_.ctx.l0cPingPongFlag_;
                     }
                     if (!isCompute && ((++barrierTriggerCnt) % barrierThreshold == 0)) {
-                        //如果全是跳过,那么cube核没有实际逻辑,导致cube核CrossCoreSetFlag过快,
-                        //vector核来不及消费Flag，使得CrossCoreSetFlag内部的计数器溢出导致异常
-                        //根据文档,CrossCoreSetFlag的计数器最多设置15次,所以每隔14次触发一次Barrier
-                        //强制cube等待vector的notify,让两边同步
+                        // 如果全是跳过,那么cube核没有实际逻辑,导致cube核CrossCoreSetFlag过快,
+                        // vector核来不及消费Flag，使得CrossCoreSetFlag内部的计数器溢出导致异常
+                        // 根据文档,CrossCoreSetFlag的计数器最多设置15次,所以每隔14次触发一次Barrier
+                        // 强制cube等待vector的notify,让两边同步
                         PipeBarrier<PIPE_ALL>();
                         barrierTriggerCnt = 0;
                     }
@@ -238,8 +248,8 @@ protected:
         }
     }
 
-    __aicore__ inline void CalcIterateCube(uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx,
-        uint32_t dkIdx, uint64_t kCnt)
+    __aicore__ inline void CalcIterateCube(
+        uint64_t batchDoutIdx, uint64_t batchdoutCurrentCore, uint32_t groupIdx, uint32_t dkIdx, uint64_t kCnt)
     {
         uint64_t kCoreTail = this->k_ - (kCnt - 1) * singleShapeK_;
         uint64_t kCoreUse = this->kCoreIndx_ == (kCnt - 1) ? kCoreTail : singleShapeK_;
@@ -287,7 +297,8 @@ protected:
                     this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
                     this->dw_.SetStartIdx(curbatchDoutIdx, hoIdx, dkIdx);
                     this->dw_.SetFmap(this->xGm_[this->offsetB_]);
-                    this->dw_.SetSingleShapeK(AscendC::Std::min(hoCoreUse - hoOffset, reduceSegmentsH) * this->tiling_->wo);
+                    this->dw_.SetSingleShapeK(
+                        AscendC::Std::min(hoCoreUse - hoOffset, reduceSegmentsH) * this->tiling_->wo);
                 }
                 if (isComputeInner) {
                     this->dw_.Compute(out2L1Params);
@@ -348,7 +359,7 @@ protected:
 
                 // AIV无需后续的计算，只需同步基本块basicBlockIdx
                 if ASCEND_IS_AIV {
-                    if (this->tiling_->group == this->tiling_->realGroup) {
+                    if constexpr (!groupEnlarge) {
                         continue;
                     }
                     if (GetSubBlockIdx() > 0) {
@@ -370,7 +381,8 @@ protected:
                 }
 
                 this->dw_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
-                uint64_t singleShapeK = AscendC::Std::min(this->tiling_->ho - hoIdx, reduceSegmentsH) * this->tiling_->wo;
+                uint64_t singleShapeK =
+                    AscendC::Std::min(this->tiling_->ho - hoIdx, reduceSegmentsH) * this->tiling_->wo;
                 this->dw_.SetSingleShape(mCoreUse, nCoreUse, singleShapeK, ciCoreUse, batchCoreUse);
                 this->dw_.SetStartIdx(batchDoutIdx, hoIdx, dkIdx);
                 this->dw_.SetFmap(this->xGm_[this->offsetB_]);
@@ -379,11 +391,12 @@ protected:
         }
     }
 
-    __aicore__ inline void CalcReduceSegments(uint64_t nd, uint64_t ho, uint64_t wo, uint64_t& segmentsH, uint64_t& segmentsND)
+    __aicore__ inline void CalcReduceSegments(
+        uint64_t nd, uint64_t ho, uint64_t wo, uint64_t& segmentsH, uint64_t& segmentsND)
     {
         const uint64_t segmentsNDH = Ceil(SINGLE_BLOCK_ADD_THRESHOLD, wo);
         segmentsH = AscendC::Std::min(segmentsNDH, ho);
-        
+
         // 对于SplitKernelHW分支，限制H轴切分的大小最大为256，使得padding不会超load3d的限制
         if constexpr (isSplitKernelHW) {
             segmentsH = AscendC::Std::min(segmentsH, HUGE_PADDING_HO_THRESHOLD);
@@ -426,12 +439,14 @@ protected:
     }
 };
 
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW, bool groupEnlarge>
-class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge> {
+template <
+    typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW,
+    bool groupEnlarge>
+class Conv3dDwBasicBlockStreamK
+    : public Conv3dDwBasicBlockMNStreamK<
+          xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge> {
 public:
-    __aicore__ inline Conv3dDwBasicBlockStreamK()
-    {
-    };
+    __aicore__ inline Conv3dDwBasicBlockStreamK(){};
 
     __aicore__ inline void Process()
     {
@@ -443,6 +458,6 @@ public:
         this->dw_.End();
     }
 };
-}
+} // namespace AscendC
 
 #endif // CONV3D_BACKPROP_FILTER_BASIC_BLOCK_H
