@@ -825,6 +825,37 @@ ge::graphStatus QBMMV3StreamKTiling::GetShapeAttrsInfo()
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
 
+ge::graphStatus QBMMV3StreamKTiling::CheckContext()
+{
+    auto x1Shape = context_->GetInputShape(GetX1Idx());
+    auto x1Desc = context_->GetInputDesc(GetX1Idx());
+    auto x2Shape = context_->GetInputShape(GetX2Idx());
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
+    auto scaleShape = context_->GetInputShape(GetScaleIdx());
+    auto scaleDesc = context_->GetInputDesc(GetScaleIdx());
+    auto outputShape = context_->GetOutputShape(0);
+    auto outputDesc = context_->GetOutputDesc(0);
+    auto attrs = context_->GetAttrs();
+    OP_TILING_CHECK(attrs == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
+                    return ge::GRAPH_FAILED);
+    auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
+
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Desc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleShape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, dtypeAttr);
+    // StreamK tiling data capacity is checked in PostTiling after IsCapable succeeds.
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
+    return ge::GRAPH_SUCCESS;
+}
+
 bool QBMMV3StreamKTiling::CheckDtype() const
 {
     return QuantBatchMatMulV3TilingUtil::CheckDtype(context_, inputParams_, compileInfo_);

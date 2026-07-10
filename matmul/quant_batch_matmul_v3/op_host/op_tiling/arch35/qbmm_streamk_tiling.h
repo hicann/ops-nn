@@ -36,6 +36,7 @@ public:
 
 protected:
     bool IsCapable() override;
+    ge::graphStatus CheckContext() override;
     bool CheckDtype() const override;
     bool CheckShape(const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
                     const gert::StorageShape* pertokenShape,
