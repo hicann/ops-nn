@@ -438,6 +438,7 @@ ge::graphStatus PrepareTilingParams(const gert::TilingContext* context,
 {
     // get coreNum and ubSize
     auto compileInfo = reinterpret_cast<const DynamicQuantUpdateScatterCompileInfo*>(context->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     computeParams.ubSize = compileInfo->ubSize;
     computeParams.actualCoreNum = compileInfo->coreNum;
 
