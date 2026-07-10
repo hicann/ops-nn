@@ -5,15 +5,15 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    ×     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品</term>                              |    √     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
-- 算子功能：BiasAdd + LeakyReLU + Scale 三合一反向梯度算子，来自 MMCV 框架的 FusedBiasLeakyReLU 反向。给定上游梯度 y_grad 和前向特征值 features，根据 features 的符号生成梯度掩码，与 y_grad 逐元素相乘后再乘以 scale 缩放因子，输出输入特征的梯度 x_grad。
+- 算子功能：BiasAdd + LeakyReLU + Scale三合一反向梯度算子，来自MMCV框架的FusedBiasLeakyReLU反向。给定上游梯度y_grad和前向特征值features，根据features的符号生成梯度掩码，与y_grad逐元素相乘后再乘以scale缩放因子，输出输入特征的梯度x_grad。
 
 - 计算公式：
 
@@ -42,35 +42,35 @@
   <tr>
     <td>y_grad</td>
     <td>输入</td>
-    <td>上游回传的梯度张量，数据类型需与 features 一致。</td>
+    <td>上游回传的梯度张量，数据类型需与features一致。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>features</td>
     <td>输入</td>
-    <td>前向特征值张量，用于符号判断（features > 0 作为梯度掩码），shape 需与 y_grad 广播兼容。</td>
+    <td>前向特征值张量，用于符号判断（features > 0作为梯度掩码），shape需与y_grad广播兼容。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>negative_slope</td>
     <td>属性</td>
-    <td>LeakyReLU 负半轴斜率系数，默认值 0.2。</td>
+    <td>LeakyReLU负半轴斜率系数，默认值0.2。</td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>scale</td>
     <td>属性</td>
-    <td>方差保持缩放因子，默认值 sqrt(2) ≈ 1.414213562373。</td>
+    <td>方差保持缩放因子，默认值sqrt(2) ≈ 1.414213562373。</td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>x_grad</td>
     <td>输出</td>
-    <td>输入特征的梯度，shape 为 y_grad 和 features 广播后的结果。</td>
+    <td>输入特征的梯度，shape为y_grad和features广播后的结果。</td>
     <td>同y_grad</td>
     <td>ND</td>
   </tr>
@@ -78,11 +78,9 @@
 
 ## 约束说明
 
-- y_grad 和 features 的数据类型必须相同。
-- y_grad 和 features 的 shape 必须满足广播规则，广播后的 rank 不超过 8。
-- 支持空 Tensor（元素数为 0 时返回空输出）。
-- <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT16、FLOAT。
-- <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT。
+- y_grad和features的数据类型必须相同。
+- y_grad和features的shape必须满足广播规则，广播后的rank不超过8。
+- 支持空Tensor（元素数为0时返回空输出）。
 
 ## 调用说明
 
