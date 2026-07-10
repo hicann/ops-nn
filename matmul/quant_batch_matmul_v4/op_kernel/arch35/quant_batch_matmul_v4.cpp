@@ -128,7 +128,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
 {
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #if CMCT_PRETILE_INT8_INT8_BF16
-    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3TilingDataParams);
+    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3BasicAPITilingData);
     if constexpr (TRANS == QBMMV4_NOT_TRANS) {
         QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
                                  Cmct::Gemm::layout::RowMajorAlign);
