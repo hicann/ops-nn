@@ -32,7 +32,9 @@ void PlatformUtil::GetLocalMemSize(fe::PlatFormInfos& platform_info, const strin
         errno = 0;
         char* end_ptr = nullptr;
         const unsigned long long parsed = std::strtoull(temp_str.c_str(), &end_ptr, 10);
-        if (temp_str.empty() || end_ptr == temp_str.c_str() || *end_ptr != '\0' || errno == ERANGE) {
+        const size_t first_non_space = temp_str.find_first_not_of(" \t\n\r\f\v");
+        const bool is_negative = first_non_space != std::string::npos && temp_str[first_non_space] == '-';
+        if (temp_str.empty() || is_negative || end_ptr == temp_str.c_str() || *end_ptr != '\0' || errno == ERANGE) {
             OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s", mem_type.c_str(), temp_str.c_str());
             size = 0;
         } else {

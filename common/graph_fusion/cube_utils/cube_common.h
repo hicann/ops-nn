@@ -371,9 +371,8 @@ using PostCubeFunctionParamPtr = std::shared_ptr<PostCubeFunctionParam>;
 class PostCubeComm {
 public:
     PostCubeComm() = default;
-    ;
     ~PostCubeComm() = default;
-    ;
+
     static bool ReadPlatFormConfig(
         const ge::CustomPassContext& context, const bool& skip_trans, std::vector<std::string>& unit_list,
         std::map<std::string, std::vector<std::string>>& depends_list,
