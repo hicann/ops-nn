@@ -669,12 +669,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/softshrink_grad/README.md">softshrink_grad</a></td>
-    <td>✗</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>完成SoftShrink激活函数的反向梯度计算。给定上游梯度和前向输入，按元素判断绝对值是否超过阈值lambd，超过则传递梯度，否则置零。</td>
   </tr>
   <tr>
     <td>activation</td>
