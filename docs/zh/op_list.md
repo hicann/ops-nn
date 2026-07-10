@@ -2238,6 +2238,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/sigmoid_cross_entropy_with_logits_grad/README.md">sigmoid_cross_entropy_with_logits_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>Sigmoid + 二元交叉熵融合损失的反向梯度计算。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/cross_v2/README.md">cross_v2</a></td>
     <td>✓</td>
     <td>✓</td>
