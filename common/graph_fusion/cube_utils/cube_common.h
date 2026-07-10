@@ -10,6 +10,7 @@
 
 #ifndef COMMON_GRAPH_FUSION_CUBE_UTILS_CUBE_COMMON_H_
 #define COMMON_GRAPH_FUSION_CUBE_UTILS_CUBE_COMMON_H_
+#include <exception>
 #include <map>
 #include <queue>
 #include <stack>
@@ -169,21 +170,21 @@ extern const ge::AscendString kAscendFusionOpListAsc;
 extern const ge::AscendString kAscendUnitListAsc;
 extern const ge::AscendString kAscendEltwiseModeAsc;
 
-#define GET_DEQUANT_SCALE_DEQ(dequant_scale_date) (((dequant_scale_date)&0x00000000ffffffff))
+#define GET_DEQUANT_SCALE_DEQ(dequant_scale_date) (((dequant_scale_date) & 0x00000000ffffffff))
 
 #ifndef REPORT_OPS_ERROR
 #define REPORT_OPS_ERROR(fmt, ...) OPS_LOG_E("PostCube", fmt, ##__VA_ARGS__)
 #endif
 
 #ifndef OPS_MAKE_SHARED
-#define OPS_MAKE_SHARED(exec_expr0, exec_expr1)          \
-    do {                                                 \
-        try {                                            \
-            exec_expr0;                                  \
-        } catch (...) {                                  \
-            OPS_LOG_E("PostCube", "Make shared failed"); \
-            exec_expr1;                                  \
-        }                                                \
+#define OPS_MAKE_SHARED(exec_expr0, exec_expr1)                        \
+    do {                                                               \
+        try {                                                          \
+            exec_expr0;                                                \
+        } catch (const std::exception& e) {                            \
+            OPS_LOG_E("PostCube", "Make shared failed: %s", e.what()); \
+            exec_expr1;                                                \
+        }                                                              \
     } while (0)
 #endif
 

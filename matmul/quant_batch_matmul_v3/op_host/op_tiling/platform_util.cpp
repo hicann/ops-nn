@@ -15,6 +15,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cerrno>
+#include <cstdlib>
 #include "platform/platform_info.h"
 #include "log/log.h"
 #include "platform_util.h"
@@ -27,10 +29,14 @@ void PlatformUtil::GetLocalMemSize(fe::PlatFormInfos& platform_info, const strin
     size = 0;
     if (platform_info.GetPlatformRes(lable, mem_type, temp_str)) {
         OP_LOGD("NO_OP_NAME", "PLATFORM INFO %s: %s", mem_type.c_str(), temp_str.c_str());
-        try {
-            size = atol(temp_str.c_str());
-        } catch (const std::exception& e) {
-            OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s", mem_type.c_str(), e.what());
+        errno = 0;
+        char* end_ptr = nullptr;
+        const unsigned long long parsed = std::strtoull(temp_str.c_str(), &end_ptr, 10);
+        if (temp_str.empty() || end_ptr == temp_str.c_str() || *end_ptr != '\0' || errno == ERANGE) {
+            OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s", mem_type.c_str(), temp_str.c_str());
+            size = 0;
+        } else {
+            size = static_cast<uint64_t>(parsed);
         }
     } else {
         OP_LOGW("NO_OP_NAME", "NO PLATFORM INFO for %s", mem_type.c_str());

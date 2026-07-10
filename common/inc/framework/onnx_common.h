@@ -16,9 +16,11 @@
 #ifndef MATH_COMMON_ONNX_COMMON_H
 #define MATH_COMMON_ONNX_COMMON_H
 
+#include <map>
+#include <cerrno>
+#include <cstdlib>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "stub_ops.h"
 #include "register/register.h"
@@ -29,6 +31,21 @@
 #include "onnx/proto/ge_onnx.pb.h"
 
 namespace domi {
+inline bool StrToFloat(const std::string& str, float& value)
+{
+    if (str.empty()) {
+        return false;
+    }
+    errno = 0;
+    char* end_ptr = nullptr;
+    const float parsed = std::strtof(str.c_str(), &end_ptr);
+    if (end_ptr == str.c_str() || *end_ptr != '\0' || errno == ERANGE) {
+        return false;
+    }
+    value = parsed;
+    return true;
+}
+
 template <typename T>
 inline std::string GetOpName(const T& op)
 {

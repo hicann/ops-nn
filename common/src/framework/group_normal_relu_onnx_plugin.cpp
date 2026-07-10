@@ -15,6 +15,20 @@
 using namespace ge;
 using json = nlohmann::json;
 namespace domi {
+static Status ParseGroupNormReluAttr(json& attr, int& num_groups, float& eps)
+{
+    if (attr["name"] == "eps") {
+        std::string eps_str = attr["f"];
+        if (!StrToFloat(eps_str, eps)) {
+            OP_LOGE("group_normal_relu", "invalid eps value: %s", eps_str.c_str());
+            return FAILED;
+        }
+    } else if (attr["name"] == "num_groups") {
+        num_groups = attr["i"];
+    }
+    return SUCCESS;
+}
+
 static Status ParseOnnxParamsGroupNormRelu(const ge::Operator& op_src, ge::Operator& op_dest)
 {
     AscendString attrs_string;
@@ -23,13 +37,10 @@ static Status ParseOnnxParamsGroupNormRelu(const ge::Operator& op_src, ge::Opera
     try {
         if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
             json attrs = json::parse(attrs_string.GetString());
-            
+
             for (json& attr : attrs["attribute"]) {
-                if (attr["name"] == "eps") {
-                    std::string eps_str = attr["f"];
-                    eps = atof(eps_str.c_str());
-                } else if (attr["name"] == "num_groups") {
-                    num_groups = attr["i"];
+                if (ParseGroupNormReluAttr(attr, num_groups, eps) != SUCCESS) {
+                    return FAILED;
                 }
             }
         }
