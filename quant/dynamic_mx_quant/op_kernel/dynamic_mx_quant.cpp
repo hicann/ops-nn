@@ -139,8 +139,6 @@ template <uint64_t optiMode, uint64_t scaleAlg, uint64_t roundMode, uint64_t isO
 __global__ __aicore__ void dynamic_mx_quant(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(DynamicMxQuant4OptimizeTilingData);
-    REGISTER_TILING_FOR_TILINGKEY("NOT TAIL AXIS TILING DATA", DynamicMxQuantTilingData);
-    REGISTER_TILING_FOR_TILINGKEY("TAIL AXIS WITH BLOCKSIZE 32 TILING DATA", DynamicMxQuantTailAxisTilingData);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
 #if (__NPU_ARCH__ == 3510)
