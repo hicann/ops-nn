@@ -31,6 +31,9 @@ bool MatMulV3ToVectorTiling::IsCapable()
     if (!args_.isForceGrpAccForFp32) {
         return false;
     }
+    if (MatMulV3TilingHelper::IsSelfNonContiguous(context_)) {
+        return false;
+    }
     // !ATrans && BTrans
     if (args_.isATrans || !args_.isBTrans) {
         return false;
