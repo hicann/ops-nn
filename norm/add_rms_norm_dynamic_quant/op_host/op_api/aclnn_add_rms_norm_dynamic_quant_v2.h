@@ -61,10 +61,10 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] scale1Out:
  * 公式中的输出`scale1`，数据类型支持FLOAT，shape需要与x1除最后一维一致。
- * 支持非连续的Tensor，数据格式支持ND。
+ * 不支持非连续的Tensor，数据格式支持ND。
  * @param [in] scale2Out:
  * 公式中的输出`scale2`，数据类型支持FLOAT，shape需要与x1除最后一维一致。
- * 支持非连续的Tensor，数据格式支持ND。
+ * 不支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
