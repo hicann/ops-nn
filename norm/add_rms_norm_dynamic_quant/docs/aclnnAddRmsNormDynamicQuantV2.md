@@ -248,7 +248,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>scale2Out（aclTensor*）</td>
@@ -258,7 +258,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -286,7 +286,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
