@@ -126,7 +126,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(
 {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 #if CMCT_PRETILE_INT8_INT8_BF16
-    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3TilingDataParams);
+    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3BasicAPITilingData);
     if constexpr (TRANS == QBMMV4_NOT_TRANS) {
         QBMM_QUANT_GB_IMPL_CLASS(
             Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
