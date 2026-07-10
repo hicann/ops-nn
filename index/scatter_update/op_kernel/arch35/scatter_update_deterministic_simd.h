@@ -46,6 +46,7 @@ private:
     uint64_t updatesBlockLoop_{0};
     uint64_t updatesTailLoopSize_{0};
     uint64_t updateBlockColNum_{0};
+    uint64_t updateOneColAlign_{0};
 };
 
 template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
@@ -60,10 +61,12 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
         updatesBlockLoop_ = this->tilingData_.updatesNormBlockLoop;
         updatesTailLoopSize_ = this->tilingData_.updatesNormBlockTailLoopSize;
         updateBlockColNum_ = this->tilingData_.normBlockColNum;
+        updateOneColAlign_ = this->tilingData_.updateOneColAlign;
         if (this->blockIdx_ == this->tilingData_.usedCoreNum - 1) {
             updatesBlockLoop_ = this->tilingData_.updatesTailBlockLoop;
             updatesTailLoopSize_ = this->tilingData_.updatesTailBlockTailLoopSize;
             updateBlockColNum_ = this->tilingData_.tailBlockColNum;
+            updateOneColAlign_ = ops::CeilAlign(updateBlockColNum_, UB_AGLIN_VALUE / sizeof(T));
         }
         this->pipe_.InitBuffer(updatesQueue_, 1, this->tilingData_.updateColUbFactor * sizeof(T));
     } else {
@@ -148,7 +151,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
                                                this->tilingData_.varShape[1] +
                                            this->blockIdx_ * this->tilingData_.normBlockColNum;
 
-                CopyInManyUpdates(updatesGmOffset, curUpProNum, this->tilingData_.updateOneColAlign);
+                CopyInManyUpdates(updatesGmOffset, curUpProNum, updateBlockColNum_);
                 LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
                 for (uint32_t j = 0; j < curUpProNum; j++) {
                     U indicesValue = indicesLocal.GetValue(i * this->tilingData_.updateUbProNum + j);
@@ -157,8 +160,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
                     }
                     uint64_t varGmOffset = indicesValue * this->tilingData_.varStride +
                                            this->blockIdx_ * this->tilingData_.normBlockColNum;
-                    CopyOutUpdates(varGmOffset, j * this->tilingData_.updateOneColAlign, updateBlockColNum_,
-                                   updatesLocal);
+                    CopyOutUpdates(varGmOffset, j * updateOneColAlign_, updateBlockColNum_, updatesLocal);
                 }
                 updatesQueue_.FreeTensor(updatesLocal);
             }
