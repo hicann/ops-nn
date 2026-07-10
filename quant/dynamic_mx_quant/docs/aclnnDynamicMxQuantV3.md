@@ -190,7 +190,7 @@ aclnnStatus aclnnDynamicMxQuantV3(
       <td>blocksize（int64_t）</td>
       <td>输入</td>
       <td>表示指定每次量化的元素个数，对应公式中的blocksize。</td>
-      <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li><li>当x的类型为FLOAT时，blocksize必须为32。</li></ul></td>
+      <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li><li>当scaleAlg为2时，blocksize必须为32。</li><li>当x的类型为FLOAT时，blocksize必须为32。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>-</td>
