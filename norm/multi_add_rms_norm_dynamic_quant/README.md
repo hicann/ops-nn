@@ -89,35 +89,35 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量列表，为长度为1~5的listOfTensor，对应公式中的`x1`。</td>
+      <td>表示标准化过程中的源数据张量列表，为长度为1~5的listOfTensor，对应公式中的`x1`。不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。</td>
+      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与`x1`最后一维一致。</td>
+      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与`x1`最后一维一致。不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale1</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。</td>
+      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale2</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。</td>
+      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

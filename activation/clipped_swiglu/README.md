@@ -98,14 +98,14 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>公式中的输入x。维度必须大于0且必须在入参dim对应维度上是偶数。</td>
+      <td>公式中的输入x。维度必须大于0且必须在入参dim对应维度上是偶数。输入不支持包含±inf或nan。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>公式中的输入group_index。维度必须是1维，且元素个数必须小于等于1024。</td>
+      <td>公式中的输入group_index。维度必须是1维，且元素个数必须小于等于1024。输入不支持包含±inf或nan。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>

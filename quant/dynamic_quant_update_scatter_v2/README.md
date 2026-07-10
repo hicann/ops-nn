@@ -35,35 +35,35 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>量化输入，对应过程描述中的"x"</td>
+      <td>量化输入，对应过程描述中的"x"。不支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>量化数据更新索引，对应过程描述中的"indices"</td>
+      <td>量化数据更新索引，对应过程描述中的"indices"。不支持空Tensor。</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输入/输出</td>
-      <td>需要更新的量化结果，对应过程描述中的"var"</td>
+      <td>需要更新的量化结果，对应过程描述中的"var"。不支持空Tensor。</td>
       <td>INT4</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var_scale</td>
       <td>输入/输出</td>
-      <td>需要更新的量化scale因子，对应过程描述中的"var_scale"</td>
+      <td>需要更新的量化scale因子，对应过程描述中的"var_scale"。不支持空Tensor。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var_offset</td>
       <td>输入/输出</td>
-      <td>需要更新的量化offset因子，对应过程描述中的"var_offset"</td>
+      <td>需要更新的量化offset因子，对应过程描述中的"var_offset"。不支持空Tensor。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>

@@ -81,49 +81,49 @@
        <tr>
       <td>x</td>
       <td>输入</td>
-      <td>输入待处理的数据，公式中的x。</td>
+      <td>输入待处理的数据，公式中的x。输入不支持包含±inf或nan。</td>
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
     </tr>
      <tr>
       <td>weight_scale</td>
       <td>输入</td>
-      <td>-</td>
+      <td>输入不支持包含±inf或nan。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
       <tr>
       <td>activation_scale</td>
       <td>输入</td>
-      <td>激活函数的反量化scale。</td>
+      <td>激活函数的反量化scale。输入不支持包含±inf或nan。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
       <tr>
       <td>bias</td>
       <td>输入</td>
-      <td>Matmul的bias，公式中的bias。</td>
+      <td>Matmul的bias，公式中的bias。输入不支持包含±inf或nan。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>quant_scale</td>
       <td>输入</td>
-      <td>量化的scale，公式中的quant_scale。</td>
+      <td>量化的scale，公式中的quant_scale。输入不支持包含±inf或nan。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
      <tr>
       <td>quant_offset</td>
       <td>输入</td>
-      <td>量化的offset。</td>
+      <td>量化的offset。输入不支持包含±inf或nan。</td>
       <td>FLOAT</td>
       <td>ND</td>
      </tr>
       <tr>
       <td>group_index</td>
       <td>输入</td>
-      <td>MoE分组需要的group_index。</td>
+      <td>MoE分组需要的group_index。输入不支持包含±inf或nan。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>

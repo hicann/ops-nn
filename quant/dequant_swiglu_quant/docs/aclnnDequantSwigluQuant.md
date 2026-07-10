@@ -91,7 +91,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
-      <td>shape为(N...,H)，最后一维需要是2的倍数，且x的维度必须大于1维。</td>
+      <td>shape为(N...,H)，最后一维需要是2的倍数，且x的维度必须大于1维。不支持空Tensor。输入不支持包含±inf或nan。</td>
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>weightScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>weight的反量化scale，公式中的weightScaleOptional。</td>
-      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape表示为[H]，且取值H和x最后一维保持一致。</li><li><term>Ascend 950PR/Ascend 950DT</term>：shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape表示为[H]，且取值H和x最后一维保持一致。</li><li><term>Ascend 950PR/Ascend 950DT</term>：shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor。输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>activationScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>激活函数的反量化scale，公式中的activationScaleOptional。</td>
-      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape为[N..., 1]，最后一维为1，其余和x保持一致。</li><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N,...]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape为[N..., 1]，最后一维为1，其余和x保持一致。</li><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N,...]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor。输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>Matmul的bias，公式中的biasOptional。</td>
-      <td><ul><li>shape支持1维或2维，shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>shape支持1维或2维，shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor。输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>quantScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
-      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。</li><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持FLOAT，仅支持quantModeOptional为dynamic的场景。当quantModeOptional为dynamic时，shape表示为[H/2]或[groupNum, H/2]。当groupIndexOptional为空指针时，shape为[H/2]；当groupIndexOptional不为空指针时，shape为[groupNum, H/2]。</li></ul></td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。</li><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持FLOAT，仅支持quantModeOptional为dynamic的场景。当quantModeOptional为dynamic时，shape表示为[H/2]或[groupNum, H/2]。当groupIndexOptional为空指针时，shape为[H/2]；当groupIndexOptional不为空指针时，shape为[groupNum, H/2]。</li><li>不支持空Tensor。输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>1或2</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>quantOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的offset，公式中的quantOffsetOptional。</td>
-      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。</li><li><term>Ascend 950PR/Ascend 950DT</term>：暂时不支持此参数。</li></ul></td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。</li><li><term>Ascend 950PR/Ascend 950DT</term>：暂时不支持此参数。</li><li>不支持空Tensor。输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持INT64。shape为[groupNum]，groupNum大于等于1。可选参数，支持传空指针。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持INT64。shape为[groupNum]，groupNum大于等于1。可选参数，支持传空指针。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor。输入不支持包含±inf或nan。</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>-</td>
-      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N...,H/2]，yOut的尾轴需要小于5120。</li></ul></td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N...,H/2]，yOut的尾轴需要小于5120。</li><li>不支持空Tensor。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>
       <td>-</td>
@@ -191,7 +191,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>-</td>
-      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape不超过7维，不小于1维，shape为[N,...]，shape与yOut去除尾轴后的shape一致。</li></ul></td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape不超过7维，不小于1维，shape为[N,...]，shape与yOut去除尾轴后的shape一致。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
