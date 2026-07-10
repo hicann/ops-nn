@@ -3769,6 +3769,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/global_lp_pool/README.md">global_lp_pool</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算输入张量空间维度的 Lp 范数：y = (sum(|x|^p))^(1/p)。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool3_d/README.md">max_pool3d</a></td>
     <td>✓</td>
     <td>✓</td>
