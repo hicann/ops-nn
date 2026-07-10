@@ -17,11 +17,11 @@
 #include "foreach_round_off_number_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
-#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -30,6 +30,9 @@ extern "C" {
 #endif
 
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32, DataType::DT_INT16};
+
+static const std::initializer_list<DataType> ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
 
 static const std::initializer_list<DataType> FOREACH_ROUND_SCALAR_SUPPORT_LIST = {DataType::DT_INT8,
@@ -48,7 +51,9 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scal
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+    } else if (curArch == NpuArch::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",

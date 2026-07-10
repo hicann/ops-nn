@@ -1096,10 +1096,10 @@ private:
             // foreach_round_off_number
             uint32_t canUseUbSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize()) / 2;
             uint32_t predictSGUbSize = uint32_t(BYTE_REPEAT / (BYTE_REPEAT + 2.0 * dataTypeSize) * canUseUbSize);
-            if (dataType == ge::DT_BF16 || dataType == ge::DT_FLOAT16) {
+            if (dataType == ge::DT_BF16 || dataType == ge::DT_FLOAT16 || dataType == ge::DT_INT16) {
                 predictSGUbSize = predictSGUbSize / UB_DIVIDER_FOR_TEMP_CASTING;
             }
-            inputsTensorUbSize = (dataType == ge::DT_BF16 || dataType == ge::DT_FLOAT16) ?
+            inputsTensorUbSize = (dataType == ge::DT_BF16 || dataType == ge::DT_FLOAT16 || dataType == ge::DT_INT16) ?
                                      predictSGUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
                                      predictSGUbSize / BYTE_BLOCK * BYTE_BLOCK;
         } else if (opCode == FOREACH_SUB_SCALAR_OP_CODE) {

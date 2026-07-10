@@ -11,17 +11,13 @@
 
 import torch
 from atk.configs.dataset_config import InputDataset
-from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-from atk.tasks.dataset.base_dataset import OpsDataset
-import numpy as np
 
 
 @register("function_aclnnForeachRoundOffNumberV2")
 class aclnnForeachRoundOffNumberV2Executor(BaseApi):
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         x = input_data.kwargs["x"]
         roundMode = input_data.kwargs["roundMode"]
@@ -41,8 +37,14 @@ class aclnnForeachRoundOffNumberV2Executor(BaseApi):
         elif roundMode == ROUND_MODE_TRUNC:
             output = torch._foreach_trunc(x)
         elif roundMode == ROUND_MODE_FRAC:
-            output = torch._foreach_frac(x)
+            if x[0].dtype in [
+                torch.int16,
+            ]:
+                output = [torch.zeros_like(t) for t in x]
+            else:
+                output = torch._foreach_frac(x)
         return output
+
 
 @register("aclnnfunction_aclnnForeachRoundOffNumberV2")
 class aclnnfunctionExecutor(AclnnBaseApi):

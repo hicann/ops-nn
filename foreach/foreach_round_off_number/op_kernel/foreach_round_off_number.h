@@ -136,6 +136,24 @@ public:
     }
 };
 
+template <>
+class InnerComputer<int16_t> {
+public:
+    __aicore__ inline void Compute(LocalTensor<int16_t>& dataLocal, LocalTensor<int16_t>& outLocal,
+                                   LocalTensor<float>& float32Tensor, int8_t roundModeValue, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
+    {
+        if (roundModeValue == CAST_FRAC) {
+            // Integers have no fractional part, output entirely 0.
+            Duplicate(outLocal, static_cast<int16_t>(0), dataCount);
+        } else {
+            // For standard rounding operations (CEIL, FLOOR, ROUND, TRUNC, RINT, NONE) on integers,
+            // the result is the input itself. Completely avoids the V unit compute and performs a UB-UB copy.
+            Adds(outLocal, dataLocal, static_cast<int16_t>(0), dataCount);
+        }
+    }
+};
+
 template <typename T>
 class ForeachRoundOffNumberND {
 public:
@@ -211,6 +229,11 @@ __aicore__ inline void ForeachRoundOffNumberND<T>::Init(GM_ADDR x, GM_ADDR round
         LocalTensor<float> float32Tensor = float32Queue.AllocTensor<float>();
         float32Queue.EnQue(float32Tensor);
         maxCastDataCount = inputsTensorUbSize / sizeof(float);
+    } else if (std::is_same<T, int16_t>::value) {
+        // No COPY_SPACE_MULTIPLE overhead logic, fully utilizes allocated UB
+        pipe.InitBuffer(dataQueue, BUFFER_NUM, inputsTensorUbSize);
+        pipe.InitBuffer(outQueue, BUFFER_NUM, inputsTensorUbSize);
+        maxDataCount = inputsTensorUbSize / sizeof(T);
     }
 #endif
     if (std::is_same<T, half>::value) {

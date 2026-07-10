@@ -145,3 +145,83 @@ TEST_F(foreach_round_off_number_test, test_case_bfloat16_3)
 
     system("cd ./round_off_number_data/ && python3 compare_data.py 'float16'");
 }
+
+TEST_F(foreach_round_off_number_test, test_case_int16_4)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_round_off_number/tests/ut/op_kernel/round_off_number_data ./");
+    system("chmod -R 755 ./round_off_number_data/");
+
+    system("cd ./round_off_number_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'int16'");
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 5, 29);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateForeachRoundOffNumberTensorList<int16_t>(shapeInfos, "int16");
+    uint8_t* x2 = CreateForeachRoundOffNumberTensorList<int16_t>(shapeInfos, "int16");
+
+    ICPU_SET_TILING_KEY(5);
+
+    uint8_t* roundMode = (uint8_t*)AscendC::GmAlloc(sizeof(uint8_t));
+    *((uint8_t*)roundMode) = 3;
+
+    ICPU_RUN_KF(foreach_round_off_number, blockDim, x1, roundMode, x2, workspace, tiling);
+
+    FreeForeachRoundOffNumberTensorList<int16_t>(x2, shapeInfos, "int16");
+    AscendC::GmFree((void*)x1);
+    AscendC::GmFree((void*)roundMode);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./round_off_number_data/ && python3 compare_data.py 'int16'");
+}
+
+TEST_F(foreach_round_off_number_test, test_case_int16_cast_frac_5)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_round_off_number/tests/ut/op_kernel/round_off_number_data ./");
+    system("chmod -R 755 ./round_off_number_data/");
+
+    system("cd ./round_off_number_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 7 'int16'");
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 5, 29);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateForeachRoundOffNumberTensorList<int16_t>(shapeInfos, "int16");
+    uint8_t* x2 = CreateForeachRoundOffNumberTensorList<int16_t>(shapeInfos, "int16");
+
+    ICPU_SET_TILING_KEY(5);
+
+    uint8_t* roundMode = (uint8_t*)AscendC::GmAlloc(sizeof(uint8_t));
+    *((uint8_t*)roundMode) = 7;
+
+    ICPU_RUN_KF(foreach_round_off_number, blockDim, x1, roundMode, x2, workspace, tiling);
+
+    FreeForeachRoundOffNumberTensorList<int16_t>(x2, shapeInfos, "int16");
+    AscendC::GmFree((void*)x1);
+    AscendC::GmFree((void*)roundMode);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./round_off_number_data/ && python3 compare_data.py 'int16'");
+}

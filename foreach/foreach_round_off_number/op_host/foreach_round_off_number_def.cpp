@@ -22,9 +22,9 @@ class ForeachRoundOffNumber : public OpDef {
 public:
     explicit ForeachRoundOffNumber(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT16};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
-        std::vector<ge::DataType> scalarDtypeList{ge::DT_INT8, ge::DT_INT8, ge::DT_INT8};
+        std::vector<ge::DataType> scalarDtypeList{tensor_dtype_list.size(), ge::DT_INT8};
         this->Input("x")
             .ParamType(DYNAMIC)
             .DataType(tensor_dtype_list)
@@ -42,7 +42,13 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910b");
+
         OpAICoreConfig aicoreConfig950;
+        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::Format> format_list_950(tensor_dtype_list_950.size(), ge::FORMAT_ND);
+        std::vector<ge::DataType> scalarDtypeList950{tensor_dtype_list_950.size(), ge::DT_INT8};
         aicoreConfig950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
@@ -50,9 +56,24 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "foreach_round_off_number");
+        aicoreConfig950.Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
+        aicoreConfig950.Input("roundMode")
+            .ParamType(REQUIRED)
+            .DataType(scalarDtypeList950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950);
+        aicoreConfig950.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
         this->AICore().AddConfig("ascend950", aicoreConfig950);
-        this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend910b");
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

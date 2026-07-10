@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ constexpr uint64_t TILING_KEY_HALF = 1;
 constexpr uint64_t TILING_KEY_FLOAT = 2;
 constexpr uint64_t TILING_KEY_INT = 3;
 constexpr uint64_t TILING_KEY_BFLOAT16 = 4;
+constexpr uint64_t TILING_KEY_INT16 = 5;
 constexpr uint64_t TILING_KEY_INT8 = 7;
 constexpr uint64_t TILING_KEY_INT64 = 10;
 constexpr uint64_t TILING_KEY_DOUBLE = 11;
@@ -189,6 +190,7 @@ inline uint64_t ForeachCommonTiling::GetTilingN()
         case 3:
             return TILING_INT_N_SCALAR;
         case 4:
+        case 5:
             return TILING_BF16_N_SCALAR;
         default:
             return TILING_HALF_N_SCALAR;
@@ -239,6 +241,7 @@ inline uint8_t ForeachCommonTiling::GetDataTypeSize()
         case 3: // int
             return 4;
         case 4: // bfloat16
+        case 5: // int16
             return 2;
         case 7:  // int8
         case 12: // bool
@@ -262,6 +265,8 @@ inline uint64_t ForeachCommonTiling::GetTilingKeyVal()
             return TILING_KEY_INT;
         case 4:
             return TILING_KEY_BFLOAT16;
+        case 5:
+            return TILING_KEY_INT16;
         case 7:
             return TILING_KEY_INT8;
         case 10:
@@ -757,10 +762,10 @@ inline void ForeachCommonTiling::DivideUbMemory9(uint64_t ubSizePlatForm)
         // foreach_round_off_number
         uint32_t canUseUbSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData)) / 2;
         uint32_t predictSGUbSize = uint32_t(BYTE_REPEAT / (BYTE_REPEAT + 2.0 * dataTypeSize) * canUseUbSize);
-        if (dataType == 4 || dataType == 2) {
+        if (dataType == 4 || dataType == 2 || dataType == 5) {
             predictSGUbSize = predictSGUbSize / UB_DIVIDER_FOR_TEMP_CASTING;
         }
-        inputsTensorUbSize = (dataType == 4 || dataType == 2) ?
+        inputsTensorUbSize = (dataType == 4 || dataType == 2 || dataType == 5) ?
                                  predictSGUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
                                  predictSGUbSize / BYTE_BLOCK * BYTE_BLOCK;
     } else if (opCode == FOREACH_SUB_SCALAR_OP_CODE) {

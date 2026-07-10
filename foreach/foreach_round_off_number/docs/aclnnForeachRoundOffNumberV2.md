@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>输入</td>
       <td>表示进行舍入运算的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>输出</td>
       <td>表示进行舍入运算的输出张量列表。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

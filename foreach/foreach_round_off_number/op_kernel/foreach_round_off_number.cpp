@@ -38,6 +38,10 @@ extern "C" __global__ __aicore__ void foreach_round_off_number(GM_ADDR x, GM_ADD
         ForeachRoundOffNumberND<bfloat16_t> op;
         op.Init(x, roundMode, y, userWS, &tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(5)) {
+        ForeachRoundOffNumberND<int16_t> op;
+        op.Init(x, roundMode, y, userWS, &tilingData);
+        op.Process();
     }
 #endif
 }
