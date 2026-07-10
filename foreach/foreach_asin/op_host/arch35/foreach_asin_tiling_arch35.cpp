@@ -36,16 +36,38 @@ struct ForeachAsinCompileInfo {
     int64_t ubSize;
 };
 
+static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
+{
+    auto compileInfo = reinterpret_cast<const ForeachAsinCompileInfo*>(context->GetCompileInfo());
+    if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
+        coreNum = compileInfo->coreNum;
+        ubSize = compileInfo->ubSize;
+        return ge::GRAPH_SUCCESS;
+    }
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    if (platformInfoPtr != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+        coreNum = ascendcPlatform.GetCoreNumAiv();
+        uint64_t ub = 0;
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub);
+        ubSize = static_cast<int64_t>(ub);
+        if (coreNum > 0 && ubSize > 0) {
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+    return ge::GRAPH_FAILED;
+}
+
 /**
  * @brief Tiling 主函数：计算切分参数并设置 tiling data
  */
 static ge::graphStatus ForeachAsinTilingFunc(gert::TilingContext* context)
 {
     // 1. 获取平台信息
-    auto compileInfo = reinterpret_cast<const ForeachAsinCompileInfo*>(context->GetCompileInfo());
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    int64_t maxCoreNum = compileInfo->coreNum;
-    int64_t ubSize = compileInfo->ubSize;
+    int64_t maxCoreNum = 0;
+    int64_t ubSize = 0;
+    OP_CHECK_IF(GetPlatformInfoFallback(context, maxCoreNum, ubSize) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
     OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ub size less than DCache Size"), return ge::GRAPH_FAILED);
     int64_t ubSizeActual = ubSize - DCACHE_SIZE;
 
