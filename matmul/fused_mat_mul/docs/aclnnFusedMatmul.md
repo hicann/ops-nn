@@ -152,7 +152,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>y</td>
         <td>输出</td>
         <td>表示计算的输出矩阵，对应公式中的y。</td>
-        <td><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
+        <td><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）；当fusedOpType为"16cast32"时，y的数据类型固定为FLOAT32。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>2-6（fusedOpType为""、"relu"时）；2-3（fusedOpType为"add"、"mul"时）；2（其他取值）</td>

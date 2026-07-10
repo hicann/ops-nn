@@ -20,6 +20,12 @@
   y = OP((x1 @ x2 + bias), x3)
   $$
 
+  16cast32运算:
+
+  $$
+  y = cast\_float32(x1 @ x2 + bias)
+  $$
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
@@ -62,7 +68,7 @@
         <td>bias</td>
         <td>输入</td>
         <td>公式中的输入bias。</td>
-        <td><ul><li>仅当fusedOpType为""、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></ul></td>
+        <td><ul><li>仅当fusedOpType为""、"16cast32"、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
@@ -78,7 +84,7 @@
         <td>fusedOpType</td>
         <td>输入</td>
         <td>公式中的输入OP。</td>
-        <td><ul><li>融合模式取值必须是""（表示不做融合）、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></ul></td>
+        <td><ul><li>融合模式取值必须是""（表示不做融合）、"16cast32"、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></ul></td>
         <td>STRING</td>
         <td>-</td>
       </tr>
@@ -86,7 +92,7 @@
         <td>y</td>
         <td>输出</td>
         <td>公式中的输出y。</td>
-        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）；当fusedOpType为"16cast32"时，y的数据类型固定为FLOAT32。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
@@ -94,7 +100,8 @@
 
 ## 约束说明
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 
 ## 调用说明
 
@@ -115,4 +122,4 @@
         <td><a href="examples/arch35/test_aclnn_fused_mat_mul.cpp">test_aclnn_fused_mat_mul</a></td>
         <td>通过<a href="docs/aclnnFusedMatmul.md">aclnnFusedMatmul</a>接口方式调用FusedMatmul算子</td>
       </tr>
-  </tbody></table> 
+  </tbody></table>
