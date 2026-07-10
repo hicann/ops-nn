@@ -8,6 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = ["activation", "norm"]
+__all__ = ["swiglu_group", "convert_swiglu_group"]
 
-from . import activation, norm
+from .swiglu_group import swiglu_group
+from .graph_convert_swiglu_group import convert_swiglu_group

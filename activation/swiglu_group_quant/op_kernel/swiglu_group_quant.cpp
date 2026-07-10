@@ -42,27 +42,27 @@ extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weig
     TPipe pipe;
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
     if (TILING_KEY_IS(BLOCK_QUANT_TILING_KEY)) {
-        GET_TILING_DATA(tilingData, tiling);
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluGroupQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(BLOCK_QUANT_YORIGIN_TILING_KEY)) {
-        GET_TILING_DATA(tilingData, tiling);
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluGroupQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(MX_QUANT_TILING_KEY)) {
-        GET_TILING_DATA(tilingData, tiling);
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluMxQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(MX_QUANT_YORIGIN_TILING_KEY)) {
-        GET_TILING_DATA(tilingData, tiling);
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluMxQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(MXFP4_QUANT_TILING_KEY)) {
-        GET_TILING_DATA(tilingData, tiling);
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluMxFp4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE> op;
         op.Init(x, weight, groupIndex, y, yScale, userWs, &tilingData, &pipe);
         op.Process();
