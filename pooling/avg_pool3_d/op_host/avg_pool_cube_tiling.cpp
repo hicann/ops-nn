@@ -137,6 +137,9 @@ bool CubeCompileInfo::AnalyzeCompileInfo(const char* op_name, const char* compil
                             OP_LOGE(op_name, "Parse compile value fail"), return false);
             }
         }
+    } catch (const std::exception& e) {
+        OP_LOGE(op_name, "get json exception: %s, please check compile info json.", e.what());
+        return false;
     } catch (...) {
         OP_LOGE(op_name, "get unknown exception, please check compile info json.");
         return false;
@@ -243,9 +246,10 @@ void CubeCompileInfo::GetLocalMemSize(fe::PlatFormInfos& platform_info, const st
     if (platform_info.GetPlatformRes(lable, mem_type, temp_str)) {
         OP_LOGD("NO_OP_NAME", "PLATFORM INFO %s: %s", mem_type.c_str(), temp_str.c_str());
         try {
-            size = static_cast<uint64_t>(atol(temp_str.c_str()));
+            size = std::stoull(temp_str);
         } catch (const std::exception& e) {
-            OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s", mem_type.c_str(), e.what());
+            OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s, %s", mem_type.c_str(), temp_str.c_str(),
+                                   e.what());
         }
     } else {
         OP_LOGW("NO_OP_NAME", "NO PLATFORM INFO for %s", mem_type.c_str());
@@ -279,7 +283,12 @@ void CubeCompileInfo::ParseRuntimePlatformInfo(const char* op_name, fe::PlatForm
     platform_info.GetPlatformRes("AICoreSpec", "cube_freq", cube_freq_str);
     platform_info.GetPlatformRes("version", "SoC_version", soc_version);
     GetLocalMemSize(platform_info, "AICoreSpec", "bt_size", bt_size);
-    cube_freq = std::atoi(cube_freq_str.c_str());
+    try {
+        cube_freq = std::stoi(cube_freq_str);
+    } catch (const std::exception& e) {
+        OP_LOGW("NO_OP_NAME", "Invalid cube_freq value: %s, set to default 0, %s", cube_freq_str.c_str(), e.what());
+        cube_freq = 0;
+    }
     OP_LOGD(op_name,
             "PLATFORM INFO CORE_NUM: %u, UB: %lu, L1: %lu, L2: %lu, L0_A: %lu, L0_B: %lu, L0_C: %lu, BT_SIZE: %lu",
             core_num, ub_size, l1_size, l2_size, l0a_size, l0b_size, l0c_size, bt_size);

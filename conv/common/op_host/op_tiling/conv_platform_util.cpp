@@ -31,9 +31,10 @@ void PlatformUtil::GetLocalMemSize(fe::PlatFormInfos& platform_info, const strin
     if (platform_info.GetPlatformRes(lable, mem_type, temp_str)) {
         OP_LOGD("NO_OP_NAME", "PLATFORM INFO %s: %s", mem_type.c_str(), temp_str.c_str());
         try {
-            size = atol(temp_str.c_str());
+            size = std::stoull(temp_str);
         } catch (const std::exception& e) {
-            OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s", mem_type.c_str(), e.what());
+            OP_LOGE_WITHOUT_REPORT("NO_OP_NAME", "illegal PLATFORM INFO %s: %s, %s", mem_type.c_str(), temp_str.c_str(),
+                                   e.what());
         }
     } else {
         OP_LOGW("NO_OP_NAME", "NO PLATFORM INFO for %s", mem_type.c_str());
@@ -80,7 +81,12 @@ void PlatformUtil::ParseRuntimePlatformInfo(Conv3DBackpropV2CompileInfo& compile
     platform_info.GetPlatformRes("AICoreSpec", "cube_freq", cube_freq_str);
     platform_info.GetPlatformRes("version", "SoC_version", compileInfo.soc_version);
     GetLocalMemSize(platform_info, "AICoreSpec", "bt_size", compileInfo.bt_size);
-    compileInfo.cube_freq = std::atoi(cube_freq_str.c_str());
+    try {
+        compileInfo.cube_freq = std::stoi(cube_freq_str);
+    } catch (const std::exception& e) {
+        OP_LOGW("NO_OP_NAME", "Invalid cube_freq value: %s, set to default 0, %s", cube_freq_str.c_str(), e.what());
+        compileInfo.cube_freq = 0;
+    }
     OP_LOGD(op_name,
             "PLATFORM INFO CORE_NUM: %u, UB: %lu, L1: %lu, L2: %lu, L0_A: %lu, L0_B: %lu, L0_C: %lu, BT_SIZE: %lu",
             compileInfo.core_num, compileInfo.ub_size, compileInfo.l1_size, compileInfo.l2_size, compileInfo.l0a_size,

@@ -187,6 +187,8 @@ ge::graphStatus AdaptiveMaxPool3DGradTilingBase::DoLibApiTiling() { return ge::G
 ge::graphStatus AdaptiveMaxPool3DGradTilingBase::GetPlatformInfo()
 {
     auto compileInfo = reinterpret_cast<const Tiling4AdaptiveMaxPool3DGradCompileInfo*>(context_->GetCompileInfo());
+    OP_CHECK_IF(compileInfo == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                return ge::GRAPH_FAILED);
     maxPoolGradParams.totalCoreNum = compileInfo->totalCoreNum;
     maxPoolGradParams.maxUbSize = compileInfo->maxUbSize;
     return ge::GRAPH_SUCCESS;
