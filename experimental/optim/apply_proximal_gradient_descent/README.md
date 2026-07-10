@@ -60,8 +60,6 @@ aclnnStatus aclnnApplyProximalGradientDescent(
 | `delta`  | 输入      | 梯度张量，shape 与 `var` 完全相同                          |
 | `varOut` | 输出      | 输出张量，shape/dtype/format 与 `var` 一致                 |
 
-详细字段（非连续张量/错误码等）参见 [aclnnApplyProximalGradientDescent.md](docs/aclnnApplyProximalGradientDescent.md)。
-
 ## 4. 数据类型与 shape 约束
 
 - **数据类型**：`var / alpha / l1 / l2 / delta / varOut` 必须一致，仅支持 `FLOAT`、`FLOAT16`。
@@ -111,10 +109,6 @@ bash run.sh
 
 示例会构造一个 `[2, 3]` 的 FP32 `var/delta`，以 `alpha=0.01, l1=0.001, l2=0.01` 调用一次 `aclnnApplyProximalGradientDescent`，并把 NPU 输出与 CPU Golden 打印对比。
 
-### 5.4 PyTorch ST
-
-参见 [tests/st/torch/README.md](tests/st/torch/) 下的 PyTorch 适配层与 L0+L1 精度用例。
-
 ## 6. 目录结构
 
 ```text
@@ -150,13 +144,3 @@ ops/apply_proximal_gradient_descent/
 ├── tools/                        # 辅助脚本
 └── issues/                       # 问题记录
 ```
-
-## 7. 相关文档
-
-- [需求文档](docs/REQUIREMENTS.md)
-- [详细设计](docs/DESIGN.md)
-- [测试设计](docs/TEST_DESIGN.md)
-- [测试用例](docs/TEST_CASES.md)
-- [aclnn 接口文档](docs/aclnnApplyProximalGradientDescent.md)
-- [最终精度验收报告](docs/precision-report.md)
-- [开发日志](docs/LOG.md)
