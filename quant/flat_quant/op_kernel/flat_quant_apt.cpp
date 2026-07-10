@@ -44,55 +44,11 @@ extern "C" __global__ __aicore__ void flat_quant(
                 x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, tilingData);
         }
     } else {
-        if (TILING_KEY_IS(1)) {
-            if ASCEND_IS_AIV {
-                FlatQuantVec<DTYPE_X, MM_BASE_MODE> op;
-                op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
-                op.Process();
-            }
-            if ASCEND_IS_AIC {
-                FlatQuantCube<DTYPE_X, MM_BASE_MODE> op;
-                op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
-                op.Process();
-            }
-        } else if (TILING_KEY_IS(2)) {
-            if ASCEND_IS_AIV {
-                FlatQuantVec<DTYPE_X, MM_DOUBLE_MODE> op;
-                op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
-                op.Process();
-            }
-            if ASCEND_IS_AIC {
-                FlatQuantCube<DTYPE_X, MM_DOUBLE_MODE> op;
-                op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
-                op.Process();
-            }
-        } else if (TILING_KEY_IS(3)) {
-            if ASCEND_IS_AIV {
-                FlatQuantVec<DTYPE_X, MM_SPLIT_MODE> op;
-                op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
-                op.Process();
-            }
-            if ASCEND_IS_AIC {
-                FlatQuantCube<DTYPE_X, MM_SPLIT_MODE> op;
-                op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
-                op.Process();
-            }
-        } else if (TILING_KEY_IS(4)) {
+        if (TILING_KEY_IS(4)) {
             FlatQuantHigh<DTYPE_X> op;
             REGIST_MATMUL_OBJ(&op.pipe, GetSysWorkSpacePtr(), op.matmulR, mmTilingR, op.matmulL, mmTilingL);
             op.Init(x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, &tilingData);
             op.Process();
-        } else if (TILING_KEY_IS(5)) {
-            if ASCEND_IS_AIV {
-                FlatQuantVecOne<DTYPE_X, MM_SPLIT_MODE> op;
-                op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
-                op.Process();
-            }
-            if ASCEND_IS_AIC {
-                FlatQuantCubeOne<DTYPE_X, MM_SPLIT_MODE> op;
-                op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
-                op.Process();
-            }
         }
     }
 }

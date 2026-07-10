@@ -153,16 +153,18 @@ public:
         }
     }
 
-    aifunc void ProcessHighK(int64_t k, int64_t batch){
+    aifunc void ProcessHighK(int64_t k, int64_t batch)
+    {
         int64_t offset1 = x1Offset + (k % K_PER_VEC) * shape.M * shape.N;
         int64_t offset2 = x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N;
         matmulR.SetSingleShape(batch * shape.M, shape.N, shape.N);
         matmulR.SetTensorA(xGM[k * shape.M * shape.N], false);
         matmulR.SetTensorB(p2GM, false);
         matmulR.IterateAll(x1GM[offset1], false);
+        PipeBarrier<PIPE_ALL>();
 
         matmulL.SetTensorA(p1GM, false);
-        for (int64_t i = 0;i < batch;i ++) {
+        for (int64_t i = 0; i < batch; i++) {
             matmulL.SetTensorB(x1GM[offset1], false);
             matmulL.IterateAll(x2GM[offset2], false);
             offset1 += shape.M * shape.N;
