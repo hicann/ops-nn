@@ -12,14 +12,19 @@
 
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/const_util.h"
+#include "util/shape_util.h"
 
 using namespace ge;
+using namespace Ops::Base;
 
 namespace ops {
 
 static constexpr int64_t IDX_0 = 0;
 static constexpr int64_t IDX_1 = 1;
 static constexpr int64_t IDX_2 = 2;
+static constexpr int64_t IDX_3 = 3;
+static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
 static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* context)
 {
@@ -31,40 +36,42 @@ static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* c
     const gert::Shape* indicesShape = context->GetInputShape(IDX_1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     if (indicesShape->GetDimNum() != 1) {
-        OP_LOGE(context->GetNodeName(), "indices must be 1-D, but got %zu-D", indicesShape->GetDimNum());
+        std::string indicesDim = std::to_string(indicesShape->GetDimNum()) + "D";
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices", indicesDim.c_str(), "1D");
         return GRAPH_FAILED;
     }
 
     const gert::Shape* segmentIdsShape = context->GetInputShape(IDX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsShape);
     if (segmentIdsShape->GetDimNum() != 1) {
-        OP_LOGE(context->GetNodeName(), "segment_ids must be 1-D, but got %zu-D", segmentIdsShape->GetDimNum());
-        return GRAPH_FAILED;
-    }
-
-    int64_t indicesLen = indicesShape->GetDim(0);
-    int64_t segmentIdsLen = segmentIdsShape->GetDim(0);
-    if (indicesLen >= 0 && segmentIdsLen >= 0 && indicesLen != segmentIdsLen) {
-        OP_LOGE(context->GetNodeName(),
-                "indices and segment_ids must have the same length, "
-                "but got indices: %ld, segment_ids: %ld",
-                indicesLen, segmentIdsLen);
+        std::string segmentIdsDim = std::to_string(segmentIdsShape->GetDimNum()) + "D";
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "segment_ids", segmentIdsDim.c_str(), "1D");
         return GRAPH_FAILED;
     }
 
     gert::Shape* outputShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
 
-    auto dimNum = gradShape->GetDimNum();
-    outputShape->SetDimNum(dimNum);
-    outputShape->SetDim(0, -1);
-    for (size_t i = 1; i < dimNum; ++i) {
-        outputShape->SetDim(i, gradShape->GetDim(i));
+    // dynamic -2
+    if (IsUnknownRank(*gradShape)) {
+        OP_LOGD(context->GetNodeName(), "grad_shape is UnknownRank, set output_shape to -2");
+        *outputShape = *gradShape;
+        return GRAPH_SUCCESS;
     }
+
+    // output_dim0 (scalar) determines the concrete first dim of the output;
+    // fall back to -1 when it is not a compile-time const.
+    int64_t outputDim0 = UNKNOWN_DIM_VALUE_;
+    if (!GetConstInt(context, IDX_3, outputDim0)) {
+        OP_LOGD(context->GetNodeName(), "output_dim0 is not a compile-time const, fall back to -1");
+    }
+
+    *outputShape = *gradShape;
+    outputShape->SetDim(0, outputDim0);
 
     OP_LOGD(context->GetNodeName(), "End InferShapeSparseSegmentSumGrad");
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SparseSegmentSumGrad).InferShape(InferShapeSparseSegmentSumGrad);
+IMPL_OP_INFERSHAPE(SparseSegmentSumGrad).InputsDataDependency({IDX_3}).InferShape(InferShapeSparseSegmentSumGrad);
 } // namespace ops

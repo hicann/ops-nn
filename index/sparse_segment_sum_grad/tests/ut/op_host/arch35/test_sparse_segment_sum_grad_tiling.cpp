@@ -140,3 +140,10 @@ TEST_F(SparseSegmentSumGradTiling, fp16_int64_basic)
                     gert::StorageShape({8}, {8}), gert::StorageShape({8}, {8}), gert::StorageShape({}, {}),
                     gert::StorageShape({16, 16}, {16, 16}), 8, 16, 16, 256);
 }
+
+TEST_F(SparseSegmentSumGradTiling, fail_indices_segment_ids_length_mismatch)
+{
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
+                    gert::StorageShape({4}, {4}), gert::StorageShape({3}, {3}), gert::StorageShape({}, {}),
+                    gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
+}

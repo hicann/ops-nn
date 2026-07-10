@@ -81,7 +81,7 @@ $$
 - indices 和 segment_ids 必须为 1-D 且长度相同。
 - indices 中的值必须在 [0, output_dim0) 范围内。
 - segment_ids 中的值必须在 [0, grad.shape[0]) 范围内。
-- 多个 segment 指向同一 indices 时使用 atomic add 累加（非确定性）。
+- 多个 segment 指向同一 indices 时使用确定性 gather-add 累加（每个输出由单线程顺序累加，无 atomic 操作）。
 
 ## 调用说明
 

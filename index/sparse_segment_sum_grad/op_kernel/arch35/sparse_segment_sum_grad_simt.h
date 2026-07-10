@@ -23,7 +23,6 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "simt_api/common_functions.h"
-#include "simt_api/device_atomic_functions.h"
 #include "simt_api/device_sync_functions.h"
 #include "simt_api/device_warp_functions.h"
 #include "simt_api/asc_fp16.h"
@@ -39,7 +38,6 @@ template <typename IDX_T>
 static constexpr uint32_t THREAD_NUM = (sizeof(IDX_T) == 4) ? 1024 : 512;
 
 constexpr uint64_t DOUBLE_ABS_MASK = 0x7FFFFFFFFFFFFFFFULL;
-constexpr uint32_t DOUBLE_SIGN_SHIFT = 63;
 constexpr uint32_t DOUBLE_EXP_SHIFT = 52;
 constexpr uint32_t DOUBLE_EXP_MASK = 0x7FFU;
 constexpr uint64_t DOUBLE_MAN_MASK = 0x000FFFFFFFFFFFFFULL;
@@ -61,25 +59,8 @@ constexpr uint64_t LZ_MASK_4 = 0xF000000000000000ULL;
 constexpr uint64_t LZ_MASK_2 = 0xC000000000000000ULL;
 constexpr uint64_t LZ_MASK_1 = 0x8000000000000000ULL;
 constexpr uint32_t SHIFT_LIMIT_64 = 64;
-constexpr int64_t WARP_WORK_LIMIT = 50000000LL;
-constexpr int64_t WARP_INNER_SIZE_LIMIT = 8192;
-constexpr int64_t WARP_SEGMENT_COUNT_LIMIT = 50000;
-constexpr int64_t HIGH_CONFLICT_RATIO_THRESHOLD = 4;
 constexpr uint32_t DOUBLE_TYPE_SIZE = 8;
-constexpr uint32_t LOW_PRECISION_TYPE_SIZE = 2;
 
-// ===== AtomicAddDispatch overloads =====
-
-// float: asc_atomic_add(__gm__ float*, float)
-__simt_callee__ inline void AtomicAddDispatch(__gm__ float* addr, float val) { asc_atomic_add(addr, val); }
-
-// half: asc_atomic_add(__gm__ half*, half) - return value unreliable, not used
-__simt_callee__ inline void AtomicAddDispatch(__gm__ half* addr, half val) { asc_atomic_add(addr, val); }
-
-// bfloat16_t: asc_atomic_add(__gm__ bfloat16_t*, bfloat16_t) - return value unreliable
-__simt_callee__ inline void AtomicAddDispatch(__gm__ bfloat16_t* addr, bfloat16_t val) { asc_atomic_add(addr, val); }
-
-// double: asc_atomic_add does not support __gm__ double*
 // ascend950 aicore forbids double arithmetic; implement addition via uint64_t bit manipulation
 // IEEE 754 double addition using only integer operations
 __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
@@ -156,6 +137,10 @@ __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
     if (aSign == bSign) {
         rSign = aSign;
         rMan = aMan + bMan;
+        if (rMan < aMan) {
+            rMan = (rMan >> 1) | DOUBLE_IMPLICIT_BIT << DOUBLE_EXP_WIDTH;
+            rExp += 1;
+        }
     } else {
         if (aMan >= bMan) {
             rSign = aSign;
@@ -218,29 +203,6 @@ __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
     return ((uint64_t)rSign << DOUBLE_SIGN_BIT_SHIFT) | ((uint64_t)rExp << DOUBLE_EXP_SHIFT) | rManField;
 }
 
-__simt_callee__ inline void AtomicAddDispatch(__gm__ double* addr, double val)
-{
-    __gm__ uint64_t* addrAsUll = (__gm__ uint64_t*)addr;
-    uint64_t valBits = *(uint64_t*)((void*)&val);
-    uint64_t old = *addrAsUll;
-    uint64_t assumed;
-    do {
-        assumed = old;
-        uint64_t newBits = DoubleAddBits(assumed, valBits);
-        old = asc_atomic_cas(addrAsUll, assumed, newBits);
-    } while (assumed != old);
-}
-
-// ===== Inner loop: scatter-add one row =====
-template <typename T>
-__simt_callee__ inline void ScatterAddRow(__gm__ T* output, __gm__ const T* grad, int64_t outBase, int64_t gradBase,
-                                          int64_t innerSize)
-{
-    for (int64_t k = 0; k < innerSize; ++k) {
-        AtomicAddDispatch(&output[outBase + k], grad[gradBase + k]);
-    }
-}
-
 // ===== SIMT VF Kernel: Phase 1 - Zero Initialize =====
 template <typename T, typename IDX_T>
 __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradZeroInit(
@@ -252,77 +214,41 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparse
     }
 }
 
-// ===== SIMT VF Kernel: Phase 2 - Scatter Add =====
 template <typename T, typename IndexT, typename SegIdT, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradScatterAdd(
-    IDX_T n, IDX_T innerSize, __gm__ T* grad, __gm__ IndexT* indices, __gm__ SegIdT* segmentIds, __gm__ T* output)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradGatherAdd(
+    IDX_T n, IDX_T innerSize, IDX_T totalOutputElements, __gm__ T* grad, __gm__ IndexT* indices,
+    __gm__ SegIdT* segmentIds, __gm__ T* output)
 {
-    for (IDX_T j = static_cast<IDX_T>(blockIdx.x) * static_cast<IDX_T>(blockDim.x) + static_cast<IDX_T>(threadIdx.x);
-         j < n; j += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x)) {
-        IndexT outIdx = indices[j];
-        SegIdT segId = segmentIds[j];
-        IDX_T outBase = static_cast<IDX_T>(outIdx) * innerSize;
-        IDX_T gradBase = static_cast<IDX_T>(segId) * innerSize;
-
-        ScatterAddRow<T>(output, grad, static_cast<int64_t>(outBase), static_cast<int64_t>(gradBase),
-                         static_cast<int64_t>(innerSize));
-    }
-}
-
-// ===== SIMT VF Kernel: Phase 2b - Warp-Reduction Scatter Add (high precision) =====
-// Each warp handles one (outputRow, innerChunk) pair.
-// Contributions are accumulated in float32 per-thread, then warp-reduced,
-// and a single atomic add per output element is performed.
-// This dramatically reduces precision loss from repeated fp16/bf16 atomic adds.
-static constexpr uint32_t WARP_SZ = 32;
-
-template <typename T, typename IndexT, typename SegIdT, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradScatterAddWarp(
-    IDX_T n, IDX_T outputDim0, IDX_T innerSize, __gm__ T* grad, __gm__ IndexT* indices, __gm__ SegIdT* segmentIds,
-    __gm__ T* output)
-{
-    uint32_t tid = static_cast<uint32_t>(threadIdx.x);
-    uint32_t bid = static_cast<uint32_t>(blockIdx.x);
-    uint32_t bdim = static_cast<uint32_t>(blockDim.x);
-    uint32_t gdim = static_cast<uint32_t>(gridDim.x);
-    uint32_t warpIdInBlock = tid / WARP_SZ;
-    uint32_t laneId = tid % WARP_SZ;
-    uint32_t warpsPerBlock = bdim / WARP_SZ;
-    uint32_t globalWarpId = bid * warpsPerBlock + warpIdInBlock;
-    uint32_t totalWarps = gdim * warpsPerBlock;
-
-    // Use int64 for totalOutElems to avoid int32 overflow when outputDim0 * innerSize > INT32_MAX
-    int64_t totalOutElems = static_cast<int64_t>(outputDim0) * static_cast<int64_t>(innerSize);
-
-    // Each warp processes one output element at a time (grid-stride over output elements)
-    for (int64_t outElem = static_cast<int64_t>(globalWarpId); outElem < totalOutElems;
-         outElem += static_cast<int64_t>(totalWarps)) {
-        IDX_T row = static_cast<IDX_T>(outElem / static_cast<int64_t>(innerSize));
-        IDX_T k = static_cast<IDX_T>(outElem % static_cast<int64_t>(innerSize));
-
-        // Each lane accumulates contributions for this (row, k) from its assigned j values
-        float localSum = 0.0f;
-        for (IDX_T j = static_cast<IDX_T>(laneId); j < n; j += static_cast<IDX_T>(WARP_SZ)) {
-            IndexT outIdx = indices[j];
-            if (static_cast<IDX_T>(outIdx) == row) {
-                SegIdT segId = segmentIds[j];
-                int64_t gradIdx = static_cast<int64_t>(segId) * static_cast<int64_t>(innerSize) +
-                                  static_cast<int64_t>(k);
-                localSum += static_cast<float>(grad[gradIdx]);
+    for (IDX_T elemIdx =
+             static_cast<IDX_T>(blockIdx.x) * static_cast<IDX_T>(blockDim.x) + static_cast<IDX_T>(threadIdx.x);
+         elemIdx < totalOutputElements; elemIdx += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x)) {
+        IDX_T row = elemIdx / innerSize;
+        IDX_T k = elemIdx % innerSize;
+        if constexpr (sizeof(T) == DOUBLE_TYPE_SIZE) {
+            // double: aicore forbids double arithmetic in VF; use bit manipulation
+            uint64_t sumBits = 0;
+            __gm__ uint64_t* gradAsUll = (__gm__ uint64_t*)grad;
+            for (IDX_T j = 0; j < n; ++j) {
+                if (static_cast<IDX_T>(indices[j]) == row) {
+                    int64_t gradIdx = static_cast<int64_t>(segmentIds[j]) * static_cast<int64_t>(innerSize) +
+                                      static_cast<int64_t>(k);
+                    uint64_t valBits = gradAsUll[gradIdx];
+                    sumBits = DoubleAddBits(sumBits, valBits);
+                }
             }
-        }
-
-        // Warp butterfly reduction in float32 precision
-        // After all steps, ALL lanes hold the total sum of all 32 partial sums
-        localSum += asc_shfl_xor(localSum, 1);
-        localSum += asc_shfl_xor(localSum, 2);
-        localSum += asc_shfl_xor(localSum, 4);
-        localSum += asc_shfl_xor(localSum, 8);
-        localSum += asc_shfl_xor(localSum, 16);
-
-        // Lane 0 writes the final result (output is already zero-initialized)
-        if (laneId == 0 && localSum != 0.0f) {
-            AtomicAddDispatch(&output[outElem], static_cast<T>(localSum));
+            __gm__ uint64_t* outputAsUll = (__gm__ uint64_t*)output;
+            outputAsUll[elemIdx] = sumBits;
+        } else {
+            // fp16/bf16/fp32: accumulate in float for better precision
+            float sum = 0.0f;
+            for (IDX_T j = 0; j < n; ++j) {
+                if (static_cast<IDX_T>(indices[j]) == row) {
+                    int64_t gradIdx = static_cast<int64_t>(segmentIds[j]) * static_cast<int64_t>(innerSize) +
+                                      static_cast<int64_t>(k);
+                    sum += static_cast<float>(grad[gradIdx]);
+                }
+            }
+            output[elemIdx] = static_cast<T>(sum);
         }
     }
 }
@@ -345,26 +271,6 @@ __aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds
     bool use32 = (totalOut <= static_cast<int64_t>(INT32_MAX)) && (n <= static_cast<int64_t>(INT32_MAX)) &&
                  (innerSz <= static_cast<int64_t>(INT32_MAX)) && (outDim0 <= static_cast<int64_t>(INT32_MAX));
 
-    // Decide whether to use warp-reduction approach (better precision for fp16/bf16,
-    // and fewer atomic conflicts for all dtypes on large shapes)
-    // Warp approach has O(totalOutElems * n / WARP_SZ) complexity, so limit total work
-    // to avoid PROFILE_CRASH on large shapes.
-    // NOTE: Warp approach uses float32 accumulation internally, so it cannot be used
-    // for double type (float↔double conversions cause compiler backend errors in SIMT VF).
-    constexpr bool IS_DOUBLE = (sizeof(T) == DOUBLE_TYPE_SIZE);
-    int64_t warpWork = totalOut * n;
-    // Use warp approach when:
-    // 1. Low precision dtype (fp16/bf16) with moderate work
-    // 2. fp32 when there are many concurrent writes (n/outputDim0 > HIGH_CONFLICT_RATIO_THRESHOLD) and work is
-    // manageable
-    // 3. Never for double (compiler cannot handle float↔double in SIMT VF)
-    constexpr bool IS_LOW_PRECISION = (sizeof(T) <= LOW_PRECISION_TYPE_SIZE);
-    bool highConflict = (outDim0 > 0) && (n / outDim0 > HIGH_CONFLICT_RATIO_THRESHOLD);
-    bool useWarpApproach = !IS_DOUBLE && ((IS_LOW_PRECISION && (innerSz <= WARP_INNER_SIZE_LIMIT) &&
-                                           (n <= WARP_SEGMENT_COUNT_LIMIT) && (warpWork <= WARP_WORK_LIMIT)) ||
-                                          (highConflict && (innerSz <= WARP_INNER_SIZE_LIMIT) &&
-                                           (n <= WARP_SEGMENT_COUNT_LIMIT) && (warpWork <= WARP_WORK_LIMIT)));
-
     // Phase 1: Zero-initialize output (always runs, even when N=0)
     if (use32) {
         asc_vf_call<OpSparseSegmentSumGradZeroInit<T, int32_t>>(dim3(THREAD_NUM<int32_t>),
@@ -381,25 +287,14 @@ __aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds
 
     SyncAll();
 
-    // Phase 2: Scatter-add
+    // Phase 2: Deterministic gather-add (no atomics)
     if (use32) {
-        if (useWarpApproach) {
-            asc_vf_call<OpSparseSegmentSumGradScatterAddWarp<T, IndexT, SegIdT, int32_t>>(
-                dim3(THREAD_NUM<int32_t>), static_cast<int32_t>(n), static_cast<int32_t>(outDim0),
-                static_cast<int32_t>(innerSz), gradGm, indicesGm, segIdsGm, outputGm);
-        } else {
-            asc_vf_call<OpSparseSegmentSumGradScatterAdd<T, IndexT, SegIdT, int32_t>>(
-                dim3(THREAD_NUM<int32_t>), static_cast<int32_t>(n), static_cast<int32_t>(innerSz), gradGm, indicesGm,
-                segIdsGm, outputGm);
-        }
+        asc_vf_call<OpSparseSegmentSumGradGatherAdd<T, IndexT, SegIdT, int32_t>>(
+            dim3(THREAD_NUM<int32_t>), static_cast<int32_t>(n), static_cast<int32_t>(innerSz),
+            static_cast<int32_t>(totalOut), gradGm, indicesGm, segIdsGm, outputGm);
     } else {
-        if (useWarpApproach) {
-            asc_vf_call<OpSparseSegmentSumGradScatterAddWarp<T, IndexT, SegIdT, int64_t>>(
-                dim3(THREAD_NUM<int64_t>), n, outDim0, innerSz, gradGm, indicesGm, segIdsGm, outputGm);
-        } else {
-            asc_vf_call<OpSparseSegmentSumGradScatterAdd<T, IndexT, SegIdT, int64_t>>(
-                dim3(THREAD_NUM<int64_t>), n, innerSz, gradGm, indicesGm, segIdsGm, outputGm);
-        }
+        asc_vf_call<OpSparseSegmentSumGradGatherAdd<T, IndexT, SegIdT, int64_t>>(
+            dim3(THREAD_NUM<int64_t>), n, innerSz, totalOut, gradGm, indicesGm, segIdsGm, outputGm);
     }
 }
 

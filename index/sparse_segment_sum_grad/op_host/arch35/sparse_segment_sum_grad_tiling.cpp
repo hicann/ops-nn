@@ -52,6 +52,20 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& n, in
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesStorageShape = indicesShape->GetStorageShape();
 
+    auto segmentIdsShape = context->GetInputShape(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsShape);
+    auto segmentIdsStorageShape = segmentIdsShape->GetStorageShape();
+
+    // validate: indices and segment_ids must have the same length
+    int64_t indicesSize = indicesStorageShape.GetShapeSize();
+    int64_t segmentIdsSize = segmentIdsStorageShape.GetShapeSize();
+    if (indicesSize != segmentIdsSize) {
+        std::string sizeMsg = std::to_string(indicesSize) + " and " + std::to_string(segmentIdsSize);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "indices and segment_ids", sizeMsg.c_str(),
+                                                   "size of indices must be equal to size of segment_ids");
+        return ge::GRAPH_FAILED;
+    }
+
     auto outputShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
     auto outputStorageShape = outputShape->GetStorageShape();
