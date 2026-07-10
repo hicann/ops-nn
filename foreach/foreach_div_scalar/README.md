@@ -57,7 +57,7 @@
       <td>scalar</td>
       <td>输入</td>
       <td>表示除法运算的第二个输入张量，对应公式中的`scalar`。元素个数为1。数据类型与入参`x`的数据类型具有一定对应关系：当`x`的数据类型为FLOAT32、FLOAT16时，数据类型与`x`的数据类型保持一致或者DOUBLE；当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</td>
-      <td>FLOAT32、FLOAT16、DOUBLE</td>
+      <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -73,7 +73,7 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- 输出支持非连续Tensor。
 
 ## 调用说明
 

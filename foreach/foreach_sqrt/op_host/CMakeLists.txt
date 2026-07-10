@@ -10,4 +10,8 @@
 
 message(STATUS "=== Debug: start ops.foreach.foreach_sqrt.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_sqrt ACLNNTYPE aclnn DEPENDENCIES foreach_utils)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_sqrt ACLNNTYPE aclnn_exclude DEPENDENCIES foreach_utils)
+
+# Add foreach_utils include directory for contiguous helper
+get_filename_component(FOREACH_UTILS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../foreach_utils ABSOLUTE)
+target_include_directories(${OPHOST_NAME}_opapi_obj PRIVATE ${FOREACH_UTILS_DIR}/op_api)
