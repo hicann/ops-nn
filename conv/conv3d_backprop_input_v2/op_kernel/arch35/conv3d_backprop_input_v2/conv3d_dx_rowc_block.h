@@ -23,6 +23,7 @@ constexpr uint8_t LOOP_DMN = 2;
 constexpr uint8_t LOOP_MDN = 3;
 static constexpr uint8_t SYNC_MODE2 = 2;
 static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
+constexpr int BLOCK_CUBE_ALIGN_BITS = 4;
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
           typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
@@ -56,7 +57,9 @@ public:
             // 开启前置transpose同时使用累加轴特性需要分段使用
             if (this->useUbAccumForSplitK_) {
                 workSpace += static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->dk * this->tiling_->hk *
-                             this->tiling_->wk * (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) *
+                             this->tiling_->wk *
+                             (((this->tiling_->cinG + BLOCK_CUBE - 1) >> BLOCK_CUBE_ALIGN_BITS)
+                              << BLOCK_CUBE_ALIGN_BITS) *
                              sizeof(filterType); // 4 : 2的4次方
             }
         }

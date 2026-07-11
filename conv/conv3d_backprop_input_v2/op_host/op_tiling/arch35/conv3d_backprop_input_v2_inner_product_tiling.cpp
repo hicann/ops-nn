@@ -63,7 +63,7 @@ void Conv3DDXV2InnerProductTiling::Reset()
 {
     OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 1,
                              context_->GetRawTilingData()->GetCapacity()) != EOK,
-                    CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return );
+                    CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
     opName_ = nullptr;
 }
 
@@ -568,7 +568,7 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(const CoreTilingParams& c
                                                        const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     if ((unlikely(runInfo_.groups) > 1) || (runInfo_.filterFormat != ge::FORMAT_NCDHW) ||
-        (runInfo_.dedx_cin > 65535)) { // cin太大会导致超datacopy指令限制
+        (runInfo_.dedx_cin > MAX_UINT16)) { // cin太大会导致超datacopy指令限制
         return false;
     }
     if (tilingRunInfo_.enableC04Flag || tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK) {
@@ -787,13 +787,15 @@ std::shared_ptr<tuningtiling::TuningTilingDef> Conv3DDXV2InnerProductTiling::Get
                     return nullptr);
     const std::string& socVersion = compileInfo->soc_version;
     const std::string& socVersionFuse = "FUSE";
-    
+
     OP_LOGD(context_, "socVersion = %s, coreNum_ = %d", socVersion.c_str(), coreNum_);
     uint32_t ret = -1;
     if (IsSocVersionFuse(context_)) {
-        ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "ExtendConvTranspose", socVersionFuse, coreNum_, tuningTiling);
+        ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "ExtendConvTranspose", socVersionFuse, coreNum_,
+                                 tuningTiling);
     } else {
-        ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DBackpropInputV2", socVersion, coreNum_, tuningTiling);
+        ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DBackpropInputV2", socVersion, coreNum_,
+                                 tuningTiling);
     }
     if (ret != 0) {
         OP_LOGD(context_->GetNodeName(),

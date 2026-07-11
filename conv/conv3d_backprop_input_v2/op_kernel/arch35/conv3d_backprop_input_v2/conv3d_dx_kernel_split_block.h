@@ -41,7 +41,8 @@ public:
         if (this->enableVecTrans_) {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType*)workSpace);
             workSpace += static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->dk * this->tiling_->hk *
-                         this->tiling_->wk * (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) *
+                         this->tiling_->wk *
+                         (((this->tiling_->cinG + BLOCK_CUBE - 1) >> BLOCK_CUBE_ALIGN_BITS) << BLOCK_CUBE_ALIGN_BITS) *
                          sizeof(filterType); // 4 : 2的4次方
         } else {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);

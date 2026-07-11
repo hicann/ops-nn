@@ -32,6 +32,10 @@ static constexpr uint32_t MULTIPLE_AIV_TO_AIC = 2;
 static constexpr uint32_t DATA_BLOCK_SIZE = 32;
 static constexpr uint32_t POWER_5 = 5;
 
+static constexpr uint32_t POINTS_PER_BLOCK_FP32 = 8;  // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
+static constexpr uint32_t POINTS_PER_BLOCK_FP16 = 16; // 16: 16bit数据VNCHWCONV一个dataBlock是16个point
+static constexpr uint32_t POINTS_PER_BLOCK_INT8 = 64; // 64: 8bit时需要用到高低位，一次高低位完成2个dataBlock
+
 template <typename filterType>
 class Conv3dDxVecTranspose {
 protected:
@@ -129,16 +133,13 @@ protected:
             transDataParams.srcRepStride = 0; // 单位 dataBlock
         } else {
             if constexpr (std::is_same<filterType, float>::value) { // 单位 dataBlock
-                transDataParams.dstRepStride = (cin0_ * 8 * sizeof(filterType)) >>
-                                               POWER_5; // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
+                transDataParams.dstRepStride = (cin0_ * POINTS_PER_BLOCK_FP32 * sizeof(filterType)) >> POWER_5;
             } else if constexpr (std::is_same<filterType, bfloat16_t>::value || std::is_same<filterType, half>::value) {
-                transDataParams.dstRepStride = (cin0_ * 16 * sizeof(filterType)) >>
-                                               POWER_5; // 16: 16bit数据VNCHWCONV一个dataBlock是16个point
+                transDataParams.dstRepStride = (cin0_ * POINTS_PER_BLOCK_FP16 * sizeof(filterType)) >> POWER_5;
             } else if constexpr (std::is_same<filterType, hifloat8_t>::value ||
                                  std::is_same<filterType, fp8_e4m3fn_t>::value ||
                                  std::is_same<filterType, int8_t>::value) {
-                transDataParams.dstRepStride = (cin0_ * 64 * sizeof(filterType)) >>
-                                               POWER_5; // 64: 8bit时需要用到高低位，一次高低位完成2个dataBlock
+                transDataParams.dstRepStride = (cin0_ * POINTS_PER_BLOCK_INT8 * sizeof(filterType)) >> POWER_5;
             }
             transDataParams.srcRepStride = 1; // 单位 dataBlock
         }
@@ -155,7 +156,7 @@ protected:
         uint64_t dstCount = 0;
         if constexpr (std::is_same<filterType, float>::value) {
             for (int i = 0; i < cin0_; i++) {
-                dstCount = (i >> 1) * cin0_ + (i & 1) * 8; // 8: 32bit数据VNCHWCONV一个dataBlock是8个point
+                dstCount = (i >> 1) * cin0_ + (i & 1) * POINTS_PER_BLOCK_FP32;
                 dstLocalList[i] = reinterpret_cast<uint64_t>(vecOutBuf_[dstCount].GetPhyAddr());
             }
         } else if constexpr (std::is_same<filterType, bfloat16_t>::value || std::is_same<filterType, half>::value) {
