@@ -9,7 +9,6 @@
  */
 
 #include "aclnn/aclnn_base.h"
-#include "op_api/op_api_def.h"
 
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"

@@ -352,7 +352,7 @@ private:
         dataCopyPadExtParamsGamma.paddingValue = 0;
         DataCopyExtParams copyInParamsGamma;
         copyInParamsGamma.blockCount = 1;
-        copyInParamsGamma.blockLen = xGammaBetaAlign * sizeof(T_X);
+        copyInParamsGamma.blockLen = numR * sizeof(T_X);
         copyInParamsGamma.srcStride = 0;
         copyInParamsGamma.dstStride = 0;
         DataCopyPad(gammaLocal, gammaGm, copyInParamsGamma, dataCopyPadExtParamsGamma);
@@ -367,7 +367,11 @@ private:
         dataCopyPadExtParamsScales.paddingValue = 0;
         DataCopyExtParams copyInParamsScales;
         copyInParamsScales.blockCount = 1;
-        copyInParamsScales.blockLen = scalesAlign * sizeof(T_SCALES);
+        if (numQ == 1) {
+            copyInParamsScales.blockLen = sizeof(T_SCALES);
+        } else {
+            copyInParamsScales.blockLen = numR * sizeof(T_SCALES);
+        }
         copyInParamsScales.srcStride = 0;
         copyInParamsScales.dstStride = 0;
         DataCopyPad(scales1Local, scales1Gm, copyInParamsScales, dataCopyPadExtParamsScales);
@@ -380,7 +384,11 @@ private:
         dataCopyPadExtParamszeroPoints.paddingValue = 0;
         DataCopyExtParams copyInParamszeroPoints;
         copyInParamszeroPoints.blockCount = 1;
-        copyInParamszeroPoints.blockLen = zeroPointsAlign * sizeof(T_ZEROPOINTS);
+        if (numQ == 1) {
+            copyInParamszeroPoints.blockLen = sizeof(T_ZEROPOINTS);
+        } else {
+            copyInParamszeroPoints.blockLen = numR * sizeof(T_ZEROPOINTS);
+        }
         copyInParamszeroPoints.srcStride = 0;
         copyInParamszeroPoints.dstStride = 0;
 
