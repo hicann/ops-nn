@@ -16,6 +16,8 @@
 #include "arch35/gather_v2_after_gather_full_load.h"
 #include "arch35/gather_v2_simt_two_dim.h"
 #include "arch35/gather_v2_empty.h"
+#include "arch35/gather_v2_simd_pcie.h"
+#include "arch35/gather_v2_simd_two_dim_pcie.h"
 
 using namespace AscendC;
 using namespace gatherv2;
@@ -57,11 +59,19 @@ using namespace gatherv2;
 #define SIMT_TWO_DIM_B32_INDEX_SIZE_64_TILING_KEY  2000000104UL
 #define SIMT_TWO_DIM_B64_INDEX_SIZE_64_TILING_KEY  2000000108UL
 
+#define PCIE_ADDR_LOW  0x40000000000UL
+#define PCIE_ADDR_HIGH 0x80000000000UL
+
 extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y,
                                                 GM_ADDR workspace, GM_ADDR tiling) 
 {
     TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY); 
+
+    uint64_t addrX = (uint64_t)(__gm__ DTYPE_X*)x;
+    uint64_t addrIndices = (uint64_t)(__gm__ DTYPE_INDICES*)indices;
+    uint64_t addrAxis = (uint64_t)(__gm__ DTYPE_AXIS*)axis;
+    uint64_t addrY = (uint64_t)(__gm__ DTYPE_X*)y;
 
     TILING_KEY_IS(SIMD_TILING_KEY);
     TILING_KEY_IS(SIMD_TILING_KEY_TWO_DIM);
@@ -97,170 +107,266 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     TILING_KEY_IS(TILING_KEY_X_B8_INDEX_SIZE_2D);
     TILING_KEY_IS(TILING_KEY_EMPTY);
 
-    #if TILING_KEY_VAR == SIMD_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
-        Gatherv2Simd<DTYPE_INDICES> gatherv2Op(&pipe);
+#if TILING_KEY_VAR == SIMD_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2Simd<DTYPE_INDICES> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_TILING_KEY_TWO_DIM
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDim, tilingDataIn, tiling);
+    Gatherv2SimdTwoDim<DTYPE_INDICES> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B8_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int8_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B16_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int16_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B32_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int32_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B64_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int64_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B8_SUPPORT_NEG_INDICE_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int8_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B16_SUPPORT_NEG_INDICE_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int16_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B32_SUPPORT_NEG_INDICE_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int32_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_LAST_GATHER_B64_SUPPORT_NEG_INDICE_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
+    Gatherv2SimdLastGather<int64_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_GA_ALL_LOAD_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2GaAllLoadTilingData, tilingDataIn, tiling);
+    Gatherv2GaAllLoad<DTYPE_INDICES, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_GA_ALL_LOAD_SUPPORT_NEG_INDICE_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2GaAllLoadTilingData, tilingDataIn, tiling);
+    Gatherv2GaAllLoad<DTYPE_INDICES, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_64_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_TILING_KEY_TWO_DIM
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDim, tilingDataIn, tiling);
-        Gatherv2SimdTwoDim<DTYPE_INDICES> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B8_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int8_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B16_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int16_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B32_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int32_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B64_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int64_t, DTYPE_INDICES, false> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B8_SUPPORT_NEG_INDICE_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int8_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B16_SUPPORT_NEG_INDICE_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int16_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B32_SUPPORT_NEG_INDICE_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int32_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B64_SUPPORT_NEG_INDICE_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
-        Gatherv2SimdLastGather<int64_t, DTYPE_INDICES, true> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_GA_ALL_LOAD_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2GaAllLoadTilingData, tilingDataIn, tiling);
-        Gatherv2GaAllLoad<DTYPE_INDICES, false> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMD_GA_ALL_LOAD_SUPPORT_NEG_INDICE_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2GaAllLoadTilingData, tilingDataIn, tiling);
-        Gatherv2GaAllLoad<DTYPE_INDICES, true> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_64_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    } else {
         Gatherv2SimtTwoDim<int8_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B16_INDEX_SIZE_64_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B16_INDEX_SIZE_64_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int16_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B32_INDEX_SIZE_64_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B32_INDEX_SIZE_64_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int32_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B64_INDEX_SIZE_64_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B64_INDEX_SIZE_64_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int64_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_32_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_32_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int8_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B16_INDEX_SIZE_32_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B16_INDEX_SIZE_32_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int16_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B32_INDEX_SIZE_32_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B32_INDEX_SIZE_32_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int32_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == SIMT_TWO_DIM_B64_INDEX_SIZE_32_TILING_KEY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B64_INDEX_SIZE_32_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdTwoDimPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2SimtTwoDim<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_64
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_64
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int8_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B16_INDEX_SIZE_64
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B16_INDEX_SIZE_64
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int16_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B32_INDEX_SIZE_64
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B32_INDEX_SIZE_64
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int32_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_64
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_64
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int64_t, DTYPE_INDICES, uint64_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_32
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_32
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int8_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B16_INDEX_SIZE_32
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B16_INDEX_SIZE_32
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int16_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B32_INDEX_SIZE_32
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B32_INDEX_SIZE_32
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int32_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_32
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_32
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    if ((addrX >= PCIE_ADDR_LOW && addrX < PCIE_ADDR_HIGH) || (addrIndices >= PCIE_ADDR_LOW && addrIndices < PCIE_ADDR_HIGH) || (addrAxis >= PCIE_ADDR_LOW && addrAxis < PCIE_ADDR_HIGH) || (addrY >= PCIE_ADDR_LOW && addrY < PCIE_ADDR_HIGH)) {
+        Gatherv2SimdPcie<DTYPE_INDICES> gatherv2Op(&pipe);
+        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+        gatherv2Op.Process();
+    } else {
         Gatherv2<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op;
         gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
         gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_2D
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
-        Gatherv2FullLoad<int8_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B16_INDEX_SIZE_2D
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
-        Gatherv2FullLoad<int16_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B32_INDEX_SIZE_2D
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
-        Gatherv2FullLoad<int32_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_2D
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
-        Gatherv2FullLoad<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
-        gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
-        gatherv2Op.Process();
-    #elif TILING_KEY_VAR ==TILING_KEY_EMPTY
-        GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataEmptyInput, tilingDataIn, tiling);
-        Gatherv2Empty<int8_t> gatherv2Op;
-        gatherv2Op.Init(y, &tilingDataIn);
-        gatherv2Op.Process();
-    #endif
+    }
+#elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_2D
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2FullLoad<int8_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == TILING_KEY_X_B16_INDEX_SIZE_2D
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2FullLoad<int16_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == TILING_KEY_X_B32_INDEX_SIZE_2D
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2FullLoad<int32_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_2D
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2FullLoad<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == TILING_KEY_EMPTY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataEmptyInput, tilingDataIn, tiling);
+    Gatherv2Empty<int8_t> gatherv2Op;
+    gatherv2Op.Init(y, &tilingDataIn);
+    gatherv2Op.Process();
+#endif
 }

@@ -335,157 +335,171 @@ int64_t Gatherv2TilingBase::XDtypeImprove() {
 
 ge::graphStatus Gatherv2TilingBase::CalcEmptyCoreElement()
 {
-  int64_t xDtypeSize = ge::GetSizeByDataType(xDtype_);
-  int64_t innerSizeWoImprove_ = 1;
-  int64_t ySizeWoImprove_ = 1;
+    int64_t xDtypeSize = ge::GetSizeByDataType(xDtype_);
+    int64_t innerSizeWoImprove_ = 1;
+    int64_t ySizeWoImprove_ = 1;
 
-  for (size_t i = axis_ + 1; i < xShape_.GetDimNum(); i++) {
-    innerSizeWoImprove_ *= xShape_.GetDim(i);
-  }
+    for (size_t i = axis_ + 1; i < xShape_.GetDimNum(); i++) {
+        innerSizeWoImprove_ *= xShape_.GetDim(i);
+    }
 
-  ySizeWoImprove_ = batchSize_ * outerSize_ * gatherSize_ * innerSizeWoImprove_;
-  int64_t ySizeLen_ = ySizeWoImprove_ * xDtypeSize; //后续用int8_t赋0，这里计算字节数即可
+    ySizeWoImprove_ = batchSize_ * outerSize_ * gatherSize_ * innerSizeWoImprove_;
+    int64_t ySizeLen_ = ySizeWoImprove_ * xDtypeSize; //后续用int8_t赋0，这里计算字节数即可
 
-  needCoreNum_ = (ySizeLen_ * BITS_NUM + MIN_TILING_BITS_SIZE_PER_CORE - 1) / MIN_TILING_BITS_SIZE_PER_CORE;
+    needCoreNum_ = (ySizeLen_ * BITS_NUM + MIN_TILING_BITS_SIZE_PER_CORE - 1) / MIN_TILING_BITS_SIZE_PER_CORE;
 
-  if (needCoreNum_ > aivNum_) {
-    needCoreNum_ = aivNum_;
-  }
+    if (needCoreNum_ > aivNum_) {
+        needCoreNum_ = aivNum_;
+    }
 
-  int64_t perCoreElements = (ySizeLen_ + needCoreNum_ - 1) / needCoreNum_;
-  int64_t lastCoreElements = ySizeLen_ - (needCoreNum_ - 1) * perCoreElements;
-  
-  emptyTilingData_.set_needCoreNum(needCoreNum_);
-  emptyTilingData_.set_perCoreElements(perCoreElements);
-  emptyTilingData_.set_lastCoreElements(lastCoreElements);
-  return ge::GRAPH_SUCCESS;
-}
+    int64_t perCoreElements = (ySizeLen_ + needCoreNum_ - 1) / needCoreNum_;
+    int64_t lastCoreElements = ySizeLen_ - (needCoreNum_ - 1) * perCoreElements;
 
-void Gatherv2TilingBase::CalcCoreElement() {
-  while ((threadNum_ >= NUM_TWO * SMALL_CASE_THREAD_NUM) && (CeilDiv(ySize_, threadNum_) < (aivNum_ / NUM_TWO))) {
-    threadNum_ = threadNum_ / NUM_TWO;
-  }
-  gatherV2TilingData_.set_threadNum(threadNum_);
-  int64_t perCoreElements = CeilDiv(ySize_, aivNum_);
-  if (ySize_ < threadNum_) {
-    gatherV2TilingData_.set_needCoreNum(1);
-    gatherV2TilingData_.set_perCoreElements(ySize_);
-    gatherV2TilingData_.set_lastCoreElements(ySize_);
-    needCoreNum_ = 1;
-    return;
-  }
-  perCoreElements = (perCoreElements + threadNum_ - 1) / threadNum_ * threadNum_;  // 对齐到threadNum_的倍数
-  needCoreNum_ = CeilDiv(ySize_, perCoreElements);
-  int64_t lastCoreElements = ySize_ - perCoreElements * (needCoreNum_ - 1);
-  gatherV2TilingData_.set_needCoreNum(needCoreNum_);
-  gatherV2TilingData_.set_perCoreElements(perCoreElements);
-  gatherV2TilingData_.set_lastCoreElements(lastCoreElements);
-}
-
-ge::graphStatus Gatherv2TilingBase::CalFullLoadTiling() {
-  int64_t perCoreElements;
-  int64_t pgDataSize = outerSize_ * gatherSize_;
-  int64_t perCoreMinElements = std::max<int64_t>(PER_BLOCK_MIN_NUM / innerSize_ / improveDtypeSize_, static_cast<int64_t>(1));
-  if ((outerSize_ * gatherSize_) < aivNum_ * perCoreMinElements) {
-    perCoreElements = std::min(perCoreMinElements, pgDataSize);
-  } else {
-    perCoreElements = (pgDataSize + aivNum_ - 1) / aivNum_;
-  }
-  needCoreNum_ = (pgDataSize + perCoreElements -1) / perCoreElements;
-  int64_t tailBlockData = pgDataSize - (needCoreNum_ -1) * perCoreElements;
-  threadNum_ = std::min(perCoreElements * innerSize_, MAX_THREAD_NUM);
-
-  int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
-  int64_t ubAviable = (ubSize_ - DCACHE) / ubBlockSize * ubBlockSize / improveDtypeSize_;
-  
-  gatherV2TilingData_.set_needCoreNum(needCoreNum_);
-  gatherV2TilingData_.set_perCoreElements(perCoreElements);
-  gatherV2TilingData_.set_lastCoreElements(tailBlockData);
-  gatherV2TilingData_.set_maxElement(ubAviable);
-  gatherV2TilingData_.set_threadNum(threadNum_);
-  gatherV2TilingData_.set_dtypeSize(improveDtypeSize_);
-  return ge::GRAPH_SUCCESS;
-}
-
-void Gatherv2TilingBase::CalcSimdTiling() {
-  int64_t blockFactor = batchSize_ * outerSize_ * gatherSize_ / aivNum_;
-  int64_t tailBlockFactor = batchSize_ * outerSize_ * gatherSize_ - blockFactor * aivNum_;
-  int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
-  int64_t ubAviable = (ubSize_ - INDICES_SIZE) / ubBlockSize * ubBlockSize / improveDtypeSize_ / BUFFER_NUM;
-  needCoreNum_ = tailBlockFactor;
-  if (blockFactor > 0) {
-    needCoreNum_ = aivNum_;
-  }
-
-  gatherV2TilingData_.set_needCoreNum(needCoreNum_);
-  gatherV2TilingData_.set_perCoreElements(blockFactor);
-  gatherV2TilingData_.set_lastCoreElements(tailBlockFactor);
-  gatherV2TilingData_.set_maxElement(ubAviable);
-  gatherV2TilingData_.set_indiceUbSize(INDICES_SIZE);
-  gatherV2TilingData_.set_dtypeSize(improveDtypeSize_);
-}
-
-ge::graphStatus Gatherv2TilingBase::SimdTwoDimTiling() {
-  int64_t blockFactor = gatherSize_ / aivNum_;
-  int64_t tailBlockFactor = gatherSize_ - blockFactor * aivNum_;
-  int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
-  int64_t ubAviable = (ubSize_ - INDICES_SIZE) / ubBlockSize * ubBlockSize / improveDtypeSize_ / BUFFER_NUM;
-  int32_t indiceFactor = INDICES_SIZE / indicesDtypeSize_;
-  needCoreNum_ = blockFactor > 0 ? aivNum_ :tailBlockFactor;
-
-  simdTwoDimTilingData_.set_needCoreNum(needCoreNum_);
-  simdTwoDimTilingData_.set_negativeIndexSupport(negativeIndexSupport_);
-  simdTwoDimTilingData_.set_indiceFactor(indiceFactor);
-  simdTwoDimTilingData_.set_dtypeSize(improveDtypeSize_);
-
-  simdTwoDimTilingData_.set_gatherDimSize(gatherDimSize_);
-  simdTwoDimTilingData_.set_gatherSize(gatherSize_);
-  simdTwoDimTilingData_.set_innerSize(innerSize_);
-  simdTwoDimTilingData_.set_blockFactor(blockFactor);
-  simdTwoDimTilingData_.set_tailBlockFactor(tailBlockFactor);
-  simdTwoDimTilingData_.set_maxElement(ubAviable);
-  return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Gatherv2TilingBase::SimtTwoDimTiling() {
-  int32_t threadNum = MAX_THREAD_NUM;
-  while ((threadNum >= NUM_TWO * SMALL_CASE_THREAD_NUM) && (CeilDiv(ySize_, static_cast<int64_t>(threadNum)) < (aivNum_ / NUM_TWO))) {
-    threadNum = threadNum / NUM_TWO;
-  }
-  simtTwoDimTilingData_.set_threadNum(threadNum);
-  simtTwoDimTilingData_.set_negativeIndexSupport(negativeIndexSupport_);
-  simtTwoDimTilingData_.set_gatherDimSize(gatherDimSize_);
-  simtTwoDimTilingData_.set_innerSize(innerSize_);
-  int64_t perCoreElements = CeilDiv(ySize_, aivNum_);
-  if (ySize_ < threadNum) {
-    simtTwoDimTilingData_.set_needCoreNum(1);
-    simtTwoDimTilingData_.set_perCoreElements(ySize_);
-    simtTwoDimTilingData_.set_lastCoreElements(ySize_);
-    needCoreNum_ = 1;
+    emptyTilingData_.set_needCoreNum(needCoreNum_);
+    emptyTilingData_.set_perCoreElements(perCoreElements);
+    emptyTilingData_.set_lastCoreElements(lastCoreElements);
     return ge::GRAPH_SUCCESS;
-  }
-
-  perCoreElements = (perCoreElements + threadNum - 1) / threadNum * threadNum;  // 对齐到threadNum_的倍数
-  needCoreNum_ = CeilDiv(ySize_, perCoreElements);
-  int64_t lastCoreElements = ySize_ - perCoreElements * (needCoreNum_ - 1);
-  simtTwoDimTilingData_.set_needCoreNum(needCoreNum_);
-  simtTwoDimTilingData_.set_perCoreElements(perCoreElements);
-  simtTwoDimTilingData_.set_lastCoreElements(lastCoreElements);
-  return ge::GRAPH_SUCCESS;
 }
 
-void Gatherv2TilingBase::ShowBaseTilingData() {
-  OP_LOGI(opName_,
-          "gatherV2TilingData is needCoreNum: %ld, threadNum is: %ld, batchSize: %ld, outerSize: %ld, gatherDimSize: "
-          "%ld, gatherSize: %ld, innerSize: %ld, xSize: %ld, ySize: %ld, indicesSize: %ld, perCoreElements: "
-          "%ld, lastCoreElements: %ld, negativeIndexSupport: %ld, supportOutOfBoundIndex: %ld",
-          gatherV2TilingData_.get_needCoreNum(), gatherV2TilingData_.get_threadNum(),
-          gatherV2TilingData_.get_batchSize(), gatherV2TilingData_.get_outerSize(),
-          gatherV2TilingData_.get_gatherDimSize(), gatherV2TilingData_.get_gatherSize(),
-          gatherV2TilingData_.get_innerSize(), gatherV2TilingData_.get_xSize(), gatherV2TilingData_.get_ySize(),
-          gatherV2TilingData_.get_indicesSize(), gatherV2TilingData_.get_perCoreElements(),
-          gatherV2TilingData_.get_lastCoreElements(), gatherV2TilingData_.get_negativeIndexSupport(),
-          gatherV2TilingData_.get_supportOutOfBoundIndex());
+void Gatherv2TilingBase::CalcCoreElement()
+{
+    while ((threadNum_ >= NUM_TWO * SMALL_CASE_THREAD_NUM) && (CeilDiv(ySize_, threadNum_) < (aivNum_ / NUM_TWO))) {
+        threadNum_ = threadNum_ / NUM_TWO;
+    }
+    gatherV2TilingData_.set_threadNum(threadNum_);
+    int64_t perCoreElements = CeilDiv(ySize_, aivNum_);
+    if (ySize_ < threadNum_) {
+        gatherV2TilingData_.set_needCoreNum(1);
+        gatherV2TilingData_.set_perCoreElements(ySize_);
+        gatherV2TilingData_.set_lastCoreElements(ySize_);
+        gatherV2TilingData_.set_dtypeSize(improveDtypeSize_);
+        needCoreNum_ = 1;
+        return;
+    }
+    perCoreElements = (perCoreElements + threadNum_ - 1) / threadNum_ * threadNum_; // 对齐到threadNum_的倍数
+    needCoreNum_ = CeilDiv(ySize_, perCoreElements);
+    int64_t lastCoreElements = ySize_ - perCoreElements * (needCoreNum_ - 1);
+    gatherV2TilingData_.set_needCoreNum(needCoreNum_);
+    gatherV2TilingData_.set_perCoreElements(perCoreElements);
+    gatherV2TilingData_.set_lastCoreElements(lastCoreElements);
+    gatherV2TilingData_.set_dtypeSize(improveDtypeSize_);
+}
+
+ge::graphStatus Gatherv2TilingBase::CalFullLoadTiling()
+{
+    int64_t perCoreElements;
+    int64_t pgDataSize = outerSize_ * gatherSize_;
+    int64_t perCoreMinElements = std::max<int64_t>(PER_BLOCK_MIN_NUM / innerSize_ / improveDtypeSize_,
+                                                   static_cast<int64_t>(1));
+    if ((outerSize_ * gatherSize_) < aivNum_ * perCoreMinElements) {
+        perCoreElements = std::min(perCoreMinElements, pgDataSize);
+    } else {
+        perCoreElements = (pgDataSize + aivNum_ - 1) / aivNum_;
+    }
+    needCoreNum_ = (pgDataSize + perCoreElements - 1) / perCoreElements;
+    int64_t tailBlockData = pgDataSize - (needCoreNum_ - 1) * perCoreElements;
+    threadNum_ = std::min(perCoreElements * innerSize_, MAX_THREAD_NUM);
+
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t ubAviable = (ubSize_ - DCACHE) / ubBlockSize * ubBlockSize / improveDtypeSize_;
+
+    gatherV2TilingData_.set_needCoreNum(needCoreNum_);
+    gatherV2TilingData_.set_perCoreElements(perCoreElements);
+    gatherV2TilingData_.set_lastCoreElements(tailBlockData);
+    gatherV2TilingData_.set_maxElement(ubAviable);
+    gatherV2TilingData_.set_threadNum(threadNum_);
+    gatherV2TilingData_.set_dtypeSize(improveDtypeSize_);
+    return ge::GRAPH_SUCCESS;
+}
+
+void Gatherv2TilingBase::CalcSimdTiling()
+{
+    int64_t blockFactor = batchSize_ * outerSize_ * gatherSize_ / aivNum_;
+    int64_t tailBlockFactor = batchSize_ * outerSize_ * gatherSize_ - blockFactor * aivNum_;
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t ubAviable = (ubSize_ - INDICES_SIZE) / ubBlockSize * ubBlockSize / improveDtypeSize_ / BUFFER_NUM;
+    needCoreNum_ = tailBlockFactor;
+    if (blockFactor > 0) {
+        needCoreNum_ = aivNum_;
+    }
+
+    gatherV2TilingData_.set_needCoreNum(needCoreNum_);
+    gatherV2TilingData_.set_perCoreElements(blockFactor);
+    gatherV2TilingData_.set_lastCoreElements(tailBlockFactor);
+    gatherV2TilingData_.set_maxElement(ubAviable);
+    gatherV2TilingData_.set_indiceUbSize(INDICES_SIZE);
+    gatherV2TilingData_.set_dtypeSize(improveDtypeSize_);
+}
+
+ge::graphStatus Gatherv2TilingBase::SimdTwoDimTiling()
+{
+    int64_t blockFactor = gatherSize_ / aivNum_;
+    int64_t tailBlockFactor = gatherSize_ - blockFactor * aivNum_;
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t ubAviable = (ubSize_ - INDICES_SIZE) / ubBlockSize * ubBlockSize / improveDtypeSize_ / BUFFER_NUM;
+    int32_t indiceFactor = INDICES_SIZE / indicesDtypeSize_;
+    needCoreNum_ = blockFactor > 0 ? aivNum_ : tailBlockFactor;
+
+    simdTwoDimTilingData_.set_needCoreNum(needCoreNum_);
+    simdTwoDimTilingData_.set_negativeIndexSupport(negativeIndexSupport_);
+    simdTwoDimTilingData_.set_indiceFactor(indiceFactor);
+    simdTwoDimTilingData_.set_dtypeSize(improveDtypeSize_);
+
+    simdTwoDimTilingData_.set_gatherDimSize(gatherDimSize_);
+    simdTwoDimTilingData_.set_gatherSize(gatherSize_);
+    simdTwoDimTilingData_.set_innerSize(innerSize_);
+    simdTwoDimTilingData_.set_blockFactor(blockFactor);
+    simdTwoDimTilingData_.set_tailBlockFactor(tailBlockFactor);
+    simdTwoDimTilingData_.set_maxElement(ubAviable);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Gatherv2TilingBase::SimtTwoDimTiling()
+{
+    int32_t threadNum = MAX_THREAD_NUM;
+    while ((threadNum >= NUM_TWO * SMALL_CASE_THREAD_NUM) &&
+           (CeilDiv(ySize_, static_cast<int64_t>(threadNum)) < (aivNum_ / NUM_TWO))) {
+        threadNum = threadNum / NUM_TWO;
+    }
+    simtTwoDimTilingData_.set_threadNum(threadNum);
+    simtTwoDimTilingData_.set_negativeIndexSupport(negativeIndexSupport_);
+    simtTwoDimTilingData_.set_gatherDimSize(gatherDimSize_);
+    simtTwoDimTilingData_.set_innerSize(innerSize_);
+    int64_t perCoreElements = CeilDiv(ySize_, aivNum_);
+    if (ySize_ < threadNum) {
+        simtTwoDimTilingData_.set_needCoreNum(1);
+        simtTwoDimTilingData_.set_perCoreElements(ySize_);
+        simtTwoDimTilingData_.set_lastCoreElements(ySize_);
+        simtTwoDimTilingData_.set_gatherSize(gatherSize_);
+        simtTwoDimTilingData_.set_dtypeSize(improveDtypeSize_);
+        needCoreNum_ = 1;
+        return ge::GRAPH_SUCCESS;
+    }
+
+    perCoreElements = (perCoreElements + threadNum - 1) / threadNum * threadNum; // 对齐到threadNum_的倍数
+    needCoreNum_ = CeilDiv(ySize_, perCoreElements);
+    int64_t lastCoreElements = ySize_ - perCoreElements * (needCoreNum_ - 1);
+    simtTwoDimTilingData_.set_needCoreNum(needCoreNum_);
+    simtTwoDimTilingData_.set_perCoreElements(perCoreElements);
+    simtTwoDimTilingData_.set_lastCoreElements(lastCoreElements);
+    simtTwoDimTilingData_.set_gatherSize(gatherSize_);
+    simtTwoDimTilingData_.set_dtypeSize(improveDtypeSize_);
+    return ge::GRAPH_SUCCESS;
+}
+
+void Gatherv2TilingBase::ShowBaseTilingData()
+{
+    OP_LOGI(opName_,
+            "gatherV2TilingData is needCoreNum: %ld, threadNum is: %ld, batchSize: %ld, outerSize: %ld, gatherDimSize: "
+            "%ld, gatherSize: %ld, innerSize: %ld, xSize: %ld, ySize: %ld, indicesSize: %ld, perCoreElements: "
+            "%ld, lastCoreElements: %ld, negativeIndexSupport: %ld, supportOutOfBoundIndex: %ld",
+            gatherV2TilingData_.get_needCoreNum(), gatherV2TilingData_.get_threadNum(),
+            gatherV2TilingData_.get_batchSize(), gatherV2TilingData_.get_outerSize(),
+            gatherV2TilingData_.get_gatherDimSize(), gatherV2TilingData_.get_gatherSize(),
+            gatherV2TilingData_.get_innerSize(), gatherV2TilingData_.get_xSize(), gatherV2TilingData_.get_ySize(),
+            gatherV2TilingData_.get_indicesSize(), gatherV2TilingData_.get_perCoreElements(),
+            gatherV2TilingData_.get_lastCoreElements(), gatherV2TilingData_.get_negativeIndexSupport(),
+            gatherV2TilingData_.get_supportOutOfBoundIndex());
 }
 
 void Gatherv2TilingBase::ShowLastGtaherSimdTilingData()

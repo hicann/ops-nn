@@ -116,6 +116,8 @@ TILING_DATA_FIELD_DEF(int64_t, gatherDimSize);
 TILING_DATA_FIELD_DEF(int64_t, innerSize);
 TILING_DATA_FIELD_DEF(int64_t, perCoreElements);
 TILING_DATA_FIELD_DEF(int64_t, lastCoreElements);
+TILING_DATA_FIELD_DEF(int64_t, gatherSize);
+TILING_DATA_FIELD_DEF(int64_t, dtypeSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000001, GatherV2TilingDataSimtTwoDim)

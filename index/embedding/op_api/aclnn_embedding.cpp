@@ -267,30 +267,24 @@ aclnnStatus aclnnEmbeddingGetWorkspaceSize(const aclTensor *weight, const aclTen
   }
 
   const aclTensor* embeddingResult = nullptr;
-  if (IsUseNoContiguous(weight, indices, out)) {
-    embeddingResult = CalNoContiguous(weight, indices, uniqueExecutor.get());
+
+  // weight如果非连续，需要转连续
+  auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
+  CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+  // indices如果非连续，需要转连续
+  auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
+  CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+  // 调用l0算子GatherV2进行计算
+  if (CheckHighperf(weight, indices)) {
+    int64_t implMode = HIGH_PERFORMANCE;
+    embeddingResult = l0op::GatherV2WithImplMode(weightContiguous, EMBEDDING_DIM, indicesContiguous, implMode,
+                                                uniqueExecutor.get());
   } else {
-    // weight如果非连续，需要转连续
-    auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
-    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // indices如果非连续，需要转连续
-    auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
-    CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 调用l0算子GatherV2进行计算
-    if (CheckHighperf(weight, indices)) {
-      int64_t implMode = HIGH_PERFORMANCE;
-      embeddingResult = l0op::GatherV2WithImplMode(weightContiguous, EMBEDDING_DIM, indicesContiguous, implMode,
-                                                  uniqueExecutor.get());
-    } else {
-      if (CheckEmbeddingKernel(weight, indices)) {
-        embeddingResult = l0op::Embedding(weightContiguous, indicesContiguous, uniqueExecutor.get());
-      } else {
-        embeddingResult = l0op::GatherV2(weightContiguous, EMBEDDING_DIM, indicesContiguous, uniqueExecutor.get());
-      }
-    }
+    embeddingResult = l0op::GatherV2(weightContiguous, EMBEDDING_DIM, indicesContiguous, uniqueExecutor.get());
   }
+
   CHECK_RET(embeddingResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
