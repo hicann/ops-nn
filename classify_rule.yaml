@@ -932,6 +932,7 @@ foreach-c@ops-nn:
         - ops/ops-nn/foreach/foreach_acos/op_kernel/foreach_acos.cpp
         - ops/ops-nn/foreach/foreach_add_list/op_graph/
         - ops/ops-nn/foreach/foreach_add_list/op_host/foreach_add_list_def.cpp
+        - ops/ops-nn/foreach/foreach_add_list/op_host/arch35/foreach_add_list_tiling_arch35.cpp
         - ops/ops-nn/foreach/foreach_add_list/op_kernel/foreach_add_list.cpp
         - ops/ops-nn/foreach/foreach_add_scalar/op_graph/
         - ops/ops-nn/foreach/foreach_add_scalar/op_host/foreach_add_scalar_def.cpp
