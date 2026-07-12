@@ -130,6 +130,7 @@ static ge::graphStatus ForeachAddListTilingFunc(gert::TilingContext* context)
 
     int64_t perCoreElements = Ops::Base::CeilDiv(totalElements, needCoreNum);
     perCoreElements = Ops::Base::CeilDiv(perCoreElements, ALIGN_SIZE) * ALIGN_SIZE;
+    needCoreNum = Ops::Base::CeilDiv(totalElements, perCoreElements);
 
     int64_t globalOffset = 0;
     for (int64_t core = 0; core < needCoreNum; core++) {
