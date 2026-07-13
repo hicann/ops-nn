@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,17 +20,23 @@ public:
     explicit AddExample(const char* name) : OpDef(name)
     {
         // 输入参数说明
-        this->Input("x1")                                       // 输入x1定义
+        this->Input("x")                                        // 输入z定义
             .ParamType(REQUIRED)                                // 必选输入
             .DataType({ge::DT_FLOAT, ge::DT_INT32})             // 支持数据类型
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})             // 支持format格式
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND}) // 未确定大小shape对应format格式
             .AutoContiguous();                                  // 内存自动连续化
 
-        /* ...此处补充其他输入输出参数说明 */
+        // 输入参数说明
+        this->Input("y")                                        // 输入y定义
+            .ParamType(REQUIRED)                                // 必选输入
+            .DataType({ge::DT_FLOAT, ge::DT_INT32})             // 支持数据类型
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})             // 支持format格式
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND}) // 未确定大小shape对应format格式
+            .AutoContiguous();                                  // 内存自动连续化
 
         // 输出参数说明
-        this->Output("y") // 输出y定义
+        this->Output("z") // 输出y定义
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_INT32})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
@@ -38,6 +44,7 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", aicoreConfig);
     }
 };

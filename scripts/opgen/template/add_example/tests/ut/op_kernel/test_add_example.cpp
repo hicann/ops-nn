@@ -7,18 +7,27 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include <array>
+#include <vector>
+#include "gtest/gtest.h"
 
-/*!
- * \file add_example_tiling_data.h
- * \brief tiling data struct
- */
-
-#ifndef __ADD_EXAMPLE_TILLING_DATA_H__
-#define __ADD_EXAMPLE_TILLING_DATA_H__
-
-struct AddExampleTilingData {
-    int64_t totalLength;
-    int64_t tileNum;
-    // 扩展其他tilling参数
-};
+#ifdef __CCE_KT_TEST__
+#include "tikicpulib.h"
+#include "data_utils.h"
+#include "string.h"
+#include <iostream>
+#include <string>
 #endif
+#include "../../../op_kernel/add_example.cpp"
+#include "../../../op_kernel/add_example_tiling_data.h"
+#include <cstdint>
+
+using namespace std;
+
+class add_example_test : public testing::Test {
+protected:
+    static void SetUpTestCase() { cout << "add_example_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_example_test TearDown\n" << endl; }
+};
+
+TEST_F(add_example_test, test_case_0) {}

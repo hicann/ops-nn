@@ -8,17 +8,19 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file add_example_tiling_data.h
- * \brief tiling data struct
- */
+#include <gtest/gtest.h>
 
-#ifndef __ADD_EXAMPLE_TILLING_DATA_H__
-#define __ADD_EXAMPLE_TILLING_DATA_H__
+#include <iostream>
+#include "tiling_case_executor.h"
 
-struct AddExampleTilingData {
-    int64_t totalLength;
-    int64_t tileNum;
-    // 扩展其他tilling参数
+using namespace std;
+using namespace ge;
+
+class AddExampleTiling : public testing::Test {
+protected:
+    static void SetUpTestCase() { std::cout << "AddExampleTiling SetUp" << std::endl; }
+
+    static void TearDownTestCase() { std::cout << "AddExampleTiling TearDown" << std::endl; }
 };
-#endif
+
+TEST_F(AddExampleTiling, add_example_0) {}

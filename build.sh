@@ -1505,7 +1505,11 @@ gen_op() {
   fi
 
   if [ -n "${python_cmd}" ]; then
-    ${python_cmd} "${BASE_PATH}/scripts/opgen/opgen_standalone.py" -t ${GENOP_TYPE} -n ${GENOP_NAME} -p ${GENOP_BASE}
+    local soc_arg=""
+    if [[ -n "${COMPUTE_UNIT:-}" ]]; then
+      soc_arg="--soc ${COMPUTE_UNIT[0]}"
+    fi
+    ${python_cmd} "${BASE_PATH}/scripts/opgen/opgen_standalone.py" -t ${GENOP_TYPE} -n ${GENOP_NAME} -p ${GENOP_BASE} ${soc_arg}
     return $?
   fi
 }

@@ -8,17 +8,15 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file add_example_tiling_data.h
- * \brief tiling data struct
- */
+#include <gtest/gtest.h>
+#include <iostream>
+#include "infershape_case_executor.h"
 
-#ifndef __ADD_EXAMPLE_TILLING_DATA_H__
-#define __ADD_EXAMPLE_TILLING_DATA_H__
+class AddExampleInfershape : public testing::Test {
+protected:
+    static void SetUpTestCase() { std::cout << "AddExampleInfershape SetUp" << std::endl; }
 
-struct AddExampleTilingData {
-    int64_t totalLength;
-    int64_t tileNum;
-    // 扩展其他tilling参数
+    static void TearDownTestCase() { std::cout << "AddExampleInfershape TearDown" << std::endl; }
 };
-#endif
+
+TEST_F(AddExampleInfershape, add_example_infershape_test1) {}
