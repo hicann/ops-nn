@@ -18,7 +18,7 @@
   1）新增了三个<term>Ascend 950PR/Ascend 950DT</term>上使用的输入参数：dstType、roundModeOptional、activateDim。
 
   2）在Atlas A2和Atlas A3芯片上，新增了四个参数用于GPT-OSS使用的变体SwiGLU：swigluMode、clampLimit、gluAlpha和gluBias；在<term>Ascend 950PR/Ascend 950DT</term>上使用该接口时，需要给这四个参数设置默认值。请根据实际情况选择合适的接口。
-- swigluMode为0时的计算公式：  
+- swigluMode为0时的计算公式：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -34,7 +34,7 @@
 
   其中，A<sub>i</sub>表示dequantOut<sub>i</sub>的前半部分，B<sub>i</sub>表示dequantOut<sub>i</sub>的后半部分。
 
-- swigluMode为1时的计算公式：  
+- swigluMode为1时的计算公式：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -43,7 +43,7 @@
   $$
   x\_glu = x\_glu.clamp(min=None, max=clampLimit)
   $$
-  
+
   $$
   x\_linear = x\_linear.clamp(min=-clampLimit, max=clampLimit)
   $$
@@ -462,8 +462,10 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 - 当activateDim对应的维度不是x的尾轴时，输出yOut的尾轴不超过5120。
 - groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积。
 - 输出yOut和scaleOut超出groupIndexOptional所有元素之和的部分未进行清理处理，该部分内存为垃圾数据。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当groupIndexOptional输入时，算子支持的输入张量的内存大小有上限，x的尾轴不超过7232。
-
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - 当groupIndexOptional输入时，算子支持的输入张量的内存大小有上限，x的尾轴不超过7232。
+  - x的最后一维必须能被64整除。
+  - quant_mode为dynamic时，quant_offset必须为空。
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
