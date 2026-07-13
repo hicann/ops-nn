@@ -151,30 +151,16 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>varOut</td>
-    <td>输出</td>
-    <td>更新后的模型参数，与var共享存储（inplace）。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
-    <td>ND</td>
+    <td>use_locking</td>
+    <td>属性</td>
+    <td>可选属性，是否对更新加锁。默认值为false。</td>
+    <td>BOOL</td>
+    <td>-</td>
   </tr>
   <tr>
-    <td>mgOut</td>
+    <td>var</td>
     <td>输出</td>
-    <td>更新后的梯度一阶矩，与mg共享存储（inplace）。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>msOut</td>
-    <td>输出</td>
-    <td>更新后的梯度二阶矩，与ms共享存储（inplace）。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>momOut</td>
-    <td>输出</td>
-    <td>更新后的动量缓冲，与mom共享存储（inplace）。</td>
+    <td>更新后的模型参数，与输入var共享存储（inplace）。mg/ms/mom亦在输入上原地更新，与canndev IR一致，不作为独立输出声明。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -182,27 +168,16 @@
 
 ## 约束说明
 
-- 默认确定性实现。
 - var、mg、ms、mom、grad五个ND Tensor的shape必须完全一致。
 - lr、rho、momentum、epsilon必须为0-D标量Tensor。
 - 所有输入和输出的数据类型必须相同（FLOAT、FLOAT16或BFLOAT16）。
-- varOut/mgOut/msOut/momOut分别与var/mg/ms/mom共享存储，实现原地更新（inplace语义）。
+- 算子仅声明1个输出var，与输入var共享存储；mg/ms/mom在输入上原地更新。
 - 不支持稀疏梯度。
 - FLOAT16/BFLOAT16输入时，内部走FP32混合精度计算路径，最终Cast回原始dtype。
 - fp16上溢边界：grad值接近fp16最大值65504时，内部FP32计算路径可防止中间溢出，但最终Cast回fp16时若结果超出范围则饱和截断。
 
 ## 调用说明
 
-<table><thead>
-  <tr>
-    <th>调用方式</th>
-    <th>调用样例</th>
-    <th>说明</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>GE IR 图模式调用</td>
-    <td><a href="./examples/test_geir_apply_centered_rms_prop.cpp">test_geir_apply_centered_rms_prop</a></td>
-    <td>构图并运行单算子子图，9输入 / 4输出（var/mg/ms/mom inplace更新）。</td>
-  </tr>
-</tbody></table>
+| 调用方式 | 调用样例 | 说明 |
+|---|---|---|
+| 图模式调用 | [test_geir_apply_centered_rms_prop](./examples/test_geir_apply_centered_rms_prop.cpp) | 通过[算子IR](./op_graph/apply_centered_rms_prop_proto.h)构图方式调用ApplyCenteredRMSProp算子。 |
