@@ -185,6 +185,8 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
     if (outputOriginAttr != nullptr) {
         outputOrigin_ = (*outputOriginAttr) ? 1 : 0;
     }
+    OP_CHECK_IF((outputOrigin_ != 0), OP_LOGE(context_->GetNodeName(), "attr output_origin must be false."),
+                return ge::GRAPH_FAILED);
 
     if (GetClampLimitAttr(attrs) == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;

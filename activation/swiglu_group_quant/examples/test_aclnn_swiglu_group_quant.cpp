@@ -1,3 +1,13 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -108,6 +118,12 @@ struct SwigluGroupQuantCase {
     std::vector<int64_t> yScaleShape;
     aclDataType yScaleDataType;
     bool yScaleIsE8M0;
+    int64_t dstType;
+    double dstTypeMax;
+    aclDataType yDataType;
+    int64_t yElementSize;
+    bool hasScaleInput;
+    std::vector<int64_t> scaleShape;
 };
 
 int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream stream)
@@ -120,19 +136,24 @@ int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream st
     for (size_t i = 0; i < xHostData.size(); ++i) {
         xHostData[i] = static_cast<uint16_t>(i % 23);
     }
-    std::vector<uint8_t> yHostData(GetShapeSize(yShape), 0);
+    std::vector<uint8_t> yHostData(GetShapeSize(yShape) * testCase.yElementSize, 0);
     std::vector<uint8_t> yScaleE8M0HostData(GetShapeSize(testCase.yScaleShape), 0);
     std::vector<float> yScaleFp32HostData(GetShapeSize(testCase.yScaleShape), 0.0f);
     std::vector<uint16_t> yOriginHostData(GetShapeSize(yOriginShape), 0);
+    std::vector<float> scaleHostData;
+    if (testCase.hasScaleInput) {
+        scaleHostData.resize(GetShapeSize(testCase.scaleShape), 1.0f);
+    }
 
     AclTensorResource xResource;
     AclTensorResource yResource;
     AclTensorResource yScaleResource;
     AclTensorResource yOriginResource;
+    AclTensorResource scaleResource;
 
     auto ret = CreateAclTensor(xHostData, xShape, &xResource.deviceAddr, ACL_FLOAT16, &xResource.tensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(yHostData, yShape, &yResource.deviceAddr, ACL_FLOAT8_E4M3FN, &yResource.tensor);
+    ret = CreateAclTensor(yHostData, yShape, &yResource.deviceAddr, testCase.yDataType, &yResource.tensor);
     CHECK_RET(ret == ACL_SUCCESS, DestroyAclTensorResource(xResource); return ret);
     if (testCase.yScaleIsE8M0) {
         ret = CreateAclTensor(yScaleE8M0HostData, testCase.yScaleShape, &yScaleResource.deviceAddr,
@@ -147,30 +168,38 @@ int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream st
                           &yOriginResource.tensor);
     CHECK_RET(ret == ACL_SUCCESS, DestroyAclTensorResource(xResource); DestroyAclTensorResource(yResource);
               DestroyAclTensorResource(yScaleResource); DestroyAclTensorResource(yOriginResource); return ret);
+    if (testCase.hasScaleInput) {
+        ret = CreateAclTensor(scaleHostData, testCase.scaleShape, &scaleResource.deviceAddr, ACL_FLOAT,
+                              &scaleResource.tensor);
+        CHECK_RET(ret == ACL_SUCCESS, DestroyAclTensorResource(xResource); DestroyAclTensorResource(yResource);
+                  DestroyAclTensorResource(yScaleResource); DestroyAclTensorResource(yOriginResource);
+                  DestroyAclTensorResource(scaleResource); return ret);
+    }
 
-    int64_t dstType = 36;
     double clampLimit = -1.0;
-    double dstTypeMax = 448.0;
     bool outputOrigin = false;
+    const aclTensor* scaleTensor = testCase.hasScaleInput ? scaleResource.tensor : nullptr;
 
     LOG_PRINT("Run %s: quant_mode=%ld\n", testCase.name, testCase.quantMode);
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    ret = aclnnSwigluGroupQuantGetWorkspaceSize(xResource.tensor, nullptr, nullptr, nullptr, dstType,
-                                                testCase.quantMode, testCase.blockSize, testCase.roundScale, clampLimit,
-                                                dstTypeMax, outputOrigin, yResource.tensor, yScaleResource.tensor,
-                                                yOriginResource.tensor, &workspaceSize, &executor);
+    ret = aclnnSwigluGroupQuantGetWorkspaceSize(
+        xResource.tensor, nullptr, nullptr, scaleTensor, testCase.dstType, testCase.quantMode, testCase.blockSize,
+        testCase.roundScale, clampLimit, testCase.dstTypeMax, outputOrigin, yResource.tensor, yScaleResource.tensor,
+        yOriginResource.tensor, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluGroupQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               DestroyAclTensorResource(xResource); DestroyAclTensorResource(yResource);
-              DestroyAclTensorResource(yScaleResource); DestroyAclTensorResource(yOriginResource); return ret);
+              DestroyAclTensorResource(yScaleResource); DestroyAclTensorResource(yOriginResource);
+              DestroyAclTensorResource(scaleResource); return ret);
 
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
                   DestroyAclTensorResource(xResource); DestroyAclTensorResource(yResource);
-                  DestroyAclTensorResource(yScaleResource); DestroyAclTensorResource(yOriginResource); return ret);
+                  DestroyAclTensorResource(yScaleResource); DestroyAclTensorResource(yOriginResource);
+                  DestroyAclTensorResource(scaleResource); return ret);
     }
 
     ret = aclnnSwigluGroupQuant(workspaceAddr, workspaceSize, executor, stream);
@@ -178,29 +207,30 @@ int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream st
         ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluGroupQuant failed. ERROR: %d\n", ret);
         if (workspaceAddr != nullptr) { aclrtFree(workspaceAddr); } DestroyAclTensorResource(xResource);
         DestroyAclTensorResource(yResource); DestroyAclTensorResource(yScaleResource);
-        DestroyAclTensorResource(yOriginResource); return ret);
+        DestroyAclTensorResource(yOriginResource); DestroyAclTensorResource(scaleResource); return ret);
 
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(
         ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
         if (workspaceAddr != nullptr) { aclrtFree(workspaceAddr); } DestroyAclTensorResource(xResource);
         DestroyAclTensorResource(yResource); DestroyAclTensorResource(yScaleResource);
-        DestroyAclTensorResource(yOriginResource); return ret);
+        DestroyAclTensorResource(yOriginResource); DestroyAclTensorResource(scaleResource); return ret);
 
-    std::vector<uint8_t> resultData(GetShapeSize(yShape), 0);
+    std::vector<uint8_t> resultData(GetShapeSize(yShape) * testCase.yElementSize, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), yResource.deviceAddr,
                       resultData.size() * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(
         ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
         if (workspaceAddr != nullptr) { aclrtFree(workspaceAddr); } DestroyAclTensorResource(xResource);
         DestroyAclTensorResource(yResource); DestroyAclTensorResource(yScaleResource);
-        DestroyAclTensorResource(yOriginResource); return ret);
+        DestroyAclTensorResource(yOriginResource); DestroyAclTensorResource(scaleResource); return ret);
     LOG_PRINT("%s result[0] is: %d\n", testCase.name, resultData[0]);
 
     DestroyAclTensorResource(xResource);
     DestroyAclTensorResource(yResource);
     DestroyAclTensorResource(yScaleResource);
     DestroyAclTensorResource(yOriginResource);
+    DestroyAclTensorResource(scaleResource);
     if (workspaceAddr != nullptr) {
         aclrtFree(workspaceAddr);
     }
@@ -221,8 +251,10 @@ int main()
     }
 
     std::vector<SwigluGroupQuantCase> testCases = {
-        {"block_fp8", 0, 0, false, {2, 1}, ACL_FLOAT, false},
-        {"mx_fp8", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true},
+        {"block_fp8", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, {}},
+        {"mx_fp8", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, {}},
+        {"hifp8_static", 2, 0, false, {1}, ACL_FLOAT, false, 27, 448.0, ACL_HIFLOAT8, 1, true, {1}},
+        {"hifp8_dynamic", 3, 0, false, {1}, ACL_FLOAT, false, 27, 15.0, ACL_HIFLOAT8, 1, false, {}},
     };
 
     for (const auto& testCase : testCases) {
