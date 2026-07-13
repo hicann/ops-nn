@@ -26,40 +26,47 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/max_pool3_d_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
+#define C0_SIZE 16 // NDC1HWC0 物理格式中 C0 分块大小，FP16/FP32 在 910B 上为 16
+
+// 由 NDHWC 5D 原始形状 (N, D, H, W, C) 计算 NDC1HWC0 6D 存储形状 (N, D, C1, H, W, C0)
+#define GET_NDC1HWC0_SHAPE(varName, ndhwcShape)                     \
+    int64_t varName##_c1 = (ndhwcShape[4] + C0_SIZE - 1) / C0_SIZE; \
+    vector<int64_t> varName = {ndhwcShape[0], ndhwcShape[1], varName##_c1, ndhwcShape[2], ndhwcShape[3], C0_SIZE}
 
 using namespace ge;
 using std::map;
 using std::string;
 using std::vector;
-#define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                       \
-    vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                      \
-    auto placeholder##inputIndex = op::Data("placeholder" + inputIndex).set_attr_index(0);                             \
-    TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND,      \
-                                                           inputDtype);                                                \
-    placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                                   \
-    placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                               \
-    Tensor tensor_placeholder##inputIndex;                                                                             \
-    ret = GenOnesData(placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, \
-                      inputDtype, 2);                                                                                  \
-    if (ret != SUCCESS) {                                                                                              \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                                 \
-        return FAILED;                                                                                                 \
-    }                                                                                                                  \
-    placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                       \
-    input.push_back(tensor_placeholder##inputIndex);                                                                   \
-    graph.AddOp(placeholder##inputIndex);                                                                              \
-    add1.set_input_##inputName(placeholder##inputIndex);                                                               \
+#define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                               \
+    vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                              \
+    GET_NDC1HWC0_SHAPE(placeholder##inputIndex##_storage_shape, placeholder##inputIndex##_shape);              \
+    auto placeholder##inputIndex = op::Data("placeholder" #inputIndex).set_attr_index(0);                      \
+    TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_storage_shape), \
+                                                           FORMAT_NDC1HWC0, inputDtype);                       \
+    placeholder##inputIndex##_desc.SetOriginShape(ge::Shape(placeholder##inputIndex##_shape));                 \
+    placeholder##inputIndex##_desc.SetOriginFormat(FORMAT_NDHWC);                                              \
+    placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                           \
+    Tensor tensor_placeholder##inputIndex;                                                                     \
+    ret = GenOnesData(placeholder##inputIndex##_storage_shape, tensor_placeholder##inputIndex,                 \
+                      placeholder##inputIndex##_desc, inputDtype, 2);                                          \
+    if (ret != SUCCESS) {                                                                                      \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                         \
+        return FAILED;                                                                                         \
+    }                                                                                                          \
+    placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                               \
+    input.push_back(tensor_placeholder##inputIndex);                                                           \
+    graph.AddOp(placeholder##inputIndex);                                                                      \
+    add1.set_input_##inputName(placeholder##inputIndex);                                                       \
     inputs.push_back(placeholder##inputIndex)
 
 #define ADD_CONST_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                 \
     vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                      \
-    auto placeholder##inputIndex = op::Const("placeholder" + inputIndex);                                              \
+    auto placeholder##inputIndex = op::Const("placeholder" #inputIndex);                                               \
     TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND,      \
                                                            inputDtype);                                                \
     placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                                   \
@@ -78,8 +85,13 @@ using std::vector;
     add1.update_input_desc_##inputName(placeholder##inputIndex##_desc);                                                \
     inputs.push_back(placeholder##inputIndex)
 
-#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                       \
-    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype); \
+#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                          \
+    vector<int64_t> outputName##outputIndex##_shape = outputShape;                                             \
+    GET_NDC1HWC0_SHAPE(outputName##outputIndex##_storage_shape, outputName##outputIndex##_shape);              \
+    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputName##outputIndex##_storage_shape), \
+                                                           FORMAT_NDC1HWC0, outputDtype);                      \
+    outputName##outputIndex##_desc.SetOriginShape(ge::Shape(outputName##outputIndex##_shape));                 \
+    outputName##outputIndex##_desc.SetOriginFormat(FORMAT_NDHWC);                                              \
     add1.update_output_desc_##outputName(outputName##outputIndex##_desc)
 
 #define LOG_PRINT(message, ...)         \
