@@ -74,29 +74,8 @@ inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args)
     OP_LOGD(args.opName, "Hf32 flag is: %d, isAvoidTensorApi flag is: %d", args.isHf32, args.isAvoidTensorApi);
 }
 
-ge::graphStatus IsValidDtype(const MatMulV3Args& args)
+ge::graphStatus InvalidDtypeErrorMsg(const MatMulV3Args& args)
 {
-    std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
-    if (args.hasBias) {
-        dtype.push_back(args.biasType);
-    }
-    const std::vector<std::vector<ge::DataType>> dtypeSuportList = {
-        // x1,              x2,             y,              bias
-        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
-        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT},
-        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16},
-        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT},
-        {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
-        {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT},
-        {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16}, // david supports bias-bf16
-        {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16},
-        {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT}};
-    for (auto& supported : dtypeSuportList) {
-        if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
-            return ge::GRAPH_SUCCESS;
-        }
-    }
-
     if (args.hasBias) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "a, b, c, bias",
@@ -124,6 +103,74 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args)
                 "a, b, c", "{FLOAT16, FLOAT, BF16}", "a, b", "FLOAT16 or BF16", "c", "FLOAT")
                 .c_str());
         return ge::GRAPH_FAILED;
+    }
+}
+
+ge::graphStatus InvalidDtypeErrorMsgForResv(const MatMulV3Args& args)
+{
+    if (args.hasBias) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "a, b, c, bias",
+            Ops::NN::FormatString("%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str(),
+                                  Ops::Base::ToString(args.biasType).c_str())
+                .c_str(),
+            Ops::NN::FormatString("The dtypes of %s must be the same and within the range %s ", "a, b, c, bias",
+                                  "{FLOAT16}")
+                .c_str());
+        return ge::GRAPH_FAILED;
+    } else {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "a, b, c",
+            Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str())
+                .c_str(),
+            Ops::NN::FormatString("The dtypes of %s must be the same and within the range %s ", "a, b, c", "{FLOAT16}")
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
+}
+
+ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3Args& args)
+{
+    MatMulTilingCfg tilingCfg(false, context.GetCompileInfo(), reinterpret_cast<const void*>(&args));
+    OP_TILING_CHECK(tilingCfg.compileInfo == nullptr, CUBE_INNER_ERR_REPORT("matmul", "compileInfo is nullptr"),
+                    return ge::GRAPH_FAILED);
+    NpuArch npuArch = reinterpret_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
+    if (args.hasBias) {
+        dtype.push_back(args.biasType);
+    }
+    const std::vector<std::vector<ge::DataType>> dtypeSuportList = {
+        // x1,              x2,             y,              bias
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT},
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16},
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT},
+        {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT},
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16}, // david supports bias-bf16
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16},
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT}};
+    // for NpuArch::DAV_RESV
+    const std::vector<std::vector<ge::DataType>> dtypeSuportListForResv = {
+        // x1,              x2,             y,              bias
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}};
+
+    if (npuArch == NpuArch::DAV_RESV) {
+        for (auto& supported : dtypeSuportListForResv) {
+            if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
+                return ge::GRAPH_SUCCESS;
+            }
+        }
+        return InvalidDtypeErrorMsgForResv(args);
+    } else {
+        for (auto& supported : dtypeSuportList) {
+            if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
+                return ge::GRAPH_SUCCESS;
+            }
+        }
+        return InvalidDtypeErrorMsg(args);
     }
 }
 
@@ -277,14 +324,31 @@ ge::graphStatus MatMulV3Tiling::GetShape()
     int64_t knDims[TWO_BATCH_DIM];
 
     // NZ异常校验
-    if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.outFormat == ge::FORMAT_FRACTAL_NZ) {
+    // DAV_RESV芯片隔离：仅支持ND格式
+    MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), reinterpret_cast<void*>(&args_));
+    OP_TILING_CHECK(tilingCfg.compileInfo == nullptr, CUBE_INNER_ERR_REPORT(args_.opName, "compileInfo is nullptr"),
+                    return ge::GRAPH_FAILED);
+    NpuArch npuArch = reinterpret_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    if (npuArch == NpuArch::DAV_RESV &&
+        (args_.aFormat != ge::FORMAT_ND || args_.bFormat != ge::FORMAT_ND || args_.outFormat != ge::FORMAT_ND)) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            args_.opName, "a, c",
-            Ops::NN::FormatString("%s, %s", (args_.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
-                                  (args_.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
+            args_.opName, "a, b, c",
+            Ops::NN::FormatString("%s, %s, %s", (args_.aFormat == ge::FORMAT_ND) ? "ND" : "FRACTAL_NZ",
+                                  (args_.bFormat == ge::FORMAT_ND) ? "ND" : "FRACTAL_NZ",
+                                  (args_.outFormat == ge::FORMAT_ND) ? "ND" : "FRACTAL_NZ")
                 .c_str(),
-            Ops::NN::FormatString("The formats of %s must be %s", "a, c", "ND").c_str());
+            Ops::NN::FormatString("The formats of %s must be %s", "a, b, c", "ND").c_str());
         return ge::GRAPH_FAILED;
+    } else {
+        if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.outFormat == ge::FORMAT_FRACTAL_NZ) {
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                args_.opName, "a, c",
+                Ops::NN::FormatString("%s, %s", (args_.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
+                                      (args_.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
+                    .c_str(),
+                Ops::NN::FormatString("The formats of %s must be %s", "a, c", "ND").c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     // 非连续校验
@@ -391,7 +455,7 @@ ge::graphStatus MatMulV3Tiling::BaseOpSpecificCheck()
     }
 
     // dtype check
-    return IsValidDtype(args_);
+    return IsValidDtype(*context_, args_);
 }
 
 void MatMulV3Tiling::GetFormat()

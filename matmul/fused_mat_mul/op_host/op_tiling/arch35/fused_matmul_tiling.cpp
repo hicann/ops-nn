@@ -63,17 +63,26 @@ const std::vector<ge::DataType> DtypeSupportF16 = {
     // x1,              x2,             bias,              x3,           y
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}};
 
-std::string VectorToString(const std::vector<std::string>& FusedOpSupportList) {
-    std::string res = "[";
-    size_t size = FusedOpSupportList.size();
-    for (size_t i = 0; i < size; ++i) {
-        res += FusedOpSupportList[i];
-        if (i < size - 1) {
-            res += ", ";
+std::string JoinArrayValues(const std::array<std::vector<std::string>, 2>& arr)
+{
+    std::ostringstream oss;
+    oss << "[";
+    bool first_element = true;
+    for (const auto& vec : arr) {
+        for (const auto& str : vec) {
+            if (!first_element) {
+                oss << ",";
+            }
+            if (str.empty()) {
+                oss << "\" \"";
+            } else {
+                oss << str;
+            }
+            first_element = false;
         }
     }
-    res += "]";
-    return res;
+    oss << "]";
+    return oss.str();
 }
 
 FusedMatmulTrans GetTrans(bool aTrans, bool bTrans)
@@ -128,11 +137,14 @@ bool CheckDtype(const gert::TilingContext& context, bool hasX3Input, bool hasBia
     bool isSupportF32 = std::find(FusedOpTypeSupportF32.begin(), FusedOpTypeSupportF32.end(), fusedOpType) !=
                         FusedOpTypeSupportF32.end();
     NpuArch npuArch;
-    OP_TILING_CHECK(
-        GetSocVersion(&context, npuArch) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "fail to get npu arch"), return false);
+    OP_TILING_CHECK(GetSocVersion(&context, npuArch) == ge::GRAPH_FAILED,
+                    CUBE_INNER_ERR_REPORT(context.GetNodeName(), "fail to get npu arch"), return false);
 
-    if (npuArch == NpuArch::DAV_3510) {
+    if (npuArch == NpuArch::DAV_RESV) {
+        if (std::equal(dtype.begin(), dtype.end(), DtypeSupportF16.begin())) {
+            return true;
+        }
+    } else {
         for (auto& supported : DavidDtypeSupportListB16) {
             if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
                 return true;
@@ -141,12 +153,8 @@ bool CheckDtype(const gert::TilingContext& context, bool hasX3Input, bool hasBia
         if (isSupportF32 && std::equal(dtype.begin(), dtype.end(), DtypeSupportF32.begin())) {
             return true;
         }
-    } else if (npuArch == NpuArch::DAV_RESV) {
-        if (std::equal(dtype.begin(), dtype.end(), DtypeSupportF16.begin())) {
-            return true;
-        }
     }
-    
+
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
         context.GetNodeName(), "x1, x2, bias, x3, y",
         Ops::NN::FormatString(
@@ -314,13 +322,12 @@ bool CheckFusedOpType(const gert::TilingContext& context)
 
     // check op type support
     const auto& builtInSupportedOps = (it->second)[1];
-    auto errorMessage = VectorToString(builtInSupportedOps);
+    auto errorMessage = JoinArrayValues(it->second);
     auto iter = std::find(builtInSupportedOps.begin(), builtInSupportedOps.end(), fusedOpType);
     if (iter == builtInSupportedOps.end()) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-        context.GetNodeName(), "op_type",
-        Ops::NN::FormatString("%s", fusedOpType.c_str()),
-        Ops::NN::FormatString("FusedOpType must be in range %s", errorMessage.c_str()).c_str());
+            context.GetNodeName(), "op_type", Ops::NN::FormatString("%s", fusedOpType.c_str()),
+            Ops::NN::FormatString("FusedOpType must be in range %s", errorMessage.c_str()).c_str());
         return false;
     }
     return true;
