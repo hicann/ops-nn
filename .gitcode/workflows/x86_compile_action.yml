@@ -14,7 +14,7 @@ jobs:
   JOB_compile:
     name: compile
     steps:
-      - 
+      -
         name: Checkout
         identifier: process_checkout
         uses: checkout
@@ -33,19 +33,20 @@ jobs:
             ${{ env.obs_path }}/pr_filelist.txt
             ${{ env.obs_path }}/pr_filelist_mod.txt
             ${{ env.obs_path }}/update_file_detail.txt
+            ${{ env.obs_path }}/x86_compile.sh
           path: ${{ steps.process_checkout.outputs.path }}
       -
         name: x86_compile_acc
         identifier: compile
         uses: build-accelerate
         with:
-          command: | 
+          command: |
             export WORKSPACE=${{ steps.process_checkout.outputs.path }}
             cd ${{ steps.process_checkout.outputs.path }}
             export task_name=${{ inputs.task_name }}
             export GIT_TARGET_BRANCH=${{ env.target_branch }}
-            BuildAccelerate bash .gitcode/workflows/x86_compile.sh
-          AC_SERVER_IP: ${{ vars.AC_SERVER_IP }} 
+            BuildAccelerate bash x86_compile.sh
+          AC_SERVER_IP: ${{ vars.AC_SERVER_IP }}
       -
         name: verify_package
         uses: cann/.gitcode/actions/verify-package@master
@@ -59,7 +60,7 @@ jobs:
           access-key: ${{ secrets.AK }}
           secret-key: ${{ secrets.SK }}
           artifact-path: "${{ steps.process_checkout.outputs.path }}/build_out/*"
-          object-prefix: ${{ env.obs_path }}/  
+          object-prefix: ${{ env.obs_path }}/
     if: "${{ default() }}"
     runs-on: [dedicate-hosted, x64, large]
     container:

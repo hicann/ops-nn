@@ -1,20 +1,25 @@
-name: arm_compile_action 
+name: arm_compile_action
 
 on:
   workflow_call:
-    inputs: 
+    inputs:
       task_name:
         required: true
         type: string
       image_version:
         required: true
         type: string
+    outputs:
+      arm_run_url:
+        value: ${{jobs.JOB_compile.outputs.primary-url}}
+      arm_run_key:
+        value: ${{jobs.JOB_compile.outputs.primary-key}}
 
 jobs:
   JOB_compile:
     name: compile
     steps:
-      - 
+      -
         name: Checkout
         identifier: process_checkout
         uses: checkout
@@ -33,6 +38,7 @@ jobs:
             ${{ env.obs_path }}/pr_filelist.txt
             ${{ env.obs_path }}/pr_filelist_mod.txt
             ${{ env.obs_path }}/update_file_detail.txt
+            ${{ env.obs_path }}/arm_compile.sh
           path: ${{ steps.process_checkout.outputs.path }}
       -
         name: arm_compile_acc
@@ -44,7 +50,7 @@ jobs:
             cd ${{ steps.process_checkout.outputs.path }}
             export task_name=${{ inputs.task_name }}
             export target_branch=${{ env.target_branch }}
-            BuildAccelerate bash .gitcode/workflows/arm_compile.sh
+            BuildAccelerate bash arm_compile.sh
           AC_SERVER_IP: ${{ vars.AC_SERVER_IP }}
       - name: verify_package
         uses: cann/.gitcode/actions/verify-package@master
@@ -57,8 +63,8 @@ jobs:
           bucket: "ascend-ci"
           access-key: ${{ secrets.AK }}
           secret-key: ${{ secrets.SK }}
-          artifact-path: "${{ steps.process_checkout.outputs.path }}/build_out/*.run"
-          object-prefix: ${{ env.obs_path }}/  
+          artifact-path: "${{ steps.process_checkout.outputs.path }}/${{ steps.compile.outputs.buildout_package }}"
+          object-prefix: ${{ env.obs_path }}/
     if: "${{ default() }}"
     runs-on: [dedicate-hosted, arm64, xlarge]
     container:

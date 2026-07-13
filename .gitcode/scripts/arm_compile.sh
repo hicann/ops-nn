@@ -1,5 +1,13 @@
 #!/bin/bash
-
+# -----------------------------------------------------------------------------------------------------------
+# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# -----------------------------------------------------------------------------------------------------------
 
 cd ${WORKSPACE}
 echo $(grep -E "^VERSION_ID=" /etc/os-release | cut -d'"' -f2)
@@ -14,6 +22,13 @@ fi
 gcc --version
 source /home/jenkins/Ascend/cann/bin/setenv.bash
 set +e
+
+if [[ "${task_name}" == compile_single* ]]; then
+    echo "buildout_package=single.tar.gz" >> $ATOMGIT_OUTPUT
+else
+    echo "buildout_package=build_out/*.run" >> $ATOMGIT_OUTPUT
+fi
+
 case "${task_name}" in
     Pre_compile)
         bash build.sh --pkg --ops="fatrelu_mul" --cann_3rd_lib_path=/home/jenkins/opensource
@@ -28,9 +43,9 @@ case "${task_name}" in
             export ASCEND_3RD_LIB_PATH=/home/jenkins/opensource
             bash scripts/ci/check_pkg.sh "pr_filelist.txt" "-j16"
             echo "exec cmd: [bash scripts/ci/check_pkg.sh pr_filelist.txt]"
-        else
+        fi
+        if [ ! -f ${WORKSPACE}/single.tar.gz ];then
             echo "not need build single"
-            mkdir single
             touch single.tar.gz
         fi
         ;;
@@ -38,7 +53,7 @@ case "${task_name}" in
         bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         exit 0
-        ;;  
+        ;;
     Compile_Ascend_experimental)
         sh scripts/ci/check_experimental_pkg.sh "pr_filelist.txt"
         echo "exec cmd: [sh scripts/ci/check_experimental_pkg.sh pr_filelist.txt]"

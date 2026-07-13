@@ -15,9 +15,8 @@ env:
   MERGE_ID: ${{atomgit.event.pull_request.number}}
   TARGET_BRANCH: ${{atomgit.ref_name}}
   SOURCE_BRANCH: ${{atomgit.head_ref}}
-  obs_path: "test/ops-nn/package/${{ env.MERGE_ID }}"
-
-
+  obs_path: "${{ vars.OBS_PATH}}/${{ env.MERGE_ID }}"
+  obs_smoke_path: "presmoke/${{ env.repo_name }}/2/${{ env.MERGE_ID }}"
 
 stages:
   stage1:
@@ -38,7 +37,7 @@ stages:
             run: |
               echo "image: ${{ steps.revise_image.outputs.Compile_Ascend_X86  }}"
         if: "${{ default() }}"
-        runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "large"]
+        runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "small"]
       JOB_pr:
         name: get_pr_files
         steps:
@@ -71,6 +70,30 @@ stages:
                 ${{ steps.process_checkout.outputs.path }}/pr_filelist_precommit.txt
                 ${{ steps.process_checkout.outputs.path }}/update_file_detail.txt
               object-prefix: ${{ env.obs_path }}/
+        runs-on:
+        - default
+      JOB_shell:
+        name: get_shell_files
+        steps:
+          -
+            name: Checkout
+            identifier: process_checkout
+            uses: checkout
+            with:
+              ref: master
+              token: ${{secrets.GIT_TOKEN}}
+          -
+            name: upload
+            uses: obs-upload
+            with:
+              endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+              bucket: "ascend-ci"
+              access-key: ${{secrets.AK}}
+              secret-key: ${{secrets.SK}}
+              artifact-path: |
+                ${{ steps.process_checkout.outputs.path }}/.gitcode/scripts/*
+              object-prefix: ${{ env.obs_path }}/
+        if: "${{ default() }}"
         runs-on:
         - default
     pre:
@@ -115,6 +138,12 @@ stages:
         with:
           task_name: 'X86_monitor_950'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_9_0_0 }}
+      JOB_Compile_Ascend_X86_950_ubuntu24:
+        name: Compile_Ascend_X86_950_ubuntu24
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_X86_950_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950_ubuntu24 }}
       JOB_Compile_Ascend_X86_mobile_station:
         name: Compile_Ascend_X86_mobile_station
         uses: .gitcode/workflows/x86_compile_action.yml
@@ -251,6 +280,88 @@ stages:
           ut_type: 'opgraph'
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_opgraph }}
+    pre:
+    - type: auto
+    fail-fast: true
+  stage4:
+    name: PreSmoke
+    jobs:
+      A2_smoke:
+        name: A2_pre_smoke
+        steps:
+          -
+            name: Checkout
+            identifier: process_checkout
+            uses: checkout
+            with:
+              token: ${{secrets.GIT_TOKEN}}
+              path: "./runner"
+          -
+            name: Checkout gitcode
+            identifier: process_checkout_gitcode
+            uses: checkout
+            with:
+              repository: "https://gitcode.com/cann/.gitcode.git"
+              ref: master
+              path: "./runner/ci"
+          -
+            name: download
+            uses: obs-download
+            with:
+              endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+              bucket: "ascend-ci"
+              access-key: ${{ secrets.AK }}
+              secret-key: ${{ secrets.SK }}
+              key: |
+                ${{ env.obs_path }}/pr_filelist.txt
+                ${{ env.obs_path }}/pr_filelist_mod.txt
+                ${{ env.obs_path }}/update_file_detail.txt
+                ${{ env.obs_path }}/pre_smoke.sh
+              path: ${{ steps.process_checkout.outputs.path }}
+          -
+            name: tar businesscode
+            run: |
+              echo "############${{ steps.process_checkout.outputs.path }}#################"
+              echo "#####image: swr.cn-south-1.myhuaweicloud.com/pre_smoke/${{ jobs.JOB_image.outputs.PreSmoke_A900 }}#####"
+              cd ${{ steps.process_checkout.outputs.path }}
+              tar -zcf ../smoke_data.tar.gz .
+              mv ../smoke_data.tar.gz ./
+          -
+            name: upload
+            identifier: process_upload
+            uses: obs-upload
+            with:
+              endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+              bucket: "ascend-ci"
+              access-key: ${{secrets.AK}}
+              secret-key: ${{secrets.SK}}
+              artifact-path: |
+                ${{ steps.process_checkout.outputs.path }}/smoke_data.tar.gz
+              object-prefix: ${{ env.obs_smoke_path }}/
+          -
+            name: smoke
+            uses: manifest-management-plugin
+            with:
+              action: DEPLOY
+              repo: ${{ steps.process_checkout.outputs.path }}
+              file_path: ${{ steps.process_checkout.outputs.path }}/ci/smoke-conf/smoke-A2.yaml
+              manifest_image: swr.cn-south-1.myhuaweicloud.com/pre_smoke/${{ jobs.JOB_image.outputs.PreSmoke_A900 }}
+              custom_shell_script: |-
+                set -e
+                export single_tar_url=${{jobs.JOB_compile_single.outputs.arm_run_url}}
+                export experimental_run_url=${{jobs.JOB_Compile_Ascend_experimental_ubuntu24.outputs.arm_run_url}}
+                export fatrelu_run_url=${{jobs.JOB_Pre_compile.outputs.arm_run_url}}
+                export repo_name=${{env.repo_name}}
+                export pr_id=${{ env.MERGE_ID }}
+                export AK=${{secrets.AK}}
+                export SK=${{secrets.SK}}
+                mkdir -p /home/taskspace && cd /home/taskspace
+                wget -nv ${{ steps.process_upload.outputs.primary-url }}
+                tar -zxf $(basename "${{ steps.process_upload.outputs.primary-url }}")
+                bash /home/taskspace/pre_smoke.sh
+
+        if: "${{ default() }}"
+        runs-on: ['self-hosted','arch=arm','smoke=204']
     pre:
     - type: auto
     fail-fast: true
