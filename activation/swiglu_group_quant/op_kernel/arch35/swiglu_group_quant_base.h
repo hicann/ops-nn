@@ -818,10 +818,11 @@ __aicore__ inline void VFProcessGroupIndex(const LocalTensor<T>& yLocal, const L
     __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
     uint16_t vlLen = REPEAT_SIZE / sizeof(T);
     uint16_t loopCount = CeilDiv(curColNum, vlLen);
-    uint16_t fourLoopCount = loopCount / FOUR_UNFOLD;
-    uint16_t tailLoopNum = loopCount % FOUR_UNFOLD;
-    uint32_t tailReminder = curColNum - fourLoopCount * vlLen * FOUR_UNFOLD;
-    if (loopCount < FOUR_UNFOLD) {
+    uint16_t fourVecLen = vlLen * FOUR_UNFOLD;
+    uint16_t fourLoopCount = curColNum / fourVecLen;
+    uint16_t tailLoopNum = loopCount - fourLoopCount * FOUR_UNFOLD;
+    uint32_t tailReminder = curColNum - static_cast<uint32_t>(fourLoopCount) * fourVecLen;
+    if (fourLoopCount == 0) {
         AscendC::VF_CALL<VFProcessGroupIndexSmallVf<T, withUbReduce>>(yLocalAddr, xLocalAddr, curColNum, vlLen,
                                                                       loopCount);
     } else {
