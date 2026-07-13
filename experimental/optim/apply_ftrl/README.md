@@ -49,7 +49,7 @@
   $$
 
   其中 $sign(x) \in \{-1, 0, +1\}$（$x>0 \to +1$，$x<0 \to -1$，$x=0 \to 0$）；$var$、$accum$、$linear$ 三者均原地写回。
-  
+
   - 实现要点（ascend910b 原生 kernel）：
   - 逐元素独立计算，无跨元素/跨核归约 → 天然确定性。
   - **内部统一 fp32 计算**：bf16/fp16 输入在 kernel 入口 Cast 到 fp32 完成全部中间计算（含 `accum_new`、幂运算、sign + 软阈值、`quadratic`、除法），末尾 Cast 回原 dtype 输出；fp32 直接计算。
@@ -121,7 +121,7 @@
 | GE 图模式（静态/动态 shape） | √ | [test_geir_apply_ftrl.cpp](./examples/test_geir_apply_ftrl.cpp) | 通过[算子 IR](../../../optim/apply_ftrl/op_graph/apply_ftrl_proto.h) 构图方式调用 `ApplyFtrl`（按 `var → accum → linear → grad → lr → l1 → l2 → lr_power` 串接 8 个 `Data` 输入，scalar 输入 shape `{1}`，`set_attr_use_locking(false)`）。运行需将算子编译安装进 OPP 包。 |
 | Kernel 直调（`<<<>>>`） | √（**本实验已在真实 NPU 验证通过**） | [test_kernel_direct_apply_ftrl.asc](./examples/test_kernel_direct_apply_ftrl.asc) | 直接复用本算子 `op_kernel/apply_ftrl_kernel.h` 的 `NsApplyFtrl::ApplyFtrl<T, PAD_TAIL, HAS_L1>` 计算类，经 `<<<>>>` 在 ascend910b 真实 NPU 上运行并与 CPU golden 比对。一键运行见 [examples/run.sh](./examples/run.sh)。 |
 | aclnn 调用 | × | — | 无 CANN 已部署 aclnn 接口（ACLNNTYPE=`aclnn_exclude`）。 |
-| torch_npu / torch.compile | × | — | 无 PyTorch 等价。 |
+| TorchNPU / torch.compile | × | — | 无 PyTorch 等价。 |
 | TensorFlow 算子 | √（语义兼容） | — | 对标 `tf.raw_ops.ApplyFtrl`。 |
 
 - aclnn 接口设计（派生原型，**非 CANN 已部署**）见 [docs/aclnnApplyFtrl.md](./docs/aclnnApplyFtrl.md)。

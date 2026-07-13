@@ -39,7 +39,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann)（Compute Architecture for N
 git clone -b 9.0.0 https://gitcode.com/cann/ops-nn.git
 ```
 
-> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如CANNLab默认已提供最新商发版CANN对应的源码。
+> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如CANNLab默认已提供最新版本CANN对应的源码。
 
 ## 📖学习教程
 

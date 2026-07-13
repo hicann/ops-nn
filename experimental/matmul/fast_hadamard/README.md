@@ -49,7 +49,7 @@ fast_hadamard/
 cd ${git_clone_path}
 bash build.sh --pkg --experimental --soc=ascend910b \
     --ops=fast_hadamard,fast_hadamard_quant,fast_hadamard_dynamic_quant
-# 安装生成的 wheel（注意 --no-deps，避免升级容器内已固定的 torch/torch_npu）
+# 安装生成的 wheel（注意 --no-deps，避免升级容器内已固定的 torch/TorchNPU）
 pip install --no-deps --force-reinstall build_out/ascend_ops_nn-*.whl
 ```
 

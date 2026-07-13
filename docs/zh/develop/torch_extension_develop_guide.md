@@ -16,7 +16,7 @@
 - python >= 3.8.0
 - gcc >= 9.4.0
 - PyTorch >= 2.6.0
-- 对应版本的[torch_npu](https://gitcode.com/Ascend/pytorch/releases)
+- 对应版本的[TorchNPU](https://gitcode.com/Ascend/pytorch/releases)
 
 ## 算子开发流程
 

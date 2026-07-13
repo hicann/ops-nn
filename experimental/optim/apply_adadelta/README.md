@@ -41,12 +41,12 @@ $$
 | 调用方式 | 是否支持 |
 |---------|:--------:|
 | ACLNN 单算子调用 | √ |
-| torch_npu 单算子调用 | × |
+| TorchNPU 单算子调用 | × |
 | torch.compile 入图 | × |
 | GE 图模式（静态 shape） | × |
 | GE 图模式（动态 shape） | × |
 
-> **说明**：本算子仅支持 ACLNN 单算子调用，暂不支持 GE 图模式、torch_npu 单算子及 torch.compile 入图。因此仅提供 ACLNN 调用示例 `test_aclnn_apply_adadelta.cpp`，**不提供 GE IR 示例**。
+> **说明**：本算子仅支持 ACLNN 单算子调用，暂不支持 GE 图模式、TorchNPU 单算子及 torch.compile 入图。因此仅提供 ACLNN 调用示例 `test_aclnn_apply_adadelta.cpp`，**不提供 GE IR 示例**。
 
 ## 数据类型
 
