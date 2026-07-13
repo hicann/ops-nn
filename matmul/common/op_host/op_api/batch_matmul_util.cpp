@@ -1293,6 +1293,22 @@ bool checkFusedmm(const aclTensor* bias, const aclTensor* self, const aclTensor*
     if (!Ops::NN::IsTransposeNonContiguous(mat2, isNeedSwapInnerTwoDim)) {
         return false;
     }
+    // shape校验
+    const auto& selfShape = self->GetViewShape();
+    const auto& mat2Shape = mat2->GetViewShape();
+    const auto& biasShape = bias->GetViewShape();
+    int64_t aM = selfShape.GetDim(selfShape.GetDimNum() - NUM_TWO);
+    int64_t bN = mat2Shape.GetDim(mat2Shape.GetDimNum() - 1);
+    if (biasShape.GetDimNum() == NUM_TWO) {
+        if (aM != biasShape.GetDim(0) || bN != biasShape.GetDim(1)) {
+            return false;
+        }
+    } else {
+        if ((biasShape.GetDim(0) != 1 && biasShape.GetDim(0) != selfShape.GetDim(0)) || aM != biasShape.GetDim(1) ||
+            bN != biasShape.GetDim(NUM_TWO)) {
+            return false;
+        }
+    }
     OP_LOGI("Check fusedmm success.");
     return true;
 }
