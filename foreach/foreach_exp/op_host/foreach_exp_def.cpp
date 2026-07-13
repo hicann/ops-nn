@@ -20,7 +20,8 @@ class ForeachExp : public OpDef {
 public:
     explicit ForeachExp(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
+                                                       ge::DT_INT16,   ge::DT_INT8,  ge::DT_UINT8};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
         this->Input("x")
             .ParamType(DYNAMIC)
@@ -34,17 +35,31 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
-        OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910b");
+
+        OpAICoreConfig regbaseCfg;
+        std::vector<ge::DataType> tensor_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::Format> format_list_ascend950(tensor_dtype_list_ascend950.size(), ge::FORMAT_ND);
+        regbaseCfg.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-
-        this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend910b");
+        regbaseCfg.Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_ascend950)
+            .Format(format_list_ascend950)
+            .UnknownShapeFormat(format_list_ascend950)
+            .AutoContiguous();
+        regbaseCfg.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_ascend950)
+            .Format(format_list_ascend950)
+            .UnknownShapeFormat(format_list_ascend950)
+            .AutoContiguous();
+        this->AICore().AddConfig("ascend950", regbaseCfg);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

@@ -49,23 +49,24 @@
       <td>x</td>
       <td>输入</td>
       <td>表示进行指数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示进行指数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- Ascend 950PR/Ascend 950DT：不支持INT16、INT8、UINT8。
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16、INT16、INT8、UINT8。
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+无
 
 ## 调用说明
 

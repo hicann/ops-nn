@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -69,10 +69,15 @@ __aicore__ inline void KernelForeachBase<T>::Init(const ForeachCommonTilingData*
     ParseTilingData(tilingData);
 
 #if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-    if (std::is_same_v<T, bfloat16_t>) {
+    if (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, int16_t> || std::is_same_v<T, int8_t> ||
+        std::is_same_v<T, uint8_t>) {
         totalTensorUbSize = inputsTensorUbSize * COPY_SPACE_MULTIPLE;
         maxDataCount = totalTensorUbSize / sizeof(T);
-        maxCastDataCount = inputsTensorUbSize / sizeof(float);
+        if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>) {
+            maxCastDataCount = inputsTensorUbSize / sizeof(half);
+        } else {
+            maxCastDataCount = inputsTensorUbSize / sizeof(float);
+        }
     } else {
         maxDataCount = inputsTensorUbSize / sizeof(T);
     }

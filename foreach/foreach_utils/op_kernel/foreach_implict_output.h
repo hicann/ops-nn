@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -36,10 +36,10 @@ public:
 };
 
 #if __CCE_AICORE__ >= 220
-template <ImplictOutputOp<float>* op, uint8_t paramsCount>
-class InnerComputer<bfloat16_t, float, op, paramsCount> {
+template <typename T, typename P, ImplictOutputOp<P>* op, uint8_t paramsCount>
+class InnerComputerCastBase {
 public:
-    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& dataLocal, LocalTensor<float>& float32Tensor,
+    __aicore__ inline void Compute(LocalTensor<T>& dataLocal, LocalTensor<float>& float32Tensor,
                                    uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
@@ -55,19 +55,45 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& dataLocal, LocalTensor<float>& float32Tensor,
+    __aicore__ inline void ComputePerCast(LocalTensor<T>& dataLocal, LocalTensor<float>& float32Tensor,
                                           uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
     {
-        PipeBarrier<PIPE_V>();
-        Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
-        PipeBarrier<PIPE_V>();
-        uint32_t offset = (paramsCount == 1) ? 0 : maxCastDataCount;
-        op(float32Tensor[offset], float32Tensor, dataCount);
-        PipeBarrier<PIPE_V>();
-        Cast(dataLocal[index * maxCastDataCount], float32Tensor[offset], RoundMode::CAST_RINT, dataCount);
-        PipeBarrier<PIPE_V>();
+        if constexpr (std::is_same_v<P, float>) {
+            PipeBarrier<PIPE_V>();
+            Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
+            PipeBarrier<PIPE_V>();
+            uint32_t offset = (paramsCount == 1) ? 0 : maxCastDataCount;
+            op(float32Tensor[offset], float32Tensor, dataCount);
+            PipeBarrier<PIPE_V>();
+            Cast(dataLocal[index * maxCastDataCount], float32Tensor[offset], RoundMode::CAST_RINT, dataCount);
+            PipeBarrier<PIPE_V>();
+        } else if constexpr (std::is_same_v<P, half>) {
+            PipeBarrier<PIPE_V>();
+            LocalTensor<half> halfTensor = float32Tensor.template ReinterpretCast<half>();
+            Cast(halfTensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
+            PipeBarrier<PIPE_V>();
+            uint32_t offset = (paramsCount == 1) ? 0 : maxCastDataCount;
+            op(halfTensor[offset], halfTensor, dataCount);
+            PipeBarrier<PIPE_V>();
+            Cast(dataLocal[index * maxCastDataCount], halfTensor[offset], RoundMode::CAST_RINT, dataCount);
+            PipeBarrier<PIPE_V>();
+        }
     }
 };
+
+template <ImplictOutputOp<float>* op, uint8_t paramsCount>
+class InnerComputer<bfloat16_t, float, op, paramsCount>
+    : public InnerComputerCastBase<bfloat16_t, float, op, paramsCount> {};
+
+template <ImplictOutputOp<float>* op, uint8_t paramsCount>
+class InnerComputer<int16_t, float, op, paramsCount> : public InnerComputerCastBase<int16_t, float, op, paramsCount> {};
+
+template <ImplictOutputOp<half>* op, uint8_t paramsCount>
+class InnerComputer<int8_t, half, op, paramsCount> : public InnerComputerCastBase<int8_t, half, op, paramsCount> {};
+
+template <ImplictOutputOp<half>* op, uint8_t paramsCount>
+class InnerComputer<uint8_t, half, op, paramsCount> : public InnerComputerCastBase<uint8_t, half, op, paramsCount> {};
+
 #endif
 
 template <typename T, typename P, ImplictOutputOp<P>* op, int32_t bufferNum = BUFFER_NUM,
@@ -97,9 +123,9 @@ private:
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         if (isRemainder) {
             DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-            DataCopyPad(Base::outTensorsGM[1ULL * index * Base::maxDataCount], dataLocal, copyParams);
+            DataCopyPad(Base::outTensorsGM[index * Base::maxDataCount], dataLocal, copyParams);
         } else {
-            DataCopy(Base::outTensorsGM[1ULL * index * Base::maxDataCount], dataLocal, dataCount);
+            DataCopy(Base::outTensorsGM[index * Base::maxDataCount], dataLocal, dataCount);
         }
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);

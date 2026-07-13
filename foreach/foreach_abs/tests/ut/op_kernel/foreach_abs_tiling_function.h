@@ -32,6 +32,7 @@ constexpr uint64_t TILING_KEY_INT = 3;
 constexpr uint64_t TILING_KEY_BFLOAT16 = 4;
 constexpr uint64_t TILING_KEY_INT16 = 5;
 constexpr uint64_t TILING_KEY_INT8 = 7;
+constexpr uint64_t TILING_KEY_UINT8 = 8;
 constexpr uint64_t TILING_KEY_INT64 = 10;
 constexpr uint64_t TILING_KEY_DOUBLE = 11;
 constexpr uint64_t TILING_KEY_BOOL = 12;
@@ -191,6 +192,8 @@ inline uint64_t ForeachCommonTiling::GetTilingN()
             return TILING_INT_N_SCALAR;
         case 4:
         case 5:
+        case 7:
+        case 8:
             return TILING_BF16_N_SCALAR;
         default:
             return TILING_HALF_N_SCALAR;
@@ -244,6 +247,7 @@ inline uint8_t ForeachCommonTiling::GetDataTypeSize()
         case 5: // int16
             return 2;
         case 7:  // int8
+        case 8:  // uint8
         case 12: // bool
             return 1;
         case 10: // int64
@@ -269,6 +273,8 @@ inline uint64_t ForeachCommonTiling::GetTilingKeyVal()
             return TILING_KEY_INT16;
         case 7:
             return TILING_KEY_INT8;
+        case 8:
+            return TILING_KEY_UINT8;
         case 10:
             return TILING_KEY_INT64;
         case 11:
@@ -724,12 +730,16 @@ inline void ForeachCommonTiling::DivideUbMemory8(uint64_t ubSizePlatForm)
         // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
         // foreach_exp
         uint32_t totalSize = uint32_t(ubSizePlatForm - 1024 - sizeof(ForeachCommonTilingData));
-        if (dataType == 4) {
+        if (dataType == 4 || dataType == 5 || dataType == 7 || dataType == 8) {
             totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
         }
         uint32_t canUseUbSize = totalSize / 2;
-        inputsTensorUbSize = (dataType == 4) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                               canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        inputsTensorUbSize = (dataType == 4 || dataType == 5) ?
+                                 canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                 canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        if (dataType == 7 || dataType == 8) {
+            inputsTensorUbSize = canUseUbSize / (BYTE_BLOCK_FOR_BF16 * 2U) * (BYTE_BLOCK_FOR_BF16 * 2U);
+        }
     } else if (opCode == FOREACH_MAXIMUM_LIST_OP_CODE) {
         // The remaining UB size is split in six, double buffer enabled, and rounded down 32 bytes.
         // foreach_maximum_list

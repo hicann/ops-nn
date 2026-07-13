@@ -26,8 +26,8 @@ namespace ge {
  * @li y: A tensor list which store the tensors whose value are the exp value of the x
  */
 REG_OP(ForeachExp)
-    .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT16, DT_INT8, DT_UINT8}))
+    .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT16, DT_INT8, DT_UINT8}))
     .OP_END_FACTORY_REG(ForeachExp)
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_EXP_H_

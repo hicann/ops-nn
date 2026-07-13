@@ -129,3 +129,102 @@ TEST_F(foreach_exp_test, test_case_bfloat16_3)
 
     system("cd ./exp_data/ && python3 compare_data.py 'bfloat16_t'");
 }
+
+TEST_F(foreach_exp_test, test_case_int16_4)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_exp/tests/ut/op_kernel/exp_data ./");
+    system("chmod -R 755 ./exp_data/");
+    system("cd ./exp_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int16'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 5, 26);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateTensorListForeachExp<int16_t>(shapeInfos, "int16"); // input tensor
+    uint8_t* x2 = CreateTensorListForeachExp<int16_t>(shapeInfos, "int16"); // output tensor
+
+    ICPU_SET_TILING_KEY(5); // int16_t
+    ICPU_RUN_KF(foreach_exp, blockDim, x1, x2, workspace, tiling);
+
+    FreeTensorListForeachExp<int16_t>(x2, shapeInfos, "int16");
+
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./exp_data/ && python3 compare_data.py 'int16'");
+}
+
+TEST_F(foreach_exp_test, test_case_int8_5)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_exp/tests/ut/op_kernel/exp_data ./");
+    system("chmod -R 755 ./exp_data/");
+    system("cd ./exp_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int8'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 7, 26);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateTensorListForeachExp<int8_t>(shapeInfos, "int8"); // input tensor
+    uint8_t* x2 = CreateTensorListForeachExp<int8_t>(shapeInfos, "int8"); // output tensor
+
+    ICPU_SET_TILING_KEY(7); // int8_t
+    ICPU_RUN_KF(foreach_exp, blockDim, x1, x2, workspace, tiling);
+
+    FreeTensorListForeachExp<int8_t>(x2, shapeInfos, "int8");
+
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./exp_data/ && python3 compare_data.py 'int8'");
+}
+
+TEST_F(foreach_exp_test, test_case_uint8_6)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_exp/tests/ut/op_kernel/exp_data ./");
+    system("chmod -R 755 ./exp_data/");
+    system("cd ./exp_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'uint8'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 8, 26);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateTensorListForeachExp<uint8_t>(shapeInfos, "uint8"); // input tensor
+    uint8_t* x2 = CreateTensorListForeachExp<uint8_t>(shapeInfos, "uint8"); // output tensor
+
+    ICPU_SET_TILING_KEY(8); // uint8_t
+    ICPU_RUN_KF(foreach_exp, blockDim, x1, x2, workspace, tiling);
+
+    FreeTensorListForeachExp<uint8_t>(x2, shapeInfos, "uint8");
+
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./exp_data/ && python3 compare_data.py 'uint8'");
+}

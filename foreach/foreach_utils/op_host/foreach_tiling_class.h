@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -1058,12 +1058,17 @@ private:
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             // foreach_exp
             uint32_t totalSize = uint32_t(ubSizePlatForm - 1024 - tilingData.GetDataSize());
-            if (dataType == ge::DT_BF16) {
+            if (dataType == ge::DT_BF16 || dataType == ge::DT_INT16 || dataType == ge::DT_INT8 ||
+                dataType == ge::DT_UINT8) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
             }
             uint32_t canUseUbSize = static_cast<uint32_t>(totalSize / 2U);
-            inputsTensorUbSize = (dataType == ge::DT_BF16) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                                             canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            inputsTensorUbSize = (dataType == ge::DT_BF16 || dataType == ge::DT_INT16) ?
+                                     canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                     canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            if (dataType == ge::DT_INT8 || dataType == ge::DT_UINT8) {
+                inputsTensorUbSize = canUseUbSize / (BYTE_BLOCK_FOR_BF16 * 2U) * (BYTE_BLOCK_FOR_BF16 * 2U);
+            }
         } else if (opCode == FOREACH_MAXIMUM_LIST_OP_CODE) {
             // The remaining UB size is split in six, double buffer enabled, and rounded down 32 bytes.
             // foreach_maximum_list
