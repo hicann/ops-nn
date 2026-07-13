@@ -74,30 +74,7 @@ inline void GetDtype(const gert::TilingContext &context, MatMulV3Args &args)
     OP_LOGD(args.opName, "Hf32 flag is: %d, isAvoidTensorApi flag is: %d", args.isHf32, args.isAvoidTensorApi);
 }
 
-ge::graphStatus IsValidDtype(const MatMulV3Args &args)
-{
-    std::vector<ge::DataType> dtype = { args.aType, args.bType, args.cType };
-    if (args.hasBias) {
-        dtype.push_back(args.biasType);
-    }
-    const std::vector<std::vector<ge::DataType>> dtypeSuportList = {
-        // x1,              x2,             y,              bias
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16 },
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT },
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16 },
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT },
-        { ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT },
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT },
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16 }, // david supports bias-bf16
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16 },
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT }
-    };
-    for (auto &supported : dtypeSuportList) {
-        if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
-            return ge::GRAPH_SUCCESS;
-        }
-    }
-
+ge::graphStatus InVaildDtypeError(const MatMulV3Args &args) {
     if (args.hasBias) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "a, b, c, bias",
@@ -127,6 +104,33 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
+}
+
+ge::graphStatus IsValidDtype(const MatMulV3Args &args)
+{
+    std::vector<ge::DataType> dtype = { args.aType, args.bType, args.cType };
+    if (args.hasBias) {
+        dtype.push_back(args.biasType);
+    }
+    const std::vector<std::vector<ge::DataType>> dtypeSuportList = {
+        // x1,              x2,             y,              bias
+        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16 },
+        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT },
+        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16 },
+        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT },
+        { ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT },
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT },
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16 }, // david supports bias-bf16
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16 },
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT }
+    };
+    for (auto &supported : dtypeSuportList) {
+        if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+
+    return InVaildDtypeError(args);
 }
 
 ge::graphStatus GetInputDims(const gert::Shape& storageShape, const gert::Shape& oriShape, uint64_t dtypeSize,
