@@ -111,7 +111,7 @@ public:
 
 public:
     __aicore__ inline void Init(
-        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, bool isSplitSingleK = false)
+        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -125,7 +125,6 @@ public:
         baseN_ = Get<DIMENSION_N>(tileL0);
         baseK_ = Get<DIMENSION_K>(tileL0);
         isBias_ = isBias;
-        isSplitSingleK_ = isSplitSingleK;
         // init tensor
         if (isBias_) {
             biasL1Offset_ = nL1_ * sizeof(Bias_T) * BUFFER_NUM;
@@ -357,12 +356,14 @@ public:
     __aicore__ inline void operator()(
         AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
         AscendC::GlobalTensor<Bias_T> biasGlobal, AscendC::GlobalTensor<float> workspaceGlobal, TupleShape tileShape,
-        int64_t kCntIndex, bool checkIsSkScene, uint64_t blkK = 0, bool isFirstSplitK = false, bool isEndSplitK = false)
+        int64_t kCntIndex, bool checkIsSkScene, bool isSplitSingleK = false, uint64_t blkK = 0,
+        bool isFirstSplitK = false, bool isEndSplitK = false)
     {
         // mL1_ == ml0, nL1_ == nl0
         uint64_t curML1 = Get<0>(tileShape);
         uint64_t curNL1 = Get<1>(tileShape);
         skKSingleCore_ = Get<2>(tileShape);
+        isSplitSingleK_ = isSplitSingleK;
         blkK_ = blkK;
         isFirstSplitK_ = isFirstSplitK;
         isEndSplitK_ = isEndSplitK;

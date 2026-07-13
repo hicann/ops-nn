@@ -244,7 +244,7 @@ public:
                 AscendC::SetHF32TransMode(1);
             }
             SetMMLayoutTransform(true); // copy out with nfirst, try to make cube and fixp pairing.
-            blockMmadOp.Init(problemShape_, tileL1, tileL0, isBias_, bs.isSplitSingleK_);
+            blockMmadOp.Init(problemShape_, tileL1, tileL0, isBias_);
             int64_t tailSKTotalTileNum =
                 static_cast<int64_t>(((mTileNum * nTileNum * batchNum) % usedCoreNum_) * skKTileNum);
             for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += usedCoreNum_) {
@@ -261,7 +261,7 @@ public:
                 auto singleCoreShape = bs.GetSingleCoreShape(tmpTileIdx);
                 auto singleCoreCoord = bs.GetSingleCoreCoord(tmpTileIdx);
                 for (int64_t kOffset = 0; kOffset < bs.realSingleCoreK_; kOffset += bs.blkK_) {
-                    bs.UpdateSplitKIdx(kOffset);
+                    bs.UpdateBlockK(kOffset);
                     auto blockOffset = GetOffsetStreamK<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
                         singleCoreCoord, problemShape_, tileL1, bs.GetCurKSingleCore(tmpTileIdx), transA, transB,
                         isBias_, bs.splitSingleK_, bs.splitSingleKIdx_);
@@ -275,7 +275,7 @@ public:
                     blockMmadOp.template operator()<BlockMmadBuilder::formatB>(
                         cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
                         workspaceGlobal_[offsetWorkspace], singleCoreShape, Get<MNK_K>(singleCoreCoord),
-                        bs.CheckIsSkScene(tmpTileIdx), bs.blkK_, bs.splitSingleKIdx_ == 0,
+                        bs.CheckIsSkScene(tmpTileIdx), bs.isSplitSingleK_, bs.blkK_, bs.splitSingleKIdx_ == 0,
                         bs.splitSingleKIdx_ == (bs.splitSingleKRound_ - 1));
                 }
                 if (tmpTileIdx + usedCoreNum_ >= tileNum) {

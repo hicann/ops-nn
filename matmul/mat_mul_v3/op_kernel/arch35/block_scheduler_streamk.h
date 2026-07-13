@@ -22,6 +22,7 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
+constexpr int64_t FP32_SPLIT_K_THRESHOLD = 2048;
 template <
     class ProblemShape_,
     class L1TileShape_,
@@ -103,11 +104,6 @@ public:
         // totaltilenum = core num of DP (m*n) + tail core num of SK (m*n*k)
         tileNum_ = (mTileNum_ * nTileNum_ - tailMNTileNum) + tailMNTileNum * skKTileNum_ * batch_;
         totalMNTileNumInDP_ = mTileNum_ * nTileNum_ - tailMNTileNum;
-
-        // fp32 split singlecorek
-        if (isFp32_ && !isHf32_ && isNdFormat_ && skKSingleCore_ > splitSingleK_) {
-            isSplitSingleK_ = true;
-        }
     }
 
     __aicore__ inline int64_t GetTotalTileNum()
@@ -163,8 +159,12 @@ public:
         return {blkM, blkN, realSingleCoreK_, 0};
     }
 
-    __aicore__ inline void UpdateSplitKIdx(int64_t kOffset)
+    __aicore__ inline void UpdateBlockK(int64_t kOffset)
     {
+        // fp32 split singlecorek
+        if (isFp32_ && !isHf32_ && isNdFormat_ && realSingleCoreK_ >= FP32_SPLIT_K_THRESHOLD) {
+            isSplitSingleK_ = true;
+        }
         if (isSplitSingleK_) {
             splitSingleKRound_ = realSingleCoreK_ / splitSingleK_;
             splitSingleKTail_ = realSingleCoreK_ % splitSingleK_ + splitSingleK_;
