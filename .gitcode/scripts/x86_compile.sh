@@ -69,7 +69,7 @@ case "${task_name}|${GIT_TARGET_BRANCH}" in
         bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
-    "Compile_Ascend_X86_mobile_station|*")
+    *)
         echo "not need build single"
         mkdir single
         touch single.tar.gz
@@ -83,7 +83,7 @@ case "${task_name}|${GIT_TARGET_BRANCH}" in
         bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
-    "Compile_Ascend_X86_mobile_station|*")
+    *)
         echo "not need build single"
         mkdir single
         touch single.tar.gz
