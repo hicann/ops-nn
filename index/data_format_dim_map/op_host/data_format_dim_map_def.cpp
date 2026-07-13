@@ -33,7 +33,7 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig aiCoreConfig;
-        aiCoreConfig.DynamicCompileStaticFlag(false)
+        aiCoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
