@@ -1599,6 +1599,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/bucketize/README.md">bucketize</a></td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>根据属性boundaries为输入张量中的每个元素计算所属区间下标。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/bucketize_v2/README.md">bucketize_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3737,6 +3747,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入Tensor进行窗口为kH * kW、步长为sH * sW的二维平均池化操作，其中k为kernelSize，表示池化窗口的大小，s为stride，表示池化操作的步长。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/avg_pool1d_avg_matrix/README.md">avg_pool1d_avg_matrix</a></td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>为1DAvgPool反向传播场景生成平均矩阵权重。</td>
   </tr>
   <tr>
     <td>pooling</td>
