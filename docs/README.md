@@ -16,18 +16,19 @@ Docs目录结构说明如下：
   │   ├── ...
   ├── figures                            # 图片目录
   ├── install                            # 环境安装和编译指导文档
-  │   ├── build.md  
-  │   ├── compile.md  
-  │   ├── quick_install.md 
+  │   ├── build.md
+  │   ├── compile.md
+  │   ├── quick_install.md
   │   └── ...
   ├── invocation                         # 算子调用指导文档（包括aclnn调用、图模式调用等）
   │   ├── quick_op_invocation.md
   │   ├── ...
-  ├── op_api_list.md                     # 全量算子接口列表（aclnn）
-  ├── op_list.md                         # 全量算子列表      
+  ├── menu_aclnn_api.md                  # 全量aclnn接口索引文件
+  ├── op_api_list.md                     # 全量aclnn接口列表
+  ├── op_list.md                         # 全量算子列表
 ├── CONTRIBUTING_DOCS.md                 # 文档贡献说明
 ├── QUICKSTART.md                        # 快速入门
-└── README.md                            
+└── README.md
 ```
 
 ## 进阶教程
