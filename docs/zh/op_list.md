@@ -4528,6 +4528,17 @@
     <td>AI Core</td>
     <td>稀疏版本的AdagradV2优化器算子，根据稀疏梯度和索引向量原地更新参数变量和累加器。</td>
   </tr>
+  </tr>
+    <tr>
+    <td>optim</td>
+    <td><a href="../../optim/inplace_apply_power_sign/README.md">inplace_apply_power_sign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行PowerSign优化器的单步参数更新，对权重`var`和一阶矩`m`进行原地更新（inplace语义）。</td>
+  </tr>
   <tr>
     <td>hash</td>
     <td><a href="../../hash/embedding_hash_table_apply_adam_w/README.md">embedding_hash_table_apply_adam_w</a></td>
