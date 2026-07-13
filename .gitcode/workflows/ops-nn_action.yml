@@ -15,8 +15,8 @@ env:
   MERGE_ID: ${{atomgit.event.pull_request.number}}
   TARGET_BRANCH: ${{atomgit.ref_name}}
   SOURCE_BRANCH: ${{atomgit.head_ref}}
-  obs_path: "${{ vars.OBS_PATH}}/${{ env.MERGE_ID }}"
-  obs_smoke_path: "presmoke/${{ env.repo_name }}/2/${{ env.MERGE_ID }}"
+  obs_path: "${{ vars.OBS_PATH }}/${{ env.MERGE_ID }}"
+  obs_smoke_path: "${{ env.obs_path }}/presmoke/2"
 
 stages:
   stage1:
@@ -339,7 +339,7 @@ stages:
                 ${{ steps.process_checkout.outputs.path }}/smoke_data.tar.gz
               object-prefix: ${{ env.obs_smoke_path }}/
           -
-            name: smoke
+            name: smoke executor
             uses: manifest-management-plugin
             with:
               action: DEPLOY
@@ -359,6 +359,13 @@ stages:
                 wget -nv ${{ steps.process_upload.outputs.primary-url }}
                 tar -zxf $(basename "${{ steps.process_upload.outputs.primary-url }}")
                 bash /home/taskspace/pre_smoke.sh
+          -
+            name: smoke resource clean
+            uses: manifest-management-plugin
+            with:
+              action: CRUSH
+              repo: ${{ steps.process_checkout.outputs.path }}
+              file_path: ${{ steps.process_checkout.outputs.path }}/ci/smoke-conf/smoke-A2.yaml
 
         if: "${{ default() }}"
         runs-on: ['self-hosted','arch=arm','smoke=204']
