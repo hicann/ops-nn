@@ -1,0 +1,2130 @@
+[
+  {
+    "id": 1,
+    "name": "test_max_pool_v3_fp32",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          1,
+          4,
+          4
+        ],
+        "range_values": [
+          0,
+          15
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 2,
+    "name": "test_max_pool_v3_fp16",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1,
+          3,
+          8,
+          8
+        ],
+        "range_values": [
+          -1,
+          1
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 3,
+    "name": "test_max_pool_v3_bf16",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          2,
+          4,
+          7,
+          7
+        ],
+        "range_values": [
+          -2,
+          2
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 4,
+    "name": "test_max_pool_v3_padding",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          1,
+          4,
+          4
+        ],
+        "range_values": [
+          0,
+          15
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 5,
+    "name": "test_max_pool_v3_ceil_mode",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          1,
+          5,
+          5
+        ],
+        "range_values": [
+          0,
+          24
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 1
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 6,
+    "name": "test_max_pool_v3_large_kernel",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          1,
+          10,
+          10
+        ],
+        "range_values": [
+          -5,
+          5
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 5
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 5
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 7,
+    "name": "test_max_pool_v3_1x1_kernel",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          3,
+          7,
+          7
+        ],
+        "range_values": [
+          -5,
+          5
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 8,
+    "name": "test_max_pool_v3_large_batch",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16,
+          32,
+          32
+        ],
+        "range_values": [
+          -2,
+          2
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 9,
+    "name": "test_max_pool_v3_fp32_medium",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          64,
+          56,
+          56
+        ],
+        "range_values": [
+          -5,
+          5
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 10,
+    "name": "test_max_pool_v3_fp16_production",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1,
+          128,
+          112,
+          112
+        ],
+        "range_values": [
+          -2,
+          2
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 11,
+    "name": "test_max_pool_v3_bf16_global_pool",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          2,
+          32,
+          64,
+          64
+        ],
+        "range_values": [
+          -2,
+          2
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 12,
+    "name": "test_max_pool_v3_fp32_stride3",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          4,
+          13,
+          13
+        ],
+        "range_values": [
+          0,
+          168
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 13,
+    "name": "test_max_pool_v3_fp16_asymmetric_pad",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1,
+          3,
+          15,
+          15
+        ],
+        "range_values": [
+          -1,
+          1
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 14,
+    "name": "test_max_pool_v3_bf16_kernel5",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1,
+          2,
+          15,
+          15
+        ],
+        "range_values": [
+          -3,
+          3
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 5
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 5
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 15,
+    "name": "test_max_pool_v3_fp32_channel_heavy",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          128,
+          16,
+          16
+        ],
+        "range_values": [
+          -3,
+          3
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 4
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 4
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 4
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 4
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 0
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 0
+      }
+    ],
+    "is_boundary": false
+  },
+  {
+    "id": 16,
+    "name": "test_max_pool_v3_fp16_ceil_pad_combo",
+    "aclnn_name": "aclnnMaxPoolV3",
+    "api_type": "aclnn_max_pool_v3",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision"
+        }
+      },
+      "perf": [
+        0.95,
+        0.97
+      ]
+    },
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          2,
+          8,
+          11,
+          11
+        ],
+        "range_values": [
+          -2,
+          2
+        ]
+      },
+      [
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        },
+        {
+          "name": "ksize",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 3
+        }
+      ],
+      [
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        },
+        {
+          "name": "strides",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 2
+        }
+      ],
+      [
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        },
+        {
+          "name": "pads",
+          "type": "attrs",
+          "required": true,
+          "dtype": "int",
+          "range_values": 1
+        }
+      ],
+      {
+        "name": "ceilMode",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "range_values": 1
+      }
+    ],
+    "is_boundary": false
+  }
+]
