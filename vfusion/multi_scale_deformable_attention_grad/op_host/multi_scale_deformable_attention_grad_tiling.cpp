@@ -35,7 +35,7 @@ constexpr static int64_t NUM_QUERIE_BUFFER = 15;
 constexpr static int64_t NUM_CHANNEL_BUFFER = 13;
 class MultiScaleDeformableAttentionGradTiling {
 public:
-    explicit MultiScaleDeformableAttentionGradTiling(gert::TilingContext* context) : TilingContext(context){};
+    explicit MultiScaleDeformableAttentionGradTiling(gert::TilingContext* context) : TilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint();
@@ -81,6 +81,7 @@ ge::graphStatus MultiScaleDeformableAttentionGradTiling::Init()
     auto sampling_loc_shape = TilingContext->GetInputShape(3)->GetStorageShape();
     auto compileInfo = reinterpret_cast<const MultiScaleDeformableAttentionGradCompileInfo*>(
         TilingContext->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(TilingContext, compileInfo);
     uint64_t total_ub_size = compileInfo->ub_size_platform;
     ub_size = total_ub_size - RESERVE_SAPCE;
     uint64_t core_num = compileInfo->total_core_num;
